@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAccount } from 'wagmi';
-import { 
-  crossChainTicketService, 
-  type TicketPurchaseIntent, 
+import {
+  getCrossChainTicketService,
+  type TicketPurchaseIntent,
   type CrossChainTicketResult,
-  SUPPORTED_CHAINS 
+  SUPPORTED_CHAINS
 } from '@/services/crossChainTicketService';
 
 export interface UseCrossChainTicketsReturn {
@@ -56,7 +56,8 @@ export function useCrossChainTickets(): UseCrossChainTicketsReturn {
     }
 
     try {
-      const userIntents = crossChainTicketService.getUserIntents(address);
+      const service = getCrossChainTicketService();
+      const userIntents = service.getUserIntents(address);
       setIntents(userIntents);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load intents');
@@ -67,7 +68,8 @@ export function useCrossChainTickets(): UseCrossChainTicketsReturn {
   useEffect(() => {
     loadIntents();
 
-    const unsubscribe = crossChainTicketService.onIntentUpdate((intent) => {
+    const service = getCrossChainTicketService();
+    const unsubscribe = service.onIntentUpdate((intent) => {
       if (!address || intent.userAddress.toLowerCase() !== address.toLowerCase()) {
         return;
       }
@@ -93,7 +95,8 @@ export function useCrossChainTickets(): UseCrossChainTicketsReturn {
     setError(null);
 
     try {
-      const intent = await crossChainTicketService.createTicketPurchaseIntent({
+      const service = getCrossChainTicketService();
+      const intent = await service.createTicketPurchaseIntent({
         ...params,
         userAddress: address,
       });
@@ -125,7 +128,8 @@ export function useCrossChainTickets(): UseCrossChainTicketsReturn {
         signTransaction: (tx: any) => Promise.resolve('0x' + Math.random().toString(16).slice(2)),
       };
 
-      const result = await crossChainTicketService.executeTicketPurchase(
+      const service = getCrossChainTicketService();
+      const result = await service.executeTicketPurchase(
         intentId,
         mockWallet as any
       );
@@ -149,7 +153,8 @@ export function useCrossChainTickets(): UseCrossChainTicketsReturn {
     setError(null);
 
     try {
-      return await crossChainTicketService.estimateCrossChainFees(params);
+      const service = getCrossChainTicketService();
+      return await service.estimateCrossChainFees(params);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to estimate fees';
       setError(errorMessage);
@@ -159,7 +164,8 @@ export function useCrossChainTickets(): UseCrossChainTicketsReturn {
 
   // Get a specific intent
   const getIntent = useCallback((intentId: string): TicketPurchaseIntent | undefined => {
-    return crossChainTicketService.getIntent(intentId);
+    const service = getCrossChainTicketService();
+    return service.getIntent(intentId);
   }, []);
 
   // Refresh intents manually
@@ -199,14 +205,16 @@ export function useIntent(intentId: string | undefined) {
       return;
     }
 
+    const service = getCrossChainTicketService();
+
     const loadIntent = () => {
-      const foundIntent = crossChainTicketService.getIntent(intentId);
+      const foundIntent = service.getIntent(intentId);
       setIntent(foundIntent || null);
     };
 
     loadIntent();
 
-    const unsubscribe = crossChainTicketService.onIntentUpdate((updatedIntent) => {
+    const unsubscribe = service.onIntentUpdate((updatedIntent) => {
       if (updatedIntent.id === intentId) {
         setIntent(updatedIntent);
       }
@@ -240,9 +248,11 @@ export function useCrossChainStats(userAddress?: string) {
       return;
     }
 
+    const service = getCrossChainTicketService();
+
     const calculateStats = () => {
-      const userIntents = crossChainTicketService.getUserIntents(userAddress);
-      
+      const userIntents = service.getUserIntents(userAddress);
+
       const totalIntents = userIntents.length;
       const successfulPurchases = userIntents.filter(intent => intent.status === 'executed').length;
       const totalTicketsPurchased = userIntents
@@ -262,7 +272,7 @@ export function useCrossChainStats(userAddress?: string) {
 
     calculateStats();
 
-    const unsubscribe = crossChainTicketService.onIntentUpdate((intent) => {
+    const unsubscribe = service.onIntentUpdate((intent) => {
       if (intent.userAddress.toLowerCase() === userAddress.toLowerCase()) {
         calculateStats();
       }

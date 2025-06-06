@@ -25,9 +25,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full">
+    <html lang="en" className="h-full" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-full font-sans antialiased flex flex-col`}
+        suppressHydrationWarning
       >
         <div className="flex-1">
           <AppProvider>{children}</AppProvider>

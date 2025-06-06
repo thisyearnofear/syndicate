@@ -68,7 +68,7 @@ export class NearChainSignatureService {
       // Convert NEAR public key format to Ethereum address
       // This is a simplified version - in production, you'd use proper key derivation
       const ethPublicKey = publicKey.replace('secp256k1:', '');
-      const address = ethers.utils.computeAddress('0x' + ethPublicKey);
+      const address = ethers.computeAddress('0x' + ethPublicKey);
       
       return address;
     } catch (error) {
@@ -84,7 +84,7 @@ export class NearChainSignatureService {
     try {
       const signArgs = {
         request: {
-          payload: Array.from(ethers.utils.arrayify(request.payload)),
+          payload: Array.from(ethers.getBytes(request.payload)),
           path: request.path,
           key_version: request.keyVersion,
         }
@@ -181,7 +181,7 @@ export class NearChainSignatureService {
     const usdcContract = RAINBOW_BRIDGE_CONTRACTS.base.usdc;
 
     // Build the transaction data
-    const megapotInterface = new ethers.utils.Interface([
+    const megapotInterface = new ethers.Interface([
       'function purchaseTickets(uint256 count) external'
     ]);
 
@@ -193,14 +193,14 @@ export class NearChainSignatureService {
       value: '0', // No ETH value, using USDC
       data,
       gasLimit: GAS_LIMITS.evm.ticketPurchase,
-      gasPrice: ethers.utils.parseUnits('20', 'gwei'), // 20 gwei
+      gasPrice: ethers.parseUnits('20', 'gwei'), // 20 gwei
       nonce: 0, // Would need to fetch actual nonce
       chainId: 8453, // Base chain ID
     };
 
     // Calculate transaction hash
-    const serializedTx = ethers.utils.serializeTransaction(transaction);
-    const hash = ethers.utils.keccak256(serializedTx);
+    const serializedTx = ethers.Transaction.from(transaction).serialized;
+    const hash = ethers.keccak256(serializedTx);
 
     return {
       ...transaction,
@@ -219,15 +219,17 @@ export class NearChainSignatureService {
   ): Promise<string> {
     try {
       // Reconstruct the signed transaction
-      const signedTx = ethers.utils.serializeTransaction(transaction, {
+      const tx = ethers.Transaction.from(transaction);
+      tx.signature = {
         r: signature.signature.r,
         s: signature.signature.s,
         v: signature.signature.v,
-      });
+      };
+      const signedTx = tx.serialized;
 
       // In a real implementation, you would broadcast this to the target chain
       // For now, we'll simulate the broadcast
-      const txHash = ethers.utils.keccak256(signedTx);
+      const txHash = ethers.keccak256(signedTx);
       
       console.log('Simulated broadcast of signed transaction:', signedTx);
       
@@ -306,14 +308,14 @@ export class NearChainSignatureService {
   }> {
     try {
       // NEAR gas fee (in NEAR)
-      const nearGasFee = ethers.utils.formatUnits(
-        ethers.utils.parseUnits('0.001', 'ether'), // ~0.001 NEAR for chain signature
+      const nearGasFee = ethers.formatUnits(
+        ethers.parseUnits('0.001', 'ether'), // ~0.001 NEAR for chain signature
         'ether'
       );
 
       // Target chain gas fee (in ETH)
-      const targetChainGasFee = ethers.utils.formatUnits(
-        ethers.utils.parseUnits('0.002', 'ether'), // ~0.002 ETH for ticket purchase
+      const targetChainGasFee = ethers.formatUnits(
+        ethers.parseUnits('0.002', 'ether'), // ~0.002 ETH for ticket purchase
         'ether'
       );
 
@@ -321,8 +323,8 @@ export class NearChainSignatureService {
       const bridgeFee = '0'; // Rainbow Bridge is typically free for small amounts
 
       // Total fee in USD equivalent
-      const totalFee = ethers.utils.formatUnits(
-        ethers.utils.parseUnits('5', 'ether'), // ~$5 total
+      const totalFee = ethers.formatUnits(
+        ethers.parseUnits('5', 'ether'), // ~$5 total
         'ether'
       );
 
