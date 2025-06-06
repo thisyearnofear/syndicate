@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { SessionAccountProvider } from "@/providers/SessionAccountProvider";
-import { PermissionProvider } from "@/providers/PermissionProvider";
-import { CrossChainProvider } from "@/providers/CrossChainProvider";
+import { AppProvider } from "@/providers/AppProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,7 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Syndicate - Social Lottery Coordination",
-  description: "Pool resources with your community for lottery participation and cause-based impact on Base and Avalanche",
+  description:
+    "Pool resources with your community for lottery participation and cause-based impact on Base and Avalanche",
 };
 
 export default function RootLayout({
@@ -31,13 +30,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} min-h-full font-sans antialiased flex flex-col`}
       >
         <div className="flex-1">
-          <main>
-            <CrossChainProvider>
-              <PermissionProvider>
-                <SessionAccountProvider>{children}</SessionAccountProvider>
-              </PermissionProvider>
-            </CrossChainProvider>
-          </main>
+          <AppProvider>{children}</AppProvider>
         </div>
       </body>
     </html>
