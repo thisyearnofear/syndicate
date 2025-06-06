@@ -1,11 +1,15 @@
 "use client";
 
-import { useNearWallet, useNearWalletConnection } from '@/providers/NearWalletProvider';
-import { useState, useEffect } from 'react';
-import { crossChainTicketService } from '@/services/crossChainTicketService';
+import {
+  useNearWallet,
+  useNearWalletConnection,
+} from "@/providers/NearWalletProvider";
+import { useState, useEffect } from "react";
+import { getCrossChainTicketService } from "@/services/crossChainTicketService";
 
 export default function NearWalletConnection() {
-  const { isConnected, accountId, connect, disconnect, isLoading } = useNearWalletConnection();
+  const { isConnected, accountId, connect, disconnect, isLoading } =
+    useNearWalletConnection();
   const nearWallet = useNearWallet();
   const [isInitializing, setIsInitializing] = useState(false);
   const [chainSignatureAvailable, setChainSignatureAvailable] = useState(false);
@@ -14,22 +18,23 @@ export default function NearWalletConnection() {
   useEffect(() => {
     if (isConnected && nearWallet && !isInitializing) {
       setIsInitializing(true);
-      
+
       const initializeService = async () => {
         try {
           // Initialize the cross-chain service with NEAR wallet
-          crossChainTicketService.initializeNearService(nearWallet);
-          
+          const service = getCrossChainTicketService();
+          service.initializeNearService(nearWallet);
+
           // Check if chain signatures are available
-          const nearService = (crossChainTicketService as any).nearChainSignatureService;
+          const nearService = (service as any).nearChainSignatureService;
           if (nearService) {
             const available = await nearService.isChainSignatureAvailable();
             setChainSignatureAvailable(available);
           }
-          
-          console.log('NEAR chain signature service initialized');
+
+          console.log("NEAR chain signature service initialized");
         } catch (error) {
-          console.error('Failed to initialize NEAR service:', error);
+          console.error("Failed to initialize NEAR service:", error);
         } finally {
           setIsInitializing(false);
         }
@@ -43,7 +48,7 @@ export default function NearWalletConnection() {
     try {
       await connect();
     } catch (error) {
-      console.error('Failed to connect NEAR wallet:', error);
+      console.error("Failed to connect NEAR wallet:", error);
     }
   };
 
@@ -52,7 +57,7 @@ export default function NearWalletConnection() {
       await disconnect();
       setChainSignatureAvailable(false);
     } catch (error) {
-      console.error('Failed to disconnect NEAR wallet:', error);
+      console.error("Failed to disconnect NEAR wallet:", error);
     }
   };
 
@@ -71,18 +76,21 @@ export default function NearWalletConnection() {
     return (
       <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-white mb-2">🌌 NEAR Protocol</h3>
+          <h3 className="text-lg font-semibold text-white mb-2">
+            🌌 NEAR Protocol
+          </h3>
           <p className="text-gray-300 mb-4 text-sm">
-            Connect your NEAR wallet to enable cross-chain ticket purchasing with chain signatures.
+            Connect your NEAR wallet to enable cross-chain ticket purchasing
+            with chain signatures.
           </p>
-          
+
           <button
             onClick={handleConnect}
             className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
           >
             Connect NEAR Wallet
           </button>
-          
+
           <div className="mt-4 text-xs text-gray-400">
             <p>Supports: MyNearWallet, Bitte Wallet</p>
           </div>
@@ -95,10 +103,10 @@ export default function NearWalletConnection() {
     <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-white">🌌 NEAR Connected</h3>
-          <p className="text-gray-300 text-sm">
-            {accountId}
-          </p>
+          <h3 className="text-lg font-semibold text-white">
+            🌌 NEAR Connected
+          </h3>
+          <p className="text-gray-300 text-sm">{accountId}</p>
         </div>
         <button
           onClick={handleDisconnect}
@@ -113,7 +121,9 @@ export default function NearWalletConnection() {
         <div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
           <div>
             <h4 className="font-medium text-white">Chain Signatures</h4>
-            <p className="text-gray-300 text-sm">Cross-chain transaction signing</p>
+            <p className="text-gray-300 text-sm">
+              Cross-chain transaction signing
+            </p>
           </div>
           <div className="flex items-center space-x-2">
             {isInitializing ? (
@@ -139,7 +149,9 @@ export default function NearWalletConnection() {
         <div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
           <div>
             <h4 className="font-medium text-white">MPC Contract</h4>
-            <p className="text-gray-300 text-sm">Multi-party computation signing</p>
+            <p className="text-gray-300 text-sm">
+              Multi-party computation signing
+            </p>
           </div>
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
@@ -151,9 +163,15 @@ export default function NearWalletConnection() {
         <div className="p-3 bg-gray-700 rounded-lg">
           <h4 className="font-medium text-white mb-2">Supported Chains</h4>
           <div className="flex flex-wrap gap-2">
-            <span className="px-2 py-1 bg-blue-600 text-white text-xs rounded">Base</span>
-            <span className="px-2 py-1 bg-red-600 text-white text-xs rounded">Avalanche</span>
-            <span className="px-2 py-1 bg-gray-600 text-white text-xs rounded">Ethereum</span>
+            <span className="px-2 py-1 bg-blue-600 text-white text-xs rounded">
+              Base
+            </span>
+            <span className="px-2 py-1 bg-red-600 text-white text-xs rounded">
+              Avalanche
+            </span>
+            <span className="px-2 py-1 bg-gray-600 text-white text-xs rounded">
+              Ethereum
+            </span>
           </div>
         </div>
       </div>
@@ -161,9 +179,12 @@ export default function NearWalletConnection() {
       {/* Chain Signature Info */}
       {chainSignatureAvailable && (
         <div className="mt-4 p-4 bg-green-900/30 border border-green-700 rounded-lg">
-          <h4 className="font-medium text-green-200 mb-2">✅ Ready for Cross-Chain</h4>
+          <h4 className="font-medium text-green-200 mb-2">
+            ✅ Ready for Cross-Chain
+          </h4>
           <p className="text-green-200 text-sm">
-            You can now purchase lottery tickets on Base using funds from Avalanche through NEAR chain signatures.
+            You can now purchase lottery tickets on Base using funds from
+            Avalanche through NEAR chain signatures.
           </p>
         </div>
       )}
@@ -171,9 +192,12 @@ export default function NearWalletConnection() {
       {/* Warning if chain signatures not available */}
       {!chainSignatureAvailable && !isInitializing && (
         <div className="mt-4 p-4 bg-orange-900/30 border border-orange-700 rounded-lg">
-          <h4 className="font-medium text-orange-200 mb-2">⚠️ Chain Signatures Unavailable</h4>
+          <h4 className="font-medium text-orange-200 mb-2">
+            ⚠️ Chain Signatures Unavailable
+          </h4>
           <p className="text-orange-200 text-sm">
-            Chain signatures are not available for this account. You may need to request access or use a different account.
+            Chain signatures are not available for this account. You may need to
+            request access or use a different account.
           </p>
         </div>
       )}

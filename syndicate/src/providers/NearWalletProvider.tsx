@@ -1,12 +1,25 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { setupWalletSelector, WalletSelector, Wallet } from '@near-wallet-selector/core';
-import { setupMyNearWallet } from '@near-wallet-selector/my-near-wallet';
-import { setupBitteWallet } from '@near-wallet-selector/bitte-wallet';
-import { setupModal, WalletSelectorModal } from '@near-wallet-selector/modal-ui';
-import { providers } from 'near-api-js';
-import { getConfig } from '@/config/nearConfig';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
+import {
+  setupWalletSelector,
+  WalletSelector,
+  Wallet,
+} from "@near-wallet-selector/core";
+import { setupMyNearWallet } from "@near-wallet-selector/my-near-wallet";
+import { setupBitteWallet } from "@near-wallet-selector/bitte-wallet";
+import {
+  setupModal,
+  WalletSelectorModal,
+} from "@near-wallet-selector/modal-ui";
+import { providers } from "near-api-js";
+import { getConfig } from "@/config/nearConfig";
 
 interface NearWalletContextType {
   // Wallet state
@@ -16,13 +29,23 @@ interface NearWalletContextType {
   accountId: string | null;
   isConnected: boolean;
   isLoading: boolean;
-  
+
   // Actions
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   signAndSendTransaction: (transaction: any) => Promise<any>;
-  viewMethod: (contractId: string, methodName: string, args?: any) => Promise<any>;
-  callMethod: (contractId: string, methodName: string, args?: any, gas?: string, deposit?: string) => Promise<any>;
+  viewMethod: (
+    contractId: string,
+    methodName: string,
+    args?: any
+  ) => Promise<any>;
+  callMethod: (
+    contractId: string,
+    methodName: string,
+    args?: any,
+    gas?: string,
+    deposit?: string
+  ) => Promise<any>;
 }
 
 const NearWalletContext = createContext<NearWalletContextType | null>(null);
@@ -30,7 +53,7 @@ const NearWalletContext = createContext<NearWalletContextType | null>(null);
 export function useNearWallet() {
   const context = useContext(NearWalletContext);
   if (!context) {
-    throw new Error('useNearWallet must be used within a NearWalletProvider');
+    throw new Error("useNearWallet must be used within a NearWalletProvider");
   }
   return context;
 }
@@ -49,16 +72,19 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
 
   // Initialize wallet selector
   useEffect(() => {
+    // Only initialize in browser environment
+    if (typeof window === "undefined") {
+      setIsLoading(false);
+      return;
+    }
+
     const initWalletSelector = async () => {
       try {
         const config = getConfig();
-        
+
         const _selector = await setupWalletSelector({
-          network: config.networkId as 'mainnet' | 'testnet',
-          modules: [
-            setupMyNearWallet(),
-            setupBitteWallet(),
-          ],
+          network: config.networkId as "mainnet" | "testnet",
+          modules: [setupMyNearWallet(), setupBitteWallet()],
         });
 
         const _modal = setupModal(_selector, {
@@ -73,7 +99,7 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
         if (isSignedIn) {
           const _wallet = await _selector.wallet();
           const accounts = await _wallet.getAccounts();
-          
+
           if (accounts.length > 0) {
             setWallet(_wallet);
             setAccountId(accounts[0].accountId);
@@ -81,25 +107,27 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
           }
         }
       } catch (error) {
-        console.error('Failed to initialize NEAR wallet selector:', error);
+        console.error("Failed to initialize NEAR wallet selector:", error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    initWalletSelector();
+    // Add a small delay to ensure DOM is ready
+    const timer = setTimeout(initWalletSelector, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   // Connect wallet
   const connect = async () => {
     if (!modal) {
-      throw new Error('Wallet selector not initialized');
+      throw new Error("Wallet selector not initialized");
     }
 
     try {
       modal.show();
     } catch (error) {
-      console.error('Failed to connect NEAR wallet:', error);
+      console.error("Failed to connect NEAR wallet:", error);
       throw error;
     }
   };
@@ -114,7 +142,7 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
       setAccountId(null);
       setIsConnected(false);
     } catch (error) {
-      console.error('Failed to disconnect NEAR wallet:', error);
+      console.error("Failed to disconnect NEAR wallet:", error);
       throw error;
     }
   };
@@ -122,54 +150,58 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
   // Sign and send transaction
   const signAndSendTransaction = async (transaction: any) => {
     if (!wallet || !accountId) {
-      throw new Error('Wallet not connected');
+      throw new Error("Wallet not connected");
     }
 
     try {
       const result = await wallet.signAndSendTransaction(transaction);
       return result;
     } catch (error) {
-      console.error('Failed to sign and send transaction:', error);
+      console.error("Failed to sign and send transaction:", error);
       throw error;
     }
   };
 
   // View method (read-only)
-  const viewMethod = async (contractId: string, methodName: string, args: any = {}) => {
+  const viewMethod = async (
+    contractId: string,
+    methodName: string,
+    args: any = {}
+  ) => {
     if (!selector) {
-      throw new Error('Wallet selector not initialized');
+      throw new Error("Wallet selector not initialized");
     }
 
     try {
       const config = getConfig();
       const provider = new providers.JsonRpcProvider({ url: config.nodeUrl });
-      
+
       const result = await provider.query({
-        request_type: 'call_function',
-        finality: 'final',
+        request_type: "call_function",
+        finality: "final",
         account_id: contractId,
         method_name: methodName,
-        args_base64: Buffer.from(JSON.stringify(args)).toString('base64'),
+        args_base64: Buffer.from(JSON.stringify(args)).toString("base64"),
       });
 
       // @ts-ignore
       return JSON.parse(Buffer.from(result.result).toString());
     } catch (error) {
-      console.error('Failed to call view method:', error);
+      console.error("Failed to call view method:", error);
       throw error;
     }
   };
 
   // Call method (state-changing)
   const callMethod = async (
-    contractId: string, 
-    methodName: string, 
-    args: any = {}, 
-    gas: string = '300000000000000', // 300 TGas
-    deposit: string = '0'
+    contractId: string,
+    methodName: string,
+    args: any = {},
+    gas: string = "300000000000000", // 300 TGas
+    deposit: string = "0"
   ) => {
     if (!wallet || !accountId) {
-      throw new Error('Wallet not connected');
+      throw new Error("Wallet not connected");
     }
 
     try {
@@ -178,7 +210,7 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
         receiverId: contractId,
         actions: [
           {
-            type: 'FunctionCall',
+            type: "FunctionCall",
             params: {
               methodName,
               args,
@@ -192,7 +224,7 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
       const result = await signAndSendTransaction(transaction);
       return result;
     } catch (error) {
-      console.error('Failed to call method:', error);
+      console.error("Failed to call method:", error);
       throw error;
     }
   };
@@ -205,7 +237,7 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
       try {
         const _wallet = await selector.wallet();
         const accounts = await _wallet.getAccounts();
-        
+
         if (accounts.length > 0) {
           setWallet(_wallet);
           setAccountId(accounts[0].accountId);
@@ -216,11 +248,11 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
           setIsConnected(false);
         }
       } catch (error) {
-        console.error('Error handling account change:', error);
+        console.error("Error handling account change:", error);
       }
     };
 
-    const subscription = selector.on('accountsChanged', handleAccountsChanged);
+    const subscription = selector.on("accountsChanged", handleAccountsChanged);
 
     return () => {
       subscription.remove();
@@ -250,8 +282,9 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
 
 // Hook for NEAR wallet connection status
 export function useNearWalletConnection() {
-  const { isConnected, accountId, connect, disconnect, isLoading } = useNearWallet();
-  
+  const { isConnected, accountId, connect, disconnect, isLoading } =
+    useNearWallet();
+
   return {
     isConnected,
     accountId,
@@ -264,17 +297,22 @@ export function useNearWalletConnection() {
 // Hook for NEAR contract interactions
 export function useNearContract(contractId: string) {
   const { viewMethod, callMethod, isConnected } = useNearWallet();
-  
+
   const view = async (methodName: string, args?: any) => {
     return viewMethod(contractId, methodName, args);
   };
-  
-  const call = async (methodName: string, args?: any, gas?: string, deposit?: string) => {
+
+  const call = async (
+    methodName: string,
+    args?: any,
+    gas?: string,
+    deposit?: string
+  ) => {
     if (!isConnected) {
-      throw new Error('NEAR wallet not connected');
+      throw new Error("NEAR wallet not connected");
     }
     return callMethod(contractId, methodName, args, gas, deposit);
   };
-  
+
   return { view, call, isConnected };
 }

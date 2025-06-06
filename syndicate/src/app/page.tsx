@@ -1,68 +1,42 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAccount } from "wagmi";
+import dynamic from "next/dynamic";
 import Hero from "@/components/Hero";
 import Footer from "@/components/Footer";
-import LotteryInterface from "@/components/LotteryInterface";
-import TicketPurchase from "@/components/TicketPurchase";
 import SyndicateCreator from "@/components/SyndicateCreator";
 import { CrossChainTransactionList } from "@/providers/CrossChainProvider";
 import WalletInfoContainer from "@/components/WalletInfoContainer";
 import ConnectWallet from "@/components/ConnectWallet";
-import CrossChainDashboard from "@/components/CrossChainDashboard";
 import Loader from "@/components/Loader";
+
+// Dynamically import components that use browser APIs to avoid SSR issues
+const TicketPurchase = dynamic(() => import("@/components/TicketPurchase"), {
+  ssr: false,
+  loading: () => <Loader />,
+});
+
+const CrossChainDashboard = dynamic(
+  () => import("@/components/CrossChainDashboard"),
+  {
+    ssr: false,
+    loading: () => <Loader />,
+  }
+);
 
 export default function Home() {
   const { isConnected } = useAccount();
-  const [isFlask, setIsFlask] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [enableAdvancedFeatures, setEnableAdvancedFeatures] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "lottery" | "transactions" | "dashboard"
   >("lottery");
   const [showSyndicateCreator, setShowSyndicateCreator] = useState(false);
-
-  const detectFlaskCapabilities = async () => {
-    if (window && window.ethereum) {
-      const provider = window.ethereum;
-
-      if (provider) {
-        try {
-          const clientVersion = await provider.request({
-            method: "web3_clientVersion",
-          });
-
-          const isFlaskDetected = (clientVersion as string[])?.includes(
-            "flask"
-          );
-          setIsFlask(isFlaskDetected);
-        } catch (error) {
-          console.log(
-            "Could not detect Flask, using regular MetaMask features"
-          );
-          setIsFlask(false);
-        }
-      }
-    }
-    setIsLoading(false);
-  };
-
-  useEffect(() => {
-    detectFlaskCapabilities();
-  }, [isConnected]);
 
   const handleCreateSyndicate = (syndicateData: any) => {
     console.log("Creating syndicate:", syndicateData);
     // In a real implementation, this would call the smart contract
     // For now, just log the data
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white flex items-center justify-center">
-        <Loader />
-      </div>
-    );
-  }
 
   // Show wallet connection interface if not connected
   if (!isConnected) {
@@ -83,23 +57,42 @@ export default function Home() {
         <Hero />
         <WalletInfoContainer />
 
-        {/* Flask Enhancement Notice */}
-        {!isFlask && (
-          <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-4 mb-6 text-center">
-            <p className="text-blue-200 text-sm">
-              💡 <strong>Enhanced Experience Available:</strong> Install{" "}
-              <a
-                href="https://metamask.io/flask/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-400 hover:text-blue-300 underline"
-              >
-                MetaMask Flask
-              </a>{" "}
-              for gasless transactions and advanced features.
-            </p>
+        {/* Advanced Features Toggle */}
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-white font-medium">⚡ Advanced Features</h3>
+              <p className="text-gray-400 text-sm">
+                Enable gasless transactions and experimental features
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={enableAdvancedFeatures}
+                onChange={(e) => setEnableAdvancedFeatures(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+            </label>
           </div>
-        )}
+          {enableAdvancedFeatures && (
+            <div className="mt-3 p-3 bg-yellow-900/30 border border-yellow-600 rounded">
+              <p className="text-yellow-200 text-sm">
+                ⚠️ <strong>Note:</strong> Advanced features require{" "}
+                <a
+                  href="https://metamask.io/flask/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-yellow-400 hover:text-yellow-300 underline"
+                >
+                  MetaMask Flask
+                </a>{" "}
+                and may be experimental.
+              </p>
+            </div>
+          )}
+        </div>
 
         {/* Navigation Tabs */}
         <div className="flex justify-center mb-8">
@@ -140,7 +133,7 @@ export default function Home() {
         {/* Content */}
         {activeTab === "lottery" && (
           <div className="space-y-6">
-            <TicketPurchase isFlask={isFlask} />
+            <TicketPurchase isFlask={enableAdvancedFeatures} />
           </div>
         )}
         {activeTab === "transactions" && (

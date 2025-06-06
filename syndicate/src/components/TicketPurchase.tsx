@@ -5,25 +5,23 @@ import { useAccount, useChainId, useBalance } from "wagmi";
 import { base, baseSepolia, avalanche } from "viem/chains";
 import { formatEther, parseEther } from "viem";
 import MegapotIntegration from "./MegapotIntegration";
-import CrossChainTicketPurchase from "./CrossChainTicketPurchase";
 import {
   useSmartAccount,
   useGaslessTransaction,
   useDeploySmartAccount,
 } from "@/hooks/useSmartAccount";
 import { useCrossChain } from "@/providers/CrossChainProvider";
-import { useCrossChainTickets } from "@/hooks/useCrossChainTickets";
 
 interface TicketPurchaseProps {
   syndicateId?: string;
   causeAllocation?: number;
-  isFlask?: boolean;
+  isFlask?: boolean; // Keep same prop name for compatibility
 }
 
 export default function TicketPurchase({
   syndicateId,
   causeAllocation = 20,
-  isFlask = false,
+  isFlask = false, // Now represents user's choice to enable advanced features
 }: TicketPurchaseProps) {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
@@ -58,26 +56,30 @@ export default function TicketPurchase({
 
   const availableMethods = {
     standard: isOnBase && hasBalance,
-    gasless: isFlask && canExecuteGasless && isOnBase,
+    gasless: isFlask && canExecuteGasless && isOnBase && isDeployed, // Only available when smart account is deployed
     crossChain: isNearConnected || isOnAvalanche,
   };
 
-  // Auto-select best method
+  // Auto-select best method - prioritize standard for now
   useEffect(() => {
-    if (availableMethods.gasless && isFlask) {
-      setPurchaseMethod("gasless");
-    } else if (availableMethods.standard) {
+    if (availableMethods.standard) {
       setPurchaseMethod("standard");
     } else if (availableMethods.crossChain) {
       setPurchaseMethod("cross-chain");
+    } else if (availableMethods.gasless && isFlask) {
+      setPurchaseMethod("gasless");
     }
   }, [availableMethods, isFlask]);
 
+  const [deployError, setDeployError] = useState<string | null>(null);
+
   const handleDeployAccount = async () => {
     try {
+      setDeployError(null);
       await deploySmartAccount();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to deploy smart account:", error);
+      setDeployError(error.message || "Failed to enable gasless transactions");
     }
   };
 
@@ -136,22 +138,46 @@ export default function TicketPurchase({
 
           {/* Smart Account Status */}
           <div className="bg-gray-700 rounded-lg p-4">
-            <h4 className="font-medium text-white mb-2">🤖 Smart Account</h4>
+            <h4 className="font-medium text-white mb-2">
+              ⚡ Gasless Transactions
+            </h4>
             {smartAccountLoading ? (
-              <p className="text-sm text-yellow-400">Loading...</p>
+              <p className="text-sm text-yellow-400">Setting up...</p>
             ) : smartAccount ? (
               <div>
                 <p className="text-sm text-green-400">
-                  {isDeployed ? "✅ Deployed" : "⏳ Ready to deploy"}
+                  {isDeployed
+                    ? "✅ Ready for gasless txns"
+                    : "⏳ Setup required"}
                 </p>
-                {needsDeployment && (
-                  <button
-                    onClick={handleDeployAccount}
-                    disabled={isDeploying}
-                    className="mt-2 text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-2 py-1 rounded"
-                  >
-                    {isDeploying ? "Deploying..." : "Deploy"}
-                  </button>
+                {needsDeployment && isFlask && (
+                  <div className="mt-2">
+                    <p className="text-xs text-gray-300 mb-1">
+                      Enable gasless ticket purchases
+                    </p>
+                    <button
+                      onClick={handleDeployAccount}
+                      disabled={isDeploying}
+                      className="text-xs bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-2 py-1 rounded"
+                    >
+                      {isDeploying ? "Setting up..." : "Enable Gasless"}
+                    </button>
+                    {deployError && (
+                      <div className="mt-2 p-2 bg-red-900/30 border border-red-600 rounded text-xs">
+                        <p className="text-red-200">{deployError}</p>
+                        {deployError.includes("Pimlico balance") && (
+                          <p className="text-red-300 mt-1">
+                            💡 Use standard purchase method instead
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {!isFlask && (
+                  <p className="text-xs text-orange-400 mt-1">
+                    Enable advanced features above
+                  </p>
                 )}
               </div>
             ) : (
@@ -228,7 +254,11 @@ export default function TicketPurchase({
             <p className="text-xs text-gray-400 mt-1">
               {availableMethods.gasless
                 ? "✅ Available"
-                : "❌ Requires MetaMask Flask"}
+                : !isFlask
+                ? "❌ Enable advanced features above"
+                : !isDeployed
+                ? "❌ Smart account setup required"
+                : "❌ Not available"}
             </p>
           </button>
 
@@ -306,21 +336,10 @@ export default function TicketPurchase({
       </div>
 
       {/* Purchase Interface Based on Selected Method */}
-      {purchaseMethod === "cross-chain" ? (
-        <CrossChainTicketPurchase
-          syndicateId={syndicateId}
-          causeAllocation={causeAllocation}
-          onPurchaseComplete={(result) => {
-            console.log("Cross-chain purchase completed:", result);
-          }}
-        />
-      ) : (
-        <MegapotIntegration
-          isFlask={isFlask}
-          syndicateId={syndicateId}
-          causeAllocation={causeAllocation}
-        />
-      )}
+      <MegapotIntegration
+        syndicateId={syndicateId}
+        causeAllocation={causeAllocation}
+      />
 
       {/* Active Transactions */}
       {activeTransactions.length > 0 && (

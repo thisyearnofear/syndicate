@@ -204,6 +204,20 @@ export function useDeploySmartAccount() {
       });
 
       return { userOperationHash, receipt };
+    } catch (error: any) {
+      console.error('Failed to deploy smart account:', error);
+
+      // Handle specific Pimlico balance error
+      if (error?.message?.includes('Insufficient Pimlico balance')) {
+        throw new Error('Gasless transactions temporarily unavailable. The sponsorship balance needs to be topped up. Please use standard transactions for now.');
+      }
+
+      // Handle other common errors
+      if (error?.message?.includes('User denied')) {
+        throw new Error('Transaction was cancelled by user');
+      }
+
+      throw error;
     } finally {
       setIsDeploying(false);
     }

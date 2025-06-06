@@ -92,8 +92,10 @@ export class CrossChainTicketService {
   private nearChainSignatureService: NearChainSignatureService | null = null;
 
   constructor() {
-    // Initialize with any persisted intents
-    this.loadPersistedIntents();
+    // Initialize with any persisted intents (only in browser)
+    if (typeof window !== 'undefined') {
+      this.loadPersistedIntents();
+    }
   }
 
   /**
@@ -298,7 +300,20 @@ export class CrossChainTicketService {
 
   private persistIntents(): void {
     try {
-      const intentsArray = Array.from(this.intents.entries());
+      // Only access localStorage in browser environment
+      if (typeof window === 'undefined' || !window.localStorage) {
+        return;
+      }
+
+      const intentsArray = Array.from(this.intents.entries()).map(([id, intent]) => [
+        id,
+        {
+          ...intent,
+          // Convert BigInt values to strings for JSON serialization
+          totalAmount: typeof intent.totalAmount === 'bigint' ? intent.totalAmount.toString() : intent.totalAmount,
+          createdAt: intent.createdAt.toISOString(),
+        }
+      ]);
       localStorage.setItem('syndicate_intents', JSON.stringify(intentsArray));
     } catch (error) {
       console.warn('Failed to persist intents:', error);
@@ -307,6 +322,11 @@ export class CrossChainTicketService {
 
   private loadPersistedIntents(): void {
     try {
+      // Only access localStorage in browser environment
+      if (typeof window === 'undefined' || !window.localStorage) {
+        return;
+      }
+
       const stored = localStorage.getItem('syndicate_intents');
       if (stored) {
         const intentsArray = JSON.parse(stored);
@@ -321,5 +341,25 @@ export class CrossChainTicketService {
   }
 }
 
-// Singleton instance
-export const crossChainTicketService = new CrossChainTicketService();
+// Lazy singleton instance to avoid SSR issues
+let _crossChainTicketService: CrossChainTicketService | null = null;
+
+export const getCrossChainTicketService = (): CrossChainTicketService => {
+  if (typeof window === 'undefined') {
+    // Return a mock service during SSR
+    return {
+      createTicketPurchaseIntent: () => ({ id: 'ssr-mock' } as any),
+      executeTicketPurchase: () => Promise.resolve({} as any),
+      getIntent: () => undefined,
+      getAllIntents: () => [],
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      initializeNearService: () => {},
+    } as unknown as CrossChainTicketService;
+  }
+
+  if (!_crossChainTicketService) {
+    _crossChainTicketService = new CrossChainTicketService();
+  }
+  return _crossChainTicketService;
+};
