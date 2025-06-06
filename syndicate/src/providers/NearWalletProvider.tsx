@@ -84,7 +84,7 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
 
         const _selector = await setupWalletSelector({
           network: config.networkId as "mainnet" | "testnet",
-          modules: [setupMyNearWallet(), setupBitteWallet()],
+          modules: [setupMyNearWallet() as any, setupBitteWallet() as any],
         });
 
         const _modal = setupModal(_selector, {

@@ -62,6 +62,7 @@ const queryClient = new QueryClient({
 });
 
 // Multi-chain configuration supporting Avalanche, Base, and test networks
+// Base mainnet is the first chain, making it the default on page load
 export const wagmiConfig = createConfig({
   chains: [base, baseSepolia, avalanche, sepolia],
   connectors,

@@ -6,7 +6,7 @@ import {
   toMetaMaskSmartAccount,
 } from "@metamask/delegation-toolkit";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { PublicClient, WalletClient, Address } from "viem";
+import { PublicClient, WalletClient, Address, Account, Transport, Chain } from "viem";
 
 export interface SmartAccountConfig {
   client: PublicClient;
@@ -59,8 +59,8 @@ export class SmartAccountService {
     const smartAccount = await toMetaMaskSmartAccount({
       client,
       implementation,
-      deployParams: deployParams || [account.address, [], [], []],
-      deploySalt,
+      deployParams: deployParams || [account.address, [], [], []] as any,
+      deploySalt: deploySalt as `0x${string}`,
       signatory: { account },
     });
 
@@ -85,12 +85,20 @@ export class SmartAccountService {
       ownerAddress,
     } = config;
 
+    // Ensure walletClient has an account
+    if (!walletClient.account) {
+      throw new Error('WalletClient must have an account to create a smart account');
+    }
+
+    // Type assertion to ensure walletClient has a defined account
+    const walletClientWithAccount = walletClient as WalletClient<Transport, Chain | undefined, Account>;
+
     return await toMetaMaskSmartAccount({
       client,
       implementation,
-      deployParams: deployParams || [ownerAddress, [], [], []],
-      deploySalt,
-      signatory: { walletClient },
+      deployParams: deployParams || [ownerAddress, [], [], []] as any,
+      deploySalt: deploySalt as `0x${string}`,
+      signatory: { walletClient: walletClientWithAccount },
     });
   }
 
@@ -130,10 +138,8 @@ export class SmartAccountService {
    */
   async isAccountDeployed(smartAccount: MetaMaskSmartAccount<Implementation>): Promise<boolean> {
     try {
-      const code = await smartAccount.client.getBytecode({
-        address: smartAccount.address,
-      });
-      return code !== undefined && code !== '0x';
+      // Use the built-in isDeployed method from the smart account
+      return await smartAccount.isDeployed();
     } catch (error) {
       console.error('Failed to check account deployment:', error);
       return false;
@@ -142,16 +148,18 @@ export class SmartAccountService {
 
   /**
    * Deploy smart account if not already deployed
+   * Note: Smart accounts are typically deployed automatically when the first transaction is sent.
+   * This method is provided for explicit deployment scenarios.
    */
-  async deployAccount(smartAccount: MetaMaskSmartAccount<Implementation>): Promise<string> {
+  async deployAccount(smartAccount: MetaMaskSmartAccount<Implementation>): Promise<void> {
     const isDeployed = await this.isAccountDeployed(smartAccount);
     if (isDeployed) {
       throw new Error('Account is already deployed');
     }
 
-    // Deploy the account by sending a transaction
-    const hash = await smartAccount.deployContract();
-    return hash;
+    // Smart accounts are deployed automatically when the first transaction is sent
+    // This method serves as a check and documentation of the deployment pattern
+    throw new Error('Smart account deployment should be handled by sending the first transaction through a bundler client. Use the useSmartAccount hook for deployment.');
   }
 
   /**

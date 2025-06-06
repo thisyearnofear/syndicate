@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { formatEther } from "viem";
-import { publicClient } from "@/services/publicClient";
+import { publicClient } from "@/lib/viem-client";
 import { Trash2, ExternalLink } from "lucide-react";
 import { config } from "@/config";
 
