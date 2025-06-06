@@ -22,6 +22,7 @@ Instead of chasing the entire pie alone, get a generous slice of a much bigger w
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js 18+
 - npm or yarn
 
@@ -29,22 +30,26 @@ Instead of chasing the entire pie alone, get a generous slice of a much bigger w
 
 1. Clone this repository
 2. Choose your template:
+
    - `gator-nextjs-starter/` - MetaMask integration template
    - `templated-gator-7715/` - Advanced template with additional features
 
 3. Install dependencies:
+
 ```bash
 cd gator-nextjs-starter  # or templated-gator-7715
 npm install
 ```
 
 4. Set up environment:
+
 ```bash
 cp .env.example .env.local
 # Configure your Avalanche RPC and Megapot contract addresses
 ```
 
 5. Start development:
+
 ```bash
 npm run dev
 ```
@@ -56,13 +61,15 @@ npm run dev
 - **Smart Contracts**: Automated cause-based distribution
 - **Social Layer**: Mewe & Arena decentralised social integration
 
-## Templates
+## Reference Examples
 
-### gator-nextjs-starter
-MetaMask integration template for basic Syndicate functionality.
+### omni-transaction-rs
 
-### templated-gator-7715
-Advanced template with enhanced features and optimizations.
+NEAR team's official Rust implementation for omni-transactions and chain signatures. This provides the backend infrastructure for cross-chain operations.
+
+### bridge-sdk-js
+
+NEAR team's official TypeScript/JavaScript SDK for bridge operations and chain signatures. This provides the frontend integration patterns for seamless cross-chain user experiences.
 
 ## Contributing
 
