@@ -2,6 +2,7 @@
 
 import { ethers } from "ethers";
 import { parseEther, formatEther } from "viem";
+import { NearChainSignatureService } from './nearChainSignatureService';
 
 // Types based on NEAR bridge patterns
 export interface ChainConfig {
@@ -88,10 +89,18 @@ export const CONTRACT_ADDRESSES = {
 export class CrossChainTicketService {
   private intents: Map<string, TicketPurchaseIntent> = new Map();
   private eventListeners: ((intent: TicketPurchaseIntent) => void)[] = [];
+  private nearChainSignatureService: NearChainSignatureService | null = null;
 
   constructor() {
     // Initialize with any persisted intents
     this.loadPersistedIntents();
+  }
+
+  /**
+   * Initialize NEAR chain signature service
+   */
+  initializeNearService(nearWallet: any): void {
+    this.nearChainSignatureService = new NearChainSignatureService(nearWallet);
   }
 
   /**
@@ -135,16 +144,19 @@ export class CrossChainTicketService {
   }
 
   /**
-   * Execute cross-chain ticket purchase
-   * This would integrate with NEAR chain signatures in production
+   * Execute cross-chain ticket purchase using NEAR chain signatures
    */
   async executeTicketPurchase(
     intentId: string,
-    wallet: ethers.Signer
+    wallet?: ethers.Signer
   ): Promise<CrossChainTicketResult> {
     const intent = this.intents.get(intentId);
     if (!intent) {
       throw new Error(`Intent ${intentId} not found`);
+    }
+
+    if (!this.nearChainSignatureService) {
+      throw new Error('NEAR chain signature service not initialized');
     }
 
     try {
@@ -152,22 +164,27 @@ export class CrossChainTicketService {
       intent.status = 'signed';
       this.updateIntent(intent);
 
-      // For now, simulate the cross-chain operation
-      // In production, this would:
-      // 1. Create a NEAR chain signature request
-      // 2. Sign the transaction on the source chain
-      // 3. Bridge funds to target chain
-      // 4. Execute ticket purchase on Megapot contract
+      // Execute real cross-chain purchase using NEAR chain signatures
+      const txHash = await this.nearChainSignatureService.executeCrossChainTicketPurchase({
+        sourceChain: intent.sourceChain.name.toLowerCase() as 'avalanche' | 'ethereum',
+        targetChain: 'base',
+        userAddress: intent.userAddress,
+        ticketCount: intent.ticketCount,
+        usdcAmount: formatEther(intent.totalAmount),
+        syndicateId: intent.syndicateId,
+        causeAllocation: intent.causeAllocation,
+      });
 
-      const result = await this.simulateCrossChainPurchase(intent, wallet);
-
-      intent.status = result.status === 'success' ? 'executed' : 'failed';
-      intent.txHash = result.txHash;
-      intent.errorMessage = result.status === 'failed' ? result.message : undefined;
-
+      intent.status = 'executed';
+      intent.txHash = txHash;
       this.updateIntent(intent);
 
-      return result;
+      return {
+        intentId,
+        txHash,
+        status: 'success',
+        message: `Successfully purchased ${intent.ticketCount} ticket(s) cross-chain`,
+      };
     } catch (error) {
       intent.status = 'failed';
       intent.errorMessage = error instanceof Error ? error.message : 'Unknown error';
