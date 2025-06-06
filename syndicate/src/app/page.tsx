@@ -9,15 +9,16 @@ import SyndicateCreator from "@/components/SyndicateCreator";
 import { CrossChainTransactionList } from "@/providers/CrossChainProvider";
 import WalletInfoContainer from "@/components/WalletInfoContainer";
 import ConnectWallet from "@/components/ConnectWallet";
+import CrossChainDashboard from "@/components/CrossChainDashboard";
 import Loader from "@/components/Loader";
 
 export default function Home() {
   const { isConnected } = useAccount();
   const [isFlask, setIsFlask] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"lottery" | "transactions">(
-    "lottery"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "lottery" | "transactions" | "dashboard"
+  >("lottery");
   const [showSyndicateCreator, setShowSyndicateCreator] = useState(false);
 
   const detectFlaskCapabilities = async () => {
@@ -123,6 +124,16 @@ export default function Home() {
             >
               📊 Transactions
             </button>
+            <button
+              onClick={() => setActiveTab("dashboard")}
+              className={`px-6 py-3 rounded-md transition-all ${
+                activeTab === "dashboard"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              🌉 Cross-Chain
+            </button>
           </div>
         </div>
 
@@ -142,6 +153,7 @@ export default function Home() {
             </div>
           </div>
         )}
+        {activeTab === "dashboard" && <CrossChainDashboard />}
 
         {/* Syndicate Creator Modal */}
         <SyndicateCreator
