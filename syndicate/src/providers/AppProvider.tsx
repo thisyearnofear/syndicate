@@ -8,6 +8,7 @@ import { metaMask, walletConnect, coinbaseWallet } from "wagmi/connectors";
 import { CrossChainProvider } from "@/providers/CrossChainProvider";
 import { PermissionProvider } from "@/providers/PermissionProvider";
 import { SessionAccountProvider } from "@/providers/SessionAccountProvider";
+import { NearWalletProvider } from "@/providers/NearWalletProvider";
 
 // Enhanced connector configuration supporting multiple wallets
 export const connectors = [
@@ -50,13 +51,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
-        <CrossChainProvider>
-          <PermissionProvider>
-            <SessionAccountProvider>
-              {children}
-            </SessionAccountProvider>
-          </PermissionProvider>
-        </CrossChainProvider>
+        <NearWalletProvider>
+          <CrossChainProvider>
+            <PermissionProvider>
+              <SessionAccountProvider>{children}</SessionAccountProvider>
+            </PermissionProvider>
+          </CrossChainProvider>
+        </NearWalletProvider>
       </WagmiProvider>
     </QueryClientProvider>
   );
