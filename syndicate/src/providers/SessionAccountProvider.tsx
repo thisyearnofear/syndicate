@@ -5,9 +5,15 @@ import {
   MetaMaskSmartAccount,
   toMetaMaskSmartAccount,
 } from "@metamask/delegation-toolkit";
-import { createContext, useCallback, useState, useContext, useEffect } from "react";
+import {
+  createContext,
+  useCallback,
+  useState,
+  useContext,
+  useEffect,
+} from "react";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { publicClient } from "@/services/publicClient";
+import { publicClient } from "@/lib/viem-client";
 import { usePermissions } from "./PermissionProvider";
 
 export const SessionAccountContext = createContext({
@@ -31,35 +37,40 @@ export const SessionAccountProvider = ({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-    const createSessionAccount = useCallback(async (privateKey?: `0x${string}`) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      const key = privateKey || generatePrivateKey();
-      const account = privateKeyToAccount(key as `0x${string}`);
+  const createSessionAccount = useCallback(
+    async (privateKey?: `0x${string}`) => {
+      try {
+        setIsLoading(true);
+        setError(null);
 
-      const newSessionAccount = await toMetaMaskSmartAccount({
-        client: publicClient,
-        implementation: Implementation.Hybrid,
-        deployParams: [account.address, [], [], []],
-        deploySalt: "0x",
-        signatory: { account },
-      });
+        const key = privateKey || generatePrivateKey();
+        const account = privateKeyToAccount(key as `0x${string}`);
 
-      setSessionAccount(newSessionAccount);
-      
-      // Save the private key to session storage
-      if (!privateKey) {
-        sessionStorage.setItem(PRIVATE_KEY_STORAGE_KEY, key);
+        const newSessionAccount = await toMetaMaskSmartAccount({
+          client: publicClient,
+          implementation: Implementation.Hybrid,
+          deployParams: [account.address, [], [], []],
+          deploySalt: "0x",
+          signatory: { account },
+        });
+
+        setSessionAccount(newSessionAccount);
+
+        // Save the private key to session storage
+        if (!privateKey) {
+          sessionStorage.setItem(PRIVATE_KEY_STORAGE_KEY, key);
+        }
+      } catch (err) {
+        console.error("Error creating Session account:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to create account"
+        );
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      console.error("Error creating Session account:", err);
-      setError(err instanceof Error ? err.message : "Failed to create account");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   const clearSessionAccount = useCallback(() => {
     removePermission();
@@ -72,14 +83,18 @@ export const SessionAccountProvider = ({
     const initializeWallet = async () => {
       try {
         setIsLoading(true);
-        const storedPrivateKey = sessionStorage.getItem(PRIVATE_KEY_STORAGE_KEY);
-        
+        const storedPrivateKey = sessionStorage.getItem(
+          PRIVATE_KEY_STORAGE_KEY
+        );
+
         if (storedPrivateKey) {
           await createSessionAccount(storedPrivateKey as `0x${string}`);
         }
       } catch (err) {
         console.error("Error initializing wallet:", err);
-        setError(err instanceof Error ? err.message : "Failed to initialize wallet");
+        setError(
+          err instanceof Error ? err.message : "Failed to initialize wallet"
+        );
       } finally {
         setIsLoading(false);
       }
@@ -89,13 +104,13 @@ export const SessionAccountProvider = ({
   }, [createSessionAccount]);
 
   return (
-    <SessionAccountContext.Provider 
-      value={{ 
-        sessionAccount, 
-        createSessionAccount, 
-        isLoading, 
+    <SessionAccountContext.Provider
+      value={{
+        sessionAccount,
+        createSessionAccount,
+        isLoading,
         error,
-        clearSessionAccount
+        clearSessionAccount,
       }}
     >
       {children}

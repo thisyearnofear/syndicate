@@ -17,8 +17,10 @@ import {
 import { base, baseSepolia, avalanche } from "viem/chains";
 import { useState, useEffect } from "react";
 import { erc20Abi, formatUnits } from "viem";
+import { BaseJackpotAbi } from "@/lib/megapot-abi";
 import { useCrossChain } from "@/providers/CrossChainProvider";
 import CrossChainTicketPurchase from "./CrossChainTicketPurchase";
+import CustomTicketPurchase from "./CustomTicketPurchase";
 
 interface MegapotIntegrationProps {
   syndicateId?: string;
@@ -448,35 +450,12 @@ export default function MegapotIntegration({
         </div>
       )}
 
-      {/* Megapot UI Kit Integration */}
-      {purchaseMode === "direct" && contract && isOnSupportedChain && (
-        <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">
-            🎯 Buy Lottery Tickets
-          </h3>
-
-          {/* Use the official Megapot UI Kit component */}
-          <div className="bg-white rounded-lg p-4">
-            <Jackpot
-              contract={contract}
-              referrerAddress={
-                (process.env.NEXT_PUBLIC_REFERRER_ADDRESS ||
-                  "0x55A5705453Ee82c742274154136Fce8149597058") as `0x${string}`
-              }
-            />
-          </div>
-
-          {/* Syndicate Info */}
-          {syndicateId && (
-            <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-4 mt-4">
-              <p className="text-blue-200 text-sm text-center">
-                🤝 Purchasing for Syndicate: <strong>{syndicateId}</strong>
-                <br />
-                {causeAllocation}% of winnings will go to causes
-              </p>
-            </div>
-          )}
-        </div>
+      {/* Custom Ticket Purchase */}
+      {purchaseMode === "direct" && isOnSupportedChain && (
+        <CustomTicketPurchase
+          syndicateId={syndicateId}
+          causeAllocation={causeAllocation}
+        />
       )}
 
       {/* Cross-Chain Purchase Interface */}

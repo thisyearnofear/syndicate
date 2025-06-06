@@ -1,46 +1,23 @@
-import { createPublicClient, http, formatUnits, parseUnits } from 'viem';
+import { formatUnits, erc20Abi } from 'viem';
 import { base } from 'viem/chains';
 import { CONTRACT_ADDRESS, ERC20_TOKEN_ADDRESS } from './constants';
-
-// Create a public client for Base chain
-const publicClient = createPublicClient({
-  chain: base,
-  transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://base-mainnet.g.alchemy.com/v2/zXTB8midlluEtdL8Gay5bvz5RI-FfsDH'),
-});
-
-// Megapot Contract ABI (minimal required functions)
-const MEGAPOT_ABI = [
-  'function getCurrentJackpot() external view returns (uint256)',
-  'function getTicketPrice() external view returns (uint256)',
-  'function getTimeRemaining() external view returns (uint256)',
-  'function purchaseTickets(address referrer, uint256 amount, address recipient) external',
-  'function getUserInfo(address user) external view returns (uint256 winningsClaimable, uint256 ticketsPurchased)',
-  'function claimWinnings() external',
-  'function withdrawWinnings() external',
-  'function getJackpotOdds() external view returns (uint256)',
-  'function getTotalTickets() external view returns (uint256)',
-] as const;
-
-// USDC Contract ABI
-const ERC20_ABI = [
-  'function balanceOf(address account) external view returns (uint256)',
-  'function allowance(address owner, address spender) external view returns (uint256)',
-  'function approve(address spender, uint256 amount) external returns (bool)',
-] as const;
+import { getPublicClient } from './viem-client';
+import { BaseJackpotAbi } from './megapot-abi';
 
 /**
  * Get the current jackpot amount in USDC
  */
-export async function getJackpotAmount(): Promise<number | undefined> {
+export async function getJackpotAmount(chainId: number = base.id): Promise<number | undefined> {
   try {
-    const result = await publicClient.readContract({
+    const client = getPublicClient(chainId);
+    const result = await client.readContract({
       address: CONTRACT_ADDRESS as `0x${string}`,
-      abi: MEGAPOT_ABI,
-      functionName: 'getCurrentJackpot',
+      abi: BaseJackpotAbi,
+      functionName: 'userPoolTotal',
     });
-    
+
     // Convert from wei to USDC (6 decimals)
-    return Number(formatUnits(result, 6));
+    return Number(formatUnits(result as bigint, 6));
   } catch (error) {
     console.error('Error fetching jackpot amount:', error);
     return undefined;
@@ -50,16 +27,17 @@ export async function getJackpotAmount(): Promise<number | undefined> {
 /**
  * Get the ticket price in USDC
  */
-export async function getTicketPrice(): Promise<number | undefined> {
+export async function getTicketPrice(chainId: number = base.id): Promise<number | undefined> {
   try {
-    const result = await publicClient.readContract({
+    const client = getPublicClient(chainId);
+    const result = await client.readContract({
       address: CONTRACT_ADDRESS as `0x${string}`,
-      abi: MEGAPOT_ABI,
-      functionName: 'getTicketPrice',
+      abi: BaseJackpotAbi,
+      functionName: 'ticketPrice',
     });
-    
+
     // Convert from wei to USDC (6 decimals)
-    return Number(formatUnits(result, 6));
+    return Number(formatUnits(result as bigint, 6));
   } catch (error) {
     console.error('Error fetching ticket price:', error);
     return undefined;
@@ -69,15 +47,19 @@ export async function getTicketPrice(): Promise<number | undefined> {
 /**
  * Get time remaining until next draw (in seconds)
  */
-export async function getTimeRemaining(): Promise<number | undefined> {
+export async function getTimeRemaining(chainId: number = base.id): Promise<number | undefined> {
   try {
-    const result = await publicClient.readContract({
+    const client = getPublicClient(chainId);
+    const result = await client.readContract({
       address: CONTRACT_ADDRESS as `0x${string}`,
-      abi: MEGAPOT_ABI,
-      functionName: 'getTimeRemaining',
+      abi: BaseJackpotAbi,
+      functionName: 'lastJackpotEndTime',
     });
-    
-    return Number(result);
+
+    // Calculate time remaining from end time
+    const endTime = Number(result as bigint);
+    const now = Math.floor(Date.now() / 1000);
+    return Math.max(0, endTime - now);
   } catch (error) {
     console.error('Error fetching time remaining:', error);
     return undefined;
@@ -87,15 +69,16 @@ export async function getTimeRemaining(): Promise<number | undefined> {
 /**
  * Get user's USDC balance
  */
-export async function getTokenBalance(userAddress: string): Promise<number | undefined> {
+export async function getTokenBalance(userAddress: string, chainId: number = base.id): Promise<number | undefined> {
   try {
-    const result = await publicClient.readContract({
+    const client = getPublicClient(chainId);
+    const result = await client.readContract({
       address: ERC20_TOKEN_ADDRESS as `0x${string}`,
-      abi: ERC20_ABI,
+      abi: erc20Abi,
       functionName: 'balanceOf',
       args: [userAddress as `0x${string}`],
     });
-    
+
     // Convert from wei to USDC (6 decimals)
     return Number(formatUnits(result, 6));
   } catch (error) {
@@ -107,15 +90,16 @@ export async function getTokenBalance(userAddress: string): Promise<number | und
 /**
  * Get user's USDC allowance for the Megapot contract
  */
-export async function getTokenAllowance(userAddress: string): Promise<number | undefined> {
+export async function getTokenAllowance(userAddress: string, chainId: number = base.id): Promise<number | undefined> {
   try {
-    const result = await publicClient.readContract({
+    const client = getPublicClient(chainId);
+    const result = await client.readContract({
       address: ERC20_TOKEN_ADDRESS as `0x${string}`,
-      abi: ERC20_ABI,
+      abi: erc20Abi,
       functionName: 'allowance',
       args: [userAddress as `0x${string}`, CONTRACT_ADDRESS as `0x${string}`],
     });
-    
+
     // Convert from wei to USDC (6 decimals)
     return Number(formatUnits(result, 6));
   } catch (error) {
@@ -127,21 +111,25 @@ export async function getTokenAllowance(userAddress: string): Promise<number | u
 /**
  * Get user's info (winnings claimable, tickets purchased)
  */
-export async function getUsersInfo(userAddress: string): Promise<{
+export async function getUsersInfo(userAddress: string, chainId: number = base.id): Promise<{
   winningsClaimable: number;
   ticketsPurchased: number;
 } | undefined> {
   try {
-    const result = await publicClient.readContract({
+    const client = getPublicClient(chainId);
+    const result = await client.readContract({
       address: CONTRACT_ADDRESS as `0x${string}`,
-      abi: MEGAPOT_ABI,
-      functionName: 'getUserInfo',
+      abi: BaseJackpotAbi,
+      functionName: 'usersInfo',
       args: [userAddress as `0x${string}`],
     });
-    
+
+    // The result should be a tuple with [ticketsPurchasedTotalBps, winningsClaimable, active]
+    const [ticketsPurchasedTotalBps, winningsClaimable] = result as [bigint, bigint, boolean];
+
     return {
-      winningsClaimable: Number(formatUnits(result[0], 6)),
-      ticketsPurchased: Number(result[1]),
+      winningsClaimable: Number(formatUnits(winningsClaimable, 6)),
+      ticketsPurchased: Number(ticketsPurchasedTotalBps) / 10000, // Convert from basis points
     };
   } catch (error) {
     console.error('Error fetching user info:', error);
@@ -160,15 +148,19 @@ export function calculateWinningOdds(ticketsPurchased: number, totalTickets: num
 /**
  * Get jackpot odds (1 in X chance of winning)
  */
-export async function getJackpotOdds(): Promise<number | undefined> {
+export async function getJackpotOdds(chainId: number = base.id): Promise<number | undefined> {
   try {
-    const result = await publicClient.readContract({
+    const client = getPublicClient(chainId);
+    // Use ticketCountTotalBps to calculate odds
+    const result = await client.readContract({
       address: CONTRACT_ADDRESS as `0x${string}`,
-      abi: MEGAPOT_ABI,
-      functionName: 'getJackpotOdds',
+      abi: BaseJackpotAbi,
+      functionName: 'ticketCountTotalBps',
     });
 
-    return Number(result);
+    // Convert from basis points to actual ticket count
+    const totalTickets = Number(result as bigint) / 10000;
+    return totalTickets > 0 ? totalTickets : 1;
   } catch (error) {
     console.error('Error fetching jackpot odds:', error);
     return undefined;
@@ -178,15 +170,17 @@ export async function getJackpotOdds(): Promise<number | undefined> {
 /**
  * Get total tickets in current jackpot
  */
-export async function getTotalTickets(): Promise<number | undefined> {
+export async function getTotalTickets(chainId: number = base.id): Promise<number | undefined> {
   try {
-    const result = await publicClient.readContract({
+    const client = getPublicClient(chainId);
+    const result = await client.readContract({
       address: CONTRACT_ADDRESS as `0x${string}`,
-      abi: MEGAPOT_ABI,
-      functionName: 'getTotalTickets',
+      abi: BaseJackpotAbi,
+      functionName: 'ticketCountTotalBps',
     });
 
-    return Number(result);
+    // Convert from basis points to actual ticket count
+    return Number(result as bigint) / 10000;
   } catch (error) {
     console.error('Error fetching total tickets:', error);
     return undefined;
