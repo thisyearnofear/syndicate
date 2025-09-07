@@ -206,7 +206,7 @@ export default function CrossChainTicketPurchase({
           🌉 Cross-Chain Ticket Purchase
         </h2>
         <p className="text-gray-300">
-          Buy Megapot lottery tickets on Base using funds from Avalanche with
+          Buy Megapot lottery tickets on Base using funds from Avalanche or Solana with
           NEAR chain signatures.
         </p>
       </div>

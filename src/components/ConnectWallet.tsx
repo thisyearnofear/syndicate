@@ -2,12 +2,15 @@
 
 import { useConnect, useAccount, useDisconnect } from "wagmi";
 import { useState } from "react";
+import NearWalletConnection from "@/components/NearWalletConnection";
+import SolanaWalletConnection from "@/components/SolanaWalletConnection";
 
 export default function ConnectWallet() {
   const { connectors, connect, isPending } = useConnect();
   const { isConnected, address } = useAccount();
   const { disconnect } = useDisconnect();
   const [isConnecting, setIsConnecting] = useState(false);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
   const handleConnect = async (connector: any) => {
     setIsConnecting(true);
@@ -36,6 +39,24 @@ export default function ConnectWallet() {
           >
             Disconnect
           </button>
+        </div>
+        
+        {/* Advanced Options for Cross-Chain */}
+        <div className="mt-6">
+          <button
+            onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+            className="flex items-center text-gray-400 hover:text-white transition-colors"
+          >
+            <span className="mr-2">{showAdvancedOptions ? "▼" : "▶"}</span>
+            <span>Advanced Options (Cross-Chain)</span>
+          </button>
+          
+          {showAdvancedOptions && (
+            <div className="mt-4 space-y-4">
+              <NearWalletConnection />
+              <SolanaWalletConnection />
+            </div>
+          )}
         </div>
       </div>
     );
@@ -71,6 +92,21 @@ export default function ConnectWallet() {
             )}
           </button>
         ))}
+      </div>
+
+      {/* Cross-Chain Wallet Options */}
+      <div className="mt-6 space-y-4">
+        <div className="border-t border-gray-700 pt-6">
+          <h4 className="text-md font-semibold text-white mb-3">Cross-Chain Wallets</h4>
+          <p className="text-gray-400 text-sm mb-4">
+            Connect additional wallets for cross-chain lottery purchases.
+          </p>
+          
+          <div className="space-y-3">
+            <NearWalletConnection />
+            <SolanaWalletConnection />
+          </div>
+        </div>
       </div>
 
       <div className="mt-6 p-4 bg-blue-900/30 border border-blue-700 rounded-lg">

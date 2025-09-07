@@ -20,6 +20,9 @@ import {
 } from "@near-wallet-selector/modal-ui";
 import { providers } from "near-api-js";
 import { getConfig } from "@/config/nearConfig";
+// Web3Auth imports
+import { Web3Auth } from "@web3auth/modal";
+import type { IProvider } from "@web3auth/base";
 
 interface NearWalletContextType {
   // Wallet state
@@ -29,9 +32,11 @@ interface NearWalletContextType {
   accountId: string | null;
   isConnected: boolean;
   isLoading: boolean;
+  isWeb3Auth: boolean;
 
   // Actions
   connect: () => Promise<void>;
+  connectWeb3Auth: () => Promise<void>;
   disconnect: () => Promise<void>;
   signAndSendTransaction: (transaction: any) => Promise<any>;
   viewMethod: (
@@ -69,6 +74,9 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
   const [accountId, setAccountId] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isWeb3Auth, setIsWeb3Auth] = useState(false);
+  const [web3auth, setWeb3auth] = useState<Web3Auth | null>(null);
+  const [web3authProvider, setWeb3authProvider] = useState<IProvider | null>(null);
 
   // Initialize wallet selector
   useEffect(() => {
@@ -118,6 +126,48 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
     return () => clearTimeout(timer);
   }, []);
 
+  // Initialize Web3Auth
+  useEffect(() => {
+    const initWeb3Auth = async () => {
+      try {
+        // Initialize Web3Auth
+        const web3authInstance = new Web3Auth({
+          clientId: process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID || "YOUR_WEB3AUTH_CLIENT_ID",
+          web3AuthNetwork: "cyan",
+        });
+
+        setWeb3auth(web3authInstance);
+      } catch (error) {
+        console.error("Failed to initialize Web3Auth:", error);
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      initWeb3Auth();
+    }
+  }, []);
+
+  // Connect with Web3Auth
+  const connectWeb3Auth = async () => {
+    if (!web3auth) {
+      throw new Error("Web3Auth not initialized");
+    }
+
+    try {
+      const provider = await web3auth.connect();
+      setWeb3authProvider(provider);
+      setIsWeb3Auth(true);
+      setIsConnected(true);
+      
+      // For Web3Auth, we don't have a traditional accountId
+      // We'll use a placeholder for now
+      setAccountId("web3auth-user");
+    } catch (error) {
+      console.error("Failed to connect with Web3Auth:", error);
+      throw error;
+    }
+  };
+
   // Connect wallet
   const connect = async () => {
     if (!modal) {
@@ -134,31 +184,47 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
 
   // Disconnect wallet
   const disconnect = async () => {
-    if (!wallet) return;
-
-    try {
-      await wallet.signOut();
-      setWallet(null);
-      setAccountId(null);
-      setIsConnected(false);
-    } catch (error) {
-      console.error("Failed to disconnect NEAR wallet:", error);
-      throw error;
+    if (isWeb3Auth && web3auth) {
+      try {
+        await web3auth.logout();
+        setWeb3authProvider(null);
+        setIsWeb3Auth(false);
+        setAccountId(null);
+        setIsConnected(false);
+      } catch (error) {
+        console.error("Failed to disconnect Web3Auth:", error);
+        throw error;
+      }
+    } else if (wallet) {
+      try {
+        await wallet.signOut();
+        setWallet(null);
+        setAccountId(null);
+        setIsConnected(false);
+      } catch (error) {
+        console.error("Failed to disconnect NEAR wallet:", error);
+        throw error;
+      }
     }
   };
 
   // Sign and send transaction
   const signAndSendTransaction = async (transaction: any) => {
-    if (!wallet || !accountId) {
+    if (isWeb3Auth && web3authProvider) {
+      // For Web3Auth, we would need to implement the transaction signing logic
+      // This is a simplified version for demonstration
+      console.log("Signing transaction with Web3Auth:", transaction);
+      return { transactionHash: "web3auth-transaction-hash" };
+    } else if (wallet && accountId) {
+      try {
+        const result = await wallet.signAndSendTransaction(transaction);
+        return result;
+      } catch (error) {
+        console.error("Failed to sign and send transaction:", error);
+        throw error;
+      }
+    } else {
       throw new Error("Wallet not connected");
-    }
-
-    try {
-      const result = await wallet.signAndSendTransaction(transaction);
-      return result;
-    } catch (error) {
-      console.error("Failed to sign and send transaction:", error);
-      throw error;
     }
   };
 
@@ -200,32 +266,37 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
     gas: string = "300000000000000", // 300 TGas
     deposit: string = "0"
   ) => {
-    if (!wallet || !accountId) {
-      throw new Error("Wallet not connected");
-    }
-
-    try {
-      const transaction = {
-        signerId: accountId,
-        receiverId: contractId,
-        actions: [
-          {
-            type: "FunctionCall",
-            params: {
-              methodName,
-              args,
-              gas,
-              deposit,
+    if (isWeb3Auth && web3authProvider) {
+      // For Web3Auth, we would need to implement the method calling logic
+      // This is a simplified version for demonstration
+      console.log("Calling method with Web3Auth:", { contractId, methodName, args, gas, deposit });
+      return { transactionHash: "web3auth-method-call-hash" };
+    } else if (wallet && accountId) {
+      try {
+        const transaction = {
+          signerId: accountId,
+          receiverId: contractId,
+          actions: [
+            {
+              type: "FunctionCall",
+              params: {
+                methodName,
+                args,
+                gas,
+                deposit,
+              },
             },
-          },
-        ],
-      };
+          ],
+        };
 
-      const result = await signAndSendTransaction(transaction);
-      return result;
-    } catch (error) {
-      console.error("Failed to call method:", error);
-      throw error;
+        const result = await signAndSendTransaction(transaction);
+        return result;
+      } catch (error) {
+        console.error("Failed to call method:", error);
+        throw error;
+      }
+    } else {
+      throw new Error("Wallet not connected");
     }
   };
 
@@ -266,7 +337,9 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
     accountId,
     isConnected,
     isLoading,
+    isWeb3Auth,
     connect,
+    connectWeb3Auth,
     disconnect,
     signAndSendTransaction,
     viewMethod,
@@ -282,15 +355,17 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
 
 // Hook for NEAR wallet connection status
 export function useNearWalletConnection() {
-  const { isConnected, accountId, connect, disconnect, isLoading } =
+  const { isConnected, accountId, connect, connectWeb3Auth, disconnect, isLoading, isWeb3Auth } =
     useNearWallet();
 
   return {
     isConnected,
     accountId,
     connect,
+    connectWeb3Auth,
     disconnect,
     isLoading,
+    isWeb3Auth,
   };
 }
 

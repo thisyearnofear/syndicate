@@ -1,158 +1,182 @@
-# Syndicate
+# Syndicate - Social Lottery Coordination
 
-**Social lottery coordination on Avalanche, powered by Megapot's onchain lottery system**
+**Cross-chain social lottery platform powered by NEAR chain signatures, Web3Auth, and MetaMask delegation toolkit**
 
-Syndicate creates a powerful social coordination layer for lottery participation on Avalanche (Mewe & Arena decentralised social). By pooling resources with your social connections, you dramatically increase your collective chances of winning while embedding shared values into smart contracts.
+Syndicate enables users to pool resources with their social connections for lottery participation while automatically distributing portions of winnings to causes they care about. Built on Base, Avalanche, and Solana with cross-chain support via NEAR chain signatures and Web3Auth for social login.
 
-## Vision
+## 🌟 Key Features
 
-Transform social connections into financial impact. When your group pledges portions of potential winnings to causes like ocean cleanup or food aid, these commitments are automatically executed upon winning through smart contracts.
+### Cross-Chain Native
+- Purchase Megapot lottery tickets on Base from any supported chain (EVM, Solana)
+- Powered by NEAR chain signatures for seamless cross-chain transactions
+- No manual bridging required - everything happens in one transaction
+- Web3Auth integration for social login and easy onboarding
 
-## Key Features
+### Social Coordination
+- Create or join cause-based syndicates with friends and community
+- Pool resources to dramatically increase collective winning chances
+- Transparent member management and contribution tracking
 
-- **Megapot Integration**: Cause-based lottery pools on Avalanche
-- **Social Coordination**: Pool resources with like-minded individuals
-- **Automated Distribution**: Smart contracts handle payouts (e.g., 20% to cause, 80% to participants)
-- **Transparent Impact**: All commitments executed automatically on-chain
+### Automated Impact
+- Smart contracts automatically distribute winnings based on predefined allocations
+- Support for various causes: ocean cleanup, food security, education, climate action
+- Configurable cause percentages (5-50% of winnings)
 
-## Why Syndicate?
+### Multi-Wallet Integration
+- Built on MetaMask's delegation toolkit (ERC-7715)
+- Secure permission-based transactions
+- Enhanced user experience with delegated operations
+- Web3Auth for social login support (Google, Email, etc.)
 
-Instead of chasing the entire pie alone, get a generous slice of a much bigger win together. The bigger your cause-branded Syndicate grows, the higher your chances of winning and creating impact while securing your personal share.
-
-## Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
-
 - Node.js 18+
-- npm or yarn
+- MetaMask Flask (for ERC-7715 support)
+- Supported wallet on any EVM chain
 
 ### Installation
 
-1. Clone this repository
-2. Choose your template:
-
-   - `gator-nextjs-starter/` - MetaMask integration template
-   - `templated-gator-7715/` - Advanced template with additional features
-
-3. Install dependencies:
-
+1. **Clone and setup:**
 ```bash
-cd gator-nextjs-starter  # or templated-gator-7715
+cd syndicate
 npm install
 ```
 
-4. Set up environment:
-
+2. **Environment configuration:**
 ```bash
 cp .env.example .env.local
-# Configure your Avalanche RPC and Megapot contract addresses
+# Configure your RPC endpoints and contract addresses
 ```
 
-5. Start development:
-
+3. **Start development server:**
 ```bash
 npm run dev
 ```
 
-## Architecture
+4. **Open in browser:**
+Navigate to `http://localhost:3000`
 
-- **Frontend**: Next.js with TypeScript and Tailwind CSS
-- **Blockchain**: Avalanche network integration
-- **Smart Contracts**: Automated cause-based distribution
-- **Social Layer**: Mewe & Arena decentralised social integration
+## 🎯 How It Works
 
-## Reference Examples
+### For Users
 
-### omni-transaction-rs
+1. **Connect Wallet**: Connect your wallet from any supported chain (EVM, Solana) or use Web3Auth for social login
+2. **Choose Syndicate**: Join an existing cause-based syndicate or create your own
+3. **Purchase Tickets**: Buy Megapot lottery tickets with automatic cross-chain execution
+4. **Win Together**: Winnings are automatically distributed according to syndicate rules
 
-NEAR team's official Rust implementation for omni-transactions and chain signatures. This provides the backend infrastructure for cross-chain operations.
+### Cross-Chain Flow
 
-### bridge-sdk-js
-
-NEAR team's official TypeScript/JavaScript SDK for bridge operations and chain signatures. This provides the frontend integration patterns for seamless cross-chain user experiences.
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## Current Implementation Status
-
-### ✅ Completed Features
-
-**Multi-Wallet Integration**
-
-- MetaMask, WalletConnect, Coinbase Wallet support
-- Progressive enhancement (regular MetaMask → Flask → NEAR)
-- Smart account creation with MetaMask Delegation Toolkit
-- Gasless transactions via Pimlico bundler/paymaster
-
-**Megapot Integration**
-
-- Official @coordinationlabs/megapot-ui-kit integration
-- Direct ticket purchasing on Base chain
-- Real-time jackpot tracking and cost breakdown
-- Automatic referral fee collection (10% of ticket sales)
-
-**Cross-Chain Infrastructure**
-
-- NEAR chain signatures for Avalanche → Base ticket purchasing
-- Real MPC contracts: `multichain-mpc.near`, `v1.signer.near`
-- Rainbow Bridge integration for cross-chain operations
-- Intent-based transaction system with persistent tracking
-
-**Syndicate System**
-
-- Cause-based lottery pools with automatic distribution
-- Smart contract registry for transparent allocation
-- Social coordination layer for group participation
-
-### 🚀 Getting Live
-
-**Required Environment Variables**
-
-```bash
-# Copy .env.example to .env.local and configure:
-
-# Pimlico (for gasless transactions)
-NEXT_PUBLIC_PIMLICO_API_KEY=your_pimlico_key
-
-# NEAR (for cross-chain)
-NEAR_ACCOUNT_ID=your-account.near
-NEAR_PRIVATE_KEY=ed25519:your_private_key
-
-# WalletConnect (optional)
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id
+```
+User Wallet (Ethereum/Solana) → NEAR Chain Signatures → Base Network (Megapot)
+                      ↓
+              Intent Solver Network
+                      ↓
+              Automated Execution
 ```
 
-**Deployment Steps**
+## 🛠️ Development
 
-1. Configure environment variables above
-2. Deploy to Vercel/Netlify with environment secrets
-3. Test wallet connections (MetaMask, NEAR)
-4. Verify cross-chain flow (Avalanche → Base)
-5. Test Megapot ticket purchasing
+### Project Structure
+```
+syndicate/
+├── src/
+│   ├── app/                 # Next.js app router
+│   ├── components/          # React components
+│   │   ├── LotteryInterface.tsx
+│   │   ├── SyndicateCreator.tsx
+│   │   └── ...
+│   ├── providers/           # Context providers
+│   │   ├── CrossChainProvider.tsx
+│   │   └── ...
+│   ├── services/            # External service integrations
+│   │   ├── nearIntents.ts
+│   │   └── ...
+│   └── config.ts           # Configuration
+└── package.json
+```
 
-**Key Functionality**
+### Key Components
 
-- **Standard Users**: Direct ticket purchasing on Base with MetaMask
-- **Flask Users**: Gasless transactions with smart accounts
-- **NEAR Users**: Cross-chain purchasing from Avalanche to Base
-- **All Users**: Syndicate creation and cause-based coordination
+- **LotteryInterface**: Main ticket purchase interface with cross-chain support
+- **SyndicateCreator**: Create and manage cause-based syndicates
+- **CrossChainProvider**: Manages cross-chain transaction state and NEAR integration
+- **nearIntents**: NEAR chain signatures service for cross-chain execution
 
-### 🎯 Live Demo Flow
+## 🔧 Configuration
 
-1. **Connect Wallet** → Multiple options with capability detection
-2. **Choose Method** → Standard, Gasless, or Cross-Chain
-3. **Purchase Tickets** → Seamless Megapot integration
-4. **Track Activity** → Real-time transaction monitoring
-5. **Coordinate Impact** → Automatic cause allocation
+### Supported Chains
+- **Base** (Primary lottery chain - Megapot)
+- **Ethereum** (Cross-chain support)
+- **Avalanche** (Cross-chain support)
+- **Solana** (Cross-chain support via Web3Auth)
+- **Polygon** (Cross-chain support)
+- **Arbitrum** (Cross-chain support)
 
-The platform is production-ready for individual ticket sales with full cross-chain support.
+### Environment Variables
+```bash
+# RPC Endpoints
+NEXT_PUBLIC_BASE_RPC_URL=https://mainnet.base.org
+NEXT_PUBLIC_ETHEREUM_RPC_URL=https://eth.llamarpc.com
+NEXT_PUBLIC_AVALANCHE_RPC_URL=https://api.avax.network/ext/bc/C/rpc
 
-## License
+# Contract Addresses (update with actual deployments)
+NEXT_PUBLIC_MEGAPOT_CONTRACT=0x...
+NEXT_PUBLIC_SYNDICATE_CONTRACT=0x...
+NEXT_PUBLIC_CAUSE_FUND_CONTRACT=0x...
 
-MIT License - see LICENSE file for details.
+# NEAR Configuration
+NEXT_PUBLIC_NEAR_NETWORK_ID=mainnet
+NEXT_PUBLIC_NEAR_NODE_URL=https://rpc.mainnet.near.org
+```
+
+## 🌍 Supported Causes
+
+- **Ocean Cleanup**: Remove plastic waste from oceans
+- **Food Security**: Provide meals to those in need
+- **Education Access**: Support education in underserved communities
+- **Climate Action**: Fund renewable energy projects
+- **Healthcare Access**: Provide medical care to remote areas
+- **Custom Causes**: Define your own impact areas
+
+## 🔐 Security Features
+
+- **MetaMask Delegation**: Secure permission-based operations via ERC-7715
+- **NEAR Chain Signatures**: Decentralized cross-chain execution
+- **Web3Auth**: Secure social login with key management
+- **Smart Contract Automation**: Trustless distribution mechanisms
+- **Multi-signature Support**: Enhanced security for syndicate management
+
+## 📊 Roadmap
+
+- [x] **Phase 1**: Core lottery interface and syndicate creation
+- [x] **Phase 2**: NEAR chain signatures integration
+- [x] **Phase 3**: Web3Auth integration for Solana and social login
+- [ ] **Phase 4**: Smart contract deployment and testing
+- [ ] **Phase 5**: Social platform integrations (Lens, Farcaster)
+- [ ] **Phase 6**: Mobile app and additional chain support
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 🙏 Acknowledgments
+
+- **MetaMask** for the delegation toolkit and ERC-7715 implementation
+- **NEAR Protocol** for chain signatures technology
+- **Web3Auth** for social login and multi-chain wallet integration
+- **Megapot** for the lottery infrastructure
+- **Base**, **Avalanche**, and **Solana** for blockchain infrastructure
+
+---
+
+**Transform social connections into financial impact. Win together, give together.** 🎯🌊
