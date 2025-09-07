@@ -41,7 +41,7 @@ export default function MegapotIntegration({
   const [purchaseMode, setPurchaseMode] = useState<"direct" | "cross-chain">(
     "direct"
   );
-  const [sourceChain, setSourceChain] = useState<"avalanche" | "base">("base");
+  const [sourceChain, setSourceChain] = useState<"avalanche" | "base" | "solana">("base");
   const [timeLeft, setTimeLeft] = useState<string>("");
 
   // Determine which Megapot contract to use
@@ -350,7 +350,7 @@ export default function MegapotIntegration({
               <p className="text-sm text-gray-300">
                 {isOnAvalanche
                   ? "✨ Perfect! Use your AVAX/USDC to buy Base tickets"
-                  : "Buy Base tickets from any supported chain"}
+                  : "Buy Base tickets from Avalanche or Solana"}
               </p>
               {isOnAvalanche && (
                 <p className="text-xs text-green-400 mt-1">
@@ -427,6 +427,16 @@ export default function MegapotIntegration({
                   }`}
                 >
                   🔵 Base
+                </button>
+                <button
+                  onClick={() => setSourceChain("solana")}
+                  className={`px-4 py-2 rounded-lg transition-all ${
+                    sourceChain === "solana"
+                      ? "bg-purple-600 text-white"
+                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                  }`}
+                >
+                  🔥 Solana
                 </button>
               </div>
             </div>

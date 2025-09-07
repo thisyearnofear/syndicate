@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import { getCrossChainTicketService } from "@/services/crossChainTicketService";
 
 export default function NearWalletConnection() {
-  const { isConnected, accountId, connect, disconnect, isLoading } =
+  const { isConnected, accountId, connect, connectWeb3Auth, disconnect, isLoading, isWeb3Auth } =
     useNearWalletConnection();
   const nearWallet = useNearWallet();
   const [isInitializing, setIsInitializing] = useState(false);
@@ -52,6 +52,14 @@ export default function NearWalletConnection() {
     }
   };
 
+  const handleWeb3AuthConnect = async () => {
+    try {
+      await connectWeb3Auth();
+    } catch (error) {
+      console.error("Failed to connect with Web3Auth:", error);
+    }
+  };
+
   const handleDisconnect = async () => {
     try {
       await disconnect();
@@ -84,15 +92,24 @@ export default function NearWalletConnection() {
             with chain signatures.
           </p>
 
-          <button
-            onClick={handleConnect}
-            className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-          >
-            Connect NEAR Wallet
-          </button>
+          <div className="space-y-3">
+            <button
+              onClick={handleConnect}
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+            >
+              Connect NEAR Wallet
+            </button>
+
+            <button
+              onClick={handleWeb3AuthConnect}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+            >
+              🔐 Connect with Web3Auth (Social Login)
+            </button>
+          </div>
 
           <div className="mt-4 text-xs text-gray-400">
-            <p>Supports: MyNearWallet, Bitte Wallet</p>
+            <p>Supports: MyNearWallet, Bitte Wallet, Google, Email, etc.</p>
           </div>
         </div>
       </div>
@@ -104,7 +121,7 @@ export default function NearWalletConnection() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-lg font-semibold text-white">
-            🌌 NEAR Connected
+            🌌 NEAR Connected {isWeb3Auth ? "(Web3Auth)" : ""}
           </h3>
           <p className="text-gray-300 text-sm">{accountId}</p>
         </div>
@@ -169,6 +186,9 @@ export default function NearWalletConnection() {
             <span className="px-2 py-1 bg-red-600 text-white text-xs rounded">
               Avalanche
             </span>
+            <span className="px-2 py-1 bg-purple-600 text-white text-xs rounded">
+              Solana
+            </span>
             <span className="px-2 py-1 bg-gray-600 text-white text-xs rounded">
               Ethereum
             </span>
@@ -184,7 +204,7 @@ export default function NearWalletConnection() {
           </h4>
           <p className="text-green-200 text-sm">
             You can now purchase lottery tickets on Base using funds from
-            Avalanche through NEAR chain signatures.
+            Avalanche or Solana through NEAR chain signatures.
           </p>
         </div>
       )}
@@ -207,17 +227,26 @@ export default function NearWalletConnection() {
 
 // Compact version for use in other components
 export function NearWalletStatus() {
-  const { isConnected, accountId, connect } = useNearWalletConnection();
+  const { isConnected, accountId, connect, connectWeb3Auth } = useNearWalletConnection();
 
   if (!isConnected) {
     return (
-      <button
-        onClick={connect}
-        className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg transition-colors"
-      >
-        <span>🌌</span>
-        <span className="text-sm">Connect NEAR</span>
-      </button>
+      <div className="flex space-x-2">
+        <button
+          onClick={connect}
+          className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg transition-colors"
+        >
+          <span>🌌</span>
+          <span className="text-sm">Connect NEAR</span>
+        </button>
+        <button
+          onClick={connectWeb3Auth}
+          className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition-colors"
+        >
+          <span>🔐</span>
+          <span className="text-sm">Web3Auth</span>
+        </button>
+      </div>
     );
   }
 

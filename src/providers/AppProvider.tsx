@@ -10,6 +10,7 @@ import { CrossChainProvider } from "@/providers/CrossChainProvider";
 import { PermissionProvider } from "@/providers/PermissionProvider";
 import { SessionAccountProvider } from "@/providers/SessionAccountProvider";
 import { NearWalletProvider } from "@/providers/NearWalletProvider";
+import { SolanaWalletProvider } from "@/providers/SolanaWalletProvider";
 import { useConnect } from "wagmi";
 
 // Create a safe storage implementation for SSR
@@ -123,11 +124,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       <WagmiProvider config={wagmiConfig}>
         <MegapotWrapper>
           <NearWalletProvider>
-            <CrossChainProvider>
-              <PermissionProvider>
-                <SessionAccountProvider>{children}</SessionAccountProvider>
-              </PermissionProvider>
-            </CrossChainProvider>
+            <SolanaWalletProvider>
+              <CrossChainProvider>
+                <PermissionProvider>
+                  <SessionAccountProvider>{children}</SessionAccountProvider>
+                </PermissionProvider>
+              </CrossChainProvider>
+            </SolanaWalletProvider>
           </NearWalletProvider>
         </MegapotWrapper>
       </WagmiProvider>

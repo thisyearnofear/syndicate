@@ -62,6 +62,13 @@ export const SUPPORTED_CHAINS: Record<string, ChainConfig> = {
     nativeCurrency: { name: "Ethereum", symbol: "ETH", decimals: 18 },
     blockExplorer: "https://sepolia.basescan.org",
   },
+  solana: {
+    chainId: 900,
+    name: "Solana",
+    rpcUrl: "https://api.mainnet-beta.solana.com",
+    nativeCurrency: { name: "Solana", symbol: "SOL", decimals: 9 },
+    blockExplorer: "https://solscan.io",
+  },
 };
 
 // Contract addresses (from your existing setup)
