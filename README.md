@@ -4,7 +4,39 @@
 
 Syndicate enables users to pool resources with their social connections for lottery participation while automatically distributing portions of winnings to causes they care about. Built on Base, Avalanche, and Solana with cross-chain support via NEAR chain signatures and Web3Auth for social login.
 
+## 🏆 Hackathon Eligibility
+
+**Total Prize Potential: $9,000 USDC**
+
+### 🌉 Cross-Chain Interoperability Track ($3,500 USDC)
+- **NEAR Chain Signatures Integration**: Seamless cross-chain lottery ticket purchases from any blockchain
+- **Multi-Chain Bridge Status**: Real-time transaction tracking across Ethereum, Solana, Base, and Avalanche
+- **Universal Wallet Support**: Connect from any EVM chain or Solana with automatic cross-chain execution
+- **Intent-Based Architecture**: Simplified UX that abstracts complex cross-chain operations
+
+### 💫 Solana Everyday Impact Track ($3,500 USDC)
+- **Enhanced User Experience**: Intuitive onboarding flow with progressive wallet setup
+- **Mobile-First Design**: Responsive layout with dedicated mobile navigation and touch-optimized UI
+- **Real-Time Notifications**: Comprehensive notification system for wallet connections, transactions, and achievements
+- **Social Login Integration**: Web3Auth support making lottery accessible to mainstream users
+- **Gamified Experience**: User dashboard with experience points, achievements, and activity tracking
+
+### 🏷️ Best Use of SNS Track ($2,000 USDC)
+- **Domain Resolution**: Comprehensive SNS domain search and resolution functionality
+- **Address Display**: Human-readable domain names instead of wallet addresses
+- **Recent Searches**: Persistent search history for improved user experience
+- **Integration**: SNS domains used throughout the lottery interface for better UX
+
 ## 🌟 Key Features
+
+### 🎯 Hackathon-Winning Features
+- **Cross-Chain Native**: Purchase lottery tickets from any blockchain with NEAR chain signatures
+- **SNS Integration**: Full Solana Name Service support for human-readable addresses
+- **Mobile-Optimized**: Complete responsive design with dedicated mobile navigation
+- **Social Login**: Web3Auth integration for mainstream user adoption
+- **Real-Time Updates**: Comprehensive notification system for all user actions
+
+### Core Platform Features
 
 ### Cross-Chain Native
 - Purchase Megapot lottery tickets on Base from any supported chain (EVM, Solana)
@@ -27,6 +59,18 @@ Syndicate enables users to pool resources with their social connections for lott
 - Secure permission-based transactions
 - Enhanced user experience with delegated operations
 - Web3Auth for social login support (Google, Email, etc.)
+
+## 🎯 What Makes Syndicate Unique
+
+**The First Cross-Chain Lottery Platform** - Syndicate eliminates the complexity of multi-chain interactions, enabling seamless Megapot lottery access from any blockchain:
+
+- **Universal Access**: Purchase tickets from Ethereum, Solana, Avalanche, or Base with a single click
+- **No Bridging Required**: Automatic cross-chain execution via NEAR Chain Signatures
+- **Beautiful UX**: Intuitive interface that abstracts away blockchain complexity
+- **Complete Prize Management**: Claim winnings on your preferred chain, regardless of purchase origin
+- **Social Login**: Web3Auth integration makes lottery accessible to mainstream users
+
+*Transform your multi-chain lottery experience from complex to effortless.*
 
 ## 🚀 Getting Started
 
@@ -76,16 +120,60 @@ User Wallet (Ethereum/Solana) → NEAR Chain Signatures → Base Network (Megapo
               Automated Execution
 ```
 
-## 🛠️ Development
+## 🛠️ Technical Implementation
 
-### Project Structure
+### Hackathon Track Features
+
+#### Cross-Chain Interoperability
+- **NEAR Chain Signatures**: `src/services/nearChainSignatureService.ts` - Enables cross-chain transaction signing
+- **Cross-Chain Bridge Status**: `src/components/CrossChainBridgeStatus.tsx` - Real-time multi-chain transaction tracking
+- **Unified Ticket Service**: `src/services/unifiedTicketService.ts` - Abstracted cross-chain lottery operations
+- **Intent Solver Integration**: `src/services/nearIntents.ts` - Automated cross-chain execution
+
+#### Solana Everyday Impact
+- **Onboarding Flow**: `src/components/OnboardingFlow.tsx` - Progressive wallet setup with guided steps
+- **User Dashboard**: `src/components/UserDashboard.tsx` - Gamified experience with achievements and stats
+- **Mobile Navigation**: `src/components/MobileNavigation.tsx` - Touch-optimized bottom navigation
+- **Responsive Layout**: `src/components/ResponsiveLayout.tsx` - Adaptive design for all screen sizes
+- **Notification System**: `src/components/NotificationSystem.tsx` - Real-time updates and alerts
+
+#### Best Use of SNS
+- **SNS Domain Search**: `src/components/SNSDomainSearch.tsx` - Comprehensive domain resolution interface
+- **SNS Service**: `src/services/snsService.ts` - Core SNS integration and caching
+- **SNS Hook**: `src/hooks/useSNS.ts` - React hook for domain operations
+- **Address Resolution**: Integrated throughout UI for human-readable addresses
+
+### Development
+
+#### Project Structure
 ```
 syndicate/
 ├── src/
 │   ├── app/                 # Next.js app router
 │   ├── components/          # React components
-│   │   ├── LotteryInterface.tsx
-│   │   ├── SyndicateCreator.tsx
+│   │   ├── CrossChainBridgeStatus.tsx    # Multi-chain transaction tracking
+│   │   ├── OnboardingFlow.tsx            # User onboarding experience
+│   │   ├── UserDashboard.tsx             # Gamified user interface
+│   │   ├── MobileNavigation.tsx          # Mobile-optimized navigation
+│   │   ├── NotificationSystem.tsx        # Real-time notifications
+│   │   ├── SNSDomainSearch.tsx           # SNS domain resolution
+│   │   ├── ResponsiveLayout.tsx          # Adaptive layout system
+│   │   ├── LotteryInterface.tsx          # Core lottery interface
+│   │   └── SyndicateCreator.tsx          # Syndicate creation flow
+│   ├── services/            # Core services
+│   │   ├── nearChainSignatureService.ts  # Cross-chain signing
+│   │   ├── nearIntents.ts               # Intent-based execution
+│   │   ├── snsService.ts                # SNS integration
+│   │   ├── unifiedTicketService.ts      # Cross-chain tickets
+│   │   └── crossChainTicketService.ts   # Multi-chain operations
+│   ├── hooks/               # React hooks
+│   │   ├── useSNS.ts                    # SNS domain operations
+│   │   ├── useCrossChainTickets.ts      # Cross-chain ticket management
+│   │   └── useSmartAccount.ts           # Account abstraction
+│   └── providers/           # Context providers
+│       ├── CrossChainProvider.tsx       # Cross-chain state management
+│       ├── SolanaWalletProvider.tsx     # Solana wallet integration
+│       └── NearWalletProvider.tsx       # NEAR wallet integration
 │   │   └── ...
 │   ├── providers/           # Context providers
 │   │   ├── CrossChainProvider.tsx

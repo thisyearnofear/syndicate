@@ -5,12 +5,14 @@ import {
   useSolanaWalletConnection,
 } from "@/providers/SolanaWalletProvider";
 import { useState, useEffect } from "react";
+import { useAddressDisplay } from "@/hooks/useSNS";
 
 export default function SolanaWalletConnection() {
   const { isConnected, publicKey, connect, disconnect, isLoading } =
     useSolanaWalletConnection();
-  const solanaWallet = useSolanaWallet();
+  const { connection } = useSolanaWallet();
   const [isInitializing, setIsInitializing] = useState(false);
+  const { displayName, isLoading: isLoadingDomain } = useAddressDisplay(publicKey, connection);
 
   const handleConnect = async () => {
     try {
@@ -73,8 +75,18 @@ export default function SolanaWalletConnection() {
             🔥 Solana Connected
           </h3>
           <p className="text-gray-300 text-sm">
-            {publicKey?.slice(0, 8)}...{publicKey?.slice(-8)}
+            {isLoadingDomain ? (
+              <span className="animate-pulse">Loading domain...</span>
+            ) : (
+              displayName || `${publicKey?.toString().slice(0, 8)}...${publicKey?.toString().slice(-8)}`
+            )}
           </p>
+          {displayName && displayName.endsWith('.sol') && (
+            <div className="flex items-center space-x-1 mt-1">
+              <span className="text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">SNS</span>
+              <span className="text-xs text-purple-300">Verified Domain</span>
+            </div>
+          )}
         </div>
         <button
           onClick={handleDisconnect}
@@ -130,6 +142,8 @@ export default function SolanaWalletConnection() {
 // Compact version for use in other components
 export function SolanaWalletStatus() {
   const { isConnected, publicKey, connect } = useSolanaWalletConnection();
+  const { connection } = useSolanaWallet();
+  const { displayName, isLoading: isLoadingDomain } = useAddressDisplay(publicKey, connection);
 
   if (!isConnected) {
     return (
@@ -146,9 +160,18 @@ export function SolanaWalletStatus() {
   return (
     <div className="flex items-center space-x-2 bg-purple-900/30 border border-purple-700 px-3 py-2 rounded-lg">
       <span>🔥</span>
-      <span className="text-purple-200 text-sm">
-        {publicKey?.slice(0, 8)}...{publicKey?.slice(-8)}
-      </span>
+      <div className="flex flex-col">
+        <span className="text-purple-200 text-sm">
+          {isLoadingDomain ? (
+            <span className="animate-pulse">Loading...</span>
+          ) : (
+            displayName || `${publicKey?.toString().slice(0, 8)}...${publicKey?.toString().slice(-8)}`
+          )}
+        </span>
+        {displayName && displayName.endsWith('.sol') && (
+          <span className="text-xs text-purple-400">SNS Domain</span>
+        )}
+      </div>
     </div>
   );
 }

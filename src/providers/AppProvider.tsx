@@ -5,13 +5,16 @@ import { createConfig, http, WagmiProvider, createStorage } from "wagmi";
 import { sepolia, base, avalanche, baseSepolia } from "viem/chains";
 import { ReactNode } from "react";
 import { metaMask, walletConnect, coinbaseWallet } from "wagmi/connectors";
-import { MegapotProvider } from "@coordinationlabs/megapot-ui-kit";
+import { MegapotProvider as MegapotUIProvider } from "@coordinationlabs/megapot-ui-kit";
+import { MegapotProvider } from "@/providers/MegapotProvider";
+import { Web3AuthProvider } from "@web3auth/modal/react";
 import { CrossChainProvider } from "@/providers/CrossChainProvider";
 import { PermissionProvider } from "@/providers/PermissionProvider";
 import { SessionAccountProvider } from "@/providers/SessionAccountProvider";
 import { NearWalletProvider } from "@/providers/NearWalletProvider";
 import { SolanaWalletProvider } from "@/providers/SolanaWalletProvider";
 import { useConnect } from "wagmi";
+import web3AuthContextConfig from "@/config/web3authContext";
 
 // Create a safe storage implementation for SSR
 const createSafeStorage = () => {
@@ -96,7 +99,7 @@ function MegapotWrapper({ children }: { children: ReactNode }) {
   const { connectors } = useConnect();
 
   return (
-    <MegapotProvider
+    <MegapotUIProvider
       onConnectWallet={() => {
         // Connect using the first available connector (usually MetaMask)
         if (connectors.length > 0) {
@@ -113,27 +116,31 @@ function MegapotWrapper({ children }: { children: ReactNode }) {
         }
       }}
     >
-      {children}
-    </MegapotProvider>
+      <MegapotProvider>
+        {children}
+      </MegapotProvider>
+    </MegapotUIProvider>
   );
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
   return (
-    <QueryClientProvider client={queryClient}>
-      <WagmiProvider config={wagmiConfig}>
-        <MegapotWrapper>
-          <NearWalletProvider>
-            <SolanaWalletProvider>
-              <CrossChainProvider>
-                <PermissionProvider>
-                  <SessionAccountProvider>{children}</SessionAccountProvider>
-                </PermissionProvider>
-              </CrossChainProvider>
-            </SolanaWalletProvider>
-          </NearWalletProvider>
-        </MegapotWrapper>
-      </WagmiProvider>
-    </QueryClientProvider>
+    <Web3AuthProvider config={web3AuthContextConfig}>
+      <QueryClientProvider client={queryClient}>
+        <WagmiProvider config={wagmiConfig}>
+          <MegapotWrapper>
+            <CrossChainProvider>
+              <PermissionProvider>
+                <SessionAccountProvider>
+                  <NearWalletProvider>
+                    <SolanaWalletProvider>{children}</SolanaWalletProvider>
+                  </NearWalletProvider>
+                </SessionAccountProvider>
+              </PermissionProvider>
+            </CrossChainProvider>
+          </MegapotWrapper>
+        </WagmiProvider>
+      </QueryClientProvider>
+    </Web3AuthProvider>
   );
 }
