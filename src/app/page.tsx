@@ -2,6 +2,9 @@
 import { useState } from "react";
 import { useAccount } from "wagmi";
 import dynamic from "next/dynamic";
+import NotificationSystem from "@/components/NotificationSystem";
+import MobileNavigation from "@/components/MobileNavigation";
+import ResponsiveLayout from "@/components/ResponsiveLayout";
 import Hero from "@/components/Hero";
 import Footer from "@/components/Footer";
 import SyndicateCreator from "@/components/SyndicateCreator";
@@ -11,7 +14,7 @@ import ConnectWallet from "@/components/ConnectWallet";
 import Loader from "@/components/Loader";
 
 // Dynamically import components that use browser APIs to avoid SSR issues
-const TicketPurchase = dynamic(() => import("@/components/TicketPurchase"), {
+const LotteryDashboard = dynamic(() => import("@/components/lottery/LotteryDashboard"), {
   ssr: false,
   loading: () => <Loader />,
 });
@@ -46,15 +49,28 @@ export default function Home() {
           <Hero />
           <ConnectWallet />
         </main>
-        <Footer />
+      <Footer />
+        
+        {/* Mobile Navigation */}
+        <MobileNavigation 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab}
+          className="fixed bottom-0 left-0 right-0"
+        />
       </div>
     );
-  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white flex flex-col">
-      <main className="container mx-auto px-4 py-8 max-w-6xl flex-1">
+    <ResponsiveLayout>
+      {/* Header with Notification System */}
+      <div className="relative">
+        {/* Notification Bell - positioned in top right */}
+        <div className="absolute top-0 right-0 z-10">
+          <NotificationSystem />
+        </div>
+        
         <Hero />
+      </div>
         <WalletInfoContainer />
 
         {/* Advanced Features Toggle */}
@@ -133,7 +149,7 @@ export default function Home() {
         {/* Content */}
         {activeTab === "lottery" && (
           <div className="space-y-6">
-            <TicketPurchase isFlask={enableAdvancedFeatures} />
+            <LotteryDashboard className="max-w-4xl mx-auto" />
           </div>
         )}
         {activeTab === "transactions" && (
@@ -148,14 +164,20 @@ export default function Home() {
         )}
         {activeTab === "dashboard" && <CrossChainDashboard />}
 
-        {/* Syndicate Creator Modal */}
-        <SyndicateCreator
-          isOpen={showSyndicateCreator}
-          onClose={() => setShowSyndicateCreator(false)}
-          onCreate={handleCreateSyndicate}
-        />
-      </main>
-      <Footer />
-    </div>
+      {/* Syndicate Creator Modal */}
+      <SyndicateCreator
+        isOpen={showSyndicateCreator}
+        onClose={() => setShowSyndicateCreator(false)}
+        onCreate={handleCreateSyndicate}
+      />
+      
+      {/* Mobile Navigation */}
+      <MobileNavigation 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab}
+        className="fixed bottom-0 left-0 right-0"
+      />
+    </ResponsiveLayout>
   );
+}
 }
