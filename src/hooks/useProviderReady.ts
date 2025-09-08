@@ -26,31 +26,42 @@ export function useProviderReady(providerCheck: () => boolean | void): boolean {
  * Hook specifically for checking if Web3Auth-related providers are ready
  */
 export function useWeb3AuthProviderReady(): boolean {
-  return useProviderReady(() => {
-    // Try to access Web3Auth context - will throw if not available
-    try {
-      // This will throw if the Web3Auth context is not available
-      const { useWeb3Auth } = require('@web3auth/modal/react');
-      useWeb3Auth();
-      return true;
-    } catch {
-      return false;
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    // Check if we're on the client side and Web3Auth is available
+    if (typeof window !== 'undefined') {
+      try {
+        // Check if Web3Auth module is available
+        const web3AuthModule = require('@web3auth/modal/react');
+        setIsReady(!!web3AuthModule);
+      } catch {
+        setIsReady(false);
+      }
     }
-  });
+  }, []);
+
+  return isReady;
 }
 
 /**
  * Hook specifically for checking if Solana wallet provider is ready
  */
 export function useSolanaProviderReady(): boolean {
-  return useProviderReady(() => {
-    // Try to access Solana wallet context - will throw if not available
-    try {
-      const { useSolanaWallet } = require('@/providers/SolanaWalletProvider');
-      useSolanaWallet();
-      return true;
-    } catch {
-      return false;
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    // Check if we're on the client side and provider is available
+    if (typeof window !== 'undefined') {
+      try {
+        // Check if SolanaWalletProvider module is available
+        const solanaModule = require('@/providers/SolanaWalletProvider');
+        setIsReady(!!solanaModule);
+      } catch {
+        setIsReady(false);
+      }
     }
-  });
+  }, []);
+
+  return isReady;
 }

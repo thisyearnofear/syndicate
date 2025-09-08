@@ -47,6 +47,8 @@ export async function GET(request: NextRequest) {
     const response = await fetch(url, {
       method: 'GET',
       headers,
+      // Add timeout to prevent hanging requests
+      signal: AbortSignal.timeout(15000), // 15 second timeout
     });
 
     if (!response.ok) {
@@ -74,6 +76,29 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Proxy error:', error);
+    
+    // Handle timeout errors specifically
+    if (error instanceof Error && error.name === 'AbortError') {
+      return NextResponse.json(
+        { 
+          error: 'Request timeout',
+          details: 'The Megapot API request timed out. Please try again.'
+        },
+        { status: 504 } // Gateway Timeout
+      );
+    }
+    
+    // Handle network errors
+    if (error instanceof Error && error.message.includes('fetch')) {
+      return NextResponse.json(
+        { 
+          error: 'Network error',
+          details: 'Unable to connect to Megapot API. Please check your connection.'
+        },
+        { status: 502 } // Bad Gateway
+      );
+    }
+    
     return NextResponse.json(
       { 
         error: 'Internal server error',

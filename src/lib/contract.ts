@@ -5,7 +5,7 @@ import { getPublicClient } from './viem-client';
 import { BaseJackpotAbi } from './megapot-abi';
 
 /**
- * Get the current jackpot amount in USDC
+ * Get the current jackpot amount in USDC (lpPoolTotal - actual prize pool)
  */
 export async function getJackpotAmount(chainId: number = base.id): Promise<number | undefined> {
   try {
@@ -13,15 +13,33 @@ export async function getJackpotAmount(chainId: number = base.id): Promise<numbe
     const result = await client.readContract({
       address: CONTRACT_ADDRESS as `0x${string}`,
       abi: BaseJackpotAbi,
-      functionName: 'userPoolTotal',
+      functionName: 'lpPoolTotal',
     });
 
-    // Convert from wei to USDC (6 decimals)
-    return Number(formatUnits(result as bigint, 6));
+    const amount = Number(formatUnits(result as bigint, 6));
+    console.log('[DEBUG] Contract lpPoolTotal (USDC):', amount);
+    
+    // For debugging, also log userPoolTotal for comparison
+    const userPoolResult = await client.readContract({
+      address: CONTRACT_ADDRESS as `0x${string}`,
+      abi: BaseJackpotAbi,
+      functionName: 'userPoolTotal',
+    });
+    const userPoolAmount = Number(formatUnits(userPoolResult as bigint, 6));
+    console.log('[DEBUG] Contract userPoolTotal (for comparison):', userPoolAmount);
+    
+    return amount;
   } catch (error) {
-    console.error('Error fetching jackpot amount:', error);
+    console.error('Error fetching jackpot amount (lpPoolTotal):', error);
     return undefined;
   }
+}
+
+/**
+ * Get LP pool total (same as getJackpotAmount - exported for direct access)
+ */
+export async function getLpPoolTotal(chainId: number = base.id): Promise<number | undefined> {
+  return getJackpotAmount(chainId);
 }
 
 /**

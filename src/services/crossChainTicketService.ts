@@ -3,6 +3,8 @@
 import { ethers } from "ethers";
 import { parseEther, formatEther } from "viem";
 import { NearChainSignatureService } from './nearChainSignatureService';
+import { SUPPORTED_CHAINS, type ChainId } from '@/config/chains';
+
 
 // Types based on NEAR bridge patterns
 export interface ChainConfig {
@@ -108,8 +110,15 @@ export class CrossChainTicketService {
   /**
    * Initialize NEAR chain signature service
    */
-  initializeNearService(nearWallet: any): void {
-    this.nearChainSignatureService = new NearChainSignatureService(nearWallet);
+  async initializeNearService(nearWallet: any): Promise<void> {
+    try {
+      this.nearChainSignatureService = new NearChainSignatureService(nearWallet);
+      await this.nearChainSignatureService.initialize();
+      console.log("NEAR chain signature service initialized successfully");
+    } catch (error) {
+      console.error("Failed to initialize NEAR service:", error);
+      throw error;
+    }
   }
 
   /**
@@ -153,124 +162,6 @@ export class CrossChainTicketService {
   }
 
   /**
-   * Execute cross-chain ticket purchase using NEAR chain signatures
-   */
-  async executeTicketPurchase(
-    intentId: string,
-    wallet?: ethers.Signer
-  ): Promise<CrossChainTicketResult> {
-    const intent = this.intents.get(intentId);
-    if (!intent) {
-      throw new Error(`Intent ${intentId} not found`);
-    }
-
-    if (!this.nearChainSignatureService) {
-      throw new Error('NEAR chain signature service not initialized');
-    }
-
-    try {
-      // Update status to signed
-      intent.status = 'signed';
-      this.updateIntent(intent);
-
-      // Execute real cross-chain purchase using NEAR chain signatures
-      const txHash = await this.nearChainSignatureService.executeCrossChainTicketPurchase({
-        sourceChain: intent.sourceChain.name.toLowerCase() as 'avalanche' | 'ethereum',
-        targetChain: 'base',
-        userAddress: intent.userAddress,
-        ticketCount: intent.ticketCount,
-        usdcAmount: formatEther(intent.totalAmount),
-        syndicateId: intent.syndicateId,
-        causeAllocation: intent.causeAllocation,
-      });
-
-      intent.status = 'executed';
-      intent.txHash = txHash;
-      this.updateIntent(intent);
-
-      return {
-        intentId,
-        txHash,
-        status: 'success',
-        message: `Successfully purchased ${intent.ticketCount} ticket(s) cross-chain`,
-      };
-    } catch (error) {
-      intent.status = 'failed';
-      intent.errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.updateIntent(intent);
-
-      return {
-        intentId,
-        status: 'failed',
-        message: intent.errorMessage,
-      };
-    }
-  }
-
-  /**
-   * Simulate cross-chain purchase for demo purposes
-   * In production, this would be replaced with actual NEAR chain signatures
-   */
-  private async simulateCrossChainPurchase(
-    intent: TicketPurchaseIntent,
-    wallet: ethers.Signer
-  ): Promise<CrossChainTicketResult> {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // For demo, we'll just log the intent and return success
-    console.log('Simulating cross-chain ticket purchase:', {
-      from: intent.sourceChain.name,
-      to: intent.targetChain.name,
-      tickets: intent.ticketCount,
-      amount: formatEther(intent.totalAmount),
-      syndicate: intent.syndicateId,
-    });
-
-    // In production, this would:
-    // 1. Call NEAR chain signature service
-    // 2. Execute bridge transaction
-    // 3. Purchase tickets on Megapot
-    // 4. Register with Syndicate if applicable
-
-    return {
-      intentId: intent.id,
-      txHash: `0x${Math.random().toString(16).slice(2)}`, // Fake tx hash for demo
-      status: 'success',
-      message: `Successfully purchased ${intent.ticketCount} ticket(s) cross-chain`,
-    };
-  }
-
-  /**
-   * Get all intents for a user
-   */
-  getUserIntents(userAddress: string): TicketPurchaseIntent[] {
-    return Array.from(this.intents.values())
-      .filter(intent => intent.userAddress.toLowerCase() === userAddress.toLowerCase())
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  }
-
-  /**
-   * Get intent by ID
-   */
-  getIntent(intentId: string): TicketPurchaseIntent | undefined {
-    return this.intents.get(intentId);
-  }
-
-  /**
-   * Subscribe to intent updates
-   */
-  onIntentUpdate(callback: (intent: TicketPurchaseIntent) => void): () => void {
-    this.eventListeners.push(callback);
-    return () => {
-      const index = this.eventListeners.indexOf(callback);
-      if (index > -1) {
-        this.eventListeners.splice(index, 1);
-      }
-    };
-  }
-
-  /**
    * Estimate cross-chain fees
    */
   async estimateCrossChainFees(params: {
@@ -282,13 +173,7 @@ export class CrossChainTicketService {
     gasFee: bigint;
     totalFee: bigint;
   }> {
-    // Simplified fee estimation
-    // In production, this would query actual bridge fees
-    const bridgeFee = params.amount / BigInt(1000); // 0.1% bridge fee
-    const gasFee = parseEther("0.001"); // ~$2-3 gas fee
-    const totalFee = bridgeFee + gasFee;
-
-    return { bridgeFee, gasFee, totalFee };
+    throw new Error('Cross-chain fee estimation not implemented. Requires real bridge integration.');
   }
 
   private generateIntentId(): string {
@@ -361,7 +246,7 @@ export const getCrossChainTicketService = (): CrossChainTicketService => {
       getAllIntents: () => [],
       addEventListener: () => {},
       removeEventListener: () => {},
-      initializeNearService: () => {},
+      initializeNearService: () => Promise.resolve(),
     } as unknown as CrossChainTicketService;
   }
 

@@ -10,21 +10,6 @@ import { useSolanaProviderReady } from "@/hooks/useProviderReady";
 
 export default function SolanaWalletConnection() {
   const isProviderReady = useSolanaProviderReady();
-
-  // Only render the component if provider is ready
-  if (!isProviderReady) {
-    return (
-      <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-        <div className="flex items-center space-x-3">
-          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-400"></div>
-          <span className="text-gray-300">
-            Loading Solana wallet provider...
-          </span>
-        </div>
-      </div>
-    );
-  }
-
   const { isConnected, publicKey, connect, disconnect, isLoading } =
     useSolanaWalletConnection();
   const { connection } = useSolanaWallet();
@@ -33,6 +18,16 @@ export default function SolanaWalletConnection() {
     publicKey,
     connection
   );
+
+  // Only render the component if provider is ready
+  if (!isProviderReady) {
+    return (
+      <div className="flex items-center space-x-2 text-xs text-gray-400">
+        <div className="animate-spin rounded-full h-3 w-3 border-b border-purple-400"></div>
+        <span>Loading Solana...</span>
+      </div>
+    );
+  }
 
   const handleConnect = async () => {
     try {
@@ -52,38 +47,22 @@ export default function SolanaWalletConnection() {
 
   if (isLoading) {
     return (
-      <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-        <div className="flex items-center space-x-3">
-          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-400"></div>
-          <span className="text-gray-300">Loading Solana wallet...</span>
-        </div>
+      <div className="flex items-center space-x-2 text-xs text-gray-400">
+        <div className="animate-spin rounded-full h-3 w-3 border-b border-purple-400"></div>
+        <span>Loading Solana...</span>
       </div>
     );
   }
 
   if (!isConnected) {
     return (
-      <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-        <div className="text-center">
-          <h3 className="text-lg font-semibold text-white mb-2">
-            🔥 Solana Network
-          </h3>
-          <p className="text-gray-300 mb-4 text-sm">
-            Connect your Solana wallet to enable cross-chain ticket purchasing.
-          </p>
-
-          <button
-            onClick={handleConnect}
-            className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-          >
-            Connect Solana Wallet
-          </button>
-
-          <div className="mt-4 text-xs text-gray-400">
-            <p>Supports: Phantom, Solflare, and other Solana wallets</p>
-          </div>
-        </div>
-      </div>
+      <button
+        onClick={handleConnect}
+        className="flex items-center space-x-1 bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded text-xs transition-colors"
+      >
+        <span>🔥</span>
+        <span>Solana</span>
+      </button>
     );
   }
 
@@ -167,6 +146,12 @@ export default function SolanaWalletConnection() {
 // Compact version for use in other components
 export function SolanaWalletStatus() {
   const isProviderReady = useSolanaProviderReady();
+  const { isConnected, publicKey, connect } = useSolanaWalletConnection();
+  const { connection } = useSolanaWallet();
+  const { displayName, isLoading: isLoadingDomain } = useAddressDisplay(
+    publicKey,
+    connection
+  );
 
   // Only render the component if provider is ready
   if (!isProviderReady) {
@@ -177,13 +162,6 @@ export function SolanaWalletStatus() {
       </div>
     );
   }
-
-  const { isConnected, publicKey, connect } = useSolanaWalletConnection();
-  const { connection } = useSolanaWallet();
-  const { displayName, isLoading: isLoadingDomain } = useAddressDisplay(
-    publicKey,
-    connection
-  );
 
   if (!isConnected) {
     return (

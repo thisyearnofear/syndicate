@@ -101,8 +101,10 @@ export default function SocialLoginFirst({ onComplete, className = '' }: SocialL
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [step, setStep] = useState<'welcome' | 'providers' | 'connecting' | 'success'>('welcome');
   
-  const { isConnected: web3AuthConnected } = useWeb3Auth();
-  const { connect: web3AuthConnect } = useWeb3AuthConnect();
+  // Prevent Web3Auth hooks from running on server-side
+  const isClient = typeof window !== "undefined";
+  const { isConnected: web3AuthConnected } = isClient ? useWeb3Auth() : { isConnected: false };
+  const { connect: web3AuthConnect } = isClient ? useWeb3AuthConnect() : { connect: async () => {} };
   const { isConnected: evmConnected } = useAccount();
   const { connected: solanaConnected } = useSolanaWallet();
 

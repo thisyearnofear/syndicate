@@ -49,6 +49,9 @@ class MegapotService {
     // Use the API proxy route to avoid CORS issues
     const url = `/api/megapot?endpoint=${encodeURIComponent(endpoint)}`;
     
+    // DEBUG: Log API key status
+    console.log('[DEBUG] Megapot API Key present:', !!this.apiKey);
+    
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         const response = await fetch(url, {
@@ -59,7 +62,7 @@ class MegapotService {
           // Add timeout to prevent hanging requests
           signal: AbortSignal.timeout(10000), // 10 second timeout
         });
-
+  
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
           
@@ -77,8 +80,22 @@ class MegapotService {
           
           throw new Error(`API error: ${response.status} - ${errorData.error || 'Server error'}`);
         }
-
-        return await response.json();
+  
+        const data = await response.json();
+        
+        // DEBUG: Log API response for jackpot stats
+        if (endpoint.includes('jackpot-round-stats')) {
+          console.log('[DEBUG] Megapot API Response:', {
+            prizeUsd: data.prizeUsd,
+            lpPoolTotalBps: data.lpPoolTotalBps,
+            userPoolTotalBps: data.userPoolTotalBps,
+            ticketsSoldCount: data.ticketsSoldCount,
+            endpoint
+          });
+          console.log('[DEBUG] Calculated prize USD from lpPoolTotalBps:', (parseInt(data.lpPoolTotalBps || '0') / 1000000).toFixed(2));
+        }
+        
+        return data;
       } catch (error) {
         // Don't retry on timeout or network errors if it's the last attempt
         if (attempt === retries) {
