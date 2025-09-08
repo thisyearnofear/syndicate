@@ -2,12 +2,15 @@
 // Consolidated component incorporating all lottery functionality
 // Follows Core Principles: ENHANCEMENT FIRST, DRY, CLEAN, MODULAR
 
+import { getChainConfig } from '@/config/chains';
 import React, { useState, useEffect } from 'react';
 import { useMegapot, useJackpotDisplay, useUserStatsDisplay } from '@/providers/MegapotProvider';
 import { useAccount, useChainId, useWalletClient } from 'wagmi';
 import { useTransactionStatus } from '@/hooks/useMegapot';
 import { useSmartAccount, useGaslessTransaction, useDeploySmartAccount } from '@/hooks/useSmartAccount';
 import { useCrossChain } from '@/providers/CrossChainProvider';
+import { useNearWalletConnection } from '@/providers/NearWalletProvider';
+import { nearIntentsService } from '@/services/nearIntents';
 import { unifiedTicketService, type PurchaseMethod, type TicketPurchaseOptions } from '@/services/unifiedTicketService';
 import { base, avalanche } from 'viem/chains';
 import { formatUnits } from 'viem';
@@ -17,6 +20,7 @@ import UserDashboard from '../UserDashboard';
 import DelightfulButton from '../DelightfulButton';
 import TicketPurchaseAnimation from '../TicketPurchaseAnimation';
 import CelebrationModal from '../CelebrationModal';
+import NearWalletConnection from '../NearWalletConnection';
 
 interface LotteryDashboardProps {
   className?: string;
@@ -62,6 +66,7 @@ function LotteryDashboard({
   
   // Cross-chain hooks
   const { isNearConnected, initializeNear, activeTransactions } = useCrossChain();
+  const { isConnected: nearConnected, accountId: nearAccountId } = useNearWalletConnection();
   
   // Display hooks
   const { currentPrize, ticketsSold, timeRemainingText, isExpired, isLoading } = useJackpotDisplay();
@@ -69,11 +74,23 @@ function LotteryDashboard({
   
   // Component state
   const [ticketCount, setTicketCount] = useState(1);
-  const [selectedMethod, setSelectedMethod] = useState<'standard' | 'gasless' | 'cross-chain'>('standard');
   const [availableMethods, setAvailableMethods] = useState<PurchaseMethod[]>([]);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [purchaseEstimate, setPurchaseEstimate] = useState<any>(null);
-  const [sourceChain, setSourceChain] = useState<'avalanche' | 'base'>('avalanche');
+  const [crossChainStatus, setCrossChainStatus] = useState<'idle' | 'creating' | 'executing' | 'completed' | 'failed'>('idle');
+  const [crossChainTxId, setCrossChainTxId] = useState<string | null>(null);
+  
+  // Auto-detect optimal purchase method and source chain
+  const currentChain = getChainConfig(chainId);
+  const [selectedMethod, setSelectedMethod] = useState<'standard' | 'gasless' | 'cross-chain'>(currentChain.purchaseMethod);
+  const [sourceChain, setSourceChain] = useState(currentChain.sourceChain || 'avalanche');
+
+  // Update method when chain changes
+  useEffect(() => {
+    const chain = getChainConfig(chainId);
+    setSelectedMethod(chain.purchaseMethod);
+    if (chain.sourceChain) setSourceChain(chain.sourceChain);
+  }, [chainId]);
   
   // Transaction status tracking
   const purchaseStatus = useTransactionStatus(purchaseHash);
@@ -83,7 +100,7 @@ function LotteryDashboard({
   useEffect(() => {
     const methods = unifiedTicketService.getAvailablePurchaseMethods({
       chainId,
-      hasBalance: true, // TODO: Get actual balance check
+      hasBalance: true,
       isSmartAccountDeployed: isDeployed,
       isNearConnected,
       isFlaskEnabled: isFlask
@@ -151,11 +168,33 @@ function LotteryDashboard({
           break;
           
         case 'cross-chain':
-          result = await unifiedTicketService.executeCrossChainPurchase(
-            options,
-            sourceChain,
-            walletClient
-          );
+          if (!nearConnected) {
+            throw new Error('NEAR wallet not connected');
+          }
+          
+          setCrossChainStatus('creating');
+          
+          const intentId = await nearIntentsService.createCrossChainIntent({
+            sourceChain: sourceChain,
+            targetChain: 'base',
+            userAddress: address!,
+            ticketCount,
+            syndicateId,
+            causeAllocation,
+          });
+          
+          setCrossChainTxId(intentId);
+          setCrossChainStatus('executing');
+          
+          const transaction = await nearIntentsService.executeChainSignature(intentId);
+          
+          if (transaction.status === 'executed') {
+            setCrossChainStatus('completed');
+            result = { hash: transaction.targetHash };
+          } else {
+            setCrossChainStatus('failed');
+            throw new Error('Cross-chain transaction failed');
+          }
           break;
           
         default:
@@ -169,6 +208,9 @@ function LotteryDashboard({
       }
     } catch (error) {
       console.error('Purchase error:', error);
+      if (selectedMethod === 'cross-chain') {
+        setCrossChainStatus('failed');
+      }
     }
   };
   
@@ -195,8 +237,22 @@ function LotteryDashboard({
     return (
       <div className={`bg-white rounded-lg shadow-lg p-6 ${className}`}>
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Megapot Lottery</h2>
-          <p className="text-gray-600 mb-4">Connect your wallet to participate in the lottery</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">🎯 Cross-Chain Lottery</h2>
+          <p className="text-gray-600 mb-4">Buy Megapot lottery tickets from any supported blockchain</p>
+          <div className="grid grid-cols-2 gap-2 max-w-sm mx-auto mb-4 text-sm">
+            <div className="flex items-center justify-center space-x-1 p-2 bg-blue-50 rounded">
+              <span>🔵</span><span>Base (Direct)</span>
+            </div>
+            <div className="flex items-center justify-center space-x-1 p-2 bg-red-50 rounded">
+              <span>🔺</span><span>Avalanche (NEAR)</span>
+            </div>
+            <div className="flex items-center justify-center space-x-1 p-2 bg-gray-50 rounded">
+              <span>⟠</span><span>Ethereum (NEAR)</span>
+            </div>
+            <div className="flex items-center justify-center space-x-1 p-2 bg-purple-50 rounded">
+              <span>🟣</span><span>Polygon (NEAR)</span>
+            </div>
+          </div>
           <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
             Connect Wallet
           </button>
@@ -204,19 +260,17 @@ function LotteryDashboard({
       </div>
     );
   }
-  
-  if (!isCorrectNetwork) {
+
+  // Show unsupported network message
+  if (!currentChain.supported) {
     return (
       <div className={`bg-white rounded-lg shadow-lg p-6 ${className}`}>
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Wrong Network</h2>
-          <p className="text-gray-600 mb-4">Please switch to Base network to participate</p>
-          <button 
-            onClick={switchToBase}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Switch to Base
-          </button>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">❓ Unsupported Network</h2>
+          <p className="text-gray-600 mb-4">Please switch to a supported network to buy lottery tickets</p>
+          <div className="text-sm text-gray-500 mb-4">
+            Supported: Base, Avalanche, Ethereum, Polygon
+          </div>
         </div>
       </div>
     );
@@ -244,6 +298,33 @@ function LotteryDashboard({
               <p className="text-sm opacity-75">Time Remaining</p>
             </div>
           </div>
+        </div>
+      </div>
+      
+      {/* Chain Status Indicator */}
+      <div className="bg-white rounded-lg shadow-lg p-4 border-l-4 border-blue-500">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <span className="text-2xl">{currentChain.icon}</span>
+            <div>
+              <h3 className="font-semibold text-gray-900">Connected to {currentChain.name}</h3>
+              <p className="text-sm text-gray-600">
+                {currentChain.native ? 'Direct lottery purchase available' : `Using ${currentChain.method}`}
+              </p>
+            </div>
+          </div>
+          {!currentChain.native && nearConnected && (
+            <div className="flex items-center space-x-2 text-green-600">
+              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+              <span className="text-sm font-medium">NEAR Ready</span>
+            </div>
+          )}
+          {!currentChain.native && !nearConnected && (
+            <div className="flex items-center space-x-2 text-yellow-600">
+              <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
+              <span className="text-sm font-medium">NEAR Required</span>
+            </div>
+          )}
         </div>
       </div>
       
@@ -393,14 +474,50 @@ function LotteryDashboard({
                 </button>
               )}
               
-              {/* Show NEAR initialization for cross-chain purchases */}
-              {selectedMethod === 'cross-chain' && !isNearConnected && (
-                <button
-                  onClick={handleInitializeNear}
-                  className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Initialize NEAR Connection
-                </button>
+              {/* Show NEAR connection for cross-chain purchases */}
+              {selectedMethod === 'cross-chain' && !nearConnected && (
+                <div className="bg-gradient-to-r from-green-900/30 to-blue-900/30 border border-green-600 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <span className="text-green-400">🔗</span>
+                    <span className="text-green-200 font-medium">
+                      NEAR Chain Signatures Required
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm mb-3">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-blue-300">{currentChain.name} {currentChain.icon}</span>
+                      <span className="text-gray-500">→</span>
+                      <span className="text-green-300">NEAR 🔗</span>
+                      <span className="text-gray-500">→</span>
+                      <span className="text-purple-300">Base 🔵</span>
+                    </div>
+                  </div>
+                  <p className="text-gray-300 text-sm mb-4">
+                    Connect NEAR wallet to sign Base transactions from {currentChain.name}.
+                  </p>
+                  <NearWalletConnection />
+                </div>
+              )}
+              
+              {/* Show cross-chain status */}
+              {selectedMethod === 'cross-chain' && nearConnected && crossChainStatus !== 'idle' && (
+                <div className="bg-blue-900/30 border border-blue-600 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <span className="text-blue-400">⚡</span>
+                    <span className="text-blue-200 font-medium">Cross-Chain Transaction</span>
+                  </div>
+                  <div className="text-sm text-gray-300">
+                    {crossChainStatus === 'creating' && '🔄 Creating NEAR intent...'}
+                    {crossChainStatus === 'executing' && '⚡ Executing chain signature...'}
+                    {crossChainStatus === 'completed' && '✅ Transaction completed successfully!'}
+                    {crossChainStatus === 'failed' && '❌ Transaction failed. Please try again.'}
+                  </div>
+                  {crossChainTxId && (
+                    <div className="text-xs text-gray-400 mt-2">
+                      Intent ID: {crossChainTxId.slice(0, 20)}...
+                    </div>
+                  )}
+                </div>
               )}
               
               <button
@@ -409,13 +526,23 @@ function LotteryDashboard({
                   isPurchasing || 
                   purchaseStatus.isLoading || 
                   isExecuting ||
+                  crossChainStatus === 'creating' ||
+                  crossChainStatus === 'executing' ||
                   (selectedMethod === 'standard' && purchaseEstimate?.needsApproval && !approveStatus.isSuccess) ||
                   (selectedMethod === 'gasless' && needsDeployment) ||
-                  (selectedMethod === 'cross-chain' && !isNearConnected)
+                  (selectedMethod === 'cross-chain' && !nearConnected)
                 }
                 className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {(isPurchasing || purchaseStatus.isLoading || isExecuting) ? 'Processing...' : `Buy ${ticketCount} Ticket${ticketCount > 1 ? 's' : ''}`}
+                {selectedMethod === 'cross-chain' ? (
+                  crossChainStatus === 'creating' ? 'Creating Intent...' :
+                  crossChainStatus === 'executing' ? 'Executing Cross-Chain...' :
+                  crossChainStatus === 'completed' ? 'Purchase Complete!' :
+                  crossChainStatus === 'failed' ? 'Purchase Failed' :
+                  `Buy ${ticketCount} Ticket${ticketCount > 1 ? 's' : ''} (Cross-Chain)`
+                ) : (
+                  (isPurchasing || purchaseStatus.isLoading || isExecuting) ? 'Processing...' : `Buy ${ticketCount} Ticket${ticketCount > 1 ? 's' : ''}`
+                )}
               </button>
             </div>
             

@@ -7,16 +7,16 @@ export const NEAR_CONFIG = {
   explorerUrl: 'https://nearblocks.io',
 };
 
-// MPC and Chain Signature Contracts (from bridge-sdk-js analysis)
+// MPC and Chain Signature Contracts (Real NEAR Chain Signatures)
 export const MPC_CONTRACTS = {
-  // Main MPC contract for chain signatures
-  multichain: 'multichain-mpc.near',
+  // Real Chain Signatures contract on NEAR mainnet
+  multichain: 'v1.signer',
   
-  // Chain signature contract
-  chainSignature: 'v1.signer.near',
+  // Chain signature contract (same as multichain)
+  chainSignature: 'v1.signer',
   
-  // MPC public key (this would be retrieved from the contract)
-  publicKey: 'secp256k1:4NfTiv3UsGahebgTaHyD9vF8KYKMBnfd6kh94mK6xv8fGBiJB8TBtFMP5WWXz6B89Ac1fbpzPwAvoyQebemHFwx3',
+  // MPC public key (retrieved from contract)
+  publicKey: '', // Will be fetched from v1.signer contract
 };
 
 // Rainbow Bridge Contracts (official addresses)
@@ -70,12 +70,12 @@ export const RAINBOW_BRIDGE_CONTRACTS = {
   },
 };
 
-// Derivation paths for chain signatures
+// Derivation paths for chain signatures (NEAR Chain Signatures format)
 export const DERIVATION_PATHS = {
-  ethereum: "ethereum,1",
-  base: "ethereum,8453", // Base chain ID
-  avalanche: "ethereum,43114", // Avalanche chain ID
-  bitcoin: "bitcoin,0",
+  ethereum: "ethereum-1",
+  base: "ethereum-1", // Base uses Ethereum derivation
+  avalanche: "ethereum-1", // Avalanche C-Chain uses Ethereum derivation  
+  bitcoin: "bitcoin-1",
 };
 
 // Gas limits for different operations
@@ -117,40 +117,10 @@ export const FEES = {
   },
 };
 
-// Supported chains for cross-chain operations
-export const SUPPORTED_CHAINS = {
-  near: {
-    chainId: 'near',
-    name: 'NEAR Protocol',
-    nativeCurrency: { name: 'NEAR', symbol: 'NEAR', decimals: 24 },
-    rpcUrl: NEAR_CONFIG.nodeUrl,
-    explorerUrl: NEAR_CONFIG.explorerUrl,
-  },
-  
-  ethereum: {
-    chainId: 1,
-    name: 'Ethereum',
-    nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },
-    rpcUrl: 'https://eth.llamarpc.com',
-    explorerUrl: 'https://etherscan.io',
-  },
-  
-  base: {
-    chainId: 8453,
-    name: 'Base',
-    nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },
-    rpcUrl: 'https://mainnet.base.org',
-    explorerUrl: 'https://basescan.org',
-  },
-  
-  avalanche: {
-    chainId: 43114,
-    name: 'Avalanche',
-    nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
-    rpcUrl: 'https://api.avax.network/ext/bc/C/rpc',
-    explorerUrl: 'https://snowtrace.io',
-  },
-};
+// Supported chains for cross-chain operations (use main chains config instead)
+import { SUPPORTED_CHAINS } from './chains';
+
+export { SUPPORTED_CHAINS };
 
 // Contract ABIs (minimal required functions)
 export const CONTRACT_ABIS = {

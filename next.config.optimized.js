@@ -1,8 +1,8 @@
 /** @type {import('next').NextConfig} */
-const { createBundleAnalyzerPlugin } = require('./analyze-bundle');
 const nextConfig = {
-  // PERFORMANT: Enhanced build performance with aggressive optimizations
+  // Enhanced build performance
   experimental: {
+    // Optimize package imports
     optimizePackageImports: [
       "@coordinationlabs/megapot-ui-kit",
       "@metamask/delegation-toolkit",
@@ -10,7 +10,7 @@ const nextConfig = {
       "viem",
       "lucide-react",
     ],
-    // Enable modern bundling for better performance
+    // Enable modern bundling
     turbo: {
       rules: {
         '*.svg': {
@@ -21,7 +21,7 @@ const nextConfig = {
     },
   },
 
-  // PERFORMANT: Webpack optimizations with blockchain-specific splitting
+  // Webpack optimizations
   webpack: (config, { dev, isServer }) => {
     // Development optimizations
     if (dev) {
@@ -30,18 +30,27 @@ const nextConfig = {
         aggregateTimeout: 300,
         ignored: ['**/node_modules', '**/.next'],
       };
-      // Faster dev builds
+      
+      // Faster builds in development
       config.optimization.removeAvailableModules = false;
       config.optimization.removeEmptyChunks = false;
       config.optimization.splitChunks = false;
     }
 
-    // Production optimizations with blockchain-specific chunks
+    // Production optimizations
     if (!dev) {
+      // Better chunk splitting
       config.optimization.splitChunks = {
         chunks: 'all',
         cacheGroups: {
-          // MODULAR: Separate blockchain SDKs for better caching
+          // Separate vendor chunks
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all',
+            priority: 10,
+          },
+          // Blockchain-specific chunks
           ethereum: {
             test: /[\\/]node_modules[\\/](ethers|viem|wagmi|@metamask)/,
             name: 'ethereum',
@@ -60,17 +69,18 @@ const nextConfig = {
             chunks: 'all',
             priority: 20,
           },
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
+          // UI components
+          ui: {
+            test: /[\\/]node_modules[\\/](lucide-react|styled-components)/,
+            name: 'ui',
             chunks: 'all',
-            priority: 10,
+            priority: 15,
           },
         },
       };
     }
 
-    // CLEAN: Reduce bundle size with proper fallbacks
+    // Reduce bundle size
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
@@ -87,21 +97,14 @@ const nextConfig = {
       path: false,
     };
 
-    // PERFORMANT: Tree shaking improvements (only in production)
-    if (!dev) {
-      config.optimization.usedExports = true;
-      config.optimization.sideEffects = false;
-    }
-
-    // PERFORMANT: Add bundle analyzer in production
-    if (!dev && !isServer) {
-      config.plugins.push(...createBundleAnalyzerPlugin());
-    }
+    // Tree shaking improvements
+    config.optimization.usedExports = true;
+    config.optimization.sideEffects = false;
 
     return config;
   },
 
-  // MODULAR: Transpile packages for better compatibility
+  // Transpile specific packages
   transpilePackages: [
     "@coordinationlabs/megapot-ui-kit",
     "@metamask/delegation-toolkit",
@@ -116,26 +119,28 @@ const nextConfig = {
     "@near-js/utils",
   ],
 
-  // PERFORMANT: Optimized compilation
-  reactStrictMode: false,
+  // Performance optimizations
+  reactStrictMode: false, // Already disabled for performance
+  swcMinify: true, // Use SWC for faster minification
   
+  // Compiler optimizations
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
     styledComponents: true,
   },
 
-  // CLEAN: Environment configuration
+  // Environment variables
   env: {
     CUSTOM_KEY: process.env.CUSTOM_KEY,
   },
 
-  // PERFORMANT: Enhanced image optimization
+  // Image optimization
   images: {
     domains: ["localhost"],
     formats: ['image/webp', 'image/avif'],
   },
 
-  // PERFORMANT: Better caching headers
+  // Headers for better caching
   async headers() {
     return [
       {
@@ -150,9 +155,26 @@ const nextConfig = {
     ];
   },
 
-  // PERFORMANT: Additional optimizations
+  // Redirects for better SEO
+  async redirects() {
+    return [];
+  },
+
+  // Output configuration for better performance
+  output: 'standalone',
+  
+  // Enable gzip compression
   compress: true,
+  
+  // Power optimizations
   poweredByHeader: false,
+  
+  // Experimental features for better performance
+  experimental: {
+    ...nextConfig.experimental,
+    optimizeCss: true,
+    scrollRestoration: true,
+  },
 };
 
 module.exports = nextConfig;

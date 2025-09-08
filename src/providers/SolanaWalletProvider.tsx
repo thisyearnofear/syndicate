@@ -8,33 +8,37 @@ import React, {
   ReactNode,
   useEffect,
 } from "react";
-import { Connection, PublicKey, Transaction } from "@solana/web3.js";
+import { Connection, PublicKey, Transaction, VersionedTransaction } from "@solana/web3.js";
 import {
   useWeb3Auth,
   useWeb3AuthConnect,
   useWeb3AuthDisconnect,
 } from "@web3auth/modal/react";
-import { CHAIN_NAMESPACES } from "@web3auth/base";
+import { SolanaWallet } from "@web3auth/solana-provider";
+import { solanaProvider, solanaChainConfig } from "@/config/web3authContext";
 
-interface SolanaWallet {
+// CLEAN: Simplified wallet interface aligned with Web3Auth
+interface SolanaWalletState {
   publicKey: PublicKey | null;
   connected: boolean;
   connecting: boolean;
   disconnect: () => Promise<void>;
-  signTransaction?: (transaction: Transaction) => Promise<Transaction>;
-  signAllTransactions?: (transactions: Transaction[]) => Promise<Transaction[]>;
+  signTransaction?: (transaction: Transaction | VersionedTransaction) => Promise<Transaction | VersionedTransaction>;
+  signAllTransactions?: (transactions: (Transaction | VersionedTransaction)[]) => Promise<(Transaction | VersionedTransaction)[]>;
+  signMessage?: (message: Uint8Array) => Promise<Uint8Array>;
 }
 
 interface SolanaWalletContextType {
-  wallet: SolanaWallet | null;
+  wallet: SolanaWalletState | null;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   connection: Connection;
   publicKey: PublicKey | null;
   connected: boolean;
   connecting: boolean;
-  signTransaction: (transaction: Transaction) => Promise<Transaction>;
-  signAllTransactions: (transactions: Transaction[]) => Promise<Transaction[]>;
+  signTransaction: (transaction: Transaction | VersionedTransaction) => Promise<Transaction | VersionedTransaction>;
+  signAllTransactions: (transactions: (Transaction | VersionedTransaction)[]) => Promise<(Transaction | VersionedTransaction)[]>;
+  signMessage: (message: Uint8Array) => Promise<Uint8Array>;
 }
 
 const SolanaWalletContext = createContext<SolanaWalletContextType | undefined>(
@@ -55,91 +59,65 @@ interface SolanaWalletProviderProps {
   children: ReactNode;
 }
 
-export function SolanaWalletProvider({ children }: SolanaWalletProviderProps) {
-  const [wallet, setWallet] = useState<SolanaWallet | null>(null);
+// Client-side wrapper to prevent SSR issues with Web3Auth hooks
+function SolanaWalletProviderClient({ children }: SolanaWalletProviderProps) {
+  const [wallet, setWallet] = useState<SolanaWalletState | null>(null);
   const [connecting, setConnecting] = useState(false);
-  const [solanaProvider, setSolanaProvider] = useState<any | null>(null);
 
   const { provider, isConnected: web3AuthConnected } = useWeb3Auth();
   const { connect: web3AuthConnect } = useWeb3AuthConnect();
   const { disconnect: web3AuthDisconnect } = useWeb3AuthDisconnect();
 
-  // Initialize connection to Solana mainnet
+  // CLEAN: Single source of truth for connection
   const connection = new Connection(
-    process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
-      "https://api.mainnet-beta.solana.com"
+    process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com"
   );
 
-  // Initialize Solana provider when Web3Auth is connected
+  // ENHANCEMENT: Properly initialize Solana provider with Web3Auth
   useEffect(() => {
     const initSolanaProvider = async () => {
       if (web3AuthConnected && provider) {
         try {
-          // For now, we'll create a basic wallet interface
-          // In a full implementation, you would use a Solana provider here
-          try {
-            const accounts = (await provider.request({
-              method: "getAccounts",
-            })) as string[];
-            if (accounts && accounts.length > 0) {
-              const publicKey = new PublicKey(accounts[0]);
+          // Create SolanaWallet instance with Web3Auth provider
+          const solanaWallet = new SolanaWallet(provider);
+          
+          // Get the public key from the Solana wallet
+          const accounts = await solanaWallet.requestAccounts();
+          if (accounts && accounts.length > 0) {
+            const publicKey = new PublicKey(accounts[0]);
 
-              const solanaWallet: SolanaWallet = {
-                publicKey,
-                connected: true,
-                connecting: false,
-                disconnect: async () => {
-                  await web3AuthDisconnect();
-                  setWallet(null);
-                  setSolanaProvider(null);
-                },
-                signTransaction: async (transaction: Transaction) => {
-                  // This would need to be implemented with proper Solana provider
-                  const serialized = transaction.serialize({
-                    requireAllSignatures: false,
-                  });
-                  const signature = await provider.request({
-                    method: "signTransaction",
-                    params: { message: serialized },
-                  });
-                  // Return the signed transaction
-                  return transaction;
-                },
-                signAllTransactions: async (transactions: Transaction[]) => {
-                  // This would need to be implemented with proper Solana provider
-                  return transactions;
-                },
-              };
-
-              setWallet(solanaWallet);
-            }
-          } catch (accountError) {
-            console.log("Could not get accounts, using mock wallet");
-            // Create a mock wallet for development
-            const solanaWallet: SolanaWallet = {
-              publicKey: null,
+            const walletInstance: SolanaWalletState = {
+              publicKey,
               connected: true,
               connecting: false,
               disconnect: async () => {
                 await web3AuthDisconnect();
                 setWallet(null);
-                setSolanaProvider(null);
               },
-              signTransaction: async (transaction: Transaction) => {
-                return transaction;
+              // ENHANCEMENT: Proper transaction signing with Solana wallet
+              signTransaction: async (transaction: Transaction | VersionedTransaction) => {
+                const signedTx = await solanaWallet.signTransaction(transaction as Transaction);
+                return signedTx;
               },
-              signAllTransactions: async (transactions: Transaction[]) => {
-                return transactions;
+              signAllTransactions: async (transactions: (Transaction | VersionedTransaction)[]) => {
+                const signedTxs = await solanaWallet.signAllTransactions(transactions as Transaction[]);
+                return signedTxs;
+              },
+              signMessage: async (message: Uint8Array) => {
+                const signature = await solanaWallet.signMessage(message);
+                return signature;
               },
             };
-            setWallet(solanaWallet);
+
+            setWallet(walletInstance);
           }
         } catch (error) {
           console.error("Failed to initialize Solana provider:", error);
+          // CLEAN: Clear state on error
+          setWallet(null);
         }
       } else {
         setWallet(null);
-        setSolanaProvider(null);
       }
     };
 
@@ -167,12 +145,11 @@ export function SolanaWalletProvider({ children }: SolanaWalletProviderProps) {
     }
   }, [wallet]);
 
+  // CLEAN: Consolidated transaction signing methods
   const signTransaction = useCallback(
-    async (transaction: Transaction): Promise<Transaction> => {
+    async (transaction: Transaction | VersionedTransaction): Promise<Transaction | VersionedTransaction> => {
       if (!wallet || !wallet.signTransaction) {
-        throw new Error(
-          "Wallet not connected or does not support transaction signing"
-        );
+        throw new Error("Wallet not connected or does not support transaction signing");
       }
       return wallet.signTransaction(transaction);
     },
@@ -180,17 +157,26 @@ export function SolanaWalletProvider({ children }: SolanaWalletProviderProps) {
   );
 
   const signAllTransactions = useCallback(
-    async (transactions: Transaction[]): Promise<Transaction[]> => {
+    async (transactions: (Transaction | VersionedTransaction)[]): Promise<(Transaction | VersionedTransaction)[]> => {
       if (!wallet || !wallet.signAllTransactions) {
-        throw new Error(
-          "Wallet not connected or does not support batch transaction signing"
-        );
+        throw new Error("          not connected or does not support batch transaction signing");
       }
       return wallet.signAllTransactions(transactions);
     },
     [wallet]
   );
 
+  const signMessage = useCallback(
+    async (message: Uint8Array): Promise<Uint8Array> => {
+      if (!wallet || !wallet.signMessage) {
+        throw new Error("Wallet not connected or does not support message signing");
+      }
+      return wallet.signMessage(message);
+    },
+    [wallet]
+  );
+
+  // DRY: Single source of truth for wallet state
   const value: SolanaWalletContextType = {
     wallet,
     publicKey: wallet?.publicKey || null,
@@ -201,6 +187,7 @@ export function SolanaWalletProvider({ children }: SolanaWalletProviderProps) {
     disconnect,
     signTransaction,
     signAllTransactions,
+    signMessage,
   };
 
   return (
@@ -210,10 +197,35 @@ export function SolanaWalletProvider({ children }: SolanaWalletProviderProps) {
   );
 }
 
-// Hook for Solana wallet connection status
+export function SolanaWalletProvider({ children }: SolanaWalletProviderProps) {
+  // Prevent Web3Auth hooks from running on server-side
+  if (typeof window === "undefined") {
+    // Provide default context for SSR
+    const defaultContext: SolanaWalletContextType = {
+      wallet: null,
+      connect: async () => {},
+      disconnect: async () => {},
+      connection: new Connection("https://api.mainnet-beta.solana.com"),
+      publicKey: null,
+      connected: false,
+      connecting: false,
+      signTransaction: async (tx) => tx,
+      signAllTransactions: async (txs) => txs,
+      signMessage: async (msg) => msg,
+    };
+    return (
+      <SolanaWalletContext.Provider value={defaultContext}>
+        {children}
+      </SolanaWalletContext.Provider>
+    );
+  }
+
+  return <SolanaWalletProviderClient>{children}</SolanaWalletProviderClient>;
+}
+
+// CLEAN: Simplified hook for wallet connection status
 export function useSolanaWalletConnection() {
-  const { connected, publicKey, connect, disconnect, connecting } =
-    useSolanaWallet();
+  const { connected, publicKey, connect, disconnect, connecting } = useSolanaWallet();
 
   return {
     isConnected: connected,

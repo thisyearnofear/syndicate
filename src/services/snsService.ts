@@ -124,12 +124,11 @@ export class SNSService {
   }
 
   /**
-   * Search for domains by partial match (mock implementation)
+   * Search for domains by partial match
+   * Note: Requires indexer service - not implemented
    */
   async searchDomains(query: string): Promise<string[]> {
-    // This would typically query an indexer or API
-    // For now, return empty array as this requires additional infrastructure
-    return [];
+    throw new Error('Domain search requires indexer service integration');
   }
 }
 

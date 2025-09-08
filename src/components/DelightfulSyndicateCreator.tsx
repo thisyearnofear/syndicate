@@ -94,8 +94,8 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (validateForm()) {
       setIsCreating(true);
       
@@ -413,7 +413,7 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
 
           {currentStep === 'preview' ? (
             <DelightfulButton
-              onClick={handleSubmit}
+              onClick={() => handleSubmit()}
               variant="success"
               loading={isCreating}
             >

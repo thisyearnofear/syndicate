@@ -5,6 +5,7 @@ import {
   ChainSignatureRequest, 
   CrossChainTransaction 
 } from '@/services/nearIntents';
+import { useNearWallet } from './NearWalletProvider';
 
 interface CrossChainContextType {
   // Connection state
@@ -41,11 +42,8 @@ export function CrossChainProvider({ children }: CrossChainProviderProps) {
   const [pendingIntents, setPendingIntents] = useState<string[]>([]);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<CrossChainTransaction | null>(null);
-
-  // Initialize NEAR connection on mount
-  useEffect(() => {
-    initializeNear();
-  }, []);
+  
+  const { accountId, isConnected: isNearWalletConnected } = useNearWallet();
 
   // Poll for transaction updates
   useEffect(() => {
@@ -69,10 +67,20 @@ export function CrossChainProvider({ children }: CrossChainProviderProps) {
 
   const initializeNear = async (): Promise<boolean> => {
     if (isNearConnected) return true;
+    if (!isNearWalletConnected || !accountId) {
+      console.error('NEAR wallet not connected or accountId not available');
+      return false;
+    }
     
+    // In a real implementation, we would get the privateKey from the wallet
+    // For now, we'll just simulate the initialization
     setIsInitializing(true);
     try {
-      const success = await nearIntentsService.initialize();
+      // This is a placeholder - in a real implementation, you would get the actual privateKey
+      // from the wallet and pass it to the nearIntentsService
+      const privateKey = 'ed25519:placeholderPrivateKey'; // This should come from the wallet
+      
+      const success = await nearIntentsService.initialize(accountId, privateKey);
       setIsNearConnected(success);
       return success;
     } catch (error) {

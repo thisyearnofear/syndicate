@@ -20,8 +20,6 @@ import {
 } from "@near-wallet-selector/modal-ui";
 import { providers } from "near-api-js";
 import { getConfig } from "@/config/nearConfig";
-// Web3Auth imports
-import { Web3Auth } from "@web3auth/modal";
 import type { IProvider } from "@web3auth/base";
 
 interface NearWalletContextType {
@@ -75,8 +73,9 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isWeb3Auth, setIsWeb3Auth] = useState(false);
-  const [web3auth, setWeb3auth] = useState<Web3Auth | null>(null);
-  const [web3authProvider, setWeb3authProvider] = useState<IProvider | null>(null);
+  const [web3authProvider, setWeb3authProvider] = useState<IProvider | null>(
+    null
+  );
 
   // Initialize wallet selector
   useEffect(() => {
@@ -126,41 +125,27 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
     return () => clearTimeout(timer);
   }, []);
 
-  // Initialize Web3Auth
-  useEffect(() => {
-    const initWeb3Auth = async () => {
-      try {
-        // Initialize Web3Auth
-        const web3authInstance = new Web3Auth({
-          clientId: process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID || "YOUR_WEB3AUTH_CLIENT_ID",
-          web3AuthNetwork: "cyan",
-        });
+  // Removed duplicate Web3Auth initialization – Web3Auth is provided by OptimizedWeb3AuthProvider
 
-        setWeb3auth(web3authInstance);
-      } catch (error) {
-        console.error("Failed to initialize Web3Auth:", error);
-      }
-    };
-
-    if (typeof window !== "undefined") {
-      initWeb3Auth();
-    }
-  }, []);
-
-  // Connect with Web3Auth
+  // Connect with Web3Auth – loaded lazily on the client to avoid SSR issues
   const connectWeb3Auth = async () => {
-    if (!web3auth) {
-      throw new Error("Web3Auth not initialized");
-    }
-
     try {
-      const provider = await web3auth.connect();
-      setWeb3authProvider(provider);
+      // Dynamically import the hooks only in the browser
+      const { useWeb3Auth, useWeb3AuthConnect } = await import(
+        "@web3auth/modal/react"
+      );
+
+      const { provider } = useWeb3Auth();
+      const { connect } = useWeb3AuthConnect();
+
+      if (!provider) {
+        throw new Error("Web3Auth not initialized");
+      }
+
+      const web3Provider = await connect();
+      setWeb3authProvider(web3Provider as IProvider);
       setIsWeb3Auth(true);
       setIsConnected(true);
-      
-      // For Web3Auth, we don't have a traditional accountId
-      // We'll use a placeholder for now
       setAccountId("web3auth-user");
     } catch (error) {
       console.error("Failed to connect with Web3Auth:", error);
@@ -184,9 +169,9 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
 
   // Disconnect wallet
   const disconnect = async () => {
-    if (isWeb3Auth && web3auth) {
+    if (isWeb3Auth) {
       try {
-        await web3auth.logout();
+        // If needed, you can add logout logic here using the Web3Auth hook
         setWeb3authProvider(null);
         setIsWeb3Auth(false);
         setAccountId(null);
@@ -266,10 +251,15 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
     gas: string = "300000000000000", // 300 TGas
     deposit: string = "0"
   ) => {
-    if (isWeb3Auth && web3authProvider) {
-      // For Web3Auth, we would need to implement the method calling logic
-      // This is a simplified version for demonstration
-      console.log("Calling method with Web3Auth:", { contractId, methodName, args, gas, deposit });
+    if (isWeb3Auth) {
+      // Placeholder implementation for Web3Auth method call
+      console.log("Calling method with Web3Auth (placeholder):", {
+        contractId,
+        methodName,
+        args,
+        gas,
+        deposit,
+      });
       return { transactionHash: "web3auth-method-call-hash" };
     } else if (wallet && accountId) {
       try {
@@ -355,8 +345,15 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
 
 // Hook for NEAR wallet connection status
 export function useNearWalletConnection() {
-  const { isConnected, accountId, connect, connectWeb3Auth, disconnect, isLoading, isWeb3Auth } =
-    useNearWallet();
+  const {
+    isConnected,
+    accountId,
+    connect,
+    connectWeb3Auth,
+    disconnect,
+    isLoading,
+    isWeb3Auth,
+  } = useNearWallet();
 
   return {
     isConnected,

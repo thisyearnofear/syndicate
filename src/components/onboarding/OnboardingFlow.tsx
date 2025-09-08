@@ -21,7 +21,9 @@ export default function OnboardingFlow({ onComplete, onSkip, className = '' }: O
   const [userProfile, setUserProfile] = useState<any>(null);
   
   const { isConnected: evmConnected, address } = useAccount();
-  const { isConnected: web3AuthConnected } = useWeb3Auth();
+  // Prevent Web3Auth hooks from running on server-side
+  const isClient = typeof window !== "undefined";
+  const { isConnected: web3AuthConnected } = isClient ? useWeb3Auth() : { isConnected: false };
   const { connected: solanaConnected, publicKey } = useSolanaWallet();
 
   // Check if user is already connected and skip to appropriate step

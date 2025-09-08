@@ -23,18 +23,28 @@ export default function NearWalletConnection() {
         try {
           // Initialize the cross-chain service with NEAR wallet
           const service = getCrossChainTicketService();
-          service.initializeNearService(nearWallet);
+          await service.initializeNearService(nearWallet);
+
+          // Initialize NEAR intents service
+          const { nearIntentsService } = await import('@/services/nearIntents');
+          await nearIntentsService.initialize(nearWallet);
 
           // Check if chain signatures are available
-          const nearService = (service as any).nearChainSignatureService;
-          if (nearService) {
-            const available = await nearService.isChainSignatureAvailable();
-            setChainSignatureAvailable(available);
+          try {
+            const nearService = (service as any).nearChainSignatureService;
+            if (nearService) {
+              const available = await nearService.isChainSignatureAvailable();
+              setChainSignatureAvailable(available);
+            }
+          } catch (error) {
+            console.warn("Chain signatures not available:", error);
+            setChainSignatureAvailable(false);
           }
 
-          console.log("NEAR chain signature service initialized");
+          console.log("NEAR services initialized successfully");
         } catch (error) {
-          console.error("Failed to initialize NEAR service:", error);
+          console.error("Failed to initialize NEAR services:", error);
+          setChainSignatureAvailable(false);
         } finally {
           setIsInitializing(false);
         }
@@ -71,47 +81,30 @@ export default function NearWalletConnection() {
 
   if (isLoading) {
     return (
-      <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-        <div className="flex items-center space-x-3">
-          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-400"></div>
-          <span className="text-gray-300">Loading NEAR wallet...</span>
-        </div>
+      <div className="flex items-center space-x-2 text-xs text-gray-400">
+        <div className="animate-spin rounded-full h-3 w-3 border-b border-purple-400"></div>
+        <span>Loading NEAR...</span>
       </div>
     );
   }
 
   if (!isConnected) {
     return (
-      <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-        <div className="text-center">
-          <h3 className="text-lg font-semibold text-white mb-2">
-            🌌 NEAR Protocol
-          </h3>
-          <p className="text-gray-300 mb-4 text-sm">
-            Connect your NEAR wallet to enable cross-chain ticket purchasing
-            with chain signatures.
-          </p>
-
-          <div className="space-y-3">
-            <button
-              onClick={handleConnect}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-            >
-              Connect NEAR Wallet
-            </button>
-
-            <button
-              onClick={handleWeb3AuthConnect}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-            >
-              🔐 Connect with Web3Auth (Social Login)
-            </button>
-          </div>
-
-          <div className="mt-4 text-xs text-gray-400">
-            <p>Supports: MyNearWallet, Bitte Wallet, Google, Email, etc.</p>
-          </div>
-        </div>
+      <div className="flex space-x-2">
+        <button
+          onClick={handleConnect}
+          className="flex items-center space-x-1 bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded text-xs transition-colors"
+        >
+          <span>🌌</span>
+          <span>NEAR</span>
+        </button>
+        <button
+          onClick={handleWeb3AuthConnect}
+          className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs transition-colors"
+        >
+          <span>🔐</span>
+          <span>Web3Auth</span>
+        </button>
       </div>
     );
   }

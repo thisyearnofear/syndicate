@@ -29,28 +29,51 @@ export interface CrossChainTransaction {
 }
 
 class NearIntentsService {
-  private nearConnection: any = null;
-  private wallet: any = null;
+  private nearWallet: any = null;
+  private isInitialized = false;
 
   /**
    * Initialize NEAR connection for chain signatures
    */
-  async initialize() {
+  async initialize(nearWallet: any) {
     try {
-      // In a real implementation, you would use @near-js/client
-      // For now, we'll simulate the connection
-      console.log("Initializing NEAR connection for chain signatures...");
+      this.nearWallet = nearWallet;
       
-      // Mock initialization
-      this.nearConnection = {
-        networkId: config.near.networkId,
-        nodeUrl: config.near.nodeUrl,
-      };
+      // Verify NEAR wallet is connected
+      if (!nearWallet.isConnected) {
+        throw new Error("NEAR wallet not connected");
+      }
+
+      // Test connection to MPC contract
+      await this.testMPCConnection();
       
+      this.isInitialized = true;
       return true;
     } catch (error) {
       console.error("Failed to initialize NEAR connection:", error);
-      return false;
+      throw error;
+    }
+  }
+
+  /**
+   * Test connection to MPC contract
+   */
+  private async testMPCConnection(): Promise<void> {
+    try {
+      const publicKey = await this.nearWallet.viewMethod(
+        'v1.signer',
+        'public_key',
+        {}
+      );
+      
+      if (!publicKey) {
+        throw new Error("Failed to retrieve MPC public key from v1.signer");
+      }
+      
+      console.log("v1.signer contract connection verified:", publicKey);
+    } catch (error) {
+      console.error("v1.signer contract test failed:", error);
+      throw new Error("Cannot connect to NEAR v1.signer contract. Please check network connection.");
     }
   }
 
@@ -58,41 +81,40 @@ class NearIntentsService {
    * Create a cross-chain intent for lottery ticket purchase
    */
   async createCrossChainIntent(request: ChainSignatureRequest): Promise<string> {
-    if (!this.nearConnection) {
-      throw new Error("NEAR connection not initialized");
+    if (!this.isInitialized || !this.nearWallet) {
+      throw new Error("NEAR service not initialized. Call initialize() first.");
     }
 
     try {
-      // Create the intent payload
-      const intent = {
-        id: `intent_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        type: "cross_chain_lottery_purchase",
-        sourceChain: request.sourceChain,
-        targetChain: request.targetChain,
-        userAddress: request.userAddress,
-        ticketCount: request.ticketCount,
-        syndicateId: request.syndicateId,
-        causeAllocation: request.causeAllocation,
+      const intentId = `intent_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Create the intent payload for NEAR MPC
+      const intentPayload = {
+        intent_id: intentId,
+        source_chain: request.sourceChain,
+        target_chain: request.targetChain,
+        user_address: request.userAddress,
+        ticket_count: request.ticketCount,
+        syndicate_id: request.syndicateId || null,
+        cause_allocation: request.causeAllocation || 0,
         timestamp: Date.now(),
-        // Target contract on Base (Megapot)
-        targetContract: config.contracts.megapot,
-        // Function to call on target contract
-        targetFunction: "purchaseTickets",
-        // Parameters for the target function
-        targetParams: {
-          ticketCount: request.ticketCount,
-          syndicateId: request.syndicateId || "0x0",
-          causePercentage: request.causeAllocation || 0,
-        }
+        // Target contract details
+        target_contract: config.contracts.megapot,
+        target_function: "purchaseTickets",
+        target_params: [request.ticketCount],
       };
 
-      // In a real implementation, this would submit to NEAR's intent solver network
-      console.log("Creating cross-chain intent:", intent);
-      
-      // Simulate intent creation
-      await this.simulateIntentCreation(intent);
-      
-      return intent.id;
+      // Submit intent to NEAR MPC contract
+      const result = await this.nearWallet.callMethod(
+        config.near.mpcContract,
+        'create_cross_chain_intent',
+        intentPayload,
+        '300000000000000', // 300 TGas
+        '0' // No deposit required
+      );
+
+      console.log("Cross-chain intent created:", result);
+      return intentId;
     } catch (error) {
       console.error("Failed to create cross-chain intent:", error);
       throw error;
@@ -103,26 +125,49 @@ class NearIntentsService {
    * Execute chain signature for cross-chain transaction
    */
   async executeChainSignature(intentId: string): Promise<CrossChainTransaction> {
+    if (!this.isInitialized || !this.nearWallet) {
+      throw new Error("NEAR service not initialized");
+    }
+
     try {
       console.log("Executing chain signature for intent:", intentId);
       
-      // In a real implementation, this would:
-      // 1. Submit the intent to NEAR's MPC signer network
-      // 2. Generate a signature for the target chain transaction
-      // 3. Submit the signed transaction to the target chain
-      
+      // Get the intent details
+      const intent = await this.nearWallet.viewMethod(
+        config.near.mpcContract,
+        'get_intent',
+        { intent_id: intentId }
+      );
+
+      if (!intent) {
+        throw new Error(`Intent ${intentId} not found`);
+      }
+
+      // Execute the chain signature
+      const signatureResult = await this.nearWallet.callMethod(
+        config.near.chainSignatureContract,
+        'sign_and_execute',
+        {
+          intent_id: intentId,
+          derivation_path: this.getDerivationPath(intent.target_chain),
+        },
+        '300000000000000', // 300 TGas
+        '0'
+      );
+
       const transaction: CrossChainTransaction = {
         id: intentId,
-        status: 'pending',
-        sourceChain: 'ethereum', // This would come from the intent
-        targetChain: 'base',
+        status: 'signed',
+        sourceChain: intent.source_chain,
+        targetChain: intent.target_chain,
         timestamp: Date.now(),
-        ticketCount: 1, // This would come from the intent
-        totalCost: '0.01 ETH', // This would be calculated
+        ticketCount: intent.ticket_count,
+        totalCost: `${intent.ticket_count * 1.0} USDC`,
+        sourceHash: signatureResult.source_tx_hash,
       };
 
-      // Simulate the signing process
-      await this.simulateChainSigning(transaction);
+      // Monitor execution status
+      this.monitorExecution(transaction);
       
       return transaction;
     } catch (error) {
@@ -132,27 +177,90 @@ class NearIntentsService {
   }
 
   /**
+   * Monitor transaction execution on target chain
+   */
+  private async monitorExecution(transaction: CrossChainTransaction): Promise<void> {
+    const maxAttempts = 30; // 5 minutes with 10s intervals
+    let attempts = 0;
+
+    const checkExecution = async (): Promise<void> => {
+      try {
+        const status = await this.nearWallet.viewMethod(
+          config.near.mpcContract,
+          'get_execution_status',
+          { intent_id: transaction.id }
+        );
+
+        if (status.executed) {
+          transaction.status = 'executed';
+          transaction.targetHash = status.target_tx_hash;
+          console.log("Transaction executed successfully:", transaction.id);
+          return;
+        }
+
+        if (status.failed) {
+          transaction.status = 'failed';
+          console.error("Transaction execution failed:", status.error);
+          return;
+        }
+
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(checkExecution, 10000); // Check every 10 seconds
+        } else {
+          transaction.status = 'failed';
+          console.error("Transaction execution timeout");
+        }
+      } catch (error) {
+        console.error("Error monitoring execution:", error);
+        transaction.status = 'failed';
+      }
+    };
+
+    // Start monitoring
+    setTimeout(checkExecution, 5000); // Initial delay of 5 seconds
+  }
+
+  /**
    * Get the status of a cross-chain transaction
    */
   async getTransactionStatus(transactionId: string): Promise<CrossChainTransaction | null> {
+    if (!this.isInitialized || !this.nearWallet) {
+      throw new Error("NEAR service not initialized");
+    }
+
     try {
-      // In a real implementation, this would query the NEAR network
-      // and the target chain for transaction status
-      
-      // For now, simulate status checking
-      const mockTransaction: CrossChainTransaction = {
+      const intent = await this.nearWallet.viewMethod(
+        config.near.mpcContract,
+        'get_intent',
+        { intent_id: transactionId }
+      );
+
+      if (!intent) {
+        return null;
+      }
+
+      const executionStatus = await this.nearWallet.viewMethod(
+        config.near.mpcContract,
+        'get_execution_status',
+        { intent_id: transactionId }
+      );
+
+      const transaction: CrossChainTransaction = {
         id: transactionId,
-        status: 'executed',
-        sourceChain: 'ethereum',
-        targetChain: 'base',
-        sourceHash: '0x' + Math.random().toString(16).substr(2, 64),
-        targetHash: '0x' + Math.random().toString(16).substr(2, 64),
-        timestamp: Date.now() - 60000, // 1 minute ago
-        ticketCount: 1,
-        totalCost: '0.01 ETH',
+        status: executionStatus.executed ? 'executed' : 
+                executionStatus.failed ? 'failed' : 
+                executionStatus.signed ? 'signed' : 'pending',
+        sourceChain: intent.source_chain,
+        targetChain: intent.target_chain,
+        sourceHash: executionStatus.source_tx_hash,
+        targetHash: executionStatus.target_tx_hash,
+        timestamp: intent.timestamp,
+        ticketCount: intent.ticket_count,
+        totalCost: `${intent.ticket_count * 1.0} USDC`,
       };
-      
-      return mockTransaction;
+
+      return transaction;
     } catch (error) {
       console.error("Failed to get transaction status:", error);
       return null;
@@ -175,19 +283,27 @@ class NearIntentsService {
     bridgeFee: string;
     total: string;
   }> {
+    if (!this.isInitialized || !this.nearWallet) {
+      throw new Error("NEAR service not initialized");
+    }
+
     try {
-      // In a real implementation, this would query actual fee data
-      const baseFee = 0.001; // ETH
-      const ticketCost = 0.01 * request.ticketCount; // ETH per ticket
-      
-      const fees = {
-        sourceFee: (baseFee * 0.5).toFixed(6) + ' ETH',
-        targetFee: (baseFee * 0.3).toFixed(6) + ' ETH',
-        bridgeFee: (baseFee * 0.2).toFixed(6) + ' ETH',
-        total: (ticketCost + baseFee).toFixed(6) + ' ETH',
+      const feeEstimate = await this.nearWallet.viewMethod(
+        config.near.mpcContract,
+        'estimate_cross_chain_fees',
+        {
+          source_chain: request.sourceChain,
+          target_chain: request.targetChain,
+          ticket_count: request.ticketCount,
+        }
+      );
+
+      return {
+        sourceFee: feeEstimate.source_fee,
+        targetFee: feeEstimate.target_fee,
+        bridgeFee: feeEstimate.bridge_fee,
+        total: feeEstimate.total_fee,
       };
-      
-      return fees;
     } catch (error) {
       console.error("Failed to estimate fees:", error);
       throw error;
@@ -195,34 +311,25 @@ class NearIntentsService {
   }
 
   /**
-   * Simulate intent creation (for development)
+   * Get derivation path for target chain
    */
-  private async simulateIntentCreation(intent: any): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        console.log("Intent created successfully:", intent.id);
-        resolve();
-      }, 1000);
-    });
+  private getDerivationPath(targetChain: string): string {
+    const paths: Record<string, string> = {
+      'ethereum': 'ethereum,1',
+      'base': 'ethereum,8453',
+      'avalanche': 'ethereum,43114',
+      'polygon': 'ethereum,137',
+      'arbitrum': 'ethereum,42161',
+    };
+
+    return paths[targetChain] || 'ethereum,1';
   }
 
   /**
-   * Simulate chain signing process (for development)
+   * Check if service is properly initialized
    */
-  private async simulateChainSigning(transaction: CrossChainTransaction): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        transaction.status = 'signed';
-        transaction.sourceHash = '0x' + Math.random().toString(16).substr(2, 64);
-        
-        setTimeout(() => {
-          transaction.status = 'executed';
-          transaction.targetHash = '0x' + Math.random().toString(16).substr(2, 64);
-          console.log("Chain signature executed successfully:", transaction.id);
-          resolve();
-        }, 2000);
-      }, 1500);
-    });
+  isReady(): boolean {
+    return this.isInitialized && this.nearWallet?.isConnected;
   }
 }
 
@@ -233,9 +340,9 @@ export const nearIntentsService = new NearIntentsService();
 export const formatTransactionStatus = (status: CrossChainTransaction['status']): string => {
   switch (status) {
     case 'pending':
-      return 'Pending Signature';
+      return 'Creating Intent';
     case 'signed':
-      return 'Signature Complete';
+      return 'Executing Transaction';
     case 'executed':
       return 'Transaction Complete';
     case 'failed':

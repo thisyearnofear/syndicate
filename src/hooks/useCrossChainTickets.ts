@@ -121,18 +121,8 @@ export function useCrossChainTickets(): UseCrossChainTicketsReturn {
     setError(null);
 
     try {
-      // For now, we'll simulate the execution
-      // In production, this would integrate with the actual wallet client
-      const mockWallet = {
-        getAddress: () => Promise.resolve(address),
-        signTransaction: (tx: any) => Promise.resolve('0x' + Math.random().toString(16).slice(2)),
-      };
-
       const service = getCrossChainTicketService();
-      const result = await service.executeTicketPurchase(
-        intentId,
-        mockWallet as any
-      );
+      const result = await service.executeTicketPurchase(intentId);
 
       return result;
     } catch (err) {

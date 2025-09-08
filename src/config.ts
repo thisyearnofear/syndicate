@@ -47,8 +47,8 @@ export const config = {
     nodeUrl: process.env.NEXT_PUBLIC_NEAR_NODE_URL || "https://rpc.mainnet.near.org",
     walletUrl: process.env.NEXT_PUBLIC_NEAR_WALLET_URL || "https://wallet.mainnet.near.org",
     helperUrl: process.env.NEXT_PUBLIC_NEAR_HELPER_URL || "https://helper.mainnet.near.org",
-    mpcContract: process.env.NEXT_PUBLIC_MPC_CONTRACT || "multichain-mpc.near",
-    chainSignatureContract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT || "v1.signer.near",
+    mpcContract: "v1.signer", // Real NEAR Chain Signatures contract
+    chainSignatureContract: "v1.signer", // Same contract handles signing
   },
   // API Keys
   pimlico: {

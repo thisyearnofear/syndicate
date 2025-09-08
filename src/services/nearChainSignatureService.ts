@@ -33,78 +33,122 @@ export class NearChainSignatureService {
   private nearWallet: any;
   private mpcContract: string;
   private chainSignatureContract: string;
+  private isInitialized = false;
 
   constructor(nearWallet: any) {
     this.nearWallet = nearWallet;
-    this.mpcContract = MPC_CONTRACTS.multichain;
-    this.chainSignatureContract = MPC_CONTRACTS.chainSignature;
+    this.mpcContract = 'v1.signer'; // Real NEAR Chain Signatures contract
+    this.chainSignatureContract = 'v1.signer'; // Same contract handles signing
   }
 
   /**
-   * Get the MPC public key for a specific derivation path
+   * Initialize and verify NEAR chain signature service
+   */
+  async initialize(): Promise<void> {
+    if (!this.nearWallet?.isConnected) {
+      throw new Error('NEAR wallet not connected');
+    }
+
+    try {
+      // Test MPC contract connection
+      await this.getMpcPublicKey(DERIVATION_PATHS.base);
+      this.isInitialized = true;
+    } catch (error) {
+      console.error("Failed to initialize chain signature service:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get the MPC public key for Chain Signatures
    */
   async getMpcPublicKey(path: string): Promise<string> {
+    if (!this.nearWallet?.isConnected) {
+      throw new Error('NEAR wallet not connected');
+    }
+
     try {
       const result = await this.nearWallet.viewMethod(
-        this.mpcContract,
+        'v1.signer',
         'public_key',
         {}
       );
       
+      if (!result) {
+        throw new Error('Failed to retrieve MPC public key from v1.signer');
+      }
+
       return result;
     } catch (error) {
       console.error('Failed to get MPC public key:', error);
-      throw new Error('Failed to retrieve MPC public key');
+      throw error;
     }
   }
 
   /**
-   * Derive Ethereum address from MPC public key
+   * Derive Ethereum address from NEAR account and path
    */
   async getDerivedAddress(path: string): Promise<string> {
+    if (!this.nearWallet?.accountId) {
+      throw new Error('NEAR account not available');
+    }
+
     try {
+      // Use NEAR's derivation method: account + path + MPC public key
       const publicKey = await this.getMpcPublicKey(path);
       
-      // Convert NEAR public key format to Ethereum address
-      // This is a simplified version - in production, you'd use proper key derivation
-      const ethPublicKey = publicKey.replace('secp256k1:', '');
-      const address = ethers.computeAddress('0x' + ethPublicKey);
+      // Derive address using NEAR account, path, and MPC public key
+      const derivedKey = await this.nearWallet.viewMethod(
+        'v1.signer',
+        'derived_public_key',
+        { 
+          predecessor: this.nearWallet.accountId,
+          path: path 
+        }
+      );
       
+      if (!derivedKey) {
+        throw new Error('Failed to derive public key');
+      }
+
+      // Convert to Ethereum address
+      const address = ethers.computeAddress('0x' + derivedKey);
       return address;
     } catch (error) {
       console.error('Failed to derive address:', error);
-      throw new Error('Failed to derive Ethereum address');
+      throw error;
     }
   }
 
   /**
-   * Sign a transaction hash using NEAR chain signatures
+   * Sign a transaction using NEAR Chain Signatures v1.signer contract
    */
   async signTransaction(request: ChainSignatureRequest): Promise<ChainSignatureResponse> {
+    if (!this.isInitialized) {
+      throw new Error('Chain signature service not initialized');
+    }
+
     try {
-      const signArgs = {
-        request: {
+      // Call the real v1.signer contract sign method
+      const result = await this.nearWallet.callMethod(
+        'v1.signer',
+        'sign',
+        {
           payload: Array.from(ethers.getBytes(request.payload)),
           path: request.path,
-          key_version: request.keyVersion,
-        }
-      };
-
-      const result = await this.nearWallet.callMethod(
-        this.chainSignatureContract,
-        'sign',
-        signArgs,
-        GAS_LIMITS.near.chainSignature.toString() + '000000000000', // Convert TGas to gas
+          domain_id: 0, // 0 for Secp256k1 (Ethereum-compatible)
+        },
+        '300000000000000', // 300 TGas
         '0' // No deposit required
       );
 
-      // Parse the signature result
+      // Parse the signature result from v1.signer
       const signature = this.parseSignatureResult(result);
       
       return signature;
     } catch (error) {
-      console.error('Failed to sign transaction:', error);
-      throw new Error('Chain signature failed');
+      console.error('Failed to sign transaction with NEAR Chain Signatures:', error);
+      throw error;
     }
   }
 
@@ -112,15 +156,15 @@ export class NearChainSignatureService {
    * Execute cross-chain ticket purchase
    */
   async executeCrossChainTicketPurchase(params: CrossChainTicketPurchaseParams): Promise<string> {
-    try {
-      console.log('Starting cross-chain ticket purchase:', params);
+    if (!this.isInitialized) {
+      throw new Error('Chain signature service not initialized');
+    }
 
+    try {
       // Step 1: Get derived address for the target chain
       const derivationPath = DERIVATION_PATHS[params.targetChain];
       const derivedAddress = await this.getDerivedAddress(derivationPath);
       
-      console.log('Derived address:', derivedAddress);
-
       // Step 2: Build the ticket purchase transaction
       const ticketPurchaseTx = await this.buildTicketPurchaseTransaction(
         params.targetChain,
@@ -128,8 +172,6 @@ export class NearChainSignatureService {
         params.ticketCount,
         params.usdcAmount
       );
-
-      console.log('Built ticket purchase transaction:', ticketPurchaseTx);
 
       // Step 3: Sign the transaction using chain signatures
       const signatureRequest: ChainSignatureRequest = {
@@ -140,16 +182,12 @@ export class NearChainSignatureService {
 
       const signature = await this.signTransaction(signatureRequest);
       
-      console.log('Transaction signed:', signature);
-
-      // Step 4: Broadcast the signed transaction
+      // Step 4: Broadcast the signed transaction to Base
       const txHash = await this.broadcastTransaction(
         params.targetChain,
         ticketPurchaseTx,
         signature
       );
-
-      console.log('Transaction broadcasted:', txHash);
 
       // Step 5: Register with Syndicate if applicable
       if (params.syndicateId) {
@@ -169,7 +207,7 @@ export class NearChainSignatureService {
   }
 
   /**
-   * Build a ticket purchase transaction for the target chain
+   * Build a ticket purchase transaction for Base chain
    */
   private async buildTicketPurchaseTransaction(
     targetChain: string,
@@ -178,28 +216,32 @@ export class NearChainSignatureService {
     usdcAmount: string
   ): Promise<any> {
     const megapotContract = RAINBOW_BRIDGE_CONTRACTS.base.megapot;
-    const usdcContract = RAINBOW_BRIDGE_CONTRACTS.base.usdc;
 
-    // Build the transaction data
+    // Build the transaction data for Megapot contract
     const megapotInterface = new ethers.Interface([
       'function purchaseTickets(uint256 count) external'
     ]);
 
     const data = megapotInterface.encodeFunctionData('purchaseTickets', [ticketCount]);
 
-    // Get current gas price and nonce (this would need a provider)
+    // Get current gas price and nonce from Base network
+    const baseProvider = new ethers.JsonRpcProvider('https://mainnet.base.org');
+    const gasPrice = await baseProvider.getFeeData();
+    const nonce = await baseProvider.getTransactionCount(fromAddress);
+
     const transaction = {
       to: megapotContract,
       value: '0', // No ETH value, using USDC
       data,
       gasLimit: GAS_LIMITS.evm.ticketPurchase,
-      gasPrice: ethers.parseUnits('20', 'gwei'), // 20 gwei
-      nonce: 0, // Would need to fetch actual nonce
+      gasPrice: gasPrice.gasPrice || ethers.parseUnits('1', 'gwei'),
+      nonce,
       chainId: 8453, // Base chain ID
     };
 
-    // Calculate transaction hash
-    const serializedTx = ethers.Transaction.from(transaction).serialized;
+    // Calculate transaction hash for signing
+    const tx = ethers.Transaction.from(transaction);
+    const serializedTx = tx.serialized;
     const hash = ethers.keccak256(serializedTx);
 
     return {
@@ -210,7 +252,7 @@ export class NearChainSignatureService {
   }
 
   /**
-   * Broadcast signed transaction to the target chain
+   * Broadcast signed transaction to Base chain
    */
   private async broadcastTransaction(
     targetChain: string,
@@ -225,18 +267,19 @@ export class NearChainSignatureService {
         s: signature.signature.s,
         v: signature.signature.v,
       };
+      
       const signedTx = tx.serialized;
 
-      // In a real implementation, you would broadcast this to the target chain
-      // For now, we'll simulate the broadcast
-      const txHash = ethers.keccak256(signedTx);
+      // Broadcast to Base network
+      const baseProvider = new ethers.JsonRpcProvider('https://mainnet.base.org');
+      const result = await baseProvider.broadcastTransaction(signedTx);
       
-      console.log('Simulated broadcast of signed transaction:', signedTx);
+      console.log('Transaction broadcasted successfully:', result.hash);
       
-      return txHash;
+      return result.hash;
     } catch (error) {
       console.error('Failed to broadcast transaction:', error);
-      throw new Error('Transaction broadcast failed');
+      throw error;
     }
   }
 
@@ -250,12 +293,12 @@ export class NearChainSignatureService {
     causeAllocation: number
   ): Promise<void> {
     try {
-      // This would call your Syndicate registry contract
       const registryArgs = {
         syndicate_id: syndicateId,
         tx_hash: txHash,
         ticket_count: ticketCount,
         cause_allocation: causeAllocation,
+        timestamp: Date.now(),
       };
 
       await this.nearWallet.callMethod(
@@ -266,7 +309,7 @@ export class NearChainSignatureService {
         '0'
       );
 
-      console.log('Registered with Syndicate:', syndicateId);
+      console.log('Successfully registered with Syndicate:', syndicateId);
     } catch (error) {
       console.error('Failed to register with Syndicate:', error);
       // Don't throw here - ticket purchase succeeded even if registration failed
@@ -278,22 +321,36 @@ export class NearChainSignatureService {
    */
   private parseSignatureResult(result: any): ChainSignatureResponse {
     try {
-      // Parse the result based on NEAR chain signature format
-      // This is a simplified version - actual parsing depends on the contract response format
-      const signature = {
-        r: result.signature.r || '0x' + '0'.repeat(64),
-        s: result.signature.s || '0x' + '0'.repeat(64),
-        v: result.signature.v || 27,
-      };
+      // Handle different possible result formats from NEAR
+      let signature, publicKey, recoveryId;
+
+      if (result.signature) {
+        signature = {
+          r: result.signature.r || result.signature[0],
+          s: result.signature.s || result.signature[1],
+          v: result.signature.v || result.signature[2] || 27,
+        };
+      } else if (Array.isArray(result) && result.length >= 2) {
+        signature = {
+          r: '0x' + result[0],
+          s: '0x' + result[1],
+          v: result[2] || 27,
+        };
+      } else {
+        throw new Error('Invalid signature format from NEAR');
+      }
+
+      publicKey = result.public_key || result.publicKey || MPC_CONTRACTS.publicKey;
+      recoveryId = result.recovery_id || result.recoveryId || 0;
 
       return {
         signature,
-        publicKey: result.public_key || MPC_CONTRACTS.publicKey,
-        recoveryId: result.recovery_id || 0,
+        publicKey,
+        recoveryId,
       };
     } catch (error) {
       console.error('Failed to parse signature result:', error);
-      throw new Error('Invalid signature format');
+      throw error;
     }
   }
 
@@ -307,36 +364,43 @@ export class NearChainSignatureService {
     totalFee: string;
   }> {
     try {
-      // NEAR gas fee (in NEAR)
+      // Get real gas prices from networks
+      const baseProvider = new ethers.JsonRpcProvider('https://mainnet.base.org');
+      const baseFeeData = await baseProvider.getFeeData();
+      
+      // NEAR gas fee (in NEAR tokens)
       const nearGasFee = ethers.formatUnits(
-        ethers.parseUnits('0.001', 'ether'), // ~0.001 NEAR for chain signature
+        ethers.parseUnits('0.003', 'ether'), // ~0.003 NEAR for chain signature
         'ether'
       );
 
-      // Target chain gas fee (in ETH)
+      // Base chain gas fee (in ETH)
+      const baseGasLimit = BigInt(GAS_LIMITS.evm.ticketPurchase);
+      const baseGasPrice = baseFeeData.gasPrice || ethers.parseUnits('1', 'gwei');
       const targetChainGasFee = ethers.formatUnits(
-        ethers.parseUnits('0.002', 'ether'), // ~0.002 ETH for ticket purchase
+        baseGasLimit * baseGasPrice,
         'ether'
       );
 
-      // Bridge fee (if using Rainbow Bridge)
-      const bridgeFee = '0'; // Rainbow Bridge is typically free for small amounts
+      // No bridge fee for direct chain signatures
+      const bridgeFee = '0';
 
-      // Total fee in USD equivalent
-      const totalFee = ethers.formatUnits(
-        ethers.parseUnits('5', 'ether'), // ~$5 total
-        'ether'
-      );
+      // Calculate total in USD equivalent (approximate)
+      const nearPriceUsd = 3.0; // Approximate NEAR price
+      const ethPriceUsd = 2500.0; // Approximate ETH price
+      
+      const totalUsd = (parseFloat(nearGasFee) * nearPriceUsd) + 
+                      (parseFloat(targetChainGasFee) * ethPriceUsd);
 
       return {
-        nearGasFee,
-        targetChainGasFee,
+        nearGasFee: `${nearGasFee} NEAR`,
+        targetChainGasFee: `${targetChainGasFee} ETH`,
         bridgeFee,
-        totalFee,
+        totalFee: `$${totalUsd.toFixed(2)} USD`,
       };
     } catch (error) {
       console.error('Failed to estimate fees:', error);
-      throw new Error('Fee estimation failed');
+      throw error;
     }
   }
 
@@ -345,11 +409,26 @@ export class NearChainSignatureService {
    */
   async isChainSignatureAvailable(): Promise<boolean> {
     try {
+      if (!this.nearWallet?.isConnected) {
+        return false;
+      }
+
       const publicKey = await this.getMpcPublicKey(DERIVATION_PATHS.base);
       return !!publicKey;
     } catch (error) {
-      console.error('Chain signature not available:', error);
+      console.error('Chain signature availability check failed:', error);
       return false;
     }
+  }
+
+  /**
+   * Get service status
+   */
+  getStatus(): { initialized: boolean; connected: boolean; ready: boolean } {
+    return {
+      initialized: this.isInitialized,
+      connected: this.nearWallet?.isConnected || false,
+      ready: this.isInitialized && this.nearWallet?.isConnected,
+    };
   }
 }
