@@ -9,12 +9,14 @@ Syndicate enables users to pool resources with their social connections for lott
 **Total Prize Potential: $9,000 USDC**
 
 ### 🌉 Cross-Chain Interoperability Track ($3,500 USDC)
+
 - **NEAR Chain Signatures Integration**: Seamless cross-chain lottery ticket purchases from any blockchain
 - **Multi-Chain Bridge Status**: Real-time transaction tracking across Ethereum, Solana, Base, and Avalanche
 - **Universal Wallet Support**: Connect from any EVM chain or Solana with automatic cross-chain execution
 - **Intent-Based Architecture**: Simplified UX that abstracts complex cross-chain operations
 
 ### 💫 Solana Everyday Impact Track ($3,500 USDC)
+
 - **Enhanced User Experience**: Intuitive onboarding flow with progressive wallet setup
 - **Mobile-First Design**: Responsive layout with dedicated mobile navigation and touch-optimized UI
 - **Real-Time Notifications**: Comprehensive notification system for wallet connections, transactions, and achievements
@@ -22,14 +24,24 @@ Syndicate enables users to pool resources with their social connections for lott
 - **Gamified Experience**: User dashboard with experience points, achievements, and activity tracking
 
 ### 🏷️ Best Use of SNS Track ($2,000 USDC)
+
 - **Domain Resolution**: Comprehensive SNS domain search and resolution functionality
 - **Address Display**: Human-readable domain names instead of wallet addresses
 - **Recent Searches**: Persistent search history for improved user experience
 - **Integration**: SNS domains used throughout the lottery interface for better UX
 
+## 📚 Documentation
+
+For detailed information about the project implementation and features:
+
+- **[Project Overview & Implementation](docs/PROJECT_OVERVIEW.md)** - Complete implementation details, hackathon tracks alignment, and technical architecture
+- **[Mobile Experience & Polish](docs/MOBILE_EXPERIENCE.md)** - Mobile enhancements, gesture navigation, and production-ready features
+- **[Impact Features & Social Good](docs/IMPACT_FEATURES.md)** - Impact tracking, user engagement, and social features
+
 ## 🌟 Key Features
 
 ### 🎯 Hackathon-Winning Features
+
 - **Cross-Chain Native**: Purchase lottery tickets from any blockchain with NEAR chain signatures
 - **SNS Integration**: Full Solana Name Service support for human-readable addresses
 - **Mobile-Optimized**: Complete responsive design with dedicated mobile navigation
@@ -39,22 +51,26 @@ Syndicate enables users to pool resources with their social connections for lott
 ### Core Platform Features
 
 ### Cross-Chain Native
+
 - Purchase Megapot lottery tickets on Base from any supported chain (EVM, Solana)
 - Powered by NEAR chain signatures for seamless cross-chain transactions
 - No manual bridging required - everything happens in one transaction
 - Web3Auth integration for social login and easy onboarding
 
 ### Social Coordination
+
 - Create or join cause-based syndicates with friends and community
 - Pool resources to dramatically increase collective winning chances
 - Transparent member management and contribution tracking
 
 ### Automated Impact
+
 - Smart contracts automatically distribute winnings based on predefined allocations
 - Support for various causes: ocean cleanup, food security, education, climate action
 - Configurable cause percentages (5-50% of winnings)
 
 ### Multi-Wallet Integration
+
 - Built on MetaMask's delegation toolkit (ERC-7715)
 - Secure permission-based transactions
 - Enhanced user experience with delegated operations
@@ -70,11 +86,12 @@ Syndicate enables users to pool resources with their social connections for lott
 - **Complete Prize Management**: Claim winnings on your preferred chain, regardless of purchase origin
 - **Social Login**: Web3Auth integration makes lottery accessible to mainstream users
 
-*Transform your multi-chain lottery experience from complex to effortless.*
+_Transform your multi-chain lottery experience from complex to effortless._
 
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Node.js 18+
 - MetaMask Flask (for ERC-7715 support)
 - Supported wallet on any EVM chain
@@ -82,24 +99,27 @@ Syndicate enables users to pool resources with their social connections for lott
 ### Installation
 
 1. **Clone and setup:**
+
 ```bash
 cd syndicate
 npm install
 ```
 
 2. **Environment configuration:**
+
 ```bash
 cp .env.example .env.local
 # Configure your RPC endpoints and contract addresses
 ```
 
 3. **Start development server:**
+
 ```bash
 npm run dev
 ```
 
 4. **Open in browser:**
-Navigate to `http://localhost:3000`
+   Navigate to `http://localhost:3000`
 
 ## 🎯 How It Works
 
@@ -125,12 +145,14 @@ User Wallet (Ethereum/Solana) → NEAR Chain Signatures → Base Network (Megapo
 ### Hackathon Track Features
 
 #### Cross-Chain Interoperability
+
 - **NEAR Chain Signatures**: `src/services/nearChainSignatureService.ts` - Enables cross-chain transaction signing
 - **Cross-Chain Bridge Status**: `src/components/CrossChainBridgeStatus.tsx` - Real-time multi-chain transaction tracking
 - **Unified Ticket Service**: `src/services/unifiedTicketService.ts` - Abstracted cross-chain lottery operations
 - **Intent Solver Integration**: `src/services/nearIntents.ts` - Automated cross-chain execution
 
 #### Solana Everyday Impact
+
 - **Onboarding Flow**: `src/components/OnboardingFlow.tsx` - Progressive wallet setup with guided steps
 - **User Dashboard**: `src/components/UserDashboard.tsx` - Gamified experience with achievements and stats
 - **Mobile Navigation**: `src/components/MobileNavigation.tsx` - Touch-optimized bottom navigation
@@ -138,6 +160,7 @@ User Wallet (Ethereum/Solana) → NEAR Chain Signatures → Base Network (Megapo
 - **Notification System**: `src/components/NotificationSystem.tsx` - Real-time updates and alerts
 
 #### Best Use of SNS
+
 - **SNS Domain Search**: `src/components/SNSDomainSearch.tsx` - Comprehensive domain resolution interface
 - **SNS Service**: `src/services/snsService.ts` - Core SNS integration and caching
 - **SNS Hook**: `src/hooks/useSNS.ts` - React hook for domain operations
@@ -146,6 +169,7 @@ User Wallet (Ethereum/Solana) → NEAR Chain Signatures → Base Network (Megapo
 ### Development
 
 #### Project Structure
+
 ```
 syndicate/
 ├── src/
@@ -195,6 +219,7 @@ syndicate/
 ## 🔧 Configuration
 
 ### Supported Chains
+
 - **Base** (Primary lottery chain - Megapot)
 - **Ethereum** (Cross-chain support)
 - **Avalanche** (Cross-chain support)
@@ -203,6 +228,7 @@ syndicate/
 - **Arbitrum** (Cross-chain support)
 
 ### Environment Variables
+
 ```bash
 # RPC Endpoints
 NEXT_PUBLIC_BASE_RPC_URL=https://mainnet.base.org

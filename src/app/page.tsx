@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useAccount } from "wagmi";
+import { useWeb3Auth } from "@web3auth/modal/react";
+import { useSolanaWallet } from "@/providers/SolanaWalletProvider";
 import dynamic from "next/dynamic";
 import NotificationSystem from "@/components/NotificationSystem";
 import MobileNavigation from "@/components/MobileNavigation";
@@ -12,6 +14,7 @@ import { CrossChainTransactionList } from "@/providers/CrossChainProvider";
 import WalletInfoContainer from "@/components/WalletInfoContainer";
 import ConnectWallet from "@/components/ConnectWallet";
 import Loader from "@/components/Loader";
+import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
 
 // Dynamically import components that use browser APIs to avoid SSR issues
 const LotteryDashboard = dynamic(() => import("@/components/lottery/LotteryDashboard"), {
@@ -29,11 +32,17 @@ const CrossChainDashboard = dynamic(
 
 export default function Home() {
   const { isConnected } = useAccount();
+  const { isConnected: web3AuthConnected } = useWeb3Auth();
+  const { connected: solanaConnected } = useSolanaWallet();
   const [enableAdvancedFeatures, setEnableAdvancedFeatures] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "lottery" | "transactions" | "dashboard"
   >("lottery");
   const [showSyndicateCreator, setShowSyndicateCreator] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(true);
+
+  // Check if any wallet is connected
+  const isAnyWalletConnected = isConnected || web3AuthConnected || solanaConnected;
 
   const handleCreateSyndicate = (syndicateData: any) => {
     console.log("Creating syndicate:", syndicateData);
@@ -41,23 +50,13 @@ export default function Home() {
     // For now, just log the data
   };
 
-  // Show wallet connection interface if not connected
-  if (!isConnected) {
+  // Show onboarding flow for new users
+  if (!isAnyWalletConnected || showOnboarding) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white flex flex-col">
-        <main className="container mx-auto px-4 py-8 max-w-4xl flex-1">
-          <Hero />
-          <ConnectWallet />
-        </main>
-      <Footer />
-        
-        {/* Mobile Navigation */}
-        <MobileNavigation 
-          activeTab={activeTab} 
-          onTabChange={setActiveTab}
-          className="fixed bottom-0 left-0 right-0"
-        />
-      </div>
+      <OnboardingFlow 
+        onComplete={() => setShowOnboarding(false)}
+        className="min-h-screen"
+      />
     );
 
   return (

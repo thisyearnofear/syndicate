@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useSolanaWallet } from '@/providers/SolanaWalletProvider';
 import { useUserStatsDisplay } from '@/providers/MegapotProvider';
+import { impactService, type UserImpactStats } from '@/services/impactService';
+import { useGestures, mobileGestureService, MobileGestureService } from '@/services/mobileGestureService';
+import SwipeableNavigation, { useSwipeableTabNavigation } from '@/components/mobile/SwipeableNavigation';
 import { 
   Menu, 
   X, 
@@ -34,6 +37,25 @@ export default function MobileNavigation({ activeTab, onTabChange, className = '
   const { connected: isSolanaConnected, publicKey } = useSolanaWallet();
   const { totalTickets, totalSpentFormatted } = useUserStatsDisplay();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [userImpactStats, setUserImpactStats] = useState<UserImpactStats | null>(null);
+  const [isSwipeEnabled, setIsSwipeEnabled] = useState(true);
+  const navigationRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Load user impact stats
+  useEffect(() => {
+    const loadUserStats = async () => {
+      if (address) {
+        try {
+          const stats = await impactService.getUserImpactStats(address);
+          setUserImpactStats(stats);
+        } catch (error) {
+          console.error('Failed to load user stats:', error);
+        }
+      }
+    };
+    loadUserStats();
+  }, [address]);
 
   const navigationItems: Array<{
     id: "lottery" | "transactions" | "dashboard";
@@ -85,19 +107,56 @@ export default function MobileNavigation({ activeTab, onTabChange, className = '
     }
   ];
 
+  // Enhanced navigation with gesture support
+  const tabs = ['lottery', 'transactions', 'dashboard'] as const;
+  const { swipeToNextTab, swipeToPrevTab } = useSwipeableTabNavigation(
+    tabs,
+    activeTab,
+    onTabChange
+  );
+
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
+    // Add haptic feedback for menu toggle
+    MobileGestureService.triggerHapticFeedback('medium');
   };
 
   const handleNavigation = (tabId: "lottery" | "transactions" | "dashboard") => {
     onTabChange(tabId);
     setIsMenuOpen(false);
+    // Add haptic feedback for navigation
+    MobileGestureService.triggerHapticFeedback('light');
+  };
+
+  // Handle swipe gestures for tab navigation
+  const handleSwipeLeft = () => {
+    if (!isMenuOpen) {
+      swipeToNextTab();
+    }
+  };
+
+  const handleSwipeRight = () => {
+    if (!isMenuOpen) {
+      swipeToPrevTab();
+    }
+  };
+
+  const handleSwipeDown = () => {
+    if (isMenuOpen) {
+      setIsMenuOpen(false);
+    }
   };
 
   return (
     <>
-      {/* Mobile Navigation Bar */}
-      <div className={`lg:hidden bg-gray-800 border-t border-gray-700 ${className}`}>
+      {/* Mobile Navigation Bar with Gesture Support */}
+      <SwipeableNavigation
+        onSwipeLeft={handleSwipeLeft}
+        onSwipeRight={handleSwipeRight}
+        onSwipeDown={handleSwipeDown}
+        disabled={isMenuOpen}
+        className={`lg:hidden bg-gray-800 border-t border-gray-700 ${className}`}
+      >
         {/* Bottom Navigation */}
         <div className="flex items-center justify-around py-2">
           {navigationItems.map((item) => (
@@ -124,7 +183,7 @@ export default function MobileNavigation({ activeTab, onTabChange, className = '
             <span className="text-xs font-medium">More</span>
           </button>
         </div>
-      </div>
+      </SwipeableNavigation>
 
       {/* Mobile Menu Overlay */}
       {isMenuOpen && (
@@ -141,7 +200,7 @@ export default function MobileNavigation({ activeTab, onTabChange, className = '
               </button>
             </div>
 
-            {/* User Info */}
+            {/* Enhanced User Info with Real Impact Data */}
             {isConnected && (
               <div className="bg-gray-700/50 rounded-lg p-4 mb-6">
                 <div className="flex items-center space-x-3 mb-3">
