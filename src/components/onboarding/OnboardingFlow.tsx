@@ -12,10 +12,11 @@ type OnboardingStep = 'social-login' | 'sns-setup' | 'pool-discovery' | 'complet
 
 interface OnboardingFlowProps {
   onComplete: () => void;
+  onSkip?: () => void; // ENHANCEMENT FIRST: Added skip option
   className?: string;
 }
 
-export default function OnboardingFlow({ onComplete, className = '' }: OnboardingFlowProps) {
+export default function OnboardingFlow({ onComplete, onSkip, className = '' }: OnboardingFlowProps) {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('social-login');
   const [userProfile, setUserProfile] = useState<any>(null);
   
@@ -100,6 +101,18 @@ export default function OnboardingFlow({ onComplete, className = '' }: Onboardin
 
   return (
     <div className={`onboarding-flow bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 ${className}`}>
+      {/* ENHANCEMENT FIRST: Added skip option for users who just want to connect wallet */}
+      {onSkip && (
+        <div className="absolute top-4 right-4 z-50">
+          <button
+            onClick={onSkip}
+            className="bg-gray-800/80 hover:bg-gray-700/80 text-gray-300 hover:text-white px-4 py-2 rounded-lg transition-colors backdrop-blur-sm border border-gray-600"
+          >
+            Skip & Connect Wallet
+          </button>
+        </div>
+      )}
+      
       {renderCurrentStep()}
       
       {/* Progress Indicator */}

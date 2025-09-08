@@ -14,6 +14,9 @@ import { formatUnits } from 'viem';
 import SNSDomainSearch from '../SNSDomainSearch';
 import CrossChainBridgeStatus from '../CrossChainBridgeStatus';
 import UserDashboard from '../UserDashboard';
+import DelightfulButton from '../DelightfulButton';
+import TicketPurchaseAnimation from '../TicketPurchaseAnimation';
+import CelebrationModal from '../CelebrationModal';
 
 interface LotteryDashboardProps {
   className?: string;

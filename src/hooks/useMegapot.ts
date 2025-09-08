@@ -104,7 +104,14 @@ export function useJackpotStats(autoRefresh = true): UseJackpotStatsReturn {
       const stats = await megapotService.getActiveJackpotStats();
       setJackpotStats(stats);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch jackpot stats');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch jackpot stats';
+      setError(errorMessage);
+      
+      // Log detailed error for debugging
+      console.error('Jackpot stats fetch error:', err);
+      
+      // Provide fallback data or graceful degradation if needed
+      // You could set default/cached data here if available
     } finally {
       setLoading(false);
     }
