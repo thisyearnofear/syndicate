@@ -9,7 +9,7 @@ import MobileNavigation from "@/components/MobileNavigation";
 import ResponsiveLayout from "@/components/ResponsiveLayout";
 import Hero from "@/components/Hero";
 import Footer from "@/components/Footer";
-import SyndicateCreator from "@/components/SyndicateCreator";
+import DelightfulSyndicateCreator from "@/components/DelightfulSyndicateCreator";
 import { CrossChainTransactionList } from "@/providers/CrossChainProvider";
 import WalletInfoContainer from "@/components/WalletInfoContainer";
 import ConnectWallet from "@/components/ConnectWallet";
@@ -17,10 +17,13 @@ import Loader from "@/components/Loader";
 import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
 
 // Dynamically import components that use browser APIs to avoid SSR issues
-const LotteryDashboard = dynamic(() => import("@/components/lottery/LotteryDashboard"), {
-  ssr: false,
-  loading: () => <Loader />,
-});
+const LotteryDashboard = dynamic(
+  () => import("@/components/lottery/LotteryDashboard"),
+  {
+    ssr: false,
+    loading: () => <Loader />,
+  }
+);
 
 const CrossChainDashboard = dynamic(
   () => import("@/components/CrossChainDashboard"),
@@ -40,7 +43,8 @@ export default function Home() {
   >("lottery");
   const [showSyndicateCreator, setShowSyndicateCreator] = useState(false);
   // Check if any wallet is connected
-  const isAnyWalletConnected = isConnected || web3AuthConnected || solanaConnected;
+  const isAnyWalletConnected =
+    isConnected || web3AuthConnected || solanaConnected;
 
   const handleCreateSyndicate = (syndicateData: any) => {
     console.log("Creating syndicate:", syndicateData);
@@ -52,9 +56,12 @@ export default function Home() {
   // Show onboarding only if no wallet connected AND user hasn't opted out
   if (!isAnyWalletConnected) {
     return (
-      <OnboardingFlow 
+      <OnboardingFlow
         onComplete={() => {}} // No state needed, just proceed to main app
-        onSkip={() => {}} // No state needed, just proceed to main app
+        onSkip={() => {
+          // Force a re-render by updating state to show main app
+          setActiveTab("lottery");
+        }}
         className="min-h-screen"
       />
     );
@@ -68,124 +75,128 @@ export default function Home() {
         <div className="absolute top-0 right-0 z-10">
           <NotificationSystem />
         </div>
-        
+
         <Hero />
       </div>
-      
+
       <WalletInfoContainer />
 
-        {/* Advanced Features Toggle */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-white font-medium">⚡ Advanced Features</h3>
-              <p className="text-gray-400 text-sm">
-                Enable gasless transactions and experimental features
-              </p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={enableAdvancedFeatures}
-                onChange={(e) => setEnableAdvancedFeatures(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-            </label>
+      {/* Advanced Features Toggle */}
+      <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-white font-medium">⚡ Advanced Features</h3>
+            <p className="text-gray-400 text-sm">
+              Enable gasless transactions and experimental features
+            </p>
           </div>
-          {enableAdvancedFeatures && (
-            <div className="mt-3 p-3 bg-yellow-900/30 border border-yellow-600 rounded">
-              <p className="text-yellow-200 text-sm">
-                ⚠️ <strong>Note:</strong> Advanced features require{" "}
-                <a
-                  href="https://metamask.io/flask/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-yellow-400 hover:text-yellow-300 underline"
-                >
-                  MetaMask Flask
-                </a>{" "}
-                and may be experimental.
-              </p>
-            </div>
-          )}
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={enableAdvancedFeatures}
+              onChange={(e) => setEnableAdvancedFeatures(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+          </label>
         </div>
-
-        {/* Navigation Tabs */}
-        <div className="flex justify-center mb-8">
-          <div className="bg-gray-800 rounded-lg p-1 border border-gray-700">
-            <button
-              onClick={() => setActiveTab("lottery")}
-              className={`px-6 py-3 rounded-md transition-all ${
-                activeTab === "lottery"
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-400 hover:text-white"
-              }`}
-            >
-              🎯 Lottery
-            </button>
-            <button
-              onClick={() => setActiveTab("transactions")}
-              className={`px-6 py-3 rounded-md transition-all ${
-                activeTab === "transactions"
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-400 hover:text-white"
-              }`}
-            >
-              📊 Transactions
-            </button>
-            <button
-              onClick={() => setActiveTab("dashboard")}
-              className={`px-6 py-3 rounded-md transition-all ${
-                activeTab === "dashboard"
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-400 hover:text-white"
-              }`}
-            >
-              🌉 Cross-Chain
-            </button>
+        {enableAdvancedFeatures && (
+          <div className="mt-3 p-3 bg-yellow-900/30 border border-yellow-600 rounded">
+            <p className="text-yellow-200 text-sm">
+              ⚠️ <strong>Note:</strong> Advanced features require{" "}
+              <a
+                href="https://metamask.io/flask/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-yellow-400 hover:text-yellow-300 underline"
+              >
+                MetaMask Flask
+              </a>{" "}
+              and may be experimental.
+            </p>
           </div>
-        </div>
+        )}
+      </div>
 
-        {/* Content */}
-        {activeTab === "lottery" && (
-          <div className="space-y-6">
-            {/* ENHANCEMENT FIRST: Prominent individual ticket purchase */}
-            <div className="max-w-md mx-auto mb-8">
-              <div className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 rounded-xl p-6 border border-purple-500/20 backdrop-blur-sm">
-                <div className="text-center mb-4">
-                  <h3 className="text-xl font-bold text-white mb-2">🎫 Buy Individual Tickets</h3>
-                  <p className="text-gray-300 text-sm">Join the lottery directly - no syndicate required</p>
-                </div>
-                <ConnectWallet />
+      {/* Navigation Tabs */}
+      <div className="flex justify-center mb-8">
+        <div className="bg-gray-800 rounded-lg p-1 border border-gray-700">
+          <button
+            onClick={() => setActiveTab("lottery")}
+            className={`px-6 py-3 rounded-md transition-all ${
+              activeTab === "lottery"
+                ? "bg-blue-600 text-white"
+                : "text-gray-400 hover:text-white"
+            }`}
+          >
+            🎯 Lottery
+          </button>
+          <button
+            onClick={() => setActiveTab("transactions")}
+            className={`px-6 py-3 rounded-md transition-all ${
+              activeTab === "transactions"
+                ? "bg-blue-600 text-white"
+                : "text-gray-400 hover:text-white"
+            }`}
+          >
+            📊 Transactions
+          </button>
+          <button
+            onClick={() => setActiveTab("dashboard")}
+            className={`px-6 py-3 rounded-md transition-all ${
+              activeTab === "dashboard"
+                ? "bg-blue-600 text-white"
+                : "text-gray-400 hover:text-white"
+            }`}
+          >
+            🌉 Cross-Chain
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      {activeTab === "lottery" && (
+        <div className="space-y-6">
+          {/* ENHANCEMENT FIRST: Prominent individual ticket purchase */}
+          <div className="max-w-md mx-auto mb-8">
+            <div className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 rounded-xl p-6 border border-purple-500/20 backdrop-blur-sm">
+              <div className="text-center mb-4">
+                <h3 className="text-xl font-bold text-white mb-2">
+                  🎫 Buy Individual Tickets
+                </h3>
+                <p className="text-gray-300 text-sm">
+                  Join the lottery directly - no syndicate required
+                </p>
               </div>
-            </div>
-            
-            <LotteryDashboard className="max-w-4xl mx-auto" />
-          </div>
-        )}
-        {activeTab === "transactions" && (
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-              <h2 className="text-2xl font-bold text-white mb-6">
-                Cross-Chain Transactions
-              </h2>
-              <CrossChainTransactionList />
+              <ConnectWallet />
             </div>
           </div>
-        )}
-        {activeTab === "dashboard" && <CrossChainDashboard />}
 
-      {/* Syndicate Creator Modal */}
-      <SyndicateCreator
+          <LotteryDashboard className="max-w-4xl mx-auto" />
+        </div>
+      )}
+      {activeTab === "transactions" && (
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h2 className="text-2xl font-bold text-white mb-6">
+              Cross-Chain Transactions
+            </h2>
+            <CrossChainTransactionList />
+          </div>
+        </div>
+      )}
+      {activeTab === "dashboard" && <CrossChainDashboard />}
+
+      {/* Delightful Syndicate Creator Modal */}
+      <DelightfulSyndicateCreator
         isOpen={showSyndicateCreator}
         onClose={() => setShowSyndicateCreator(false)}
         onCreate={handleCreateSyndicate}
       />
-      
+
       {/* Mobile Navigation */}
-      <MobileNavigation 
-        activeTab={activeTab} 
+      <MobileNavigation
+        activeTab={activeTab}
         onTabChange={setActiveTab}
         className="fixed bottom-0 left-0 right-0"
       />
