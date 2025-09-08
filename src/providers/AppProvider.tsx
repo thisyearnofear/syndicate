@@ -4,17 +4,29 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createConfig, http, WagmiProvider, createStorage } from "wagmi";
 import { sepolia, base, avalanche, baseSepolia } from "viem/chains";
 import { ReactNode } from "react";
+import dynamic from "next/dynamic";
 import { metaMask, walletConnect, coinbaseWallet } from "wagmi/connectors";
 import { MegapotProvider as MegapotUIProvider } from "@coordinationlabs/megapot-ui-kit";
 import { MegapotProvider } from "@/providers/MegapotProvider";
-import { Web3AuthProvider } from "@web3auth/modal/react";
 import { CrossChainProvider } from "@/providers/CrossChainProvider";
 import { PermissionProvider } from "@/providers/PermissionProvider";
 import { SessionAccountProvider } from "@/providers/SessionAccountProvider";
 import { NearWalletProvider } from "@/providers/NearWalletProvider";
-import { SolanaWalletProvider } from "@/providers/SolanaWalletProvider";
 import { useConnect } from "wagmi";
 import web3AuthContextConfig from "@/config/web3authContext";
+import { Web3AuthProvider, SolanaWalletProvider } from "@/lib/dynamicImports";
+import { Web3AuthErrorBoundary } from "@/components/Web3AuthErrorBoundary";
+
+// Consolidated client-only Web3Auth wrapper using centralized utilities
+function ClientOnlyWeb3AuthProvider({ children }: { children: ReactNode }) {
+  return (
+    <Web3AuthErrorBoundary>
+      <Web3AuthProvider config={web3AuthContextConfig}>
+        {children}
+      </Web3AuthProvider>
+    </Web3AuthErrorBoundary>
+  );
+}
 
 // Create a safe storage implementation for SSR
 const createSafeStorage = () => {
@@ -116,16 +128,14 @@ function MegapotWrapper({ children }: { children: ReactNode }) {
         }
       }}
     >
-      <MegapotProvider>
-        {children}
-      </MegapotProvider>
+      <MegapotProvider>{children}</MegapotProvider>
     </MegapotUIProvider>
   );
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
   return (
-    <Web3AuthProvider config={web3AuthContextConfig}>
+    <ClientOnlyWeb3AuthProvider>
       <QueryClientProvider client={queryClient}>
         <WagmiProvider config={wagmiConfig}>
           <MegapotWrapper>
@@ -141,6 +151,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           </MegapotWrapper>
         </WagmiProvider>
       </QueryClientProvider>
-    </Web3AuthProvider>
+    </ClientOnlyWeb3AuthProvider>
   );
 }

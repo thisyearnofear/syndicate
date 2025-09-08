@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useEffect, useState } from 'react';
+import DynamicBackdrop from './DynamicBackdrop';
 
 interface ResponsiveLayoutProps {
   children: React.ReactNode;
@@ -30,33 +31,33 @@ export default function ResponsiveLayout({ children, className = '' }: Responsiv
     <div className={`responsive-layout ${className}`}>
       {/* Mobile Layout */}
       {isMobile && (
-        <div className="mobile-layout min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+        <DynamicBackdrop className="mobile-layout min-h-screen">
           <div className="px-4 py-6 pb-20">
             {children}
           </div>
-        </div>
+        </DynamicBackdrop>
       )}
 
       {/* Tablet Layout */}
       {isTablet && (
-        <div className="tablet-layout min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+        <DynamicBackdrop className="tablet-layout min-h-screen">
           <div className="px-6 py-8">
             <div className="max-w-4xl mx-auto">
               {children}
             </div>
           </div>
-        </div>
+        </DynamicBackdrop>
       )}
 
       {/* Desktop Layout */}
       {!isMobile && !isTablet && (
-        <div className="desktop-layout min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+        <DynamicBackdrop className="desktop-layout min-h-screen">
           <div className="px-8 py-12">
             <div className="max-w-7xl mx-auto">
               {children}
             </div>
           </div>
-        </div>
+        </DynamicBackdrop>
       )}
 
       {/* Global Responsive Styles */}

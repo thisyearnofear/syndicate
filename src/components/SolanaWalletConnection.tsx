@@ -6,13 +6,33 @@ import {
 } from "@/providers/SolanaWalletProvider";
 import { useState, useEffect } from "react";
 import { useAddressDisplay } from "@/hooks/useSNS";
+import { useSolanaProviderReady } from "@/hooks/useProviderReady";
 
 export default function SolanaWalletConnection() {
+  const isProviderReady = useSolanaProviderReady();
+
+  // Only render the component if provider is ready
+  if (!isProviderReady) {
+    return (
+      <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <div className="flex items-center space-x-3">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-400"></div>
+          <span className="text-gray-300">
+            Loading Solana wallet provider...
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   const { isConnected, publicKey, connect, disconnect, isLoading } =
     useSolanaWalletConnection();
   const { connection } = useSolanaWallet();
   const [isInitializing, setIsInitializing] = useState(false);
-  const { displayName, isLoading: isLoadingDomain } = useAddressDisplay(publicKey, connection);
+  const { displayName, isLoading: isLoadingDomain } = useAddressDisplay(
+    publicKey,
+    connection
+  );
 
   const handleConnect = async () => {
     try {
@@ -78,12 +98,17 @@ export default function SolanaWalletConnection() {
             {isLoadingDomain ? (
               <span className="animate-pulse">Loading domain...</span>
             ) : (
-              displayName || `${publicKey?.toString().slice(0, 8)}...${publicKey?.toString().slice(-8)}`
+              displayName ||
+              `${publicKey?.toString().slice(0, 8)}...${publicKey
+                ?.toString()
+                .slice(-8)}`
             )}
           </p>
-          {displayName && displayName.endsWith('.sol') && (
+          {displayName && displayName.endsWith(".sol") && (
             <div className="flex items-center space-x-1 mt-1">
-              <span className="text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">SNS</span>
+              <span className="text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">
+                SNS
+              </span>
               <span className="text-xs text-purple-300">Verified Domain</span>
             </div>
           )}
@@ -141,9 +166,24 @@ export default function SolanaWalletConnection() {
 
 // Compact version for use in other components
 export function SolanaWalletStatus() {
+  const isProviderReady = useSolanaProviderReady();
+
+  // Only render the component if provider is ready
+  if (!isProviderReady) {
+    return (
+      <div className="flex items-center space-x-2 bg-gray-600 text-gray-400 px-3 py-2 rounded-lg">
+        <span>🔥</span>
+        <span className="text-sm">Loading...</span>
+      </div>
+    );
+  }
+
   const { isConnected, publicKey, connect } = useSolanaWalletConnection();
   const { connection } = useSolanaWallet();
-  const { displayName, isLoading: isLoadingDomain } = useAddressDisplay(publicKey, connection);
+  const { displayName, isLoading: isLoadingDomain } = useAddressDisplay(
+    publicKey,
+    connection
+  );
 
   if (!isConnected) {
     return (
@@ -165,10 +205,13 @@ export function SolanaWalletStatus() {
           {isLoadingDomain ? (
             <span className="animate-pulse">Loading...</span>
           ) : (
-            displayName || `${publicKey?.toString().slice(0, 8)}...${publicKey?.toString().slice(-8)}`
+            displayName ||
+            `${publicKey?.toString().slice(0, 8)}...${publicKey
+              ?.toString()
+              .slice(-8)}`
           )}
         </span>
-        {displayName && displayName.endsWith('.sol') && (
+        {displayName && displayName.endsWith(".sol") && (
           <span className="text-xs text-purple-400">SNS Domain</span>
         )}
       </div>
