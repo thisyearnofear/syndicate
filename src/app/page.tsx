@@ -39,8 +39,6 @@ export default function Home() {
     "lottery" | "transactions" | "dashboard"
   >("lottery");
   const [showSyndicateCreator, setShowSyndicateCreator] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(true);
-
   // Check if any wallet is connected
   const isAnyWalletConnected = isConnected || web3AuthConnected || solanaConnected;
 
@@ -50,14 +48,17 @@ export default function Home() {
     // For now, just log the data
   };
 
-  // Show onboarding flow for new users
-  if (!isAnyWalletConnected || showOnboarding) {
+  // ENHANCEMENT FIRST: Enhanced existing onboarding to be optional
+  // Show onboarding only if no wallet connected AND user hasn't opted out
+  if (!isAnyWalletConnected) {
     return (
       <OnboardingFlow 
-        onComplete={() => setShowOnboarding(false)}
+        onComplete={() => {}} // No state needed, just proceed to main app
+        onSkip={() => {}} // No state needed, just proceed to main app
         className="min-h-screen"
       />
     );
+  }
 
   return (
     <ResponsiveLayout>
@@ -70,7 +71,8 @@ export default function Home() {
         
         <Hero />
       </div>
-        <WalletInfoContainer />
+      
+      <WalletInfoContainer />
 
         {/* Advanced Features Toggle */}
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-6">
@@ -148,6 +150,17 @@ export default function Home() {
         {/* Content */}
         {activeTab === "lottery" && (
           <div className="space-y-6">
+            {/* ENHANCEMENT FIRST: Prominent individual ticket purchase */}
+            <div className="max-w-md mx-auto mb-8">
+              <div className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 rounded-xl p-6 border border-purple-500/20 backdrop-blur-sm">
+                <div className="text-center mb-4">
+                  <h3 className="text-xl font-bold text-white mb-2">🎫 Buy Individual Tickets</h3>
+                  <p className="text-gray-300 text-sm">Join the lottery directly - no syndicate required</p>
+                </div>
+                <ConnectWallet />
+              </div>
+            </div>
+            
             <LotteryDashboard className="max-w-4xl mx-auto" />
           </div>
         )}
@@ -178,5 +191,4 @@ export default function Home() {
       />
     </ResponsiveLayout>
   );
-}
 }

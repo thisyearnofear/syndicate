@@ -4,6 +4,7 @@ import { useConnect, useAccount, useDisconnect } from "wagmi";
 import { useState } from "react";
 import NearWalletConnection from "@/components/NearWalletConnection";
 import SolanaWalletConnection from "@/components/SolanaWalletConnection";
+import DelightfulButton from "@/components/DelightfulButton";
 
 export default function ConnectWallet() {
   const { connectors, connect, isPending } = useConnect();
@@ -33,12 +34,13 @@ export default function ConnectWallet() {
               {address?.slice(0, 6)}...{address?.slice(-4)}
             </p>
           </div>
-          <button
+          <DelightfulButton
             onClick={() => disconnect()}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+            variant="secondary"
+            size="sm"
           >
             Disconnect
-          </button>
+          </DelightfulButton>
         </div>
         
         {/* Advanced Options for Cross-Chain */}
@@ -71,18 +73,15 @@ export default function ConnectWallet() {
       
       <div className="space-y-3">
         {connectors.map((connector) => (
-          <button
+          <DelightfulButton
             key={connector.uid}
             onClick={() => handleConnect(connector)}
             disabled={isPending || isConnecting}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+            loading={isPending || isConnecting}
+            variant="primary"
+            className="w-full"
           >
-            {isPending || isConnecting ? (
-              <div className="flex items-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Connecting...
-              </div>
-            ) : (
+            {!isPending && !isConnecting && (
               <>
                 {connector.name === "MetaMask" && "🦊 "}
                 {connector.name === "WalletConnect" && "🔗 "}
@@ -90,7 +89,8 @@ export default function ConnectWallet() {
                 Connect with {connector.name}
               </>
             )}
-          </button>
+            {(isPending || isConnecting) && "Connecting..."}
+          </DelightfulButton>
         ))}
       </div>
 

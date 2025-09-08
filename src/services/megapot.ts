@@ -45,33 +45,68 @@ class MegapotService {
   private baseUrl = MEGAPOT_API_BASE_URL;
   private apiKey = MEGAPOT_API_KEY;
 
-  private async makeRequest<T>(endpoint: string): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
+  private async makeRequest<T>(endpoint: string, retries = 3): Promise<T> {
+    // Use the API proxy route to avoid CORS issues
+    const url = `/api/megapot?endpoint=${encodeURIComponent(endpoint)}`;
     
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          // Add timeout to prevent hanging requests
+          signal: AbortSignal.timeout(10000), // 10 second timeout
+        });
 
-    // Add API key to headers if available
-    if (this.apiKey) {
-      headers['apikey'] = this.apiKey;
-    }
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+          
+          // Don't retry on client errors (4xx)
+          if (response.status >= 400 && response.status < 500) {
+            throw new Error(`API error: ${response.status} - ${errorData.error || 'Client error'}`);
+          }
+          
+          // Retry on server errors (5xx) if we have attempts left
+          if (attempt < retries) {
+            console.warn(`API request failed (attempt ${attempt}/${retries}): ${response.status}`);
+            await this.delay(1000 * attempt); // Exponential backoff
+            continue;
+          }
+          
+          throw new Error(`API error: ${response.status} - ${errorData.error || 'Server error'}`);
+        }
 
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        return await response.json();
+      } catch (error) {
+        // Don't retry on timeout or network errors if it's the last attempt
+        if (attempt === retries) {
+          console.error(`Error fetching from Megapot API: ${endpoint}`, error);
+          
+          // Provide user-friendly error messages
+          if (error instanceof Error) {
+            if (error.name === 'AbortError') {
+              throw new Error('Request timeout - please check your connection and try again');
+            }
+            if (error.message.includes('Failed to fetch')) {
+              throw new Error('Network error - please check your connection and try again');
+            }
+          }
+          
+          throw error;
+        }
+        
+        console.warn(`API request failed (attempt ${attempt}/${retries}):`, error);
+        await this.delay(1000 * attempt); // Exponential backoff
       }
-
-      return await response.json();
-    } catch (error) {
-      console.error(`Error fetching from Megapot API: ${endpoint}`, error);
-      throw error;
     }
+    
+    throw new Error('Max retries exceeded');
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**

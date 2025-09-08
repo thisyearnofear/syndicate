@@ -1,3 +1,5 @@
+import { CurrentJackpot } from "@/components/jackpot-components/CurrentJackpot";
+
 export default function Hero() {
   return (
     <div className="text-center space-y-8 my-16">
@@ -10,6 +12,18 @@ export default function Hero() {
         </h1>
         <div className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
           Social lottery coordination on <span className="text-blue-400 font-semibold">Base</span> & <span className="text-red-400 font-semibold">Avalanche</span>
+        </div>
+        
+        {/* ENHANCEMENT FIRST: Enhanced Hero with prominent megapot integration */}
+        <div className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 rounded-lg p-6 border border-purple-500/30 max-w-2xl mx-auto">
+          <div className="text-xl text-purple-200 mb-3 font-semibold">🎰 Megapot Lottery - Live Now!</div>
+          <div className="text-gray-300 mb-4">
+            Buy individual tickets or create syndicates with friends. Every ticket supports causes you care about.
+          </div>
+          {/* ENHANCEMENT FIRST: Reusing existing CurrentJackpot component */}
+          <div className="flex justify-center">
+            <CurrentJackpot />
+          </div>
         </div>
       </div>
 
