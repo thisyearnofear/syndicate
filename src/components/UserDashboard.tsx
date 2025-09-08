@@ -5,6 +5,8 @@ import { useAccount } from 'wagmi';
 import { useSolanaWallet } from '@/providers/SolanaWalletProvider';
 import { useUserStatsDisplay } from '@/providers/MegapotProvider';
 import { useCrossChain } from '@/providers/CrossChainProvider';
+import { impactService, type UserImpactStats, type CauseImpact, type Achievement } from '@/services/impactService';
+import CauseImpactWidget from '@/components/impact/CauseImpactWidget';
 import { 
   Trophy, 
   Ticket, 
@@ -20,15 +22,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 
-interface Achievement {
-  id: string;
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  unlocked: boolean;
-  progress?: number;
-  maxProgress?: number;
-}
+// Remove duplicate Achievement interface - using one from impactService
 
 interface UserDashboardProps {
   className?: string;
@@ -43,87 +37,49 @@ export default function UserDashboard({ className = '' }: UserDashboardProps) {
   const [userLevel, setUserLevel] = useState(1);
   const [experiencePoints, setExperiencePoints] = useState(0);
   const [nextLevelXP, setNextLevelXP] = useState(100);
-  const [impactScore, setImpactScore] = useState(0);
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [userImpactStats, setUserImpactStats] = useState<UserImpactStats | null>(null);
+  const [causeImpacts, setCauseImpacts] = useState<CauseImpact[]>([]);
+  const [isLoadingImpact, setIsLoadingImpact] = useState(true);
 
-  // Calculate user stats and achievements
+  // Load real impact data and user stats
   useEffect(() => {
-    if (!address) return;
-    
-    // Calculate experience points based on activity
-    const baseXP = totalTickets * 10;
-    const crossChainBonus = activeTransactions.length * 25;
-    const solanaBonus = isSolanaConnected ? 50 : 0;
-    const totalXP = baseXP + crossChainBonus + solanaBonus;
-    
-    setExperiencePoints(totalXP);
-    
-    // Calculate user level
-    const level = Math.floor(totalXP / 100) + 1;
-    setUserLevel(level);
-    setNextLevelXP((level * 100) - totalXP);
-    
-    // Calculate impact score (mock calculation)
-    const impact = totalTickets * 2 + activeTransactions.length * 5;
-    setImpactScore(impact);
-    
-    // Update achievements
-    const newAchievements: Achievement[] = [
-      {
-        id: 'first-ticket',
-        title: 'First Steps',
-        description: 'Purchase your first lottery ticket',
-        icon: <Ticket className="w-5 h-5" />,
-        unlocked: totalTickets > 0
-      },
-      {
-        id: 'cross-chain-explorer',
-        title: 'Cross-Chain Explorer',
-        description: 'Complete a cross-chain transaction',
-        icon: <Zap className="w-5 h-5" />,
-        unlocked: activeTransactions.length > 0
-      },
-      {
-        id: 'solana-connector',
-        title: 'Solana Pioneer',
-        description: 'Connect your Solana wallet',
-        icon: <Target className="w-5 h-5" />,
-        unlocked: isSolanaConnected
-      },
-      {
-        id: 'ticket-collector',
-        title: 'Ticket Collector',
-        description: 'Purchase 10 or more tickets',
-        icon: <Trophy className="w-5 h-5" />,
-        unlocked: totalTickets >= 10,
-        progress: Math.min(totalTickets, 10),
-        maxProgress: 10
-      },
-      {
-        id: 'impact-maker',
-        title: 'Impact Maker',
-        description: 'Generate 100+ impact points',
-        icon: <Heart className="w-5 h-5" />,
-        unlocked: impact >= 100,
-        progress: Math.min(impact, 100),
-        maxProgress: 100
-      },
-      {
-        id: 'level-up',
-        title: 'Level Up',
-        description: 'Reach level 5',
-        icon: <Award className="w-5 h-5" />,
-        unlocked: level >= 5,
-        progress: Math.min(level, 5),
-        maxProgress: 5
+    const loadImpactData = async () => {
+      setIsLoadingImpact(true);
+      try {
+        // Load user impact stats
+        const stats = await impactService.getUserImpactStats(address);
+        setUserImpactStats(stats);
+
+        // Load all cause impacts
+        const causes = await impactService.getAllCauseImpacts();
+        setCauseImpacts(causes);
+
+        // Calculate level based on real contribution and activity
+        const baseXP = totalTickets * 10;
+        const crossChainBonus = activeTransactions.length * 25;
+        const solanaBonus = isSolanaConnected ? 50 : 0;
+        const impactBonus = stats.totalContributed * 4;
+        const achievementBonus = stats.achievements.length * 50;
+        const totalXP = baseXP + crossChainBonus + solanaBonus + impactBonus + achievementBonus;
+        
+        setExperiencePoints(totalXP);
+        
+        const level = Math.floor(totalXP / 100) + 1;
+        setUserLevel(level);
+        setNextLevelXP((level * 100) - totalXP);
+        
+      } catch (error) {
+        console.error('Failed to load impact data:', error);
+      } finally {
+        setIsLoadingImpact(false);
       }
-    ];
-    
-    setAchievements(newAchievements);
+    };
+
+    loadImpactData();
   }, [address, totalTickets, activeTransactions.length, isSolanaConnected]);
 
-  const unlockedAchievements = achievements.filter(a => a.unlocked);
-  const progressAchievements = achievements.filter(a => !a.unlocked && a.progress !== undefined);
+  const unlockedAchievements = userImpactStats?.achievements.filter(a => a.unlocked) || [];
+  const progressAchievements = userImpactStats?.achievements.filter(a => !a.unlocked && a.progress !== undefined) || [];
 
   if (isLoading) {
     return (
@@ -157,7 +113,9 @@ export default function UserDashboard({ className = '' }: UserDashboardProps) {
             </div>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold text-yellow-300">{impactScore}</div>
+            <div className="text-2xl font-bold text-yellow-300">
+              {userImpactStats?.totalContributed || 0}
+            </div>
             <div className="text-sm text-purple-200">Impact Score</div>
           </div>
         </div>
@@ -230,7 +188,9 @@ export default function UserDashboard({ className = '' }: UserDashboardProps) {
         <div className="bg-gray-800 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
             <Heart className="w-8 h-8 text-red-400" />
-            <span className="text-2xl font-bold text-white">{impactScore}</span>
+            <span className="text-2xl font-bold text-white">
+              {userImpactStats?.totalContributed || 0}
+            </span>
           </div>
           <div className="text-sm text-gray-400">Impact Points</div>
           <div className="text-xs text-red-400 mt-1">Causes supported</div>
@@ -245,7 +205,7 @@ export default function UserDashboard({ className = '' }: UserDashboardProps) {
             <span>Achievements</span>
           </h3>
           <span className="text-sm text-gray-400">
-            {unlockedAchievements.length} / {achievements.length} unlocked
+            {unlockedAchievements.length} / {(userImpactStats?.achievements.length || 0)} unlocked
           </span>
         </div>
         
@@ -336,6 +296,60 @@ export default function UserDashboard({ className = '' }: UserDashboardProps) {
         </div>
       )}
 
+      {/* Cause Impact Section */}
+      {!isLoadingImpact && causeImpacts.length > 0 && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+              <Heart className="w-6 h-6 text-red-400" />
+              Your Impact
+            </h3>
+            <div className="text-sm text-gray-400">
+              {userImpactStats?.causesSupported || 0} causes supported
+            </div>
+          </div>
+
+          {/* User's Active Causes */}
+          <div className="grid md:grid-cols-2 gap-4">
+            {causeImpacts
+              .filter(cause => cause.userContribution > 0)
+              .map(cause => (
+                <CauseImpactWidget
+                  key={cause.id}
+                  cause={cause}
+                  compact={true}
+                  showUserContribution={true}
+                  showMilestones={false}
+                />
+              ))}
+          </div>
+
+          {/* Trending Causes */}
+          {causeImpacts.some(cause => cause.trending && cause.userContribution === 0) && (
+            <div>
+              <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-orange-400" />
+                Trending Causes
+              </h4>
+              <div className="grid md:grid-cols-2 gap-4">
+                {causeImpacts
+                  .filter(cause => cause.trending && cause.userContribution === 0)
+                  .slice(0, 2)
+                  .map(cause => (
+                    <CauseImpactWidget
+                      key={cause.id}
+                      cause={cause}
+                      compact={true}
+                      showUserContribution={false}
+                      showMilestones={false}
+                    />
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Quick Actions */}
       <div className="bg-gray-800 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
@@ -357,8 +371,8 @@ export default function UserDashboard({ className = '' }: UserDashboardProps) {
           
           <button className="bg-green-600 hover:bg-green-700 text-white p-4 rounded-lg transition-colors text-left">
             <Heart className="w-6 h-6 mb-2" />
-            <h4 className="font-medium mb-1">Support Causes</h4>
-            <p className="text-sm text-green-200">Make a positive impact</p>
+            <h4 className="font-medium mb-1">Support New Causes</h4>
+            <p className="text-sm text-green-200">Discover more ways to help</p>
           </button>
         </div>
       </div>
