@@ -130,7 +130,7 @@ export default function Home() {
                 : "text-gray-400 hover:text-white"
             }`}
           >
-            🎯 Lottery
+            🎯 Play Lottery
           </button>
           <button
             onClick={() => setActiveTab("transactions")}
@@ -140,7 +140,7 @@ export default function Home() {
                 : "text-gray-400 hover:text-white"
             }`}
           >
-            📊 Transactions
+            📊 My Activity
           </button>
           <button
             onClick={() => setActiveTab("dashboard")}
@@ -157,22 +157,66 @@ export default function Home() {
 
       {/* Content */}
       {activeTab === "lottery" && (
-        <div className="space-y-6">
-          {/* ENHANCEMENT FIRST: Prominent individual ticket purchase */}
-          <div className="max-w-md mx-auto mb-8">
+        <div className="space-y-8">
+          {/* Individual Ticket Purchase Section */}
+          <div className="max-w-md mx-auto">
             <div className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 rounded-xl p-6 border border-purple-500/20 backdrop-blur-sm">
               <div className="text-center mb-4">
                 <h3 className="text-xl font-bold text-white mb-2">
-                  🎫 Buy Individual Tickets
+                  🎫 Individual Tickets
                 </h3>
                 <p className="text-gray-300 text-sm">
-                  Join the lottery directly - no syndicate required
+                  Quick entry - buy tickets directly on any supported chain
                 </p>
               </div>
               <ConnectWallet />
             </div>
           </div>
 
+          {/* Syndicate Creation Section */}
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-gradient-to-br from-blue-900/50 to-green-900/50 rounded-xl p-6 border border-blue-500/20 backdrop-blur-sm">
+              <div className="text-center mb-6">
+                <h3 className="text-xl font-bold text-white mb-2">
+                  👥 Create Syndicate
+                </h3>
+                <p className="text-gray-300 text-sm">
+                  Pool resources with friends for better odds and shared
+                  winnings
+                </p>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-600">
+                  <h4 className="text-white font-semibold mb-2">
+                    🎯 Better Odds
+                  </h4>
+                  <p className="text-gray-400 text-sm">
+                    Buy more tickets collectively than you could alone
+                  </p>
+                </div>
+                <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-600">
+                  <h4 className="text-white font-semibold mb-2">
+                    🤝 Social Impact
+                  </h4>
+                  <p className="text-gray-400 text-sm">
+                    Support causes together with your community
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-center mt-6">
+                <button
+                  onClick={() => setShowSyndicateCreator(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+                >
+                  Create New Syndicate
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Lottery Dashboard */}
           <LotteryDashboard className="max-w-4xl mx-auto" />
         </div>
       )}
