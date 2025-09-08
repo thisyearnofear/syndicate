@@ -42,6 +42,7 @@ export default function Home() {
     "lottery" | "transactions" | "dashboard"
   >("lottery");
   const [showSyndicateCreator, setShowSyndicateCreator] = useState(false);
+  const [hasSkippedOnboarding, setHasSkippedOnboarding] = useState(false);
   // Check if any wallet is connected
   const isAnyWalletConnected =
     isConnected || web3AuthConnected || solanaConnected;
@@ -54,13 +55,13 @@ export default function Home() {
 
   // ENHANCEMENT FIRST: Enhanced existing onboarding to be optional
   // Show onboarding only if no wallet connected AND user hasn't opted out
-  if (!isAnyWalletConnected) {
+  if (!isAnyWalletConnected && !hasSkippedOnboarding) {
     return (
       <OnboardingFlow
         onComplete={() => {}} // No state needed, just proceed to main app
         onSkip={() => {
-          // Force a re-render by updating state to show main app
-          setActiveTab("lottery");
+          // Skip onboarding and show main app with wallet connection
+          setHasSkippedOnboarding(true);
         }}
         className="min-h-screen"
       />
