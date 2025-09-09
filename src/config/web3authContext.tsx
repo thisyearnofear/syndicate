@@ -3,14 +3,15 @@ import { WEB3AUTH_NETWORK, type Web3AuthOptions } from "@web3auth/modal";
 import { CHAIN_NAMESPACES } from "@web3auth/base";
 import { SolanaPrivateKeyProvider } from "@web3auth/solana-provider";
 
-// CLEAN: Solana chain configuration for Web3Auth
+// ENHANCEMENT: Solana mainnet configuration for production
 export const solanaChainConfig = {
   chainNamespace: CHAIN_NAMESPACES.SOLANA,
-  chainId: "0x3", // 0x3 for Devnet, 0x1 for Mainnet
+  chainId: "0x1", // 0x1 for Mainnet (production)
   rpcTarget:
-    process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com",
-  displayName: "Solana Devnet",
-  blockExplorerUrl: "https://explorer.solana.com/?cluster=devnet",
+    process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
+    "https://api.mainnet-beta.solana.com",
+  displayName: "Solana Mainnet",
+  blockExplorerUrl: "https://explorer.solana.com",
   ticker: "SOL",
   tickerName: "Solana",
   logo: "https://images.toruswallet.io/solana.svg",

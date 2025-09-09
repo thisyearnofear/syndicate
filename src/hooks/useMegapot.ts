@@ -110,12 +110,31 @@ export function useJackpotStats(autoRefresh = true): UseJackpotStatsReturn {
       // Log detailed error for debugging
       console.error('Jackpot stats fetch error:', err);
       
-      // Provide fallback data or graceful degradation if needed
-      // You could set default/cached data here if available
+      // Provide fallback data for better UX during network issues
+      if (!jackpotStats) {
+        const fallbackStats: JackpotStats = {
+          prizeUsd: '0',
+          endTimestamp: String(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
+          oddsPerTicket: '1000000',
+          ticketPrice: 1,
+          ticketsSoldCount: 0,
+          lastTicketPurchaseBlockNumber: 0,
+          lastTicketPurchaseCount: 0,
+          lastTicketPurchaseTimestamp: String(Date.now()),
+          lastTicketPurchaseTxHash: '',
+          lpPoolTotalBps: '0',
+          userPoolTotalBps: '0',
+          feeBps: 500,
+          referralFeeBps: 100,
+          activeLps: 0,
+          activePlayers: 0,
+        };
+        setJackpotStats(fallbackStats);
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [jackpotStats]);
 
   // Update countdown every second
   useEffect(() => {

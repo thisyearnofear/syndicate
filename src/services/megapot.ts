@@ -60,7 +60,7 @@ class MegapotService {
             'Content-Type': 'application/json',
           },
           // Add timeout to prevent hanging requests
-          signal: AbortSignal.timeout(10000), // 10 second timeout
+          signal: AbortSignal.timeout(30000), // 30 second timeout
         });
   
         if (!response.ok) {
@@ -74,7 +74,7 @@ class MegapotService {
           // Retry on server errors (5xx) if we have attempts left
           if (attempt < retries) {
             console.warn(`API request failed (attempt ${attempt}/${retries}): ${response.status}`);
-            await this.delay(1000 * attempt); // Exponential backoff
+            await this.delay(Math.pow(2, attempt) * 1000); // Exponential backoff: 2s, 4s, 8s
             continue;
           }
           
@@ -103,10 +103,10 @@ class MegapotService {
           
           // Provide user-friendly error messages
           if (error instanceof Error) {
-            if (error.name === 'AbortError') {
+            if (error.name === 'AbortError' || error.name === 'TimeoutError') {
               throw new Error('Request timeout - please check your connection and try again');
             }
-            if (error.message.includes('Failed to fetch')) {
+            if (error.message.includes('Failed to fetch') || error.message.includes('fetch')) {
               throw new Error('Network error - please check your connection and try again');
             }
           }
@@ -115,7 +115,7 @@ class MegapotService {
         }
         
         console.warn(`API request failed (attempt ${attempt}/${retries}):`, error);
-        await this.delay(1000 * attempt); // Exponential backoff
+        await this.delay(Math.pow(2, attempt) * 1000); // Exponential backoff: 2s, 4s, 8s
       }
     }
     
