@@ -6,8 +6,8 @@ import {
   useCrossChainTickets,
   useCrossChainStats,
 } from "@/hooks/useCrossChainTickets";
-import { SUPPORTED_CHAINS } from "@/services/crossChainTicketService";
-import NearWalletConnection from "@/components/NearWalletConnection";
+import { CROSS_CHAIN_SUPPORTED_CHAINS as SUPPORTED_CHAINS } from "@/services/crossChainTicketService";
+import NearWalletConnection from "@/components/wallet/NearWalletConnection";
 
 export default function CrossChainDashboard() {
   const { address } = useAccount();

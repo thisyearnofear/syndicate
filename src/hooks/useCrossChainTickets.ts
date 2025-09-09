@@ -6,7 +6,7 @@ import {
   getCrossChainTicketService,
   type TicketPurchaseIntent,
   type CrossChainTicketResult,
-  SUPPORTED_CHAINS
+  CROSS_CHAIN_SUPPORTED_CHAINS as SUPPORTED_CHAINS
 } from '@/services/crossChainTicketService';
 
 export interface UseCrossChainTicketsReturn {

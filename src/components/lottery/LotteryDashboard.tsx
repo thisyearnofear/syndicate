@@ -17,10 +17,10 @@ import { formatUnits } from 'viem';
 import SNSDomainSearch from '../SNSDomainSearch';
 import CrossChainBridgeStatus from '../CrossChainBridgeStatus';
 import UserDashboard from '../UserDashboard';
-import DelightfulButton from '../DelightfulButton';
+import DelightfulButton from '@/components/core/DelightfulButton';
 import TicketPurchaseAnimation from '../TicketPurchaseAnimation';
-import CelebrationModal from '../CelebrationModal';
-import NearWalletConnection from '../NearWalletConnection';
+import CelebrationModal from '@/components/modal/CelebrationModal';
+import NearWalletConnection from '@/components/wallet/NearWalletConnection';
 
 interface LotteryDashboardProps {
   className?: string;
@@ -83,13 +83,15 @@ function LotteryDashboard({
   // Auto-detect optimal purchase method and source chain
   const currentChain = getChainConfig(chainId);
   const [selectedMethod, setSelectedMethod] = useState<'standard' | 'gasless' | 'cross-chain'>(currentChain.purchaseMethod);
-  const [sourceChain, setSourceChain] = useState(currentChain.sourceChain || 'avalanche');
+  const [sourceChain, setSourceChain] = useState('avalanche');
 
   // Update method when chain changes
   useEffect(() => {
     const chain = getChainConfig(chainId);
     setSelectedMethod(chain.purchaseMethod);
-    if (chain.sourceChain) setSourceChain(chain.sourceChain);
+    if ('sourceChain' in chain && chain.sourceChain) {
+        setSourceChain(chain.sourceChain);
+    }
   }, [chainId]);
   
   // Transaction status tracking

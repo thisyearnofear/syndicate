@@ -9,7 +9,7 @@ import { metaMask, walletConnect, coinbaseWallet } from "wagmi/connectors";
 import { MegapotProvider as MegapotUIProvider } from "@coordinationlabs/megapot-ui-kit";
 import { useConnect } from "wagmi";
 import web3AuthContextConfig from "@/config/web3authContext";
-import { Web3AuthErrorBoundary } from "@/components/Web3AuthErrorBoundary";
+import { Web3AuthErrorBoundary } from "@/components/wallet/Web3AuthErrorBoundary";
 
 // PERFORMANT: Lazy load heavy providers for adaptive loading
 const Web3AuthProvider = lazy(() =>

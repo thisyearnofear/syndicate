@@ -32,11 +32,11 @@ export function usePerformanceMonitoring() {
     const observer = new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
         if (entry.entryType === "navigation") {
+          const navEntry = entry as PerformanceNavigationTiming;
           console.log("Page Load Performance:", {
-            loadComplete: entry.loadEventEnd - entry.loadEventStart,
+            loadComplete: navEntry.loadEventEnd - navEntry.loadEventStart,
             domContentLoaded:
-              entry.domContentLoadedEventEnd - entry.domContentLoadedEventStart,
-            firstContentfulPaint: entry.loadEventEnd, // Simplified
+              navEntry.domContentLoadedEventEnd - navEntry.domContentLoadedEventStart,
           });
         }
       }

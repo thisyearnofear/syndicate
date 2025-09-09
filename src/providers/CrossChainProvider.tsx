@@ -43,7 +43,7 @@ export function CrossChainProvider({ children }: CrossChainProviderProps) {
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<CrossChainTransaction | null>(null);
   
-  const { accountId, isConnected: isNearWalletConnected } = useNearWallet();
+  const { accountId, isConnected: isNearWalletConnected, wallet } = useNearWallet();
 
   // Poll for transaction updates
   useEffect(() => {
@@ -67,20 +67,14 @@ export function CrossChainProvider({ children }: CrossChainProviderProps) {
 
   const initializeNear = async (): Promise<boolean> => {
     if (isNearConnected) return true;
-    if (!isNearWalletConnected || !accountId) {
+    if (!isNearWalletConnected || !accountId || !wallet) {
       console.error('NEAR wallet not connected or accountId not available');
       return false;
     }
     
-    // In a real implementation, we would get the privateKey from the wallet
-    // For now, we'll just simulate the initialization
     setIsInitializing(true);
     try {
-      // This is a placeholder - in a real implementation, you would get the actual privateKey
-      // from the wallet and pass it to the nearIntentsService
-      const privateKey = 'ed25519:placeholderPrivateKey'; // This should come from the wallet
-      
-      const success = await nearIntentsService.initialize(accountId, privateKey);
+      const success = await nearIntentsService.initialize(wallet);
       setIsNearConnected(success);
       return success;
     } catch (error) {

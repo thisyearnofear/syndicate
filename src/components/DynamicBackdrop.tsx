@@ -24,7 +24,7 @@ export default function DynamicBackdrop({ children, className = '' }: DynamicBac
   const [elements, setElements] = useState<FloatingElement[]>([]);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isJackpotGrowing, setIsJackpotGrowing] = useState(false);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | null>(null);
   const { currentPrize, isLoading } = useJackpotDisplay();
 
   // DELIGHT: Create floating elements based on lottery theme
