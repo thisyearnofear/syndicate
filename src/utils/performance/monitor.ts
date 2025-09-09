@@ -1,3 +1,5 @@
+import React from 'react';
+
 // PERFORMANT: Performance monitoring utilities following Core Principles
 
 // DRY: Single source of truth for performance metrics

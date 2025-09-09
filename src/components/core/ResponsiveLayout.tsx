@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useEffect, useState } from 'react';
-import DynamicBackdrop from './DynamicBackdrop';
+import DynamicBackdrop from '@/components/DynamicBackdrop';
 
 interface ResponsiveLayoutProps {
   children: React.ReactNode;

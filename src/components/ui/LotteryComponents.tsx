@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import ConnectWallet from "@/components/ConnectWallet";
+import ConnectWallet from "@/components/wallet/ConnectWallet";
 
 export const IndividualTicketSection = memo(() => (
   <div className="max-w-md mx-auto">

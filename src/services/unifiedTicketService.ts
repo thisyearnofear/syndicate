@@ -290,7 +290,7 @@ class UnifiedTicketService {
       });
 
       // Execute intent
-      const result = await crossChainService.executeTicketPurchase(intent.id, walletClient as any);
+      const result = await crossChainService.executeTicketPurchase(intent.id);
       
       return {
         success: result.status === 'success',

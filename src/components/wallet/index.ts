@@ -5,4 +5,4 @@ export { default as SolanaWalletConnection } from './SolanaWalletConnection';
 export { default as WalletConnectionOptions, SocialLoginModal } from './WalletConnectionOptions';
 export { default as WalletInfo } from './WalletInfo';
 export { default as WalletInfoContainer } from './WalletInfoContainer';
-export { default as Web3AuthErrorBoundary } from './Web3AuthErrorBoundary';
+export { Web3AuthErrorBoundary } from './Web3AuthErrorBoundary';

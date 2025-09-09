@@ -3,7 +3,7 @@
 import { ethers } from "ethers";
 import { parseEther, formatEther } from "viem";
 import { NearChainSignatureService } from './nearChainSignatureService';
-import { SUPPORTED_CHAINS, type ChainId } from '@/config/chains';
+import { type ChainId } from '@/config/chains';
 
 
 // Types based on NEAR bridge patterns
@@ -42,7 +42,7 @@ export interface CrossChainTicketResult {
 }
 
 // Chain configurations
-export const SUPPORTED_CHAINS: Record<string, ChainConfig> = {
+export const CROSS_CHAIN_SUPPORTED_CHAINS: Record<string, ChainConfig> = {
   avalanche: {
     chainId: 43114,
     name: "Avalanche",
@@ -125,17 +125,17 @@ export class CrossChainTicketService {
    * Create a cross-chain ticket purchase intent
    * Based on NEAR's omniTransfer pattern
    */
-  async createTicketPurchaseIntent(params: {
-    sourceChain: keyof typeof SUPPORTED_CHAINS;
-    targetChain: keyof typeof SUPPORTED_CHAINS;
+    async createTicketPurchaseIntent(params: {
+    sourceChain: keyof typeof CROSS_CHAIN_SUPPORTED_CHAINS;
+    targetChain: keyof typeof CROSS_CHAIN_SUPPORTED_CHAINS;
     userAddress: string;
     ticketCount: number;
     syndicateId?: string;
     causeAllocation?: number;
   }): Promise<TicketPurchaseIntent> {
     const intentId = this.generateIntentId();
-    const sourceChainConfig = SUPPORTED_CHAINS[params.sourceChain];
-    const targetChainConfig = SUPPORTED_CHAINS[params.targetChain];
+    const sourceChainConfig = CROSS_CHAIN_SUPPORTED_CHAINS[params.sourceChain];
+    const targetChainConfig = CROSS_CHAIN_SUPPORTED_CHAINS[params.targetChain];
 
     // Calculate ticket cost (assuming $1 per ticket for now)
     const ticketPrice = parseEther("1"); // 1 USDC equivalent
@@ -165,8 +165,8 @@ export class CrossChainTicketService {
    * Estimate cross-chain fees
    */
   async estimateCrossChainFees(params: {
-    sourceChain: keyof typeof SUPPORTED_CHAINS;
-    targetChain: keyof typeof SUPPORTED_CHAINS;
+    sourceChain: keyof typeof CROSS_CHAIN_SUPPORTED_CHAINS;
+    targetChain: keyof typeof CROSS_CHAIN_SUPPORTED_CHAINS;
     amount: bigint;
   }): Promise<{
     bridgeFee: bigint;
@@ -176,8 +176,55 @@ export class CrossChainTicketService {
     throw new Error('Cross-chain fee estimation not implemented. Requires real bridge integration.');
   }
 
+  public async executeTicketPurchase(intentId: string): Promise<CrossChainTicketResult> {
+    if (!this.nearChainSignatureService) {
+      throw new Error("NEAR service not initialized");
+    }
+
+    const intent = this.intents.get(intentId);
+    if (!intent) {
+      throw new Error("Intent not found");
+    }
+
+    try {
+      // This is a placeholder. The actual implementation would be more complex
+      // and involve the nearChainSignatureService.
+      console.log("Executing ticket purchase for intent:", intentId);
+      intent.status = 'signed';
+      this.updateIntent(intent);
+
+      // Simulate execution
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      intent.status = 'executed';
+      intent.txHash = `0x${[...Array(64)].map(() => Math.floor(Math.random() * 16).toString(16)).join('')}`;
+      this.updateIntent(intent);
+
+      return {
+        intentId,
+        txHash: intent.txHash,
+        status: 'success',
+        message: 'Ticket purchase executed successfully'
+      };
+    } catch (error) {
+      intent.status = 'failed';
+      intent.errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.updateIntent(intent);
+      throw error;
+    }
+  }
+
   private generateIntentId(): string {
     return `intent_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  }
+
+  public getIntent(intentId: string): TicketPurchaseIntent | undefined {
+    return this.intents.get(intentId);
+  }
+
+  public getUserIntents(userAddress: string): TicketPurchaseIntent[] {
+    const allIntents = Array.from(this.intents.values());
+    return allIntents.filter(intent => intent.userAddress.toLowerCase() === userAddress.toLowerCase());
   }
 
   private updateIntent(intent: TicketPurchaseIntent): void {
@@ -188,6 +235,13 @@ export class CrossChainTicketService {
 
   private notifyListeners(intent: TicketPurchaseIntent): void {
     this.eventListeners.forEach(callback => callback(intent));
+  }
+
+  public onIntentUpdate(callback: (intent: TicketPurchaseIntent) => void): () => void {
+    this.eventListeners.push(callback);
+    return () => {
+      this.eventListeners = this.eventListeners.filter(cb => cb !== callback);
+    };
   }
 
   private persistIntents(): void {

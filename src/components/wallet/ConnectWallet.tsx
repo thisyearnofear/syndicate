@@ -2,9 +2,9 @@
 
 import { useConnect, useAccount, useDisconnect } from "wagmi";
 import { useState } from "react";
-import NearWalletConnection from "@/components/NearWalletConnection";
-import SolanaWalletConnection from "@/components/SolanaWalletConnection";
-import DelightfulButton from "@/components/DelightfulButton";
+import NearWalletConnection from "@/components/wallet/NearWalletConnection";
+import SolanaWalletConnection from "@/components/wallet/SolanaWalletConnection";
+import DelightfulButton from "@/components/core/DelightfulButton";
 
 export default function ConnectWallet() {
   const { connectors, connect, isPending } = useConnect();

@@ -1,9 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
 import { X, Users, Heart, Sparkles, Target, Share2, Copy, Check, Eye } from "lucide-react";
-import DelightfulButton from "./DelightfulButton";
-import SyndicateStepIndicator from "./SyndicateStepIndicator";
-import SyndicatePreview from "./SyndicatePreview";
+import DelightfulButton from "@/components/core/DelightfulButton";
+import SyndicateStepIndicator from "@/components/SyndicateStepIndicator";
+import SyndicatePreview from "@/components/SyndicatePreview";
 
 interface SyndicateCreatorProps {
   isOpen: boolean;
