@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       method: 'GET',
       headers,
       // Add timeout to prevent hanging requests
-      signal: AbortSignal.timeout(15000), // 15 second timeout
+      signal: AbortSignal.timeout(30000), // 30 second timeout
     });
 
     if (!response.ok) {
@@ -89,14 +89,30 @@ export async function GET(request: NextRequest) {
     }
     
     // Handle network errors
-    if (error instanceof Error && error.message.includes('fetch')) {
-      return NextResponse.json(
-        { 
-          error: 'Network error',
-          details: 'Unable to connect to Megapot API. Please check your connection.'
-        },
-        { status: 502 } // Bad Gateway
-      );
+    if (error instanceof Error) {
+      // Handle CORS issues
+      if (error.message.includes('Cross-Origin-Opener-Policy') ||
+          error.message.includes('CORS') ||
+          error.message.includes('blocked by CORS policy')) {
+        return NextResponse.json(
+          { 
+            error: 'CORS policy error',
+            details: 'Unable to connect to Megapot API due to CORS restrictions. This may be a temporary issue.'
+          },
+          { status: 502 }
+        );
+      }
+      
+      // Handle generic fetch errors
+      if (error.message.includes('fetch')) {
+        return NextResponse.json(
+          { 
+            error: 'Network error',
+            details: 'Unable to connect to Megapot API. Please check your connection.'
+          },
+          { status: 502 } // Bad Gateway
+        );
+      }
     }
     
     return NextResponse.json(

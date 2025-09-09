@@ -91,36 +91,46 @@ const WALLET_CONFIG = {
   icon: "https://syndicate.app/icon.png",
 } as const;
 
-// PERFORMANT: Memoized connector configuration
-const createConnectors = () => [
-  metaMask({
-    dappMetadata: {
-      name: WALLET_CONFIG.name,
-      url: WALLET_CONFIG.url,
-    },
-  }),
-  walletConnect({
-    projectId:
-      process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ||
-      "e0dc7e521674d18ddf0a9ad3084439fb",
-    metadata: {
-      name: WALLET_CONFIG.name,
-      description: WALLET_CONFIG.description,
-      // Use the current origin when running locally to avoid metadata URL mismatch
-      url:
-        typeof window !== "undefined"
-          ? window.location.origin
-          : WALLET_CONFIG.url,
-      icons: [WALLET_CONFIG.icon],
-    },
-    // Ensure only one WalletConnect modal is created
-    showQrModal: false,
-  }),
-  coinbaseWallet({
-    appName: WALLET_CONFIG.name,
-    appLogoUrl: WALLET_CONFIG.icon,
-  }),
-];
+// PERFORMANT: Memoized connector configuration with singleton pattern
+let connectorsInstance: any[] | null = null;
+
+const createConnectors = (): any[] => {
+  if (connectorsInstance) {
+    return connectorsInstance;
+  }
+
+  connectorsInstance = [
+    metaMask({
+      dappMetadata: {
+        name: WALLET_CONFIG.name,
+        url: WALLET_CONFIG.url,
+      },
+    }),
+    walletConnect({
+      projectId:
+        process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ||
+        "e0dc7e521674d18ddf0a9ad3084439fb",
+      metadata: {
+        name: WALLET_CONFIG.name,
+        description: WALLET_CONFIG.description,
+        // Use the current origin when running locally to avoid metadata URL mismatch
+        url:
+          typeof window !== "undefined"
+            ? window.location.origin
+            : WALLET_CONFIG.url,
+        icons: [WALLET_CONFIG.icon],
+      },
+      // Ensure proper WalletConnect modal handling
+      showQrModal: true,
+    }),
+    coinbaseWallet({
+      appName: WALLET_CONFIG.name,
+      appLogoUrl: WALLET_CONFIG.icon,
+    }),
+  ];
+
+  return connectorsInstance;
+};
 
 // PERFORMANT: Optimized QueryClient with caching strategy
 const createQueryClient = () =>
@@ -153,12 +163,17 @@ const RPC_URLS = {
     "https://sepolia.infura.io/v3/119d623be6f144138f75b5af8babdda4",
 } as const;
 
-// PERFORMANT: Memoized Wagmi configuration
-const createWagmiConfig = () => {
+// PERFORMANT: Memoized Wagmi configuration with singleton pattern
+let wagmiConfigInstance: any | null = null;
+
+const createWagmiConfig = (): any => {
+  if (wagmiConfigInstance) {
+    return wagmiConfigInstance;
+  }
+
   const connectors = createConnectors();
 
-  // @ts-ignore – TypeScript infers a generic Record<string, Transport>, but we know the keys match the chain IDs
-  return createConfig({
+  wagmiConfigInstance = createConfig({
     chains: [base, baseSepolia, avalanche, sepolia],
     connectors,
     multiInjectedProviderDiscovery: false,
@@ -173,6 +188,8 @@ const createWagmiConfig = () => {
       ])
     ) as any,
   });
+
+  return wagmiConfigInstance;
 };
 
 // PERFORMANT: Optimized Megapot wrapper with memoization
@@ -230,9 +247,7 @@ function OptionalProviders({ children }: { children: ReactNode }) {
         <NearWalletProvider>
           <CrossChainProvider>
             <PermissionProvider>
-              <SessionAccountProvider>
-                {children}
-              </SessionAccountProvider>
+              <SessionAccountProvider>{children}</SessionAccountProvider>
             </PermissionProvider>
           </CrossChainProvider>
         </NearWalletProvider>

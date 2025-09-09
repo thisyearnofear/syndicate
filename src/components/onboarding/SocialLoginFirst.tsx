@@ -1,41 +1,50 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import { useWeb3Auth, useWeb3AuthConnect } from "@web3auth/modal/react";
-import { useSolanaWallet } from '@/providers/SolanaWalletProvider';
-import { useAccount } from 'wagmi';
+import { useSolanaWallet } from "@/providers/SolanaWalletProvider";
+import { useAccount } from "wagmi";
 // Simple CSS-based animations
 const motion = {
-  div: ({ children, className, initial, animate, exit, transition, ...props }: any) => (
+  div: ({
+    children,
+    className,
+    initial,
+    animate,
+    exit,
+    transition,
+    ...props
+  }: any) => (
     <div className={`${className} animate-fade-in`} {...props}>
       {children}
     </div>
   ),
   button: ({ children, className, whileHover, whileTap, ...props }: any) => (
-    <button className={`${className} transition-transform hover:scale-105 active:scale-95`} {...props}>
+    <button
+      className={`${className} transition-transform hover:scale-105 active:scale-95`}
+      {...props}
+    >
       {children}
     </button>
-  )
+  ),
 };
 
 const AnimatePresence = ({ children, mode }: any) => (
-  <div className="animate-presence">
-    {children}
-  </div>
+  <div className="animate-presence">{children}</div>
 );
-import { 
-  Mail, 
-  Chrome, 
-  Github, 
-  Twitter, 
+import {
+  Mail,
+  Chrome,
+  Github,
+  Twitter,
   Smartphone,
   Wallet,
   Zap,
   Users,
   Heart,
   ArrowRight,
-  CheckCircle
-} from 'lucide-react';
+  CheckCircle,
+} from "lucide-react";
 
 interface SocialLoginFirstProps {
   onComplete: () => void;
@@ -44,102 +53,110 @@ interface SocialLoginFirstProps {
 
 const SOCIAL_PROVIDERS = [
   {
-    id: 'google',
-    name: 'Google',
+    id: "google",
+    name: "Google",
     icon: Chrome,
-    color: 'bg-red-500 hover:bg-red-600',
-    description: 'Continue with your Google account'
+    color: "bg-red-500 hover:bg-red-600",
+    description: "Continue with your Google account",
   },
   {
-    id: 'email_passwordless',
-    name: 'Email',
+    id: "email_passwordless",
+    name: "Email",
     icon: Mail,
-    color: 'bg-blue-500 hover:bg-blue-600',
-    description: 'Sign in with your email address'
+    color: "bg-blue-500 hover:bg-blue-600",
+    description: "Sign in with your email address",
   },
   {
-    id: 'github',
-    name: 'GitHub',
+    id: "github",
+    name: "GitHub",
     icon: Github,
-    color: 'bg-gray-700 hover:bg-gray-800',
-    description: 'Continue with GitHub'
+    color: "bg-gray-700 hover:bg-gray-800",
+    description: "Continue with GitHub",
   },
   {
-    id: 'twitter',
-    name: 'Twitter',
+    id: "twitter",
+    name: "Twitter",
     icon: Twitter,
-    color: 'bg-sky-500 hover:bg-sky-600',
-    description: 'Continue with Twitter'
-  }
+    color: "bg-sky-500 hover:bg-sky-600",
+    description: "Continue with Twitter",
+  },
 ];
 
 const ONBOARDING_STEPS = [
   {
     icon: Smartphone,
-    title: 'Social Login',
-    description: 'Sign in with your favorite social account'
+    title: "Social Login",
+    description: "MetaMask Embedded Wallet via Web3Auth",
   },
   {
     icon: Wallet,
-    title: 'Instant Wallet',
-    description: 'We create secure wallets automatically'
+    title: "Seedless Security",
+    description: "No seed phrases, secured by MPC technology",
+  },
+  {
+    icon: Zap,
+    title: "Cross-Chain Ready",
+    description: "Solana + EVM chains in one interface",
   },
   {
     icon: Users,
-    title: 'Join Pools',
-    description: 'Start participating in lottery pools'
+    title: "SNS Integration",
+    description: "Human-readable .sol addresses",
   },
-  {
-    icon: Heart,
-    title: 'Support Causes',
-    description: 'Automatically donate to causes you care about'
-  }
 ];
 
-export default function SocialLoginFirst({ onComplete, className = '' }: SocialLoginFirstProps) {
+export default function SocialLoginFirst({
+  onComplete,
+  className = "",
+}: SocialLoginFirstProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
-  const [step, setStep] = useState<'welcome' | 'providers' | 'connecting' | 'success'>('welcome');
-  
+  const [step, setStep] = useState<
+    "welcome" | "providers" | "connecting" | "success"
+  >("welcome");
+
   // Prevent Web3Auth hooks from running on server-side
   const isClient = typeof window !== "undefined";
-  const { isConnected: web3AuthConnected } = isClient ? useWeb3Auth() : { isConnected: false };
-  const { connect: web3AuthConnect } = isClient ? useWeb3AuthConnect() : { connect: async () => {} };
+  const { isConnected: web3AuthConnected } = isClient
+    ? useWeb3Auth()
+    : { isConnected: false };
+  const { connect: web3AuthConnect } = isClient
+    ? useWeb3AuthConnect()
+    : { connect: async () => {} };
   const { isConnected: evmConnected } = useAccount();
   const { connected: solanaConnected } = useSolanaWallet();
 
   const handleSocialLogin = async (providerId: string) => {
     setSelectedProvider(providerId);
     setIsConnecting(true);
-    setStep('connecting');
+    setStep("connecting");
 
     try {
-      // For demo purposes, simulate successful connection
+      // Actually connect using Web3Auth
+      await web3AuthConnect();
+
+      setStep("success");
       setTimeout(() => {
-        setStep('success');
-        setTimeout(() => {
-          onComplete();
-        }, 2000);
+        onComplete();
       }, 2000);
-      
     } catch (error) {
-      console.error('Social login failed:', error);
+      console.error("Social login failed:", error);
       setIsConnecting(false);
-      setStep('providers');
+      setStep("providers");
     }
   };
 
   const isFullyConnected = web3AuthConnected || evmConnected || solanaConnected;
 
-  if (isFullyConnected && step !== 'success') {
-    setStep('success');
+  if (isFullyConnected && step !== "success") {
+    setStep("success");
     setTimeout(onComplete, 1000);
   }
 
   return (
     <div className={`social-login-first ${className}`}>
       <AnimatePresence mode="wait">
-        {step === 'welcome' && (
+        {step === "welcome" && (
           <motion.div
             key="welcome"
             initial={{ opacity: 0, y: 20 }}
@@ -157,14 +174,19 @@ export default function SocialLoginFirst({ onComplete, className = '' }: SocialL
               >
                 🎯
               </motion.div>
-              
+
               <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-400 via-blue-500 to-green-400 bg-clip-text text-transparent">
-                Welcome to Syndicate
+                Syndicate
               </h1>
-              
+
+              <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/30 rounded-full px-4 py-2 mb-2">
+                <span className="text-sm font-medium text-purple-200">
+                  🔐 Powered by Megapot
+                </span>
+              </div>
+
               <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
-                Join lottery pools with friends, increase your chances of winning, 
-                and automatically support causes you care about.
+                Join cross-chain lottery pools with social logins
               </p>
             </div>
 
@@ -176,26 +198,36 @@ export default function SocialLoginFirst({ onComplete, className = '' }: SocialL
                 transition={{ delay: 0.4 }}
                 className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 rounded-xl p-6 border border-purple-500/20"
               >
-                <Users className="w-8 h-8 text-purple-400 mb-3" />
-                <h3 className="text-lg font-semibold text-white mb-2">Social Coordination</h3>
-                <p className="text-gray-300 text-sm">Pool resources with friends across multiple blockchains</p>
+                <Wallet className="w-8 h-8 text-purple-400 mb-3" />
+                <h3 className="text-lg font-semibold text-white mb-2">
+                  Seedless Security
+                </h3>
+                <p className="text-gray-300 text-sm">
+                  MetaMask Embedded Wallets
+                </p>
               </motion.div>
 
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.5 }}
-                className="bg-gradient-to-br from-green-900/50 to-blue-900/50 rounded-xl p-6 border border-green-500/20"
+                className="bg-gradient-to-br from-blue-900/50 to-green-900/50 rounded-xl p-6 border border-blue-500/20"
               >
-                <Heart className="w-8 h-8 text-green-400 mb-3" />
-                <h3 className="text-lg font-semibold text-white mb-2">Cause Impact</h3>
-                <p className="text-gray-300 text-sm">Automatically donate portions to ocean cleanup, food aid, and more</p>
+                <Zap className="w-8 h-8 text-blue-400 mb-3" />
+                <h3 className="text-lg font-semibold text-white mb-2">
+                  Instant Cross-Chain
+                </h3>
+                <p className="text-gray-300 text-sm">
+                  One wallet for Solana, Ethereum, and all EVM chains
+                </p>
               </motion.div>
             </div>
 
             {/* How It Works */}
             <div className="space-y-6">
-              <h2 className="text-2xl font-semibold text-white">How It Works</h2>
+              <h2 className="text-2xl font-semibold text-white">
+                How It Works
+              </h2>
               <div className="grid md:grid-cols-4 gap-4">
                 {ONBOARDING_STEPS.map((step, index) => (
                   <motion.div
@@ -220,7 +252,7 @@ export default function SocialLoginFirst({ onComplete, className = '' }: SocialL
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1 }}
-              onClick={() => setStep('providers')}
+              onClick={() => setStep("providers")}
               className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-4 px-8 rounded-xl transition-all duration-200 flex items-center gap-3 mx-auto text-lg"
             >
               Get Started in 30 Seconds
@@ -233,7 +265,7 @@ export default function SocialLoginFirst({ onComplete, className = '' }: SocialL
           </motion.div>
         )}
 
-        {step === 'providers' && (
+        {step === "providers" && (
           <motion.div
             key="providers"
             initial={{ opacity: 0, y: 20 }}
@@ -242,10 +274,19 @@ export default function SocialLoginFirst({ onComplete, className = '' }: SocialL
             className="max-w-md mx-auto space-y-6"
           >
             <div className="text-center space-y-4">
-              <h2 className="text-3xl font-bold text-white">Choose Your Login</h2>
+              <h2 className="text-3xl font-bold text-white">
+                Choose Your Login Method
+              </h2>
               <p className="text-gray-300">
-                We'll create secure wallets automatically - no seed phrases needed!
+                MetaMask Embedded Wallets create secure, seedless accounts
+                instantly!
               </p>
+              <div className="bg-blue-900/30 border border-blue-600 rounded-lg p-3 text-center">
+                <p className="text-blue-200 text-sm font-medium">
+                  🔐 Powered by Web3Auth • ⚡ 30-Second Setup • 🌐 Cross-Chain
+                  Ready
+                </p>
+              </div>
             </div>
 
             <div className="space-y-3">
@@ -263,7 +304,9 @@ export default function SocialLoginFirst({ onComplete, className = '' }: SocialL
                   <provider.icon className="w-5 h-5" />
                   <div className="flex-1 text-left">
                     <div className="font-semibold">{provider.name}</div>
-                    <div className="text-sm opacity-90">{provider.description}</div>
+                    <div className="text-sm opacity-90">
+                      {provider.description}
+                    </div>
                   </div>
                   <ArrowRight className="w-4 h-4" />
                 </motion.button>
@@ -272,7 +315,7 @@ export default function SocialLoginFirst({ onComplete, className = '' }: SocialL
 
             <div className="text-center">
               <button
-                onClick={() => setStep('welcome')}
+                onClick={() => setStep("welcome")}
                 className="text-gray-400 hover:text-white transition-colors text-sm"
               >
                 ← Back to overview
@@ -281,7 +324,7 @@ export default function SocialLoginFirst({ onComplete, className = '' }: SocialL
           </motion.div>
         )}
 
-        {step === 'connecting' && (
+        {step === "connecting" && (
           <motion.div
             key="connecting"
             initial={{ opacity: 0, scale: 0.9 }}
@@ -295,10 +338,12 @@ export default function SocialLoginFirst({ onComplete, className = '' }: SocialL
                 transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                 className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full mx-auto"
               />
-              
-              <h2 className="text-2xl font-bold text-white">Creating Your Wallets</h2>
+
+              <h2 className="text-2xl font-bold text-white">
+                Creating Your MetaMask Embedded Wallets
+              </h2>
               <p className="text-gray-300">
-                Setting up your secure, multi-chain wallets...
+                Using Web3Auth technology to set up secure, seedless wallets...
               </p>
             </div>
 
@@ -310,9 +355,9 @@ export default function SocialLoginFirst({ onComplete, className = '' }: SocialL
                 className="flex items-center gap-3 text-green-400"
               >
                 <CheckCircle className="w-5 h-5" />
-                <span>Authenticating with {selectedProvider}</span>
+                <span>Web3Auth authentication successful</span>
               </motion.div>
-              
+
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -320,9 +365,9 @@ export default function SocialLoginFirst({ onComplete, className = '' }: SocialL
                 className="flex items-center gap-3 text-green-400"
               >
                 <CheckCircle className="w-5 h-5" />
-                <span>Creating Solana wallet</span>
+                <span>MetaMask Embedded Wallet created</span>
               </motion.div>
-              
+
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -330,13 +375,13 @@ export default function SocialLoginFirst({ onComplete, className = '' }: SocialL
                 className="flex items-center gap-3 text-green-400"
               >
                 <CheckCircle className="w-5 h-5" />
-                <span>Setting up cross-chain support</span>
+                <span>Cross-chain features activated</span>
               </motion.div>
             </div>
           </motion.div>
         )}
 
-        {step === 'success' && (
+        {step === "success" && (
           <motion.div
             key="success"
             initial={{ opacity: 0, scale: 0.9 }}
@@ -352,11 +397,14 @@ export default function SocialLoginFirst({ onComplete, className = '' }: SocialL
             >
               🎉
             </motion.div>
-            
+
             <div className="space-y-4">
-              <h2 className="text-3xl font-bold text-white">Welcome to Syndicate!</h2>
+              <h2 className="text-3xl font-bold text-white">
+                MetaMask Embedded Wallet Ready!
+              </h2>
               <p className="text-gray-300 max-w-md mx-auto">
-                Your wallets are ready. Let's find some lottery pools to join!
+                Your seedless, secure wallet is ready. Experience Web3 without
+                complexity!
               </p>
             </div>
 
@@ -368,7 +416,9 @@ export default function SocialLoginFirst({ onComplete, className = '' }: SocialL
             >
               <div className="flex items-center gap-3 text-green-400">
                 <CheckCircle className="w-5 h-5" />
-                <span className="font-medium">Multi-chain wallets created</span>
+                <span className="font-medium">
+                  MetaMask Embedded Wallet activated
+                </span>
               </div>
             </motion.div>
           </motion.div>
