@@ -3,15 +3,15 @@ import { WEB3AUTH_NETWORK, type Web3AuthOptions } from "@web3auth/modal";
 import { CHAIN_NAMESPACES } from "@web3auth/base";
 import { SolanaPrivateKeyProvider } from "@web3auth/solana-provider";
 
-// ENHANCEMENT: Solana mainnet configuration for production
+// ENHANCEMENT: Solana devnet configuration for development
 export const solanaChainConfig = {
   chainNamespace: CHAIN_NAMESPACES.SOLANA,
-  chainId: "0x1", // 0x1 for Mainnet (production)
+  chainId: "0x2", // 0x2 for Devnet
   rpcTarget:
     process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
-    "https://api.mainnet-beta.solana.com",
-  displayName: "Solana Mainnet",
-  blockExplorerUrl: "https://explorer.solana.com",
+    "https://api.devnet.solana.com",
+  displayName: "Solana Devnet",
+  blockExplorerUrl: "https://explorer.solana.com?cluster=devnet",
   ticker: "SOL",
   tickerName: "Solana",
   logo: "https://images.toruswallet.io/solana.svg",
@@ -22,8 +22,8 @@ const web3AuthOptions: Web3AuthOptions = {
   clientId:
     process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID ||
     "BPi5PB_UiIZ-cPz1GtV5i1I2iOSOHuimiXBI0e-Oe_u6X3oVAbCiAZOTEBtTXw4tsluTITPqA8zMsfxIKMjiqNQ",
-  // Align the network with the project configuration (mainnet)
-  web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_MAINNET,
+  // Align the network with the project configuration (devnet)
+  web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
   // Removed unsupported chainConfig property – Solana chain is provided via solanaProvider
   uiConfig: {
     appName: "Syndicate",
