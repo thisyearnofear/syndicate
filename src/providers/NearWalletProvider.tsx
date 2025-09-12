@@ -125,7 +125,7 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
     return () => clearTimeout(timer);
   }, []);
 
-  // Removed duplicate Web3Auth initialization – Web3Auth is provided by OptimizedWeb3AuthProvider
+  // CLEAN: Web3Auth initialization handled by AppProvider
 
   // Connect with Web3Auth – loaded lazily on the client to avoid SSR issues
   const connectWeb3Auth = async () => {
@@ -198,7 +198,7 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
     if (isWeb3Auth && web3authProvider) {
       // For Web3Auth, we would need to implement the transaction signing logic
       // This is a simplified version for demonstration
-      console.log("Signing transaction with Web3Auth:", transaction);
+      // DEBUG: console.log("Signing transaction with Web3Auth:", transaction);
       return { transactionHash: "web3auth-transaction-hash" };
     } else if (wallet && accountId) {
       try {
@@ -253,13 +253,7 @@ export function NearWalletProvider({ children }: NearWalletProviderProps) {
   ) => {
     if (isWeb3Auth) {
       // Placeholder implementation for Web3Auth method call
-      console.log("Calling method with Web3Auth (placeholder):", {
-        contractId,
-        methodName,
-        args,
-        gas,
-        deposit,
-      });
+      // DEBUG: Web3Auth method call logging disabled for production
       return { transactionHash: "web3auth-method-call-hash" };
     } else if (wallet && accountId) {
       try {

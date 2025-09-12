@@ -114,7 +114,7 @@ export class CrossChainTicketService {
     try {
       this.nearChainSignatureService = new NearChainSignatureService(nearWallet);
       await this.nearChainSignatureService.initialize();
-      console.log("NEAR chain signature service initialized successfully");
+      // DEBUG: console.log("NEAR chain signature service initialized successfully");
     } catch (error) {
       console.error("Failed to initialize NEAR service:", error);
       throw error;
@@ -189,7 +189,7 @@ export class CrossChainTicketService {
     try {
       // This is a placeholder. The actual implementation would be more complex
       // and involve the nearChainSignatureService.
-      console.log("Executing ticket purchase for intent:", intentId);
+      // DEBUG: console.log("Executing ticket purchase for intent:", intentId);
       intent.status = 'signed';
       this.updateIntent(intent);
 

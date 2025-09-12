@@ -30,7 +30,7 @@ export default function SyndicatePreview({ formData, memberPreview, impactPrevie
           url: window.location.href
         });
       } catch (err) {
-        console.log('Share cancelled');
+        // DEBUG: console.log('Share cancelled');
       }
     } else {
       // Fallback to clipboard

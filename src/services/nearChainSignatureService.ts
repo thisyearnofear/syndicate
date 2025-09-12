@@ -274,7 +274,7 @@ export class NearChainSignatureService {
       const baseProvider = new ethers.JsonRpcProvider('https://mainnet.base.org');
       const result = await baseProvider.broadcastTransaction(signedTx);
       
-      console.log('Transaction broadcasted successfully:', result.hash);
+      // DEBUG: console.log('Transaction broadcasted successfully:', result.hash);
       
       return result.hash;
     } catch (error) {
@@ -309,7 +309,7 @@ export class NearChainSignatureService {
         '0'
       );
 
-      console.log('Successfully registered with Syndicate:', syndicateId);
+      // DEBUG: console.log('Successfully registered with Syndicate:', syndicateId);
     } catch (error) {
       console.error('Failed to register with Syndicate:', error);
       // Don't throw here - ticket purchase succeeded even if registration failed

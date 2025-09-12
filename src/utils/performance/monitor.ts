@@ -158,7 +158,7 @@ export function measureComponentRender(componentName: string) {
         const endTime = performance.now();
         const renderTime = endTime - startTime;
         
-        console.log(`${componentName} render time:`, renderTime.toFixed(2), 'ms');
+        // DEBUG: console.log(`${componentName} render time:`, renderTime.toFixed(2), 'ms');
         
         // Record as custom metric
         if (typeof window !== 'undefined') {
@@ -187,7 +187,7 @@ export async function measureAsync<T>(
     const result = await operation();
     const duration = performance.now() - startTime;
     
-    console.log(`${name} completed in:`, duration.toFixed(2), 'ms');
+    // DEBUG: console.log(`${name} completed in:`, duration.toFixed(2), 'ms');
     
     // Record as custom metric
     if (typeof window !== 'undefined') {

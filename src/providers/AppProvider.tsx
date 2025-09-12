@@ -270,6 +270,4 @@ export function AppProvider({ children }: { children: ReactNode }) {
 // MODULAR: Export individual providers for selective usage
 export { CoreProviders, OptionalProviders, OptimizedWeb3AuthProvider };
 
-// AGGRESSIVE CONSOLIDATION: Remove unused exports, keep only what's needed
-export const connectors = createConnectors();
-export const wagmiConfig = createWagmiConfig();
+// CLEAN: Removed unused exports - configs are internal to provider
