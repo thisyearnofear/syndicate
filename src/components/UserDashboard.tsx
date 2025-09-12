@@ -22,7 +22,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 
-// Remove duplicate Achievement interface - using one from impactService
+// CLEAN: Using Achievement interface from impactService
 
 interface UserDashboardProps {
   className?: string;

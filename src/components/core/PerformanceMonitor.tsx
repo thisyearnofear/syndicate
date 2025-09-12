@@ -17,13 +17,7 @@ export function usePerformanceMonitoring() {
     if (walletConnection.isAnyConnected) {
       const connectionTime = performance.now() - connectionStart;
 
-      // Log performance metrics (replace with your analytics)
-      console.log("Performance Metrics:", {
-        walletConnectionTime: connectionTime,
-        connectedWallets: walletConnection.connectedWallets,
-        hasMultipleWallets: walletConnection.hasMultipleWallets,
-        primaryWallet: walletConnection.primaryWallet,
-      });
+      // DEBUG: Performance metrics logging disabled for production
     }
   }, [walletConnection.isAnyConnected]);
 
@@ -33,11 +27,7 @@ export function usePerformanceMonitoring() {
       for (const entry of list.getEntries()) {
         if (entry.entryType === "navigation") {
           const navEntry = entry as PerformanceNavigationTiming;
-          console.log("Page Load Performance:", {
-            loadComplete: navEntry.loadEventEnd - navEntry.loadEventStart,
-            domContentLoaded:
-              navEntry.domContentLoadedEventEnd - navEntry.domContentLoadedEventStart,
-          });
+          // DEBUG: Page load performance logging disabled for production
         }
       }
     });

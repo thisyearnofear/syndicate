@@ -70,7 +70,7 @@ class NearIntentsService {
         throw new Error("Failed to retrieve MPC public key from v1.signer");
       }
       
-      console.log("v1.signer contract connection verified:", publicKey);
+      // DEBUG: console.log("v1.signer contract connection verified:", publicKey);
     } catch (error) {
       console.error("v1.signer contract test failed:", error);
       throw new Error("Cannot connect to NEAR v1.signer contract. Please check network connection.");
@@ -113,7 +113,7 @@ class NearIntentsService {
         '0' // No deposit required
       );
 
-      console.log("Cross-chain intent created:", result);
+      // DEBUG: console.log("Cross-chain intent created:", result);
       return intentId;
     } catch (error) {
       console.error("Failed to create cross-chain intent:", error);
@@ -130,7 +130,7 @@ class NearIntentsService {
     }
 
     try {
-      console.log("Executing chain signature for intent:", intentId);
+      // DEBUG: console.log("Executing chain signature for intent:", intentId);
       
       // Get the intent details
       const intent = await this.nearWallet.viewMethod(
@@ -194,7 +194,7 @@ class NearIntentsService {
         if (status.executed) {
           transaction.status = 'executed';
           transaction.targetHash = status.target_tx_hash;
-          console.log("Transaction executed successfully:", transaction.id);
+          // DEBUG: console.log("Transaction executed successfully:", transaction.id);
           return;
         }
 

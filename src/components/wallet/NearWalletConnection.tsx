@@ -41,7 +41,7 @@ export default function NearWalletConnection() {
             setChainSignatureAvailable(false);
           }
 
-          console.log("NEAR services initialized successfully");
+          // DEBUG: console.log("NEAR services initialized successfully");
         } catch (error) {
           console.error("Failed to initialize NEAR services:", error);
           setChainSignatureAvailable(false);

@@ -86,7 +86,7 @@ export function useSmartAccount(): SmartAccountState {
 
     const createSmartAccount = async () => {
       try {
-        console.log("Creating smart account for:", address);
+        // DEBUG: console.log("Creating smart account for:", address);
 
         const account = await toMetaMaskSmartAccount({
           client: publicClient,
@@ -102,8 +102,8 @@ export function useSmartAccount(): SmartAccountState {
         const code = await publicClient.getCode({ address: account.address });
         setIsDeployed(code !== undefined && code !== "0x");
 
-        console.log("Smart account created:", account.address);
-        console.log("Is deployed:", code !== undefined && code !== "0x");
+        // DEBUG: console.log("Smart account created:", account.address);
+        // DEBUG: console.log("Is deployed:", code !== undefined && code !== "0x");
       } catch (err) {
         console.error("Failed to create smart account:", err);
         setError(err instanceof Error ? err.message : "Failed to create smart account");

@@ -164,7 +164,7 @@ export default function SocialLoginFirst({
             exit={{ opacity: 0, y: -20 }}
             className="text-center space-y-8"
           >
-            {/* Hero Section */}
+            {/* Header Section */}
             <div className="space-y-4">
               <motion.div
                 initial={{ scale: 0.8 }}

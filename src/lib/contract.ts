@@ -17,7 +17,7 @@ export async function getJackpotAmount(chainId: number = base.id): Promise<numbe
     });
 
     const amount = Number(formatUnits(result as bigint, 6));
-    console.log('[DEBUG] Contract lpPoolTotal (USDC):', amount);
+    // DEBUG: console.log('[DEBUG] Contract lpPoolTotal (USDC):', amount);
     
     // For debugging, also log userPoolTotal for comparison
     const userPoolResult = await client.readContract({
@@ -26,7 +26,7 @@ export async function getJackpotAmount(chainId: number = base.id): Promise<numbe
       functionName: 'userPoolTotal',
     });
     const userPoolAmount = Number(formatUnits(userPoolResult as bigint, 6));
-    console.log('[DEBUG] Contract userPoolTotal (for comparison):', userPoolAmount);
+    // DEBUG: console.log('[DEBUG] Contract userPoolTotal (for comparison):', userPoolAmount);
     
     return amount;
   } catch (error) {

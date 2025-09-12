@@ -642,7 +642,7 @@ function LotteryDashboard({
         </p>
         <SNSDomainSearch 
           onDomainSelect={(domain, publicKey) => {
-            console.log('Selected domain:', domain, 'for address:', publicKey.toString());
+            // DEBUG: console.log('Selected domain:', domain, 'for address:', publicKey.toString());
           }}
         />
        </div>

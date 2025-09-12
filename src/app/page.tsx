@@ -4,16 +4,17 @@
 import { useState, useCallback, Suspense, lazy } from "react";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 import ResponsiveLayout from "@/components/core/ResponsiveLayout";
-import Hero from "@/components/Hero";
-import WalletConnectionOptions, {
-  SocialLoginModal,
-} from "@/components/wallet/WalletConnectionOptions";
+import { SocialLoginModal } from "@/components/wallet/WalletConnectionOptions";
+import ConnectWallet from "@/components/wallet/ConnectWallet";
 import PurchaseModal from "@/components/modal/PurchaseModal";
 import Loader from "@/components/core/Loader";
 import ActivityFeed from "@/components/interactive/ActivityFeed";
-import ContributionTracker from "@/components/interactive/ContributionTracker";
 import SyndicateDiscovery from "@/components/interactive/SyndicateDiscovery";
 import { NetworkStatusIndicator } from "@/components/NetworkStatusIndicator";
+import { OptimisticJackpot } from "@/components/core/OptimisticJackpot";
+import { LiveSocialProof } from "@/components/core/LiveSocialProof";
+import { SmartTooltip } from "@/components/core/SmartTooltip";
+import { OnboardingProgress } from "@/components/core/OnboardingProgress";
 
 // PERFORMANT: Lazy load heavy components for adaptive loading
 const DelightfulSyndicateCreator = lazy(
@@ -30,7 +31,7 @@ const ComponentLoader = () => (
   </div>
 );
 
-// ENHANCEMENT FIRST: Enhanced Home component with performance optimizations
+// TRANSFORMATIONAL: Instant gratification home with optimistic UI
 export default function Home() {
   // CLEAN: Unified wallet connection state
   const walletConnection = useWalletConnection();
@@ -45,13 +46,13 @@ export default function Home() {
     if (!walletConnection.isAnyConnected) {
       setShowPurchaseModal(true);
     } else {
-      console.log("Proceeding to purchase...");
+      // DEBUG: console.log("Proceeding to purchase...");
       // Implementation would go here
     }
   }, [walletConnection.isAnyConnected]);
 
   const handleCreateSyndicate = useCallback((syndicateData: any) => {
-    console.log("Creating syndicate:", syndicateData);
+    // DEBUG: console.log("Creating syndicate:", syndicateData);
     setShowSyndicateCreator(false);
     // Implementation would go here
   }, []);
@@ -64,68 +65,120 @@ export default function Home() {
     setShowPurchaseModal(false);
   }, []);
 
-  // Show wallet connection options when not connected
-  if (!walletConnection.isAnyConnected) {
-    return (
-      <ResponsiveLayout className="min-h-screen">
-        <div className="relative flex-1 py-8">
-          <div className="max-w-4xl mx-auto px-4 space-y-8">
-            {/* Hero Section */}
-            <div className="text-center space-y-6">
-              <div className="text-6xl mb-4">🎯</div>
-              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-400 via-blue-500 to-green-400 bg-clip-text text-transparent">
-                Syndicate
-              </h1>
-              <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/30 rounded-full px-4 py-2">
-                <span className="text-sm font-medium text-purple-200">
-                  Cross-Chain Lottery Platform
-                </span>
-              </div>
-              <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
-                Join cross-chain lottery pools with seamless wallet integration
-              </p>
+  // ENHANCEMENT FIRST: Always show jackpot + instant buy - no blocking on wallet
+  return (
+    <ResponsiveLayout className="min-h-screen">
+      <NetworkStatusIndicator />
+      
+      {/* TRANSFORMATIONAL: Instant gratification hero - always visible */}
+      <div className="relative flex-1">
+        <div className="absolute top-4 right-4 z-10">
+          <Suspense fallback={null}>
+            <NotificationSystem />
+          </Suspense>
+        </div>
+
+        {/* INSTANT GRATIFICATION: Hero with immediate buy option */}
+        <div className="min-h-screen flex flex-col justify-center py-8 px-4">
+          <div className="text-center space-y-6 max-w-4xl mx-auto">
+            
+            {/* TRANSFORMATIONAL: Optimistic jackpot - no loading states */}
+            <div data-onboarding="jackpot">
+              <OptimisticJackpot onBuyClick={handlePurchaseAction} />
             </div>
 
-            {/* Connection Options */}
-            <WalletConnectionOptions
-              onSocialLoginClick={() => setShowSocialLoginModal(true)}
-            />
+            {/* COMPACT WALLET OPTIONS: Only show if not connected */}
+            {!walletConnection.isAnyConnected && (
+              <div className="bg-gray-900/50 rounded-2xl p-6 border border-gray-700/50 backdrop-blur-md" data-onboarding="wallet-options">
+                <div className="text-lg font-semibold text-white mb-4">Choose Your Connection</div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {/* Compact Social Login */}
+                  <button
+                    onClick={() => setShowSocialLoginModal(true)}
+                    className="bg-gradient-to-r from-purple-600/20 to-green-600/20 border border-purple-500/30 hover:border-purple-400/50 text-white p-4 rounded-xl transition-all duration-200 text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="text-2xl">✨</div>
+                      <div>
+                        <div className="font-semibold">Social Login</div>
+                        <div className="text-sm text-gray-300">Google, Discord, Email</div>
+                      </div>
+                    </div>
+                  </button>
+                  
+                  {/* Compact Existing Wallet */}
+                  <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 hover:border-blue-400/50 p-4 rounded-xl transition-all duration-200">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="text-2xl">🔗</div>
+                      <div>
+                        <div className="font-semibold text-white">Existing Wallet</div>
+                        <div className="text-sm text-gray-300">MetaMask, Phantom, etc.</div>
+                      </div>
+                    </div>
+                    <ConnectWallet />
+                  </div>
+                </div>
+              </div>
+            )}
 
-            {/* Value Props */}
-            <div className="grid md:grid-cols-3 gap-4 max-w-6xl mx-auto">
-              <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50 text-center">
-                <div className="text-2xl mb-2">🌍</div>
-                <h4 className="text-white font-semibold mb-1">Cross-Chain</h4>
-                <p className="text-gray-400 text-xs">
-                  Buy Base lottery tickets from Solana, Ethereum, and more
-                </p>
-              </div>
-              <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50 text-center">
-                <div className="text-2xl mb-2">🔐</div>
-                <h4 className="text-white font-semibold mb-1">Secure</h4>
-                <p className="text-gray-400 text-xs">
-                  Your keys, your control. Multiple wallet options available
-                </p>
-              </div>
-              <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50 text-center">
-                <div className="text-2xl mb-2">⚡</div>
-                <h4 className="text-white font-semibold mb-1">Instant</h4>
-                <p className="text-gray-400 text-xs">
-                  Start playing immediately with any connection method
-                </p>
+            {/* BRAND IDENTITY: Repositioned below action */}
+            <div className="space-y-4 mt-8">
+              <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-purple-400 via-blue-500 to-green-400 bg-clip-text text-transparent">
+                Syndicate
+              </h1>
+              <div className="text-lg text-gray-300">
+                Social lottery coordination • Cross-chain • Cause-driven
               </div>
             </div>
           </div>
-
-          {/* Social Login Modal */}
-          <SocialLoginModal
-            isOpen={showSocialLoginModal}
-            onClose={() => setShowSocialLoginModal(false)}
-          />
         </div>
-      </ResponsiveLayout>
-    );
-  }
+
+        {/* ALWAYS SHOW: Live social proof for engagement */}
+        <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
+          <div data-onboarding="social-proof">
+            <LiveSocialProof />
+          </div>
+
+          {/* PROGRESSIVE DISCLOSURE: Advanced features when connected */}
+          {walletConnection.isAnyConnected && (
+            <Suspense fallback={<ComponentLoader />}>
+              <div className="grid md:grid-cols-2 gap-6">
+                <ActivityFeed />
+                <div data-onboarding="syndicate-discovery">
+                  <SyndicateDiscovery />
+                </div>
+              </div>
+            </Suspense>
+          )}
+        </div>
+
+        {/* MODALS */}
+        <SocialLoginModal
+          isOpen={showSocialLoginModal}
+          onClose={() => setShowSocialLoginModal(false)}
+        />
+
+        <Suspense fallback={null}>
+          <PurchaseModal
+            isOpen={showPurchaseModal}
+            onClose={handleClosePurchaseModal}
+          />
+        </Suspense>
+
+        <Suspense fallback={null}>
+          <DelightfulSyndicateCreator
+            isOpen={showSyndicateCreator}
+            onClose={handleCloseSyndicateCreator}
+            onCreate={handleCreateSyndicate}
+          />
+        </Suspense>
+
+        {/* ENHANCEMENT FIRST: Smart contextual guidance */}
+        <SmartTooltip />
+        <OnboardingProgress />
+      </div>
+    </ResponsiveLayout>
+  );
 
   return (
     <ResponsiveLayout className="min-h-screen">
@@ -137,7 +190,6 @@ export default function Home() {
             <NotificationSystem />
           </Suspense>
         </div>
-        <Hero />
       </div>
 
       {/* ENHANCEMENT FIRST: Simplified unified content - focus on jackpot experience */}
@@ -224,7 +276,6 @@ export default function Home() {
         </div>
 
         <div className="mt-8 space-y-8">
-          <ContributionTracker />
           <SyndicateDiscovery />
         </div>
       </div>
@@ -244,10 +295,6 @@ export default function Home() {
       <PurchaseModal
         isOpen={showPurchaseModal}
         onClose={handleClosePurchaseModal}
-        onSocialLoginClick={() => {
-          setShowSocialLoginModal(true);
-          setShowPurchaseModal(false);
-        }}
       />
 
       {/* ENHANCEMENT FIRST: Simplified mobile navigation - only essential actions */}

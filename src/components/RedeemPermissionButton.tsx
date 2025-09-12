@@ -83,7 +83,7 @@ export default function RedeemPermissionButton() {
 
       setTxHash(receipt.transactionHash);
 
-      console.log(receipt);
+      // DEBUG: console.log(receipt);
     } catch (error) {
       console.error(error);
     } finally {

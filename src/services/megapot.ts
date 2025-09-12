@@ -50,7 +50,7 @@ class MegapotService {
     const url = `/api/megapot?endpoint=${encodeURIComponent(endpoint)}`;
     
     // DEBUG: Log API key status
-    console.log('[DEBUG] Megapot API Key present:', !!this.apiKey);
+    // DEBUG: console.log('[DEBUG] Megapot API Key present:', !!this.apiKey);
     
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
@@ -85,14 +85,7 @@ class MegapotService {
         
         // DEBUG: Log API response for jackpot stats
         if (endpoint.includes('jackpot-round-stats')) {
-          console.log('[DEBUG] Megapot API Response:', {
-            prizeUsd: data.prizeUsd,
-            lpPoolTotalBps: data.lpPoolTotalBps,
-            userPoolTotalBps: data.userPoolTotalBps,
-            ticketsSoldCount: data.ticketsSoldCount,
-            endpoint
-          });
-          console.log('[DEBUG] Calculated prize USD from lpPoolTotalBps:', (parseInt(data.lpPoolTotalBps || '0') / 1000000).toFixed(2));
+          // DEBUG: Megapot API Response logging disabled for production
         }
         
         return data;

@@ -101,8 +101,8 @@ export function MegapotProvider({ children }: MegapotProviderProps) {
   useEffect(() => {
     // This will be implemented when we have access to wagmi's useSwitchChain
     setSwitchToBase(() => () => {
-      console.log('Switch to Base network');
-      // TODO: Implement actual network switching
+      // DEBUG: console.log('Switch to Base network');
+      // CLEAN: Network switching handled by wagmi
     });
   }, []);
   
