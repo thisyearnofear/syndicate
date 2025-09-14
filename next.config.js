@@ -21,7 +21,7 @@ const nextConfig = {
     },
   },
 
-  // PERFORMANT: Webpack optimizations with blockchain-specific splitting
+  // PERFORMANT: Enhanced webpack optimizations with blockchain-specific splitting
   webpack: (config, { dev, isServer }) => {
     // Development optimizations
     if (dev) {
@@ -36,27 +36,46 @@ const nextConfig = {
       config.optimization.splitChunks = false;
     }
 
-    // Production optimizations with blockchain-specific chunks
+    // PERFORMANT: Enhanced production optimizations with better chunk splitting
     if (!dev) {
       config.optimization.splitChunks = {
         chunks: 'all',
+        maxInitialRequests: 25,
+        maxAsyncRequests: 25,
         cacheGroups: {
           // MODULAR: Separate blockchain SDKs for better caching
           ethereum: {
             test: /[\\/]node_modules[\\/](ethers|viem|wagmi|@metamask)/,
             name: 'ethereum',
             chunks: 'all',
-            priority: 20,
+            priority: 30,
+            enforce: true,
           },
           solana: {
             test: /[\\/]node_modules[\\/](@solana|@bonfida)/,
             name: 'solana',
             chunks: 'all',
-            priority: 20,
+            priority: 30,
+            enforce: true,
           },
           near: {
             test: /[\\/]node_modules[\\/](@near-js|near-api-js)/,
             name: 'near',
+            chunks: 'all',
+            priority: 30,
+            enforce: true,
+          },
+          // PERFORMANT: Separate UI libraries
+          ui: {
+            test: /[\\/]node_modules[\\/](framer-motion|lucide-react|@coordinationlabs)/,
+            name: 'ui',
+            chunks: 'all',
+            priority: 25,
+          },
+          // CLEAN: React and core dependencies
+          react: {
+            test: /[\\/]node_modules[\\/](react|react-dom)/,
+            name: 'react',
             chunks: 'all',
             priority: 20,
           },
@@ -65,6 +84,7 @@ const nextConfig = {
             name: 'vendors',
             chunks: 'all',
             priority: 10,
+            minChunks: 2,
           },
         },
       };
@@ -87,10 +107,12 @@ const nextConfig = {
       path: false,
     };
 
-    // PERFORMANT: Tree shaking improvements (only in production)
+    // PERFORMANT: Enhanced tree shaking and optimization
     if (!dev) {
       config.optimization.usedExports = true;
       config.optimization.sideEffects = false;
+      config.optimization.providedExports = true;
+      config.optimization.innerGraph = true;
     }
 
     // PERFORMANT: Add bundle analyzer in production
