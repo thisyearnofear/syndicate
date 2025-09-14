@@ -1,6 +1,6 @@
 import React from "react";
 import { useSyndicateDiscoveryData } from "@/hooks/data/useSyndicateDiscoveryData";
-import ComponentLoader from "@/components/shared/ComponentLoader";
+import { ComponentLoader } from "@/components/shared/UnifiedLoader";
 
 /**
  * SyndicateDiscovery

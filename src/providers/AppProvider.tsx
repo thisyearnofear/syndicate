@@ -48,12 +48,8 @@ const MegapotProvider = lazy(() =>
   }))
 );
 
-// PERFORMANT: Loading fallback component
-const ProviderLoading = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-  </div>
-);
+// AGGRESSIVE CONSOLIDATION: Use unified loader
+import { ProviderLoader } from "@/components/shared/UnifiedLoader";
 
 // CLEAN: Consolidated Web3Auth wrapper with error boundary
 function OptimizedWeb3AuthProvider({ children }: { children: ReactNode }) {
@@ -218,7 +214,7 @@ function OptimizedMegapotWrapper({ children }: { children: ReactNode }) {
 
   return (
     <MegapotUIProvider {...walletHandlers}>
-      <Suspense fallback={<ProviderLoading />}>
+      <Suspense fallback={<ProviderLoader />}>
         <MegapotProvider>{children}</MegapotProvider>
       </Suspense>
     </MegapotUIProvider>
@@ -233,7 +229,9 @@ function CoreProviders({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
-        <OptimizedMegapotWrapper>{children}</OptimizedMegapotWrapper>
+        <Suspense fallback={<ProviderLoader />}>
+          <OptimizedMegapotWrapper>{children}</OptimizedMegapotWrapper>
+        </Suspense>
       </WagmiProvider>
     </QueryClientProvider>
   );
@@ -242,7 +240,7 @@ function CoreProviders({ children }: { children: ReactNode }) {
 // PERFORMANT: Optional providers with lazy loading
 function OptionalProviders({ children }: { children: ReactNode }) {
   return (
-    <Suspense fallback={<ProviderLoading />}>
+    <Suspense fallback={<ProviderLoader />}>
       <SolanaWalletProvider>
         <NearWalletProvider>
           <CrossChainProvider>
