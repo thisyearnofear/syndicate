@@ -63,19 +63,13 @@ export function useUnifiedWallet(): WalletState & WalletActions {
   
   // Web3Auth state (client-side only)
   const isClient = typeof window !== "undefined";
-  const { 
-    isConnected: web3AuthConnected, 
-    provider: web3AuthProvider,
-    userInfo: web3AuthUserInfo,
-    connect: connectWeb3AuthModal,
-    logout: logoutWeb3Auth
-  } = isClient ? useWeb3Auth() : { 
-    isConnected: false, 
-    provider: null, 
-    userInfo: null,
-    connect: async () => {},
-    logout: async () => {}
-  };
+  const web3AuthHook = isClient ? useWeb3Auth() : null;
+  
+  const web3AuthConnected = web3AuthHook?.isConnected || false;
+  const web3AuthProvider = web3AuthHook?.provider || null;
+  const web3AuthUserInfo = (web3AuthHook as any)?.userInfo || null;
+  const connectWeb3AuthModal = (web3AuthHook as any)?.connect || (async () => {});
+  const logoutWeb3Auth = (web3AuthHook as any)?.logout || (async () => {});
   
   // Solana wallet state
   const { 
