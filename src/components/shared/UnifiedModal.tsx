@@ -7,7 +7,7 @@
 
 import React, { useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -24,4 +24,303 @@ export interface ModalProps {
   contentClassName?: string;
 }
 
-const sizeClasses = {\n  sm: 'max-w-sm',\n  md: 'max-w-md',\n  lg: 'max-w-lg',\n  xl: 'max-w-xl',\n  full: 'max-w-full'\n};\n\nconst variantClasses = {\n  default: 'rounded-lg',\n  centered: 'rounded-xl',\n  drawer: 'rounded-t-xl',\n  fullscreen: 'rounded-none'\n};\n\n/**\n * PERFORMANT: Optimized modal animations\n */\nconst modalVariants = {\n  hidden: {\n    opacity: 0,\n    scale: 0.95,\n    y: 20\n  },\n  visible: {\n    opacity: 1,\n    scale: 1,\n    y: 0,\n    transition: {\n      type: \"spring\",\n      damping: 25,\n      stiffness: 300\n    }\n  },\n  exit: {\n    opacity: 0,\n    scale: 0.95,\n    y: 20,\n    transition: {\n      duration: 0.2\n    }\n  }\n};\n\nconst overlayVariants = {\n  hidden: { opacity: 0 },\n  visible: { opacity: 1 },\n  exit: { opacity: 0 }\n};\n\n/**\n * CLEAN: Main unified modal component\n */\nexport default function UnifiedModal({\n  isOpen,\n  onClose,\n  title,\n  children,\n  size = 'md',\n  variant = 'default',\n  showCloseButton = true,\n  closeOnOverlayClick = true,\n  closeOnEscape = true,\n  className = '',\n  overlayClassName = '',\n  contentClassName = ''\n}: ModalProps) {\n  // CLEAN: Handle escape key\n  const handleEscape = useCallback((event: KeyboardEvent) => {\n    if (event.key === 'Escape' && closeOnEscape) {\n      onClose();\n    }\n  }, [onClose, closeOnEscape]);\n\n  // PERFORMANT: Add/remove event listeners\n  useEffect(() => {\n    if (isOpen && closeOnEscape) {\n      document.addEventListener('keydown', handleEscape);\n      return () => document.removeEventListener('keydown', handleEscape);\n    }\n  }, [isOpen, handleEscape, closeOnEscape]);\n\n  // CLEAN: Prevent body scroll when modal is open\n  useEffect(() => {\n    if (isOpen) {\n      document.body.style.overflow = 'hidden';\n      return () => {\n        document.body.style.overflow = 'unset';\n      };\n    }\n  }, [isOpen]);\n\n  // MODULAR: Handle overlay click\n  const handleOverlayClick = (event: React.MouseEvent) => {\n    if (event.target === event.currentTarget && closeOnOverlayClick) {\n      onClose();\n    }\n  };\n\n  // PERFORMANT: Only render when needed\n  if (typeof window === 'undefined') return null;\n\n  const modalContent = (\n    <AnimatePresence>\n      {isOpen && (\n        <motion.div\n          className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${overlayClassName}`}\n          variants={overlayVariants}\n          initial=\"hidden\"\n          animate=\"visible\"\n          exit=\"exit\"\n          onClick={handleOverlayClick}\n        >\n          {/* Backdrop */}\n          <div className=\"absolute inset-0 bg-black/50 backdrop-blur-sm\" />\n          \n          {/* Modal Content */}\n          <motion.div\n            className={`\n              relative bg-white dark:bg-gray-900 shadow-xl\n              ${sizeClasses[size]} \n              ${variantClasses[variant]}\n              ${variant === 'drawer' ? 'mt-auto' : ''}\n              ${variant === 'fullscreen' ? 'w-full h-full' : 'w-full'}\n              ${className}\n            `}\n            variants={modalVariants}\n            initial=\"hidden\"\n            animate=\"visible\"\n            exit=\"exit\"\n            onClick={(e) => e.stopPropagation()}\n          >\n            {/* Header */}\n            {(title || showCloseButton) && (\n              <div className=\"flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700\">\n                {title && (\n                  <h2 className=\"text-xl font-semibold text-gray-900 dark:text-white\">\n                    {title}\n                  </h2>\n                )}\n                {showCloseButton && (\n                  <button\n                    onClick={onClose}\n                    className=\"text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors\"\n                    aria-label=\"Close modal\"\n                  >\n                    <svg className=\"w-6 h-6\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">\n                      <path strokeLinecap=\"round\" strokeLinejoin=\"round\" strokeWidth={2} d=\"M6 18L18 6M6 6l12 12\" />\n                    </svg>\n                  </button>\n                )}\n              </div>\n            )}\n            \n            {/* Content */}\n            <div className={`${title || showCloseButton ? 'p-6' : 'p-0'} ${contentClassName}`}>\n              {children}\n            </div>\n          </motion.div>\n        </motion.div>\n      )}\n    </AnimatePresence>\n  );\n\n  return createPortal(modalContent, document.body);\n}\n\n/**\n * MODULAR: Specialized modal components for common use cases\n */\n\n// CLEAN: Confirmation modal\nexport function ConfirmationModal({\n  isOpen,\n  onClose,\n  onConfirm,\n  title = \"Confirm Action\",\n  message,\n  confirmText = \"Confirm\",\n  cancelText = \"Cancel\",\n  variant = \"danger\"\n}: {\n  isOpen: boolean;\n  onClose: () => void;\n  onConfirm: () => void;\n  title?: string;\n  message: string;\n  confirmText?: string;\n  cancelText?: string;\n  variant?: \"danger\" | \"warning\" | \"info\";\n}) {\n  const variantStyles = {\n    danger: \"bg-red-600 hover:bg-red-700\",\n    warning: \"bg-yellow-600 hover:bg-yellow-700\",\n    info: \"bg-blue-600 hover:bg-blue-700\"\n  };\n\n  return (\n    <UnifiedModal\n      isOpen={isOpen}\n      onClose={onClose}\n      title={title}\n      size=\"sm\"\n    >\n      <div className=\"space-y-4\">\n        <p className=\"text-gray-600 dark:text-gray-300\">{message}</p>\n        <div className=\"flex space-x-3 justify-end\">\n          <button\n            onClick={onClose}\n            className=\"px-4 py-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors\"\n          >\n            {cancelText}\n          </button>\n          <button\n            onClick={() => {\n              onConfirm();\n              onClose();\n            }}\n            className={`px-4 py-2 text-white rounded-lg transition-colors ${variantStyles[variant]}`}\n          >\n            {confirmText}\n          </button>\n        </div>\n      </div>\n    </UnifiedModal>\n  );\n}\n\n// MODULAR: Loading modal\nexport function LoadingModal({\n  isOpen,\n  title = \"Loading...\",\n  message\n}: {\n  isOpen: boolean;\n  title?: string;\n  message?: string;\n}) {\n  return (\n    <UnifiedModal\n      isOpen={isOpen}\n      onClose={() => {}} // Cannot close loading modal\n      title={title}\n      size=\"sm\"\n      showCloseButton={false}\n      closeOnOverlayClick={false}\n      closeOnEscape={false}\n    >\n      <div className=\"flex flex-col items-center space-y-4 py-4\">\n        <div className=\"animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600\" />\n        {message && <p className=\"text-gray-600 dark:text-gray-300 text-center\">{message}</p>}\n      </div>\n    </UnifiedModal>\n  );\n}\n\n// CLEAN: Success modal\nexport function SuccessModal({\n  isOpen,\n  onClose,\n  title = \"Success!\",\n  message,\n  actionText = \"Continue\",\n  onAction\n}: {\n  isOpen: boolean;\n  onClose: () => void;\n  title?: string;\n  message: string;\n  actionText?: string;\n  onAction?: () => void;\n}) {\n  return (\n    <UnifiedModal\n      isOpen={isOpen}\n      onClose={onClose}\n      title={title}\n      size=\"sm\"\n    >\n      <div className=\"space-y-4\">\n        <div className=\"flex items-center space-x-3\">\n          <div className=\"flex-shrink-0\">\n            <svg className=\"w-8 h-8 text-green-500\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">\n              <path strokeLinecap=\"round\" strokeLinejoin=\"round\" strokeWidth={2} d=\"M5 13l4 4L19 7\" />\n            </svg>\n          </div>\n          <p className=\"text-gray-600 dark:text-gray-300\">{message}</p>\n        </div>\n        <div className=\"flex justify-end\">\n          <button\n            onClick={onAction || onClose}\n            className=\"px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors\"\n          >\n            {actionText}\n          </button>\n        </div>\n      </div>\n    </UnifiedModal>\n  );\n}"
+const sizeClasses = {
+  sm: 'max-w-sm',
+  md: 'max-w-md',
+  lg: 'max-w-lg',
+  xl: 'max-w-xl',
+  full: 'max-w-full'
+};
+
+const variantClasses = {
+  default: 'rounded-lg',
+  centered: 'rounded-xl',
+  drawer: 'rounded-t-xl',
+  fullscreen: 'rounded-none'
+};
+
+/**
+ * PERFORMANT: Optimized modal animations
+ */
+const modalVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    scale: 0.95,
+    y: 20
+  },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      damping: 25,
+      stiffness: 300
+    }
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.95,
+    y: 20,
+    transition: {
+      duration: 0.2
+    }
+  }
+};
+
+const overlayVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
+  exit: { opacity: 0 }
+};
+
+/**
+ * CLEAN: Main unified modal component
+ */
+export default function UnifiedModal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  size = 'md',
+  variant = 'default',
+  showCloseButton = true,
+  closeOnOverlayClick = true,
+  closeOnEscape = true,
+  className = '',
+  overlayClassName = '',
+  contentClassName = ''
+}: ModalProps) {
+  // CLEAN: Handle escape key
+  const handleEscape = useCallback((event: KeyboardEvent) => {
+    if (event.key === 'Escape' && closeOnEscape) {
+      onClose();
+    }
+  }, [onClose, closeOnEscape]);
+
+  // PERFORMANT: Add/remove event listeners
+  useEffect(() => {
+    if (isOpen && closeOnEscape) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [isOpen, handleEscape, closeOnEscape]);
+
+  // CLEAN: Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = 'unset';
+      };
+    }
+  }, [isOpen]);
+
+  // MODULAR: Handle overlay click
+  const handleOverlayClick = (event: React.MouseEvent) => {
+    if (event.target === event.currentTarget && closeOnOverlayClick) {
+      onClose();
+    }
+  };
+
+  // PERFORMANT: Only render when needed
+  if (typeof window === 'undefined') return null;
+
+  const modalContent = (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${overlayClassName}`}
+          variants={overlayVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          onClick={handleOverlayClick}
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          
+          {/* Modal Content */}
+          <motion.div
+            className={`
+              relative bg-white dark:bg-gray-900 shadow-xl
+              ${sizeClasses[size]} 
+              ${variantClasses[variant]}
+              ${variant === 'drawer' ? 'mt-auto' : ''}
+              ${variant === 'fullscreen' ? 'w-full h-full' : 'w-full'}
+              ${className}
+            `}
+            variants={modalVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            {(title || showCloseButton) && (
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                {title && (
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    {title}
+                  </h2>
+                )}
+                {showCloseButton && (
+                  <button
+                    onClick={onClose}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                    aria-label="Close modal"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            )}
+            
+            {/* Content */}
+            <div className={`${title || showCloseButton ? 'p-6' : 'p-0'} ${contentClassName}`}>
+              {children}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
+  return createPortal(modalContent, document.body);
+}
+
+/**
+ * MODULAR: Specialized modal components for common use cases
+ */
+
+// CLEAN: Confirmation modal
+export function ConfirmationModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  title = "Confirm Action",
+  message,
+  confirmText = "Confirm",
+  cancelText = "Cancel",
+  variant = "danger"
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title?: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  variant?: "danger" | "warning" | "info";
+}) {
+  const variantStyles = {
+    danger: "bg-red-600 hover:bg-red-700",
+    warning: "bg-yellow-600 hover:bg-yellow-700",
+    info: "bg-blue-600 hover:bg-blue-700"
+  };
+
+  return (
+    <UnifiedModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+      size="sm"
+    >
+      <div className="space-y-4">
+        <p className="text-gray-600 dark:text-gray-300">{message}</p>
+        <div className="flex space-x-3 justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+          >
+            {cancelText}
+          </button>
+          <button
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+            className={`px-4 py-2 text-white rounded-lg transition-colors ${variantStyles[variant]}`}
+          >
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </UnifiedModal>
+  );
+}
+
+// MODULAR: Loading modal
+export function LoadingModal({
+  isOpen,
+  title = "Loading...",
+  message
+}: {
+  isOpen: boolean;
+  title?: string;
+  message?: string;
+}) {
+  return (
+    <UnifiedModal
+      isOpen={isOpen}
+      onClose={() => {}} // Cannot close loading modal
+      title={title}
+      size="sm"
+      showCloseButton={false}
+      closeOnOverlayClick={false}
+      closeOnEscape={false}
+    >
+      <div className="flex flex-col items-center space-y-4 py-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        {message && <p className="text-gray-600 dark:text-gray-300 text-center">{message}</p>}
+      </div>
+    </UnifiedModal>
+  );
+}
+
+// CLEAN: Success modal
+export function SuccessModal({
+  isOpen,
+  onClose,
+  title = "Success!",
+  message,
+  actionText = "Continue",
+  onAction
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title?: string;
+  message: string;
+  actionText?: string;
+  onAction?: () => void;
+}) {
+  return (
+    <UnifiedModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+      size="sm"
+    >
+      <div className="space-y-4">
+        <div className="flex items-center space-x-3">
+          <div className="flex-shrink-0">
+            <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <p className="text-gray-600 dark:text-gray-300">{message}</p>
+        </div>
+        <div className="flex justify-end">
+          <button
+            onClick={onAction || onClose}
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+          >
+            {actionText}
+          </button>
+        </div>
+      </div>
+    </UnifiedModal>
+  );
+}

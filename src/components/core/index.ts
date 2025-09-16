@@ -5,8 +5,8 @@ export { default as PerformanceMonitor } from './PerformanceMonitor';
 export { default as ResponsiveLayout } from './ResponsiveLayout';
 export { default as OptimisticJackpot } from './OptimisticJackpot';
 export { default as LiveSocialProof } from './LiveSocialProof';
-export { default as SmartTooltip } from './SmartTooltip';
-export { default as OnboardingProgress } from './OnboardingProgress';
+export { SmartTooltip } from './SmartTooltip';
+export { OnboardingProgress } from './OnboardingProgress';
 
 // AGGRESSIVE CONSOLIDATION: Deprecated - use UnifiedLoader instead
 // export { default as Loader } from './Loader';

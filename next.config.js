@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
-const { createBundleAnalyzerPlugin } = require('./analyze-bundle');
+const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+
 const nextConfig = {
   // PERFORMANT: Enhanced build performance with aggressive optimizations
   experimental: {
@@ -19,6 +20,9 @@ const nextConfig = {
         },
       },
     },
+    // Additional optimizations from consolidated config
+    optimizeCss: true,
+    scrollRestoration: true,
   },
 
   // PERFORMANT: Enhanced webpack optimizations with blockchain-specific splitting
@@ -116,8 +120,18 @@ const nextConfig = {
     }
 
     // PERFORMANT: Add bundle analyzer in production
-    if (!dev && !isServer) {
-      config.plugins.push(...createBundleAnalyzerPlugin());
+    if (!dev && !isServer && process.env.ANALYZE === 'true') {
+      config.plugins.push(
+        new BundleAnalyzerPlugin({
+          analyzerMode: 'static',
+          reportFilename: './bundle-analysis.html',
+          openAnalyzer: true,
+          defaultSizes: 'gzip',
+          generateStatsFile: true,
+          statsFilename: './bundle-stats.json',
+          logLevel: 'info',
+        })
+      );
     }
 
     return config;
@@ -175,6 +189,7 @@ const nextConfig = {
   // PERFORMANT: Additional optimizations
   compress: true,
   poweredByHeader: false,
+  output: 'standalone',
 };
 
 module.exports = nextConfig;

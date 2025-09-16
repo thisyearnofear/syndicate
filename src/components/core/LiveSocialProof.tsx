@@ -98,3 +98,5 @@ export function LiveSocialProof() {
     </div>
   );
 }
+
+export default LiveSocialProof;

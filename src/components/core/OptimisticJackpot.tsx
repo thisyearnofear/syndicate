@@ -104,3 +104,5 @@ export function OptimisticJackpot({ onBuyClick }: OptimisticJackpotProps) {
     </div>
   );
 }
+
+export default OptimisticJackpot;
