@@ -12,8 +12,9 @@ import { MEGAPOT_CONTRACT_ADDRESS, ERC20_TOKEN_ADDRESS, REFERRER_ADDRESS } from 
 const MEGAPOT_ABI = [
   {
     "inputs": [
-      { "internalType": "uint256", "name": "ticketCount", "type": "uint256" },
-      { "internalType": "address", "name": "referrer", "type": "address" }
+      { "internalType": "address", "name": "referrer", "type": "address" },
+      { "internalType": "uint256", "name": "value", "type": "uint256" },
+      { "internalType": "address", "name": "recipient", "type": "address" }
     ],
     "name": "purchaseTickets",
     "outputs": [],
@@ -217,11 +218,18 @@ export function useTicketPurchase(): UseTicketPurchaseReturn {
     try {
       setPurchaseError(null);
       
+      // Calculate USDC value: 1 USDC per ticket (6 decimals)
+      const usdcValue = parseUnits((ticketCount * 1).toString(), 6);
+      
       writeMegapot({
         address: MEGAPOT_CONTRACT_ADDRESS as `0x${string}`,
         abi: MEGAPOT_ABI,
         functionName: 'purchaseTickets',
-        args: [BigInt(ticketCount), REFERRER_ADDRESS as `0x${string}`],
+        args: [
+          REFERRER_ADDRESS as `0x${string}`, // referrer
+          usdcValue, // value in USDC (6 decimals)
+          address as `0x${string}` // recipient (user's address)
+        ],
         chainId: base.id,
       });
     } catch (err) {
