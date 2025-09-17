@@ -16,6 +16,13 @@ import React, { memo, useMemo, useCallback } from 'react';
 import { useOptimizedCounter } from '@/hooks/performance/useOptimizedAnimation';
 import { useJackpotData, useCountdownData, useActivityData, useStatsData } from '@/hooks/performance/useUnifiedData';
 import { performanceBudgetManager } from '@/services/performance/PerformanceBudgetManager';
+import {
+  createMemoComparator,
+  useDeviceAwareStyling,
+  useOptimizedLoadingConfig,
+  useMemoizedDataTransform,
+  setDisplayName
+} from '@/utils/performance/componentOptimization';
 
 // PERFORMANT: Memoized jackpot display with optimized counter
 interface OptimizedJackpotProps {
@@ -65,9 +72,14 @@ const OptimizedJackpotComponent = memo(({ className = '', priority = 'high' }: O
     return null;
   }, [timeRemaining]);
 
-  // PERFORMANT: Device-aware styling
+  // PERFORMANT: Device-aware styling using extracted utility
   const deviceCapabilities = useMemo(() => performanceBudgetManager.getStatus().capabilities, []);
   const supportsAdvancedEffects = performanceBudgetManager.supportsAdvancedEffects();
+  const optimizedClasses = useDeviceAwareStyling(
+    'relative bg-gradient-to-br from-purple-900/80 to-blue-900/80 rounded-2xl p-6 border-2 border-purple-500/30 backdrop-blur-md transition-all duration-500 hover:shadow-2xl hover:shadow-purple-500/20 overflow-hidden',
+    isAnimating ? "scale-105 border-green-400 shadow-lg shadow-green-400/30 ring-2 ring-green-400/30" : "",
+    "scale-100 border-purple-500/20" // Reduced motion fallback
+  );
 
   if (loading) {
     return (
@@ -92,13 +104,7 @@ const OptimizedJackpotComponent = memo(({ className = '', priority = 'high' }: O
   }
 
   return (
-    <div 
-      className={`relative bg-gradient-to-br from-purple-900/80 to-blue-900/80 rounded-2xl p-6 border-2 border-purple-500/30 backdrop-blur-md transition-all duration-500 hover:shadow-2xl hover:shadow-purple-500/20 overflow-hidden ${
-        isAnimating && supportsAdvancedEffects
-          ? "scale-105 border-green-400 shadow-lg shadow-green-400/30 ring-2 ring-green-400/30"
-          : ""
-      } ${className}`}
-    >
+    <div className={`${optimizedClasses} ${className}`}>
       {/* PERFORMANT: Conditional advanced effects */}
       {supportsAdvancedEffects && isAnimating && (
         <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-emerald-500/10 animate-pulse"></div>
@@ -132,15 +138,9 @@ const OptimizedJackpotComponent = memo(({ className = '', priority = 'high' }: O
       </div>
     </div>
   );
-}, (prevProps, nextProps) => {
-  // PERFORMANT: Custom comparison to prevent unnecessary re-renders
-  return (
-    prevProps.className === nextProps.className &&
-    prevProps.priority === nextProps.priority
-  );
-});
+}, createMemoComparator<OptimizedJackpotProps>(['className', 'priority']));
 
-OptimizedJackpotComponent.displayName = 'OptimizedJackpot';
+setDisplayName(OptimizedJackpotComponent, 'OptimizedJackpot');
 
 // PERFORMANT: Memoized activity feed
 interface OptimizedActivityFeedProps {
@@ -198,14 +198,9 @@ const OptimizedActivityFeedComponent = memo(({
       </div>
     </div>
   );
-}, (prevProps, nextProps) => {
-  return (
-    prevProps.className === nextProps.className &&
-    prevProps.maxItems === nextProps.maxItems
-  );
-});
+}, createMemoComparator<OptimizedActivityFeedProps>(['className', 'maxItems']));
 
-OptimizedActivityFeedComponent.displayName = 'OptimizedActivityFeed';
+setDisplayName(OptimizedActivityFeedComponent, 'OptimizedActivityFeed');
 
 // PERFORMANT: Memoized stats display
 interface OptimizedStatsProps {
@@ -276,14 +271,9 @@ const OptimizedStatsComponent = memo(({
       </div>
     </div>
   );
-}, (prevProps, nextProps) => {
-  return (
-    prevProps.className === nextProps.className &&
-    prevProps.layout === nextProps.layout
-  );
-});
+}, createMemoComparator<OptimizedStatsProps>(['className', 'layout']));
 
-OptimizedStatsComponent.displayName = 'OptimizedStats';
+setDisplayName(OptimizedStatsComponent, 'OptimizedStats');
 
 // MODULAR: Export optimized components
 export const OptimizedJackpot = OptimizedJackpotComponent;

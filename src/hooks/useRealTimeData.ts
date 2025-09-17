@@ -38,7 +38,7 @@ export function useRealTimeData<T>(
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  
+
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const currentIntervalRef = useRef(interval);
   const errorCountRef = useRef(0);
@@ -51,26 +51,26 @@ export function useRealTimeData<T>(
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const result = await fetchFn();
       setData(result);
       setLastUpdated(new Date());
-      
+
       // CLEAN: Reset interval on success
       errorCountRef.current = 0;
       currentIntervalRef.current = interval;
-      
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch data';
       setError(errorMessage);
-      
+
       // PERFORMANT: Exponential backoff on errors
       errorCountRef.current++;
       currentIntervalRef.current = Math.min(
         interval * Math.pow(backoffMultiplier, errorCountRef.current),
         maxInterval
       );
-      
+
       console.warn(`Real-time fetch failed (attempt ${errorCountRef.current}):`, errorMessage);
     } finally {
       setIsLoading(false);
@@ -83,7 +83,7 @@ export function useRealTimeData<T>(
 
     const handleVisibilityChange = () => {
       isActiveRef.current = !document.hidden;
-      
+
       if (isActiveRef.current) {
         // PERFORMANT: Immediate fetch when page becomes visible
         fetchData();
@@ -104,7 +104,7 @@ export function useRealTimeData<T>(
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
-      
+
       intervalRef.current = setInterval(() => {
         if (isActiveRef.current) {
           fetchData();
@@ -165,35 +165,32 @@ export function useRealTimeActivityFeed() {
   }>>([]);
 
   useEffect(() => {
-    // CLEAN: Import real-time service only when needed
-    import('@/services/realTimeService').then(({ realTimeService }) => {
-      // MODULAR: Subscribe to relevant events
-      const unsubscribeTickets = realTimeService.subscribe('ticket_purchase', (event) => {
-        const activity = {
-          id: Date.now().toString(),
-          type: 'ticket_purchase' as const,
-          message: `${event.data.user} bought ${event.data.amount} ticket${event.data.amount !== 1 ? 's' : ''}`,
-          timestamp: event.timestamp,
-        };
-        setActivities(prev => [activity, ...prev.slice(0, 9)]);
-      });
+    // CLEAN: Import unified data service
+    import('@/services/performance/UnifiedDataService').then(({ unifiedDataService }) => {
+      // MODULAR: Subscribe to activity data using unified service
+      const subscription = {
+        id: `activity-feed-${Date.now()}`,
+        type: 'activity' as const,
+        frequency: 5000, // 5 seconds
+        priority: 'medium' as const,
+        callback: (activityData: any) => {
+          if (activityData?.activities) {
+            const formattedActivities = activityData.activities.map((activity: any) => ({
+              id: activity.id || Date.now().toString(),
+              type: activity.type || 'activity',
+              message: activity.message || 'Recent activity',
+              timestamp: activity.timestamp || new Date(),
+              amount: activity.amount,
+            }));
+            setActivities(prev => [...formattedActivities, ...prev.slice(0, 9)]);
+          }
+        },
+      };
 
-      const unsubscribeSyndicates = realTimeService.subscribe('syndicate_activity', (event) => {
-        const activity = {
-          id: Date.now().toString(),
-          type: 'syndicate_join' as const,
-          message: `${event.data.syndicate} syndicate gained ${event.data.count} member${event.data.count !== 1 ? 's' : ''}`,
-          timestamp: event.timestamp,
-        };
-        setActivities(prev => [activity, ...prev.slice(0, 9)]);
-      });
-
-      // PERFORMANT: Start the service
-      realTimeService.start();
+      const unsubscribe = unifiedDataService.subscribe(subscription);
 
       return () => {
-        unsubscribeTickets();
-        unsubscribeSyndicates();
+        unsubscribe();
       };
     });
   }, []);
@@ -213,41 +210,30 @@ export function useRealTimeLiveStats() {
   });
 
   useEffect(() => {
-    // CLEAN: Import and use centralized real-time service
-    import('@/services/realTimeService').then(({ realTimeService }) => {
-      // MODULAR: Subscribe to user online updates
-      const unsubscribeOnline = realTimeService.subscribe('user_online', (event) => {
-        setStats(prev => ({
-          ...prev,
-          onlineUsers: event.data.count,
-        }));
-      });
+    // CLEAN: Import and use unified data service
+    import('@/services/performance/UnifiedDataService').then(({ unifiedDataService }) => {
+      // MODULAR: Subscribe to stats data using unified service
+      const subscription = {
+        id: `live-stats-${Date.now()}`,
+        type: 'stats' as const,
+        frequency: 60000, // 1 minute
+        priority: 'medium' as const,
+        callback: (statsData: any) => {
+          if (statsData) {
+            setStats({
+              ticketsToday: statsData.ticketsToday || 0,
+              activeSyndicates: statsData.activeSyndicates || 0,
+              weeklyWins: statsData.weeklyWins || 0,
+              onlineUsers: statsData.onlineUsers || 0,
+            });
+          }
+        },
+      };
 
-      // MODULAR: Subscribe to ticket purchases for daily count
-      const unsubscribeTickets = realTimeService.subscribe('ticket_purchase', (event) => {
-        setStats(prev => ({
-          ...prev,
-          ticketsToday: prev.ticketsToday + event.data.amount,
-        }));
-      });
-
-      // MODULAR: Subscribe to syndicate activity
-      const unsubscribeSyndicates = realTimeService.subscribe('syndicate_activity', (event) => {
-        if (event.data.action === 'member_joined') {
-          setStats(prev => ({
-            ...prev,
-            activeSyndicates: Math.max(40, prev.activeSyndicates + (Math.random() < 0.2 ? 1 : 0)),
-          }));
-        }
-      });
-
-      // PERFORMANT: Start the service
-      realTimeService.start();
+      const unsubscribe = unifiedDataService.subscribe(subscription);
 
       return () => {
-        unsubscribeOnline();
-        unsubscribeTickets();
-        unsubscribeSyndicates();
+        unsubscribe();
       };
     });
   }, []);
