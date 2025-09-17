@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/providers/AppProvider";
 import { PerformanceDisplay } from "@/components/shared/PerformanceTracker";
-import PerformanceDashboard from "@/components/performance/PerformanceDashboard";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,7 +34,6 @@ export default function RootLayout({
         <div className="flex-1">
           <AppProvider>{children}</AppProvider>
           <PerformanceDisplay />
-          <PerformanceDashboard />
         </div>
       </body>
     </html>
