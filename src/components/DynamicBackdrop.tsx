@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useJackpotDisplay } from '@/providers/MegapotProvider';
+import { useOptimizedParticles } from '@/hooks/performance/useOptimizedAnimation';
+import { performanceBudgetManager } from '@/services/performance/PerformanceBudgetManager';
 
 interface FloatingElement {
   id: number;
@@ -13,6 +15,7 @@ interface FloatingElement {
   color: string;
   rotation: number;
   rotationSpeed: number;
+  opacity: number;
 }
 
 interface DynamicBackdropProps {
@@ -21,83 +24,118 @@ interface DynamicBackdropProps {
 }
 
 export default function DynamicBackdrop({ children, className = '' }: DynamicBackdropProps) {
-  const [elements, setElements] = useState<FloatingElement[]>([]);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isJackpotGrowing, setIsJackpotGrowing] = useState(false);
-  const animationRef = useRef<number | null>(null);
+  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
   const { currentPrize, isLoading } = useJackpotDisplay();
+  
+  // PERFORMANT: Check device capabilities
+  const deviceCapabilities = useMemo(() => performanceBudgetManager.getStatus().capabilities, []);
+  const supportsAdvancedEffects = performanceBudgetManager.supportsAdvancedEffects();
 
-  // DELIGHT: Create floating elements based on lottery theme
+  // PERFORMANT: Window size tracking with debouncing
   useEffect(() => {
-    const createElements = () => {
-      const newElements: FloatingElement[] = [];
-      const elementTypes: FloatingElement['type'][] = ['ticket', 'coin', 'star', 'heart', 'diamond'];
-      const colors = [
-        '#FFD700', // Gold
-        '#FF6B6B', // Red
-        '#4ECDC4', // Teal
-        '#45B7D1', // Blue
-        '#96CEB4', // Green
-        '#FFEAA7', // Yellow
-        '#DDA0DD', // Plum
-        '#98FB98'  // Pale Green
-      ];
-
-      for (let i = 0; i < 25; i++) {
-        newElements.push({
-          id: i,
-          x: Math.random() * window.innerWidth,
-          y: Math.random() * window.innerHeight,
-          size: Math.random() * 20 + 10,
-          speed: Math.random() * 0.5 + 0.2,
-          type: elementTypes[Math.floor(Math.random() * elementTypes.length)],
-          color: colors[Math.floor(Math.random() * colors.length)],
-          rotation: Math.random() * 360,
-          rotationSpeed: (Math.random() - 0.5) * 2
-        });
-      }
-      setElements(newElements);
+    const updateWindowSize = () => {
+      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
     };
 
-    createElements();
-    window.addEventListener('resize', createElements);
-    return () => window.removeEventListener('resize', createElements);
-  }, []);
-
-  // DELIGHT: Animate floating elements
-  useEffect(() => {
-    const animate = () => {
-      setElements(prev => prev.map(element => ({
-        ...element,
-        y: element.y - element.speed,
-        rotation: element.rotation + element.rotationSpeed,
-        // Reset position when element goes off screen
-        ...(element.y < -50 ? {
-          y: window.innerHeight + 50,
-          x: Math.random() * window.innerWidth
-        } : {})
-      })));
-      
-      animationRef.current = requestAnimationFrame(animate);
+    updateWindowSize();
+    
+    let timeoutId: NodeJS.Timeout;
+    const debouncedResize = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(updateWindowSize, 150);
     };
 
-    animationRef.current = requestAnimationFrame(animate);
+    window.addEventListener('resize', debouncedResize);
     return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
+      window.removeEventListener('resize', debouncedResize);
+      clearTimeout(timeoutId);
     };
   }, []);
 
-  // DELIGHT: Track mouse for interactive effects
+  // PERFORMANT: Create floating element factory
+  const createFloatingElement = (): FloatingElement => {
+    const elementTypes: FloatingElement['type'][] = ['ticket', 'coin', 'star', 'heart', 'diamond'];
+    const colors = [
+      '#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', 
+      '#96CEB4', '#FFEAA7', '#DDA0DD', '#98FB98'
+    ];
+
+    return {
+      id: Math.random(),
+      x: Math.random() * (windowSize.width || 1000),
+      y: Math.random() * (windowSize.height || 800),
+      size: Math.random() * 15 + 8, // Smaller particles for better performance
+      speed: Math.random() * 0.3 + 0.1, // Slower for better performance
+      type: elementTypes[Math.floor(Math.random() * elementTypes.length)],
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rotation: Math.random() * 360,
+      rotationSpeed: (Math.random() - 0.5) * 1.5, // Slower rotation
+      opacity: Math.random() * 0.6 + 0.4,
+    };
+  };
+
+  // PERFORMANT: Update floating element
+  const updateFloatingElement = (element: FloatingElement, deltaTime: number): FloatingElement => {
+    const newY = element.y - element.speed * deltaTime * 0.06; // 60fps normalized
+    const newRotation = element.rotation + element.rotationSpeed * deltaTime * 0.06;
+
+    // Reset position when element goes off screen
+    if (newY < -50) {
+      return {
+        ...element,
+        y: (windowSize.height || 800) + 50,
+        x: Math.random() * (windowSize.width || 1000),
+        rotation: newRotation,
+      };
+    }
+
+    return {
+      ...element,
+      y: newY,
+      rotation: newRotation,
+    };
+  };
+
+  // PERFORMANT: Use optimized particle system
+  const baseParticleCount = deviceCapabilities.tier === 'high' ? 12 : deviceCapabilities.tier === 'medium' ? 6 : 3;
+  const particleCount = supportsAdvancedEffects ? baseParticleCount : Math.min(baseParticleCount, 3);
+
+  const {
+    particles: elements,
+    isActive: isAnimating,
+  } = useOptimizedParticles(
+    particleCount,
+    createFloatingElement,
+    updateFloatingElement,
+    {
+      id: 'backdrop-particles',
+      priority: 'low',
+      enabled: supportsAdvancedEffects,
+      respectReducedMotion: true,
+      frameRate: deviceCapabilities.tier === 'high' ? 60 : 30,
+    }
+  );
+
+  // PERFORMANT: Throttled mouse tracking (only if advanced effects supported)
   useEffect(() => {
+    if (!supportsAdvancedEffects) return;
+
+    let timeoutId: NodeJS.Timeout;
     const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setMousePosition({ x: e.clientX, y: e.clientY });
+      }, 50); // Throttle to 20fps
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      clearTimeout(timeoutId);
+    };
+  }, [supportsAdvancedEffects]);
 
   // DELIGHT: React to jackpot changes
   useEffect(() => {
@@ -135,36 +173,42 @@ export default function DynamicBackdrop({ children, className = '' }: DynamicBac
           <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-emerald-500/10 animate-pulse"></div>
         )}
 
-        {/* DELIGHT: Interactive mouse glow */}
-        <div 
-          className="absolute w-96 h-96 rounded-full bg-gradient-radial from-purple-500/20 to-transparent pointer-events-none transition-all duration-300"
-          style={{
-            left: mousePosition.x - 192,
-            top: mousePosition.y - 192,
-            transform: 'translate3d(0, 0, 0)'
-          }}
-        />
+        {/* PERFORMANT: Conditional interactive mouse glow */}
+        {supportsAdvancedEffects && deviceCapabilities.tier !== 'low' && (
+          <div 
+            className="absolute w-96 h-96 rounded-full bg-gradient-radial from-purple-500/15 to-transparent pointer-events-none transition-transform duration-500"
+            style={{
+              left: mousePosition.x - 192,
+              top: mousePosition.y - 192,
+              transform: 'translate3d(0, 0, 0)',
+              willChange: 'transform'
+            }}
+          />
+        )}
       </div>
 
-      {/* DELIGHT: Floating lottery-themed elements */}
-      <div className="absolute inset-0 pointer-events-none">
-        {elements.map((element) => (
-          <div
-            key={element.id}
-            className="absolute transition-all duration-100 ease-linear"
-            style={{
-              left: element.x,
-              top: element.y,
-              transform: `rotate(${element.rotation}deg)`,
-              fontSize: element.size,
-              color: element.color,
-              filter: 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.3))'
-            }}
-          >
-            {getElementSymbol(element.type)}
-          </div>
-        ))}
-      </div>
+      {/* PERFORMANT: Optimized floating elements */}
+      {supportsAdvancedEffects && isAnimating && (
+        <div className="absolute inset-0 pointer-events-none">
+          {elements.map((element) => (
+            <div
+              key={element.id}
+              className="absolute will-change-transform"
+              style={{
+                left: element.x,
+                top: element.y,
+                transform: `translate3d(0, 0, 0) rotate(${element.rotation}deg)`,
+                fontSize: element.size,
+                color: element.color,
+                opacity: element.opacity,
+                filter: deviceCapabilities.tier === 'high' ? 'drop-shadow(0 0 8px rgba(255, 255, 255, 0.2))' : 'none'
+              }}
+            >
+              {getElementSymbol(element.type)}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* DELIGHT: Syndicate connection lines */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-10">

@@ -1,35 +1,47 @@
 "use client";
 
-// CLEAN: Explicit dependencies with performance-first imports
-import { useState, useCallback, Suspense, lazy } from "react";
+// ENHANCEMENT FIRST: Performance-optimized imports
+import { useState, useCallback, Suspense, lazy, memo, useMemo } from "react";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 import ResponsiveLayout from "@/components/core/ResponsiveLayout";
 import { SocialLoginModal } from "@/components/wallet/WalletConnectionOptions";
 import ConnectWallet from "@/components/wallet/ConnectWallet";
 import PurchaseModal from "@/components/modal/PurchaseModal";
 import { ComponentLoader } from "@/components/shared/UnifiedLoader";
-import ActivityFeed from "@/components/interactive/ActivityFeed";
-import SyndicateDiscovery from "@/components/interactive/SyndicateDiscovery";
 import { NetworkStatusIndicator } from "@/components/NetworkStatusIndicator";
-import { OptimisticJackpot } from "@/components/core/OptimisticJackpot";
-import { LiveSocialProof } from "@/components/core/LiveSocialProof";
 import { SmartTooltip } from "@/components/core/SmartTooltip";
 import { OnboardingProgress } from "@/components/core/OnboardingProgress";
+import OptimisticJackpot from "@/components/core/OptimisticJackpot";
 
-// PERFORMANT: Lazy load heavy components for adaptive loading
+// PERFORMANT: Use optimized components
+import { 
+  OptimizedJackpot, 
+  OptimizedActivityFeed, 
+  OptimizedStats 
+} from "@/components/performance/OptimizedComponents";
+import { LiveSocialProof } from "@/components/core/LiveSocialProof";
+import { performanceBudgetManager } from "@/services/performance/PerformanceBudgetManager";
+import { cleanupManager } from "@/services/performance/ResourceCleanupManager";
+
+// PERFORMANT: Lazy load heavy components with better splitting
 const DelightfulSyndicateCreator = lazy(
   () => import("@/components/modal/DelightfulSyndicateCreator")
 );
 const NotificationSystem = lazy(
   () => import("@/components/NotificationSystem")
 );
+const SyndicateDiscovery = lazy(
+  () => import("@/components/interactive/SyndicateDiscovery")
+);
 
-// AGGRESSIVE CONSOLIDATION: Using unified loader component
-
-// TRANSFORMATIONAL: Instant gratification home with optimistic UI
-export default function Home() {
+// ENHANCEMENT FIRST: Performance-optimized home component
+const HomeComponent = memo(() => {
   // CLEAN: Unified wallet connection state
   const walletConnection = useWalletConnection();
+
+  // PERFORMANT: Device capabilities check
+  const deviceCapabilities = useMemo(() => performanceBudgetManager.getStatus().capabilities, []);
+  const supportsAdvancedFeatures = performanceBudgetManager.supportsAdvancedEffects();
 
   // AGGRESSIVE CONSOLIDATION: Simplified state management
   const [showSyndicateCreator, setShowSyndicateCreator] = useState(false);
@@ -128,23 +140,48 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ALWAYS SHOW: Live social proof for engagement */}
+        {/* PERFORMANT: Optimized content with device-aware features */}
         <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
-          <div data-onboarding="social-proof">
-            <LiveSocialProof />
-          </div>
+          {/* PERFORMANT: Optimized jackpot display */}
+          <OptimizedJackpot 
+            priority={deviceCapabilities.tier === 'high' ? 'high' : 'medium'}
+            className="mb-6"
+          />
 
-          {/* PROGRESSIVE DISCLOSURE: Advanced features when connected */}
-          {walletConnection.isAnyConnected && (
-            <Suspense fallback={<ComponentLoader />}>
-              <div className="grid md:grid-cols-2 gap-6">
-                <ActivityFeed />
+          {/* PERFORMANT: Conditional social proof based on device capabilities */}
+          {(deviceCapabilities.tier !== 'low' || walletConnection.isAnyConnected) && (
+            <div data-onboarding="social-proof">
+              <LiveSocialProof />
+            </div>
+          )}
+
+          {/* PERFORMANT: Adaptive layout based on device capabilities */}
+          <div className={`grid gap-6 ${
+            deviceCapabilities.tier === 'high' 
+              ? 'grid-cols-1 md:grid-cols-2' 
+              : 'grid-cols-1'
+          }`}>
+            {/* PERFORMANT: Always show optimized activity feed */}
+            <OptimizedActivityFeed 
+              maxItems={deviceCapabilities.tier === 'high' ? 8 : 5}
+              className="order-1"
+            />
+            
+            {/* PERFORMANT: Conditional syndicate discovery */}
+            {supportsAdvancedFeatures && walletConnection.isAnyConnected && (
+              <Suspense fallback={<ComponentLoader />}>
                 <div data-onboarding="syndicate-discovery">
                   <SyndicateDiscovery />
                 </div>
-              </div>
-            </Suspense>
-          )}
+              </Suspense>
+            )}
+            
+            {/* PERFORMANT: Stats display for all devices */}
+            <OptimizedStats 
+              layout={deviceCapabilities.tier === 'high' ? 'grid' : 'horizontal'}
+              className={deviceCapabilities.tier === 'high' ? 'md:col-span-2' : ''}
+            />
+          </div>
         </div>
 
         {/* MODALS */}
@@ -200,4 +237,12 @@ export default function Home() {
       </div>
     </ResponsiveLayout>
   );
-}
+}, (prevProps, nextProps) => {
+  // PERFORMANT: Prevent unnecessary re-renders
+  return true; // Pure component
+});
+
+HomeComponent.displayName = 'Home';
+
+// CLEAN: Export optimized component
+export default HomeComponent;
