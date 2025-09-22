@@ -31,19 +31,19 @@ import {
 class UnifiedCrossChainService {
   private nearWallet: any = null;
   private isInitialized = false;
-  
+
   // Intent management
   private intents: Map<string, CrossChainIntent> = new Map();
   private eventListeners: ((intent: CrossChainIntent) => void)[] = [];
-  
+
   // Caching for performance
   private derivedAddressCache: Map<string, string> = new Map();
   private publicKeyCache: Map<string, string> = new Map();
-  
+
   // ============================================================================
   // INITIALIZATION & CONNECTION MANAGEMENT
   // ============================================================================
-  
+
   /**
    * Initialize NEAR connection and verify chain signature availability
    */
@@ -54,7 +54,7 @@ class UnifiedCrossChainService {
 
     try {
       this.nearWallet = nearWallet;
-      
+
       // Verify wallet connection
       if (!nearWallet.isConnected) {
         throw new Error('NEAR wallet must be connected before initialization');
@@ -62,15 +62,15 @@ class UnifiedCrossChainService {
 
       // Test v1.signer contract availability
       await this.testChainSignatureAvailability();
-      
+
       // Load persisted intents (browser only)
       if (typeof window !== 'undefined') {
         this.loadPersistedIntents();
       }
-      
+
       this.isInitialized = true;
       console.log('✅ Unified Cross-Chain Service initialized successfully');
-      
+
     } catch (error) {
       console.error('❌ Failed to initialize Unified Cross-Chain Service:', error);
       throw error;
@@ -149,7 +149,7 @@ class UnifiedCrossChainService {
 
       // Step 1: Get derived address for target chain
       const derivedAddress = await this.getDerivedAddress(intent.targetChain.derivationPath);
-      
+
       // Step 2: Build ticket purchase transaction
       const transaction = await this.buildTicketPurchaseTransaction(
         intent.targetChain,
@@ -213,22 +213,22 @@ class UnifiedCrossChainService {
       const derivedKey = await this.nearWallet.viewMethod(
         NEAR_CONFIG.chainSignatureContract,
         'derived_public_key',
-        { 
+        {
           predecessor: this.nearWallet.accountId,
           path: derivationPath
         }
       );
-      
+
       if (!derivedKey) {
         throw new Error('Failed to derive public key from v1.signer');
       }
 
       // Convert to Ethereum address (works for all EVM chains)
       const address = ethers.computeAddress('0x' + derivedKey);
-      
+
       // Cache the result
       this.derivedAddressCache.set(cacheKey, address);
-      
+
       return address;
     } catch (error) {
       console.error('Failed to derive address:', error);
@@ -279,7 +279,7 @@ class UnifiedCrossChainService {
     usdcAmount: string
   ): Promise<any> {
     const provider = new ethers.JsonRpcProvider(targetChain.rpcUrl);
-    
+
     // Get contract addresses for target chain
     const chainKey = targetChain.name.toLowerCase() as keyof typeof CONTRACT_ADDRESSES.megapot;
     const megapotAddress = CONTRACT_ADDRESSES.megapot[chainKey];
@@ -411,16 +411,119 @@ class UnifiedCrossChainService {
    * Estimate all fees for cross-chain transaction
    */
   async estimateAllFees(params: CrossChainIntentParams): Promise<FeeBreakdown> {
-    // Implementation would calculate actual fees
-    // For now, return estimated values
-    return {
-      nearGasFee: parseEther("0.01"), // ~0.01 NEAR
-      targetChainGasFee: parseEther("0.005"), // ~$5 in ETH
-      bridgeFee: parseEther("0.001"), // Bridge fee
-      relayerFee: parseEther("0.002"), // Gas relayer fee
-      totalFee: parseEther("0.018"), // Sum of all
-      currency: "NEAR",
-    };
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized');
+    }
+
+    try {
+      const sourceChain = SUPPORTED_CHAINS[params.sourceChain];
+      const targetChain = SUPPORTED_CHAINS[params.targetChain];
+
+      // Estimate NEAR gas fee for chain signature
+      const nearGasFee = await this.estimateNearGasFee(params.ticketCount);
+
+      // Estimate target chain gas fee
+      const targetChainGasFee = await this.estimateTargetChainGasFee(
+        targetChain,
+        params.ticketCount
+      );
+
+      // Estimate bridge fee (if different chains)
+      const bridgeFee = sourceChain.chainId !== targetChain.chainId
+        ? await this.estimateBridgeFee(sourceChain, targetChain, params.ticketCount)
+        : BigInt(0);
+
+      // Estimate gas relayer fee
+      const relayerFee = await this.estimateRelayerFee(targetChain);
+
+      const totalFee = nearGasFee + targetChainGasFee + bridgeFee + relayerFee;
+
+      return {
+        nearGasFee,
+        targetChainGasFee,
+        bridgeFee,
+        relayerFee,
+        totalFee,
+        currency: "NEAR",
+      };
+    } catch (error) {
+      console.error('Fee estimation failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get transaction status by intent ID
+   */
+  async getTransactionStatus(intentId: string): Promise<CrossChainIntent | null> {
+    const intent = this.intents.get(intentId);
+    if (!intent) {
+      return null;
+    }
+
+    // If transaction is still pending or in progress, check on-chain status
+    if (['pending', 'signing', 'broadcasting'].includes(intent.status)) {
+      await this.refreshIntentStatus(intent);
+    }
+
+    return intent;
+  }
+
+
+  // ============================================================================
+  // PRIVATE HELPER METHODS
+  // ============================================================================
+
+  private async estimateNearGasFee(ticketCount: number): Promise<bigint> {
+    // Estimate based on ticket count and historical data
+    const baseFee = parseEther("0.01"); // Base fee for chain signature
+    const perTicketFee = parseEther("0.001"); // Additional fee per ticket
+    return baseFee + (perTicketFee * BigInt(ticketCount));
+  }
+
+  private async estimateTargetChainGasFee(
+    targetChain: ChainConfig,
+    ticketCount: number
+  ): Promise<bigint> {
+    // This would typically call the target chain to estimate gas
+    // For now, return estimated values based on chain type
+    const baseGasEstimate = parseEther("0.005"); // ~$5 in ETH equivalent
+    return baseGasEstimate;
+  }
+
+  private async estimateBridgeFee(
+    sourceChain: ChainConfig,
+    targetChain: ChainConfig,
+    ticketCount: number
+  ): Promise<bigint> {
+    // Bridge fees vary by bridge provider and amount
+    // For now, return a simple estimate
+    return parseEther("0.001");
+  }
+
+  private async estimateRelayerFee(targetChain: ChainConfig): Promise<bigint> {
+    // Gas relayer fees are typically fixed per chain
+    return parseEther("0.002");
+  }
+
+  private async refreshIntentStatus(intent: CrossChainIntent): Promise<void> {
+    if (!intent.txHash) return;
+
+    try {
+      const provider = new ethers.JsonRpcProvider(intent.targetChain.rpcUrl);
+      const receipt = await provider.getTransactionReceipt(intent.txHash);
+
+      if (receipt) {
+        if (receipt.status === 1) {
+          this.updateIntentStatus(intent, 'executed');
+          intent.targetHash = intent.txHash;
+        } else {
+          this.updateIntentStatus(intent, 'failed', 'Transaction reverted on target chain');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh intent status:', error);
+    }
   }
 
   // ============================================================================
@@ -447,7 +550,7 @@ class UnifiedCrossChainService {
     return {
       signature: {
         r: result.r || "0x",
-        s: result.s || "0x", 
+        s: result.s || "0x",
         v: result.v || 27,
       },
       publicKey: result.publicKey || "",
@@ -547,6 +650,96 @@ class UnifiedCrossChainService {
     return Object.values(SUPPORTED_CHAINS);
   }
 }
+
+// ============================================================================
+// UI HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Format transaction status for UI display
+ */
+export const formatTransactionStatus = (status: IntentStatus): string => {
+  switch (status) {
+    case 'pending':
+      return 'Creating Intent';
+    case 'signing':
+      return 'Signing Transaction';
+    case 'signed':
+      return 'Broadcasting';
+    case 'broadcasting':
+      return 'Executing Transaction';
+    case 'executed':
+      return 'Transaction Complete';
+    case 'failed':
+      return 'Transaction Failed';
+    case 'expired':
+      return 'Transaction Expired';
+    default:
+      return 'Unknown Status';
+  }
+};
+
+/**
+ * Get CSS class for status color
+ */
+export const getStatusColor = (status: IntentStatus): string => {
+  switch (status) {
+    case 'pending':
+      return 'text-yellow-400';
+    case 'signing':
+      return 'text-blue-400';
+    case 'signed':
+      return 'text-blue-400';
+    case 'broadcasting':
+      return 'text-purple-400';
+    case 'executed':
+      return 'text-green-400';
+    case 'failed':
+      return 'text-red-400';
+    case 'expired':
+      return 'text-gray-400';
+    default:
+      return 'text-gray-400';
+  }
+};
+
+/**
+ * Get status icon for UI
+ */
+export const getStatusIcon = (status: IntentStatus): string => {
+  switch (status) {
+    case 'pending':
+      return '⏳';
+    case 'signing':
+      return '✍️';
+    case 'signed':
+      return '📡';
+    case 'broadcasting':
+      return '🚀';
+    case 'executed':
+      return '✅';
+    case 'failed':
+      return '❌';
+    case 'expired':
+      return '⏰';
+    default:
+      return '❓';
+  }
+};
+
+/**
+ * Check if status indicates completion
+ */
+export const isTransactionComplete = (status: IntentStatus): boolean => {
+  return ['executed', 'failed', 'expired'].includes(status);
+};
+
+/**
+ * Check if status indicates failure
+ */
+export const isTransactionFailed = (status: IntentStatus): boolean => {
+  return ['failed', 'expired'].includes(status);
+};
 
 // ============================================================================
 // SINGLETON EXPORT

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/providers/AppProvider";
 import { PerformanceDisplay } from "@/components/shared/PerformanceTracker";
+import { PerformanceOptimizer } from "@/components/performance/PerformanceOptimizer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,6 +33,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <div className="flex-1">
+          <PerformanceOptimizer />
           <AppProvider>{children}</AppProvider>
           <PerformanceDisplay />
         </div>
