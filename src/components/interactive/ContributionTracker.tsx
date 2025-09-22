@@ -1,6 +1,6 @@
 import React from "react";
 import { useContributionData } from "@/hooks/data/useContributionData";
-import { ComponentLoader } from "@/components/shared/UnifiedLoader";
+import { ComponentLoader } from "@/components/shared/ComponentLoader";
 
 /**
  * ContributionTracker

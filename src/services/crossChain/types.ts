@@ -18,7 +18,7 @@ export interface ChainConfig {
   };
   blockExplorer: string;
   derivationPath: string; // NEAR Chain Signatures derivation path
-  type: 'evm' | 'bitcoin';
+  type: 'evm' | 'bitcoin' | 'solana';
 }
 
 /**
@@ -94,7 +94,7 @@ export interface CrossChainIntent {
 /**
  * Intent execution status
  */
-export type IntentStatus = 
+export type IntentStatus =
   | 'pending'     // Intent created, awaiting signature
   | 'signing'     // NEAR Chain Signature in progress
   | 'signed'      // Signature obtained, awaiting broadcast
@@ -139,9 +139,10 @@ export interface GasRelayerParams {
 }
 
 /**
- * Supported chains configuration
+ * Supported chains configuration - Consolidated from all services
  */
 export const SUPPORTED_CHAINS = {
+  // EVM Chains
   ethereum: {
     chainId: 1,
     name: 'Ethereum',
@@ -153,6 +154,45 @@ export const SUPPORTED_CHAINS = {
     },
     blockExplorer: 'https://etherscan.io',
     derivationPath: 'ethereum,1',
+    type: 'evm' as const,
+  },
+  base: {
+    chainId: 8453,
+    name: 'Base',
+    rpcUrl: 'https://mainnet.base.org',
+    nativeCurrency: {
+      name: 'Ethereum',
+      symbol: 'ETH',
+      decimals: 18,
+    },
+    blockExplorer: 'https://basescan.org',
+    derivationPath: 'ethereum,8453',
+    type: 'evm' as const,
+  },
+  baseSepolia: {
+    chainId: 84532,
+    name: 'Base Sepolia',
+    rpcUrl: 'https://sepolia.base.org',
+    nativeCurrency: {
+      name: 'Ethereum',
+      symbol: 'ETH',
+      decimals: 18,
+    },
+    blockExplorer: 'https://sepolia.basescan.org',
+    derivationPath: 'ethereum,84532',
+    type: 'evm' as const,
+  },
+  avalanche: {
+    chainId: 43114,
+    name: 'Avalanche',
+    rpcUrl: 'https://api.avax.network/ext/bc/C/rpc',
+    nativeCurrency: {
+      name: 'Avalanche',
+      symbol: 'AVAX',
+      decimals: 18,
+    },
+    blockExplorer: 'https://snowtrace.io',
+    derivationPath: 'ethereum,43114',
     type: 'evm' as const,
   },
   polygon: {
@@ -167,6 +207,34 @@ export const SUPPORTED_CHAINS = {
     blockExplorer: 'https://polygonscan.com',
     derivationPath: 'ethereum,137',
     type: 'evm' as const,
+  },
+  arbitrum: {
+    chainId: 42161,
+    name: 'Arbitrum',
+    rpcUrl: 'https://arb1.arbitrum.io/rpc',
+    nativeCurrency: {
+      name: 'Ethereum',
+      symbol: 'ETH',
+      decimals: 18,
+    },
+    blockExplorer: 'https://arbiscan.io',
+    derivationPath: 'ethereum,42161',
+    type: 'evm' as const,
+  },
+
+  // Non-EVM Chains
+  solana: {
+    chainId: 900,
+    name: 'Solana',
+    rpcUrl: 'https://api.mainnet-beta.solana.com',
+    nativeCurrency: {
+      name: 'Solana',
+      symbol: 'SOL',
+      decimals: 9,
+    },
+    blockExplorer: 'https://solscan.io',
+    derivationPath: 'solana,0',
+    type: 'solana' as const,
   },
   bitcoin: {
     chainId: 0,
@@ -184,7 +252,7 @@ export const SUPPORTED_CHAINS = {
 } as const;
 
 /**
- * Contract addresses across supported chains
+ * Contract addresses across supported chains - Consolidated from all services
  */
 export const CONTRACT_ADDRESSES = {
   megapot: {
@@ -192,12 +260,16 @@ export const CONTRACT_ADDRESSES = {
     baseSepolia: "0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95",
     ethereum: "0x0000000000000000000000000000000000000000", // TBD
     avalanche: "0x0000000000000000000000000000000000000000", // TBD
+    polygon: "0x0000000000000000000000000000000000000000", // TBD
+    arbitrum: "0x0000000000000000000000000000000000000000", // TBD
   },
   usdc: {
     base: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
     baseSepolia: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
-    ethereum: "0xA0b86a33E6441c8C673f4c8b0C8C8e6C5b8b8b8b", // TBD
+    ethereum: "0xA0b86a33E6441c8C673f4c8b0C8C8e6C5b8b8b8b", // USDC on Ethereum
     avalanche: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E", // USDC on Avalanche
+    polygon: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174", // USDC on Polygon
+    arbitrum: "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8", // USDC on Arbitrum
   },
   syndicate: {
     base: {
@@ -220,10 +292,10 @@ export const NEAR_CONFIG = {
   walletUrl: "https://wallet.mainnet.near.org",
   helperUrl: "https://helper.mainnet.near.org",
   explorerUrl: "https://nearblocks.io",
-  
+
   // Official NEAR Chain Signatures contract
   chainSignatureContract: "v1.signer",
-  
+
   // Gas limits for different operations
   gasLimits: {
     chainSignature: "300000000000000", // 300 TGas

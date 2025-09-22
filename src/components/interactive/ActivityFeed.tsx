@@ -1,6 +1,6 @@
 import React from "react";
 import { useActivityFeedData } from "@/hooks/data/useActivityFeedData";
-import { ComponentLoader } from "@/components/shared/UnifiedLoader";
+import { ComponentLoader } from "@/components/shared/ComponentLoader";
 
 /**
  * ActivityFeed

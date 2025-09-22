@@ -7,7 +7,7 @@ import ResponsiveLayout from "@/components/core/ResponsiveLayout";
 import { SocialLoginModal } from "@/components/wallet/WalletConnectionOptions";
 import ConnectWallet from "@/components/wallet/ConnectWallet";
 import PurchaseModal from "@/components/modal/PurchaseModal";
-import { ComponentLoader } from "@/components/shared/UnifiedLoader";
+import { ComponentLoader } from "@/components/shared/ComponentLoader";
 import { NetworkStatusIndicator } from "@/components/NetworkStatusIndicator";
 import { SmartTooltip } from "@/components/core/SmartTooltip";
 import { OnboardingProgress } from "@/components/core/OnboardingProgress";
