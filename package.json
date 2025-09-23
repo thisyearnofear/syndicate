@@ -10,7 +10,10 @@
     "start": "next start",
     "lint": "next lint",
     "analyze": "npx @next/bundle-analyzer",
-    "perf": "npm run build && npm run analyze"
+    "perf": "npm run build && npm run analyze",
+    "perf:monitor": "NEXT_PUBLIC_ENABLE_ANALYTICS=true npm run dev",
+    "clean": "rm -rf .next out dist",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@bonfida/spl-name-service": "^3.0.16",

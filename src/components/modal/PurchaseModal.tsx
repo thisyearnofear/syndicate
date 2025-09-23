@@ -1,171 +1,220 @@
 "use client";
 
-import { useState } from "react";
-import { useWalletConnection } from "@/hooks/useWalletConnection";
-import { SmartTicketSelector, useSmartDefaults } from "@/components/core/SmartDefaults";
-import { SocialLoginModal } from "@/components/wallet/WalletConnectionOptions";
-import ConnectWallet from "@/components/wallet/ConnectWallet";
-import UnifiedModal from "./UnifiedModal";
+/**
+ * ENHANCED PURCHASE MODAL
+ * 
+ * Core Principles Applied:
+ * - ENHANCEMENT FIRST: Enhanced with premium UI components
+ * - MODULAR: Uses premium design system
+ * - CLEAN: Clear purchase flow
+ * - PERFORMANT: Optimized animations
+ */
+
+import { useState, useEffect } from 'react';
+import { PremiumButton, JackpotButton, GhostButton } from '@/shared/components/premium/PremiumButton';
+import { CompactStack, CompactFlex } from '@/shared/components/premium/CompactLayout';
+import { HeadlineText, BodyText, CountUpText, PremiumBadge } from '@/shared/components/premium/Typography';
 
 interface PurchaseModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: (txHash: string) => void;
 }
 
-/**
- * ENHANCED: Smart purchase modal with optimistic UX
- * CONSOLIDATION: Combines wallet connection + purchase flow
- * PERFORMANT: No loading states, instant feedback
- */
-export default function PurchaseModal({
-  isOpen,
-  onClose,
-}: PurchaseModalProps) {
-  const walletConnection = useWalletConnection();
-  const { getRecommendedTicketAmount } = useSmartDefaults();
-  
-  // CLEAN: Consolidated state management
-  const [selectedAmount, setSelectedAmount] = useState(getRecommendedTicketAmount());
-  const [showSocialLogin, setShowSocialLogin] = useState(false);
-  const [purchaseStep, setPurchaseStep] = useState<'select' | 'connect' | 'confirm' | 'success'>('select');
+export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps) {
+  const [ticketCount, setTicketCount] = useState(1);
+  const [isPurchasing, setIsPurchasing] = useState(false);
+  const [step, setStep] = useState<'select' | 'confirm' | 'processing' | 'success'>('select');
 
-  // ENHANCEMENT FIRST: Smart flow progression
-  const handlePurchaseFlow = () => {
-    if (!walletConnection.isAnyConnected) {
-      setPurchaseStep('connect');
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      setStep('select');
+      setTicketCount(1);
     } else {
-      setPurchaseStep('confirm');
-      // PERFORMANT: Optimistic success - show immediately
-      setTimeout(() => setPurchaseStep('success'), 1500);
+      document.body.style.overflow = 'unset';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  const handlePurchase = async () => {
+    setIsPurchasing(true);
+    setStep('processing');
+    
+    try {
+      // Simulate purchase process
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const mockTxHash = `0x${Math.random().toString(16).substr(2, 64)}`;
+      setStep('success');
+      onSuccess?.(mockTxHash);
+      
+      // Auto-close after success
+      setTimeout(() => {
+        onClose();
+      }, 3000);
+    } catch (error) {
+      console.error('Purchase failed:', error);
+      setStep('select');
+    } finally {
+      setIsPurchasing(false);
     }
   };
 
-  const renderStepContent = () => {
-    switch (purchaseStep) {
-      case 'select':
-        return (
-          <div className="space-y-6">
-            {/* ENHANCEMENT FIRST: Smart ticket selector */}
-            <SmartTicketSelector 
-              onAmountChange={setSelectedAmount}
-              className="mb-6"
-            />
-            
-            {/* INSTANT GRATIFICATION: Show what they're getting */}
-            <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
-              <div className="text-center space-y-2">
-                <div className="text-lg font-semibold text-green-300">
-                  🎫 {selectedAmount} Ticket{selectedAmount !== 1 ? 's' : ''} = ${selectedAmount}
-                </div>
-                <div className="text-sm text-green-200/80">
-                  🎯 {selectedAmount} chance{selectedAmount !== 1 ? 's' : ''} to win • 🌊 10% supports ocean cleanup
-                </div>
-              </div>
-            </div>
+  const quickAmounts = [1, 5, 10, 25];
 
-            <button
-              onClick={handlePurchaseFlow}
-              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-4 px-6 rounded-xl text-lg transition-all duration-200 transform hover:scale-105"
-            >
-              🚀 Buy {selectedAmount} Ticket{selectedAmount !== 1 ? 's' : ''} Now
-            </button>
-          </div>
-        );
-
-      case 'connect':
-        return (
-          <div className="space-y-6">
-            <div className="text-center">
-              <div className="text-lg font-semibold text-white mb-2">
-                Almost there! Connect your wallet
-              </div>
-              <div className="text-sm text-gray-400">
-                You're buying {selectedAmount} ticket{selectedAmount !== 1 ? 's' : ''} for ${selectedAmount}
-              </div>
-            </div>
-
-            {/* CONSOLIDATION: Compact wallet options */}
-            <div className="grid md:grid-cols-2 gap-4">
-              <button
-                onClick={() => setShowSocialLogin(true)}
-                className="bg-gradient-to-r from-purple-600/20 to-green-600/20 border border-purple-500/30 hover:border-purple-400/50 text-white p-4 rounded-xl transition-all duration-200"
-              >
-                <div className="text-center">
-                  <div className="text-2xl mb-2">✨</div>
-                  <div className="font-semibold">Social Login</div>
-                  <div className="text-sm text-gray-300">Google, Discord, Email</div>
-                </div>
-              </button>
-              
-              <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 p-4 rounded-xl">
-                <div className="text-center mb-3">
-                  <div className="text-2xl mb-2">🔗</div>
-                  <div className="font-semibold text-white">Existing Wallet</div>
-                  <div className="text-sm text-gray-300 mb-3">MetaMask, Phantom, etc.</div>
-                </div>
-                <ConnectWallet />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'confirm':
-        return (
-          <div className="space-y-6 text-center">
-            <div className="animate-pulse">
-              <div className="text-4xl mb-4">⚡</div>
-              <div className="text-lg font-semibold text-white">Processing Purchase...</div>
-              <div className="text-sm text-gray-400">
-                {selectedAmount} ticket{selectedAmount !== 1 ? 's' : ''} for ${selectedAmount}
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'success':
-        return (
-          <div className="space-y-6 text-center">
-            <div className="text-6xl mb-4 animate-bounce">🎉</div>
-            <div className="space-y-2">
-              <div className="text-xl font-bold text-green-400">Purchase Successful!</div>
-              <div className="text-gray-300">
-                You now own {selectedAmount} ticket{selectedAmount !== 1 ? 's' : ''} in the current draw
-              </div>
-              <div className="text-sm text-gray-400">
-                Good luck! 🍀 Draw happens in 2d 14h 32m
-              </div>
-            </div>
-            
-            <button
-              onClick={onClose}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-            >
-              View My Tickets
-            </button>
-          </div>
-        );
-
-      default:
-        return null;
-    }
-  };
+  if (!isOpen) return null;
 
   return (
-    <>
-      <UnifiedModal
-        isOpen={isOpen}
-        onClose={onClose}
-        title={purchaseStep === 'success' ? '🎫 Tickets Purchased!' : '🎫 Buy Lottery Tickets'}
-        maxWidth="md"
-      >
-        {renderStepContent()}
-      </UnifiedModal>
-
-      {/* MODULAR: Separate social login modal */}
-      <SocialLoginModal
-        isOpen={showSocialLogin}
-        onClose={() => setShowSocialLogin(false)}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Premium backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/60 backdrop-blur-md"
+        onClick={onClose}
       />
-    </>
+      
+      {/* Premium modal */}
+      <div className="relative glass-premium rounded-3xl p-8 w-full max-w-lg border border-white/20 animate-scale-in">
+        {/* Header */}
+        <CompactFlex align="center" justify="between" className="mb-6">
+          <HeadlineText className="text-2xl">
+            {step === 'success' ? '🎉 Success!' : '🎫 Buy Tickets'}
+          </HeadlineText>
+          <GhostButton
+            size="sm"
+            onClick={onClose}
+            className="w-8 h-8 p-0 rounded-full"
+          >
+            ✕
+          </GhostButton>
+        </CompactFlex>
+
+        {/* Content based on step */}
+        {step === 'select' && (
+          <CompactStack spacing="lg">
+            {/* Quick amount selection */}
+            <div>
+              <BodyText size="sm" weight="medium" className="mb-3">
+                Quick Select
+              </BodyText>
+              <CompactFlex gap="sm" className="flex-wrap">
+                {quickAmounts.map((amount) => (
+                  <PremiumButton
+                    key={amount}
+                    variant={ticketCount === amount ? "primary" : "ghost"}
+                    size="sm"
+                    onClick={() => setTicketCount(amount)}
+                  >
+                    {amount} ticket{amount > 1 ? 's' : ''}
+                  </PremiumButton>
+                ))}
+              </CompactFlex>
+            </div>
+
+            {/* Custom amount */}
+            <div>
+              <BodyText size="sm" weight="medium" className="mb-3">
+                Custom Amount
+              </BodyText>
+              <CompactFlex align="center" gap="md" justify="center">
+                <PremiumButton
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setTicketCount(Math.max(1, ticketCount - 1))}
+                  className="w-12 h-12 p-0 rounded-full"
+                >
+                  -
+                </PremiumButton>
+                
+                <div className="text-center min-w-[80px]">
+                  <div className="text-3xl font-black gradient-text-primary">
+                    {ticketCount}
+                  </div>
+                  <BodyText size="xs" color="gray-400">
+                    ticket{ticketCount > 1 ? 's' : ''}
+                  </BodyText>
+                </div>
+                
+                <PremiumButton
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setTicketCount(ticketCount + 1)}
+                  className="w-12 h-12 p-0 rounded-full"
+                >
+                  +
+                </PremiumButton>
+              </CompactFlex>
+            </div>
+
+            {/* Price display */}
+            <div className="glass p-6 rounded-2xl">
+              <CompactFlex align="center" justify="between" className="mb-2">
+                <BodyText weight="medium">Total Cost:</BodyText>
+                <div className="text-3xl font-black text-green-400">
+                  $<CountUpText value={ticketCount} duration={300} />
+                </div>
+              </CompactFlex>
+              
+              <CompactFlex align="center" justify="between" gap="sm" className="text-sm">
+                <BodyText size="sm" color="gray-400">
+                  $1 per ticket
+                </BodyText>
+                <PremiumBadge variant="success" size="sm">
+                  🌊 Supports Ocean Cleanup
+                </PremiumBadge>
+              </CompactFlex>
+            </div>
+
+            {/* Purchase button */}
+            <JackpotButton
+              onClick={handlePurchase}
+              size="lg"
+              leftIcon="⚡"
+              className="w-full"
+            >
+              Purchase {ticketCount} Ticket{ticketCount > 1 ? 's' : ''}
+            </JackpotButton>
+
+            {/* Terms */}
+            <BodyText size="xs" color="gray-500" className="text-center">
+              By purchasing, you agree to our terms and support ocean cleanup initiatives
+            </BodyText>
+          </CompactStack>
+        )}
+
+        {step === 'processing' && (
+          <CompactStack spacing="lg" align="center">
+            <div className="w-20 h-20 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+            <HeadlineText className="text-xl">Processing Purchase...</HeadlineText>
+            <BodyText color="gray-400" className="text-center">
+              Please wait while we process your {ticketCount} ticket{ticketCount > 1 ? 's' : ''}
+            </BodyText>
+          </CompactStack>
+        )}
+
+        {step === 'success' && (
+          <CompactStack spacing="lg" align="center">
+            <div className="text-6xl animate-bounce">🎉</div>
+            <HeadlineText className="text-xl text-center">
+              Purchase Successful!
+            </HeadlineText>
+            <div className="glass p-4 rounded-xl text-center">
+              <BodyText weight="semibold" className="mb-2">
+                {ticketCount} Ticket{ticketCount > 1 ? 's' : ''} Purchased
+              </BodyText>
+              <BodyText size="sm" color="gray-400">
+                Good luck in the draw! 🍀
+              </BodyText>
+            </div>
+            <BodyText size="sm" color="gray-400" className="text-center">
+              This modal will close automatically...
+            </BodyText>
+          </CompactStack>
+        )}
+      </div>
+    </div>
   );
 }
