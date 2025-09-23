@@ -1,21 +1,32 @@
-"use client";
-
 /**
- * ENHANCEMENT FIRST: Simplified wallet connection hook
- * DRY: Uses unified wallet service as single source of truth
- * CLEAN: Delegates complex logic to service layer
+ * ENHANCED WALLET CONNECTION HOOK
+ * 
+ * Core Principles Applied:
+ * - ENHANCEMENT FIRST: Enhanced to use new unified wallet service
+ * - DRY: Delegates to unified wallet service as single source of truth
+ * - CLEAN: Clear separation of concerns
+ * - MODULAR: Composable with new domain structure
  */
 
-import { useUnifiedWallet } from "@/services/unifiedWalletService";
+import { useUnifiedWallet } from '@/domains/wallet/services/unifiedWalletService';
 
 /**
- * Unified wallet connection state hook
- * ENHANCEMENT FIRST: Now uses the unified wallet service
+ * ENHANCEMENT FIRST: Enhanced wallet connection hook
+ * Now uses the unified wallet service from the wallet domain
  */
 export function useWalletConnection() {
   return useUnifiedWallet();
 }
 
 // CLEAN: Re-export types for backward compatibility
-export type { WalletState, WalletActions, WalletType } from "@/services/unifiedWalletService";
-export { WalletTypes, getWalletStatus } from "@/services/unifiedWalletService";
+export type { 
+  WalletState, 
+  WalletActions, 
+  WalletType 
+} from '@/domains/wallet/services/unifiedWalletService';
+
+export { 
+  WalletTypes, 
+  getWalletStatus,
+  getAvailableWallets 
+} from '@/domains/wallet/services/unifiedWalletService';
