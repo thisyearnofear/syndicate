@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { formatEther } from "viem";
-import { publicClient } from "@/lib/viem-client";
+// import { publicClient } from "@/lib/viem-client";
 import { Trash2, ExternalLink } from "lucide-react";
 import { config } from "@/config";
 
@@ -35,10 +35,11 @@ export default function WalletInfo({
 
       try {
         setIsLoading(true);
-        const balanceWei = await publicClient.getBalance({
-          address: address as `0x${string}`,
-        });
-        setBalance(formatEther(balanceWei));
+        // const balanceWei = await publicClient.getBalance({
+        //   address: address as `0x${string}`,
+        // });
+        // setBalance(formatEther(balanceWei));
+        setBalance("0.0");
       } catch (error) {
         console.error("Error fetching balance:", error);
         setBalance("0");

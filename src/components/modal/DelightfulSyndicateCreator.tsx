@@ -1,9 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
 import { X, Users, Heart, Sparkles, Target, Share2, Copy, Check, Eye } from "lucide-react";
-import DelightfulButton from "@/components/core/DelightfulButton";
-import SyndicateStepIndicator from "@/components/SyndicateStepIndicator";
-import SyndicatePreview from "@/components/SyndicatePreview";
+import { Button } from "@/shared/components/ui/Button";
+// import SyndicateStepIndicator from "@/components/SyndicateStepIndicator";
+// import SyndicatePreview from "@/components/SyndicatePreview";
 
 interface SyndicateCreatorProps {
   isOpen: boolean;
@@ -365,11 +365,9 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
               <p className="text-gray-400">Review everything before creating</p>
             </div>
             
-            <SyndicatePreview 
-              formData={formData}
-              memberPreview={memberPreview}
-              impactPreview={impactPreview}
-            />
+            <div className="text-center">
+              <p className="text-gray-400">Preview component not available</p>
+            </div>
           </div>
         );
 
@@ -393,7 +391,9 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
             </button>
           </div>
           
-          <SyndicateStepIndicator currentStep={currentStep} />
+          <div className="text-center">
+            <p className="text-gray-400">Step: {currentStep}</p>
+          </div>
         </div>
 
         {/* Step Content */}
@@ -403,29 +403,28 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
 
         {/* Navigation */}
         <div className="p-6 border-t border-gray-700 flex justify-between">
-          <DelightfulButton
+          <Button
             onClick={prevStep}
             disabled={currentStep === 'basic'}
             variant="secondary"
           >
             Previous
-          </DelightfulButton>
+          </Button>
 
           {currentStep === 'preview' ? (
-            <DelightfulButton
+            <Button
               onClick={() => handleSubmit()}
-              variant="success"
-              loading={isCreating}
+              variant="default"
             >
               Create Syndicate
-            </DelightfulButton>
+            </Button>
           ) : (
-            <DelightfulButton
+            <Button
               onClick={nextStep}
-              variant="primary"
+              variant="default"
             >
               Next
-            </DelightfulButton>
+            </Button>
           )}
         </div>
       </div>

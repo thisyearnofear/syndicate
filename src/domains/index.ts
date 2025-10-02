@@ -19,7 +19,7 @@ export * from './lottery';
 export * from './wallet';
 
 // Syndicate domain
-export * from './syndicate';
+// export * from './syndicate';
 
 // =============================================================================
 // CONVENIENCE EXPORTS

@@ -11,14 +11,48 @@
  */
 
 import { useState, useEffect } from 'react';
-import { PremiumButton, JackpotButton, GhostButton } from '@/shared/components/premium/PremiumButton';
+import { Button } from "@/shared/components/ui/Button";
 import { CompactStack, CompactFlex } from '@/shared/components/premium/CompactLayout';
-import { HeadlineText, BodyText, CountUpText, PremiumBadge } from '@/shared/components/premium/Typography';
+
 
 interface PurchaseModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (txHash: string) => void;
+}
+
+const CountUpText = ({ value, duration = 2000, prefix = '', suffix = '', className = '' }: { value: number; duration?: number; prefix?: string; suffix?: string; className?: string; }) => {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    let startTime: number;
+    let animationFrame: number;
+
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      
+      setCount(Math.floor(progress * value));
+
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      }
+    };
+
+    animationFrame = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+    };
+  }, [value, duration]);
+
+  return (
+    <span className={`font-mono font-bold ${className}`}>
+      {prefix}{count.toLocaleString()}{suffix}
+    </span>
+  );
 }
 
 export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps) {
@@ -80,16 +114,17 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
       <div className="relative glass-premium rounded-3xl p-8 w-full max-w-lg border border-white/20 animate-scale-in">
         {/* Header */}
         <CompactFlex align="center" justify="between" className="mb-6">
-          <HeadlineText className="text-2xl">
+          <h2 className="font-bold text-2xl md:text-4xl lg:text-5xl leading-tight tracking-tight text-white">
             {step === 'success' ? '🎉 Success!' : '🎫 Buy Tickets'}
-          </HeadlineText>
-          <GhostButton
+          </h2>
+          <Button
+            variant="ghost"
             size="sm"
             onClick={onClose}
             className="w-8 h-8 p-0 rounded-full"
           >
             ✕
-          </GhostButton>
+          </Button>
         </CompactFlex>
 
         {/* Content based on step */}
@@ -97,121 +132,122 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
           <CompactStack spacing="lg">
             {/* Quick amount selection */}
             <div>
-              <BodyText size="sm" weight="medium" className="mb-3">
+              <p className="mb-3 text-sm font-medium">
                 Quick Select
-              </BodyText>
+              </p>
               <CompactFlex gap="sm" className="flex-wrap">
                 {quickAmounts.map((amount) => (
-                  <PremiumButton
+                  <Button
                     key={amount}
-                    variant={ticketCount === amount ? "primary" : "ghost"}
+                    variant={ticketCount === amount ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setTicketCount(amount)}
+                    className={ticketCount === amount ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl border border-blue-500/20" : ""}
                   >
                     {amount} ticket{amount > 1 ? 's' : ''}
-                  </PremiumButton>
+                  </Button>
                 ))}
               </CompactFlex>
             </div>
 
             {/* Custom amount */}
             <div>
-              <BodyText size="sm" weight="medium" className="mb-3">
+              <p className="mb-3 text-sm font-medium">
                 Custom Amount
-              </BodyText>
+              </p>
               <CompactFlex align="center" gap="md" justify="center">
-                <PremiumButton
+                <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setTicketCount(Math.max(1, ticketCount - 1))}
                   className="w-12 h-12 p-0 rounded-full"
                 >
                   -
-                </PremiumButton>
+                </Button>
                 
                 <div className="text-center min-w-[80px]">
                   <div className="text-3xl font-black gradient-text-primary">
                     {ticketCount}
                   </div>
-                  <BodyText size="xs" color="gray-400">
+                  <p className="text-xs text-gray-400 leading-relaxed">
                     ticket{ticketCount > 1 ? 's' : ''}
-                  </BodyText>
+                  </p>
                 </div>
                 
-                <PremiumButton
+                <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setTicketCount(ticketCount + 1)}
                   className="w-12 h-12 p-0 rounded-full"
                 >
                   +
-                </PremiumButton>
+                </Button>
               </CompactFlex>
             </div>
 
             {/* Price display */}
             <div className="glass p-6 rounded-2xl">
               <CompactFlex align="center" justify="between" className="mb-2">
-                <BodyText weight="medium">Total Cost:</BodyText>
+                <p className="font-medium text-gray-300 leading-relaxed">Total Cost:</p>
                 <div className="text-3xl font-black text-green-400">
                   $<CountUpText value={ticketCount} duration={300} />
                 </div>
               </CompactFlex>
               
               <CompactFlex align="center" justify="between" gap="sm" className="text-sm">
-                <BodyText size="sm" color="gray-400">
+<p className="text-sm text-gray-400 leading-relaxed">
                   $1 per ticket
-                </BodyText>
-                <PremiumBadge variant="success" size="sm">
+                </p>
+                <span className="inline-flex items-center font-semibold rounded-full shadow-lg backdrop-blur-sm transform hover:scale-105 transition-transform duration-200 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-2 py-1 text-xs">
                   🌊 Supports Ocean Cleanup
-                </PremiumBadge>
+                </span>
               </CompactFlex>
             </div>
 
             {/* Purchase button */}
-            <JackpotButton
-              onClick={handlePurchase}
+            <Button
+              variant="default"
               size="lg"
-              leftIcon="⚡"
-              className="w-full"
+              className="w-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white shadow-2xl hover:shadow-yellow-500/30 border border-yellow-400/30"
+              onClick={handlePurchase}
             >
-              Purchase {ticketCount} Ticket{ticketCount > 1 ? 's' : ''}
-            </JackpotButton>
+              ⚡ Purchase {ticketCount} Ticket{ticketCount > 1 ? 's' : ''}
+            </Button>
 
             {/* Terms */}
-            <BodyText size="xs" color="gray-500" className="text-center">
+            <p className="text-xs text-gray-500 text-center leading-relaxed">
               By purchasing, you agree to our terms and support ocean cleanup initiatives
-            </BodyText>
+            </p>
           </CompactStack>
         )}
 
         {step === 'processing' && (
           <CompactStack spacing="lg" align="center">
             <div className="w-20 h-20 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
-            <HeadlineText className="text-xl">Processing Purchase...</HeadlineText>
-            <BodyText color="gray-400" className="text-center">
+            <h2 className="font-bold text-xl md:text-4xl lg:text-5xl leading-tight tracking-tight text-white">Processing Purchase...</h2>
+            <p className="text-gray-400 text-center leading-relaxed">
               Please wait while we process your {ticketCount} ticket{ticketCount > 1 ? 's' : ''}
-            </BodyText>
+            </p>
           </CompactStack>
         )}
 
         {step === 'success' && (
           <CompactStack spacing="lg" align="center">
             <div className="text-6xl animate-bounce">🎉</div>
-            <HeadlineText className="text-xl text-center">
+            <h2 className="font-bold text-xl md:text-4xl lg:text-5xl leading-tight tracking-tight text-white text-center">
               Purchase Successful!
-            </HeadlineText>
+            </h2>
             <div className="glass p-4 rounded-xl text-center">
-              <BodyText weight="semibold" className="mb-2">
+              <p className="font-semibold mb-2 text-gray-300 leading-relaxed">
                 {ticketCount} Ticket{ticketCount > 1 ? 's' : ''} Purchased
-              </BodyText>
-              <BodyText size="sm" color="gray-400">
+              </p>
+              <p className="text-sm text-gray-400">
                 Good luck in the draw! 🍀
-              </BodyText>
+              </p>
             </div>
-            <BodyText size="sm" color="gray-400" className="text-center">
+            <p className="text-sm text-gray-400 text-center">
               This modal will close automatically...
-            </BodyText>
+            </p>
           </CompactStack>
         )}
       </div>

@@ -5,9 +5,9 @@ import ConnectWallet from "./ConnectWallet";
 import UnifiedModal from "../modal/UnifiedModal";
 
 // Lazy load the social login component
-const SocialLoginFirst = lazy(
-  () => import("@/components/onboarding/SocialLoginFirst")
-);
+// const SocialLoginFirst = lazy(
+//   () => import("@/components/onboarding/SocialLoginFirst")
+// );
 
 interface WalletConnectionOptionsProps {
   onSocialLoginClick: () => void;
@@ -87,7 +87,9 @@ export function SocialLoginModal({ isOpen, onClose }: SocialLoginModalProps) {
       className="relative"
     >
       <Suspense fallback={<ComponentLoader />}>
-        <SocialLoginFirst onComplete={onClose} className="px-4" />
+        <div className="px-4 text-center">
+          <p className="text-gray-400">Social login component not available</p>
+        </div>
       </Suspense>
     </UnifiedModal>
   );

@@ -1,16 +1,18 @@
 "use client";
 
-import { useSessionAccount } from "@/providers/SessionAccountProvider";
-import { usePermissions } from "@/providers/PermissionProvider";
+// import { useSessionAccount } from "@/providers/SessionAccountProvider";
+// import { usePermissions } from "@/providers/PermissionProvider";
 import WalletInfo from "./WalletInfo";
 
 export default function WalletInfoContainer() {
-  const { sessionAccount, clearSessionAccount } = useSessionAccount();
-  const { smartAccount } = usePermissions();
+  // const { sessionAccount, clearSessionAccount } = useSessionAccount();
+  // const { smartAccount } = usePermissions();
+  const sessionAccount = null;
+  const smartAccount = null;
   return (
     <div className="w-full max-w-4xl mx-auto p-3 space-y-2">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {sessionAccount && (
+        {/* {sessionAccount && (
           <WalletInfo
             address={sessionAccount.address}
             label="Session Account"
@@ -20,7 +22,7 @@ export default function WalletInfoContainer() {
         )}
         {smartAccount && (
           <WalletInfo address={smartAccount} label="Smart Account" />
-        )}
+        )} */}
       </div>
    
     </div>

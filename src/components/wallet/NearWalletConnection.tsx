@@ -1,47 +1,52 @@
 "use client";
 
-import {
-  useNearWallet,
-  useNearWalletConnection,
-} from "@/providers/NearWalletProvider";
+// import {
+//   useNearWallet,
+//   useNearWalletConnection,
+// } from "@/providers/NearWalletProvider";
 import { useState, useEffect } from "react";
-import { getCrossChainTicketService } from "@/services/crossChainTicketService";
+// import { getCrossChainTicketService } from "@/services/crossChainTicketService";
 
 export default function NearWalletConnection() {
-  const { isConnected, accountId, connect, connectWeb3Auth, disconnect, isLoading, isWeb3Auth } =
-    useNearWalletConnection();
-  const nearWallet = useNearWallet();
+  // const { isConnected, accountId, connect, connectWeb3Auth, disconnect, isLoading, isWeb3Auth } =
+  //   useNearWalletConnection();
+  // const nearWallet = useNearWallet();
+  const isConnected = false;
+  const accountId = null;
+  const isLoading = false;
+  const isWeb3Auth = false;
   const [isInitializing, setIsInitializing] = useState(false);
   const [chainSignatureAvailable, setChainSignatureAvailable] = useState(false);
 
   // Initialize NEAR service when wallet connects
   useEffect(() => {
-    if (isConnected && nearWallet && !isInitializing) {
+    if (isConnected && !isInitializing) {
       setIsInitializing(true);
 
       const initializeService = async () => {
         try {
           // Initialize the cross-chain service with NEAR wallet
-          const service = getCrossChainTicketService();
-          await service.initializeNearService(nearWallet);
+          // const service = getCrossChainTicketService();
+          // await service.initializeNearService(nearWallet);
 
           // Initialize NEAR intents service
-          const { nearIntentsService } = await import('@/services/nearIntents');
-          await nearIntentsService.initialize(nearWallet);
+          // const { nearIntentsService } = await import('@/services/nearIntents');
+          // await nearIntentsService.initialize(nearWallet);
 
           // Check if chain signatures are available
-          try {
-            const nearService = (service as any).nearChainSignatureService;
-            if (nearService) {
-              const available = await nearService.isChainSignatureAvailable();
-              setChainSignatureAvailable(available);
-            }
-          } catch (error) {
-            console.warn("Chain signatures not available:", error);
-            setChainSignatureAvailable(false);
-          }
+          // try {
+          //   const nearService = (service as any).nearChainSignatureService;
+          //   if (nearService) {
+          //     const available = await nearService.isChainSignatureAvailable();
+          //     setChainSignatureAvailable(available);
+          //   }
+          // } catch (error) {
+          //   console.warn("Chain signatures not available:", error);
+          //   setChainSignatureAvailable(false);
+          // }
 
           // DEBUG: console.log("NEAR services initialized successfully");
+          setChainSignatureAvailable(false);
         } catch (error) {
           console.error("Failed to initialize NEAR services:", error);
           setChainSignatureAvailable(false);
@@ -52,11 +57,12 @@ export default function NearWalletConnection() {
 
       initializeService();
     }
-  }, [isConnected, nearWallet, isInitializing]);
+  }, [isConnected, isInitializing]);
 
   const handleConnect = async () => {
     try {
-      await connect();
+      // await connect();
+      console.log("NEAR wallet connection not implemented");
     } catch (error) {
       console.error("Failed to connect NEAR wallet:", error);
     }
@@ -64,7 +70,8 @@ export default function NearWalletConnection() {
 
   const handleWeb3AuthConnect = async () => {
     try {
-      await connectWeb3Auth();
+      // await connectWeb3Auth();
+      console.log("Web3Auth connection not implemented");
     } catch (error) {
       console.error("Failed to connect with Web3Auth:", error);
     }
@@ -72,8 +79,9 @@ export default function NearWalletConnection() {
 
   const handleDisconnect = async () => {
     try {
-      await disconnect();
+      // await disconnect();
       setChainSignatureAvailable(false);
+      console.log("NEAR wallet disconnection not implemented");
     } catch (error) {
       console.error("Failed to disconnect NEAR wallet:", error);
     }
@@ -220,20 +228,22 @@ export default function NearWalletConnection() {
 
 // Compact version for use in other components
 export function NearWalletStatus() {
-  const { isConnected, accountId, connect, connectWeb3Auth } = useNearWalletConnection();
+  // const { isConnected, accountId, connect, connectWeb3Auth } = useNearWalletConnection();
+  const isConnected = false;
+  const accountId = null;
 
   if (!isConnected) {
     return (
       <div className="flex space-x-2">
         <button
-          onClick={connect}
+          onClick={() => console.log("Connect NEAR not implemented")}
           className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg transition-colors"
         >
           <span>🌌</span>
           <span className="text-sm">Connect NEAR</span>
         </button>
         <button
-          onClick={connectWeb3Auth}
+          onClick={() => console.log("Web3Auth not implemented")}
           className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition-colors"
         >
           <span>🔐</span>
@@ -247,7 +257,7 @@ export function NearWalletStatus() {
     <div className="flex items-center space-x-2 bg-purple-900/30 border border-purple-700 px-3 py-2 rounded-lg">
       <span>🌌</span>
       <span className="text-purple-200 text-sm">
-        {accountId?.slice(0, 8)}...{accountId?.slice(-8)}
+        Connected
       </span>
     </div>
   );

@@ -32,7 +32,7 @@ export function formatCurrency(
   } = options;
 
   const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-  
+
   if (isNaN(numericAmount)) return '$0';
 
   return new Intl.NumberFormat(locale, {
@@ -48,9 +48,9 @@ export function formatCurrency(
  */
 export function formatNumber(num: number | string): string {
   const numericValue = typeof num === 'string' ? parseFloat(num) : num;
-  
+
   if (isNaN(numericValue)) return '0';
-  
+
   if (numericValue >= 1e9) {
     return (numericValue / 1e9).toFixed(1) + 'B';
   }
@@ -60,7 +60,7 @@ export function formatNumber(num: number | string): string {
   if (numericValue >= 1e3) {
     return (numericValue / 1e3).toFixed(1) + 'K';
   }
-  
+
   return numericValue.toLocaleString();
 }
 
@@ -125,7 +125,7 @@ export function debounce<T extends (...args: any[]) => any>(
   wait: number
 ): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout;
-  
+
   return (...args: Parameters<T>) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
@@ -140,7 +140,7 @@ export function throttle<T extends (...args: any[]) => any>(
   limit: number
 ): (...args: Parameters<T>) => void {
   let inThrottle: boolean;
-  
+
   return (...args: Parameters<T>) => {
     if (!inThrottle) {
       func(...args);
@@ -165,11 +165,11 @@ export async function retry<T>(
       return await operation();
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      
+
       if (attempt === maxAttempts) {
         throw lastError;
       }
-      
+
       // Exponential backoff
       const delay = baseDelay * Math.pow(2, attempt - 1);
       await new Promise(resolve => setTimeout(resolve, delay));
@@ -205,7 +205,7 @@ export function deepClone<T>(obj: T): T {
 /**
  * CLEAN: Pick specific properties from object
  */
-export function pick<T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
+export function pick<T extends object, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
   const result = {} as Pick<T, K>;
   keys.forEach(key => {
     if (key in obj) {

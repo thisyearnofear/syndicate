@@ -57,7 +57,7 @@ export function getAvailableWallets(): WalletType[] {
   }
 
   // Check for Phantom
-  if (typeof window !== 'undefined' && window.solana?.isPhantom) {
+  if (typeof window !== 'undefined' && (window as any).solana?.isPhantom) {
     available.push(WalletTypes.PHANTOM);
   }
 
@@ -88,14 +88,14 @@ export function getWalletStatus(walletType: WalletType): {
         isInstalled: typeof window !== 'undefined' && !!window.ethereum?.isMetaMask,
         downloadUrl: 'https://metamask.io/download/',
       };
-    
+
     case WalletTypes.PHANTOM:
       return {
-        isAvailable: typeof window !== 'undefined' && !!window.solana?.isPhantom,
-        isInstalled: typeof window !== 'undefined' && !!window.solana?.isPhantom,
+        isAvailable: typeof window !== 'undefined' && !!(window as any).solana?.isPhantom,
+        isInstalled: typeof window !== 'undefined' && !!(window as any).solana?.isPhantom,
         downloadUrl: 'https://phantom.app/',
       };
-    
+
     case WalletTypes.WALLETCONNECT:
     case WalletTypes.SOCIAL:
     case WalletTypes.NEAR:
@@ -103,7 +103,7 @@ export function getWalletStatus(walletType: WalletType): {
         isAvailable: true,
         isInstalled: true,
       };
-    
+
     default:
       return {
         isAvailable: false,
@@ -137,7 +137,7 @@ export function useUnifiedWallet(): WalletState & WalletActions {
 
     try {
       const walletStatus = getWalletStatus(walletType);
-      
+
       if (!walletStatus.isAvailable) {
         throw createError(
           'WALLET_NOT_AVAILABLE',
@@ -151,14 +151,14 @@ export function useUnifiedWallet(): WalletState & WalletActions {
 
       switch (walletType) {
         case WalletTypes.METAMASK:
-          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          const network = await window.ethereum.request({ method: 'eth_chainId' });
-          address = accounts[0];
-          chainId = parseInt(network, 16);
+          const accounts = await window.ethereum!.request({ method: 'eth_requestAccounts' });
+          const network = await window.ethereum!.request({ method: 'eth_chainId' });
+          address = (accounts as string[])[0] || '';
+          chainId = parseInt((network as string) || '0x1', 16);
           break;
 
         case WalletTypes.PHANTOM:
-          const response = await window.solana.connect();
+          const response = await (window as any).solana!.connect();
           address = response.publicKey.toString();
           chainId = 101; // Solana mainnet
           break;
@@ -275,7 +275,7 @@ export function useUnifiedWallet(): WalletState & WalletActions {
       try {
         const { walletType, address, chainId } = JSON.parse(stored);
         const walletStatus = getWalletStatus(walletType);
-        
+
         if (walletStatus.isAvailable) {
           setState(prev => ({
             ...prev,
@@ -300,7 +300,6 @@ export function useUnifiedWallet(): WalletState & WalletActions {
     switchChain,
     clearError,
     // Computed properties
-    isAnyConnected: state.isConnected,
   };
 }
 
@@ -308,15 +307,9 @@ export function useUnifiedWallet(): WalletState & WalletActions {
 // TYPE AUGMENTATION
 // =============================================================================
 
-declare global {
-  interface Window {
-    ethereum?: {
-      isMetaMask?: boolean;
-      request: (args: { method: string; params?: any[] }) => Promise<any>;
-    };
-    solana?: {
-      isPhantom?: boolean;
-      connect: () => Promise<{ publicKey: { toString: () => string } }>;
-    };
-  }
-}
+// declare global {
+//   interface Window {
+//     ethereum?: any;
+//     solana?: any;
+//   }
+// }

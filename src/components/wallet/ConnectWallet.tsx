@@ -11,19 +11,19 @@
  */
 
 import { useState } from 'react';
-import { PremiumButton } from '@/shared/components/premium/PremiumButton';
+import { Button } from "@/shared/components/ui/Button";
 import { CompactStack, CompactFlex } from '@/shared/components/premium/CompactLayout';
-import { BodyText } from '@/shared/components/premium/Typography';
+import { WalletType } from '@/domains/wallet/services/unifiedWalletService';
 
 interface ConnectWalletProps {
-  onConnect?: (walletType: string) => void;
+  onConnect?: (walletType: WalletType) => void;
 }
 
 export default function ConnectWallet({ onConnect }: ConnectWalletProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
 
-  const handleConnect = async (walletType: string) => {
+  const handleConnect = async (walletType: WalletType) => {
     setIsConnecting(true);
     setConnectingWallet(walletType);
     
@@ -67,21 +67,19 @@ export default function ConnectWallet({ onConnect }: ConnectWalletProps) {
       {/* Main wallet options */}
       <CompactStack spacing="sm">
         {wallets.map((wallet) => (
-          <PremiumButton
+          <Button
             key={wallet.name}
-            variant={wallet.variant}
-            size="md"
-            onClick={() => handleConnect(wallet.name)}
+            variant="default"
+            size="lg"
+            onClick={() => handleConnect(wallet.name as WalletType)}
             disabled={isConnecting}
-            isLoading={isConnecting && connectingWallet === wallet.name}
-            leftIcon={wallet.icon}
-            className="w-full justify-start"
+            className={`w-full justify-start ${wallet.variant === 'primary' ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl border border-blue-500/20' : wallet.variant === 'secondary' ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg hover:shadow-xl border border-emerald-400/20' : 'bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-700 hover:via-pink-700 hover:to-blue-700 text-white shadow-2xl hover:shadow-purple-500/25 border border-purple-400/30'}`}
           >
             <div className="flex-1 text-left">
-              <div className="font-semibold">{wallet.name}</div>
+              <div className="font-semibold">{wallet.icon} {wallet.name}</div>
               <div className="text-xs opacity-80">{wallet.description}</div>
             </div>
-          </PremiumButton>
+          </Button>
         ))}
       </CompactStack>
       
@@ -95,22 +93,20 @@ export default function ConnectWallet({ onConnect }: ConnectWalletProps) {
         </div>
       </div>
       
-      <PremiumButton
+      <Button
         variant="ghost"
         size="sm"
-        onClick={() => handleConnect('Social')}
+        onClick={() => handleConnect('social' as WalletType)}
         disabled={isConnecting}
-        isLoading={isConnecting && connectingWallet === 'Social'}
-        leftIcon="🔐"
         className="w-full"
       >
-        Connect with Social Login
-      </PremiumButton>
+        {isConnecting && connectingWallet === 'Social' ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" /> : "🔐"} Connect with Social Login
+      </Button>
       
       {/* Help text */}
-      <BodyText size="xs" color="gray-500" className="text-center">
+      <p className="text-xs text-gray-500 text-center leading-relaxed">
         New to crypto? Social login creates a wallet for you automatically.
-      </BodyText>
+      </p>
     </CompactStack>
   );
 }
