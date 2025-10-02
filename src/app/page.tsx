@@ -10,22 +10,56 @@
  * - CLEAN: Clear visual hierarchy with premium design
  */
 
-import { useState, useCallback, Suspense, lazy } from "react";
-import { ErrorBoundary } from "@/shared/components/ErrorBoundary";
+import { useState, useCallback, useEffect, Suspense, lazy } from "react";
 import { LoadingSpinner } from "@/shared/components/LoadingSpinner";
-import { useWalletConnection } from "@/hooks/useWalletConnection";
+import { useWalletConnection, WalletType } from "@/hooks/useWalletConnection";
 import { useLottery } from "@/domains/lottery/hooks/useLottery";
-import { formatCurrency, formatTimeRemaining } from "@/shared/utils";
+import { formatTimeRemaining } from "@/shared/utils";
 
 // Premium UI Components
-import { PremiumButton, JackpotButton, GhostButton } from "@/shared/components/premium/PremiumButton";
+import { Button } from "@/shared/components/ui/Button";
 import { PuzzlePiece, PuzzleGrid, OverlappingPieces, MagneticPiece } from "@/shared/components/premium/PuzzlePiece";
-import { DisplayText, HeadlineText, BodyText, GlowText, CountUpText, PremiumBadge } from "@/shared/components/premium/Typography";
-import { CompactContainer, CompactGrid, CompactStack, CompactHero, CompactCard, CompactSection, CompactFlex } from "@/shared/components/premium/CompactLayout";
+import { CompactContainer, CompactGrid, CompactStack, CompactHero, CompactSection, CompactFlex } from "@/shared/components/premium/CompactLayout";
+
+
 
 // Lazy load heavy components
 const WalletConnect = lazy(() => import("@/components/wallet/ConnectWallet"));
 const PurchaseModal = lazy(() => import("@/components/modal/PurchaseModal"));
+
+const CountUpText = ({ value, duration = 2000, prefix = '', suffix = '', className = '' }: { value: number; duration?: number; prefix?: string; suffix?: string; className?: string; }) => {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    let startTime: number;
+    let animationFrame: number;
+
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      
+      setCount(Math.floor(progress * value));
+
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      }
+    };
+
+    animationFrame = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+    };
+  }, [value, duration]);
+
+  return (
+    <span className={`font-mono font-bold ${className}`}>
+      {prefix}{count.toLocaleString()}{suffix}
+    </span>
+  );
+}
 
 // =============================================================================
 // PREMIUM PUZZLE PIECE COMPONENTS
@@ -35,17 +69,17 @@ const PurchaseModal = lazy(() => import("@/components/modal/PurchaseModal"));
  * ENHANCEMENT FIRST: Premium Jackpot Display as Central Puzzle Piece
  */
 function PremiumJackpotPiece({ onBuyClick }: { onBuyClick: () => void }) {
-  const { jackpotStats, formattedPrize, isLoading, error, refresh } = useLottery();
+   const { jackpotStats, isLoading, error, refresh } = useLottery();
 
   if (error) {
     return (
       <MagneticPiece variant="accent" size="lg" shape="organic" glow>
         <CompactStack spacing="md" align="center">
-          <GlowText color="pink">⚠️ Connection Issue</GlowText>
-          <BodyText size="sm" color="gray-400">Failed to load jackpot data</BodyText>
-          <GhostButton onClick={refresh} size="sm">
+          <span className="font-semibold text-pink-400 drop-shadow-[0_0_20px_rgba(236,72,153,0.6)] animate-pulse">⚠️ Connection Issue</span>
+          <p className="text-sm text-gray-400 leading-relaxed">Failed to load jackpot data</p>
+          <Button variant="ghost" size="sm" onClick={refresh}>
             Retry
-          </GhostButton>
+          </Button>
         </CompactStack>
       </MagneticPiece>
     );
@@ -54,50 +88,50 @@ function PremiumJackpotPiece({ onBuyClick }: { onBuyClick: () => void }) {
   const prizeValue = jackpotStats?.prizeUsd ? parseFloat(jackpotStats.prizeUsd) : 921847;
 
   return (
-    <MagneticPiece variant="primary" size="xl" shape="blob" glow floating>
+    <MagneticPiece variant="primary" size="lg" shape="organic" glow>
       <CompactStack spacing="md" align="center">
-        {/* Live indicator */}
-        <CompactFlex align="center" gap="sm">
-          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-          <PremiumBadge variant="success" size="sm">LIVE JACKPOT</PremiumBadge>
-          {isLoading && <LoadingSpinner size="sm" color="white" />}
-        </CompactFlex>
+        <div className="flex flex-col space-y-4 items-center">
+          <CompactFlex align="center" gap="sm">
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+            <span className="inline-flex items-center font-semibold rounded-full shadow-lg backdrop-blur-sm transform hover:scale-105 transition-transform duration-200 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-2 py-1 text-xs">LIVE JACKPOT</span>
+            {isLoading && <LoadingSpinner size="sm" color="white" />}
+          </CompactFlex>
 
-        {/* Jackpot amount with count-up animation */}
-        <div className="text-center">
-          <div className="text-5xl md:text-7xl font-black gradient-text-rainbow mb-2">
-            $<CountUpText value={prizeValue} duration={2000} />
+          {/* Jackpot amount with count-up animation */}
+          <div className="text-center">
+            <div className="text-5xl md:text-7xl font-black gradient-text-rainbow mb-2">
+              $<CountUpText value={prizeValue} duration={2000} />
+            </div>
+            <span className="font-semibold text-yellow-400 drop-shadow-[0_0_20px_rgba(251,191,36,0.6)] animate-pulse text-lg">
+              Growing every minute</span>
           </div>
-          <GlowText color="yellow" className="text-lg">
-            Growing every minute
-          </GlowText>
+
+          {/* Time remaining */}
+          {jackpotStats?.endTimestamp && (
+            <p className="text-lg text-center text-gray-300 leading-relaxed">
+              ⏰ {formatTimeRemaining(jackpotStats.endTimestamp)} remaining
+            </p>
+          )}
+
+          {/* Premium CTA */}
+          <Button
+            variant="default"
+            size="lg"
+            className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white shadow-2xl hover:shadow-yellow-500/30 border border-yellow-400/30 animate-pulse-glow"
+            onClick={onBuyClick}
+          >
+            🎫 Buy Tickets Now - $1 Each
+          </Button>
+
+          {/* Social proof */}
+          <CompactFlex align="center" gap="sm" className="text-sm text-gray-400">
+            <span>⚡ Instant</span>
+            <span>•</span>
+            <span>🎯 1:1.4M odds</span>
+            <span>•</span>
+            <span>🌊 Supports causes</span>
+          </CompactFlex>
         </div>
-
-        {/* Time remaining */}
-        {jackpotStats?.endTimestamp && (
-          <BodyText size="lg" className="text-center">
-            ⏰ {formatTimeRemaining(jackpotStats.endTimestamp)} remaining
-          </BodyText>
-        )}
-
-        {/* Premium CTA */}
-        <JackpotButton 
-          onClick={onBuyClick}
-          size="lg"
-          leftIcon="🎫"
-          className="animate-pulse-glow"
-        >
-          Buy Tickets Now - $1 Each
-        </JackpotButton>
-
-        {/* Social proof */}
-        <CompactFlex align="center" gap="sm" className="text-sm text-gray-400">
-          <span>⚡ Instant</span>
-          <span>•</span>
-          <span>🎯 1:1.4M odds</span>
-          <span>•</span>
-          <span>🌊 Supports causes</span>
-        </CompactFlex>
       </CompactStack>
     </MagneticPiece>
   );
@@ -106,20 +140,20 @@ function PremiumJackpotPiece({ onBuyClick }: { onBuyClick: () => void }) {
 /**
  * MODULAR: Wallet Connection Puzzle Piece
  */
-function WalletConnectionPiece({ onConnect }: { onConnect: (type: any) => void }) {
+function WalletConnectionPiece({ onConnect }: { onConnect: (type: WalletType) => void }) {
   const { isConnected, address, walletType, error } = useWalletConnection();
 
   if (isConnected) {
     return (
       <PuzzlePiece variant="secondary" size="md" shape="rounded" glow>
-        <CompactStack spacing="sm" align="center">
-          <GlowText color="green">✅ Connected</GlowText>
-          <BodyText size="sm" className="font-mono">
+        <CompactStack spacing="xs" align="center">
+          <span className="font-semibold text-green-400 drop-shadow-[0_0_20px_rgba(34,197,94,0.6)] animate-pulse">✅ Connected</span>
+          <p className="text-sm font-mono text-gray-300 leading-relaxed">
             {address?.slice(0, 6)}...{address?.slice(-4)}
-          </BodyText>
-          <PremiumBadge variant="success" size="sm">
+          </p>
+          <span className="inline-flex items-center font-semibold rounded-full shadow-lg backdrop-blur-sm transform hover:scale-105 transition-transform duration-200 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-2 py-1 text-xs">
             {walletType}
-          </PremiumBadge>
+          </span>
         </CompactStack>
       </PuzzlePiece>
     );
@@ -128,11 +162,11 @@ function WalletConnectionPiece({ onConnect }: { onConnect: (type: any) => void }
   return (
     <PuzzlePiece variant="neutral" size="md" shape="angular" className="hover-lift">
       <CompactStack spacing="md" align="center">
-        <HeadlineText className="text-xl">Connect Wallet</HeadlineText>
+        <h2 className="font-bold text-xl md:text-4xl lg:text-5xl leading-tight tracking-tight text-white">Connect Wallet</h2>
         {error && (
-          <BodyText size="sm" color="red-400" className="text-center">
+          <p className="text-sm text-red-400 text-center leading-relaxed">
             {error}
-          </BodyText>
+          </p>
         )}
         <Suspense fallback={<LoadingSpinner />}>
           <WalletConnect onConnect={onConnect} />
@@ -156,31 +190,33 @@ function ActivityFeedPiece() {
   return (
     <PuzzlePiece variant="accent" size="lg" shape="organic" className="hover-glow">
       <CompactStack spacing="md">
-        <CompactFlex align="center" justify="between">
-          <HeadlineText className="text-lg">Live Activity</HeadlineText>
-          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-        </CompactFlex>
-        
-        <CompactStack spacing="sm">
+        <div className="flex flex-col space-y-4 items-stretch">
+          <h2 className="font-bold text-lg md:text-4xl lg:text-5xl leading-tight tracking-tight text-white">Live Activity</h2>
+          <CompactFlex align="center" gap="sm">
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+          </CompactFlex>
+        </div>
+
+        <div className="flex flex-col space-y-2 items-stretch">
           {activities.map((activity, index) => (
-            <div 
+            <div
               key={index}
               className={`glass p-3 rounded-lg hover-scale animate-fade-in-up stagger-${index + 1}`}
             >
               <CompactFlex align="center" gap="sm">
                 <span className="text-xl">{activity.icon}</span>
                 <div className="flex-1">
-                  <BodyText size="sm" className="text-white">
+                  <p className="text-sm text-white leading-relaxed">
                     {activity.text}
-                  </BodyText>
-                  <BodyText size="xs" color="gray-500">
+                  </p>
+                  <p className="text-xs text-gray-500 leading-relaxed">
                     {activity.time}
-                  </BodyText>
+                  </p>
                 </div>
               </CompactFlex>
             </div>
           ))}
-        </CompactStack>
+        </div>
       </CompactStack>
     </PuzzlePiece>
   );
@@ -200,7 +236,7 @@ function SyndicatesPiece() {
   return (
     <PuzzlePiece variant="secondary" size="lg" shape="rounded" glow>
       <CompactStack spacing="md">
-        <HeadlineText className="text-lg">Active Syndicates</HeadlineText>
+        <h2 className="font-bold text-lg md:text-4xl lg:text-5xl leading-tight tracking-tight text-white">Active Syndicates</h2>
         
         <CompactGrid columns={2} gap="sm">
           {syndicates.map((syndicate, index) => (
@@ -210,12 +246,12 @@ function SyndicatesPiece() {
             >
               <CompactStack spacing="xs" align="center">
                 <span className="text-2xl">{syndicate.icon}</span>
-                <BodyText size="sm" weight="semibold" className="text-center">
+                <p className="text-sm font-semibold text-center text-gray-300 leading-relaxed">
                   {syndicate.name}
-                </BodyText>
-                <GlowText color={syndicate.color as any} className="text-xs">
+                </p>
+                <span className={`font-semibold text-${syndicate.color}-400 drop-shadow-[0_0_20px_rgba(147,51,234,0.6)] animate-pulse text-xs`}>
                   {syndicate.members.toLocaleString()} members
-                </GlowText>
+                </span>
               </CompactStack>
             </div>
           ))}
@@ -252,9 +288,9 @@ function StatsPieces() {
               prefix={stat.prefix}
               className={`text-2xl font-black text-${stat.color}-400`}
             />
-            <BodyText size="xs" color="gray-400" className="text-center">
+            <p className="text-xs text-center text-gray-400 leading-relaxed">
               {stat.label}
-            </BodyText>
+            </p>
           </CompactStack>
         </PuzzlePiece>
       ))}
@@ -268,7 +304,7 @@ function StatsPieces() {
 
 export default function PremiumHome() {
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
-  const { isConnected, connect, error: walletError } = useWalletConnection();
+  const { isConnected, connect } = useWalletConnection();
 
   const handlePurchaseAction = useCallback(() => {
     if (!isConnected) {
@@ -278,7 +314,7 @@ export default function PremiumHome() {
     }
   }, [isConnected]);
 
-  const handleWalletConnect = useCallback(async (walletType: any) => {
+  const handleWalletConnect = useCallback(async (walletType: WalletType) => {
     try {
       await connect(walletType);
     } catch (error) {
@@ -292,7 +328,7 @@ export default function PremiumHome() {
         {/* Premium animated background */}
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.1),transparent_50%)]" />
-          <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.02"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]" />
+          <div className="absolute top-0 left-0 w-full h-full opacity-5" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.02'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }} />
         </div>
 
         {/* Main content */}
@@ -303,12 +339,12 @@ export default function PremiumHome() {
               <CompactStack spacing="lg" align="center">
                 {/* Brand */}
                 <div className="text-center animate-fade-in-up">
-                  <DisplayText gradient glow>
+                  <h1 className="font-black text-4xl md:text-6xl lg:text-7xl leading-tight tracking-tight bg-gradient-to-r from-purple-400 via-blue-500 to-green-400 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(59,130,246,0.5)]">
                     Syndicate
-                  </DisplayText>
-                  <BodyText size="xl" className="mt-4 max-w-2xl">
+                  </h1>
+                  <p className="text-xl mt-4 max-w-2xl text-gray-300 leading-relaxed">
                     Social lottery coordination • Cross-chain • Cause-driven
-                  </BodyText>
+                  </p>
                 </div>
 
                 {/* Central Jackpot Puzzle Piece */}
@@ -351,33 +387,30 @@ export default function PremiumHome() {
         <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden no-print">
           <div className="glass-premium border-t border-white/20 p-4">
             <CompactFlex justify="around" align="center">
-              <PremiumButton
+              <Button
                 variant="ghost"
                 size="sm"
                 onClick={handlePurchaseAction}
-                leftIcon="🎫"
                 className="flex-col gap-1 text-xs"
               >
-                {isConnected ? "Buy" : "Play"}
-              </PremiumButton>
+                🎫 {isConnected ? "Buy" : "Play"}
+              </Button>
               
-              <PremiumButton
+              <Button
                 variant="ghost"
                 size="sm"
-                leftIcon="👥"
                 className="flex-col gap-1 text-xs"
               >
-                Syndicate
-              </PremiumButton>
+                👥 Syndicate
+              </Button>
               
-              <PremiumButton
+              <Button
                 variant="ghost"
                 size="sm"
-                leftIcon="📊"
                 className="flex-col gap-1 text-xs"
               >
-                Activity
-              </PremiumButton>
+                📊 Activity
+              </Button>
             </CompactFlex>
           </div>
         </div>
@@ -392,14 +425,14 @@ export default function PremiumHome() {
 
         {/* Floating Action Button for Desktop */}
         <div className="fixed bottom-8 right-8 z-40 hidden md:block no-print">
-          <JackpotButton
-            onClick={handlePurchaseAction}
+          <Button
+            variant="default"
             size="lg"
-            leftIcon="⚡"
-            className="shadow-premium animate-float"
+            className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white shadow-2xl hover:shadow-yellow-500/30 border border-yellow-400/30 shadow-premium animate-float"
+            onClick={handlePurchaseAction}
           >
-            Quick Buy
-          </JackpotButton>
+            ⚡ Quick Buy
+          </Button>
         </div>
       </div>
     </div>

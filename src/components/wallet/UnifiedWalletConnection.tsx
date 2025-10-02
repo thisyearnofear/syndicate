@@ -10,7 +10,7 @@
 import { useState } from "react";
 import NearWalletConnection from "./NearWalletConnection";
 import SolanaWalletConnection from "./SolanaWalletConnection";
-import DelightfulButton from "@/components/core/DelightfulButton";
+import { Button } from "@/shared/components/ui/Button";
 
 export default function UnifiedWalletConnection() {
   const [selectedWallet, setSelectedWallet] = useState<"near" | "solana" | null>(null);
@@ -66,22 +66,22 @@ export default function UnifiedWalletConnection() {
           Quick Connect:
         </div>
         <div className="flex gap-2">
-          <DelightfulButton
+          <Button
             onClick={() => setSelectedWallet("near")}
             variant="secondary"
             size="sm"
             className="flex-1"
           >
             🌌 NEAR
-          </DelightfulButton>
-          <DelightfulButton
+          </Button>
+          <Button
             onClick={() => setSelectedWallet("solana")}
             variant="secondary"
             size="sm"
             className="flex-1"
           >
             🔥 Solana
-          </DelightfulButton>
+          </Button>
         </div>
       </div>
 

@@ -11,7 +11,7 @@
 // Re-export all lottery functionality from a single entry point
 export * from './services/megapotService';
 export * from './hooks/useLottery';
-export * from './components/JackpotDisplay';
-export * from './components/TicketPurchase';
+// export * from './components/JackpotDisplay';
+// export * from './components/TicketPurchase';
 export * from './types';
-export * from './utils';
+// export * from './utils';

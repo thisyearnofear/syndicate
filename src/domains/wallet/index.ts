@@ -10,7 +10,7 @@
 
 // Re-export all wallet functionality from a single entry point
 export * from './services/unifiedWalletService';
-export * from './hooks/useWallet';
-export * from './components/WalletConnect';
-export * from './types';
-export * from './utils';
+// export * from './hooks/useWallet';
+// export * from './components/WalletConnect';
+// export * from './types';
+// export * from './utils';

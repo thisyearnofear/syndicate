@@ -22,7 +22,7 @@ export * from './domains';
 // SHARED UTILITIES
 // =============================================================================
 export * from './shared/utils';
-export * from './shared/components';
+// export * from './shared/components';
 export * from './shared/services/performanceMonitor';
 
 // =============================================================================
@@ -35,27 +35,27 @@ export { useWalletConnection } from './hooks/useWalletConnection';
 // CONVENIENCE EXPORTS
 // =============================================================================
 // Most commonly used exports for easy access
-export { 
-  // Configuration
-  CHAINS as chains,
-  CONTRACTS as contracts,
-  LOTTERY as lottery,
-  
+export {
+  //   // Configuration
+  //   CHAINS as chains,
+  //   CONTRACTS as contracts,
+  //   LOTTERY as lottery,
+
   // Lottery domain
   useLottery,
   megapotService,
-  
+
   // Wallet domain
   useUnifiedWallet,
   getAvailableWallets,
-  
+
   // Utilities
-  formatCurrency,
-  formatTimeRemaining,
-  debounce,
-  throttle,
-  
+  // formatCurrency,
+  // formatTimeRemaining,
+  // debounce,
+  // throttle,
+
   // Performance
-  performanceMonitor,
-  usePerformanceMonitor,
+  // performanceMonitor,
+  // usePerformanceMonitor,
 } from './domains';

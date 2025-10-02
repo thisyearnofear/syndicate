@@ -1,23 +1,29 @@
 "use client";
 
-import {
-  useSolanaWallet,
-  useSolanaWalletConnection,
-} from "@/providers/SolanaWalletProvider";
+// import {
+//   useSolanaWallet,
+//   useSolanaWalletConnection,
+// } from "@/providers/SolanaWalletProvider";
 import { useState, useEffect } from "react";
-import { useAddressDisplay } from "@/hooks/useSNS";
-import { useSolanaProviderReady } from "@/hooks/useProviderReady";
+// import { useAddressDisplay } from "@/hooks/useSNS";
+// import { useSolanaProviderReady } from "@/hooks/useProviderReady";
 
 export default function SolanaWalletConnection() {
-  const isProviderReady = useSolanaProviderReady();
-  const { isConnected, publicKey, connect, disconnect, isLoading } =
-    useSolanaWalletConnection();
-  const { connection } = useSolanaWallet();
+  // const isProviderReady = useSolanaProviderReady();
+  // const { isConnected, publicKey, connect, disconnect, isLoading } =
+  //   useSolanaWalletConnection();
+  // const { connection } = useSolanaWallet();
   const [isInitializing, setIsInitializing] = useState(false);
-  const { displayName, isLoading: isLoadingDomain } = useAddressDisplay(
-    publicKey,
-    connection
-  );
+  // const { displayName, isLoading: isLoadingDomain } = useAddressDisplay(
+  //   publicKey,
+  //   connection
+  // );
+  const isProviderReady = true;
+  const isConnected = false;
+  const publicKey = null;
+  const isLoading = false;
+  const displayName = null;
+  const isLoadingDomain = false;
 
   // Only render the component if provider is ready
   if (!isProviderReady) {
@@ -31,7 +37,8 @@ export default function SolanaWalletConnection() {
 
   const handleConnect = async () => {
     try {
-      await connect();
+      // await connect();
+      console.log("Solana wallet connection not implemented");
     } catch (error) {
       console.error("Failed to connect Solana wallet:", error);
     }
@@ -39,7 +46,8 @@ export default function SolanaWalletConnection() {
 
   const handleDisconnect = async () => {
     try {
-      await disconnect();
+      // await disconnect();
+      console.log("Solana wallet disconnection not implemented");
     } catch (error) {
       console.error("Failed to disconnect Solana wallet:", error);
     }
@@ -78,12 +86,10 @@ export default function SolanaWalletConnection() {
               <span className="animate-pulse">Loading domain...</span>
             ) : (
               displayName ||
-              `${publicKey?.toString().slice(0, 8)}...${publicKey
-                ?.toString()
-                .slice(-8)}`
+              "Connected"
             )}
           </p>
-          {displayName && displayName.endsWith(".sol") && (
+          {displayName && false && (
             <div className="flex items-center space-x-1 mt-1">
               <span className="text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">
                 SNS
@@ -145,13 +151,18 @@ export default function SolanaWalletConnection() {
 
 // Compact version for use in other components
 export function SolanaWalletStatus() {
-  const isProviderReady = useSolanaProviderReady();
-  const { isConnected, publicKey, connect } = useSolanaWalletConnection();
-  const { connection } = useSolanaWallet();
-  const { displayName, isLoading: isLoadingDomain } = useAddressDisplay(
-    publicKey,
-    connection
-  );
+  // const isProviderReady = useSolanaProviderReady();
+  // const { isConnected, publicKey, connect } = useSolanaWalletConnection();
+  // const { connection } = useSolanaWallet();
+  // const { displayName, isLoading: isLoadingDomain } = useAddressDisplay(
+  //   publicKey,
+  //   connection
+  // );
+  const isProviderReady = true;
+  const isConnected = false;
+  const publicKey = null;
+  const displayName = null;
+  const isLoadingDomain = false;
 
   // Only render the component if provider is ready
   if (!isProviderReady) {
@@ -166,7 +177,7 @@ export function SolanaWalletStatus() {
   if (!isConnected) {
     return (
       <button
-        onClick={connect}
+        onClick={() => console.log("Solana connection not implemented")}
         className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg transition-colors"
       >
         <span>🔥</span>
@@ -184,12 +195,10 @@ export function SolanaWalletStatus() {
             <span className="animate-pulse">Loading...</span>
           ) : (
             displayName ||
-            `${publicKey?.toString().slice(0, 8)}...${publicKey
-              ?.toString()
-              .slice(-8)}`
+            "Connected"
           )}
         </span>
-        {displayName && displayName.endsWith(".sol") && (
+        {displayName && false && (
           <span className="text-xs text-purple-400">SNS Domain</span>
         )}
       </div>
