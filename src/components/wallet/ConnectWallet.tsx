@@ -30,7 +30,7 @@ export default function ConnectWallet({ onConnect }: ConnectWalletProps) {
     setConnectingWallet(walletType);
     
     try {
-      onConnect?.(walletType);
+      await onConnect?.(walletType);
       console.log(`Connected to ${walletType}`);
     } catch (error) {
       console.error(`Failed to connect to ${walletType}:`, error);
@@ -43,18 +43,21 @@ export default function ConnectWallet({ onConnect }: ConnectWalletProps) {
   const wallets = [
     { 
       name: 'MetaMask', 
+      type: 'metamask' as WalletType,
       icon: '🦊', 
       variant: 'primary' as const,
       description: 'Most popular Ethereum wallet'
     },
     { 
       name: 'Phantom', 
+      type: 'phantom' as WalletType,
       icon: '👻', 
       variant: 'secondary' as const,
       description: 'Solana & multi-chain wallet'
     },
     { 
       name: 'WalletConnect', 
+      type: 'walletconnect' as WalletType,
       icon: '🔗', 
       variant: 'premium' as const,
       description: 'Connect any wallet'
@@ -70,9 +73,13 @@ export default function ConnectWallet({ onConnect }: ConnectWalletProps) {
             key={wallet.name}
             variant="default"
             size="lg"
-            onClick={() => handleConnect(wallet.name as WalletType)}
+            onClick={() => handleConnect(wallet.type)}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              handleConnect(wallet.type);
+            }}
             disabled={isConnecting}
-            className={`w-full justify-start ${wallet.variant === 'primary' ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl border border-blue-500/20' : wallet.variant === 'secondary' ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg hover:shadow-xl border border-emerald-400/20' : 'bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-700 hover:via-pink-700 hover:to-blue-700 text-white shadow-2xl hover:shadow-purple-500/25 border border-purple-400/30'}`}
+            className={`w-full justify-start touch-manipulation ${wallet.variant === 'primary' ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl border border-blue-500/20' : wallet.variant === 'secondary' ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg hover:shadow-xl border border-emerald-400/20' : 'bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-700 hover:via-pink-700 hover:to-blue-700 text-white shadow-2xl hover:shadow-purple-500/25 border border-purple-400/30'}`}
           >
             <div className="flex-1 text-left">
               <div className="font-semibold">{wallet.icon} {wallet.name}</div>
