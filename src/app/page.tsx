@@ -29,6 +29,7 @@ const PurchaseModal = lazy(() => import("@/components/modal/PurchaseModal"));
 
 const CountUpText = ({ value, duration = 2000, prefix = '', suffix = '', className = '' }: { value: number; duration?: number; prefix?: string; suffix?: string; className?: string; }) => {
   const [count, setCount] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     let startTime: number;
@@ -55,7 +56,11 @@ const CountUpText = ({ value, duration = 2000, prefix = '', suffix = '', classNa
   }, [value, duration]);
 
   return (
-    <span className={`font-mono font-bold ${className}`}>
+    <span 
+      className={`font-mono font-bold ${className} transition-all duration-300 ${isHovered ? 'scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]' : ''}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       {prefix}{count.toLocaleString()}{suffix}
     </span>
   );
@@ -180,6 +185,7 @@ function WalletConnectionPiece({ onConnect }: { onConnect: (type: WalletType) =>
  * MODULAR: Activity Feed Puzzle Piece
  */
 function ActivityFeedPiece() {
+  const [hoveredActivity, setHoveredActivity] = useState<number | null>(null);
   const activities = [
     { text: "Sarah joined Ocean Warriors", icon: "🌊", time: "2m ago" },
     { text: "Climate Network won $500", icon: "🌍", time: "5m ago" },
@@ -201,10 +207,12 @@ function ActivityFeedPiece() {
           {activities.map((activity, index) => (
             <div
               key={index}
-              className={`glass p-3 rounded-lg hover-scale animate-fade-in-up stagger-${index + 1}`}
+              className={`glass p-3 rounded-lg hover-scale animate-fade-in-up stagger-${index + 1} transition-all duration-300 ${hoveredActivity === index ? 'ring-1 ring-white/30 bg-white/5' : ''}`}
+              onMouseEnter={() => setHoveredActivity(index)}
+              onMouseLeave={() => setHoveredActivity(null)}
             >
               <CompactFlex align="center" gap="sm">
-                <span className="text-xl">{activity.icon}</span>
+                <span className="text-xl transition-transform duration-300 hover:scale-125">{activity.icon}</span>
                 <div className="flex-1">
                   <p className="text-sm text-white leading-relaxed">
                     {activity.text}
@@ -226,6 +234,8 @@ function ActivityFeedPiece() {
  * MODULAR: Syndicates Puzzle Piece
  */
 function SyndicatesPiece() {
+  const [hoveredSyndicate, setHoveredSyndicate] = useState<number | null>(null);
+  
   const syndicates = [
     { name: "Ocean Warriors", members: 1247, icon: "🌊", color: "blue" },
     { name: "Climate Action", members: 2156, icon: "🌍", color: "green" },
@@ -242,10 +252,12 @@ function SyndicatesPiece() {
           {syndicates.map((syndicate, index) => (
             <div 
               key={index}
-              className={`glass-premium p-3 rounded-lg hover-lift animate-scale-in stagger-${index + 1}`}
+              className={`glass-premium p-3 rounded-lg hover-lift animate-scale-in stagger-${index + 1} transition-all duration-300 ${hoveredSyndicate === index ? 'ring-2 ring-white/50' : ''}`}
+              onMouseEnter={() => setHoveredSyndicate(index)}
+              onMouseLeave={() => setHoveredSyndicate(null)}
             >
               <CompactStack spacing="xs" align="center">
-                <span className="text-2xl">{syndicate.icon}</span>
+                <span className="text-2xl transition-transform duration-300 hover:scale-125">{syndicate.icon}</span>
                 <p className="text-sm font-semibold text-center text-gray-300 leading-relaxed">
                   {syndicate.name}
                 </p>
@@ -273,28 +285,30 @@ function StatsPieces() {
   ];
 
   return (
-    <CompactStack spacing="md" align="center">
-      {stats.map((stat, index) => (
-        <PuzzlePiece 
-          key={index}
-          variant="primary" 
-          size="sm" 
-          shape="rounded"
-          className={`animate-fade-in-up stagger-${index + 1} w-full max-w-xs`}
-        >
-          <CompactStack spacing="xs" align="center">
-            <CountUpText 
-              value={stat.value}
-              prefix={stat.prefix}
-              className={`text-2xl font-black text-${stat.color}-400`}
-            />
-            <p className="text-xs text-center text-gray-400 leading-relaxed">
-              {stat.label}
-            </p>
-          </CompactStack>
-        </PuzzlePiece>
-      ))}
-    </CompactStack>
+    <div className="flex flex-col items-center w-full max-w-2xl mx-auto">
+      <CompactStack spacing="md" align="center">
+        {stats.map((stat, index) => (
+          <PuzzlePiece 
+            key={index}
+            variant="primary" 
+            size="sm" 
+            shape="rounded"
+            className={`animate-fade-in-up stagger-${index + 1} w-full max-w-xs`}
+          >
+            <CompactStack spacing="xs" align="center">
+              <CountUpText 
+                value={stat.value}
+                prefix={stat.prefix}
+                className={`text-2xl font-black text-${stat.color}-400`}
+              />
+              <p className="text-xs text-center text-gray-400 leading-relaxed">
+                {stat.label}
+              </p>
+            </CompactStack>
+          </PuzzlePiece>
+        ))}
+      </CompactStack>
+    </div>
   );
 }
 
@@ -334,8 +348,12 @@ export default function PremiumHome() {
       <div className="min-h-screen relative overflow-hidden">
         {/* Premium animated background */}
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.1),transparent_50%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.1),transparent_50%)] animate-pulse" style={{ animationDuration: '8s' }} />
           <div className="absolute top-0 left-0 w-full h-full opacity-5" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.02'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }} />
+          {/* DELIGHT: Floating animated elements */}
+          <div className="absolute top-1/4 left-1/4 w-4 h-4 bg-blue-500/20 rounded-full animate-bounce" style={{ animationDelay: '0s', animationDuration: '3s' }}></div>
+          <div className="absolute top-3/4 right-1/3 w-3 h-3 bg-purple-500/20 rounded-full animate-bounce" style={{ animationDelay: '1s', animationDuration: '4s' }}></div>
+          <div className="absolute bottom-1/4 left-1/3 w-2 h-2 bg-green-500/20 rounded-full animate-bounce" style={{ animationDelay: '2s', animationDuration: '5s' }}></div>
         </div>
 
         {/* Main content */}
@@ -346,8 +364,10 @@ export default function PremiumHome() {
               <CompactStack spacing="lg" align="center">
                 {/* Brand */}
                 <div className="text-center animate-fade-in-up">
-                  <h1 className="font-black text-4xl md:text-6xl lg:text-7xl leading-tight tracking-tight bg-gradient-to-r from-purple-400 via-blue-500 to-green-400 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(59,130,246,0.5)]">
+                  <h1 className="font-black text-4xl md:text-6xl lg:text-7xl leading-tight tracking-tight bg-gradient-to-r from-purple-400 via-blue-500 to-green-400 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(59,130,246,0.5)] relative inline-block">
                     Syndicate
+                    {/* DELIGHT: Animated background elements for the title */}
+                    <span className="absolute inset-0 bg-gradient-to-r from-purple-400 via-blue-500 to-green-400 bg-clip-text text-transparent blur-lg opacity-30 animate-pulse"></span>
                   </h1>
                   <p className="text-xl mt-4 max-w-2xl text-gray-300 leading-relaxed">
                     Social lottery coordination • Cross-chain • Cause-driven
@@ -355,8 +375,18 @@ export default function PremiumHome() {
                 </div>
 
                 {/* Central Jackpot Puzzle Piece */}
-                <div className="animate-scale-in">
+                <div 
+                  className="animate-scale-in relative"
+                  style={{ 
+                    position: 'relative',
+                    overflow: 'visible'
+                  }}
+                >
                   <PremiumJackpotPiece onBuyClick={handlePurchaseAction} />
+                  {/* DELIGHT: Subtle floating particles around jackpot */}
+                  <div className="absolute -top-4 -left-4 w-2 h-2 bg-yellow-400 rounded-full opacity-70 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="absolute -top-2 -right-6 w-1.5 h-1.5 bg-orange-400 rounded-full opacity-70 animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+                  <div className="absolute -bottom-4 -right-4 w-2 h-2 bg-red-400 rounded-full opacity-70 animate-pulse" style={{ animationDelay: '0.8s' }}></div>
                 </div>
               </CompactStack>
             </CompactContainer>
@@ -379,7 +409,7 @@ export default function PremiumHome() {
               </CompactStack>
 
               {/* Vertical Stats */}
-              <div className="mt-12 w-full max-w-2xl">
+              <div className="mt-12 w-full">
                 <StatsPieces />
               </div>
             </CompactContainer>
