@@ -273,14 +273,14 @@ function StatsPieces() {
   ];
 
   return (
-    <OverlappingPieces overlap="md">
+    <CompactStack spacing="md" align="center">
       {stats.map((stat, index) => (
         <PuzzlePiece 
           key={index}
           variant="primary" 
           size="sm" 
           shape="rounded"
-          className={`animate-fade-in-up stagger-${index + 1}`}
+          className={`animate-fade-in-up stagger-${index + 1} w-full max-w-xs`}
         >
           <CompactStack spacing="xs" align="center">
             <CountUpText 
@@ -294,7 +294,7 @@ function StatsPieces() {
           </CompactStack>
         </PuzzlePiece>
       ))}
-    </OverlappingPieces>
+    </CompactStack>
   );
 }
 
@@ -372,18 +372,14 @@ export default function PremiumHome() {
                 </div>
               )}
 
-              {/* Main Puzzle Grid */}
-              <PuzzleGrid columns={3} gap="lg" staggered>
-                <div className="lg:col-span-2">
-                  <ActivityFeedPiece />
-                </div>
-                <div>
-                  <SyndicatesPiece />
-                </div>
-              </PuzzleGrid>
+              {/* Stack Activity Feed and Syndicates vertically */}
+              <CompactStack spacing="lg" align="center">
+                <ActivityFeedPiece />
+                <SyndicatesPiece />
+              </CompactStack>
 
-              {/* Overlapping Stats */}
-              <div className="mt-12 flex justify-center">
+              {/* Vertical Stats */}
+              <div className="mt-12 w-full max-w-2xl">
                 <StatsPieces />
               </div>
             </CompactContainer>
