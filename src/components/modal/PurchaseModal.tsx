@@ -10,15 +10,17 @@
  * - PERFORMANT: Optimized animations
  */
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { X, Plus, Minus, Loader2, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
+import { useTicketPurchase } from '@/hooks/useTicketPurchase';
+import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { Button } from "@/shared/components/ui/Button";
 import { CompactStack, CompactFlex } from '@/shared/components/premium/CompactLayout';
 
-
-interface PurchaseModalProps {
+export interface PurchaseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (txHash: string) => void;
+  onSuccess?: (ticketCount: number) => void;
 }
 
 const CountUpText = ({ value, duration = 2000, prefix = '', suffix = '', className = '' }: { value: number; duration?: number; prefix?: string; suffix?: string; className?: string; }) => {
@@ -56,15 +58,37 @@ const CountUpText = ({ value, duration = 2000, prefix = '', suffix = '', classNa
 }
 
 export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps) {
+  const { isConnected } = useWalletConnection();
+  const {
+    // State
+    isInitializing,
+    isPurchasing,
+    isApproving,
+    isCheckingBalance,
+    userBalance,
+    ticketPrice,
+    currentJackpot,
+    lastTxHash,
+    error,
+    purchaseSuccess,
+    purchasedTicketCount,
+    // Actions
+    purchaseTickets,
+    refreshBalance,
+    clearError,
+    reset
+  } = useTicketPurchase();
+
   const [ticketCount, setTicketCount] = useState(1);
-  const [isPurchasing, setIsPurchasing] = useState(false);
   const [step, setStep] = useState<'select' | 'confirm' | 'processing' | 'success'>('select');
 
+  // Reset modal state when opened
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
-      setStep('select');
       setTicketCount(1);
+      setStep('select');
+      clearError();
     } else {
       document.body.style.overflow = 'unset';
     }
@@ -72,33 +96,44 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen]);
+  }, [isOpen, clearError]);
 
-  const handlePurchase = async () => {
-    setIsPurchasing(true);
-    setStep('processing');
-    
-    try {
-      // Simulate purchase process
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const mockTxHash = `0x${Math.random().toString(16).substr(2, 64)}`;
+  // Handle purchase success
+  useEffect(() => {
+    if (purchaseSuccess) {
       setStep('success');
-      onSuccess?.(mockTxHash);
+      onSuccess?.(purchasedTicketCount);
       
       // Auto-close after success
       setTimeout(() => {
         onClose();
-      }, 3000);
+        reset();
+      }, 5000);
+    }
+  }, [purchaseSuccess, purchasedTicketCount, onSuccess, onClose, reset]);
+
+  const handlePurchase = async () => {
+    if (!isConnected) {
+      return;
+    }
+
+    setStep('processing');
+    
+    try {
+      const result = await purchaseTickets(ticketCount);
+      
+      if (!result.success) {
+        setStep('select');
+      }
     } catch (error) {
       console.error('Purchase failed:', error);
       setStep('select');
-    } finally {
-      setIsPurchasing(false);
     }
   };
 
   const quickAmounts = [1, 5, 10, 25];
+  const totalCost = (parseFloat(ticketPrice) * ticketCount).toFixed(2);
+  const hasInsufficientBalance = userBalance && parseFloat(userBalance.usdc) < parseFloat(totalCost);
 
   if (!isOpen) return null;
 
@@ -127,9 +162,63 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
           </Button>
         </CompactFlex>
 
+        {/* Wallet Status */}
+        {!isConnected && (
+          <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-6">
+            <div className="flex items-center gap-2 text-red-400">
+              <AlertCircle size={20} />
+              <span>Please connect your wallet to purchase tickets</span>
+            </div>
+          </div>
+        )}
+
+        {/* Balance Display */}
+        {isConnected && userBalance && (
+          <div className="bg-white/5 rounded-lg p-4 mb-6">
+            <div className="flex justify-between items-center">
+              <span className="text-white/70">Your USDC Balance:</span>
+              <span className="text-white font-semibold">${userBalance.usdc}</span>
+            </div>
+            {isCheckingBalance && (
+              <div className="flex items-center gap-2 mt-2 text-white/60">
+                <Loader2 size={16} className="animate-spin" />
+                <span className="text-sm">Updating balance...</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-6">
+            <div className="flex items-center gap-2 text-red-400">
+              <AlertCircle size={20} />
+              <span>{error}</span>
+            </div>
+            <button
+              onClick={clearError}
+              className="text-red-300 hover:text-red-200 text-sm mt-2 underline"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         {/* Content based on step */}
         {step === 'select' && (
           <CompactStack spacing="lg">
+            {/* Current Jackpot */}
+            <div className="text-center mb-4">
+              <p className="text-white/70">
+                Current Jackpot: <span className="text-yellow-400 font-bold">${currentJackpot} USDC</span>
+              </p>
+              {ticketPrice && (
+                <p className="text-white/60 text-sm mt-1">
+                  Ticket Price: ${ticketPrice} USDC
+                </p>
+              )}
+            </div>
+
             {/* Quick amount selection */}
             <div>
               <p className="mb-3 text-sm font-medium">
@@ -161,6 +250,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
                   size="sm"
                   onClick={() => setTicketCount(Math.max(1, ticketCount - 1))}
                   className="w-12 h-12 p-0 rounded-full"
+                  disabled={ticketCount <= 1}
                 >
                   -
                 </Button>
@@ -190,13 +280,13 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
               <CompactFlex align="center" justify="between" className="mb-2">
                 <p className="font-medium text-gray-300 leading-relaxed">Total Cost:</p>
                 <div className="text-3xl font-black text-green-400">
-                  $<CountUpText value={ticketCount} duration={300} />
+                  ${totalCost} USDC
                 </div>
               </CompactFlex>
               
               <CompactFlex align="center" justify="between" gap="sm" className="text-sm">
-<p className="text-sm text-gray-400 leading-relaxed">
-                  $1 per ticket
+                <p className="text-sm text-gray-400 leading-relaxed">
+                  {ticketCount} ticket{ticketCount !== 1 ? 's' : ''}
                 </p>
                 <span className="inline-flex items-center font-semibold rounded-full shadow-lg backdrop-blur-sm transform hover:scale-105 transition-transform duration-200 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-2 py-1 text-xs">
                   🌊 Supports Ocean Cleanup
@@ -204,14 +294,41 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
               </CompactFlex>
             </div>
 
+            {/* Insufficient Balance Warning */}
+            {hasInsufficientBalance && (
+              <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4">
+                <div className="flex items-center gap-2 text-yellow-400">
+                  <AlertCircle size={20} />
+                  <span>Insufficient USDC balance</span>
+                </div>
+                <button
+                  onClick={refreshBalance}
+                  className="text-yellow-300 hover:text-yellow-200 text-sm mt-2 underline"
+                >
+                  Refresh Balance
+                </button>
+              </div>
+            )}
+
             {/* Purchase button */}
             <Button
               variant="default"
               size="lg"
-              className="w-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white shadow-2xl hover:shadow-yellow-500/30 border border-yellow-400/30"
+              className="w-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white shadow-2xl hover:shadow-yellow-500/30 border border-yellow-400/30 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handlePurchase}
+              disabled={!isConnected || isPurchasing || isInitializing || !!hasInsufficientBalance}
             >
-              ⚡ Purchase {ticketCount} Ticket{ticketCount > 1 ? 's' : ''}
+              {!isConnected ? (
+                'Connect Wallet'
+              ) : isInitializing ? (
+                <>⏳ Initializing...</>
+              ) : isPurchasing ? (
+                <>⚡ Processing...</>
+              ) : hasInsufficientBalance ? (
+                'Insufficient Balance'
+              ) : (
+                `⚡ Purchase ${ticketCount} Ticket${ticketCount > 1 ? 's' : ''} - $${totalCost}`
+              )}
             </Button>
 
             {/* Terms */}
@@ -226,7 +343,10 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
             <div className="w-20 h-20 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
             <h2 className="font-bold text-xl md:text-4xl lg:text-5xl leading-tight tracking-tight text-white">Processing Purchase...</h2>
             <p className="text-gray-400 text-center leading-relaxed">
-              Please wait while we process your {ticketCount} ticket{ticketCount > 1 ? 's' : ''}
+              {isApproving ? 'Approving USDC spending...' : 'Purchasing your tickets...'}
+            </p>
+            <p className="text-sm text-white/50 text-center">
+              Please confirm the transaction in your wallet
             </p>
           </CompactStack>
         )}
@@ -239,12 +359,30 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
             </h2>
             <div className="glass p-4 rounded-xl text-center">
               <p className="font-semibold mb-2 text-gray-300 leading-relaxed">
-                {ticketCount} Ticket{ticketCount > 1 ? 's' : ''} Purchased
+                {purchasedTicketCount} Ticket{purchasedTicketCount > 1 ? 's' : ''} Purchased
               </p>
               <p className="text-sm text-gray-400">
                 Good luck in the draw! 🍀
               </p>
             </div>
+            
+            {lastTxHash && (
+              <div className="bg-white/5 rounded-lg p-4 w-full">
+                <div className="flex items-center justify-between">
+                  <span className="text-white/70 text-sm">Transaction:</span>
+                  <a
+                    href={`https://basescan.org/tx/${lastTxHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm"
+                  >
+                    View on Basescan
+                    <ExternalLink size={14} />
+                  </a>
+                </div>
+              </div>
+            )}
+            
             <p className="text-sm text-gray-400 text-center">
               This modal will close automatically...
             </p>
