@@ -24,13 +24,12 @@ export default function ConnectWallet({ onConnect }: ConnectWalletProps) {
   const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
 
   const handleConnect = async (walletType: WalletType) => {
+    if (isConnecting) return;
+    
     setIsConnecting(true);
     setConnectingWallet(walletType);
     
     try {
-      // Simulate connection delay with realistic timing
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
       onConnect?.(walletType);
       console.log(`Connected to ${walletType}`);
     } catch (error) {

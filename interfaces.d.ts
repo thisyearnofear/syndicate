@@ -5,7 +5,7 @@ import type {
 } from '@metamask/providers';
 
 /*
- * Window type extension to support ethereum
+ * Window type extension to support ethereum and phantom
  */
 declare global {
   // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
@@ -14,6 +14,9 @@ declare global {
       setProvider?: (provider: MetaMaskInpageProvider) => void;
       detected?: MetaMaskInpageProvider[];
       providers?: MetaMaskInpageProvider[];
+    };
+    phantom?: {
+      ethereum?: MetaMaskInpageProvider;
     };
   }
 
