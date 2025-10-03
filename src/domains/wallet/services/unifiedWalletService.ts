@@ -133,6 +133,8 @@ export function useUnifiedWallet(): WalletState & WalletActions {
    * PERFORMANT: Connect to wallet with error handling
    */
   const connect = useCallback(async (walletType: WalletType) => {
+    if (state.isConnecting) return;
+
     setState(prev => ({ ...prev, isConnecting: true, error: null }));
 
     try {
@@ -151,37 +153,167 @@ export function useUnifiedWallet(): WalletState & WalletActions {
 
       switch (walletType) {
         case WalletTypes.METAMASK:
-          const accounts = await window.ethereum!.request({ method: 'eth_requestAccounts' });
+          const accounts = await window.ethereum!.request({ method: 'eth_requestAccounts' }) as string[];
+          if (!accounts || accounts.length === 0) {
+            throw createError('WALLET_ERROR', 'No accounts found. Please unlock MetaMask.');
+          }
+
           const network = await window.ethereum!.request({ method: 'eth_chainId' });
-          address = (accounts as string[])[0] || '';
-          chainId = parseInt((network as string) || '0x1', 16);
+          const numericChainId = parseInt((network as string) || '0x1', 16);
+          
+          // Check if we're on Base network (8453), if not, try to switch
+          if (numericChainId !== 8453) {
+            try {
+              await window.ethereum!.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: '0x2105' }], // Base mainnet in hex
+              });
+            } catch (switchError: any) {
+              // If Base network is not added to wallet, add it
+              if (switchError.code === 4902) {
+                await window.ethereum!.request({
+                  method: 'wallet_addEthereumChain',
+                  params: [{
+                    chainId: '0x2105',
+                    chainName: 'Base',
+                    nativeCurrency: {
+                      name: 'Ethereum',
+                      symbol: 'ETH',
+                      decimals: 18,
+                    },
+                    rpcUrls: ['https://mainnet.base.org'],
+                    blockExplorerUrls: ['https://basescan.org'],
+                  }],
+                });
+              } else {
+                throw switchError;
+              }
+            }
+          }
+
+          // Initialize Web3 service after successful connection
+          try {
+            // Import web3Service statically to avoid webpack issues
+            const { web3Service } = await import('@/services/web3Service');
+            const initialized = await web3Service.initialize();
+            
+            if (!initialized) {
+              throw createError('WEB3_ERROR', 'Failed to initialize Web3 service. Please try again.');
+            }
+          } catch (importError) {
+            console.warn('Web3 service not available:', importError);
+            // Don't throw here - wallet connection can work without Web3 service for basic functionality
+          }
+
+          address = accounts[0] || '';
+          chainId = 8453; // Base network
           break;
 
         case WalletTypes.PHANTOM:
-          const response = await (window as any).solana!.connect();
-          address = response.publicKey.toString();
-          chainId = 101; // Solana mainnet
+          // Check if Phantom is installed
+          if (!window.phantom?.ethereum) {
+            throw createError('WALLET_NOT_FOUND', 'Phantom wallet is not installed. Please install it from phantom.app');
+          }
+
+          try {
+            // Request account access
+            const phantomAccounts = await window.phantom.ethereum.request({
+              method: 'eth_requestAccounts',
+            }) as string[];
+
+            if (!phantomAccounts || phantomAccounts.length === 0) {
+              throw createError('CONNECTION_REJECTED', 'No accounts found. Please unlock your Phantom wallet.');
+            }
+
+            address = phantomAccounts[0];
+
+            // Check if we're on the correct network (Base - 8453)
+            const phantomChainId = await window.phantom.ethereum.request({
+              method: 'eth_chainId',
+            }) as string;
+
+            const currentChainId = parseInt(phantomChainId, 16);
+            
+            if (currentChainId !== 8453) {
+              try {
+                // Try to switch to Base network
+                await window.phantom.ethereum.request({
+                  method: 'wallet_switchEthereumChain',
+                  params: [{ chainId: '0x2105' }], // Base mainnet in hex
+                });
+              } catch (switchError: any) {
+                // If the chain hasn't been added to Phantom yet, add it
+                if (switchError.code === 4902) {
+                  await window.phantom.ethereum.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [{
+                      chainId: '0x2105',
+                      chainName: 'Base',
+                      nativeCurrency: {
+                        name: 'Ethereum',
+                        symbol: 'ETH',
+                        decimals: 18,
+                      },
+                      rpcUrls: ['https://mainnet.base.org'],
+                      blockExplorerUrls: ['https://basescan.org'],
+                    }],
+                  });
+                } else {
+                  throw switchError;
+                }
+              }
+            }
+
+            // Initialize Web3 service
+            try {
+              const { web3Service } = await import('@/services/web3Service');
+              const initialized = await web3Service.initialize();
+              
+              if (!initialized) {
+                console.warn('Web3 service initialization failed for Phantom');
+              }
+            } catch (web3Error) {
+              console.warn('Web3 service initialization failed:', web3Error);
+              // Continue without Web3 service for basic wallet functionality
+            }
+
+            chainId = 8453; // Base network
+          } catch (error: any) {
+            if (error.code === 4001) {
+              throw createError('CONNECTION_REJECTED', 'Connection rejected by user');
+            }
+            throw createError('CONNECTION_FAILED', `Failed to connect to Phantom: ${error.message}`);
+          }
           break;
 
         case WalletTypes.WALLETCONNECT:
-          // Simulate WalletConnect connection
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          address = `0x${Math.random().toString(16).substr(2, 40)}`;
-          chainId = 1;
+          try {
+            // For now, show coming soon message for WalletConnect
+            throw createError('WALLET_NOT_SUPPORTED', 'WalletConnect is coming soon. Please use MetaMask for now.');
+          } catch (error: any) {
+            console.error('WalletConnect error:', error);
+            throw error;
+          }
           break;
 
         case WalletTypes.SOCIAL:
-          // Simulate social login
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          address = `0x${Math.random().toString(16).substr(2, 40)}`;
-          chainId = 1;
+          try {
+            // For now, show coming soon message for social login
+            throw createError('WALLET_NOT_SUPPORTED', 'Social login is coming soon. Please use MetaMask for now.');
+          } catch (error: any) {
+            console.error('Social login error:', error);
+            throw error;
+          }
           break;
 
         case WalletTypes.NEAR:
-          // Simulate NEAR connection
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          address = `user${Math.random().toString(36).substr(2, 9)}.near`;
-          chainId = 0; // NEAR doesn't use chainId
+          try {
+            // For now, show coming soon message for NEAR wallet
+            throw createError('WALLET_NOT_SUPPORTED', 'NEAR wallet is coming soon. Please use MetaMask for now.');
+          } catch (error: any) {
+            console.error('NEAR wallet error:', error);
+            throw error;
+          }
           break;
 
         default:
@@ -214,7 +346,7 @@ export function useUnifiedWallet(): WalletState & WalletActions {
       }));
       throw error;
     }
-  }, []);
+  }, [state.isConnecting]);
 
   /**
    * CLEAN: Disconnect wallet

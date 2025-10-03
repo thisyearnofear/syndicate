@@ -317,8 +317,15 @@ export default function PremiumHome() {
   const handleWalletConnect = useCallback(async (walletType: WalletType) => {
     try {
       await connect(walletType);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to connect wallet:', error);
+      
+      // Show user-friendly error message
+      const errorMessage = error?.message || 'Failed to connect wallet. Please try again.';
+      
+      // You could add a toast notification here or update UI state
+      // For now, we'll log the error for debugging
+      console.warn('Wallet connection error for user:', errorMessage);
     }
   }, [connect]);
 
