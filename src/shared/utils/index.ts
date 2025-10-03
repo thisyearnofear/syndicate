@@ -68,9 +68,25 @@ export function formatNumber(num: number | string): string {
  * PERFORMANT: Format time remaining
  */
 export function formatTimeRemaining(endTimestamp: string | number): string {
-  const end = typeof endTimestamp === 'string' ? parseInt(endTimestamp) * 1000 : endTimestamp;
+  // Convert timestamp to number and determine if it's in seconds or milliseconds
+  const numericTimestamp = typeof endTimestamp === 'string' ? parseFloat(endTimestamp) : endTimestamp;
+  
+  // Determine if the timestamp is in seconds (typically ~10 digits) or milliseconds (typically ~13 digits)
+  // Unix timestamps in seconds are less than 1e10 (year 2286), while those in milliseconds are larger
+  const timestampInMs = numericTimestamp < 1e10 ? numericTimestamp * 1000 : numericTimestamp;
+  
   const now = Date.now();
-  const diff = end - now;
+  const diff = timestampInMs - now;
+
+  // Handle invalid timestamps
+  if (isNaN(timestampInMs) || timestampInMs <= 0) {
+    return 'TBD';
+  }
+
+  // Handle extremely large future dates (likely data errors)
+  if (diff > 100 * 365 * 24 * 60 * 60 * 1000) { // More than 100 years
+    return 'TBD';
+  }
 
   if (diff <= 0) return 'Ended';
 
