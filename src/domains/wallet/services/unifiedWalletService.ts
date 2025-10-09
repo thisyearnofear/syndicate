@@ -52,7 +52,7 @@ export function getAvailableWallets(): WalletType[] {
   const available: WalletType[] = [];
 
   // Check for MetaMask
-  if (typeof window !== 'undefined' && window.ethereum?.isMetaMask) {
+  if (typeof window !== 'undefined' && (window as any).ethereum?.isMetaMask) {
     available.push(WalletTypes.METAMASK);
   }
 
@@ -84,8 +84,8 @@ export function getWalletStatus(walletType: WalletType): {
   switch (walletType) {
     case WalletTypes.METAMASK:
       return {
-        isAvailable: typeof window !== 'undefined' && !!window.ethereum?.isMetaMask,
-        isInstalled: typeof window !== 'undefined' && !!window.ethereum?.isMetaMask,
+        isAvailable: typeof window !== 'undefined' && !!(window as any).ethereum?.isMetaMask,
+        isInstalled: typeof window !== 'undefined' && !!(window as any).ethereum?.isMetaMask,
         downloadUrl: 'https://metamask.io/download/',
       };
 
@@ -113,6 +113,73 @@ export function getWalletStatus(walletType: WalletType): {
 }
 
 // =============================================================================
+// BROWSER COMPATIBILITY UTILS
+// =============================================================================
+
+/**
+ * Check if we're in a browser environment
+ */
+function isBrowser(): boolean {
+  return typeof window !== 'undefined' && typeof document !== 'undefined';
+}
+
+/**
+ * Check if localStorage is available
+ */
+function isLocalStorageAvailable(): boolean {
+  if (!isBrowser()) return false;
+  
+  try {
+    const testKey = '__storage_test__';
+    localStorage.setItem(testKey, testKey);
+    localStorage.removeItem(testKey);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Safe localStorage get
+ */
+function safeLocalStorageGet(key: string): string | null {
+  if (!isLocalStorageAvailable()) return null;
+  
+  try {
+    return localStorage.getItem(key);
+  } catch (e) {
+    console.warn('Failed to read from localStorage:', e);
+    return null;
+  }
+}
+
+/**
+ * Safe localStorage set
+ */
+function safeLocalStorageSet(key: string, value: string): void {
+  if (!isLocalStorageAvailable()) return;
+  
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    console.warn('Failed to write to localStorage:', e);
+  }
+}
+
+/**
+ * Safe localStorage remove
+ */
+function safeLocalStorageRemove(key: string): void {
+  if (!isLocalStorageAvailable()) return;
+  
+  try {
+    localStorage.removeItem(key);
+  } catch (e) {
+    console.warn('Failed to remove from localStorage:', e);
+  }
+}
+
+// =============================================================================
 // WALLET SERVICE HOOK
 // =============================================================================
 
@@ -133,6 +200,13 @@ export function useUnifiedWallet(): WalletState & WalletActions {
    * PERFORMANT: Connect to wallet with error handling
    */
   const connect = useCallback(async (walletType: WalletType) => {
+    // Check if we're in a browser environment
+    if (!isBrowser()) {
+      const error = createError('ENV_ERROR', 'Wallet connection is only available in browser environments');
+      setState(prev => ({ ...prev, error: error.message }));
+      throw error;
+    }
+
     if (state.isConnecting) return;
 
     setState(prev => ({ ...prev, isConnecting: true, error: null }));
@@ -153,71 +227,84 @@ export function useUnifiedWallet(): WalletState & WalletActions {
 
       switch (walletType) {
         case WalletTypes.METAMASK:
-          const accounts = await window.ethereum!.request({ method: 'eth_requestAccounts' }) as string[];
-          if (!accounts || accounts.length === 0) {
-            throw createError('WALLET_ERROR', 'No accounts found. Please unlock MetaMask.');
+          // Check if MetaMask is available
+          if (!(window as any).ethereum) {
+            throw createError('WALLET_NOT_FOUND', 'MetaMask is not installed. Please install it from metamask.io');
           }
 
-          const network = await window.ethereum!.request({ method: 'eth_chainId' });
-          const numericChainId = parseInt((network as string) || '0x1', 16);
-          
-          // Check if we're on Base network (8453), if not, try to switch
-          if (numericChainId !== 8453) {
-            try {
-              await window.ethereum!.request({
-                method: 'wallet_switchEthereumChain',
-                params: [{ chainId: '0x2105' }], // Base mainnet in hex
-              });
-            } catch (switchError: any) {
-              // If Base network is not added to wallet, add it
-              if (switchError.code === 4902) {
-                await window.ethereum!.request({
-                  method: 'wallet_addEthereumChain',
-                  params: [{
-                    chainId: '0x2105',
-                    chainName: 'Base',
-                    nativeCurrency: {
-                      name: 'Ethereum',
-                      symbol: 'ETH',
-                      decimals: 18,
-                    },
-                    rpcUrls: ['https://mainnet.base.org'],
-                    blockExplorerUrls: ['https://basescan.org'],
-                  }],
+          try {
+            const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' }) as string[];
+            if (!accounts || accounts.length === 0) {
+              throw createError('WALLET_ERROR', 'No accounts found. Please unlock MetaMask.');
+            }
+
+            const network = await (window as any).ethereum.request({ method: 'eth_chainId' });
+            const numericChainId = parseInt((network as string) || '0x1', 16);
+            
+            // Check if we're on Base network (8453), if not, try to switch
+            if (numericChainId !== 8453) {
+              try {
+                await (window as any).ethereum.request({
+                  method: 'wallet_switchEthereumChain',
+                  params: [{ chainId: '0x2105' }], // Base mainnet in hex
                 });
-              } else {
-                throw switchError;
+              } catch (switchError: any) {
+                // If Base network is not added to wallet, add it
+                if (switchError.code === 4902) {
+                  await (window as any).ethereum.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [{
+                      chainId: '0x2105',
+                      chainName: 'Base',
+                      nativeCurrency: {
+                        name: 'Ethereum',
+                        symbol: 'ETH',
+                        decimals: 18,
+                      },
+                      rpcUrls: ['https://mainnet.base.org'],
+                      blockExplorerUrls: ['https://basescan.org'],
+                    }],
+                  });
+                } else {
+                  throw switchError;
+                }
               }
             }
-          }
 
-          // Initialize Web3 service after successful connection
-          try {
-            // Import web3Service statically to avoid webpack issues
-            const { web3Service } = await import('@/services/web3Service');
-            const initialized = await web3Service.initialize();
-            
-            if (!initialized) {
-              throw createError('WEB3_ERROR', 'Failed to initialize Web3 service. Please try again.');
+            // Initialize Web3 service after successful connection
+            try {
+              // Import web3Service statically to avoid webpack issues
+              const { web3Service } = await import('@/services/web3Service');
+              const initialized = await web3Service.initialize();
+              
+              if (!initialized) {
+                console.warn('Web3 service initialization failed');
+                // Don't throw here - wallet connection can work without Web3 service for basic functionality
+              }
+            } catch (importError) {
+              console.warn('Web3 service not available:', importError);
+              // Don't throw here - wallet connection can work without Web3 service for basic functionality
             }
-          } catch (importError) {
-            console.warn('Web3 service not available:', importError);
-            // Don't throw here - wallet connection can work without Web3 service for basic functionality
-          }
 
-          address = accounts[0] || '';
-          chainId = 8453; // Base network
+            address = accounts[0] || '';
+            chainId = 8453; // Base network
+          } catch (error: any) {
+            if (error.code === 4001) {
+              throw createError('CONNECTION_REJECTED', 'Connection rejected by user');
+            }
+            throw createError('CONNECTION_FAILED', `Failed to connect to MetaMask: ${error.message}`);
+          }
           break;
 
         case WalletTypes.PHANTOM:
           // Check if Phantom is installed
-          if (!window.phantom?.ethereum) {
+          if (!(window as any).phantom?.ethereum) {
             throw createError('WALLET_NOT_FOUND', 'Phantom wallet is not installed. Please install it from phantom.app');
           }
 
           try {
             // Request account access
-            const phantomAccounts = await window.phantom.ethereum.request({
+            const phantomAccounts = await (window as any).phantom.ethereum.request({
               method: 'eth_requestAccounts',
             }) as string[];
 
@@ -228,7 +315,7 @@ export function useUnifiedWallet(): WalletState & WalletActions {
             address = phantomAccounts[0];
 
             // Check if we're on the correct network (Base - 8453)
-            const phantomChainId = await window.phantom.ethereum.request({
+            const phantomChainId = await (window as any).phantom.ethereum.request({
               method: 'eth_chainId',
             }) as string;
 
@@ -237,14 +324,14 @@ export function useUnifiedWallet(): WalletState & WalletActions {
             if (currentChainId !== 8453) {
               try {
                 // Try to switch to Base network
-                await window.phantom.ethereum.request({
+                await (window as any).phantom.ethereum.request({
                   method: 'wallet_switchEthereumChain',
                   params: [{ chainId: '0x2105' }], // Base mainnet in hex
                 });
               } catch (switchError: any) {
                 // If the chain hasn't been added to Phantom yet, add it
                 if (switchError.code === 4902) {
-                  await window.phantom.ethereum.request({
+                  await (window as any).phantom.ethereum.request({
                     method: 'wallet_addEthereumChain',
                     params: [{
                       chainId: '0x2105',
@@ -331,7 +418,7 @@ export function useUnifiedWallet(): WalletState & WalletActions {
       }));
 
       // Store connection in localStorage for persistence
-      localStorage.setItem('wallet_connection', JSON.stringify({
+      safeLocalStorageSet('wallet_connection', JSON.stringify({
         walletType,
         address,
         chainId,
@@ -362,7 +449,7 @@ export function useUnifiedWallet(): WalletState & WalletActions {
     });
 
     // Clear stored connection
-    localStorage.removeItem('wallet_connection');
+    safeLocalStorageRemove('wallet_connection');
   }, []);
 
   /**
@@ -373,9 +460,21 @@ export function useUnifiedWallet(): WalletState & WalletActions {
       throw createError('WALLET_NOT_CONNECTED', 'No wallet connected');
     }
 
+    // Check if we're in a browser environment
+    if (!isBrowser()) {
+      throw createError('ENV_ERROR', 'Chain switching is only available in browser environments');
+    }
+
     try {
-      if (state.walletType === WalletTypes.METAMASK) {
-        await window.ethereum.request({
+      if (state.walletType === WalletTypes.METAMASK && (window as any).ethereum) {
+        await (window as any).ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: `0x${targetChainId.toString(16)}` }],
+        });
+
+        setState(prev => ({ ...prev, chainId: targetChainId }));
+      } else if (state.walletType === WalletTypes.PHANTOM && (window as any).phantom?.ethereum) {
+        await (window as any).phantom.ethereum.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: `0x${targetChainId.toString(16)}` }],
         });
@@ -402,7 +501,10 @@ export function useUnifiedWallet(): WalletState & WalletActions {
    * PERFORMANT: Restore connection on mount
    */
   useEffect(() => {
-    const stored = localStorage.getItem('wallet_connection');
+    // Only run in browser environment
+    if (!isBrowser()) return;
+
+    const stored = safeLocalStorageGet('wallet_connection');
     if (stored) {
       try {
         const { walletType, address, chainId } = JSON.parse(stored);
@@ -417,10 +519,10 @@ export function useUnifiedWallet(): WalletState & WalletActions {
             chainId,
           }));
         } else {
-          localStorage.removeItem('wallet_connection');
+          safeLocalStorageRemove('wallet_connection');
         }
       } catch (error) {
-        localStorage.removeItem('wallet_connection');
+        safeLocalStorageRemove('wallet_connection');
       }
     }
   }, []);
@@ -431,17 +533,5 @@ export function useUnifiedWallet(): WalletState & WalletActions {
     disconnect,
     switchChain,
     clearError,
-    // Computed properties
   };
 }
-
-// =============================================================================
-// TYPE AUGMENTATION
-// =============================================================================
-
-// declare global {
-//   interface Window {
-//     ethereum?: any;
-//     solana?: any;
-//   }
-// }
