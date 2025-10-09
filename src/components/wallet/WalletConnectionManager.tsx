@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { useWalletConnection, WalletType } from "@/hooks/useWalletConnection";
+import { useWalletContext } from "@/context/WalletContext";
 import UnifiedModal from "@/components/modal/UnifiedModal";
 import WalletConnectionOptions from "@/components/wallet/WalletConnectionOptions";
 import WalletInfo from "@/components/wallet/WalletInfo";
@@ -10,53 +11,48 @@ import { Button } from "@/shared/components/ui/Button";
 interface WalletConnectionManagerProps {
   className?: string;
   showConnectionInfo?: boolean;
+  variant?: "default" | "compact" | "minimal";
 }
 
 export default function WalletConnectionManager({
   className = "",
   showConnectionInfo = true,
+  variant = "default",
 }: WalletConnectionManagerProps) {
   const { isConnected, connect, disconnect } = useWalletConnection();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const { state, dispatch } = useWalletContext();
 
   const handleConnectClick = useCallback(() => {
-    setIsModalOpen(true);
-  }, []);
+    dispatch({ type: "OPEN_MODAL" });
+  }, [dispatch]);
 
   const handleCloseModal = useCallback(() => {
-    setIsModalOpen(false);
-    setConnectionError(null);
-  }, []);
+    dispatch({ type: "CLOSE_MODAL" });
+  }, [dispatch]);
 
   const handleSocialLoginClick = useCallback(() => {
     // Placeholder for social login functionality
-    setConnectionError(
-      "Social login is coming soon. Please use MetaMask for now."
-    );
-  }, []);
+    dispatch({
+      type: "CONNECT_FAILURE",
+      payload: {
+        error: "Social login is coming soon. Please use MetaMask for now.",
+      },
+    });
+  }, [dispatch]);
 
   const handleWalletConnect = useCallback(
     async (walletType: WalletType) => {
-      if (isConnecting) return;
-
-      setIsConnecting(true);
-      setConnectionError(null);
-
       try {
         await connect(walletType);
-        handleCloseModal();
+        dispatch({ type: "CLOSE_MODAL" });
       } catch (error: any) {
         console.error("Wallet connection failed:", error);
         const errorMessage =
           error?.message || "Failed to connect wallet. Please try again.";
-        setConnectionError(errorMessage);
-      } finally {
-        setIsConnecting(false);
+        dispatch({ type: "CONNECT_FAILURE", payload: { error: errorMessage } });
       }
     },
-    [connect, handleCloseModal, isConnecting]
+    [connect, dispatch]
   );
 
   const handleDisconnect = useCallback(async () => {
@@ -67,11 +63,11 @@ export default function WalletConnectionManager({
     }
   }, [disconnect]);
 
+  // Render different variants based on connection state and variant prop
   if (isConnected && showConnectionInfo) {
-    return (
-      <div className={className}>
-        <WalletInfo />
-        <div className="mt-2 flex justify-center">
+    if (variant === "minimal") {
+      return (
+        <div className={className}>
           <Button
             variant="ghost"
             size="sm"
@@ -81,31 +77,72 @@ export default function WalletConnectionManager({
             Disconnect
           </Button>
         </div>
+      );
+    }
+
+    return (
+      <div className={className}>
+        <WalletInfo />
+        {variant !== "compact" && (
+          <div className="mt-2 flex justify-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDisconnect}
+              className="text-xs text-gray-400 hover:text-gray-300"
+            >
+              Disconnect
+            </Button>
+          </div>
+        )}
       </div>
     );
   }
 
+  // Render different button styles based on variant
+  const getButtonContent = () => {
+    switch (variant) {
+      case "compact":
+        return "Connect";
+      case "minimal":
+        return "🔗";
+      default:
+        return "Connect Wallet";
+    }
+  };
+
+  const getButtonClasses = () => {
+    switch (variant) {
+      case "compact":
+        return "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm py-2 px-3";
+      case "minimal":
+        return "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600";
+      default:
+        return "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl";
+    }
+  };
+
   return (
-    <div className={className}>
+    <>
       <Button
         variant="default"
-        size="lg"
+        size={variant === "compact" ? "sm" : "lg"}
         onClick={handleConnectClick}
-        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl"
+        className={`${getButtonClasses()} ${className}`}
       >
-        Connect Wallet
+        {getButtonContent()}
       </Button>
 
       <UnifiedModal
-        isOpen={isModalOpen}
+        isOpen={state.isModalOpen}
         onClose={handleCloseModal}
         title="Connect Wallet"
         maxWidth="xl"
       >
         <div className="space-y-4">
-          {connectionError && (
+          {state.error && (
             <div className="bg-red-900/30 border border-red-700 rounded-lg p-3 text-sm text-red-300">
-              {connectionError}
+              {state.error}
             </div>
           )}
 
@@ -118,6 +155,6 @@ export default function WalletConnectionManager({
           </div>
         </div>
       </UnifiedModal>
-    </div>
+    </>
   );
 }

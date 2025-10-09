@@ -8,30 +8,15 @@
  * - MODULAR: Composable wallet service
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { createError } from '@/shared/utils';
+import { useWalletContext } from '@/context/WalletContext';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
 export type WalletType = 'metamask' | 'phantom' | 'walletconnect' | 'social' | 'near';
-
-export interface WalletState {
-  isConnected: boolean;
-  address: string | null;
-  walletType: WalletType | null;
-  chainId: number | null;
-  isConnecting: boolean;
-  error: string | null;
-}
-
-export interface WalletActions {
-  connect: (walletType: WalletType) => Promise<void>;
-  disconnect: () => Promise<void>;
-  switchChain: (chainId: number) => Promise<void>;
-  clearError: () => void;
-}
 
 // =============================================================================
 // WALLET DETECTION
@@ -123,62 +108,6 @@ function isBrowser(): boolean {
   return typeof window !== 'undefined' && typeof document !== 'undefined';
 }
 
-/**
- * Check if localStorage is available
- */
-function isLocalStorageAvailable(): boolean {
-  if (!isBrowser()) return false;
-  
-  try {
-    const testKey = '__storage_test__';
-    localStorage.setItem(testKey, testKey);
-    localStorage.removeItem(testKey);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
-
-/**
- * Safe localStorage get
- */
-function safeLocalStorageGet(key: string): string | null {
-  if (!isLocalStorageAvailable()) return null;
-  
-  try {
-    return localStorage.getItem(key);
-  } catch (e) {
-    console.warn('Failed to read from localStorage:', e);
-    return null;
-  }
-}
-
-/**
- * Safe localStorage set
- */
-function safeLocalStorageSet(key: string, value: string): void {
-  if (!isLocalStorageAvailable()) return;
-  
-  try {
-    localStorage.setItem(key, value);
-  } catch (e) {
-    console.warn('Failed to write to localStorage:', e);
-  }
-}
-
-/**
- * Safe localStorage remove
- */
-function safeLocalStorageRemove(key: string): void {
-  if (!isLocalStorageAvailable()) return;
-  
-  try {
-    localStorage.removeItem(key);
-  } catch (e) {
-    console.warn('Failed to remove from localStorage:', e);
-  }
-}
-
 // =============================================================================
 // WALLET SERVICE HOOK
 // =============================================================================
@@ -186,15 +115,13 @@ function safeLocalStorageRemove(key: string): void {
 /**
  * ENHANCEMENT FIRST: Enhanced unified wallet hook
  */
-export function useUnifiedWallet(): WalletState & WalletActions {
-  const [state, setState] = useState<WalletState>({
-    isConnected: false,
-    address: null,
-    walletType: null,
-    chainId: null,
-    isConnecting: false,
-    error: null,
-  });
+export function useUnifiedWallet(): {
+  connect: (walletType: WalletType) => Promise<void>;
+  disconnect: () => Promise<void>;
+  switchChain: (chainId: number) => Promise<void>;
+  clearError: () => void;
+} {
+  const { dispatch } = useWalletContext();
 
   /**
    * PERFORMANT: Connect to wallet with error handling
@@ -203,13 +130,11 @@ export function useUnifiedWallet(): WalletState & WalletActions {
     // Check if we're in a browser environment
     if (!isBrowser()) {
       const error = createError('ENV_ERROR', 'Wallet connection is only available in browser environments');
-      setState(prev => ({ ...prev, error: error.message }));
+      dispatch({ type: 'CONNECT_FAILURE', payload: { error: error.message } });
       throw error;
     }
 
-    if (state.isConnecting) return;
-
-    setState(prev => ({ ...prev, isConnecting: true, error: null }));
+    dispatch({ type: 'CONNECT_START' });
 
     try {
       const walletStatus = getWalletStatus(walletType);
@@ -407,55 +332,31 @@ export function useUnifiedWallet(): WalletState & WalletActions {
           throw createError('UNSUPPORTED_WALLET', `Wallet type ${walletType} is not supported`);
       }
 
-      setState(prev => ({
-        ...prev,
-        isConnected: true,
-        address,
-        walletType,
-        chainId,
-        isConnecting: false,
-        error: null,
-      }));
-
-      // Store connection in localStorage for persistence
-      safeLocalStorageSet('wallet_connection', JSON.stringify({
-        walletType,
-        address,
-        chainId,
-      }));
+      dispatch({ 
+        type: 'CONNECT_SUCCESS', 
+        payload: { address, walletType, chainId } 
+      });
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to connect wallet';
-      setState(prev => ({
-        ...prev,
-        isConnecting: false,
-        error: errorMessage,
-      }));
+      dispatch({ type: 'CONNECT_FAILURE', payload: { error: errorMessage } });
       throw error;
     }
-  }, [state.isConnecting]);
+  }, [dispatch]);
 
   /**
    * CLEAN: Disconnect wallet
    */
   const disconnect = useCallback(async () => {
-    setState({
-      isConnected: false,
-      address: null,
-      walletType: null,
-      chainId: null,
-      isConnecting: false,
-      error: null,
-    });
-
-    // Clear stored connection
-    safeLocalStorageRemove('wallet_connection');
-  }, []);
+    dispatch({ type: 'DISCONNECT' });
+  }, [dispatch]);
 
   /**
    * ENHANCEMENT FIRST: Switch chain with error handling
    */
   const switchChain = useCallback(async (targetChainId: number) => {
+    const { state } = useWalletContext();
+    
     if (!state.isConnected || !state.walletType) {
       throw createError('WALLET_NOT_CONNECTED', 'No wallet connected');
     }
@@ -472,63 +373,32 @@ export function useUnifiedWallet(): WalletState & WalletActions {
           params: [{ chainId: `0x${targetChainId.toString(16)}` }],
         });
 
-        setState(prev => ({ ...prev, chainId: targetChainId }));
+        dispatch({ type: 'NETWORK_CHANGED', payload: { chainId: targetChainId } });
       } else if (state.walletType === WalletTypes.PHANTOM && (window as any).phantom?.ethereum) {
         await (window as any).phantom.ethereum.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: `0x${targetChainId.toString(16)}` }],
         });
 
-        setState(prev => ({ ...prev, chainId: targetChainId }));
+        dispatch({ type: 'NETWORK_CHANGED', payload: { chainId: targetChainId } });
       } else {
         throw createError('UNSUPPORTED_OPERATION', 'Chain switching not supported for this wallet');
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to switch chain';
-      setState(prev => ({ ...prev, error: errorMessage }));
+      dispatch({ type: 'CONNECT_FAILURE', payload: { error: errorMessage } });
       throw error;
     }
-  }, [state.isConnected, state.walletType]);
+  }, [dispatch]);
 
   /**
    * CLEAN: Clear error state
    */
   const clearError = useCallback(() => {
-    setState(prev => ({ ...prev, error: null }));
-  }, []);
-
-  /**
-   * PERFORMANT: Restore connection on mount
-   */
-  useEffect(() => {
-    // Only run in browser environment
-    if (!isBrowser()) return;
-
-    const stored = safeLocalStorageGet('wallet_connection');
-    if (stored) {
-      try {
-        const { walletType, address, chainId } = JSON.parse(stored);
-        const walletStatus = getWalletStatus(walletType);
-
-        if (walletStatus.isAvailable) {
-          setState(prev => ({
-            ...prev,
-            isConnected: true,
-            address,
-            walletType,
-            chainId,
-          }));
-        } else {
-          safeLocalStorageRemove('wallet_connection');
-        }
-      } catch (error) {
-        safeLocalStorageRemove('wallet_connection');
-      }
-    }
-  }, []);
+    dispatch({ type: 'CLEAR_ERROR' });
+  }, [dispatch]);
 
   return {
-    ...state,
     connect,
     disconnect,
     switchChain,
