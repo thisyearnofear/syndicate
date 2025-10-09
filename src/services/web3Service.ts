@@ -6,7 +6,7 @@
  */
 
 import { ethers } from 'ethers';
-import { CONTRACTS, CHAINS, LOTTERY } from '@/config';
+import { CONTRACTS, CHAINS } from '@/config';
 
 // Megapot contract ABI (minimal required functions)
 const MEGAPOT_ABI = [
@@ -46,6 +46,13 @@ export interface UserBalance {
   hasEnoughEth: boolean;
 }
 
+/**
+ * Check if we're in a browser environment
+ */
+function isBrowser(): boolean {
+  return typeof window !== 'undefined' && typeof document !== 'undefined';
+}
+
 class Web3Service {
   private provider: ethers.BrowserProvider | null = null;
   private signer: ethers.Signer | null = null;
@@ -57,11 +64,17 @@ class Web3Service {
    */
   async initialize(): Promise<boolean> {
     try {
-      if (!window.ethereum) {
+      // Check if we're in a browser environment
+      if (!isBrowser()) {
+        console.warn('Web3 service can only be initialized in browser environments');
+        return false;
+      }
+
+      if (!(window as any).ethereum) {
         throw new Error('No wallet found. Please install MetaMask or another Web3 wallet.');
       }
 
-      this.provider = new ethers.BrowserProvider(window.ethereum);
+      this.provider = new ethers.BrowserProvider((window as any).ethereum);
       this.signer = await this.provider.getSigner();
 
       // Initialize contracts
@@ -92,20 +105,21 @@ class Web3Service {
    */
   private async ensureCorrectNetwork(): Promise<void> {
     if (!this.provider) throw new Error('Provider not initialized');
+    if (!isBrowser()) return;
 
     const network = await this.provider.getNetwork();
     const baseChainId = BigInt(8453); // Base mainnet
 
     if (network.chainId !== baseChainId) {
       try {
-        await window.ethereum.request({
+        await (window as any).ethereum.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: '0x2105' }], // Base mainnet in hex
         });
       } catch (switchError: any) {
         // If Base network is not added to wallet, add it
         if (switchError.code === 4902) {
-          await window.ethereum.request({
+          await (window as any).ethereum.request({
             method: 'wallet_addEthereumChain',
             params: [{
               chainId: '0x2105',
@@ -133,6 +147,9 @@ class Web3Service {
     if (!this.signer || !this.usdcContract) {
       throw new Error('Web3 service not initialized');
     }
+    if (!isBrowser()) {
+      throw new Error('Web3 service can only be used in browser environments');
+    }
 
     const address = await this.signer.getAddress();
     
@@ -159,10 +176,13 @@ class Web3Service {
     if (!this.signer || !this.usdcContract) {
       throw new Error('Web3 service not initialized');
     }
+    if (!isBrowser()) {
+      throw new Error('Web3 service can only be used in browser environments');
+    }
 
     const address = await this.signer.getAddress();
     const allowance = await this.usdcContract.allowance(address, CONTRACTS.megapot);
-    const requiredAmount = ethers.parseUnits((ticketCount * LOTTERY.ticketPriceUsd).toString(), 6);
+    const requiredAmount = ethers.parseUnits((ticketCount * 1).toString(), 6); // $1 per ticket
 
     return allowance >= requiredAmount;
   }
@@ -174,8 +194,11 @@ class Web3Service {
     if (!this.usdcContract) {
       throw new Error('USDC contract not initialized');
     }
+    if (!isBrowser()) {
+      throw new Error('Web3 service can only be used in browser environments');
+    }
 
-    const requiredAmount = ethers.parseUnits((ticketCount * LOTTERY.ticketPriceUsd).toString(), 6);
+    const requiredAmount = ethers.parseUnits((ticketCount * 1).toString(), 6); // $1 per ticket
     
     // Approve a bit more to handle multiple purchases
     const approvalAmount = requiredAmount * BigInt(10);
@@ -193,6 +216,9 @@ class Web3Service {
     try {
       if (!this.megapotContract || !this.signer) {
         throw new Error('Contracts not initialized');
+      }
+      if (!isBrowser()) {
+        throw new Error('Web3 service can only be used in browser environments');
       }
 
       // Check balance
@@ -220,7 +246,7 @@ class Web3Service {
       // Purchase tickets
       const tx = await this.megapotContract.purchaseTickets(
         ticketCount,
-        LOTTERY.referrerAddress
+        "0x0000000000000000000000000000000000000000" // Default referrer
       );
 
       // Wait for transaction confirmation
@@ -259,6 +285,9 @@ class Web3Service {
     if (!this.megapotContract) {
       throw new Error('Megapot contract not initialized');
     }
+    if (!isBrowser()) {
+      throw new Error('Web3 service can only be used in browser environments');
+    }
 
     try {
       const jackpot = await this.megapotContract.getCurrentJackpot();
@@ -275,6 +304,9 @@ class Web3Service {
   async getTicketPrice(): Promise<string> {
     if (!this.megapotContract) {
       throw new Error('Megapot contract not initialized');
+    }
+    if (!isBrowser()) {
+      throw new Error('Web3 service can only be used in browser environments');
     }
 
     try {

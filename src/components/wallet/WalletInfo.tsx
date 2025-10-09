@@ -1,90 +1,95 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { formatEther } from "viem";
-// import { publicClient } from "@/lib/viem-client";
-import { Trash2, ExternalLink } from "lucide-react";
-import { config } from "@/config";
+import { useWalletConnection } from "@/hooks/useWalletConnection";
+import { getWalletStatus } from "@/domains/wallet/services/unifiedWalletService";
+import { CHAIN_IDS } from "@/config";
 
 interface WalletInfoProps {
-  address: string;
-  label: string;
-  onClear?: () => void;
-  showClearButton?: boolean;
+  className?: string;
 }
 
-export default function WalletInfo({
-  address,
-  label,
-  onClear,
-  showClearButton = false,
-}: WalletInfoProps) {
-  const [balance, setBalance] = useState<string>("0");
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [trimmedAddress, setTrimmedAddress] = useState<string>("");
+export default function WalletInfo({ className = "" }: WalletInfoProps) {
+  const { isConnected, address, walletType, chainId, error } =
+    useWalletConnection();
 
-  useEffect(() => {
-    if (address) {
-      setTrimmedAddress(`${address.slice(0, 6)}...${address.slice(-4)}`);
+  if (!isConnected || !address) {
+    return null;
+  }
+
+  const getChainName = (chainId: number | null) => {
+    if (!chainId) return "Unknown Network";
+
+    switch (chainId) {
+      case CHAIN_IDS.BASE:
+        return "Base";
+      case CHAIN_IDS.BASE_SEPOLIA:
+        return "Base Sepolia";
+      case CHAIN_IDS.ETHEREUM:
+        return "Ethereum";
+      case CHAIN_IDS.AVALANCHE:
+        return "Avalanche";
+      default:
+        return `Network (${chainId})`;
     }
-  }, [address]);
-
-  useEffect(() => {
-    const fetchBalance = async () => {
-      if (!address) return;
-
-      try {
-        setIsLoading(true);
-        // const balanceWei = await publicClient.getBalance({
-        //   address: address as `0x${string}`,
-        // });
-        // setBalance(formatEther(balanceWei));
-        setBalance("0.0");
-      } catch (error) {
-        console.error("Error fetching balance:", error);
-        setBalance("0");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchBalance();
-  }, [address]);
-
-  const viewOnEtherscan = () => {
-    window.open(`${config.ethScanerUrl}/address/${address}`, "_blank");
   };
 
+  const getWalletDisplayName = (walletType: string | null) => {
+    if (!walletType) return "Wallet";
+
+    switch (walletType) {
+      case "metamask":
+        return "MetaMask";
+      case "phantom":
+        return "Phantom";
+      case "walletconnect":
+        return "WalletConnect";
+      case "social":
+        return "Social Login";
+      case "near":
+        return "NEAR Wallet";
+      default:
+        return walletType;
+    }
+  };
+
+  const walletStatus = walletType ? getWalletStatus(walletType as any) : null;
+
   return (
-    <div className="bg-gray-800 rounded-lg p-3 shadow-md">
-      <div className="flex justify-between items-center">
-        <div>
-          <div className="flex justify-between gap-2">
-            <h3 className="text-sm font-semibold text-white">{label}</h3>
-            {showClearButton && onClear && (
-              <button
-                onClick={onClear}
-                className="text-red-400 hover:text-red-300 text-xs"
-                title="Clear account"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            )}
-          </div>
+    <div
+      className={`bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700 ${className}`}
+    >
+      <div className="flex flex-col space-y-3">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <p className="text-gray-300 font-mono text-sm">{trimmedAddress}</p>
-            <button
-              onClick={viewOnEtherscan}
-              className="text-blue-400 hover:text-blue-300"
-              title="View on Etherscan"
-            >
-              <ExternalLink className="h-4 w-4" />
-            </button>
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+            <span className="text-sm font-semibold text-green-400">
+              Connected
+            </span>
           </div>
-          <p className="text-gray-400 text-xs">
-            Balance: {isLoading ? "Loading..." : `${balance} ETH`}
-          </p>
+          <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded-full">
+            {getWalletDisplayName(walletType)}
+          </span>
         </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-gray-400">Address</span>
+          <span className="text-xs font-mono text-gray-300">
+            {address.slice(0, 6)}...{address.slice(-4)}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-gray-400">Network</span>
+          <span className="text-xs font-medium text-gray-300">
+            {getChainName(chainId)}
+          </span>
+        </div>
+
+        {error && (
+          <div className="text-xs text-red-400 bg-red-900/20 p-2 rounded">
+            {error}
+          </div>
+        )}
       </div>
     </div>
   );
