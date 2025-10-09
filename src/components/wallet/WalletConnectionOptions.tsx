@@ -1,32 +1,23 @@
 "use client";
 
-import { Suspense, lazy, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import ConnectWallet from "./ConnectWallet";
 import UnifiedModal from "../modal/UnifiedModal";
-
-// Lazy load the social login component
-// const SocialLoginFirst = lazy(
-//   () => import("@/components/onboarding/SocialLoginFirst")
-// );
+import { Button } from "@/shared/components/ui/Button";
 
 interface WalletConnectionOptionsProps {
   onSocialLoginClick: () => void;
 }
 
-const ComponentLoader = () => (
-  <div className="flex items-center justify-center p-8">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-  </div>
-);
-
 /**
  * Unified wallet connection options component
- * Presents both existing and new wallet options
+ * Presents both existing and new wallet options with enhanced UI/UX
  */
 export default function WalletConnectionOptions({
   onSocialLoginClick,
 }: WalletConnectionOptionsProps) {
   const [showComingSoon, setShowComingSoon] = useState(false);
+  const [activeTab, setActiveTab] = useState<"existing" | "new">("existing");
 
   const handleSocialLoginClick = useCallback(() => {
     // Show coming soon message instead of opening modal
@@ -35,47 +26,100 @@ export default function WalletConnectionOptions({
 
   return (
     <>
-      <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-        {/* Option 1: Connect Existing Wallet */}
-        <div className="bg-gradient-to-br from-blue-900/50 to-purple-900/50 rounded-xl p-6 border border-blue-500/20 backdrop-blur-md">
-          <div className="text-center space-y-4">
-            <div className="text-3xl mb-3">🔗</div>
-            <h3 className="text-xl font-bold text-white">
-              Connect Existing Wallet
-            </h3>
-            <p className="text-gray-300 text-sm mb-4">
-              Already have MetaMask, Phantom, or other wallets? Connect them
-              directly.
-            </p>
-            <div className="space-y-3">
+      {/* Tab navigation for better organization */}
+      <div className="flex border-b border-gray-700 mb-6">
+        <button
+          className={`flex-1 py-3 text-center font-medium text-sm ${
+            activeTab === "existing"
+              ? "text-white border-b-2 border-blue-500"
+              : "text-gray-400 hover:text-gray-300"
+          }`}
+          onClick={() => setActiveTab("existing")}
+        >
+          Connect Existing Wallet
+        </button>
+        <button
+          className={`flex-1 py-3 text-center font-medium text-sm ${
+            activeTab === "new"
+              ? "text-white border-b-2 border-purple-500"
+              : "text-gray-400 hover:text-gray-300"
+          }`}
+          onClick={() => setActiveTab("new")}
+        >
+          Create New Wallet
+        </button>
+      </div>
+
+      {/* Tab content */}
+      <div className="space-y-6">
+        {activeTab === "existing" ? (
+          <div className="space-y-4">
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-white mb-2">
+                Connect Your Existing Wallet
+              </h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Connect with your existing crypto wallet to get started
+              </p>
+            </div>
+
+            <div className="bg-gradient-to-br from-blue-900/30 to-purple-900/30 rounded-xl p-4 border border-blue-500/20">
               <ConnectWallet />
             </div>
-            <div className="text-xs text-gray-400">
-              Supports MetaMask, WalletConnect, Coinbase Wallet, and more
-            </div>
-          </div>
-        </div>
 
-        {/* Option 2: Create New Wallet */}
-        <div className="bg-gradient-to-br from-purple-900/50 to-green-900/50 rounded-xl p-6 border border-purple-500/20 backdrop-blur-md">
-          <div className="text-center space-y-4">
-            <div className="text-3xl mb-3">✨</div>
-            <h3 className="text-xl font-bold text-white">Create New Wallet</h3>
-            <p className="text-gray-300 text-sm mb-4">
-              New to Web3? Create a secure, seedless wallet with social login.
-            </p>
-            <button
-              onClick={handleSocialLoginClick}
-              className="w-full bg-gradient-to-r from-purple-600 to-green-600 hover:from-purple-700 hover:to-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
-            >
-              <span>🚀</span>
-              <span>Get Started with Social Login</span>
-            </button>
-            <div className="text-xs text-gray-400">
-              No seed phrases • MetaMask Embedded Wallets • Web3Auth
+            <div className="text-xs text-gray-500 text-center">
+              Supports MetaMask, Phantom, WalletConnect, and more
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-white mb-2">
+                Create a New Wallet
+              </h3>
+              <p className="text-gray-400 text-sm mb-4">
+                New to crypto? Create a secure wallet with social login
+              </p>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-900/30 to-green-900/30 rounded-xl p-6 border border-purple-500/20 text-center">
+              <div className="text-4xl mb-4">✨</div>
+              <h4 className="text-xl font-bold text-white mb-2">
+                Social Login Wallet
+              </h4>
+              <p className="text-gray-300 text-sm mb-6">
+                Create a secure, seedless wallet using your social accounts
+              </p>
+
+              <button
+                onClick={handleSocialLoginClick}
+                className="w-full bg-gradient-to-r from-purple-600 to-green-600 hover:from-purple-700 hover:to-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 mb-4"
+              >
+                <span>🚀</span>
+                <span>Get Started with Social Login</span>
+              </button>
+
+              <div className="grid grid-cols-3 gap-2 text-xs text-gray-400">
+                <div className="flex flex-col items-center p-2 bg-gray-800/50 rounded">
+                  <span className="text-lg">🔑</span>
+                  <span>No seed phrases</span>
+                </div>
+                <div className="flex flex-col items-center p-2 bg-gray-800/50 rounded">
+                  <span className="text-lg">📱</span>
+                  <span>Mobile friendly</span>
+                </div>
+                <div className="flex flex-col items-center p-2 bg-gray-800/50 rounded">
+                  <span className="text-lg">🔒</span>
+                  <span>Secure & private</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-xs text-gray-500 text-center">
+              Powered by Web3Auth • No technical knowledge required
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Coming Soon Modal */}
@@ -119,11 +163,23 @@ export function SocialLoginModal({ isOpen, onClose }: SocialLoginModalProps) {
       showCloseButton={true}
       className="relative"
     >
-      <Suspense fallback={<ComponentLoader />}>
-        <div className="px-4 text-center">
-          <p className="text-gray-400">Social login component not available</p>
-        </div>
-      </Suspense>
+      <div className="px-4 text-center py-8">
+        <div className="text-4xl mb-4">🚧</div>
+        <h3 className="text-xl font-bold text-white mb-2">
+          Feature Coming Soon
+        </h3>
+        <p className="text-gray-300 mb-6">
+          Social login and wallet creation features are currently in
+          development. Please use MetaMask to connect for now.
+        </p>
+        <Button
+          variant="default"
+          onClick={onClose}
+          className="bg-blue-600 hover:bg-blue-700 text-white"
+        >
+          Close
+        </Button>
+      </div>
     </UnifiedModal>
   );
 }

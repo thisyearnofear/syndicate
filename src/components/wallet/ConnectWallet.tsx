@@ -20,9 +20,13 @@ import { WalletType } from "@/domains/wallet/services/unifiedWalletService";
 
 interface ConnectWalletProps {
   onConnect?: (walletType: WalletType) => void;
+  showLabels?: boolean;
 }
 
-export default function ConnectWallet({ onConnect }: ConnectWalletProps) {
+export default function ConnectWallet({
+  onConnect,
+  showLabels = true,
+}: ConnectWalletProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +63,7 @@ export default function ConnectWallet({ onConnect }: ConnectWalletProps) {
       icon: "🦊",
       variant: "primary" as const,
       description: "Most popular Ethereum wallet",
+      color: "from-blue-600 to-purple-600",
     },
     {
       name: "Phantom",
@@ -66,6 +71,7 @@ export default function ConnectWallet({ onConnect }: ConnectWalletProps) {
       icon: "👻",
       variant: "secondary" as const,
       description: "Solana & multi-chain wallet",
+      color: "from-emerald-500 to-teal-600",
     },
     {
       name: "WalletConnect",
@@ -73,6 +79,7 @@ export default function ConnectWallet({ onConnect }: ConnectWalletProps) {
       icon: "🔗",
       variant: "premium" as const,
       description: "Connect any wallet",
+      color: "from-purple-600 via-pink-600 to-blue-600",
     },
   ];
 
@@ -81,7 +88,13 @@ export default function ConnectWallet({ onConnect }: ConnectWalletProps) {
       {/* Error message */}
       {error && (
         <div className="bg-red-900/30 border border-red-700 rounded-lg p-3 text-sm text-red-300">
-          {error}
+          <div className="flex items-start gap-2">
+            <span>⚠️</span>
+            <div>
+              <div className="font-medium">Connection Failed</div>
+              <div className="mt-1">{error}</div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -98,28 +111,27 @@ export default function ConnectWallet({ onConnect }: ConnectWalletProps) {
               handleConnect(wallet.type);
             }}
             disabled={isConnecting}
-            className={`w-full justify-start touch-manipulation ${
-              wallet.variant === "primary"
-                ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl border border-blue-500/20"
-                : wallet.variant === "secondary"
-                ? "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg hover:shadow-xl border border-emerald-400/20"
-                : "bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-700 hover:via-pink-700 hover:to-blue-700 text-white shadow-2xl hover:shadow-purple-500/25 border border-purple-400/30"
-            }`}
+            className={`w-full justify-start touch-manipulation bg-gradient-to-r ${wallet.color} hover:opacity-90 text-white shadow-lg hover:shadow-xl border border-white/10 transition-all duration-200`}
           >
             <div className="flex-1 text-left">
-              <div className="font-semibold">
+              <div className="font-semibold flex items-center gap-2">
                 {isConnecting && connectingWallet === wallet.type ? (
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                    Connecting...
-                  </div>
+                  <>
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    <span>Connecting...</span>
+                  </>
                 ) : (
                   <>
-                    {wallet.icon} {wallet.name}
+                    <span className="text-lg">{wallet.icon}</span>
+                    {showLabels && <span>{wallet.name}</span>}
                   </>
                 )}
               </div>
-              <div className="text-xs opacity-80">{wallet.description}</div>
+              {showLabels && (
+                <div className="text-xs opacity-80 mt-1">
+                  {wallet.description}
+                </div>
+              )}
             </div>
           </Button>
         ))}
@@ -140,22 +152,29 @@ export default function ConnectWallet({ onConnect }: ConnectWalletProps) {
         size="sm"
         onClick={() => handleConnect("social" as WalletType)}
         disabled={isConnecting}
-        className="w-full"
+        className="w-full hover:bg-gray-700/50"
       >
-        {isConnecting && connectingWallet === "Social" ? (
-          <div className="flex items-center">
-            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-            Connecting...
-          </div>
-        ) : (
-          "🔐 Connect with Social Login"
-        )}
+        <div className="flex items-center justify-center gap-2">
+          {isConnecting && connectingWallet === "social" ? (
+            <>
+              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              <span>Connecting...</span>
+            </>
+          ) : (
+            <>
+              <span className="text-lg">🔐</span>
+              {showLabels && <span>Connect with Social Login</span>}
+            </>
+          )}
+        </div>
       </Button>
 
       {/* Help text */}
-      <p className="text-xs text-gray-500 text-center leading-relaxed">
-        New to crypto? Social login creates a wallet for you automatically.
-      </p>
+      {showLabels && (
+        <p className="text-xs text-gray-500 text-center leading-relaxed">
+          New to crypto? Social login creates a wallet for you automatically.
+        </p>
+      )}
     </CompactStack>
   );
 }
