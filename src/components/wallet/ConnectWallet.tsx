@@ -11,7 +11,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { Button } from "@/shared/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import {
   CompactStack,
   CompactFlex,
@@ -105,13 +105,12 @@ export default function ConnectWallet({
             key={wallet.name}
             variant="default"
             size="lg"
-            onClick={() => handleConnect(wallet.type)}
-            onTouchEnd={(e) => {
+            onClick={(e) => {
               e.preventDefault();
               handleConnect(wallet.type);
             }}
             disabled={isConnecting}
-            className={`w-full justify-start touch-manipulation bg-gradient-to-r ${wallet.color} hover:opacity-90 text-white shadow-lg hover:shadow-xl border border-white/10 transition-all duration-200`}
+            className={`w-full justify-start touch-manipulation cursor-pointer select-none bg-gradient-to-r ${wallet.color} hover:opacity-90 text-white shadow-lg hover:shadow-xl border border-white/10 transition-all duration-200`}
           >
             <div className="flex-1 text-left">
               <div className="font-semibold flex items-center gap-2">
@@ -150,7 +149,10 @@ export default function ConnectWallet({
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => handleConnect("social" as WalletType)}
+        onClick={(e) => {
+          e.preventDefault();
+          handleConnect("social" as WalletType);
+        }}
         disabled={isConnecting}
         className="w-full hover:bg-gray-700/50"
       >

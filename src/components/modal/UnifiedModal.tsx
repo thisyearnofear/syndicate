@@ -36,9 +36,17 @@ export default function UnifiedModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div 
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 modal-overlay"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <div
-        className={`bg-gray-900 rounded-2xl p-6 w-full ${maxWidthClasses[maxWidth]} max-h-[90vh] overflow-y-auto border border-gray-700 ${className}`}
+        className={`bg-gray-900 rounded-2xl p-6 w-full ${maxWidthClasses[maxWidth]} max-h-[90vh] overflow-y-auto border border-gray-700 modal-content relative z-[10000] ${className}`}
+        onClick={(e) => e.stopPropagation()}
       >
         {(title || showCloseButton) && (
           <div className="flex justify-between items-center mb-4">
