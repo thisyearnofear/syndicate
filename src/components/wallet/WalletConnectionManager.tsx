@@ -6,7 +6,7 @@ import { useWalletContext } from "@/context/WalletContext";
 import UnifiedModal from "@/components/modal/UnifiedModal";
 import WalletConnectionOptions from "@/components/wallet/WalletConnectionOptions";
 import WalletInfo from "@/components/wallet/WalletInfo";
-import { Button } from "@/shared/components/ui/Button";
+import { Button } from "@/components/ui/button";
 
 interface WalletConnectionManagerProps {
   className?: string;

@@ -4,6 +4,47 @@
    PREMIUM GLOBAL STYLES
    ============================================================================= */
 
+/* =============================================================================
+   PRODUCTION BUTTON CLICK FIXES
+   ============================================================================= */
+
+/* Ensure modal has highest z-index and proper event handling */
+.modal-overlay {
+  z-index: 9999 !important;
+  pointer-events: auto !important;
+}
+
+.modal-content {
+  z-index: 10000 !important;
+  position: relative;
+  pointer-events: auto !important;
+}
+
+/* Ensure buttons in modals are clickable */
+.modal-content button,
+button {
+  z-index: 10001 !important;
+  position: relative;
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+  min-height: 44px; /* iOS minimum touch target */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+/* Fix for button hover states in production */
+button:hover {
+  pointer-events: auto !important;
+}
+
+/* Ensure proper touch handling */
+button:active {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
+}
+
 /* Premium font imports */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap');
 
