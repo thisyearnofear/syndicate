@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "ask": [
+      "Read(!/Users/udingethe/dev/syndicate/**)",
+      "Edit(!/Users/udingethe/dev/syndicate/**)"
+    ],
+    "allow": [
+      "Read(/Users/udingethe/dev/syndicate/**)",
+      "Edit(/Users/udingethe/dev/syndicate/**)"
+    ]
+  },
+  "memoryImport": {},
+  "monitoring": {}
+}

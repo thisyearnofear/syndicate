@@ -121,7 +121,7 @@ export function useUnifiedWallet(): {
   switchChain: (chainId: number) => Promise<void>;
   clearError: () => void;
 } {
-  const { dispatch } = useWalletContext();
+  const { state, dispatch } = useWalletContext();
 
   /**
    * PERFORMANT: Connect to wallet with error handling
@@ -300,6 +300,11 @@ export function useUnifiedWallet(): {
 
         case WalletTypes.WALLETCONNECT:
           try {
+            // Check if WalletConnect is properly configured
+            const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
+            if (!projectId || projectId === 'YOUR_PROJECT_ID_HERE') {
+              throw createError('WALLET_NOT_CONFIGURED', 'WalletConnect is not properly configured. Please contact support or use MetaMask instead.');
+            }
             // For now, show coming soon message for WalletConnect
             throw createError('WALLET_NOT_SUPPORTED', 'WalletConnect is coming soon. Please use MetaMask for now.');
           } catch (error: any) {
@@ -355,8 +360,6 @@ export function useUnifiedWallet(): {
    * ENHANCEMENT FIRST: Switch chain with error handling
    */
   const switchChain = useCallback(async (targetChainId: number) => {
-    const { state } = useWalletContext();
-    
     if (!state.isConnected || !state.walletType) {
       throw createError('WALLET_NOT_CONNECTED', 'No wallet connected');
     }
@@ -389,7 +392,7 @@ export function useUnifiedWallet(): {
       dispatch({ type: 'CONNECT_FAILURE', payload: { error: errorMessage } });
       throw error;
     }
-  }, [dispatch]);
+  }, [state, dispatch]);
 
   /**
    * CLEAN: Clear error state

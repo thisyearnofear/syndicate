@@ -141,13 +141,26 @@ export default function WalletConnectionManager({
       >
         <div className="space-y-4">
           {state.error && (
-            <div className="bg-red-900/30 border border-red-700 rounded-lg p-3 text-sm text-red-300">
-              {state.error}
+            <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 text-sm text-red-300">
+              <div className="flex items-start gap-2">
+                <span className="text-lg">⚠️</span>
+                <div>
+                  <div className="font-medium">Connection Failed</div>
+                  <div className="mt-1">{state.error}</div>
+                  <button
+                    onClick={() => dispatch({ type: "CLEAR_ERROR" })}
+                    className="mt-2 text-xs text-red-400 hover:text-red-300 underline"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
           <WalletConnectionOptions
             onSocialLoginClick={handleSocialLoginClick}
+            onWalletConnect={handleWalletConnect}
           />
 
           <div className="text-xs text-gray-500 text-center mt-4">

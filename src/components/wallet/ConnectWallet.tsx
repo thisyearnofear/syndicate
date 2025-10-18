@@ -78,8 +78,9 @@ export default function ConnectWallet({
       type: "walletconnect" as WalletType,
       icon: "🔗",
       variant: "premium" as const,
-      description: "Connect any wallet",
+      description: "Connect any wallet (Coming Soon)",
       color: "from-purple-600 via-pink-600 to-blue-600",
+      disabled: true,
     },
   ];
 
@@ -105,12 +106,11 @@ export default function ConnectWallet({
             key={wallet.name}
             variant="default"
             size="lg"
-            onClick={(e) => {
-              e.preventDefault();
+            onClick={() => {
               handleConnect(wallet.type);
             }}
-            disabled={isConnecting}
-            className={`w-full justify-start touch-manipulation cursor-pointer select-none bg-gradient-to-r ${wallet.color} hover:opacity-90 text-white shadow-lg hover:shadow-xl border border-white/10 transition-all duration-200`}
+            disabled={isConnecting || wallet.disabled}
+            className={`w-full justify-start touch-manipulation cursor-pointer select-none bg-gradient-to-r ${wallet.color} hover:opacity-90 text-white shadow-lg hover:shadow-xl border border-white/10 transition-all duration-200 ${wallet.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <div className="flex-1 text-left">
               <div className="font-semibold flex items-center gap-2">
@@ -149,25 +149,15 @@ export default function ConnectWallet({
       <Button
         variant="ghost"
         size="sm"
-        onClick={(e) => {
-          e.preventDefault();
+        onClick={() => {
           handleConnect("social" as WalletType);
         }}
-        disabled={isConnecting}
-        className="w-full hover:bg-gray-700/50"
+        disabled={true}
+        className="w-full hover:bg-gray-700/50 opacity-50 cursor-not-allowed"
       >
         <div className="flex items-center justify-center gap-2">
-          {isConnecting && connectingWallet === "social" ? (
-            <>
-              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-              <span>Connecting...</span>
-            </>
-          ) : (
-            <>
-              <span className="text-lg">🔐</span>
-              {showLabels && <span>Connect with Social Login</span>}
-            </>
-          )}
+          <span className="text-lg">🔐</span>
+          {showLabels && <span>Connect with Social Login (Coming Soon)</span>}
         </div>
       </Button>
 
