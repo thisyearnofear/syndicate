@@ -41,3 +41,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .npmrc
+
+/.qoder
+.qoder
+.qoder.json
+.qodo
+settings.json

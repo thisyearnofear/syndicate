@@ -3,10 +3,11 @@
 import { useState, useCallback } from "react";
 import ConnectWallet from "./ConnectWallet";
 import UnifiedModal from "../modal/UnifiedModal";
-import { Button } from "@/shared/components/ui/Button";
+import { Button } from "@/components/ui/button";
 
 interface WalletConnectionOptionsProps {
   onSocialLoginClick: () => void;
+  onWalletConnect?: (walletType: string) => void;
 }
 
 /**
@@ -15,6 +16,7 @@ interface WalletConnectionOptionsProps {
  */
 export default function WalletConnectionOptions({
   onSocialLoginClick,
+  onWalletConnect,
 }: WalletConnectionOptionsProps) {
   const [showComingSoon, setShowComingSoon] = useState(false);
   const [activeTab, setActiveTab] = useState<"existing" | "new">("existing");
@@ -23,6 +25,12 @@ export default function WalletConnectionOptions({
     // Show coming soon message instead of opening modal
     setShowComingSoon(true);
   }, []);
+
+  const handleWalletConnect = useCallback((walletType: string) => {
+    if (onWalletConnect) {
+      onWalletConnect(walletType);
+    }
+  }, [onWalletConnect]);
 
   return (
     <>
@@ -64,7 +72,7 @@ export default function WalletConnectionOptions({
             </div>
 
             <div className="bg-gradient-to-br from-blue-900/30 to-purple-900/30 rounded-xl p-4 border border-blue-500/20">
-              <ConnectWallet />
+              <ConnectWallet onConnect={handleWalletConnect} />
             </div>
 
             <div className="text-xs text-gray-500 text-center">

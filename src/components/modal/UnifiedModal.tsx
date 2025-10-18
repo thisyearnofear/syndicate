@@ -35,6 +35,20 @@ export default function UnifiedModal({
     "6xl": "max-w-6xl",
   };
 
+  // Handle escape key press
+  React.useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [onClose]);
+
   return (
     <div 
       className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 modal-overlay"
