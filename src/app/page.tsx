@@ -14,6 +14,7 @@ import { useState, useCallback, useEffect, Suspense, lazy } from "react";
 import { LoadingSpinner } from "@/shared/components/LoadingSpinner";
 import { useWalletConnection, WalletType } from "@/hooks/useWalletConnection";
 import { useLottery } from "@/domains/lottery/hooks/useLottery";
+import { useTicketPurchase } from "@/hooks/useTicketPurchase";
 import { formatTimeRemaining } from "@/shared/utils";
 
 // Premium UI Components
@@ -348,14 +349,16 @@ function StatsPieces() {
 export default function PremiumHome() {
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const { isConnected } = useWalletConnection();
+  const { purchaseTickets } = useTicketPurchase();
 
   const handlePurchaseAction = useCallback(() => {
     if (!isConnected) {
       setShowPurchaseModal(true);
     } else {
-      console.log("Proceeding to purchase...");
+      setShowPurchaseModal(true);
+      purchaseTickets(1);
     }
-  }, [isConnected]);
+  }, [isConnected, purchaseTickets, setShowPurchaseModal]);
 
   return (
     <div>

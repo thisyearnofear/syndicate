@@ -174,7 +174,7 @@ export const DESIGN = {
 export const PERFORMANCE = {
   // Cache durations in milliseconds
   cache: {
-    jackpotData: 30000, // 30 seconds
+    jackpotData: 300000, // 5 minutes
     activityFeed: 60000, // 1 minute
     syndicateData: 300000, // 5 minutes
   },

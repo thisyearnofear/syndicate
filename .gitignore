@@ -42,8 +42,8 @@ yarn-error.log*
 next-env.d.ts
 .npmrc
 
-/.qoder
-.qoder
+/.qoder/settings.json
+.qoder/settings.json
 .qoder.json
 .qodo
 settings.json
