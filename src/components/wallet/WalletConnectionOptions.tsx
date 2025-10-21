@@ -4,10 +4,11 @@ import { useState, useCallback } from "react";
 import ConnectWallet from "./ConnectWallet";
 import UnifiedModal from "../modal/UnifiedModal";
 import { Button } from "@/components/ui/button";
+import { WalletType } from "@/hooks/useWalletConnection";
 
 interface WalletConnectionOptionsProps {
   onSocialLoginClick: () => void;
-  onWalletConnect?: (walletType: string) => void;
+  onWalletConnect?: (walletType: WalletType) => void;
 }
 
 /**
@@ -26,7 +27,7 @@ export default function WalletConnectionOptions({
     setShowComingSoon(true);
   }, []);
 
-  const handleWalletConnect = useCallback((walletType: string) => {
+  const handleWalletConnect = useCallback((walletType: WalletType) => {
     if (onWalletConnect) {
       onWalletConnect(walletType);
     }
