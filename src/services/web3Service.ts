@@ -10,17 +10,30 @@ import { CONTRACTS, CHAINS } from '@/config';
 
 // Megapot contract ABI (minimal required functions)
 const MEGAPOT_ABI = [
-  // Purchase tickets function - 3 parameters: referrer, value, recipient
-  "function purchaseTickets(address referrer, uint256 value, address recipient) external",
+// Purchase tickets function - 3 parameters: referrer, value, recipient
+"function purchaseTickets(address referrer, uint256 value, address recipient) external",
 
-  // Get ticket price
-  "function ticketPrice() external view returns (uint256)",
+// Get ticket price
+"function ticketPrice() external view returns (uint256)",
 
-  // Get current jackpot
-  "function getCurrentJackpot() external view returns (uint256)",
+// Get current jackpot
+"function getCurrentJackpot() external view returns (uint256)",
 
-  // Events
-  "event UserTicketPurchase(address indexed recipient, uint256 ticketsPurchasedTotalBps, address indexed referrer, address indexed buyer)",
+// Get user info
+"function usersInfo(address) external view returns (uint256 ticketsPurchasedTotalBps, uint256 winningsClaimable, bool active)",
+
+// Get last winner
+"function lastWinnerAddress() external view returns (address)",
+
+// Get ticket count
+"function ticketCountTotalBps() external view returns (uint256)",
+
+// Claim winnings
+"function withdrawWinnings() external",
+
+// Events
+"event UserTicketPurchase(address indexed recipient, uint256 ticketsPurchasedTotalBps, address indexed referrer, address indexed buyer)",
+"event UserWinWithdrawal(address indexed user, uint256 amount)",
 ];
 
 // USDC token ABI (ERC20)
@@ -44,6 +57,13 @@ export interface UserBalance {
   eth: string;
   hasEnoughUsdc: boolean;
   hasEnoughEth: boolean;
+}
+
+export interface UserTicketInfo {
+  ticketsPurchased: number;
+  winningsClaimable: string;
+  isActive: boolean;
+  hasWon: boolean;
 }
 
 /**
@@ -329,30 +349,86 @@ class Web3Service {
   }
 
   /**
-   * Get ticket price from contract
-   */
+  * Get ticket price from contract
+  */
   async getTicketPrice(): Promise<string> {
-    if (!this.isInitialized || !this.megapotContract) {
-      console.warn('Web3 service not initialized, using default ticket price');
-      return '1'; // Default to $1
+  if (!this.isInitialized || !this.megapotContract) {
+  console.warn('Web3 service not initialized, using default ticket price');
+  return '1'; // Default to $1
+  }
+  if (!isBrowser()) {
+  console.warn('Web3 service can only be used in browser environments');
+  return '1';
+  }
+
+  try {
+  const price = await this.megapotContract.ticketPrice();
+  return ethers.formatUnits(price, 6); // USDC has 6 decimals
+  } catch (error) {
+  console.error('Failed to get ticket price from contract:', error);
+  return '1'; // Default to $1
+  }
+  }
+
+  /**
+    * Get user's ticket information
+    */
+  async getUserTicketInfo(): Promise<UserTicketInfo | null> {
+    if (!this.isInitialized || !this.megapotContract || !this.signer) {
+      console.warn('Web3 service not initialized');
+      return null;
     }
     if (!isBrowser()) {
       console.warn('Web3 service can only be used in browser environments');
-      return '1';
+      return null;
     }
 
     try {
-      const price = await this.megapotContract.ticketPrice();
-      return ethers.formatUnits(price, 6); // USDC has 6 decimals
+      const address = await this.signer.getAddress();
+      const [ticketsPurchasedTotalBps, winningsClaimable, isActive] = await this.megapotContract.usersInfo(address);
+      const lastWinner = await this.megapotContract.lastWinnerAddress();
+
+      // Convert Bps (basis points) to actual ticket count
+      // Each ticket is worth 10000 Bps (since tickets are multiplied by 10000)
+      const ticketsPurchased = Number(ticketsPurchasedTotalBps) / 10000;
+      const winningsFormatted = ethers.formatUnits(winningsClaimable, 6); // USDC has 6 decimals
+
+      return {
+        ticketsPurchased,
+        winningsClaimable: winningsFormatted,
+        isActive,
+        hasWon: lastWinner.toLowerCase() === address.toLowerCase() && parseFloat(winningsFormatted) > 0,
+      };
     } catch (error) {
-      console.error('Failed to get ticket price from contract:', error);
-      return '1'; // Default to $1
+      console.error('Failed to get user ticket info:', error);
+      return null;
     }
   }
 
   /**
-   * Check if service is initialized
-   */
+  * Claim winnings if user has won
+  */
+  async claimWinnings(): Promise<string> {
+  if (!this.isInitialized || !this.megapotContract) {
+      throw new Error('Contracts not initialized');
+    }
+    if (!isBrowser()) {
+      throw new Error('Web3 service can only be used in browser environments');
+    }
+
+    try {
+      const tx = await this.megapotContract.withdrawWinnings();
+      const receipt = await tx.wait();
+      return receipt.hash;
+    } catch (error) {
+      console.error('Failed to claim winnings:', error);
+      throw error;
+    }
+  }
+
+  /**
+    * Check if service is initialized
+    */
   isReady(): boolean {
     return this.isInitialized && this.megapotContract !== null && this.usdcContract !== null;
   }
