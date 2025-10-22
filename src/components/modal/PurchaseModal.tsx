@@ -121,8 +121,10 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
     
     try {
       const result = await purchaseTickets(ticketCount);
-      
-      if (!result.success) {
+
+      if (result.success) {
+        setStep('success');
+      } else {
         setStep('select');
       }
     } catch (error) {
