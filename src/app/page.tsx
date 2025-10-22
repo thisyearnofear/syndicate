@@ -302,6 +302,89 @@ function SyndicatesPiece() {
 }
 
 /**
+  * MODULAR: User Ticket Information Piece
+  */
+function UserTicketPiece({ userTicketInfo, claimWinnings, isClaimingWinnings }: {
+  userTicketInfo: any;
+  claimWinnings: () => Promise<string>;
+  isClaimingWinnings: boolean;
+}) {
+  if (!userTicketInfo) {
+    return (
+      <PuzzlePiece variant="secondary" size="md" shape="organic">
+        <CompactStack spacing="sm" align="center">
+          <span className="text-3xl">🎫</span>
+          <p className="text-sm text-center text-gray-400">Connect wallet to view your tickets</p>
+        </CompactStack>
+      </PuzzlePiece>
+    );
+  }
+
+  const handleClaimWinnings = async () => {
+    try {
+      const txHash = await claimWinnings();
+      // Could show a success message here
+      console.log('Winnings claimed:', txHash);
+    } catch (error) {
+      console.error('Failed to claim winnings:', error);
+    }
+  };
+
+  return (
+    <PuzzlePiece variant="primary" size="md" shape="organic" glow>
+      <CompactStack spacing="sm">
+        <CompactFlex align="center" gap="sm">
+          <span className="text-2xl">🎫</span>
+          <h3 className="font-bold text-lg text-white">Your Tickets</h3>
+        </CompactFlex>
+
+        <div className="glass p-3 rounded-lg">
+          <div className="grid grid-cols-2 gap-3 text-center">
+            <div>
+              <CountUpText
+                value={userTicketInfo.ticketsPurchased}
+                className="text-xl font-black text-blue-400"
+              />
+              <p className="text-xs text-gray-400">Tickets Owned</p>
+            </div>
+            <div>
+              <CountUpText
+                value={parseFloat(userTicketInfo.winningsClaimable)}
+                prefix="$"
+                className="text-xl font-black text-green-400"
+              />
+              <p className="text-xs text-gray-400">Winnings</p>
+            </div>
+          </div>
+        </div>
+
+        {userTicketInfo.hasWon && (
+          <div className="glass-premium p-3 rounded-lg border border-yellow-400/30">
+            <CompactStack spacing="xs" align="center">
+              <span className="text-2xl animate-bounce">🏆</span>
+              <p className="text-sm font-semibold text-yellow-400 text-center">
+                Congratulations! You won!
+              </p>
+              {parseFloat(userTicketInfo.winningsClaimable) > 0 && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleClaimWinnings}
+                  disabled={isClaimingWinnings}
+                  className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black font-semibold"
+                >
+                  {isClaimingWinnings ? "Claiming..." : "Claim Winnings"}
+                </Button>
+              )}
+            </CompactStack>
+          </div>
+        )}
+      </CompactStack>
+    </PuzzlePiece>
+  );
+}
+
+/**
  * MODULAR: Stats Puzzle Pieces (Overlapping)
  */
 function StatsPieces() {
@@ -349,7 +432,7 @@ function StatsPieces() {
 export default function PremiumHome() {
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const { isConnected } = useWalletConnection();
-  const { purchaseTickets } = useTicketPurchase();
+  const { purchaseTickets, userTicketInfo, claimWinnings, isClaimingWinnings } = useTicketPurchase();
 
   const handlePurchaseAction = useCallback(() => {
     if (!isConnected) {
@@ -444,9 +527,14 @@ export default function PremiumHome() {
           {/* Puzzle Piece Grid Layout */}
           <CompactSection spacing="lg">
             <CompactContainer maxWidth="2xl">
-              {/* Stack Activity Feed and Syndicates vertically */}
+              {/* Stack Activity Feed, User Tickets, and Syndicates vertically */}
               <CompactStack spacing="lg" align="center">
-                <ActivityFeedPiece />
+              <ActivityFeedPiece />
+              <UserTicketPiece
+                  userTicketInfo={userTicketInfo}
+                  claimWinnings={claimWinnings}
+                  isClaimingWinnings={isClaimingWinnings}
+                />
                 <SyndicatesPiece />
               </CompactStack>
 
