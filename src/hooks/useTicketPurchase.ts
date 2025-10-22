@@ -71,16 +71,23 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       const success = await web3Service.initialize();
       
       if (success) {
-        // Load initial data
-        await Promise.all([
-          refreshBalance(),
-          refreshJackpot(),
-          loadTicketPrice(),
-        ]);
+        // Wait a bit for the service to be fully ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Only load user-specific data - jackpot is already available from API via useLottery hook
+        try {
+          await Promise.allSettled([
+            refreshBalance(),
+            // Removed: refreshJackpot() - jackpot data comes from Megapot API, not blockchain
+            loadTicketPrice(),
+          ]);
+        } catch (dataError) {
+          console.warn('Some data failed to load, but initialization succeeded:', dataError);
+        }
       }
 
-      setState(prev => ({ 
-        ...prev, 
+      setState(prev => ({
+        ...prev,
         isInitializing: false,
         error: success ? null : 'Failed to initialize Web3 service'
       }));
@@ -88,8 +95,8 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       return success;
     } catch (error) {
       console.error('Web3 initialization failed:', error);
-      setState(prev => ({ 
-        ...prev, 
+      setState(prev => ({
+        ...prev,
         isInitializing: false,
         error: error instanceof Error ? error.message : 'Initialization failed'
       }));
@@ -101,34 +108,50 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
    * Refresh user balance
    */
   const refreshBalance = useCallback(async (): Promise<void> => {
+    // Check if service is ready before attempting to refresh
+    if (!web3Service.isReady()) {
+      console.warn('Web3 service not ready, skipping balance refresh');
+      return;
+    }
+
     setState(prev => ({ ...prev, isCheckingBalance: true }));
 
     try {
       const balance = await web3Service.getUserBalance();
-      setState(prev => ({ 
-        ...prev, 
+      setState(prev => ({
+        ...prev,
         userBalance: balance,
-        isCheckingBalance: false 
+        isCheckingBalance: false
       }));
     } catch (error) {
       console.error('Failed to refresh balance:', error);
-      setState(prev => ({ 
-        ...prev, 
+      setState(prev => ({
+        ...prev,
         isCheckingBalance: false,
-        error: 'Failed to load balance'
+        // Don't set error for balance refresh failures
       }));
     }
   }, []);
 
   /**
    * Refresh current jackpot
+   * NOTE: This is kept for backward compatibility but is not used during initialization.
+   * Jackpot data should come from the Megapot API via useLottery hook, not from blockchain.
    */
   const refreshJackpot = useCallback(async (): Promise<void> => {
+    // Check if service is ready before attempting to refresh
+    if (!web3Service.isReady()) {
+      console.warn('Web3 service not ready, skipping jackpot refresh');
+      return;
+    }
+
     try {
       const jackpot = await web3Service.getCurrentJackpot();
       setState(prev => ({ ...prev, currentJackpot: jackpot }));
     } catch (error) {
-      console.error('Failed to refresh jackpot:', error);
+      console.error('Failed to refresh jackpot from blockchain:', error);
+      // Don't throw - just log the error
+      // Jackpot data is available from API anyway
     }
   }, []);
 
@@ -136,11 +159,18 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
    * Load ticket price from contract
    */
   const loadTicketPrice = useCallback(async (): Promise<void> => {
+    // Check if service is ready before attempting to load
+    if (!web3Service.isReady()) {
+      console.warn('Web3 service not ready, using default ticket price');
+      return;
+    }
+
     try {
       const price = await web3Service.getTicketPrice();
       setState(prev => ({ ...prev, ticketPrice: price }));
     } catch (error) {
       console.error('Failed to load ticket price:', error);
+      // Don't throw - just use default price
     }
   }, []);
 
@@ -167,10 +197,10 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
           lastTxHash: result.txHash || null
         }));
 
-        // Refresh balance and jackpot after successful purchase
+        // Refresh balance after successful purchase
+        // Note: Jackpot updates come from the API via useLottery hook
         setTimeout(() => {
           refreshBalance();
-          refreshJackpot();
         }, 2000);
       } else {
         setState(prev => ({ 
@@ -226,7 +256,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
    * Auto-initialize when wallet connects
    */
   useEffect(() => {
-    if (isConnected && !state.isInitializing) {
+    if (isConnected && !state.isInitializing && !web3Service.isReady()) {
       initializeWeb3();
     }
   }, [isConnected, initializeWeb3, state.isInitializing]);
@@ -236,6 +266,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
    */
   useEffect(() => {
     if (!isConnected) {
+      web3Service.reset();
       reset();
     }
   }, [isConnected, reset]);

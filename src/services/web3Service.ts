@@ -58,6 +58,7 @@ class Web3Service {
   private signer: ethers.Signer | null = null;
   private megapotContract: ethers.Contract | null = null;
   private usdcContract: ethers.Contract | null = null;
+  private isInitialized: boolean = false;
 
   /**
    * Initialize Web3 service with user's wallet
@@ -77,7 +78,10 @@ class Web3Service {
       this.provider = new ethers.BrowserProvider((window as any).ethereum);
       this.signer = await this.provider.getSigner();
 
-      // Initialize contracts
+      // Ensure we're on Base network BEFORE initializing contracts
+      await this.ensureCorrectNetwork();
+
+      // Initialize contracts AFTER network is correct
       this.megapotContract = new ethers.Contract(
         CONTRACTS.megapot,
         MEGAPOT_ABI,
@@ -90,12 +94,12 @@ class Web3Service {
         this.signer
       );
 
-      // Ensure we're on Base network
-      await this.ensureCorrectNetwork();
-
+      this.isInitialized = true;
+      console.log('Web3 service initialized successfully');
       return true;
     } catch (error) {
       console.error('Failed to initialize Web3 service:', error);
+      this.isInitialized = false;
       return false;
     }
   }
@@ -144,54 +148,70 @@ class Web3Service {
    * Get user's balance information
    */
   async getUserBalance(): Promise<UserBalance> {
-    if (!this.signer || !this.usdcContract) {
+    if (!this.isInitialized || !this.signer || !this.usdcContract) {
       throw new Error('Web3 service not initialized');
     }
     if (!isBrowser()) {
       throw new Error('Web3 service can only be used in browser environments');
     }
 
-    const address = await this.signer.getAddress();
-    
-    // Get USDC balance (6 decimals)
-    const usdcBalance = await this.usdcContract.balanceOf(address);
-    const usdcFormatted = ethers.formatUnits(usdcBalance, 6);
+    try {
+      const address = await this.signer.getAddress();
+      
+      // Get USDC balance (6 decimals)
+      const usdcBalance = await this.usdcContract.balanceOf(address);
+      const usdcFormatted = ethers.formatUnits(usdcBalance, 6);
 
-    // Get ETH balance for gas
-    const ethBalance = await this.provider!.getBalance(address);
-    const ethFormatted = ethers.formatEther(ethBalance);
+      // Get ETH balance for gas
+      const ethBalance = await this.provider!.getBalance(address);
+      const ethFormatted = ethers.formatEther(ethBalance);
 
-    return {
-      usdc: usdcFormatted,
-      eth: ethFormatted,
-      hasEnoughUsdc: parseFloat(usdcFormatted) >= 1, // At least $1 USDC
-      hasEnoughEth: parseFloat(ethFormatted) >= 0.001, // At least 0.001 ETH for gas
-    };
+      return {
+        usdc: usdcFormatted,
+        eth: ethFormatted,
+        hasEnoughUsdc: parseFloat(usdcFormatted) >= 1, // At least $1 USDC
+        hasEnoughEth: parseFloat(ethFormatted) >= 0.001, // At least 0.001 ETH for gas
+      };
+    } catch (error) {
+      console.error('Failed to get user balance:', error);
+      // Return default values on error
+      return {
+        usdc: '0',
+        eth: '0',
+        hasEnoughUsdc: false,
+        hasEnoughEth: false,
+      };
+    }
   }
 
   /**
    * Check if user has approved USDC spending for Megapot contract
    */
   async checkUsdcAllowance(ticketCount: number): Promise<boolean> {
-    if (!this.signer || !this.usdcContract) {
+    if (!this.isInitialized || !this.signer || !this.usdcContract) {
       throw new Error('Web3 service not initialized');
     }
     if (!isBrowser()) {
       throw new Error('Web3 service can only be used in browser environments');
     }
 
-    const address = await this.signer.getAddress();
-    const allowance = await this.usdcContract.allowance(address, CONTRACTS.megapot);
-    const requiredAmount = ethers.parseUnits((ticketCount * 1).toString(), 6); // $1 per ticket
+    try {
+      const address = await this.signer.getAddress();
+      const allowance = await this.usdcContract.allowance(address, CONTRACTS.megapot);
+      const requiredAmount = ethers.parseUnits((ticketCount * 1).toString(), 6); // $1 per ticket
 
-    return allowance >= requiredAmount;
+      return allowance >= requiredAmount;
+    } catch (error) {
+      console.error('Failed to check USDC allowance:', error);
+      return false;
+    }
   }
 
   /**
    * Approve USDC spending for ticket purchases
    */
   async approveUsdc(ticketCount: number): Promise<string> {
-    if (!this.usdcContract) {
+    if (!this.isInitialized || !this.usdcContract) {
       throw new Error('USDC contract not initialized');
     }
     if (!isBrowser()) {
@@ -214,7 +234,7 @@ class Web3Service {
    */
   async purchaseTickets(ticketCount: number): Promise<TicketPurchaseResult> {
     try {
-      if (!this.megapotContract || !this.signer) {
+      if (!this.isInitialized || !this.megapotContract || !this.signer) {
         throw new Error('Contracts not initialized');
       }
       if (!isBrowser()) {
@@ -282,18 +302,21 @@ class Web3Service {
    * Get current jackpot amount
    */
   async getCurrentJackpot(): Promise<string> {
-    if (!this.megapotContract) {
-      throw new Error('Megapot contract not initialized');
+    if (!this.isInitialized || !this.megapotContract) {
+      console.warn('Web3 service not initialized, cannot get jackpot');
+      return '0';
     }
     if (!isBrowser()) {
-      throw new Error('Web3 service can only be used in browser environments');
+      console.warn('Web3 service can only be used in browser environments');
+      return '0';
     }
 
     try {
       const jackpot = await this.megapotContract.getCurrentJackpot();
       return ethers.formatUnits(jackpot, 6); // USDC has 6 decimals
     } catch (error) {
-      console.error('Failed to get jackpot:', error);
+      console.error('Failed to get jackpot from contract:', error);
+      // Return 0 instead of throwing to prevent UI errors
       return '0';
     }
   }
@@ -302,20 +325,40 @@ class Web3Service {
    * Get ticket price from contract
    */
   async getTicketPrice(): Promise<string> {
-    if (!this.megapotContract) {
-      throw new Error('Megapot contract not initialized');
+    if (!this.isInitialized || !this.megapotContract) {
+      console.warn('Web3 service not initialized, using default ticket price');
+      return '1'; // Default to $1
     }
     if (!isBrowser()) {
-      throw new Error('Web3 service can only be used in browser environments');
+      console.warn('Web3 service can only be used in browser environments');
+      return '1';
     }
 
     try {
       const price = await this.megapotContract.ticketPrice();
       return ethers.formatUnits(price, 6); // USDC has 6 decimals
     } catch (error) {
-      console.error('Failed to get ticket price:', error);
+      console.error('Failed to get ticket price from contract:', error);
       return '1'; // Default to $1
     }
+  }
+
+  /**
+   * Check if service is initialized
+   */
+  isReady(): boolean {
+    return this.isInitialized && this.megapotContract !== null && this.usdcContract !== null;
+  }
+
+  /**
+   * Reset the service (useful for wallet disconnection)
+   */
+  reset(): void {
+    this.provider = null;
+    this.signer = null;
+    this.megapotContract = null;
+    this.usdcContract = null;
+    this.isInitialized = false;
   }
 }
 
