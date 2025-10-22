@@ -10,8 +10,8 @@ import { CONTRACTS, CHAINS } from '@/config';
 
 // Megapot contract ABI (minimal required functions)
 const MEGAPOT_ABI = [
-  // Purchase tickets function
-  "function purchaseTickets(uint256 ticketCount, address referrer) external",
+  // Purchase tickets function - NOTE: payable, single parameter
+  "function purchaseTickets(uint256 count) external payable",
   
   // Get ticket price
   "function ticketPrice() external view returns (uint256)",
@@ -263,11 +263,8 @@ class Web3Service {
         await this.approveUsdc(ticketCount);
       }
 
-      // Purchase tickets
-      const tx = await this.megapotContract.purchaseTickets(
-        ticketCount,
-        "0x0000000000000000000000000000000000000000" // Default referrer
-      );
+      // Purchase tickets - contract only takes count parameter
+      const tx = await this.megapotContract.purchaseTickets(ticketCount);
 
       // Wait for transaction confirmation
       const receipt = await tx.wait();
