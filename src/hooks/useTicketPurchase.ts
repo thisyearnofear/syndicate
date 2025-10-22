@@ -258,6 +258,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       isPurchasing: false,
       isApproving: false,
       isCheckingBalance: false,
+      isClaimingWinnings: false,
       userBalance: null,
       ticketPrice: '1',
       currentJackpot: '0',
@@ -265,6 +266,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       error: null,
       purchaseSuccess: false,
       purchasedTicketCount: 0,
+      userTicketInfo: null,
     });
   }, []);
 
