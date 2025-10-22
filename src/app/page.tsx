@@ -313,8 +313,8 @@ function UserTicketPiece({ userTicketInfo, claimWinnings, isClaimingWinnings }: 
     return (
       <PuzzlePiece variant="secondary" size="md" shape="organic">
         <CompactStack spacing="sm" align="center">
-          <span className="text-3xl">🎫</span>
-          <p className="text-sm text-center text-gray-400">Connect wallet to view your tickets</p>
+          <span className="text-3xl transition-transform duration-300 hover:scale-125">🎫</span>
+          <p className="text-sm text-center text-gray-400 leading-relaxed">Connect wallet to view your tickets</p>
         </CompactStack>
       </PuzzlePiece>
     );
@@ -334,35 +334,35 @@ function UserTicketPiece({ userTicketInfo, claimWinnings, isClaimingWinnings }: 
     <PuzzlePiece variant="primary" size="md" shape="organic" glow>
       <CompactStack spacing="sm">
         <CompactFlex align="center" gap="sm">
-          <span className="text-2xl">🎫</span>
-          <h3 className="font-bold text-lg text-white">Your Tickets</h3>
+          <span className="text-2xl transition-transform duration-300 hover:scale-125">🎫</span>
+          <h3 className="font-bold text-lg md:text-xl lg:text-2xl leading-tight tracking-tight text-white">Your Tickets</h3>
         </CompactFlex>
 
-        <div className="glass p-3 rounded-lg">
-          <div className="grid grid-cols-2 gap-3 text-center">
-            <div>
+        <div className="glass p-4 rounded-xl hover-scale transition-all duration-300">
+          <div className="grid grid-cols-2 gap-4 text-center">
+            <div className="hover-lift transition-all duration-300">
               <CountUpText
                 value={userTicketInfo.ticketsPurchased}
-                className="text-xl font-black text-blue-400"
+                className="text-2xl font-black text-blue-400 drop-shadow-[0_0_20px_rgba(59,130,246,0.6)]"
               />
-              <p className="text-xs text-gray-400">Tickets Owned</p>
+              <p className="text-xs text-gray-400 leading-relaxed mt-1">Tickets Owned</p>
             </div>
-            <div>
+            <div className="hover-lift transition-all duration-300">
               <CountUpText
                 value={parseFloat(userTicketInfo.winningsClaimable)}
                 prefix="$"
-                className="text-xl font-black text-green-400"
+                className="text-2xl font-black text-green-400 drop-shadow-[0_0_20px_rgba(34,197,94,0.6)]"
               />
-              <p className="text-xs text-gray-400">Winnings</p>
+              <p className="text-xs text-gray-400 leading-relaxed mt-1">Winnings</p>
             </div>
           </div>
         </div>
 
         {userTicketInfo.hasWon && (
-          <div className="glass-premium p-3 rounded-lg border border-yellow-400/30">
+          <div className="glass-premium p-4 rounded-xl border border-yellow-400/30 animate-pulse shadow-premium">
             <CompactStack spacing="xs" align="center">
-              <span className="text-2xl animate-bounce">🏆</span>
-              <p className="text-sm font-semibold text-yellow-400 text-center">
+              <span className="text-3xl animate-bounce transition-transform duration-300 hover:scale-125">🏆</span>
+              <p className="text-sm font-bold text-yellow-400 text-center leading-relaxed drop-shadow-[0_0_20px_rgba(250,204,21,0.6)]">
                 Congratulations! You won!
               </p>
               {parseFloat(userTicketInfo.winningsClaimable) > 0 && (
@@ -371,9 +371,9 @@ function UserTicketPiece({ userTicketInfo, claimWinnings, isClaimingWinnings }: 
                   size="sm"
                   onClick={handleClaimWinnings}
                   disabled={isClaimingWinnings}
-                  className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black font-semibold"
+                  className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white font-black shadow-2xl hover:shadow-yellow-500/30 border border-yellow-400/30 animate-float hover-lift transition-all duration-300"
                 >
-                  {isClaimingWinnings ? "Claiming..." : "Claim Winnings"}
+                  {isClaimingWinnings ? "Claiming..." : "⚡ Claim Winnings"}
                 </Button>
               )}
             </CompactStack>
