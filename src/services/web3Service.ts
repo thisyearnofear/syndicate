@@ -188,7 +188,7 @@ class Web3Service {
    * Check if user has approved USDC spending for Megapot contract
    */
   async checkUsdcAllowance(ticketCount: number): Promise<boolean> {
-    if (!this.isInitialized || !this.signer || !this.usdcContract) {
+    if (!this.isInitialized || !this.signer || !this.usdcContract || !this.megapotContract) {
       throw new Error('Web3 service not initialized');
     }
     if (!isBrowser()) {
@@ -198,7 +198,8 @@ class Web3Service {
     try {
       const address = await this.signer.getAddress();
       const allowance = await this.usdcContract.allowance(address, CONTRACTS.megapot);
-      const requiredAmount = ethers.parseUnits((ticketCount * 1).toString(), 6); // $1 per ticket in szabo
+      const ticketPrice = await this.megapotContract.ticketPrice();
+      const requiredAmount = ticketPrice * BigInt(ticketCount);
 
       return allowance >= requiredAmount;
     } catch (error) {
@@ -211,14 +212,15 @@ class Web3Service {
    * Approve USDC spending for ticket purchases
    */
   async approveUsdc(ticketCount: number): Promise<string> {
-    if (!this.isInitialized || !this.usdcContract) {
-      throw new Error('USDC contract not initialized');
+    if (!this.isInitialized || !this.usdcContract || !this.megapotContract) {
+      throw new Error('Contracts not initialized');
     }
     if (!isBrowser()) {
       throw new Error('Web3 service can only be used in browser environments');
     }
 
-    const requiredAmount = ethers.parseUnits((ticketCount * 1).toString(), 6); // $1 per ticket in szabo
+    const ticketPrice = await this.megapotContract.ticketPrice();
+    const requiredAmount = ticketPrice * BigInt(ticketCount);
 
     // Approve a bit more to handle multiple purchases
     const approvalAmount = requiredAmount * BigInt(10);
@@ -263,9 +265,12 @@ class Web3Service {
         await this.approveUsdc(ticketCount);
       }
 
+      // Get actual ticket price from contract
+      const ticketPrice = await this.megapotContract.ticketPrice();
+
       // Purchase tickets - contract takes referrer, value, recipient
-      // value is USDC amount in szabo (6 decimals)
-      const usdcAmount = ethers.parseUnits((ticketCount * 1).toString(), 6); // $1 per ticket
+      // value is USDC amount in szabo (6 decimals) = ticketCount * ticketPrice
+      const usdcAmount = ticketPrice * BigInt(ticketCount);
       const referrer = ethers.ZeroAddress; // Default to address(0) for no referrer
       const recipient = await this.signer.getAddress(); // Buy for ourselves
 
