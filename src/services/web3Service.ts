@@ -10,17 +10,17 @@ import { CONTRACTS, CHAINS } from '@/config';
 
 // Megapot contract ABI (minimal required functions)
 const MEGAPOT_ABI = [
-  // Purchase tickets function - NOTE: payable, single parameter
-  "function purchaseTickets(uint256 count) external payable",
-  
+  // Purchase tickets function - 3 parameters: referrer, value, recipient
+  "function purchaseTickets(address referrer, uint256 value, address recipient) external",
+
   // Get ticket price
   "function ticketPrice() external view returns (uint256)",
-  
+
   // Get current jackpot
   "function getCurrentJackpot() external view returns (uint256)",
-  
+
   // Events
-  "event TicketsPurchased(address indexed buyer, uint256 ticketCount, uint256 totalCost)",
+  "event UserTicketPurchase(address indexed recipient, uint256 ticketsPurchasedTotalBps, address indexed referrer, address indexed buyer)",
 ];
 
 // USDC token ABI (ERC20)
@@ -198,7 +198,7 @@ class Web3Service {
     try {
       const address = await this.signer.getAddress();
       const allowance = await this.usdcContract.allowance(address, CONTRACTS.megapot);
-      const requiredAmount = ethers.parseUnits((ticketCount * 1).toString(), 6); // $1 per ticket
+      const requiredAmount = ethers.parseUnits((ticketCount * 1).toString(), 6); // $1 per ticket in szabo
 
       return allowance >= requiredAmount;
     } catch (error) {
@@ -218,8 +218,8 @@ class Web3Service {
       throw new Error('Web3 service can only be used in browser environments');
     }
 
-    const requiredAmount = ethers.parseUnits((ticketCount * 1).toString(), 6); // $1 per ticket
-    
+    const requiredAmount = ethers.parseUnits((ticketCount * 1).toString(), 6); // $1 per ticket in szabo
+
     // Approve a bit more to handle multiple purchases
     const approvalAmount = requiredAmount * BigInt(10);
 
@@ -263,8 +263,13 @@ class Web3Service {
         await this.approveUsdc(ticketCount);
       }
 
-      // Purchase tickets - contract only takes count parameter
-      const tx = await this.megapotContract.purchaseTickets(ticketCount);
+      // Purchase tickets - contract takes referrer, value, recipient
+      // value is USDC amount in szabo (6 decimals)
+      const usdcAmount = ethers.parseUnits((ticketCount * 1).toString(), 6); // $1 per ticket
+      const referrer = ethers.ZeroAddress; // Default to address(0) for no referrer
+      const recipient = await this.signer.getAddress(); // Buy for ourselves
+
+      const tx = await this.megapotContract.purchaseTickets(referrer, usdcAmount, recipient);
 
       // Wait for transaction confirmation
       const receipt = await tx.wait();
