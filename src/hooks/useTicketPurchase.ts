@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { web3Service, type TicketPurchaseResult, type UserBalance } from '@/services/web3Service';
+import { web3Service, type TicketPurchaseResult, type UserBalance, type UserTicketInfo } from '@/services/web3Service';
 import { useWalletConnection } from './useWalletConnection';
 
 export interface TicketPurchaseState {
@@ -15,19 +15,23 @@ export interface TicketPurchaseState {
   isPurchasing: boolean;
   isApproving: boolean;
   isCheckingBalance: boolean;
-  
+  isClaimingWinnings: boolean;
+
   // Data
   userBalance: UserBalance | null;
   ticketPrice: string;
   currentJackpot: string;
-  
+
   // Transaction state
   lastTxHash: string | null;
   error: string | null;
-  
+
   // Success state
   purchaseSuccess: boolean;
   purchasedTicketCount: number;
+
+  // User ticket info
+  userTicketInfo: UserTicketInfo | null;
 }
 
 export interface TicketPurchaseActions {
@@ -35,6 +39,8 @@ export interface TicketPurchaseActions {
   purchaseTickets: (ticketCount: number) => Promise<TicketPurchaseResult>;
   refreshBalance: () => Promise<void>;
   refreshJackpot: () => Promise<void>;
+  getUserTicketInfo: () => Promise<void>;
+  claimWinnings: () => Promise<string>;
   clearError: () => void;
   reset: () => void;
 }
@@ -47,6 +53,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     isPurchasing: false,
     isApproving: false,
     isCheckingBalance: false,
+    isClaimingWinnings: false,
     userBalance: null,
     ticketPrice: '1',
     currentJackpot: '0',
@@ -54,6 +61,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     error: null,
     purchaseSuccess: false,
     purchasedTicketCount: 0,
+    userTicketInfo: null,
   });
 
   /**
@@ -81,6 +89,14 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
             // Removed: refreshJackpot() - jackpot data comes from Megapot API, not blockchain
             loadTicketPrice(),
           ]);
+
+          // Load user ticket info separately (defined later in hook)
+          try {
+            const ticketInfo = await web3Service.getUserTicketInfo();
+            setState(prev => ({ ...prev, userTicketInfo: ticketInfo }));
+          } catch (ticketError) {
+            console.warn('Failed to load user ticket info:', ticketError);
+          }
         } catch (dataError) {
           console.warn('Some data failed to load, but initialization succeeded:', dataError);
         }
@@ -271,12 +287,53 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     }
   }, [isConnected, reset]);
 
+  /**
+   * Get user's ticket information and winnings
+   */
+  const getUserTicketInfo = useCallback(async (): Promise<void> => {
+    try {
+      const ticketInfo = await web3Service.getUserTicketInfo();
+      setState(prev => ({ ...prev, userTicketInfo: ticketInfo }));
+    } catch (error) {
+      console.error('Failed to get user ticket info:', error);
+    }
+  }, []);
+
+  /**
+   * Claim winnings if user has won
+   */
+  const claimWinnings = useCallback(async (): Promise<string> => {
+    setState(prev => ({ ...prev, isClaimingWinnings: true, error: null }));
+
+    try {
+      const txHash = await web3Service.claimWinnings();
+      setState(prev => ({
+        ...prev,
+        isClaimingWinnings: false,
+        lastTxHash: txHash
+      }));
+
+      // Refresh user ticket info after claiming
+      await getUserTicketInfo();
+      return txHash;
+    } catch (error: any) {
+      setState(prev => ({
+        ...prev,
+        isClaimingWinnings: false,
+        error: error.message || 'Failed to claim winnings'
+      }));
+      throw error;
+    }
+  }, [getUserTicketInfo]);
+
   return {
     ...state,
     initializeWeb3,
     purchaseTickets,
     refreshBalance,
     refreshJackpot,
+    getUserTicketInfo,
+    claimWinnings,
     clearError,
     reset,
   };
