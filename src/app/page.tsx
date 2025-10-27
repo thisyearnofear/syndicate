@@ -39,6 +39,8 @@ import WalletConnectionManager from "@/components/wallet/WalletConnectionManager
 
 // Lazy load heavy components
 const PurchaseModal = lazy(() => import("@/components/modal/PurchaseModal"));
+const SyndicateCard = lazy(() => import("@/components/SyndicateCard"));
+const SocialFeed = lazy(() => import("@/components/SocialFeed"));
 
 const CountUpText = ({
   value,
@@ -252,14 +254,58 @@ function ActivityFeedPiece() {
  * MODULAR: Syndicates Puzzle Piece
  */
 function SyndicatesPiece() {
-  const [hoveredSyndicate, setHoveredSyndicate] = useState<number | null>(null);
+  const [syndicates, setSyndicates] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const syndicates = [
-    { name: "Ocean Warriors", members: 1247, icon: "🌊", color: "blue" },
-    { name: "Climate Action", members: 2156, icon: "🌍", color: "green" },
-    { name: "Education First", members: 892, icon: "📚", color: "purple" },
-    { name: "Food Security", members: 634, icon: "🌾", color: "yellow" },
-  ];
+  useEffect(() => {
+    const fetchSyndicates = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/syndicates');
+        if (!response.ok) throw new Error('Failed to fetch syndicates');
+        const data = await response.json();
+        setSyndicates(data);
+      } catch (err) {
+        console.error('Error fetching syndicates:', err);
+        setError('Failed to load syndicates');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSyndicates();
+  }, []);
+
+  if (loading) {
+    return (
+      <PuzzlePiece variant="secondary" size="lg" shape="rounded" glow>
+        <CompactStack spacing="md">
+          <h2 className="font-bold text-lg md:text-4xl lg:text-5xl leading-tight tracking-tight text-white">
+            Active Syndicates
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="glass-premium p-4 rounded-xl h-48 animate-pulse bg-gray-700/50" />
+            ))}
+          </div>
+        </CompactStack>
+      </PuzzlePiece>
+    );
+  }
+
+  if (error) {
+    return (
+      <PuzzlePiece variant="secondary" size="lg" shape="rounded" glow>
+        <CompactStack spacing="md" align="center">
+          <h2 className="font-bold text-lg md:text-4xl lg:text-5xl leading-tight tracking-tight text-white">
+            Active Syndicates
+          </h2>
+          <p className="text-red-400">{error}</p>
+        </CompactStack>
+      </PuzzlePiece>
+    );
+  }
 
   return (
     <PuzzlePiece variant="secondary" size="lg" shape="rounded" glow>
@@ -267,35 +313,17 @@ function SyndicatesPiece() {
         <h2 className="font-bold text-lg md:text-4xl lg:text-5xl leading-tight tracking-tight text-white">
           Active Syndicates
         </h2>
-
-        <CompactGrid columns={2} gap="sm">
-          {syndicates.map((syndicate, index) => (
-            <div
-              key={index}
-              className={`glass-premium p-3 rounded-lg hover-lift animate-scale-in stagger-${
-                index + 1
-              } transition-all duration-300 ${
-                hoveredSyndicate === index ? "ring-2 ring-white/50" : ""
-              }`}
-              onMouseEnter={() => setHoveredSyndicate(index)}
-              onMouseLeave={() => setHoveredSyndicate(null)}
-            >
-              <CompactStack spacing="xs" align="center">
-                <span className="text-2xl transition-transform duration-300 hover:scale-125">
-                  {syndicate.icon}
-                </span>
-                <p className="text-sm font-semibold text-center text-gray-300 leading-relaxed">
-                  {syndicate.name}
-                </p>
-                <span
-                  className={`font-semibold text-${syndicate.color}-400 drop-shadow-[0_0_20px_rgba(147,51,234,0.6)] animate-pulse text-xs`}
-                >
-                  {syndicate.members.toLocaleString()} members
-                </span>
-              </CompactStack>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {syndicates.map((syndicate) => (
+            <Suspense key={syndicate.id} fallback={<div className="glass-premium p-4 rounded-xl h-48 animate-pulse bg-gray-700/50" />}>
+              <SyndicateCard 
+                syndicate={syndicate} 
+                onJoin={(id) => console.log('Join syndicate:', id)}
+                onView={(id) => console.log('View syndicate:', id)}
+              />
+            </Suspense>
           ))}
-        </CompactGrid>
+        </div>
       </CompactStack>
     </PuzzlePiece>
   );
@@ -530,6 +558,9 @@ export default function PremiumHome() {
               {/* Stack Activity Feed, User Tickets, and Syndicates vertically */}
               <CompactStack spacing="lg" align="center">
               <ActivityFeedPiece />
+              <Suspense fallback={<div className="glass-premium p-4 rounded-xl h-64 animate-pulse bg-gray-700/50 w-full max-w-2xl" />}>
+                <SocialFeed className="w-full max-w-2xl" />
+              </Suspense>
               <UserTicketPiece
                   userTicketInfo={userTicketInfo}
                   claimWinnings={claimWinnings}

@@ -88,6 +88,12 @@ window.__performanceMonitor.getReport()
 - **Error Recovery**: Graceful error handling with retry mechanisms
 - **Performance Tracking**: Detailed performance metrics for all operations
 
+### Syndicate Domain
+- **Social Pools**: Community-driven lottery pools supporting social causes
+- **Impact Tracking**: Real-time visualization of community impact
+- **Activity Feed**: Live social activity and trending syndicates
+- **Easy Sharing**: One-click sharing across social platforms
+
 ### Wallet Domain
 - **Multi-wallet Support**: MetaMask, Phantom, WalletConnect, Social Login, NEAR
 - **Auto-detection**: Automatic wallet availability detection

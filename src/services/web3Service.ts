@@ -50,6 +50,10 @@ export interface TicketPurchaseResult {
   txHash?: string;
   error?: string;
   ticketCount?: number;
+  // ENHANCEMENT: Added syndicate fields for enhanced purchase flow
+  mode?: 'individual' | 'syndicate';
+  syndicateId?: string;
+  syndicateImpact?: any; // Will be properly typed when we import from lottery types
 }
 
 export interface UserBalance {
