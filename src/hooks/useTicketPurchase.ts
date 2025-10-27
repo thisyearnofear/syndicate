@@ -8,6 +8,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { web3Service, type TicketPurchaseResult, type UserBalance, type UserTicketInfo } from '@/services/web3Service';
 import { useWalletConnection } from './useWalletConnection';
+import type { SyndicateInfo, PurchaseOptions, SyndicateImpact } from '@/domains/lottery/types';
 
 export interface TicketPurchaseState {
   // Loading states
@@ -32,11 +33,19 @@ export interface TicketPurchaseState {
 
   // User ticket info
   userTicketInfo: UserTicketInfo | null;
+
+  // ENHANCEMENT: Syndicate state
+  lastPurchaseMode: 'individual' | 'syndicate' | null;
+  lastSyndicateImpact: SyndicateImpact | null;
 }
 
 export interface TicketPurchaseActions {
   initializeWeb3: () => Promise<boolean>;
-  purchaseTickets: (ticketCount: number) => Promise<TicketPurchaseResult>;
+  // ENHANCEMENT: Enhanced to support both individual and syndicate purchases
+  purchaseTickets: (ticketCount: number, syndicateId?: string) => Promise<TicketPurchaseResult>;
+  // New syndicate-specific actions
+  purchaseForSyndicate: (options: PurchaseOptions) => Promise<TicketPurchaseResult>;
+  getSyndicateImpactPreview: (ticketCount: number, syndicate: SyndicateInfo) => SyndicateImpact;
   refreshBalance: () => Promise<void>;
   refreshJackpot: () => Promise<void>;
   getUserTicketInfo: () => Promise<void>;
@@ -62,6 +71,9 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     purchaseSuccess: false,
     purchasedTicketCount: 0,
     userTicketInfo: null,
+    // ENHANCEMENT: Syndicate state
+    lastPurchaseMode: null,
+    lastSyndicateImpact: null,
   });
 
   /**
@@ -191,9 +203,27 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
   }, []);
 
   /**
+   * ENHANCEMENT: Get syndicate impact preview for UI display
+   */
+  const getSyndicateImpactPreview = useCallback((ticketCount: number, syndicate: SyndicateInfo): SyndicateImpact => {
+    const ticketPrice = parseFloat(state.ticketPrice);
+    const totalCost = ticketCount * ticketPrice;
+    const potentialWinnings = parseFloat(state.currentJackpot);
+    const potentialCauseAmount = (potentialWinnings * syndicate.causePercentage) / 100;
+
+    return {
+      syndicateId: syndicate.id,
+      syndicate: syndicate,
+      ticketsPurchased: ticketCount,
+      potentialCauseAmount: potentialCauseAmount,
+      membershipStatus: 'new', // TODO: Determine if user is existing member
+    };
+  }, [state.ticketPrice, state.currentJackpot]);
+
+  /**
    * Purchase tickets
    */
-  const purchaseTickets = useCallback(async (ticketCount: number): Promise<TicketPurchaseResult> => {
+  const purchaseTickets = useCallback(async (ticketCount: number, syndicateId?: string): Promise<TicketPurchaseResult> => {
     setState(prev => ({ 
       ...prev, 
       isPurchasing: true, 
@@ -202,7 +232,28 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     }));
 
     try {
+      // ENHANCEMENT: Handle both individual and syndicate purchases
       const result = await web3Service.purchaseTickets(ticketCount);
+      
+      // Determine purchase mode and create syndicate impact if applicable
+      const purchaseMode: 'individual' | 'syndicate' = syndicateId ? 'syndicate' : 'individual';
+      let syndicateImpact: SyndicateImpact | null = null;
+      
+      if (syndicateId && result.success) {
+        // Fetch syndicate info for impact calculation
+        try {
+          const syndicateResponse = await fetch('/api/syndicates');
+          if (syndicateResponse.ok) {
+            const syndicates = await syndicateResponse.json();
+            const syndicate = syndicates.find((s: any) => s.id === syndicateId);
+            if (syndicate) {
+              syndicateImpact = getSyndicateImpactPreview(ticketCount, syndicate);
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to fetch syndicate info for impact calculation:', error);
+        }
+      }
 
       if (result.success) {
         setState(prev => ({ 
@@ -210,7 +261,10 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
           isPurchasing: false,
           purchaseSuccess: true,
           purchasedTicketCount: ticketCount,
-          lastTxHash: result.txHash || null
+          lastTxHash: result.txHash || null,
+          // ENHANCEMENT: Store syndicate context
+          lastPurchaseMode: purchaseMode,
+          lastSyndicateImpact: syndicateImpact,
         }));
 
         // Refresh balance after successful purchase
@@ -226,7 +280,13 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
         }));
       }
 
-      return result;
+      // ENHANCEMENT: Return enhanced result with syndicate context
+      return {
+        ...result,
+        mode: purchaseMode,
+        syndicateId: syndicateId,
+        syndicateImpact: syndicateImpact,
+      };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Purchase failed';
       setState(prev => ({ 
@@ -237,7 +297,9 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
 
       return {
         success: false,
-        error: errorMessage
+        error: errorMessage,
+        mode: syndicateId ? 'syndicate' : 'individual',
+        syndicateId: syndicateId,
       };
     }
   }, [refreshBalance, refreshJackpot]);
@@ -248,6 +310,13 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
   const clearError = useCallback(() => {
     setState(prev => ({ ...prev, error: null }));
   }, []);
+
+  /**
+   * ENHANCEMENT: Purchase tickets for a specific syndicate
+   */
+  const purchaseForSyndicate = useCallback(async (options: PurchaseOptions): Promise<TicketPurchaseResult> => {
+    return purchaseTickets(options.ticketCount, options.syndicateId);
+  }, [purchaseTickets]);
 
   /**
    * Reset all state
@@ -267,6 +336,9 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       purchaseSuccess: false,
       purchasedTicketCount: 0,
       userTicketInfo: null,
+      // ENHANCEMENT: Reset syndicate state
+      lastPurchaseMode: null,
+      lastSyndicateImpact: null,
     });
   }, []);
 
@@ -332,6 +404,9 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     ...state,
     initializeWeb3,
     purchaseTickets,
+    // ENHANCEMENT: New syndicate functions
+    purchaseForSyndicate,
+    getSyndicateImpactPreview,
     refreshBalance,
     refreshJackpot,
     getUserTicketInfo,

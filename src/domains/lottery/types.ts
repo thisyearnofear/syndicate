@@ -85,11 +85,50 @@ export interface TicketPurchaseProps {
 }
 
 // =============================================================================
+// SYNDICATE TYPES (ENHANCEMENT FIRST: Added to existing lottery types)
+// =============================================================================
+
+export interface SyndicateInfo {
+  id: string;
+  name: string;
+  cause: string;
+  description: string;
+  causePercentage: number;
+  membersCount: number;
+  ticketsPooled: number;
+  totalImpact: number;
+  isActive: boolean;
+  isTrending: boolean;
+  recentActivity: SyndicateActivity[];
+}
+
+export interface SyndicateActivity {
+  type: 'join' | 'tickets' | 'win' | 'donation';
+  count: number;
+  timeframe: string;
+  amount?: number;
+}
+
+export interface PurchaseOptions {
+  ticketCount: number;
+  mode: 'individual' | 'syndicate';
+  syndicateId?: string;
+}
+
+export interface SyndicateImpact {
+  syndicateId: string;
+  syndicate: SyndicateInfo;
+  ticketsPurchased: number;
+  potentialCauseAmount: number;
+  membershipStatus: 'new' | 'existing';
+}
+
+// =============================================================================
 // UTILITY TYPES
 // =============================================================================
 
 export type LotteryError = {
-  code: 'NETWORK_ERROR' | 'CONTRACT_ERROR' | 'USER_REJECTED' | 'INSUFFICIENT_FUNDS' | 'UNKNOWN';
+  code: 'NETWORK_ERROR' | 'CONTRACT_ERROR' | 'USER_REJECTED' | 'INSUFFICIENT_FUNDS' | 'SYNDICATE_ERROR' | 'UNKNOWN';
   message: string;
   details?: any;
 };
@@ -98,4 +137,8 @@ export type PurchaseResult = {
   success: boolean;
   txHash?: string;
   error?: LotteryError;
+  // ENHANCEMENT: Added syndicate fields
+  syndicateId?: string;
+  syndicateImpact?: SyndicateImpact;
+  mode?: 'individual' | 'syndicate';
 };
