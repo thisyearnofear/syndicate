@@ -11,12 +11,13 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Minus, Loader2, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
+import { Loader2, AlertCircle, ExternalLink } from 'lucide-react';
 import { useTicketPurchase } from '@/hooks/useTicketPurchase';
-import { useWalletConnection, WalletType } from '@/hooks/useWalletConnection';
+import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { Button } from "@/shared/components/ui/Button";
 import { CompactStack, CompactFlex } from '@/shared/components/premium/CompactLayout';
 import ConnectWallet from '@/components/wallet/ConnectWallet';
+import { useSuccessToast, useErrorToast } from '@/shared/components/ui/Toast';
 import type { SyndicateInfo } from '@/domains/lottery/types';
 
 export interface PurchaseModalProps {
@@ -25,42 +26,12 @@ export interface PurchaseModalProps {
   onSuccess?: (ticketCount: number) => void;
 }
 
-const CountUpText = ({ value, duration = 2000, prefix = '', suffix = '', className = '' }: { value: number; duration?: number; prefix?: string; suffix?: string; className?: string; }) => {
-  const [count, setCount] = useState(0);
 
-  useEffect(() => {
-    let startTime: number;
-    let animationFrame: number;
-
-    const animate = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      
-      setCount(Math.floor(progress * value));
-
-      if (progress < 1) {
-        animationFrame = requestAnimationFrame(animate);
-      }
-    };
-
-    animationFrame = requestAnimationFrame(animate);
-
-    return () => {
-      if (animationFrame) {
-        cancelAnimationFrame(animationFrame);
-      }
-    };
-  }, [value, duration]);
-
-  return (
-    <span className={`font-mono font-bold ${className}`}>
-      {prefix}{count.toLocaleString()}{suffix}
-    </span>
-  );
-}
 
 export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps) {
   const { isConnected, connect } = useWalletConnection();
+  const successToast = useSuccessToast();
+  const errorToast = useErrorToast();
   const {
     // State
     isInitializing,
@@ -96,13 +67,13 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
       setPurchaseMode('individual');
       setSelectedSyndicate(null);
       clearError();
-      
+
       // Fetch syndicates data
       fetchSyndicates();
     } else {
       document.body.style.overflow = 'unset';
     }
-    
+
     return () => {
       document.body.style.overflow = 'unset';
     };
@@ -126,14 +97,24 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
     if (purchaseSuccess) {
       setStep('success');
       onSuccess?.(purchasedTicketCount);
-      
+
+      // Show success toast
+      successToast(
+        'Tickets Purchased!',
+        `${purchasedTicketCount} ticket${purchasedTicketCount > 1 ? 's' : ''} successfully purchased`,
+        {
+          label: 'View My Tickets',
+          onClick: () => window.location.href = '/my-tickets'
+        }
+      );
+
       // Auto-close after success
       setTimeout(() => {
         onClose();
         reset();
       }, 5000);
     }
-  }, [purchaseSuccess, purchasedTicketCount, onSuccess, onClose, reset]);
+  }, [purchaseSuccess, purchasedTicketCount, onSuccess, onClose, reset, successToast]);
 
   const handlePurchase = async () => {
     if (!isConnected) {
@@ -141,11 +122,11 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
     }
 
     setStep('processing');
-    
+
     try {
       // Use the enhanced purchaseTickets function with syndicate support
       const result = await purchaseTickets(
-        ticketCount, 
+        ticketCount,
         purchaseMode === 'syndicate' ? selectedSyndicate?.id : undefined
       );
 
@@ -153,10 +134,24 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
         setStep('success');
       } else {
         setStep('select');
+        // Show error toast
+        errorToast(
+          'Purchase Failed',
+          result.error || 'Unable to complete ticket purchase. Please try again.',
+          {
+            label: 'Retry',
+            onClick: () => handlePurchase()
+          }
+        );
       }
     } catch (error) {
       console.error('Purchase failed:', error);
       setStep('select');
+      // Show error toast for unexpected errors
+      errorToast(
+        'Purchase Error',
+        'An unexpected error occurred. Please check your connection and try again.'
+      );
     }
   };
 
@@ -169,20 +164,20 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Premium backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/60 backdrop-blur-md"
         onClick={onClose}
       />
-      
+
       {/* Premium modal */}
       <div className="relative glass-premium rounded-3xl p-8 w-full max-w-lg border border-white/20 animate-scale-in">
         {/* Header */}
         <CompactFlex align="center" justify="between" className="mb-6">
           <div className="flex-1">
             <h2 className="font-bold text-2xl md:text-4xl lg:text-5xl leading-tight tracking-tight text-white">
-              {step === 'success' ? '🎉 Success!' : 
-               step === 'mode' ? '🎫 Buy Tickets' :
-               selectedSyndicate ? `🌊 ${selectedSyndicate.name}` : '🎫 Buy Tickets'}
+              {step === 'success' ? '🎉 Success!' :
+                step === 'mode' ? '🎫 Buy Tickets' :
+                  selectedSyndicate ? `🌊 ${selectedSyndicate.name}` : '🎫 Buy Tickets'}
             </h2>
             {selectedSyndicate && step !== 'mode' && (
               <p className="text-sm text-gray-400 mt-1">
@@ -262,11 +257,10 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
                   setSelectedSyndicate(null);
                   setStep('select');
                 }}
-                className={`glass p-6 rounded-2xl cursor-pointer transition-all duration-300 hover:scale-105 ${
-                  purchaseMode === 'individual' 
-                    ? 'ring-2 ring-blue-500 bg-blue-500/10' 
-                    : 'hover:bg-white/5'
-                }`}
+                className={`glass p-6 rounded-2xl cursor-pointer transition-all duration-300 hover:scale-105 ${purchaseMode === 'individual'
+                  ? 'ring-2 ring-blue-500 bg-blue-500/10'
+                  : 'hover:bg-white/5'
+                  }`}
               >
                 <CompactFlex align="center" gap="md">
                   <div className="text-3xl">🎫</div>
@@ -288,11 +282,10 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
               {/* Syndicate Mode */}
               <div
                 onClick={() => setPurchaseMode('syndicate')}
-                className={`glass p-6 rounded-2xl cursor-pointer transition-all duration-300 hover:scale-105 ${
-                  purchaseMode === 'syndicate' 
-                    ? 'ring-2 ring-purple-500 bg-purple-500/10' 
-                    : 'hover:bg-white/5'
-                }`}
+                className={`glass p-6 rounded-2xl cursor-pointer transition-all duration-300 hover:scale-105 ${purchaseMode === 'syndicate'
+                  ? 'ring-2 ring-purple-500 bg-purple-500/10'
+                  : 'hover:bg-white/5'
+                  }`}
               >
                 <CompactFlex align="center" gap="md">
                   <div className="text-3xl">🌊</div>
@@ -322,7 +315,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
                   <h4 className="font-semibold text-white mb-2">Choose a Pool</h4>
                   <p className="text-sm text-gray-400">Select which cause you'd like to support</p>
                 </div>
-                
+
                 <CompactStack spacing="sm">
                   {syndicates.map((syndicate) => (
                     <div
@@ -331,18 +324,17 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
                         setSelectedSyndicate(syndicate);
                         setStep('select');
                       }}
-                      className={`glass p-4 rounded-xl cursor-pointer transition-all duration-300 hover:scale-105 ${
-                        selectedSyndicate?.id === syndicate.id 
-                          ? 'ring-2 ring-green-500 bg-green-500/10' 
-                          : 'hover:bg-white/5'
-                      }`}
+                      className={`glass p-4 rounded-xl cursor-pointer transition-all duration-300 hover:scale-105 ${selectedSyndicate?.id === syndicate.id
+                        ? 'ring-2 ring-green-500 bg-green-500/10'
+                        : 'hover:bg-white/5'
+                        }`}
                     >
                       <CompactFlex align="center" gap="md">
                         <div className="text-2xl">
                           {syndicate.cause === 'Ocean Cleanup' ? '🌊' :
-                           syndicate.cause === 'Education Access' ? '📚' :
-                           syndicate.cause === 'Climate Action' ? '🌍' :
-                           syndicate.cause === 'Food Security' ? '🌾' : '✨'}
+                            syndicate.cause === 'Education Access' ? '📚' :
+                              syndicate.cause === 'Climate Action' ? '🌍' :
+                                syndicate.cause === 'Food Security' ? '🌾' : '✨'}
                         </div>
                         <div className="flex-1">
                           <h5 className="font-semibold text-white">{syndicate.name}</h5>
@@ -443,7 +435,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
                 >
                   -
                 </Button>
-                
+
                 <div className="text-center min-w-[80px]">
                   <div className="text-3xl font-black gradient-text-primary">
                     {ticketCount}
@@ -452,7 +444,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
                     ticket{ticketCount > 1 ? 's' : ''}
                   </p>
                 </div>
-                
+
                 <Button
                   variant="ghost"
                   size="sm"
@@ -472,7 +464,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
                   ${totalCost} USDC
                 </div>
               </CompactFlex>
-              
+
               <CompactFlex align="center" justify="between" gap="sm" className="text-sm">
                 <p className="text-sm text-gray-400 leading-relaxed">
                   {ticketCount} ticket{ticketCount !== 1 ? 's' : ''}
@@ -480,9 +472,9 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
                 {selectedSyndicate ? (
                   <span className="inline-flex items-center font-semibold rounded-full shadow-lg backdrop-blur-sm transform hover:scale-105 transition-transform duration-200 bg-gradient-to-r from-purple-500 to-blue-600 text-white px-2 py-1 text-xs">
                     {selectedSyndicate.cause === 'Ocean Cleanup' ? '🌊' :
-                     selectedSyndicate.cause === 'Education Access' ? '📚' :
-                     selectedSyndicate.cause === 'Climate Action' ? '🌍' :
-                     selectedSyndicate.cause === 'Food Security' ? '🌾' : '✨'} {selectedSyndicate.cause}
+                      selectedSyndicate.cause === 'Education Access' ? '📚' :
+                        selectedSyndicate.cause === 'Climate Action' ? '🌍' :
+                          selectedSyndicate.cause === 'Food Security' ? '🌾' : '✨'} {selectedSyndicate.cause}
                   </span>
                 ) : (
                   <span className="inline-flex items-center font-semibold rounded-full shadow-lg backdrop-blur-sm transform hover:scale-105 transition-transform duration-200 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-2 py-1 text-xs">
@@ -596,7 +588,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
                 </p>
               )}
             </div>
-            
+
             {lastTxHash && (
               <div className="bg-white/5 rounded-lg p-4 w-full">
                 <div className="flex items-center justify-between">
@@ -613,9 +605,34 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
                 </div>
               </div>
             )}
-            
-            <p className="text-sm text-gray-400 text-center">
-              This modal will close automatically...
+
+            {/* ENHANCEMENT: Link to ticket history */}
+            <div className="w-full space-y-3">
+              <Button
+                variant="default"
+                size="lg"
+                onClick={() => {
+                  onClose();
+                  // Navigate to tickets page
+                  window.location.href = '/my-tickets';
+                }}
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl"
+              >
+                🎫 View My Tickets
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClose}
+                className="w-full text-gray-400 hover:text-white"
+              >
+                Continue Playing
+              </Button>
+            </div>
+
+            <p className="text-xs text-gray-400 text-center">
+              Your tickets are now active for the next draw
             </p>
           </CompactStack>
         )}

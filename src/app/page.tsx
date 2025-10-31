@@ -11,14 +11,16 @@
  */
 
 import { useState, useCallback, useEffect, Suspense, lazy } from "react";
+import Link from "next/link";
 import { LoadingSpinner } from "@/shared/components/LoadingSpinner";
-import { useWalletConnection, WalletType } from "@/hooks/useWalletConnection";
+import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { useLottery } from "@/domains/lottery/hooks/useLottery";
 import { useTicketPurchase } from "@/hooks/useTicketPurchase";
 import { formatTimeRemaining } from "@/shared/utils";
 
 // Premium UI Components
 import { Button } from "@/shared/components/ui/Button";
+import { CountUpText } from "@/shared/components/ui/CountUpText";
 import {
   PuzzlePiece,
   PuzzleGrid,
@@ -42,60 +44,9 @@ const PurchaseModal = lazy(() => import("@/components/modal/PurchaseModal"));
 const SyndicateCard = lazy(() => import("@/components/SyndicateCard"));
 const SocialFeed = lazy(() => import("@/components/SocialFeed"));
 
-const CountUpText = ({
-  value,
-  duration = 2000,
-  prefix = "",
-  suffix = "",
-  className = "",
-}: {
-  value: number;
-  duration?: number;
-  prefix?: string;
-  suffix?: string;
-  className?: string;
-}) => {
-  const [count, setCount] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
 
-  useEffect(() => {
-    let startTime: number;
-    let animationFrame: number;
 
-    const animate = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
 
-      setCount(Math.floor(progress * value));
-
-      if (progress < 1) {
-        animationFrame = requestAnimationFrame(animate);
-      }
-    };
-
-    animationFrame = requestAnimationFrame(animate);
-
-    return () => {
-      if (animationFrame) {
-        cancelAnimationFrame(animationFrame);
-      }
-    };
-  }, [value, duration]);
-
-  return (
-    <span
-      className={`font-mono font-bold ${className} transition-all duration-300 ${
-        isHovered ? "scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" : ""
-      }`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {prefix}
-      {count.toLocaleString()}
-      {suffix}
-    </span>
-  );
-};
 
 // =============================================================================
 // PREMIUM PUZZLE PIECE COMPONENTS
@@ -144,7 +95,7 @@ function PremiumJackpotPiece({ onBuyClick }: { onBuyClick: () => void }) {
           {/* Jackpot amount with count-up animation */}
           <div className="text-center">
             <div className="text-5xl md:text-7xl font-black gradient-text-rainbow mb-2">
-              $<CountUpText value={prizeValue} duration={2000} />
+              $<CountUpText value={prizeValue} duration={2000} enableHover />
             </div>
             <span className="font-semibold text-yellow-400 drop-shadow-[0_0_20px_rgba(251,191,36,0.6)] animate-pulse text-lg">
               Growing every minute
@@ -219,13 +170,11 @@ function ActivityFeedPiece() {
           {activities.map((activity, index) => (
             <div
               key={index}
-              className={`glass p-3 rounded-lg hover-scale animate-fade-in-up stagger-${
-                index + 1
-              } transition-all duration-300 ${
-                hoveredActivity === index
+              className={`glass p-3 rounded-lg hover-scale animate-fade-in-up stagger-${index + 1
+                } transition-all duration-300 ${hoveredActivity === index
                   ? "ring-1 ring-white/30 bg-white/5"
                   : ""
-              }`}
+                }`}
               onMouseEnter={() => setHoveredActivity(index)}
               onMouseLeave={() => setHoveredActivity(null)}
             >
@@ -316,8 +265,8 @@ function SyndicatesPiece() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {syndicates.map((syndicate) => (
             <Suspense key={syndicate.id} fallback={<div className="glass-premium p-4 rounded-xl h-48 animate-pulse bg-gray-700/50" />}>
-              <SyndicateCard 
-                syndicate={syndicate} 
+              <SyndicateCard
+                syndicate={syndicate}
                 onJoin={(id) => console.log('Join syndicate:', id)}
                 onView={(id) => console.log('View syndicate:', id)}
               />
@@ -432,9 +381,8 @@ function StatsPieces() {
             variant="primary"
             size="sm"
             shape="rounded"
-            className={`animate-fade-in-up stagger-${
-              index + 1
-            } w-full max-w-xs`}
+            className={`animate-fade-in-up stagger-${index + 1
+              } w-full max-w-xs`}
           >
             <CompactStack spacing="xs" align="center">
               <CountUpText
@@ -557,11 +505,11 @@ export default function PremiumHome() {
             <CompactContainer maxWidth="2xl">
               {/* Stack Activity Feed, User Tickets, and Syndicates vertically */}
               <CompactStack spacing="lg" align="center">
-              <ActivityFeedPiece />
-              <Suspense fallback={<div className="glass-premium p-4 rounded-xl h-64 animate-pulse bg-gray-700/50 w-full max-w-2xl" />}>
-                <SocialFeed className="w-full max-w-2xl" />
-              </Suspense>
-              <UserTicketPiece
+                <ActivityFeedPiece />
+                <Suspense fallback={<div className="glass-premium p-4 rounded-xl h-64 animate-pulse bg-gray-700/50 w-full max-w-2xl" />}>
+                  <SocialFeed className="w-full max-w-2xl" />
+                </Suspense>
+                <UserTicketPiece
                   userTicketInfo={userTicketInfo}
                   claimWinnings={claimWinnings}
                   isClaimingWinnings={isClaimingWinnings}
@@ -598,13 +546,15 @@ export default function PremiumHome() {
                 👥 Syndicate
               </Button>
 
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex-col gap-1 text-xs"
-              >
-                📊 Activity
-              </Button>
+              <Link href="/my-tickets">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-col gap-1 text-xs"
+                >
+                  📊 History
+                </Button>
+              </Link>
             </CompactFlex>
           </div>
         </div>
