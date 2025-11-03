@@ -18,6 +18,7 @@ import { Button } from "@/shared/components/ui/Button";
 import { CompactStack, CompactFlex } from '@/shared/components/premium/CompactLayout';
 import ConnectWallet from '@/components/wallet/ConnectWallet';
 import { useSuccessToast, useErrorToast } from '@/shared/components/ui/Toast';
+import { socialService } from '@/services/socialService';
 import type { SyndicateInfo } from '@/domains/lottery/types';
 
 export interface PurchaseModalProps {
@@ -690,28 +691,40 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
 
                 <div className="space-y-3">
                   <Button
-                    variant="default"
-                    size="lg"
-                    onClick={() => {
-                      const text = `Just bought ${purchasedTicketCount} lottery ticket${purchasedTicketCount > 1 ? 's' : ''} for the $${currentJackpot} jackpot! 🎫✨ #Megapot #Lottery`;
-                      const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(window.location.origin)}`;
-                      window.open(url, '_blank');
+                  variant="default"
+                  size="lg"
+                  onClick={() => {
+                  const shareData = {
+                    ticketCount: purchasedTicketCount,
+                    jackpotAmount: currentJackpot,
+                    odds: oddsInfo ? oddsInfo.oddsFormatted(purchasedTicketCount) : 'great',
+                      platformUrl: window.location.origin,
+                    };
+                      const content = socialService.createLotteryShareContent(shareData);
+                    const url = socialService.generateTwitterUrl(content.twitterText);
+                    window.open(url, '_blank');
                       setShowShareModal(false);
                     }}
                     className="w-full bg-[#1DA1F2] hover:bg-[#1a91da] text-white"
                   >
-                    <Twitter size={20} className="mr-2" />
-                    Share on Twitter
+                  <Twitter size={20} className="mr-2" />
+                  Share on Twitter
                   </Button>
 
                   <Button
-                    variant="default"
-                    size="lg"
-                    onClick={() => {
-                      const text = `Just bought ${purchasedTicketCount} lottery ticket${purchasedTicketCount > 1 ? 's' : ''} for the $${currentJackpot} jackpot! 🎫✨`;
-                      const url = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(window.location.origin)}`;
-                      window.open(url, '_blank');
-                      setShowShareModal(false);
+                  variant="default"
+                  size="lg"
+                  onClick={() => {
+                      const shareData = {
+                      ticketCount: purchasedTicketCount,
+                      jackpotAmount: currentJackpot,
+                        odds: oddsInfo ? oddsInfo.oddsFormatted(purchasedTicketCount) : 'great',
+                        platformUrl: window.location.origin,
+                      };
+                      const content = socialService.createLotteryShareContent(shareData);
+                      socialService.shareToFarcaster(content.neynarCast).then(() => {
+                        setShowShareModal(false);
+                      });
                     }}
                     className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
                   >

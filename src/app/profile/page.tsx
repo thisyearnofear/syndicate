@@ -13,13 +13,14 @@
 import { useState, useEffect } from "react";
 import { useWalletContext } from "@/context/WalletContext";
 import { megapotService } from "@/domains/lottery/services/megapotService";
+import { socialService, type MemoryIdentity } from "@/services/socialService";
 import { performance } from "@/config";
 import { Button } from "@/shared/components/ui/Button";
 import { LoadingSpinner } from "@/shared/components/LoadingSpinner";
 import TransactionHistory from "@/components/TransactionHistory";
 import {
-  CompactContainer,
-  CompactStack,
+CompactContainer,
+CompactStack,
   CompactSection,
 } from "@/shared/components/premium/CompactLayout";
 import {
@@ -27,31 +28,41 @@ import {
 } from "@/shared/components/premium/PuzzlePiece";
 
 // Icons
-import { Ticket, History, Trophy, Wallet, TrendingUp } from "lucide-react";
+import { Ticket, History, Trophy, Wallet, TrendingUp, Twitter, MessageCircle, User, CheckCircle } from "lucide-react";
 
 export default function ProfilePage() {
   const { state: walletState } = useWalletContext();
   const [ticketPurchases, setTicketPurchases] = useState<any[]>([]);
+  const [userIdentity, setUserIdentity] = useState<MemoryIdentity | null>(null);
   const [loading, setLoading] = useState(true);
+  const [identityLoading, setIdentityLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchTicketHistory = async () => {
+    const fetchData = async () => {
       if (!walletState.address) return;
-      
+
       try {
         setLoading(true);
+        setIdentityLoading(true);
+
+        // Load ticket history
         const purchases = await megapotService.getTicketPurchases(walletState.address, performance.pagination.transactions);
         setTicketPurchases(purchases);
+
+        // Load user identity from Memory Protocol
+        const identity = await socialService.getUserIdentity(walletState.address);
+        setUserIdentity(identity);
       } catch (err) {
-        console.error('Failed to fetch ticket history:', err);
-        setError('Failed to load ticket history');
+        console.error('Failed to fetch data:', err);
+        setError('Failed to load profile data');
       } finally {
         setLoading(false);
+        setIdentityLoading(false);
       }
     };
 
-    fetchTicketHistory();
+    fetchData();
   }, [walletState.address]);
 
   const handleViewTransaction = (txHash: string) => {
@@ -84,6 +95,65 @@ export default function ProfilePage() {
             Connected: {walletState.address.slice(0, 6)}...{walletState.address.slice(-4)}
           </div>
         </div>
+
+        {/* Identity Verification */}
+        {identityLoading ? (
+          <div className="flex justify-center py-4">
+            <LoadingSpinner size="sm" color="white" />
+          </div>
+        ) : userIdentity && (
+          <PuzzlePiece variant="secondary" size="md" shape="rounded" glow>
+            <CompactStack spacing="md">
+              <div className="flex items-center gap-2">
+                <User className="w-5 h-5 text-blue-400" />
+                <h3 className="font-semibold text-white">Verified Identities</h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {userIdentity.farcaster && (
+                  <div className="flex items-center gap-3 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                    <MessageCircle className="w-5 h-5 text-purple-400" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-white">{userIdentity.farcaster.displayName}</span>
+                        {userIdentity.farcaster.verified && <CheckCircle className="w-4 h-4 text-green-400" />}
+                      </div>
+                      <span className="text-sm text-gray-400">@{userIdentity.farcaster.username}</span>
+                      <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
+                        <span>{userIdentity.farcaster.followerCount.toLocaleString()} followers</span>
+                        <span>{userIdentity.farcaster.followingCount.toLocaleString()} following</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {userIdentity.twitter && (
+                  <div className="flex items-center gap-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                    <Twitter className="w-5 h-5 text-blue-400" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-white">{userIdentity.twitter.displayName}</span>
+                        {userIdentity.twitter.verified && <CheckCircle className="w-4 h-4 text-green-400" />}
+                      </div>
+                      <span className="text-sm text-gray-400">@{userIdentity.twitter.username}</span>
+                      <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
+                        <span>{userIdentity.twitter.followerCount.toLocaleString()} followers</span>
+                        <span>{userIdentity.twitter.followingCount.toLocaleString()} following</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {!userIdentity.farcaster && !userIdentity.twitter && (
+                  <div className="col-span-full text-center py-4">
+                    <p className="text-gray-400 text-sm">No verified social identities found</p>
+                    <p className="text-gray-500 text-xs mt-1">Connect your Farcaster or Twitter to build trust</p>
+                  </div>
+                )}
+              </div>
+            </CompactStack>
+          </PuzzlePiece>
+        )}
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
