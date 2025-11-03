@@ -78,39 +78,24 @@ export function useTicketHistory(): TicketHistoryState & TicketHistoryActions {
 
             const purchases = await response.json();
 
-            // Enhance purchases with mock syndicate data for demonstration
-            const enhancedPurchases: TicketPurchaseHistory[] = purchases.map((purchase: any): TicketPurchaseHistory => {
-                // Base purchase data
-                const enhanced: TicketPurchaseHistory = {
-                    ...purchase,
-                    timestamp: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-                    status: Math.random() > 0.8 ? 'won' : 'active',
-                };
-
-                // Add syndicate info for some purchases (mock data)
-                if (Math.random() > 0.7) {
-                    const syndicates = [
-                        { id: '1', name: 'Ocean Warriors', cause: 'Ocean Cleanup' },
-                        { id: '2', name: 'Education First', cause: 'Education Access' },
-                        { id: '3', name: 'Climate Action', cause: 'Climate Action' },
-                    ];
-                    const randomSyndicate = syndicates[Math.floor(Math.random() * syndicates.length)];
-                    enhanced.syndicateId = randomSyndicate.id;
-                    enhanced.syndicateName = randomSyndicate.name;
-                    enhanced.cause = randomSyndicate.cause;
-                }
-
-                // Add win amount for won tickets
-                if (enhanced.status === 'won') {
-                    enhanced.winAmount = (Math.random() * 100 + 10).toFixed(2);
-                }
-
-                return enhanced;
-            });
+            // Map API response to our interface structure
+            const mappedPurchases: TicketPurchaseHistory[] = purchases.map((purchase: any): TicketPurchaseHistory => ({
+                id: purchase.transactionHashes?.[0] || `${purchase.jackpotRoundId}-${purchase.recipient}-${purchase.startTicket}`,
+                ticketCount: purchase.ticketsPurchased || 0,
+                totalCost: (purchase.ticketsPurchased || 0).toString(),
+                txHash: purchase.transactionHashes?.[0] || '',
+                timestamp: new Date().toISOString(), // API doesn't provide timestamps, use current for now
+                status: 'active', // All historical purchases are completed, status is for current tickets
+                jackpotRoundId: purchase.jackpotRoundId,
+                startTicket: purchase.startTicket,
+                endTicket: purchase.endTicket,
+                referrer: purchase.referrer,
+                buyer: purchase.buyer,
+            }));
 
             setState(prev => ({
                 ...prev,
-                purchases: enhancedPurchases,
+                purchases: mappedPurchases,
                 isLoading: false,
                 lastUpdated: Date.now(),
             }));
