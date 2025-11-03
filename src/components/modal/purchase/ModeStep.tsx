@@ -124,7 +124,7 @@ export function ModeStep({
                         👥 {syndicate.membersCount.toLocaleString()} members
                       </span>
                       <span className="text-green-400">
-                        🎯 {syndicate.cause}
+                        🎯 {syndicate.cause.name}
                       </span>
                     </div>
                   </div>
