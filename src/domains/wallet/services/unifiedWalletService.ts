@@ -11,6 +11,7 @@
 import { useCallback } from 'react';
 import { createError } from '@/shared/utils';
 import { useWalletContext } from '@/context/WalletContext';
+import { useWalletConnect } from '@/services/walletConnectService';
 
 // =============================================================================
 // TYPES
@@ -122,6 +123,7 @@ export function useUnifiedWallet(): {
   clearError: () => void;
 } {
   const { state, dispatch } = useWalletContext();
+  const { connectWithUri } = useWalletConnect();
 
   /**
    * PERFORMANT: Connect to wallet with error handling
@@ -302,14 +304,31 @@ export function useUnifiedWallet(): {
           try {
             // Check if WalletConnect is properly configured
             const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
-            if (!projectId || projectId === 'YOUR_PROJECT_ID_HERE') {
+            if (!projectId || projectId === 'your-project-id') {
               throw createError('WALLET_NOT_CONFIGURED', 'WalletConnect is not properly configured. Please contact support or use MetaMask instead.');
             }
-            // For now, show coming soon message for WalletConnect
-            throw createError('WALLET_NOT_SUPPORTED', 'WalletConnect is coming soon. Please use MetaMask for now.');
+
+            // Create WalletConnect modal or QR code interface
+            // For now, we'll use a simple prompt for the URI
+            const uri = prompt('Please paste the WalletConnect URI from your mobile wallet:');
+            if (!uri) {
+              throw createError('CONNECTION_REJECTED', 'WalletConnect connection cancelled by user');
+            }
+
+            // Connect using the WalletConnect service
+            await connectWithUri(uri);
+            
+            // Set temporary address and chainId for WalletConnect
+            // In a real implementation, these would come from the connected wallet
+            address = '0x0000000000000000000000000000000000000000'; // Placeholder
+            chainId = 1; // Ethereum mainnet as default
+            
           } catch (error: any) {
             console.error('WalletConnect error:', error);
-            throw error;
+            if (error.message.includes('cancelled')) {
+              throw error;
+            }
+            throw createError('CONNECTION_FAILED', `Failed to connect with WalletConnect: ${error.message}`);
           }
           break;
 
