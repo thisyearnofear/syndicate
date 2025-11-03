@@ -16,8 +16,10 @@ import { usePathname } from 'next/navigation';
 import { Button } from '@/shared/components/ui/Button';
 import { CompactFlex } from '@/shared/components/premium/CompactLayout';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
+import { useWalletContext } from '@/context/WalletContext';
+import WalletInfo from './wallet/WalletInfo';
 import { Home, Ticket, Users, Menu, X } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 interface NavigationProps {
     className?: string;
@@ -26,7 +28,10 @@ interface NavigationProps {
 export default function Navigation({ className = '' }: NavigationProps) {
     const pathname = usePathname();
     const { isConnected } = useWalletConnection();
+    const { state: walletState } = useWalletContext();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [showWalletDetails, setShowWalletDetails] = useState(false);
+    const walletDetailsRef = useRef<HTMLDivElement>(null);
 
     const navigationItems = [
         {
@@ -53,6 +58,24 @@ export default function Navigation({ className = '' }: NavigationProps) {
     const visibleItems = navigationItems.filter(item =>
         !item.requiresWallet || (item.requiresWallet && isConnected)
     );
+
+    // Handle click outside to close wallet details
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (walletDetailsRef.current && !walletDetailsRef.current.contains(event.target as Node)) {
+                setShowWalletDetails(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    const handleWalletStatusClick = () => {
+        setShowWalletDetails(!showWalletDetails);
+    };
 
     return (
         <>
@@ -107,10 +130,27 @@ export default function Navigation({ className = '' }: NavigationProps) {
 
                             {/* Wallet Status Indicator */}
                             {isConnected ? (
-                                <div className="flex items-center gap-2 px-3 py-1 bg-green-500/20 border border-green-500/30 rounded-full cursor-pointer hover:bg-green-500/30 transition-colors">
-                                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                                    <span className="text-green-400 text-sm font-semibold">Connected</span>
-                                </div>
+                                <div className="relative">
+                                <div
+                                   className="flex items-center gap-2 px-3 py-1 bg-green-500/20 border border-green-500/30 rounded-full cursor-pointer hover:bg-green-500/30 transition-colors"
+                                       onClick={handleWalletStatusClick}
+                                    >
+                                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                                        <span className="text-green-400 text-sm font-semibold">Connected</span>
+                                    </div>
+                            {showWalletDetails && (
+                            <div
+                            ref={walletDetailsRef}
+                            className="absolute top-full right-0 mt-2 z-50"
+                            >
+                            <WalletInfo
+                            showFullAddress={false}
+                            showNetworkIndicator={true}
+                            className="w-80"
+                            />
+                            </div>
+                            )}
+                            </div>
                             ) : (
                                 <Button
                                     variant="ghost"
