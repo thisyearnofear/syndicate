@@ -32,9 +32,19 @@ export default function SyndicateDetailPage({ params }: { params: any }) {
         const mockSyndicate: SyndicateInfo = {
           id: params.id,
           name: "Ocean Warriors Collective",
-          cause: "Ocean Cleanup",
+          cause: {
+            id: "ocean-cleanup",
+            name: "Ocean Cleanup",
+            verifiedWallet: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+            description: "Global ocean cleanup and marine conservation efforts",
+            verificationSource: "community",
+            verificationScore: 85,
+            verificationTimestamp: new Date("2024-01-15"),
+            verificationTier: 2,
+          },
           description: "Join the fight to clean our oceans and protect marine life. Every ticket purchased helps remove plastic waste and supports marine conservation efforts.",
           causePercentage: 20,
+          governanceModel: "leader",
           membersCount: 1247,
           ticketsPooled: 3420,
           totalImpact: 8500,
@@ -155,7 +165,7 @@ export default function SyndicateDetailPage({ params }: { params: any }) {
                     </span>
                   )}
                 </div>
-                <p className="text-blue-300 font-medium">{syndicate.cause}</p>
+                <p className="text-blue-300 font-medium">{syndicate.cause.name}</p>
                 <p className="text-gray-400 mt-2 max-w-2xl">{syndicate.description}</p>
               </div>
             </div>
