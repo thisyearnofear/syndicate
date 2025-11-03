@@ -17,7 +17,7 @@ import { useWalletConnect } from '@/services/walletConnectService';
 // TYPES
 // =============================================================================
 
-export type WalletType = 'metamask' | 'phantom' | 'walletconnect' | 'social' | 'near';
+export type WalletType = 'metamask' | 'phantom' | 'social' | 'near';
 
 // =============================================================================
 // WALLET DETECTION
@@ -26,7 +26,6 @@ export type WalletType = 'metamask' | 'phantom' | 'walletconnect' | 'social' | '
 export const WalletTypes = {
   METAMASK: 'metamask' as const,
   PHANTOM: 'phantom' as const,
-  WALLETCONNECT: 'walletconnect' as const,
   SOCIAL: 'social' as const,
   NEAR: 'near' as const,
 };
@@ -47,8 +46,7 @@ export function getAvailableWallets(): WalletType[] {
     available.push(WalletTypes.PHANTOM);
   }
 
-  // WalletConnect is always available
-  available.push(WalletTypes.WALLETCONNECT);
+  // WalletConnect is handled separately by WalletConnectManager component
 
   // Social login is always available
   available.push(WalletTypes.SOCIAL);
@@ -82,7 +80,6 @@ export function getWalletStatus(walletType: WalletType): {
         downloadUrl: 'https://phantom.app/',
       };
 
-    case WalletTypes.WALLETCONNECT:
     case WalletTypes.SOCIAL:
     case WalletTypes.NEAR:
       return {
@@ -300,37 +297,7 @@ export function useUnifiedWallet(): {
           }
           break;
 
-        case WalletTypes.WALLETCONNECT:
-          try {
-            // Check if WalletConnect is properly configured
-            const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
-            if (!projectId || projectId === 'your-project-id') {
-              throw createError('WALLET_NOT_CONFIGURED', 'WalletConnect is not properly configured. Please contact support or use MetaMask instead.');
-            }
 
-            // Create WalletConnect modal or QR code interface
-            // For now, we'll use a simple prompt for the URI
-            const uri = prompt('Please paste the WalletConnect URI from your mobile wallet:');
-            if (!uri) {
-              throw createError('CONNECTION_REJECTED', 'WalletConnect connection cancelled by user');
-            }
-
-            // Connect using the WalletConnect service
-            await connectWithUri(uri);
-            
-            // Set temporary address and chainId for WalletConnect
-            // In a real implementation, these would come from the connected wallet
-            address = '0x0000000000000000000000000000000000000000'; // Placeholder
-            chainId = 1; // Ethereum mainnet as default
-            
-          } catch (error: any) {
-            console.error('WalletConnect error:', error);
-            if (error.message.includes('cancelled')) {
-              throw error;
-            }
-            throw createError('CONNECTION_FAILED', `Failed to connect with WalletConnect: ${error.message}`);
-          }
-          break;
 
         case WalletTypes.SOCIAL:
           try {

@@ -13,10 +13,11 @@
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  CompactStack,
-  CompactFlex,
+CompactStack,
+CompactFlex,
 } from "@/shared/components/premium/CompactLayout";
 import { WalletType } from "@/domains/wallet/services/unifiedWalletService";
+import WalletConnectManager from "./WalletConnectManager";
 
 interface ConnectWalletProps {
   onConnect?: (walletType: WalletType) => void;
@@ -57,31 +58,22 @@ export default function ConnectWallet({
   );
 
   const wallets = [
-    {
-      name: "MetaMask",
-      type: "metamask" as WalletType,
-      icon: "🦊",
-      variant: "primary" as const,
-      description: "Most popular Ethereum wallet",
-      color: "from-blue-600 to-purple-600",
-    },
-    {
-      name: "Phantom",
-      type: "phantom" as WalletType,
-      icon: "👻",
-      variant: "secondary" as const,
-      description: "Solana & multi-chain wallet",
-      color: "from-emerald-500 to-teal-600",
-    },
-    {
-      name: "WalletConnect",
-      type: "walletconnect" as WalletType,
-      icon: "🔗",
-      variant: "premium" as const,
-      description: "Connect 300+ wallets securely",
-      color: "from-purple-600 via-pink-600 to-blue-600",
-      disabled: false,
-    },
+  {
+  name: "MetaMask",
+  type: "metamask" as WalletType,
+  icon: "🦊",
+  variant: "primary" as const,
+  description: "Most popular Ethereum wallet",
+  color: "from-blue-600 to-purple-600",
+  },
+  {
+  name: "Phantom",
+  type: "phantom" as WalletType,
+  icon: "👻",
+  variant: "secondary" as const,
+  description: "Solana & multi-chain wallet",
+  color: "from-emerald-500 to-teal-600",
+  },
   ];
 
   return (
@@ -109,8 +101,8 @@ export default function ConnectWallet({
             onClick={() => {
               handleConnect(wallet.type);
             }}
-            disabled={isConnecting || wallet.disabled}
-            className={`w-full justify-start touch-manipulation cursor-pointer select-none bg-gradient-to-r ${wallet.color} hover:opacity-90 text-white shadow-lg hover:shadow-xl border border-white/10 transition-all duration-200 ${wallet.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={isConnecting}
+            className={`w-full justify-start touch-manipulation cursor-pointer select-none bg-gradient-to-r ${wallet.color} hover:opacity-90 text-white shadow-lg hover:shadow-xl border border-white/10 transition-all duration-200`}
           >
             <div className="flex-1 text-left">
               <div className="font-semibold flex items-center gap-2">
@@ -135,6 +127,11 @@ export default function ConnectWallet({
           </Button>
         ))}
       </CompactStack>
+
+      {/* WalletConnect option */}
+      <div className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 rounded-xl p-4 border border-purple-500/20">
+        <WalletConnectManager />
+      </div>
 
       {/* Social login option */}
       <div className="relative">
