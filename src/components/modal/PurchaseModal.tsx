@@ -280,7 +280,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
             </h2>
             {selectedSyndicate && step !== 'mode' && (
               <p className="text-sm text-gray-400 mt-1">
-                Supporting {selectedSyndicate.cause} • {selectedSyndicate.membersCount.toLocaleString()} members
+                Supporting {selectedSyndicate.cause.name} • {selectedSyndicate.membersCount.toLocaleString()} members
               </p>
             )}
           </div>
