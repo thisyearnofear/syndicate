@@ -1,0 +1,248 @@
+"use client";
+
+import { Button } from "@/shared/components/ui/Button";
+import { CompactStack, CompactFlex } from "@/shared/components/premium/CompactLayout";
+import { AlertCircle } from 'lucide-react';
+import type { SyndicateInfo } from "@/domains/lottery/types";
+
+interface SelectStepProps {
+  setStep: (step: 'mode') => void;
+  selectedSyndicate: SyndicateInfo | null;
+  prizeAmount: number | undefined;
+  jackpotLoading: boolean;
+  jackpotError: string | null;
+  ticketPrice: string;
+  ticketCount: number;
+  setTicketCount: (count: number) => void;
+  quickAmounts: number[];
+  totalCost: string;
+  oddsInfo: {
+    oddsFormatted: (tickets: number) => string;
+  } | null;
+  hasInsufficientBalance: boolean | null | undefined;
+  refreshBalance: () => void;
+  isConnected: boolean;
+  handlePurchase: () => void;
+  isPurchasing: boolean;
+  isInitializing: boolean;
+  purchaseMode: 'individual' | 'syndicate';
+}
+
+export function SelectStep({
+  setStep,
+  selectedSyndicate,
+  prizeAmount,
+  jackpotLoading,
+  jackpotError,
+  ticketPrice,
+  ticketCount,
+  setTicketCount,
+  quickAmounts,
+  totalCost,
+  oddsInfo,
+  hasInsufficientBalance,
+  refreshBalance,
+  isConnected,
+  handlePurchase,
+  isPurchasing,
+  isInitializing,
+  purchaseMode,
+}: SelectStepProps) {
+  return (
+    <CompactStack spacing="lg">
+      {/* Back to Mode Selection */}
+      <div className="flex items-center justify-between">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setStep('mode')}
+          className="text-gray-400 hover:text-white"
+        >
+          ← Back to Options
+        </Button>
+        {selectedSyndicate && (
+          <div className="text-xs text-gray-400">
+            Pool Mode
+          </div>
+        )}
+      </div>
+
+      {/* Current Jackpot */}
+      <div className="text-center mb-4">
+        <p className="text-white/70">
+          Current Jackpot: <span className="text-yellow-400 font-bold">${prizeAmount?.toLocaleString() || '0'} USDC</span>
+        </p>
+        {jackpotLoading && <p className="text-xs text-gray-400">Loading jackpot...</p>}
+        {jackpotError && <p className="text-xs text-red-400">Error loading jackpot data</p>}
+        {ticketPrice && (
+          <p className="text-white/60 text-sm mt-1">
+            Ticket Price: ${ticketPrice} USDC
+          </p>
+        )}
+      </div>
+
+      {/* Quick amount selection */}
+      <div>
+        <p className="mb-3 text-sm font-medium">
+          Quick Select
+        </p>
+        <CompactFlex gap="sm" className="flex-wrap">
+          {quickAmounts.map((amount) => (
+            <Button
+              key={amount}
+              variant={ticketCount === amount ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setTicketCount(amount)}
+              className={ticketCount === amount ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl border border-blue-500/20" : ""}
+            >
+              {amount} ticket{amount > 1 ? 's' : ''}
+            </Button>
+          ))}
+        </CompactFlex>
+      </div>
+
+      {/* Custom amount */}
+      <div>
+        <p className="mb-3 text-sm font-medium">
+          Custom Amount
+        </p>
+        <CompactFlex align="center" gap="md" justify="center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setTicketCount(Math.max(1, ticketCount - 1))}
+            className="w-12 h-12 p-0 rounded-full"
+            disabled={ticketCount <= 1}
+          >
+            -
+          </Button>
+
+          <div className="text-center min-w-[80px]">
+            <div className="text-3xl font-black gradient-text-primary">
+              {ticketCount}
+            </div>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              ticket{ticketCount > 1 ? 's' : ''}
+            </p>
+          </div>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setTicketCount(ticketCount + 1)}
+            className="w-12 h-12 p-0 rounded-full"
+          >
+            +
+          </Button>
+        </CompactFlex>
+      </div>
+
+      {/* Price display */}
+      <div className="glass p-6 rounded-2xl">
+        <CompactFlex align="center" justify="between" className="mb-4">
+          <p className="font-medium text-gray-300 leading-relaxed">Total Cost:</p>
+          <div className="text-3xl font-black text-green-400">
+            ${totalCost} USDC
+          </div>
+        </CompactFlex>
+
+        {/* Enhanced Odds Display */}
+        {oddsInfo && (
+          <div className="mb-4 p-4 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 rounded-xl border border-yellow-500/20">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-yellow-400 font-semibold text-sm">Your Winning Odds:</p>
+              <span className="text-2xl font-black text-yellow-400">
+                {oddsInfo.oddsFormatted(ticketCount)}
+              </span>
+            </div>
+            {ticketCount > 1 && (
+              <p className="text-yellow-300 text-xs">
+                🎯 {ticketCount} tickets = {oddsInfo.oddsFormatted(ticketCount)} chance to win!
+              </p>
+            )}
+          </div>
+        )}
+
+        <CompactFlex align="center" justify="between" gap="sm" className="text-sm">
+          <p className="text-sm text-gray-400 leading-relaxed">
+            {ticketCount} ticket{ticketCount !== 1 ? 's' : ''}
+          </p>
+          {selectedSyndicate ? (
+            <span className="inline-flex items-center font-semibold rounded-full shadow-lg backdrop-blur-sm transform hover:scale-105 transition-transform duration-200 bg-gradient-to-r from-purple-500 to-blue-600 text-white px-2 py-1 text-xs">
+              {selectedSyndicate.cause === 'Ocean Cleanup' ? '🌊' :
+                selectedSyndicate.cause === 'Education Access' ? '📚' :
+                  selectedSyndicate.cause === 'Climate Action' ? '🌍' :
+                    selectedSyndicate.cause === 'Food Security' ? '🌾' : '✨'} {selectedSyndicate.cause}
+            </span>
+          ) : (
+            <span className="inline-flex items-center font-semibold rounded-full shadow-lg backdrop-blur-sm transform hover:scale-105 transition-transform duration-200 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-2 py-1 text-xs">
+              🎫 Individual Purchase
+            </span>
+          )}
+        </CompactFlex>
+
+        {/* Syndicate Impact Preview */}
+        {selectedSyndicate && (
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-400">Pool Impact:</span>
+              <span className="text-purple-400 font-semibold">
+                Joining {selectedSyndicate.membersCount.toLocaleString()} members
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs mt-1">
+              <span className="text-gray-400">Cause Support:</span>
+              <span className="text-green-400 font-semibold">
+                20% of winnings → {selectedSyndicate.cause}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Insufficient Balance Warning */}
+      {hasInsufficientBalance && (
+        <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4">
+          <div className="flex items-center gap-2 text-yellow-400">
+            <AlertCircle size={20} />
+            <span>Insufficient USDC balance</span>
+          </div>
+          <button
+            onClick={refreshBalance}
+            className="text-yellow-300 hover:text-yellow-200 text-sm mt-2 underline"
+          >
+            Refresh Balance
+          </button>
+        </div>
+      )}
+
+      {/* Purchase button - only show when connected */}
+      {isConnected && (
+        <Button
+          variant="default"
+          size="lg"
+          className="w-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white shadow-2xl hover:shadow-yellow-500/30 border border-yellow-400/30 disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={handlePurchase}
+          disabled={isPurchasing || isInitializing || !!hasInsufficientBalance}
+        >
+          {isInitializing ? (
+            <>⏳ Initializing...</>
+          ) : isPurchasing ? (
+            <>⚡ Processing...</>
+          ) : hasInsufficientBalance ? (
+            'Insufficient Balance'
+          ) : selectedSyndicate ? (
+            `🌊 Join ${selectedSyndicate.name} - $${totalCost}`
+          ) : (
+            `⚡ Purchase ${ticketCount} Ticket${ticketCount > 1 ? 's' : ''} - $${totalCost}`
+          )}
+        </Button>
+      )}
+
+      {/* Terms */}
+      <p className="text-xs text-gray-500 text-center leading-relaxed">
+        By purchasing, you agree to our terms{purchaseMode === 'syndicate' ? ' and support the selected cause' : ''}
+      </p>
+    </CompactStack>
+  );
+}
