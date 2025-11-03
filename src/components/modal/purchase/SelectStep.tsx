@@ -193,7 +193,7 @@ export function SelectStep({
             <div className="flex items-center justify-between text-xs mt-1">
               <span className="text-gray-400">Cause Support:</span>
               <span className="text-green-400 font-semibold">
-                20% of winnings → {selectedSyndicate.cause}
+                20% of winnings → {selectedSyndicate.cause.name}
               </span>
             </div>
           </div>
