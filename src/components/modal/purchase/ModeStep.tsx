@@ -111,10 +111,10 @@ export function ModeStep({
               >
                 <CompactFlex align="center" gap="md">
                   <div className="text-2xl">
-                    {syndicate.cause === 'Ocean Cleanup' ? '🌊' :
-                      syndicate.cause === 'Education Access' ? '📚' :
-                        syndicate.cause === 'Climate Action' ? '🌍' :
-                          syndicate.cause === 'Food Security' ? '🌾' : '✨'}
+                    {syndicate.cause.name === 'Ocean Cleanup' ? '🌊' :
+                      syndicate.cause.name === 'Education Access' ? '📚' :
+                        syndicate.cause.name === 'Climate Action' ? '🌍' :
+                          syndicate.cause.name === 'Food Security' ? '🌾' : '✨'}
                   </div>
                   <div className="flex-1">
                     <h5 className="font-semibold text-white">{syndicate.name}</h5>
