@@ -16,6 +16,7 @@ import { LoadingSpinner } from "@/shared/components/LoadingSpinner";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { useLottery } from "@/domains/lottery/hooks/useLottery";
 import { useTicketPurchase } from "@/hooks/useTicketPurchase";
+import { socialService } from "@/services/socialService";
 import { formatTimeRemaining } from "@/shared/utils";
 
 // Premium UI Components
@@ -55,7 +56,7 @@ const SocialFeed = lazy(() => import("@/components/SocialFeed"));
 /**
  * ENHANCEMENT FIRST: Premium Jackpot Display as Central Puzzle Piece
  */
-function PremiumJackpotPiece({ onBuyClick }: { onBuyClick: () => void }) {
+function PremiumJackpotPiece({ onBuyClick, userIdentity }: { onBuyClick: () => void; userIdentity?: any }) {
   const { jackpotStats, isLoading, error, refresh } = useLottery();
 
   if (error) {
@@ -119,17 +120,25 @@ function PremiumJackpotPiece({ onBuyClick }: { onBuyClick: () => void }) {
             🎫 Buy Tickets Now - $1 Each
           </Button>
 
-          {/* Social proof */}
+          {/* Social proof with personalization */}
           <CompactFlex
-            align="center"
-            gap="sm"
-            className="text-sm text-gray-400"
+          align="center"
+          gap="sm"
+          className="text-sm text-gray-400 flex-wrap justify-center"
           >
-            <span>⚡ Instant</span>
-            <span>•</span>
-            <span>🎯 1:1.4M odds</span>
-            <span>•</span>
-            <span>🌊 Supports causes</span>
+          <span>⚡ Instant</span>
+          <span>•</span>
+          <span>🎯 1:1.4M odds</span>
+          <span>•</span>
+          <span>🌊 Supports causes</span>
+            {userIdentity && (
+              <>
+                <span>•</span>
+                <span className="text-blue-400">
+                  👥 {((userIdentity.farcaster?.followerCount || 0) + (userIdentity.twitter?.followerCount || 0)).toLocaleString()}+ in your network
+                </span>
+              </>
+            )}
           </CompactFlex>
         </div>
       </CompactStack>
@@ -138,16 +147,78 @@ function PremiumJackpotPiece({ onBuyClick }: { onBuyClick: () => void }) {
 }
 
 /**
- * MODULAR: Activity Feed Puzzle Piece
- */
+* MODULAR: Activity Feed Puzzle Piece with Social Personalization
+*/
 function ActivityFeedPiece() {
-  const [hoveredActivity, setHoveredActivity] = useState<number | null>(null);
-  const activities = [
+const [hoveredActivity, setHoveredActivity] = useState<number | null>(null);
+const [personalizedActivities, setPersonalizedActivities] = useState<any[]>([]);
+const [loading, setLoading] = useState(false);
+const { address, isConnected } = useWalletConnection();
+
+// Default activities for non-connected users
+const defaultActivities = [
     { text: "Sarah joined Ocean Warriors", icon: "🌊", time: "2m ago" },
     { text: "Climate Network won $500", icon: "🌍", time: "5m ago" },
     { text: "Education Alliance milestone", icon: "📚", time: "8m ago" },
     { text: "Food Security raised $1.2K", icon: "🌾", time: "12m ago" },
   ];
+
+  useEffect(() => {
+    const loadPersonalizedActivities = async () => {
+      if (!isConnected || !address) {
+        setPersonalizedActivities(defaultActivities);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        // Get user's identity to personalize activities
+        const identity = await socialService.getUserIdentity(address);
+
+        // Generate personalized activities based on user's social context
+        const activities = [...defaultActivities];
+
+        if (identity?.farcaster) {
+          // Add personalized activities for Farcaster users
+          activities.unshift({
+            text: `${identity.farcaster.displayName} connected their Farcaster`,
+            icon: "💜",
+            time: "just now"
+          });
+        }
+
+        if (identity?.twitter) {
+          // Add personalized activities for Twitter users
+          activities.splice(1, 0, {
+            text: `${identity.twitter.displayName} joined the lottery community`,
+            icon: "🐦",
+            time: "1m ago"
+          });
+        }
+
+        // Add social proof based on follower counts
+        const totalFollowers = (identity?.farcaster?.followerCount || 0) + (identity?.twitter?.followerCount || 0);
+        if (totalFollowers > 100) {
+          activities.splice(2, 0, {
+            text: `${totalFollowers.toLocaleString()}+ community members active`,
+            icon: "👥",
+            time: "3m ago"
+          });
+        }
+
+        setPersonalizedActivities(activities);
+      } catch (error) {
+        console.error('Failed to load personalized activities:', error);
+        setPersonalizedActivities(defaultActivities);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPersonalizedActivities();
+  }, [address, isConnected]);
+
+  const activities = loading ? [] : personalizedActivities;
 
   return (
     <PuzzlePiece
@@ -196,6 +267,121 @@ function ActivityFeedPiece() {
         </div>
       </CompactStack>
     </PuzzlePiece>
+  );
+}
+
+/**
+ * MODULAR: Community Insights Puzzle Piece
+ */
+function CommunityInsightsPiece({ userIdentity }: { userIdentity: any }) {
+  const [insights, setInsights] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const loadCommunityInsights = async () => {
+      if (!userIdentity) return;
+
+      setLoading(true);
+      try {
+        // Generate insights based on user's social profile
+        const userInsights = [];
+
+        // Add insights based on follower counts
+        const totalFollowers = (userIdentity.farcaster?.followerCount || 0) + (userIdentity.twitter?.followerCount || 0);
+        if (totalFollowers > 1000) {
+          userInsights.push({
+            icon: "🌟",
+            title: "High Influence",
+            description: `${totalFollowers.toLocaleString()}+ followers across platforms`,
+            color: "text-yellow-400"
+          });
+        } else if (totalFollowers > 100) {
+          userInsights.push({
+            icon: "👥",
+            title: "Growing Network",
+            description: `${totalFollowers.toLocaleString()}+ community connections`,
+            color: "text-blue-400"
+          });
+        }
+
+        // Add insights based on verification status
+        const verifiedPlatforms = [userIdentity.farcaster?.verified, userIdentity.twitter?.verified].filter(Boolean).length;
+        if (verifiedPlatforms > 0) {
+          userInsights.push({
+            icon: "✅",
+            title: "Verified Identity",
+            description: `Verified on ${verifiedPlatforms} platform${verifiedPlatforms > 1 ? 's' : ''}`,
+            color: "text-green-400"
+          });
+        }
+
+        // Add insights based on platform activity
+        if (userIdentity.farcaster) {
+          userInsights.push({
+            icon: "💜",
+            title: "Web3 Native",
+            description: "Active in the decentralized social space",
+            color: "text-purple-400"
+          });
+        }
+
+        if (userIdentity.twitter) {
+          userInsights.push({
+            icon: "🐦",
+            title: "Traditional Social",
+            description: "Connected to broader social networks",
+            color: "text-blue-400"
+          });
+        }
+
+        // Add lottery/web3 relevance insight
+        userInsights.push({
+          icon: "🎫",
+          title: "Lottery Enthusiast",
+          description: "Part of the growing lottery community",
+          color: "text-orange-400"
+        });
+
+        setInsights(userInsights);
+      } catch (error) {
+        console.error('Failed to load community insights:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCommunityInsights();
+  }, [userIdentity]);
+
+  if (loading || insights.length === 0) {
+    return null;
+  }
+
+  return (
+  <PuzzlePiece variant="secondary" size="md" shape="rounded" glow>
+  <CompactStack spacing="md">
+  <div className="flex items-center gap-2">
+  <span className="text-lg">📊</span>
+  <h3 className="font-semibold text-white">Community Insights</h3>
+  </div>
+
+  <div className="grid grid-cols-1 gap-3">
+  {insights.slice(0, 3).map((insight, index) => (
+  <div key={index} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
+  <span className={`text-xl ${insight.color}`}>{insight.icon}</span>
+  <div className="flex-1">
+  <p className={`font-medium ${insight.color}`}>{insight.title}</p>
+  <p className="text-xs text-gray-400">{insight.description}</p>
+  </div>
+  </div>
+  ))}
+  </div>
+
+  <p className="text-xs text-gray-400 text-center">
+  Your social profile enhances trust and discovery
+  </p>
+  </CompactStack>
+  </PuzzlePiece>
   );
 }
 
@@ -407,8 +593,33 @@ function StatsPieces() {
 
 export default function PremiumHome() {
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
-  const { isConnected } = useWalletConnection();
+  const [userIdentity, setUserIdentity] = useState<any>(null);
+  const [identityLoading, setIdentityLoading] = useState(false);
+  const { isConnected, address } = useWalletConnection();
   const { purchaseTickets, userTicketInfo, claimWinnings, isClaimingWinnings } = useTicketPurchase();
+
+  // Load user identity for personalization
+  useEffect(() => {
+    const loadIdentity = async () => {
+      if (!isConnected || !address) {
+        setUserIdentity(null);
+        return;
+      }
+
+      setIdentityLoading(true);
+      try {
+        const identity = await socialService.getUserIdentity(address);
+        setUserIdentity(identity);
+      } catch (error) {
+        console.error('Failed to load user identity:', error);
+        setUserIdentity(null);
+      } finally {
+        setIdentityLoading(false);
+      }
+    };
+
+    loadIdentity();
+  }, [isConnected, address]);
 
   const handlePurchaseAction = useCallback(() => {
     if (!isConnected) {
@@ -464,11 +675,44 @@ export default function PremiumHome() {
                     <span className="absolute inset-0 bg-gradient-to-r from-purple-400 via-blue-500 to-green-400 bg-clip-text text-transparent blur-lg opacity-30 animate-pulse"></span>
                   </h1>
                   <p className="text-xl mt-4 max-w-2xl text-gray-300 leading-relaxed">
-                    Social lottery coordination • Cross-chain • Cause-driven
+                  Social lottery coordination • Cross-chain • Cause-driven
                   </p>
-                </div>
+                  </div>
 
-                {/* Wallet Connection Manager */}
+                  {/* Personalized Welcome Message */}
+                 {isConnected && !identityLoading && userIdentity && (
+                   <div className="animate-fade-in-up delay-300">
+                     <PuzzlePiece variant="primary" size="sm" shape="rounded" glow>
+                       <CompactStack spacing="sm" align="center">
+                         <div className="flex items-center gap-2">
+                           <span className="text-lg">👋</span>
+                           <span className="text-white font-semibold">Welcome back!</span>
+                         </div>
+                         <div className="flex items-center gap-4 text-sm text-gray-300">
+                           {userIdentity.farcaster && (
+                             <div className="flex items-center gap-1">
+                               <span className="text-purple-400">💜</span>
+                               <span>@{userIdentity.farcaster.username}</span>
+                             </div>
+                           )}
+                           {userIdentity.twitter && (
+                             <div className="flex items-center gap-1">
+                               <span className="text-blue-400">🐦</span>
+                               <span>@{userIdentity.twitter.username}</span>
+                             </div>
+                           )}
+                         </div>
+                         {(userIdentity.farcaster?.followerCount || userIdentity.twitter?.followerCount) && (
+                           <p className="text-xs text-gray-400 text-center">
+                             Connected to {((userIdentity.farcaster?.followerCount || 0) + (userIdentity.twitter?.followerCount || 0)).toLocaleString()}+ community members
+                           </p>
+                         )}
+                       </CompactStack>
+                     </PuzzlePiece>
+                   </div>
+                 )}
+
+                 {/* Wallet Connection Manager */}
                 <div className="mb-8 flex justify-center animate-slide-in-left">
                   <WalletConnectionManager />
                 </div>
@@ -481,7 +725,7 @@ export default function PremiumHome() {
                     overflow: "visible",
                   }}
                 >
-                  <PremiumJackpotPiece onBuyClick={handlePurchaseAction} />
+                  <PremiumJackpotPiece onBuyClick={handlePurchaseAction} userIdentity={userIdentity} />
                   {/* DELIGHT: Subtle floating particles around jackpot */}
                   <div
                     className="absolute -top-4 -left-4 w-2 h-2 bg-yellow-400 rounded-full opacity-70 animate-pulse"
@@ -514,6 +758,7 @@ export default function PremiumHome() {
                   claimWinnings={claimWinnings}
                   isClaimingWinnings={isClaimingWinnings}
                 />
+                {userIdentity && <CommunityInsightsPiece userIdentity={userIdentity} />}
                 <SyndicatesPiece />
               </CompactStack>
 
