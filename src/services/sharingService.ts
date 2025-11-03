@@ -1,7 +1,9 @@
 /**
  * SHARING SERVICE
  *
- * Handles social media sharing integrations with Memory Protocol and Neynar
+ * Handles social media sharing integrations with Neynar (Farcaster) and direct platform URLs
+ * Note: Memory Protocol API is read-only and not used for content sharing
+ *
  * Core Principles Applied:
  * - MODULAR: Independent service for sharing functionality
  * - CLEAN: Clear API interfaces
@@ -14,13 +16,8 @@ export interface ShareResult {
   error?: string;
 }
 
-export interface MemoryProtocolContent {
-  title: string;
-  description: string;
-  url: string;
-  image?: string;
-  tags?: string[];
-}
+// Note: Memory Protocol API is read-only for identity/social graph data
+// Content sharing is handled via direct platform URLs
 
 export interface NeynarCast {
   text: string;
@@ -29,46 +26,8 @@ export interface NeynarCast {
 }
 
 class SharingService {
-  private readonly memoryApiUrl = 'https://api.memoryproto.co';
   private readonly neynarApiUrl = 'https://api.neynar.com/v2';
   private readonly neynarApiKey = process.env.NEXT_PUBLIC_NEYNAR_API_KEY;
-
-  /**
-   * Share content using Memory Protocol
-   */
-  async shareToMemory(content: MemoryProtocolContent): Promise<ShareResult> {
-    try {
-      const response = await fetch(`${this.memoryApiUrl}/share`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: content.title,
-          description: content.description,
-          url: content.url,
-          image: content.image,
-          tags: content.tags || ['lottery', 'megapot', 'blockchain'],
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Memory API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return {
-        success: true,
-        url: data.shareUrl,
-      };
-    } catch (error) {
-      console.error('Memory Protocol sharing failed:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to share to Memory Protocol',
-      };
-    }
-  }
 
   /**
    * Share cast to Farcaster using Neynar
@@ -157,7 +116,6 @@ class SharingService {
   }): {
     twitterText: string;
     farcasterText: string;
-    memoryContent: MemoryProtocolContent;
     neynarCast: NeynarCast;
   } {
     const { ticketCount, jackpotAmount, odds, platformUrl } = data;
@@ -166,13 +124,6 @@ class SharingService {
 
     const twitterText = `${baseText} #Megapot #Lottery`;
     const farcasterText = `${baseText} Join the lottery revolution!`;
-
-    const memoryContent: MemoryProtocolContent = {
-      title: `Bought ${ticketText} - $${jackpotAmount} Jackpot!`,
-      description: `Just purchased lottery tickets with ${odds} odds to win $${jackpotAmount}. Join the blockchain lottery revolution!`,
-      url: platformUrl,
-      tags: ['lottery', 'megapot', 'blockchain', 'web3', 'jackpot'],
-    };
 
     const neynarCast: NeynarCast = {
       text: farcasterText,
@@ -183,7 +134,6 @@ class SharingService {
     return {
       twitterText,
       farcasterText,
-      memoryContent,
       neynarCast,
     };
   }
