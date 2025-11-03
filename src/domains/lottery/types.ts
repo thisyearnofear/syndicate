@@ -91,15 +91,56 @@ export interface TicketPurchaseProps {
 export interface SyndicateInfo {
   id: string;
   name: string;
-  cause: string;
+  cause: {
+    id: string;
+    name: string;
+    verifiedWallet: string;    // Transparent cause wallet
+    description: string;
+    verificationSource: 'gitcoin' | 'coinlist' | 'community' | 'manual'; // Verification source
+    verificationScore: number; // 0-100 based on multiple verification factors
+    verificationTimestamp: Date; // When verification occurred
+    verificationTier: 1 | 2 | 3; // Verification tier (1=automatic, 2=community, 3=nominated)
+  };
   description: string;
   causePercentage: number;
+  governanceModel: 'leader' | 'dao' | 'hybrid';  // Governance choice
+  governanceParameters?: {
+    // Leader-guided parameters
+    maxFundAction?: number;      // Max % of funds leader can move without DAO approval
+    actionTimeLimit?: number;    // Time window for leader actions
+    
+    // DAO parameters
+    quorumPercentage?: number;   // Minimum participation for DAO decisions
+    executionDelay?: number;     // Time lock for DAO-executed actions
+    
+    // Hybrid parameters
+    thresholdAmount?: number;    // Amount above which DAO approval required
+    emergencySwitch?: boolean;   // Allow temporary leader control in emergencies
+  };
   membersCount: number;
   ticketsPooled: number;
   totalImpact: number;
   isActive: boolean;
   isTrending: boolean;
   recentActivity: SyndicateActivity[];
+}
+
+export interface VerifiedCause {
+  id: string;
+  name: string;
+  walletAddress: string;
+  verificationSource: 'gitcoin' | 'coinlist' | 'community' | 'manual';
+  verificationTimestamp: Date;
+  verificationScore: number; // 0-100 based on multiple verification factors
+  verificationTier: 1 | 2 | 3; // 1=auto, 2=community, 3=nominated
+  impactMetrics?: ImpactMetric[]; // Track actual impact
+}
+
+export interface ImpactMetric {
+  metricType: 'fundsDistributed' | 'impactReported' | 'verificationUpdated';
+  value: number | string;
+  timestamp: Date;
+  source: string; // Source of the impact metric
 }
 
 export interface SyndicateActivity {
