@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { web3Service, type TicketPurchaseResult, type UserBalance, type UserTicketInfo } from '@/services/web3Service';
+import { web3Service, type TicketPurchaseResult, type UserBalance, type UserTicketInfo, type OddsInfo } from '@/services/web3Service';
 import { useWalletConnection } from './useWalletConnection';
 import type { SyndicateInfo, PurchaseOptions, SyndicateImpact } from '@/domains/lottery/types';
 
@@ -34,6 +34,9 @@ export interface TicketPurchaseState {
   // User ticket info
   userTicketInfo: UserTicketInfo | null;
 
+  // Odds info
+  oddsInfo: OddsInfo | null;
+
   // ENHANCEMENT: Syndicate state
   lastPurchaseMode: 'individual' | 'syndicate' | null;
   lastSyndicateImpact: SyndicateImpact | null;
@@ -49,6 +52,7 @@ export interface TicketPurchaseActions {
   refreshBalance: () => Promise<void>;
   refreshJackpot: () => Promise<void>;
   getCurrentTicketInfo: () => Promise<void>;
+  getOddsInfo: () => Promise<void>;
   claimWinnings: () => Promise<string>;
   clearError: () => void;
   reset: () => void;
@@ -71,6 +75,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     purchaseSuccess: false,
     purchasedTicketCount: 0,
     userTicketInfo: null,
+    oddsInfo: null,
     // ENHANCEMENT: Syndicate state
     lastPurchaseMode: null,
     lastSyndicateImpact: null,
@@ -102,12 +107,19 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
             loadTicketPrice(),
           ]);
 
-          // Load user ticket info separately (defined later in hook)
+          // Load user ticket info and odds info
           try {
-            const ticketInfo = await web3Service.getCurrentTicketInfo();
-            setState(prev => ({ ...prev, userTicketInfo: ticketInfo }));
+          const ticketInfo = await web3Service.getCurrentTicketInfo();
+          setState(prev => ({ ...prev, userTicketInfo: ticketInfo }));
           } catch (ticketError) {
-            console.warn('Failed to load user ticket info:', ticketError);
+          console.warn('Failed to load user ticket info:', ticketError);
+          }
+
+          try {
+            const oddsInfo = await web3Service.getOddsInfo();
+            setState(prev => ({ ...prev, oddsInfo }));
+          } catch (oddsError) {
+            console.warn('Failed to load odds info:', oddsError);
           }
         } catch (dataError) {
           console.warn('Some data failed to load, but initialization succeeded:', dataError);
@@ -336,6 +348,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       purchaseSuccess: false,
       purchasedTicketCount: 0,
       userTicketInfo: null,
+      oddsInfo: null,
       // ENHANCEMENT: Reset syndicate state
       lastPurchaseMode: null,
       lastSyndicateImpact: null,
@@ -374,8 +387,20 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
   }, []);
 
   /**
-   * Claim winnings if user has won
+   * Get current odds information
    */
+  const getOddsInfo = useCallback(async (): Promise<void> => {
+    try {
+      const odds = await web3Service.getOddsInfo();
+      setState(prev => ({ ...prev, oddsInfo: odds }));
+    } catch (error) {
+      console.error('Failed to get odds info:', error);
+    }
+  }, []);
+
+  /**
+  * Claim winnings if user has won
+  */
   const claimWinnings = useCallback(async (): Promise<string> => {
     setState(prev => ({ ...prev, isClaimingWinnings: true, error: null }));
 
@@ -410,6 +435,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     refreshBalance,
     refreshJackpot,
     getCurrentTicketInfo,
+    getOddsInfo,
     claimWinnings,
     clearError,
     reset,

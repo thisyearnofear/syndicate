@@ -70,6 +70,20 @@ export interface UserTicketInfo {
   hasWon: boolean;
 }
 
+export interface OddsInfo {
+  oddsPerTicket: number;
+  oddsForTickets: (ticketCount: number) => number;
+  oddsFormatted: (ticketCount: number) => string;
+  potentialWinnings: string;
+}
+
+export interface ShareData {
+  ticketCount: number;
+  jackpotAmount: string;
+  odds: string;
+  platformUrl: string;
+}
+
 /**
  * Check if we're in a browser environment
  */
@@ -427,6 +441,49 @@ class Web3Service {
     } catch (error) {
       console.error('Failed to claim winnings:', error);
       throw error;
+    }
+  }
+
+  /**
+  * Calculate odds information for current jackpot
+  */
+  async getOddsInfo(): Promise<OddsInfo | null> {
+  if (!this.isInitialized || !this.megapotContract) {
+      console.warn('Web3 service not initialized');
+      return null;
+    }
+    if (!isBrowser()) {
+      console.warn('Web3 service can only be used in browser environments');
+      return null;
+    }
+
+    try {
+      // Get odds per ticket from contract (if available) or estimate
+      // For now, we'll use the jackpot size to estimate odds
+      const jackpotSize = await this.megapotContract.getCurrentJackpot();
+      const ticketPrice = await this.megapotContract.ticketPrice();
+
+      // Convert to readable numbers
+      const jackpotUSD = parseFloat(ethers.formatUnits(jackpotSize, 6));
+      const ticketPriceUSD = parseFloat(ethers.formatUnits(ticketPrice, 6));
+
+      // Estimate total tickets possible (jackpot / ticket price)
+      // This is a rough estimate since fees reduce the actual prize pool
+      const estimatedTotalTickets = Math.floor(jackpotUSD / ticketPriceUSD);
+      const oddsPerTicket = estimatedTotalTickets;
+
+      return {
+        oddsPerTicket,
+        oddsForTickets: (ticketCount: number) => oddsPerTicket / ticketCount,
+        oddsFormatted: (ticketCount: number) => {
+          const odds = oddsPerTicket / ticketCount;
+          return odds < 1 ? 'Better than 1:1' : `1 in ${odds.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+        },
+        potentialWinnings: jackpotUSD.toFixed(2)
+      };
+    } catch (error) {
+      console.error('Failed to calculate odds:', error);
+      return null;
     }
   }
 
