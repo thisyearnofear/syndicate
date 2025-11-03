@@ -62,18 +62,76 @@ export async function GET(request: NextRequest) {
         const baseRpcUrl = process.env.BASE_RPC_URL || 'https://mainnet.base.org';
         const provider = new ethers.JsonRpcProvider(baseRpcUrl);
 
+        // Simple in-memory cache for tx timestamps to reduce RPC calls on warm starts
+        // Note: Cache persists across requests only while the serverless function stays warm
+        const txTimestampCache: Map<string, string> = (global as any).__txTimestampCache || new Map();
+        (global as any).__txTimestampCache = txTimestampCache;
+
+        // Basescan fallback
+        const resolveTimestampViaBaseScan = async (txHash?: string): Promise<string | null> => {
+            if (!txHash) return null;
+            const apiKey = process.env.BASESCAN_API_KEY;
+            if (!apiKey) return null;
+            try {
+                // Check cache first
+                const cached = txTimestampCache.get(txHash);
+                if (cached) return cached;
+
+                const baseUrl = 'https://api.basescan.org/api';
+                // Get receipt to obtain block number
+                const receiptResp = await fetch(`${baseUrl}?module=proxy&action=eth_getTransactionReceipt&txhash=${txHash}&apikey=${apiKey}`);
+                const receiptJson = await receiptResp.json();
+                const blockHex: string | undefined = receiptJson?.result?.blockNumber;
+                if (!blockHex) return null;
+
+                // Get block by number to obtain timestamp
+                const blockResp = await fetch(`${baseUrl}?module=proxy&action=eth_getBlockByNumber&tag=${blockHex}&boolean=true&apikey=${apiKey}`);
+                const blockJson = await blockResp.json();
+                const tsHex: string | undefined = blockJson?.result?.timestamp;
+                if (!tsHex) return null;
+                const tsSeconds = parseInt(tsHex, 16);
+                const ts = new Date(tsSeconds * 1000).toISOString();
+                txTimestampCache.set(txHash, ts);
+                return ts;
+            } catch (err) {
+                console.warn('Basescan fallback failed for tx', txHash, err);
+                return null;
+            }
+        };
+
         // Helper to resolve tx timestamp from chain
         const resolveTimestamp = async (txHash?: string): Promise<string | null> => {
             if (!txHash) return null;
             try {
+                // Cache hit
+                const cached = txTimestampCache.get(txHash);
+                if (cached) return cached;
+
                 const receipt = await provider.getTransactionReceipt(txHash);
                 if (!receipt || !receipt.blockNumber) return null;
                 const block = await provider.getBlock(receipt.blockNumber);
                 if (!block || !block.timestamp) return null;
-                return new Date(block.timestamp * 1000).toISOString();
+                const ts = new Date(block.timestamp * 1000).toISOString();
+                txTimestampCache.set(txHash, ts);
+                return ts;
             } catch (e) {
-                console.warn('Failed to resolve timestamp for tx', txHash, e);
-                return null;
+                // Fallback via getTransaction -> blockNumber
+                try {
+                    const tx = await provider.getTransaction(txHash);
+                    const blockNumber = tx?.blockNumber;
+                    if (!blockNumber) throw new Error('No blockNumber on tx');
+                    const block = await provider.getBlock(blockNumber);
+                    if (!block || !block.timestamp) throw new Error('No block timestamp');
+                    const ts = new Date(block.timestamp * 1000).toISOString();
+                    txTimestampCache.set(txHash, ts);
+                    return ts;
+                } catch (fallbackErr) {
+                    // Final fallback: Basescan proxy API
+                    const basescanTs = await resolveTimestampViaBaseScan(txHash);
+                    if (basescanTs) return basescanTs;
+                    console.warn('Failed to resolve timestamp for tx', txHash, e, fallbackErr);
+                    return null;
+                }
             }
         };
 
@@ -92,8 +150,10 @@ export async function GET(request: NextRequest) {
             // Each ticket costs 1 USDC per Megapot docs
             const totalCost = ticketCount.toString();
 
-            const txHash = purchase.transactionHashes?.[0] || '';
-            const timestamp = await resolveTimestamp(txHash);
+            const txHash = purchase.transactionHashes?.[0] || purchase.txHash || '';
+            // Prefer any existing timestamp fields from API if available
+            const apiTs = purchase.timestamp || purchase.createdAt || purchase.updatedAt || null;
+            const timestamp = apiTs ? new Date(apiTs).toISOString() : await resolveTimestamp(txHash);
 
             return {
                 id: txHash || `${purchase.jackpotRoundId}-${purchase.recipient}`,
