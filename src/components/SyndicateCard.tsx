@@ -41,7 +41,7 @@ export default function SyndicateCard({
           </div>
           <div>
             <h3 className="font-bold text-white truncate max-w-[120px]">{syndicate.name}</h3>
-            <p className="text-xs text-gray-400">{syndicate.cause}</p>
+            <p className="text-xs text-gray-400">{syndicate.cause.name}</p>
           </div>
         </div>
         

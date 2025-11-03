@@ -16,7 +16,7 @@ export interface TicketPurchaseHistory {
     ticketCount: number;
     totalCost: string;
     txHash: string;
-    timestamp: string;
+    timestamp: string | null;
     status: 'active' | 'drawn' | 'won' | 'claimed';
     syndicateId?: string;
     syndicateName?: string;
@@ -101,7 +101,7 @@ export function useTicketHistory(): TicketHistoryState & TicketHistoryActions {
                     ticketCount,
                     totalCost,
                     txHash: purchase.txHash || purchase.transactionHashes?.[0] || '',
-                    timestamp: purchase.timestamp || new Date().toISOString(),
+                    timestamp: purchase.timestamp ?? null,
                     status: purchase.status || 'active',
                     jackpotRoundId: purchase.jackpotRoundId,
                     startTicket: purchase.startTicket,

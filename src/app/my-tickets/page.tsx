@@ -37,14 +37,9 @@ function TicketHistoryCard({ ticket }: { ticket: TicketPurchaseHistory }) {
 
     const getStatusText = () => 'Completed';
 
-    const formattedDate = (() => {
-        try {
-            const d = new Date(ticket.timestamp);
-            return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-        } catch {
-            return '';
-        }
-    })();
+    const formattedDate = ticket.timestamp
+        ? new Date(ticket.timestamp).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+        : '';
 
     return (
         <div className="glass-premium rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 hover:scale-[1.02]">
