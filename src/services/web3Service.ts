@@ -375,9 +375,9 @@ class Web3Service {
   }
 
   /**
-    * Get user's ticket information
-    */
-  async getUserTicketInfo(): Promise<UserTicketInfo | null> {
+  * Get user's current jackpot ticket information from contract
+  */
+  async getCurrentTicketInfo(): Promise<UserTicketInfo | null> {
     if (!this.isInitialized || !this.megapotContract || !this.signer) {
       console.warn('Web3 service not initialized');
       return null;

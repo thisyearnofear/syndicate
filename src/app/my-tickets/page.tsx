@@ -201,7 +201,7 @@ function TicketStats({ userTicketInfo, ticketHistory }: { userTicketInfo: any; t
 
 export default function MyTicketsPage() {
     const { isConnected } = useWalletConnection();
-    const { userTicketInfo, getUserTicketInfo } = useTicketPurchase();
+    const { userTicketInfo, getCurrentTicketInfo } = useTicketPurchase();
     const { purchases: ticketHistory, isLoading, refreshHistory } = useTicketHistory();
     const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -215,7 +215,7 @@ export default function MyTicketsPage() {
     const loadTicketData = async () => {
         try {
             // Load user ticket info from blockchain
-            await getUserTicketInfo();
+            await getCurrentTicketInfo();
         } catch (error) {
             console.error('Failed to load ticket data:', error);
         }
@@ -225,7 +225,7 @@ export default function MyTicketsPage() {
         setIsRefreshing(true);
         await Promise.all([
             refreshHistory(),
-            getUserTicketInfo()
+            getCurrentTicketInfo()
         ]);
         setIsRefreshing(false);
     };

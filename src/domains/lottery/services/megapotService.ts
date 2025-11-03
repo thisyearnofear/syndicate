@@ -96,13 +96,18 @@ class MegapotService {
   }
 
   /**
-   * ENHANCEMENT FIRST: Enhanced ticket purchases with pagination
-   */
-  async getTicketPurchases(limit = performance.pagination.transactions): Promise<TicketPurchase[]> {
-    try {
-      const endpoint = `${api.megapot.endpoints.ticketPurchases}?limit=${limit}`;
-      return await this.makeRequest<TicketPurchase[]>(endpoint, {
-        cacheDuration: performance.cache.activityFeed,
+  * ENHANCEMENT FIRST: Enhanced ticket purchases with wallet filtering
+  */
+  async getTicketPurchases(walletAddress?: string, limit = performance.pagination.transactions): Promise<TicketPurchase[]> {
+  try {
+  let endpoint = api.megapot.endpoints.ticketPurchases;
+  if (walletAddress) {
+  endpoint += `/${walletAddress}`;
+  } else {
+      endpoint += `?limit=${limit}`;
+  }
+  return await this.makeRequest<TicketPurchase[]>(endpoint, {
+      cacheDuration: performance.cache.activityFeed,
       });
     } catch (error) {
       console.error('Failed to fetch ticket purchases:', error);
