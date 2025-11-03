@@ -31,50 +31,11 @@ import type { TicketPurchaseHistory } from "@/hooks/useTicketHistory";
 
 
 function TicketHistoryCard({ ticket }: { ticket: TicketPurchaseHistory }) {
-    const getStatusColor = () => {
-        switch (ticket.status) {
-            case 'active':
-                return 'text-green-400 bg-green-500/20 border-green-500/30';
-            case 'drawn':
-                return 'text-gray-400 bg-gray-500/20 border-gray-500/30';
-            case 'won':
-                return 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30';
-            case 'claimed':
-                return 'text-blue-400 bg-blue-500/20 border-blue-500/30';
-            default:
-                return 'text-gray-400 bg-gray-500/20 border-gray-500/30';
-        }
-    };
+    const getStatusColor = () => 'text-blue-400 bg-blue-500/20 border-blue-500/30';
 
-    const getStatusIcon = () => {
-        switch (ticket.status) {
-            case 'active':
-                return '🎫';
-            case 'drawn':
-                return '🎲';
-            case 'won':
-                return '🏆';
-            case 'claimed':
-                return '✅';
-            default:
-                return '🎫';
-        }
-    };
+    const getStatusIcon = () => '✅';
 
-    const getStatusText = () => {
-        switch (ticket.status) {
-            case 'active':
-                return 'Active';
-            case 'drawn':
-                return 'Draw Complete';
-            case 'won':
-                return 'Winner!';
-            case 'claimed':
-                return 'Claimed';
-            default:
-                return 'Unknown';
-        }
-    };
+    const getStatusText = () => 'Completed';
 
     return (
         <div className="glass-premium rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 hover:scale-[1.02]">
@@ -86,8 +47,7 @@ function TicketHistoryCard({ ticket }: { ticket: TicketPurchaseHistory }) {
                             {ticket.ticketCount} Ticket{ticket.ticketCount > 1 ? 's' : ''}
                         </h3>
                         <p className="text-sm text-gray-400">
-                            {new Date(ticket.timestamp).toLocaleDateString()} at{' '}
-                            {new Date(ticket.timestamp).toLocaleTimeString()}
+                        Round #{ticket.jackpotRoundId} • Tickets {ticket.startTicket}-{ticket.endTicket}
                         </p>
                     </div>
                 </div>
@@ -97,20 +57,12 @@ function TicketHistoryCard({ ticket }: { ticket: TicketPurchaseHistory }) {
                 </div>
             </CompactFlex>
 
-            {ticket.syndicateId && (
-                <div className="mb-4 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-                    <CompactFlex align="center" gap="sm">
-                        <span className="text-lg">🌊</span>
-                        <div>
-                            <p className="text-sm font-semibold text-purple-400">
-                                {ticket.syndicateName}
-                            </p>
-                            <p className="text-xs text-gray-400">
-                                Supporting {ticket.cause}
-                            </p>
-                        </div>
-                    </CompactFlex>
-                </div>
+            {ticket.referrer && ticket.referrer !== '0x0000000000000000000000000000000000000000' && (
+            <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+            <p className="text-sm text-blue-400">
+            Referred by: {ticket.referrer.slice(0, 6)}...{ticket.referrer.slice(-4)}
+            </p>
+            </div>
             )}
 
             <div className="grid grid-cols-2 gap-4 mb-4">
@@ -118,12 +70,7 @@ function TicketHistoryCard({ ticket }: { ticket: TicketPurchaseHistory }) {
                     <p className="text-xs text-gray-400">Total Cost</p>
                     <p className="font-semibold text-white">${ticket.totalCost} USDC</p>
                 </div>
-                {ticket.winAmount && (
-                    <div>
-                        <p className="text-xs text-gray-400">Winnings</p>
-                        <p className="font-semibold text-yellow-400">${ticket.winAmount} USDC</p>
-                    </div>
-                )}
+                
             </div>
 
             <CompactFlex align="center" justify="between">
@@ -137,62 +84,65 @@ function TicketHistoryCard({ ticket }: { ticket: TicketPurchaseHistory }) {
                     <ExternalLink size={14} />
                 </a>
 
-                {ticket.status === 'won' && (
-                    <Button
-                        variant="default"
-                        size="sm"
-                        className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white"
-                    >
-                        Claim Winnings
-                    </Button>
-                )}
+                
             </CompactFlex>
         </div>
     );
 }
 
-function TicketStats({ userTicketInfo, ticketHistory }: { userTicketInfo: any; ticketHistory: TicketPurchaseHistory[] }) {
-    if (!userTicketInfo) return null;
+function TicketStats({ userTicketInfo, ticketHistory, onClaimWinnings, isClaiming }: {
+    userTicketInfo: any;
+    ticketHistory: TicketPurchaseHistory[];
+    onClaimWinnings: () => void;
+    isClaiming: boolean;
+}) {
+// Calculate total tickets from history
+    const totalTickets = ticketHistory.reduce((sum, ticket) => sum + ticket.ticketCount, 0);
+const totalSpent = ticketHistory.reduce((sum, ticket) => sum + parseFloat(ticket.totalCost), 0);
 
-    return (
-        <PuzzlePiece variant="primary" size="lg" shape="rounded" glow>
+return (
+<PuzzlePiece variant="primary" size="lg" shape="rounded" glow>
             <CompactStack spacing="md">
-                <h2 className="font-bold text-2xl text-white">Your Stats</h2>
+<h2 className="font-bold text-2xl text-white">Your Stats</h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="text-center">
-                        <div className="text-3xl font-black text-blue-400 mb-2">
-                            {userTicketInfo.ticketsPurchased}
-                        </div>
-                        <p className="text-sm text-gray-400">Total Tickets</p>
+<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div className="text-center">
+<div className="text-3xl font-black text-blue-400 mb-2">
+    {totalTickets}
+    </div>
+                        <p className="text-sm text-gray-400">Total Tickets Purchased</p>
+</div>
+
+<div className="text-center">
+<div className="text-3xl font-black text-green-400 mb-2">
+    ${totalSpent.toFixed(2)}
+    </div>
+                        <p className="text-sm text-gray-400">Total Spent</p>
+</div>
+
+<div className="text-center">
+<div className="text-3xl font-black text-purple-400 mb-2">
+    {ticketHistory.length}
+    </div>
+        <p className="text-sm text-gray-400">Total Purchases</p>
                     </div>
+</div>
 
-                    <div className="text-center">
-                        <div className="text-3xl font-black text-green-400 mb-2">
-                            ${parseFloat(userTicketInfo.winningsClaimable).toFixed(2)}
-                        </div>
-                        <p className="text-sm text-gray-400">Available Winnings</p>
-                    </div>
-
-                    <div className="text-center">
-                        <div className="text-3xl font-black text-purple-400 mb-2">
-                            {ticketHistory.filter((t: TicketPurchaseHistory) => t.status === 'active').length}
-                        </div>
-                        <p className="text-sm text-gray-400">Active Tickets</p>
-                    </div>
-                </div>
-
-                {userTicketInfo.hasWon && parseFloat(userTicketInfo.winningsClaimable) > 0 && (
-                    <div className="mt-4 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-center">
-                        <p className="text-yellow-400 font-semibold mb-2">🏆 Congratulations! You have winnings to claim!</p>
-                        <Button
-                            variant="default"
-                            size="lg"
-                            className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white"
-                        >
-                            Claim ${userTicketInfo.winningsClaimable} USDC
+{/* Winnings section - only show if user has claimable winnings */}
+{userTicketInfo && parseFloat(userTicketInfo.winningsClaimable || '0') > 0 && (
+<div className="mt-4 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-center">
+<p className="text-yellow-400 font-semibold mb-2">🏆 Congratulations! You have winnings available!</p>
+<p className="text-white text-sm mb-3">${parseFloat(userTicketInfo.winningsClaimable).toFixed(2)} USDC ready to claim</p>
+<Button
+variant="default"
+size="lg"
+onClick={onClaimWinnings}
+    disabled={isClaiming}
+className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white disabled:opacity-50"
+>
+                            {isClaiming ? 'Claiming...' : 'Claim Winnings'}
                         </Button>
-                    </div>
+                </div>
                 )}
             </CompactStack>
         </PuzzlePiece>
@@ -201,9 +151,10 @@ function TicketStats({ userTicketInfo, ticketHistory }: { userTicketInfo: any; t
 
 export default function MyTicketsPage() {
     const { isConnected } = useWalletConnection();
-    const { userTicketInfo, getCurrentTicketInfo } = useTicketPurchase();
+    const { userTicketInfo, getCurrentTicketInfo, claimWinnings } = useTicketPurchase();
     const { purchases: ticketHistory, isLoading, refreshHistory } = useTicketHistory();
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isClaiming, setIsClaiming] = useState(false);
 
     // Load ticket data when component mounts or wallet connects
     useEffect(() => {
@@ -228,6 +179,26 @@ export default function MyTicketsPage() {
             getCurrentTicketInfo()
         ]);
         setIsRefreshing(false);
+    };
+
+    const handleClaimWinnings = async () => {
+        if (!userTicketInfo || parseFloat(userTicketInfo.winningsClaimable || '0') <= 0) return;
+
+        setIsClaiming(true);
+        try {
+            const txHash = await claimWinnings();
+            // Refresh data after claiming
+            await Promise.all([
+                getCurrentTicketInfo(),
+                refreshHistory()
+            ]);
+            alert(`Winnings claimed successfully! Transaction: ${txHash}`);
+        } catch (error) {
+            console.error('Failed to claim winnings:', error);
+            alert('Failed to claim winnings. Please try again.');
+        } finally {
+            setIsClaiming(false);
+        }
     };
 
     if (!isConnected) {
@@ -300,9 +271,12 @@ export default function MyTicketsPage() {
                     </CompactFlex>
 
                     {/* Stats Section */}
-                    {userTicketInfo && (
-                        <TicketStats userTicketInfo={userTicketInfo} ticketHistory={ticketHistory} />
-                    )}
+                    <TicketStats
+                        userTicketInfo={userTicketInfo}
+                        ticketHistory={ticketHistory}
+                        onClaimWinnings={handleClaimWinnings}
+                        isClaiming={isClaiming}
+                    />
 
                     {/* Ticket History */}
                     <CompactSection spacing="lg">
