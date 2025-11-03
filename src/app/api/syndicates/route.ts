@@ -5,7 +5,6 @@ const mockSyndicates = [
   {
     id: '1',
     name: 'Ocean Warriors',
-    cause: 'Ocean Cleanup',
     membersCount: 1247,
     imageUrl: '/images/ocean-cleanup.jpg',
     description: 'Join the fight to clean our oceans and protect marine life',
@@ -38,7 +37,6 @@ const mockSyndicates = [
   {
     id: '2', 
     name: 'Education First',
-    cause: 'Education Access',
     membersCount: 892,
     imageUrl: '/images/education.jpg',
     description: 'Ensuring quality education access for all communities',
@@ -71,7 +69,6 @@ const mockSyndicates = [
   {
     id: '3',
     name: 'Climate Action',
-    cause: 'Climate Action', 
     membersCount: 2156,
     imageUrl: '/images/climate.jpg',
     description: 'Taking action against climate change for a sustainable future',
@@ -104,7 +101,6 @@ const mockSyndicates = [
   {
     id: '4',
     name: 'Food Security',
-    cause: 'Food Security',
     membersCount: 634,
     imageUrl: '/images/food-security.jpg',
     description: 'Fighting hunger and ensuring food security worldwide',
