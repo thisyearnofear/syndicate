@@ -10,7 +10,7 @@
  * - CLEAN: Clear visual hierarchy with premium design
  */
 
-import { useState, useCallback, useEffect, Suspense, lazy } from "react";
+import { useState, useCallback, useEffect, Suspense, lazy, useMemo } from "react";
 import Link from "next/link";
 import { LoadingSpinner } from "@/shared/components/LoadingSpinner";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
@@ -59,6 +59,27 @@ const SocialFeed = lazy(() => import("@/components/SocialFeed"));
 function PremiumJackpotPiece({ onBuyClick, userIdentity }: { onBuyClick: () => void; userIdentity?: any }) {
   const { jackpotStats, isLoading, error, refresh } = useLottery();
 
+  const oddsDisplay = useMemo(() => {
+    if (isLoading || !jackpotStats) {
+      return "Loading odds...";
+    }
+
+    const baseOddsRaw =
+      jackpotStats.oddsPerTicket && Number(jackpotStats.oddsPerTicket) > 0
+        ? Number(jackpotStats.oddsPerTicket)
+        : typeof jackpotStats.ticketsSoldCount === "number" &&
+          jackpotStats.ticketsSoldCount > 0
+        ? Number(jackpotStats.ticketsSoldCount)
+        : null;
+
+    if (!baseOddsRaw) {
+      return "Odds not available";
+    }
+
+    const x = Math.ceil(baseOddsRaw);
+    return `1 in ${x.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  }, [isLoading, jackpotStats]);
+
   if (error) {
     return (
       <MagneticPiece variant="accent" size="lg" shape="organic" glow>
@@ -77,9 +98,22 @@ function PremiumJackpotPiece({ onBuyClick, userIdentity }: { onBuyClick: () => v
     );
   }
 
+  if (isLoading) {
+    return (
+      <MagneticPiece variant="primary" size="lg" shape="organic" glow>
+        <CompactStack spacing="md" align="center">
+          <CompactFlex align="center" gap="sm">
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+            <span className="text-gray-300">Loading jackpot...</span>
+          </CompactFlex>
+        </CompactStack>
+      </MagneticPiece>
+    );
+  }
+
   const prizeValue = jackpotStats?.prizeUsd
     ? parseFloat(jackpotStats.prizeUsd)
-    : 921847;
+    : undefined;
 
   return (
     <MagneticPiece variant="primary" size="lg" shape="organic" glow>
@@ -96,7 +130,12 @@ function PremiumJackpotPiece({ onBuyClick, userIdentity }: { onBuyClick: () => v
           {/* Jackpot amount with count-up animation */}
           <div className="text-center">
             <div className="text-5xl md:text-7xl font-black gradient-text-rainbow mb-2">
-              $<CountUpText value={prizeValue} duration={2000} enableHover />
+              $
+              {prizeValue !== undefined ? (
+                <CountUpText value={prizeValue} duration={2000} enableHover />
+              ) : (
+                <span className="animate-pulse">...</span>
+              )}
             </div>
             <span className="font-semibold text-yellow-400 drop-shadow-[0_0_20px_rgba(251,191,36,0.6)] animate-pulse text-lg">
               Growing every minute
@@ -128,7 +167,7 @@ function PremiumJackpotPiece({ onBuyClick, userIdentity }: { onBuyClick: () => v
           >
           <span>⚡ Instant</span>
           <span>•</span>
-          <span>🎯 1:1.4M odds</span>
+          <span>🎯 {oddsDisplay}</span>
           <span>•</span>
           <span>🌊 Supports causes</span>
             {userIdentity && (
@@ -622,13 +661,8 @@ export default function PremiumHome() {
   }, [isConnected, address]);
 
   const handlePurchaseAction = useCallback(() => {
-    if (!isConnected) {
-      setShowPurchaseModal(true);
-    } else {
-      setShowPurchaseModal(true);
-      purchaseTickets(1);
-    }
-  }, [isConnected, purchaseTickets, setShowPurchaseModal]);
+    setShowPurchaseModal(true);
+  }, [setShowPurchaseModal]);
 
   return (
     <div>

@@ -25,45 +25,79 @@ export function useLottery() {
   const mountedRef = useRef(true);
 
   /**
-   * PERFORMANT: Fetch jackpot data with error handling
-   */
+  * PERFORMANT: Fetch jackpot data from API (reliable and tested)
+  */
   const fetchJackpotData = useCallback(async (showLoading = false) => {
-    if (!mountedRef.current) return;
+  if (!mountedRef.current) return;
 
-    if (showLoading) {
-      setState(prev => ({ ...prev, isLoading: true, error: null }));
-    }
+  if (showLoading) {
+  setState(prev => ({ ...prev, isLoading: true, error: null }));
+  }
 
-    try {
-      const jackpotStats = await megapotService.getJackpotStats();
-      
-      if (!mountedRef.current) return;
+  try {
+  // Use reliable API - this is working and tested
+  const jackpotStats = await megapotService.getJackpotStats();
+  if (!jackpotStats?.prizeUsd) {
+        throw new Error('Invalid jackpot data from API');
+  }
 
-      setState(prev => ({
-        ...prev,
-        jackpotStats,
-        isLoading: false,
-        error: jackpotStats ? null : 'Failed to load jackpot data',
-        lastUpdated: Date.now(),
-      }));
-    } catch (error) {
-      if (!mountedRef.current) return;
+  if (!mountedRef.current) return;
 
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
-      }));
-    }
-  }, []);
+  setState(prev => ({
+  ...prev,
+    jackpotStats,
+  isLoading: false,
+  error: null,
+  lastUpdated: Date.now(),
+  }));
+  } catch (error) {
+  if (!mountedRef.current) return;
+
+      console.error('Jackpot fetch failed:', error);
+  setState(prev => ({
+  ...prev,
+  isLoading: false,
+  error: error instanceof Error ? error.message : 'Failed to load jackpot data',
+  }));
+  }
+  }, []); // No dependencies needed since setState and mountedRef are stable
 
   /**
-   * PERFORMANT: Manual refresh with cache clearing
-   */
+  * PERFORMANT: Manual refresh with cache clearing
+  */
   const refresh = useCallback(async () => {
-    megapotService.clearCache();
-    await fetchJackpotData(true);
-  }, [fetchJackpotData]);
+  megapotService.clearCache();
+  if (!mountedRef.current) return;
+
+  setState(prev => ({ ...prev, isLoading: true, error: null }));
+
+  try {
+  // Use reliable API - this is working and tested
+  const jackpotStats = await megapotService.getJackpotStats();
+      if (!jackpotStats?.prizeUsd) {
+    throw new Error('Invalid jackpot data from API');
+  }
+
+  if (!mountedRef.current) return;
+
+  setState(prev => ({
+    ...prev,
+  jackpotStats,
+  isLoading: false,
+  error: null,
+  lastUpdated: Date.now(),
+  }));
+  } catch (error) {
+  if (!mountedRef.current) return;
+
+  console.error('Jackpot refresh failed:', error);
+  setState(prev => ({
+  ...prev,
+  isLoading: false,
+  error: error instanceof Error ? error.message : 'Failed to load jackpot data',
+  }));
+  }
+  }, []); // No dependencies to avoid circular refs
 
   /**
    * ENHANCEMENT FIRST: Setup real-time updates if enabled

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ethers } from 'ethers';
 
 const MEGAPOT_API_BASE_URL = 'https://api.megapot.io/api/v1';
 const MEGAPOT_API_KEY = process.env.NEXT_PUBLIC_MEGAPOT_API_KEY;
@@ -57,19 +58,56 @@ export async function GET(request: NextRequest) {
 
         const data = await response.json();
 
-        // Transform the data to match our frontend interface
-        const transformedData = data.map((purchase: any) => ({
-            id: purchase.transactionHashes?.[0] || `${purchase.jackpotRoundId}-${purchase.recipient}`,
-            ticketCount: purchase.ticketsPurchased || 0,
-            totalCost: (purchase.ticketsPurchased || 0).toString(),
-            txHash: purchase.transactionHashes?.[0] || '',
-            timestamp: new Date().toISOString(), // API doesn't provide timestamp, use current time
-            status: 'active', // Default status, would need additional logic to determine actual status
-            jackpotRoundId: purchase.jackpotRoundId,
-            startTicket: purchase.startTicket,
-            endTicket: purchase.endTicket,
-            referrer: purchase.referrer,
-            buyer: purchase.buyer,
+        // Optional RPC URL for Base; default to public RPC
+        const baseRpcUrl = process.env.BASE_RPC_URL || 'https://mainnet.base.org';
+        const provider = new ethers.JsonRpcProvider(baseRpcUrl);
+
+        // Helper to resolve tx timestamp from chain
+        const resolveTimestamp = async (txHash?: string): Promise<string | null> => {
+            if (!txHash) return null;
+            try {
+                const receipt = await provider.getTransactionReceipt(txHash);
+                if (!receipt || !receipt.blockNumber) return null;
+                const block = await provider.getBlock(receipt.blockNumber);
+                if (!block || !block.timestamp) return null;
+                return new Date(block.timestamp * 1000).toISOString();
+            } catch (e) {
+                console.warn('Failed to resolve timestamp for tx', txHash, e);
+                return null;
+            }
+        };
+
+        // Transform + enrich with timestamps
+        const transformedData = await Promise.all(data.map(async (purchase: any) => {
+            // Compute ticket count: prefer API field, fallback to range
+            const rangeCount =
+                typeof purchase.startTicket === 'number' && typeof purchase.endTicket === 'number'
+                    ? Math.max(0, purchase.endTicket - purchase.startTicket + 1)
+                    : 0;
+            const ticketCount =
+                typeof purchase.ticketsPurchased === 'number' && purchase.ticketsPurchased > 0
+                    ? purchase.ticketsPurchased
+                    : rangeCount;
+
+            // Each ticket costs 1 USDC per Megapot docs
+            const totalCost = ticketCount.toString();
+
+            const txHash = purchase.transactionHashes?.[0] || '';
+            const timestamp = await resolveTimestamp(txHash);
+
+            return {
+                id: txHash || `${purchase.jackpotRoundId}-${purchase.recipient}`,
+                ticketCount,
+                totalCost,
+                txHash,
+                timestamp: timestamp || null,
+                status: 'active', // Default status, would need additional logic to determine actual status
+                jackpotRoundId: purchase.jackpotRoundId,
+                startTicket: purchase.startTicket,
+                endTicket: purchase.endTicket,
+                referrer: purchase.referrer,
+                buyer: purchase.buyer,
+            };
         }));
 
         // Add CORS headers to allow frontend access

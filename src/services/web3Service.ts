@@ -467,10 +467,8 @@ class Web3Service {
       const jackpotUSD = parseFloat(ethers.formatUnits(jackpotSize, 6));
       const ticketPriceUSD = parseFloat(ethers.formatUnits(ticketPrice, 6));
 
-      // Estimate total tickets possible (jackpot / ticket price)
-      // This is a rough estimate since fees reduce the actual prize pool
-      const estimatedTotalTickets = Math.floor(jackpotUSD / ticketPriceUSD);
-      const oddsPerTicket = estimatedTotalTickets;
+      // Calculate odds per ticket: jackpot / 0.7 (since 70% of ticket value goes to jackpot pool)
+      const oddsPerTicket = jackpotUSD / 0.7;
 
       return {
         oddsPerTicket,
