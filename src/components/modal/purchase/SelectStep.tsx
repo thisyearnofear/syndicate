@@ -169,10 +169,10 @@ export function SelectStep({
           </p>
           {selectedSyndicate ? (
             <span className="inline-flex items-center font-semibold rounded-full shadow-lg backdrop-blur-sm transform hover:scale-105 transition-transform duration-200 bg-gradient-to-r from-purple-500 to-blue-600 text-white px-2 py-1 text-xs">
-              {selectedSyndicate.cause === 'Ocean Cleanup' ? '🌊' :
-                selectedSyndicate.cause === 'Education Access' ? '📚' :
-                  selectedSyndicate.cause === 'Climate Action' ? '🌍' :
-                    selectedSyndicate.cause === 'Food Security' ? '🌾' : '✨'} {selectedSyndicate.cause}
+              {selectedSyndicate.cause.name === 'Ocean Cleanup' ? '🌊' :
+                selectedSyndicate.cause.name === 'Education Access' ? '📚' :
+                  selectedSyndicate.cause.name === 'Climate Action' ? '🌍' :
+                    selectedSyndicate.cause.name === 'Food Security' ? '🌾' : '✨'} {selectedSyndicate.cause.name}
             </span>
           ) : (
             <span className="inline-flex items-center font-semibold rounded-full shadow-lg backdrop-blur-sm transform hover:scale-105 transition-transform duration-200 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-2 py-1 text-xs">
