@@ -90,6 +90,7 @@ window.__performanceMonitor.getReport()
 
 ### Syndicate Domain
 - **Social Pools**: Community-driven lottery pools supporting social causes
+- **Hybrid Governance**: User choice between leader-guided (fast decisions) and DAO-governed (secure consensus) models
 - **Impact Tracking**: Real-time visualization of community impact
 - **Activity Feed**: Live social activity and trending syndicates
 - **Easy Sharing**: One-click sharing across social platforms
@@ -255,16 +256,13 @@ window.__performanceMonitor.getRealTimeStats()
 
 ## 📚 Documentation
 
-### API Reference
-- [Configuration System](./docs/config.md)
-- [Domain Architecture](./docs/domains.md)
-- [Performance Utilities](./docs/performance.md)
-- [Error Handling](./docs/errors.md)
+### System Architecture
+- [Roadmap & Vision](./docs/ROADMAP.md)
+- [Syndicate Features](./docs/SYNDICATES.md)
 
-### Guides
-- [Adding New Domains](./docs/guides/new-domain.md)
-- [Performance Optimization](./docs/guides/performance.md)
-- [Error Handling Best Practices](./docs/guides/error-handling.md)
+### Development Guides
+- [Architecture Principles](./README.md#-architecture)
+- [Development Workflow](./README.md#-contributing)
 
 ## 🤝 Contributing
 

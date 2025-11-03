@@ -16,6 +16,20 @@ interface NewSyndicate {
   description: string;
   cause: string;
   causePercentage: number;
+  governanceModel: 'leader' | 'dao' | 'hybrid';
+  governanceParameters?: {
+    // Leader-guided parameters
+    maxFundAction?: number;      // Max % of funds leader can move without DAO approval
+    actionTimeLimit?: number;    // Time window for leader actions
+    
+    // DAO parameters
+    quorumPercentage?: number;   // Minimum participation for DAO decisions
+    executionDelay?: number;     // Time lock for DAO-executed actions
+    
+    // Hybrid parameters
+    thresholdAmount?: number;    // Amount above which DAO approval required
+    emergencySwitch?: boolean;   // Allow temporary leader control in emergencies
+  };
   maxMembers: number;
   minTicketsPerMember: number;
 }
@@ -35,6 +49,7 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
     description: "",
     cause: "",
     causePercentage: 20,
+    governanceModel: 'leader', // Default to leader-guided
     maxMembers: 50,
     minTicketsPerMember: 1
   });
@@ -89,6 +104,7 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
     if (formData.maxMembers < 2 || formData.maxMembers > 1000) {
       newErrors.maxMembers = "Max members must be between 2 and 1000";
     }
+    if (!formData.governanceModel) newErrors.governanceModel = "Please select a governance model";
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -125,6 +141,7 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
       description: "",
       cause: "",
       causePercentage: 20,
+      governanceModel: 'leader',
       maxMembers: 50,
       minTicketsPerMember: 1
     });
@@ -300,7 +317,61 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
             <div className="text-center mb-6">
               <Target className="w-12 h-12 text-blue-400 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-white mb-2">Configure your syndicate</h3>
-              <p className="text-gray-400">Set up member limits and cause allocation</p>
+              <p className="text-gray-400">Set up governance, member limits, and cause allocation</p>
+            </div>
+            
+            {/* Governance Model Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Governance Model
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div
+                  onClick={() => setFormData({ ...formData, governanceModel: 'leader' })}
+                  className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                    formData.governanceModel === 'leader'
+                      ? "border-green-500 bg-green-500/20"
+                      : "border-gray-600 bg-gray-700/50 hover:border-gray-500"
+                  }`}
+                >
+                  <h4 className="font-semibold text-white">Leader-Guided</h4>
+                  <p className="text-gray-400 text-sm">Fast decisions, higher risk</p>
+                  <div className="mt-2 text-xs text-gray-500">
+                    Leader makes strategy decisions
+                  </div>
+                </div>
+                
+                <div
+                  onClick={() => setFormData({ ...formData, governanceModel: 'dao' })}
+                  className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                    formData.governanceModel === 'dao'
+                      ? "border-blue-500 bg-blue-500/20"
+                      : "border-gray-600 bg-gray-700/50 hover:border-gray-500"
+                  }`}
+                >
+                  <h4 className="font-semibold text-white">DAO-Governed</h4>
+                  <p className="text-gray-400 text-sm">Secure consensus, slower decisions</p>
+                  <div className="mt-2 text-xs text-gray-500">
+                    Community votes on decisions
+                  </div>
+                </div>
+                
+                <div
+                  onClick={() => setFormData({ ...formData, governanceModel: 'hybrid' })}
+                  className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                    formData.governanceModel === 'hybrid'
+                      ? "border-purple-500 bg-purple-500/20"
+                      : "border-gray-600 bg-gray-700/50 hover:border-gray-500"
+                  }`}
+                >
+                  <h4 className="font-semibold text-white">Hybrid</h4>
+                  <p className="text-gray-400 text-sm">Configurable parameters</p>
+                  <div className="mt-2 text-xs text-gray-500">
+                    Mix of both approaches
+                  </div>
+                </div>
+              </div>
+              {errors.governanceModel && <p className="text-red-400 text-sm mt-1">{errors.governanceModel}</p>}
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
