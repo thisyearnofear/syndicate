@@ -37,7 +37,7 @@ export function SuccessStep({
         {purchaseMode === 'syndicate' && selectedSyndicate ? (
           <div className="mt-2">
             <p className="text-sm text-blue-400">
-              Supporting {selectedSyndicate.cause}
+              Supporting {selectedSyndicate.cause.name}
             </p>
             <p className="text-xs text-gray-400 mt-1">
               You're member #{selectedSyndicate.membersCount + 1}!
