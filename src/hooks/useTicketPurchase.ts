@@ -48,7 +48,7 @@ export interface TicketPurchaseActions {
   getSyndicateImpactPreview: (ticketCount: number, syndicate: SyndicateInfo) => SyndicateImpact;
   refreshBalance: () => Promise<void>;
   refreshJackpot: () => Promise<void>;
-  getUserTicketInfo: () => Promise<void>;
+  getCurrentTicketInfo: () => Promise<void>;
   claimWinnings: () => Promise<string>;
   clearError: () => void;
   reset: () => void;
@@ -104,7 +104,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
 
           // Load user ticket info separately (defined later in hook)
           try {
-            const ticketInfo = await web3Service.getUserTicketInfo();
+            const ticketInfo = await web3Service.getCurrentTicketInfo();
             setState(prev => ({ ...prev, userTicketInfo: ticketInfo }));
           } catch (ticketError) {
             console.warn('Failed to load user ticket info:', ticketError);
@@ -364,9 +364,9 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
   /**
    * Get user's ticket information and winnings
    */
-  const getUserTicketInfo = useCallback(async (): Promise<void> => {
+  const getCurrentTicketInfo = useCallback(async (): Promise<void> => {
     try {
-      const ticketInfo = await web3Service.getUserTicketInfo();
+      const ticketInfo = await web3Service.getCurrentTicketInfo();
       setState(prev => ({ ...prev, userTicketInfo: ticketInfo }));
     } catch (error) {
       console.error('Failed to get user ticket info:', error);
@@ -388,7 +388,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       }));
 
       // Refresh user ticket info after claiming
-      await getUserTicketInfo();
+      await getCurrentTicketInfo();
       return txHash;
     } catch (error: any) {
       setState(prev => ({
@@ -398,7 +398,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       }));
       throw error;
     }
-  }, [getUserTicketInfo]);
+  }, [getCurrentTicketInfo]);
 
   return {
     ...state,
@@ -409,7 +409,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     getSyndicateImpactPreview,
     refreshBalance,
     refreshJackpot,
-    getUserTicketInfo,
+    getCurrentTicketInfo,
     claimWinnings,
     clearError,
     reset,

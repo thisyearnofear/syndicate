@@ -41,7 +41,7 @@ export default function ProfilePage() {
       
       try {
         setLoading(true);
-        const purchases = await megapotService.getTicketPurchases(performance.pagination.transactions);
+        const purchases = await megapotService.getTicketPurchases(walletState.address, performance.pagination.transactions);
         setTicketPurchases(purchases);
       } catch (err) {
         console.error('Failed to fetch ticket history:', err);

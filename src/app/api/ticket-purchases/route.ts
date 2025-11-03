@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        const endpoint = `/ticket-purchases?recipient=${walletAddress}`;
+        const endpoint = `/ticket-purchases/${walletAddress}`;
         const url = `${MEGAPOT_API_BASE_URL}${endpoint}`;
 
         const headers: Record<string, string> = {
