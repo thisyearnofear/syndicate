@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Loader2, AlertCircle, ExternalLink } from 'lucide-react';
+import { Loader2, AlertCircle, ExternalLink, Share2, Twitter, MessageCircle } from 'lucide-react';
 import { useTicketPurchase } from '@/hooks/useTicketPurchase';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { Button } from "@/shared/components/ui/Button";
@@ -41,6 +41,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
     userBalance,
     ticketPrice,
     currentJackpot,
+    oddsInfo,
     lastTxHash,
     error,
     purchaseSuccess,
@@ -53,10 +54,11 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   } = useTicketPurchase();
 
   const [ticketCount, setTicketCount] = useState(1);
-  const [step, setStep] = useState<'mode' | 'select' | 'confirm' | 'processing' | 'success'>('mode');
+  const [step, setStep] = useState<'mode' | 'select' | 'confirm' | 'processing' | 'success' | 'share'>('mode');
   const [purchaseMode, setPurchaseMode] = useState<'individual' | 'syndicate'>('individual');
   const [selectedSyndicate, setSelectedSyndicate] = useState<SyndicateInfo | null>(null);
   const [syndicates, setSyndicates] = useState<SyndicateInfo[]>([]);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Reset modal state when opened
   useEffect(() => {
@@ -390,13 +392,24 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
 
             {/* Current Jackpot */}
             <div className="text-center mb-4">
-              <p className="text-white/70">
-                Current Jackpot: <span className="text-yellow-400 font-bold">${currentJackpot} USDC</span>
-              </p>
-              {ticketPrice && (
-                <p className="text-white/60 text-sm mt-1">
-                  Ticket Price: ${ticketPrice} USDC
-                </p>
+            <p className="text-white/70">
+            Current Jackpot: <span className="text-yellow-400 font-bold">${currentJackpot} USDC</span>
+            </p>
+            {ticketPrice && (
+            <p className="text-white/60 text-sm mt-1">
+            Ticket Price: ${ticketPrice} USDC
+            </p>
+            )}
+              {oddsInfo && (
+                <div className="mt-3 p-3 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/20">
+                  <p className="text-blue-400 font-semibold text-sm">Your Odds</p>
+                  <p className="text-white font-bold">{oddsInfo.oddsFormatted(ticketCount)}</p>
+                  {ticketCount > 1 && (
+                    <p className="text-blue-300 text-xs mt-1">
+                      Buy {ticketCount} tickets = {oddsInfo.oddsFormatted(ticketCount)} chance to win!
+                    </p>
+                  )}
+                </div>
               )}
             </div>
 
@@ -606,20 +619,32 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
               </div>
             )}
 
-            {/* ENHANCEMENT: Link to ticket history */}
+            {/* ENHANCEMENT: Link to ticket history and sharing */}
             <div className="w-full space-y-3">
-              <Button
-                variant="default"
-                size="lg"
-                onClick={() => {
-                  onClose();
-                  // Navigate to tickets page
-                  window.location.href = '/my-tickets';
-                }}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl"
-              >
+            <CompactFlex gap="md" className="w-full">
+            <Button
+              variant="default"
+              size="lg"
+            onClick={() => {
+              onClose();
+              // Navigate to tickets page
+                window.location.href = '/my-tickets';
+              }}
+                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl"
+            >
                 🎫 View My Tickets
-              </Button>
+                </Button>
+
+            <Button
+              variant="default"
+              size="lg"
+              onClick={() => setShowShareModal(true)}
+                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl"
+            >
+                <Share2 size={18} className="mr-2" />
+                  Share Win
+                </Button>
+              </CompactFlex>
 
               <Button
                 variant="ghost"
@@ -632,9 +657,75 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
             </div>
 
             <p className="text-xs text-gray-400 text-center">
-              Your tickets are now active for the next draw
+            Your tickets are now active for the next draw
             </p>
-          </CompactStack>
+            </CompactStack>
+            )}
+
+                {/* Share Modal */}
+                  {showShareModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-md"
+              onClick={() => setShowShareModal(false)}
+            />
+
+            <div className="relative glass-premium rounded-3xl p-8 w-full max-w-md border border-white/20 animate-scale-in">
+              <CompactFlex align="center" justify="between" className="mb-6">
+                <h2 className="font-bold text-2xl text-white">Share Your Purchase</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowShareModal(false)}
+                  className="w-8 h-8 p-0 rounded-full"
+                >
+                  ✕
+                </Button>
+              </CompactFlex>
+
+              <CompactStack spacing="lg">
+                <p className="text-gray-300 text-center">
+                  Share your lottery ticket purchase and help spread the word! 🎉
+                </p>
+
+                <div className="space-y-3">
+                  <Button
+                    variant="default"
+                    size="lg"
+                    onClick={() => {
+                      const text = `Just bought ${purchasedTicketCount} lottery ticket${purchasedTicketCount > 1 ? 's' : ''} for the $${currentJackpot} jackpot! 🎫✨ #Megapot #Lottery`;
+                      const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(window.location.origin)}`;
+                      window.open(url, '_blank');
+                      setShowShareModal(false);
+                    }}
+                    className="w-full bg-[#1DA1F2] hover:bg-[#1a91da] text-white"
+                  >
+                    <Twitter size={20} className="mr-2" />
+                    Share on Twitter
+                  </Button>
+
+                  <Button
+                    variant="default"
+                    size="lg"
+                    onClick={() => {
+                      const text = `Just bought ${purchasedTicketCount} lottery ticket${purchasedTicketCount > 1 ? 's' : ''} for the $${currentJackpot} jackpot! 🎫✨`;
+                      const url = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(window.location.origin)}`;
+                      window.open(url, '_blank');
+                      setShowShareModal(false);
+                    }}
+                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+                  >
+                    <MessageCircle size={20} className="mr-2" />
+                    Share on Farcaster
+                  </Button>
+                </div>
+
+                <p className="text-xs text-gray-400 text-center">
+                  Help others discover Megapot and join the fun! 🌊
+                </p>
+              </CompactStack>
+            </div>
+          </div>
         )}
       </div>
     </div>
