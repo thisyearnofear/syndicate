@@ -10,16 +10,19 @@
  * - PERFORMANT: Minimal re-renders
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/shared/components/ui/Button';
 import { CompactFlex } from '@/shared/components/premium/CompactLayout';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { useWalletContext } from '@/context/WalletContext';
+import { useUnifiedWallet } from '@/domains/wallet/services/unifiedWalletService';
 import WalletInfo from './wallet/WalletInfo';
+import UnifiedModal from './modal/UnifiedModal';
+import WalletConnectionOptions from './wallet/WalletConnectionOptions';
 import { Home, Ticket, Users, Menu, X } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 
 interface NavigationProps {
     className?: string;
@@ -29,9 +32,20 @@ export default function Navigation({ className = '' }: NavigationProps) {
     const pathname = usePathname();
     const { isConnected } = useWalletConnection();
     const { state: walletState } = useWalletContext();
+    const { connect } = useUnifiedWallet();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [showWalletDetails, setShowWalletDetails] = useState(false);
+    const [showWalletModal, setShowWalletModal] = useState(false);
     const walletDetailsRef = useRef<HTMLDivElement>(null);
+
+    const handleWalletConnect = async (walletType: any) => {
+        try {
+            await connect(walletType);
+            setShowWalletModal(false);
+        } catch (error) {
+            console.error("Connection failed:", error);
+        }
+    };
 
     const navigationItems = [
         {
@@ -155,7 +169,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => window.location.href = '/wallet-test'}
+                                    onClick={() => setShowWalletModal(true)}
                                     className="text-gray-400 hover:text-white text-sm"
                                 >
                                     Connect Wallet
@@ -241,7 +255,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                                         <Button
                                             variant="default"
                                             size="sm"
-                                            onClick={() => window.location.href = '/wallet-test'}
+                                            onClick={() => setShowWalletModal(true)}
                                             className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
                                         >
                                             🔗 Connect Wallet
@@ -253,6 +267,22 @@ export default function Navigation({ className = '' }: NavigationProps) {
                     )}
                 </div>
             </nav>
+
+            {/* Enhanced Wallet Modal */}
+            <UnifiedModal
+                isOpen={showWalletModal}
+                onClose={() => setShowWalletModal(false)}
+                title="Connect Wallet"
+                maxWidth="lg"
+            >
+                <WalletConnectionOptions
+                    onWalletConnect={handleWalletConnect}
+                    onSocialLoginClick={() => {
+                        // Social login placeholder
+                        console.log("Social login clicked");
+                    }}
+                />
+            </UnifiedModal>
         </>
     );
 }

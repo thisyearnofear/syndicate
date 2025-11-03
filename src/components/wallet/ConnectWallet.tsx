@@ -78,9 +78,9 @@ export default function ConnectWallet({
       type: "walletconnect" as WalletType,
       icon: "🔗",
       variant: "premium" as const,
-      description: "Connect any wallet (Coming Soon)",
+      description: "Connect 300+ wallets securely",
       color: "from-purple-600 via-pink-600 to-blue-600",
-      disabled: true,
+      disabled: false,
     },
   ];
 

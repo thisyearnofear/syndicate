@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import ConnectWallet from "./ConnectWallet";
 import UnifiedModal from "../modal/UnifiedModal";
 import { Button } from "@/components/ui/button";
-import { WalletType } from "@/hooks/useWalletConnection";
+import { WalletType } from "@/domains/wallet/services/unifiedWalletService";
 
 interface WalletConnectionOptionsProps {
   onSocialLoginClick: () => void;
@@ -21,6 +21,7 @@ export default function WalletConnectionOptions({
 }: WalletConnectionOptionsProps) {
   const [showComingSoon, setShowComingSoon] = useState(false);
   const [activeTab, setActiveTab] = useState<"existing" | "new">("existing");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const handleSocialLoginClick = useCallback(() => {
     // Show coming soon message instead of opening modal
@@ -28,10 +29,13 @@ export default function WalletConnectionOptions({
   }, []);
 
   const handleWalletConnect = useCallback((walletType: WalletType) => {
+    if (!agreedToTerms) {
+      return; // Require terms agreement
+    }
     if (onWalletConnect) {
       onWalletConnect(walletType);
     }
-  }, [onWalletConnect]);
+  }, [onWalletConnect, agreedToTerms]);
 
   return (
     <>
@@ -63,12 +67,15 @@ export default function WalletConnectionOptions({
       <div className="space-y-6">
         {activeTab === "existing" ? (
           <div className="space-y-4">
-            <div className="text-center">
-              <h3 className="text-lg font-bold text-white mb-2">
-                Connect Your Existing Wallet
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 mx-auto bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-xl mb-3">
+                🔗
+              </div>
+              <h3 className="text-xl font-bold text-white">
+                Connect Wallet
               </h3>
-              <p className="text-gray-400 text-sm mb-4">
-                Connect with your existing crypto wallet to get started
+              <p className="text-gray-400 text-sm max-w-md mx-auto">
+                Connect your wallet to start participating in syndicates and join the community
               </p>
             </div>
 
@@ -76,8 +83,36 @@ export default function WalletConnectionOptions({
               <ConnectWallet onConnect={handleWalletConnect} />
             </div>
 
+            {/* Terms and Privacy Agreement */}
+            <div className="space-y-3 pt-2 border-t border-gray-700">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={agreedToTerms}
+                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  className="mt-1 w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                />
+                <span className="text-xs text-gray-400 leading-relaxed">
+                  By connecting, you agree to our{" "}
+                  <a href="/terms" className="text-blue-400 hover:text-blue-300 underline">
+                    Terms of Service
+                  </a>{" "}
+                  and{" "}
+                  <a href="/privacy" className="text-blue-400 hover:text-blue-300 underline">
+                    Privacy Policy
+                  </a>
+                </span>
+              </label>
+
+              {!agreedToTerms && (
+                <div className="text-xs text-amber-400 text-center">
+                  ⚠️ Please agree to the terms to continue
+                </div>
+              )}
+            </div>
+
             <div className="text-xs text-gray-500 text-center">
-              Supports MetaMask, Phantom, WalletConnect, and more
+              Supports MetaMask, Phantom, WalletConnect, and 300+ other wallets
             </div>
           </div>
         ) : (
