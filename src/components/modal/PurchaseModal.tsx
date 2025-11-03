@@ -10,10 +10,11 @@
  * - PERFORMANT: Optimized animations
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Loader2, AlertCircle, ExternalLink, Share2, Twitter, MessageCircle } from 'lucide-react';
 import { useTicketPurchase } from '@/hooks/useTicketPurchase';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
+import { useLottery } from '@/domains/lottery/hooks/useLottery';
 import { Button } from "@/shared/components/ui/Button";
 import { CompactStack, CompactFlex } from '@/shared/components/premium/CompactLayout';
 import ConnectWallet from '@/components/wallet/ConnectWallet';
@@ -33,6 +34,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   const { isConnected, connect } = useWalletConnection();
   const successToast = useSuccessToast();
   const errorToast = useErrorToast();
+  const { jackpotStats, prizeAmount, isLoading: jackpotLoading, error: jackpotError, refresh: refreshLottery } = useLottery();
   const {
     // State
     isInitializing,
@@ -41,8 +43,6 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
     isCheckingBalance,
     userBalance,
     ticketPrice,
-    currentJackpot,
-    oddsInfo,
     lastTxHash,
     error,
     purchaseSuccess,
@@ -61,6 +61,39 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   const [syndicates, setSyndicates] = useState<SyndicateInfo[]>([]);
   const [showShareModal, setShowShareModal] = useState(false);
 
+  // Compute odds using authoritative API data (no estimates)
+  // Only show odds when we have real jackpot data
+  const oddsInfo = useMemo(() => {
+    if (jackpotLoading || !jackpotStats) {
+      return null;
+    }
+
+    // Prefer API-provided oddsPerTicket; fallback to ticketsSoldCount if available
+    const baseOddsRaw =
+      jackpotStats.oddsPerTicket && Number(jackpotStats.oddsPerTicket) > 0
+        ? Number(jackpotStats.oddsPerTicket)
+        : (typeof jackpotStats.ticketsSoldCount === 'number' && jackpotStats.ticketsSoldCount > 0
+            ? Number(jackpotStats.ticketsSoldCount)
+            : null);
+
+    if (!baseOddsRaw || baseOddsRaw <= 0) {
+      return null;
+    }
+
+    const formatOdds = (tickets: number) => {
+      const divisor = Math.max(1, tickets);
+      const x = Math.ceil(baseOddsRaw / divisor);
+      return x <= 1 ? 'Better than 1:1' : `1 in ${x.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+    };
+
+    return {
+      oddsPerTicket: baseOddsRaw,
+      oddsForTickets: (tickets: number) => Math.max(1, baseOddsRaw / Math.max(1, tickets)),
+      oddsFormatted: formatOdds,
+      potentialWinnings: jackpotStats.prizeUsd,
+    };
+  }, [jackpotLoading, jackpotStats]);
+
   // Reset modal state when opened
   useEffect(() => {
     if (isOpen) {
@@ -71,6 +104,11 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
       setSelectedSyndicate(null);
       clearError();
 
+      // Refresh lottery data if we don't have it or it's stale
+      if (!jackpotStats || jackpotError) {
+        refreshLottery();
+      }
+
       // Fetch syndicates data
       fetchSyndicates();
     } else {
@@ -80,7 +118,9 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, clearError]);
+  }, [isOpen, clearError, jackpotStats, jackpotError, refreshLottery]);
+
+
 
   // Fetch syndicates data
   const fetchSyndicates = async () => {
@@ -394,24 +434,15 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
             {/* Current Jackpot */}
             <div className="text-center mb-4">
             <p className="text-white/70">
-            Current Jackpot: <span className="text-yellow-400 font-bold">${currentJackpot} USDC</span>
+            Current Jackpot: <span className="text-yellow-400 font-bold">${prizeAmount?.toLocaleString() || '0'} USDC</span>
             </p>
+            {jackpotLoading && <p className="text-xs text-gray-400">Loading jackpot...</p>}
+            {jackpotError && <p className="text-xs text-red-400">Error loading jackpot data</p>}
             {ticketPrice && (
             <p className="text-white/60 text-sm mt-1">
             Ticket Price: ${ticketPrice} USDC
             </p>
             )}
-              {oddsInfo && (
-                <div className="mt-3 p-3 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/20">
-                  <p className="text-blue-400 font-semibold text-sm">Your Odds</p>
-                  <p className="text-white font-bold">{oddsInfo.oddsFormatted(ticketCount)}</p>
-                  {ticketCount > 1 && (
-                    <p className="text-blue-300 text-xs mt-1">
-                      Buy {ticketCount} tickets = {oddsInfo.oddsFormatted(ticketCount)} chance to win!
-                    </p>
-                  )}
-                </div>
-              )}
             </div>
 
             {/* Quick amount selection */}
@@ -472,12 +503,29 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
 
             {/* Price display */}
             <div className="glass p-6 rounded-2xl">
-              <CompactFlex align="center" justify="between" className="mb-2">
-                <p className="font-medium text-gray-300 leading-relaxed">Total Cost:</p>
-                <div className="text-3xl font-black text-green-400">
-                  ${totalCost} USDC
-                </div>
-              </CompactFlex>
+            <CompactFlex align="center" justify="between" className="mb-4">
+            <p className="font-medium text-gray-300 leading-relaxed">Total Cost:</p>
+            <div className="text-3xl font-black text-green-400">
+            ${totalCost} USDC
+            </div>
+            </CompactFlex>
+
+            {/* Enhanced Odds Display */}
+            {oddsInfo && (
+            <div className="mb-4 p-4 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 rounded-xl border border-yellow-500/20">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-yellow-400 font-semibold text-sm">Your Winning Odds:</p>
+            <span className="text-2xl font-black text-yellow-400">
+                {oddsInfo.oddsFormatted(ticketCount)}
+              </span>
+            </div>
+              {ticketCount > 1 && (
+                <p className="text-yellow-300 text-xs">
+                  🎯 {ticketCount} tickets = {oddsInfo.oddsFormatted(ticketCount)} chance to win!
+                </p>
+            )}
+            </div>
+            )}
 
               <CompactFlex align="center" justify="between" gap="sm" className="text-sm">
                 <p className="text-sm text-gray-400 leading-relaxed">
@@ -557,7 +605,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
 
             {/* Terms */}
             <p className="text-xs text-gray-500 text-center leading-relaxed">
-              By purchasing, you agree to our terms and support ocean cleanup initiatives
+            By purchasing, you agree to our terms{purchaseMode === 'syndicate' ? ' and support the selected cause' : ''}
             </p>
           </CompactStack>
         )}
@@ -696,7 +744,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
                   onClick={() => {
                   const shareData = {
                     ticketCount: purchasedTicketCount,
-                    jackpotAmount: currentJackpot,
+                    jackpotAmount: prizeAmount?.toString() || '0',
                     odds: oddsInfo ? oddsInfo.oddsFormatted(purchasedTicketCount) : 'great',
                       platformUrl: window.location.origin,
                     };
@@ -717,7 +765,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
                   onClick={() => {
                       const shareData = {
                       ticketCount: purchasedTicketCount,
-                      jackpotAmount: currentJackpot,
+                      jackpotAmount: prizeAmount?.toString() || '0',
                         odds: oddsInfo ? oddsInfo.oddsFormatted(purchasedTicketCount) : 'great',
                         platformUrl: window.location.origin,
                       };

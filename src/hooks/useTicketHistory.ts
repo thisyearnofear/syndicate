@@ -78,20 +78,38 @@ export function useTicketHistory(): TicketHistoryState & TicketHistoryActions {
 
             const purchases = await response.json();
 
-            // Map API response to our interface structure
-            const mappedPurchases: TicketPurchaseHistory[] = purchases.map((purchase: any): TicketPurchaseHistory => ({
-                id: purchase.transactionHashes?.[0] || `${purchase.jackpotRoundId}-${purchase.recipient}-${purchase.startTicket}`,
-                ticketCount: purchase.ticketsPurchased || 0,
-                totalCost: (purchase.ticketsPurchased || 0).toString(),
-                txHash: purchase.transactionHashes?.[0] || '',
-                timestamp: new Date().toISOString(), // API doesn't provide timestamps, use current for now
-                status: 'active', // All historical purchases are completed, status is for current tickets
-                jackpotRoundId: purchase.jackpotRoundId,
-                startTicket: purchase.startTicket,
-                endTicket: purchase.endTicket,
-                referrer: purchase.referrer,
-                buyer: purchase.buyer,
-            }));
+            // Map API response to our interface structure, preserving transformed fields
+            const mappedPurchases: TicketPurchaseHistory[] = purchases.map((purchase: any): TicketPurchaseHistory => {
+                // Fallbacks for older API shapes
+                const rangeCount =
+                    typeof purchase.startTicket === 'number' && typeof purchase.endTicket === 'number'
+                        ? Math.max(0, purchase.endTicket - purchase.startTicket + 1)
+                        : 0;
+                const ticketCount =
+                    typeof purchase.ticketCount === 'number' && purchase.ticketCount > 0
+                        ? purchase.ticketCount
+                        : (typeof purchase.ticketsPurchased === 'number' && purchase.ticketsPurchased > 0
+                            ? purchase.ticketsPurchased
+                            : rangeCount);
+                const totalCost =
+                    typeof purchase.totalCost === 'string' && purchase.totalCost.length > 0
+                        ? purchase.totalCost
+                        : ticketCount.toString();
+
+                return {
+                    id: purchase.id || purchase.transactionHashes?.[0] || `${purchase.jackpotRoundId}-${purchase.recipient}-${purchase.startTicket}`,
+                    ticketCount,
+                    totalCost,
+                    txHash: purchase.txHash || purchase.transactionHashes?.[0] || '',
+                    timestamp: purchase.timestamp || new Date().toISOString(),
+                    status: purchase.status || 'active',
+                    jackpotRoundId: purchase.jackpotRoundId,
+                    startTicket: purchase.startTicket,
+                    endTicket: purchase.endTicket,
+                    referrer: purchase.referrer,
+                    buyer: purchase.buyer,
+                };
+            });
 
             setState(prev => ({
                 ...prev,

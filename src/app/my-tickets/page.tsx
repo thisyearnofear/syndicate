@@ -37,6 +37,15 @@ function TicketHistoryCard({ ticket }: { ticket: TicketPurchaseHistory }) {
 
     const getStatusText = () => 'Completed';
 
+    const formattedDate = (() => {
+        try {
+            const d = new Date(ticket.timestamp);
+            return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        } catch {
+            return '';
+        }
+    })();
+
     return (
         <div className="glass-premium rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 hover:scale-[1.02]">
             <CompactFlex align="center" justify="between" className="mb-4">
@@ -47,7 +56,8 @@ function TicketHistoryCard({ ticket }: { ticket: TicketPurchaseHistory }) {
                             {ticket.ticketCount} Ticket{ticket.ticketCount > 1 ? 's' : ''}
                         </h3>
                         <p className="text-sm text-gray-400">
-                        Round #{ticket.jackpotRoundId} • Tickets {ticket.startTicket}-{ticket.endTicket}
+                            Round #{ticket.jackpotRoundId} • Tickets {ticket.startTicket}-{ticket.endTicket}
+                            {formattedDate ? ` • ${formattedDate}` : ''}
                         </p>
                     </div>
                 </div>
@@ -235,17 +245,14 @@ export default function MyTicketsPage() {
             <CompactContainer maxWidth="2xl" padding="lg">
                 <CompactStack spacing="lg">
                     {/* Header */}
-                    <CompactFlex align="center" justify="between" className="pt-8">
-                        <div>
-                            <h1 className="font-black text-4xl md:text-6xl bg-gradient-to-r from-purple-400 via-blue-500 to-green-400 bg-clip-text text-transparent">
-                                My Tickets
-                            </h1>
-                            <p className="text-xl text-gray-300 mt-2">
-                                Track your lottery tickets and winnings
-                            </p>
-                        </div>
-
-                        <div className="flex items-center gap-4">
+                    <div className="pt-8 text-center">
+                        <h1 className="font-black text-4xl md:text-6xl bg-gradient-to-r from-purple-400 via-blue-500 to-green-400 bg-clip-text text-transparent">
+                            My Tickets
+                        </h1>
+                        <p className="text-xl text-gray-300 mt-2">
+                            Track your lottery tickets and winnings
+                        </p>
+                        <div className="flex items-center gap-4 justify-center mt-4">
                             <Button
                                 variant="ghost"
                                 size="sm"
@@ -268,7 +275,7 @@ export default function MyTicketsPage() {
                                 </Button>
                             </Link>
                         </div>
-                    </CompactFlex>
+                    </div>
 
                     {/* Stats Section */}
                     <TicketStats
@@ -280,10 +287,12 @@ export default function MyTicketsPage() {
 
                     {/* Ticket History */}
                     <CompactSection spacing="lg">
-                        <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center justify-center mb-2">
                             <h2 className="font-bold text-2xl text-white">Ticket History</h2>
+                        </div>
+                        <div className="flex items-center justify-center mb-6">
                             <span className="text-sm text-gray-400">
-                                {ticketHistory.length} purchase{ticketHistory.length !== 1 ? 's' : ''}
+                                Showing {Math.min(ticketHistory.length, 10)} of {ticketHistory.length} purchase{ticketHistory.length !== 1 ? 's' : ''}
                             </span>
                         </div>
 
@@ -309,15 +318,47 @@ export default function MyTicketsPage() {
                                 </Link>
                             </div>
                         ) : (
-                            <div className="grid gap-6">
-                                {ticketHistory.map((ticket) => (
-                                    <TicketHistoryCard key={ticket.id} ticket={ticket} />
-                                ))}
-                            </div>
+                            <TicketsList ticketHistory={ticketHistory} />
                         )}
                     </CompactSection>
                 </CompactStack>
             </CompactContainer>
+        </div>
+    );
+}
+
+/**
+ * TICKETS LIST WITH SHOW MORE/LESS
+ */
+function TicketsList({ ticketHistory }: { ticketHistory: TicketPurchaseHistory[] }) {
+    const [showAll, setShowAll] = useState(false);
+
+    // Sort by timestamp desc when available, fallback to jackpot round
+    const sorted = [...ticketHistory].sort((a, b) => {
+        const ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+        const tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+        if (tb !== ta) return tb - ta;
+        return (b.jackpotRoundId || 0) - (a.jackpotRoundId || 0);
+    });
+    const displayed = showAll ? sorted : sorted.slice(0, 10);
+
+    return (
+        <div className="grid gap-6">
+            {displayed.map((ticket) => (
+                <TicketHistoryCard key={ticket.id} ticket={ticket} />
+            ))}
+            {ticketHistory.length > 10 && (
+                <div className="flex justify-center mt-2">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-gray-300 hover:text-white"
+                        onClick={() => setShowAll(!showAll)}
+                    >
+                        {showAll ? 'Show less' : 'Show more'}
+                    </Button>
+                </div>
+            )}
         </div>
     );
 }

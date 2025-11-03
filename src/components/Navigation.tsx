@@ -93,13 +93,35 @@ export default function Navigation({ className = '' }: NavigationProps) {
                             })}
                         </CompactFlex>
 
-                        {/* Wallet Status Indicator */}
-                        {isConnected && (
-                            <div className="flex items-center gap-2 px-3 py-1 bg-green-500/20 border border-green-500/30 rounded-full">
-                                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                                <span className="text-green-400 text-sm font-semibold">Connected</span>
-                            </div>
-                        )}
+                        {/* Wallet Status & Terms */}
+                        <CompactFlex align="center" gap="md">
+                        {/* Terms Link */}
+                        <Button
+                        variant="ghost"
+                            size="sm"
+                                onClick={() => window.open('https://docs.megapot.io/terms-of-service', '_blank')}
+                                className="text-gray-400 hover:text-white text-xs"
+                            >
+                                Terms
+                            </Button>
+
+                            {/* Wallet Status Indicator */}
+                            {isConnected ? (
+                                <div className="flex items-center gap-2 px-3 py-1 bg-green-500/20 border border-green-500/30 rounded-full cursor-pointer hover:bg-green-500/30 transition-colors">
+                                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                                    <span className="text-green-400 text-sm font-semibold">Connected</span>
+                                </div>
+                            ) : (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => window.location.href = '/wallet-test'}
+                                    className="text-gray-400 hover:text-white text-sm"
+                                >
+                                    Connect Wallet
+                                </Button>
+                            )}
+                        </CompactFlex>
                     </CompactFlex>
                 </div>
             </nav>
@@ -157,13 +179,35 @@ export default function Navigation({ className = '' }: NavigationProps) {
                                     );
                                 })}
 
-                                {/* Wallet Status */}
-                                {isConnected && (
-                                    <div className="flex items-center gap-2 px-3 py-2 bg-green-500/20 border border-green-500/30 rounded-lg mt-4">
-                                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                                        <span className="text-green-400 text-sm font-semibold">Wallet Connected</span>
-                                    </div>
-                                )}
+                                {/* Terms & Wallet Status */}
+                                <div className="space-y-3 mt-4 pt-4 border-t border-white/10">
+                                    {/* Terms Link */}
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => window.open('https://docs.megapot.io/terms-of-service', '_blank')}
+                                        className="w-full justify-center text-gray-400 hover:text-white text-xs"
+                                    >
+                                        📋 Terms of Service
+                                    </Button>
+
+                                    {/* Wallet Status */}
+                                    {isConnected ? (
+                                        <div className="flex items-center gap-2 px-3 py-2 bg-green-500/20 border border-green-500/30 rounded-lg">
+                                            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                                            <span className="text-green-400 text-sm font-semibold">Wallet Connected</span>
+                                        </div>
+                                    ) : (
+                                        <Button
+                                            variant="default"
+                                            size="sm"
+                                            onClick={() => window.location.href = '/wallet-test'}
+                                            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                                        >
+                                            🔗 Connect Wallet
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}
