@@ -3,22 +3,22 @@
 /**
  * WALLETCONNECT MANAGER
  *
- * Modern WalletConnect integration with QR scanning and modal management
+ * Modern WalletConnect integration with proper session management
  * Provides seamless connection experience following latest standards
  */
 
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { QrCode, Scan, Link as LinkIcon, X } from "lucide-react";
-import QRCodeScanner from "./QRCodeScanner";
+import { Link as LinkIcon, X } from "lucide-react";
 import SessionProposalModal from "./SessionProposalModal";
 import SessionRequestModal from "./SessionRequestModal";
+import WalletConnectSessions from "./WalletConnectSessions";
 import { useWalletConnect } from "@/services/walletConnectService";
 import type { WalletKitTypes } from "@reown/walletkit";
 
 interface WalletConnectManagerProps {
-  onModeChange?: (mode: "main" | "qr" | "oneclick" | null) => void;
-  currentMode?: "main" | "qr" | "oneclick" | null;
+  onModeChange?: (mode: "main" | "connection" | null) => void;
+  currentMode?: "main" | "connection" | null;
 }
 
 export default function WalletConnectManager({
@@ -32,7 +32,6 @@ export default function WalletConnectManager({
     session: any;
   } | null>(null);
   const [activeSessions, setActiveSessions] = useState<any>({});
-  const [oneClickUri, setOneClickUri] = useState<string | null>(null);
 
   const {
     connectWithUri,
@@ -96,25 +95,8 @@ export default function WalletConnectManager({
     return () => clearInterval(interval);
   }, [getActiveSessions]);
 
-  const handleQRScan = useCallback(async (uri: string) => {
-    try {
-      onModeChange?.(null); // Close QR scanner
-      await connectWithUri(uri);
-    } catch (error) {
-      console.error("Failed to connect with scanned URI:", error);
-      // Error handling would be shown in UI
-    }
-  }, [connectWithUri, onModeChange]);
-
-  const handleOneClickConnect = useCallback(async () => {
-    // For one-click auth, we would typically generate a pairing URI
-    // and display it for users to click or copy
-    // For now, we'll show instructions
-    onModeChange?.("oneclick");
-  }, [onModeChange]);
-
-  const handleQRScannerOpen = useCallback(() => {
-    onModeChange?.("qr");
+  const handleConnectionView = useCallback(() => {
+    onModeChange?.("connection");
   }, [onModeChange]);
 
   const handleCloseModals = useCallback(() => {
@@ -182,7 +164,7 @@ export default function WalletConnectManager({
       {currentMode && (
         <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-700">
           <h3 className="text-lg font-semibold text-white">
-            {currentMode === "qr" ? "Scan QR Code" : "One-Click Connection"}
+            Connection Details
           </h3>
           <Button
             variant="ghost"
@@ -197,22 +179,13 @@ export default function WalletConnectManager({
 
       {/* Main WalletConnect Buttons */}
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3">
           <Button
-            onClick={handleQRScannerOpen}
+            onClick={handleConnectionView}
             className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl"
           >
-            <QrCode className="w-4 h-4 mr-2" />
-            Scan QR
-          </Button>
-
-          <Button
-            onClick={handleOneClickConnect}
-            variant="outline"
-            className="border-purple-500 text-purple-400 hover:bg-purple-500/10"
-          >
             <LinkIcon className="w-4 h-4 mr-2" />
-            One-Click
+            Connection Details
           </Button>
         </div>
 
@@ -236,11 +209,15 @@ export default function WalletConnectManager({
           </div>
 
           <p className="text-xs text-gray-500">
-            Don't have a QR code?{" "}
+            Have a WalletConnect URI?{" "}
             <button
               onClick={() => {
                 const uri = prompt("Paste WalletConnect URI:");
-                if (uri) handleQRScan(uri);
+                if (uri && uri.startsWith('wc:')) {
+                  connectWithUri(uri).catch(error => {
+                    console.error("Failed to connect with URI:", error);
+                  });
+                }
               }}
               className="text-blue-400 hover:text-blue-300 underline"
             >
@@ -249,13 +226,6 @@ export default function WalletConnectManager({
           </p>
         </div>
       </div>
-
-      {/* QR Code Scanner Modal */}
-      <QRCodeScanner
-        isOpen={currentMode === "qr"}
-        onScan={handleQRScan}
-        onClose={handleCloseModals}
-      />
 
       {/* Session Proposal Modal */}
       <SessionProposalModal
@@ -276,12 +246,12 @@ export default function WalletConnectManager({
         isOpen={!!sessionRequest}
       />
 
-      {/* One-Click Auth Modal */}
-      {currentMode === "oneclick" && (
+      {/* Connection Details Modal */}
+      {currentMode === "connection" && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-gray-900 rounded-2xl max-w-md w-full max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-gray-800">
-              <h3 className="text-lg font-semibold text-white">One-Click Connection</h3>
+              <h3 className="text-lg font-semibold text-white">Connection Details</h3>
               <Button
                 variant="ghost"
                 size="sm"
@@ -291,27 +261,27 @@ export default function WalletConnectManager({
                 <X className="w-5 h-5" />
               </Button>
             </div>
-
             <div className="p-4 space-y-4">
               <div className="text-center space-y-2">
                 <LinkIcon className="w-8 h-8 text-purple-500 mx-auto" />
                 <p className="text-gray-300">
-                  One-click auth allows instant connection to dApps without scanning QR codes.
+                  Connect to dApps using WalletConnect
                 </p>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-6">
                 <div className="p-3 bg-gray-800/50 rounded-lg">
                   <h4 className="font-medium text-white mb-2">How it works:</h4>
                   <ul className="text-sm text-gray-400 space-y-1">
-                    <li>1. Copy the connection link</li>
-                    <li>2. Open it in your mobile wallet</li>
-                    <li>3. Approve the connection</li>
+                    <li>1. Open a dApp that supports WalletConnect</li>
+                    <li>2. Select "Connect Wallet" and choose WalletConnect</li>
+                    <li>3. Scan the QR code with your camera app</li>
+                    <li>4. Approve the connection request here</li>
                   </ul>
                 </div>
 
                 <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                  <p className="text-sm text-blue-300 mb-2">Connection Link:</p>
+                  <p className="text-sm text-blue-300 mb-2">Your WalletConnect URI:</p>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 text-xs bg-gray-800 p-2 rounded text-gray-300 break-all">
                       {window.location.origin}/wc?uri=wc:example-uri-here
@@ -325,11 +295,13 @@ export default function WalletConnectManager({
                     </Button>
                   </div>
                 </div>
+
+                <WalletConnectSessions />
               </div>
 
               <div className="text-center">
                 <p className="text-xs text-gray-500">
-                  This feature requires a valid WalletConnect URI from a dApp.
+                  dApps will generate a QR code for you to scan with your camera app.
                 </p>
               </div>
             </div>

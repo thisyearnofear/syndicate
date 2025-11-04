@@ -22,8 +22,8 @@ import WalletConnectManager from "./WalletConnectManager";
 interface ConnectWalletProps {
   onConnect?: (walletType: WalletType) => void;
   showLabels?: boolean;
-  onWalletConnectModeChange?: (mode: "main" | "qr" | "oneclick" | null) => void;
-  walletConnectMode?: "main" | "qr" | "oneclick" | null;
+  onWalletConnectModeChange?: (mode: "main" | "connection" | null) => void;
+  walletConnectMode?: "main" | "connection" | null;
 }
 
 export default function ConnectWallet({

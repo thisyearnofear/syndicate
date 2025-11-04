@@ -24,7 +24,7 @@ export default function WalletConnectionOptions({
   const [showComingSoon, setShowComingSoon] = useState(false);
   const [activeTab, setActiveTab] = useState<"existing" | "new">("existing");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [walletConnectMode, setWalletConnectMode] = useState<"main" | "qr" | "oneclick" | null>(null);
+  const [walletConnectMode, setWalletConnectMode] = useState<"main" | "connection" | null>(null);
 
   const handleSocialLoginClick = useCallback(() => {
     // Show coming soon message instead of opening modal
@@ -40,7 +40,7 @@ export default function WalletConnectionOptions({
     }
   }, [onWalletConnect, agreedToTerms]);
 
-  const handleWalletConnectModeChange = useCallback((mode: "main" | "qr" | "oneclick" | null) => {
+  const handleWalletConnectModeChange = useCallback((mode: "main" | "connection" | null) => {
     setWalletConnectMode(mode);
   }, []);
 
@@ -83,16 +83,13 @@ export default function WalletConnectionOptions({
         {walletConnectMode && (
           <div className="text-center space-y-4">
             <div className="w-12 h-12 mx-auto bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl flex items-center justify-center text-xl mb-3">
-              {walletConnectMode === "qr" ? "📱" : "🔗"}
+              🔗
             </div>
             <h3 className="text-xl font-bold text-white">
-              {walletConnectMode === "qr" ? "Scan QR Code" : "One-Click Connection"}
+              Connection Details
             </h3>
             <p className="text-gray-400 text-sm max-w-md mx-auto">
-              {walletConnectMode === "qr"
-                ? "Use your mobile wallet to scan the QR code and connect"
-                : "Connect instantly using a direct link"
-              }
+              View connection information and active sessions
             </p>
           </div>
         )}
