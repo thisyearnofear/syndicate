@@ -16,14 +16,21 @@ import SessionRequestModal from "./SessionRequestModal";
 import { useWalletConnect } from "@/services/walletConnectService";
 import type { WalletKitTypes } from "@reown/walletkit";
 
-export default function WalletConnectManager() {
-const [showQRScanner, setShowQRScanner] = useState(false);
-const [showOneClickModal, setShowOneClickModal] = useState(false);
-const [sessionProposal, setSessionProposal] = useState<WalletKitTypes.SessionProposal | null>(null);
-const [sessionRequest, setSessionRequest] = useState<{
-request: WalletKitTypes.SessionRequest;
-  session: any;
-} | null>(null);
+interface WalletConnectManagerProps {
+  onModeChange?: (mode: "main" | "qr" | "oneclick" | null) => void;
+  currentMode?: "main" | "qr" | "oneclick" | null;
+}
+
+export default function WalletConnectManager({
+  onModeChange,
+  currentMode
+}: WalletConnectManagerProps) {
+  // Remove local modal states - use parent state management instead
+  const [sessionProposal, setSessionProposal] = useState<WalletKitTypes.SessionProposal | null>(null);
+  const [sessionRequest, setSessionRequest] = useState<{
+    request: WalletKitTypes.SessionRequest;
+    session: any;
+  } | null>(null);
   const [activeSessions, setActiveSessions] = useState<any>({});
   const [oneClickUri, setOneClickUri] = useState<string | null>(null);
 
@@ -39,18 +46,18 @@ request: WalletKitTypes.SessionRequest;
 
   // Set up modal callbacks
   useEffect(() => {
-  setModalCallbacks({
-  onProposal: (proposal) => {
-  setSessionProposal(proposal);
-  },
-  onRequest: (request, session) => {
-  setSessionRequest({ request, session });
-  },
-  onSession: (session) => {
-  // Update active sessions
-  setActiveSessions(getActiveSessions());
-  },
-  });
+    setModalCallbacks({
+      onProposal: (proposal) => {
+        setSessionProposal(proposal);
+      },
+      onRequest: (request, session) => {
+        setSessionRequest({ request, session });
+      },
+      onSession: (session) => {
+        // Update active sessions
+        setActiveSessions(getActiveSessions());
+      },
+    });
   }, [setModalCallbacks, getActiveSessions]);
 
   // Handle WalletConnect URI from URL parameters
@@ -91,20 +98,28 @@ request: WalletKitTypes.SessionRequest;
 
   const handleQRScan = useCallback(async (uri: string) => {
     try {
-      setShowQRScanner(false);
+      onModeChange?.(null); // Close QR scanner
       await connectWithUri(uri);
     } catch (error) {
       console.error("Failed to connect with scanned URI:", error);
       // Error handling would be shown in UI
     }
-  }, [connectWithUri]);
+  }, [connectWithUri, onModeChange]);
 
   const handleOneClickConnect = useCallback(async () => {
     // For one-click auth, we would typically generate a pairing URI
     // and display it for users to click or copy
     // For now, we'll show instructions
-    setShowOneClickModal(true);
-  }, []);
+    onModeChange?.("oneclick");
+  }, [onModeChange]);
+
+  const handleQRScannerOpen = useCallback(() => {
+    onModeChange?.("qr");
+  }, [onModeChange]);
+
+  const handleCloseModals = useCallback(() => {
+    onModeChange?.(null);
+  }, [onModeChange]);
 
   const copyToClipboard = useCallback(async (text: string) => {
     try {
@@ -163,15 +178,32 @@ request: WalletKitTypes.SessionRequest;
 
   return (
     <>
+      {/* Show back button when in modal mode */}
+      {currentMode && (
+        <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-700">
+          <h3 className="text-lg font-semibold text-white">
+            {currentMode === "qr" ? "Scan QR Code" : "One-Click Connection"}
+          </h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCloseModals}
+            className="text-gray-400 hover:text-white"
+          >
+            ← Back
+          </Button>
+        </div>
+      )}
+
       {/* Main WalletConnect Buttons */}
       <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-      <Button
-        onClick={() => setShowQRScanner(true)}
-          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl"
-      >
-        <QrCode className="w-4 h-4 mr-2" />
-          Scan QR
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            onClick={handleQRScannerOpen}
+            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl"
+          >
+            <QrCode className="w-4 h-4 mr-2" />
+            Scan QR
           </Button>
 
           <Button
@@ -220,9 +252,9 @@ request: WalletKitTypes.SessionRequest;
 
       {/* QR Code Scanner Modal */}
       <QRCodeScanner
-        isOpen={showQRScanner}
+        isOpen={currentMode === "qr"}
         onScan={handleQRScan}
-        onClose={() => setShowQRScanner(false)}
+        onClose={handleCloseModals}
       />
 
       {/* Session Proposal Modal */}
@@ -245,7 +277,7 @@ request: WalletKitTypes.SessionRequest;
       />
 
       {/* One-Click Auth Modal */}
-      {showOneClickModal && (
+      {currentMode === "oneclick" && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-gray-900 rounded-2xl max-w-md w-full max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-gray-800">
@@ -253,7 +285,7 @@ request: WalletKitTypes.SessionRequest;
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowOneClickModal(false)}
+                onClick={handleCloseModals}
                 className="text-gray-400 hover:text-white"
               >
                 <X className="w-5 h-5" />

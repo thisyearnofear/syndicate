@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import ConnectWallet from "./ConnectWallet";
 import UnifiedModal from "../modal/UnifiedModal";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { WalletType } from "@/domains/wallet/services/unifiedWalletService";
 interface WalletConnectionOptionsProps {
   onSocialLoginClick: () => void;
   onWalletConnect?: (walletType: WalletType) => void;
+  onModalClose?: () => void;
 }
 
 /**
@@ -18,10 +19,12 @@ interface WalletConnectionOptionsProps {
 export default function WalletConnectionOptions({
   onSocialLoginClick,
   onWalletConnect,
+  onModalClose,
 }: WalletConnectionOptionsProps) {
   const [showComingSoon, setShowComingSoon] = useState(false);
   const [activeTab, setActiveTab] = useState<"existing" | "new">("existing");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [walletConnectMode, setWalletConnectMode] = useState<"main" | "qr" | "oneclick" | null>(null);
 
   const handleSocialLoginClick = useCallback(() => {
     // Show coming soon message instead of opening modal
@@ -37,83 +40,124 @@ export default function WalletConnectionOptions({
     }
   }, [onWalletConnect, agreedToTerms]);
 
+  const handleWalletConnectModeChange = useCallback((mode: "main" | "qr" | "oneclick" | null) => {
+    setWalletConnectMode(mode);
+  }, []);
+
+  // Reset WalletConnect mode when component unmounts or modal closes
+  useEffect(() => {
+    return () => {
+      setWalletConnectMode(null);
+    };
+  }, []);
+
   return (
     <>
-      {/* Tab navigation for better organization */}
-      <div className="flex border-b border-gray-700 mb-6">
-        <button
-          className={`flex-1 py-3 text-center font-medium text-sm ${
-            activeTab === "existing"
+      {/* Tab navigation for better organization - hide when WalletConnect modal is active */}
+      {!walletConnectMode && (
+        <div className="flex border-b border-gray-700 mb-6">
+          <button
+            className={`flex-1 py-3 text-center font-medium text-sm ${activeTab === "existing"
               ? "text-white border-b-2 border-blue-500"
               : "text-gray-400 hover:text-gray-300"
-          }`}
-          onClick={() => setActiveTab("existing")}
-        >
-          Connect Existing Wallet
-        </button>
-        <button
-          className={`flex-1 py-3 text-center font-medium text-sm ${
-            activeTab === "new"
+              }`}
+            onClick={() => setActiveTab("existing")}
+          >
+            Connect Existing Wallet
+          </button>
+          <button
+            className={`flex-1 py-3 text-center font-medium text-sm ${activeTab === "new"
               ? "text-white border-b-2 border-purple-500"
               : "text-gray-400 hover:text-gray-300"
-          }`}
-          onClick={() => setActiveTab("new")}
-        >
-          Create New Wallet
-        </button>
-      </div>
+              }`}
+            onClick={() => setActiveTab("new")}
+          >
+            Create New Wallet
+          </button>
+        </div>
+      )}
 
       {/* Tab content */}
       <div className="space-y-6">
+        {/* Show WalletConnect modal content when active */}
+        {walletConnectMode && (
+          <div className="text-center space-y-4">
+            <div className="w-12 h-12 mx-auto bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl flex items-center justify-center text-xl mb-3">
+              {walletConnectMode === "qr" ? "📱" : "🔗"}
+            </div>
+            <h3 className="text-xl font-bold text-white">
+              {walletConnectMode === "qr" ? "Scan QR Code" : "One-Click Connection"}
+            </h3>
+            <p className="text-gray-400 text-sm max-w-md mx-auto">
+              {walletConnectMode === "qr"
+                ? "Use your mobile wallet to scan the QR code and connect"
+                : "Connect instantly using a direct link"
+              }
+            </p>
+          </div>
+        )}
+
         {activeTab === "existing" ? (
           <div className="space-y-4">
-            <div className="text-center space-y-2">
-              <div className="w-12 h-12 mx-auto bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-xl mb-3">
-                🔗
+            {/* Only show main content when no WalletConnect modal is active */}
+            {!walletConnectMode && (
+              <div className="text-center space-y-2">
+                <div className="w-12 h-12 mx-auto bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-xl mb-3">
+                  🔗
+                </div>
+                <h3 className="text-xl font-bold text-white">
+                  Connect Wallet
+                </h3>
+                <p className="text-gray-400 text-sm max-w-md mx-auto">
+                  Connect your wallet to start participating in syndicates and join the community
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-white">
-                Connect Wallet
-              </h3>
-              <p className="text-gray-400 text-sm max-w-md mx-auto">
-                Connect your wallet to start participating in syndicates and join the community
-              </p>
-            </div>
+            )}
 
             <div className="bg-gradient-to-br from-blue-900/30 to-purple-900/30 rounded-xl p-4 border border-blue-500/20">
-              <ConnectWallet onConnect={handleWalletConnect} />
+              <ConnectWallet
+                onConnect={handleWalletConnect}
+                onWalletConnectModeChange={handleWalletConnectModeChange}
+                walletConnectMode={walletConnectMode}
+              />
             </div>
 
-            {/* Terms and Privacy Agreement */}
-            <div className="space-y-3 pt-2 border-t border-gray-700">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={agreedToTerms}
-                  onChange={(e) => setAgreedToTerms(e.target.checked)}
-                  className="mt-1 w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
-                />
-                <span className="text-xs text-gray-400 leading-relaxed">
-                  By connecting, you agree to our{" "}
-                  <a href="/terms" className="text-blue-400 hover:text-blue-300 underline">
-                    Terms of Service
-                  </a>{" "}
-                  and{" "}
-                  <a href="/privacy" className="text-blue-400 hover:text-blue-300 underline">
-                    Privacy Policy
-                  </a>
-                </span>
-              </label>
+            {/* Terms and Privacy Agreement - only show when no WalletConnect modal is active */}
+            {!walletConnectMode && (
+              <div className="space-y-3 pt-2 border-t border-gray-700">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={agreedToTerms}
+                    onChange={(e) => setAgreedToTerms(e.target.checked)}
+                    className="mt-1 w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                  />
+                  <span className="text-xs text-gray-400 leading-relaxed">
+                    By connecting, you agree to our{" "}
+                    <a href="/terms" className="text-blue-400 hover:text-blue-300 underline">
+                      Terms of Service
+                    </a>{" "}
+                    and{" "}
+                    <a href="/privacy" className="text-blue-400 hover:text-blue-300 underline">
+                      Privacy Policy
+                    </a>
+                  </span>
+                </label>
 
-              {!agreedToTerms && (
-                <div className="text-xs text-amber-400 text-center">
-                  ⚠️ Please agree to the terms to continue
-                </div>
-              )}
-            </div>
+                {!agreedToTerms && (
+                  <div className="text-xs text-amber-400 text-center">
+                    ⚠️ Please agree to the terms to continue
+                  </div>
+                )}
+              </div>
+            )}
 
-            <div className="text-xs text-gray-500 text-center">
-              Supports MetaMask, Phantom, WalletConnect, and 300+ other wallets
-            </div>
+            {/* Footer text - only show when no WalletConnect modal is active */}
+            {!walletConnectMode && (
+              <div className="text-xs text-gray-500 text-center">
+                Supports MetaMask, Phantom, WalletConnect, and 300+ other wallets
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
