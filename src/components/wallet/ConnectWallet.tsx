@@ -17,20 +17,16 @@ import {
   CompactFlex,
 } from "@/shared/components/premium/CompactLayout";
 import { WalletType } from "@/domains/wallet/services/unifiedWalletService";
-import WalletConnectManager from "./WalletConnectManager";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 interface ConnectWalletProps {
   onConnect?: (walletType: WalletType) => void;
   showLabels?: boolean;
-  onWalletConnectModeChange?: (mode: "main" | "connection" | null) => void;
-  walletConnectMode?: "main" | "connection" | null;
 }
 
 export default function ConnectWallet({
   onConnect,
   showLabels = true,
-  onWalletConnectModeChange,
-  walletConnectMode,
 }: ConnectWalletProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
@@ -95,8 +91,8 @@ export default function ConnectWallet({
         </div>
       )}
 
-      {/* Main wallet options - hide when WalletConnect modal is active */}
-      {!walletConnectMode && (
+      {/* Main wallet options */}
+      (
         <CompactStack spacing="sm">
           {wallets.map((wallet) => (
             <Button
@@ -132,18 +128,18 @@ export default function ConnectWallet({
             </Button>
           ))}
         </CompactStack>
-      )}
+      )
 
-      {/* WalletConnect option */}
+      {/* dApp-side WalletConnect via RainbowKit */}
       <div className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 rounded-xl p-4 border border-purple-500/20">
-        <WalletConnectManager
-          onModeChange={onWalletConnectModeChange}
-          currentMode={walletConnectMode}
-        />
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-white font-semibold">Connect with WalletConnect</h4>
+        </div>
+        <ConnectButton showBalance={false} chainStatus="icon" />
       </div>
 
-      {/* Social login option - hide when WalletConnect modal is active */}
-      {!walletConnectMode && (
+      {/* Social login option */}
+      (
         <>
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -176,7 +172,7 @@ export default function ConnectWallet({
             </p>
           )}
         </>
-      )}
+      )
     </CompactStack>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import ConnectWallet from "./ConnectWallet";
 import UnifiedModal from "../modal/UnifiedModal";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ export default function WalletConnectionOptions({
   const [showComingSoon, setShowComingSoon] = useState(false);
   const [activeTab, setActiveTab] = useState<"existing" | "new">("existing");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [walletConnectMode, setWalletConnectMode] = useState<"main" | "connection" | null>(null);
+  // dApp-only: no wallet-side WalletConnect modal state
 
   const handleSocialLoginClick = useCallback(() => {
     // Show coming soon message instead of opening modal
@@ -40,21 +40,15 @@ export default function WalletConnectionOptions({
     }
   }, [onWalletConnect, agreedToTerms]);
 
-  const handleWalletConnectModeChange = useCallback((mode: "main" | "connection" | null) => {
-    setWalletConnectMode(mode);
-  }, []);
+  // Removed wallet-side modal mode management
 
   // Reset WalletConnect mode when component unmounts or modal closes
-  useEffect(() => {
-    return () => {
-      setWalletConnectMode(null);
-    };
-  }, []);
+  // No wallet-side cleanup needed
 
   return (
     <>
-      {/* Tab navigation for better organization - hide when WalletConnect modal is active */}
-      {!walletConnectMode && (
+      {/* Tab navigation for better organization */}
+      (
         <div className="flex border-b border-gray-700 mb-6">
           <button
             className={`flex-1 py-3 text-center font-medium text-sm ${activeTab === "existing"
@@ -75,29 +69,15 @@ export default function WalletConnectionOptions({
             Create New Wallet
           </button>
         </div>
-      )}
+      )
 
       {/* Tab content */}
       <div className="space-y-6">
-        {/* Show WalletConnect modal content when active */}
-        {walletConnectMode && (
-          <div className="text-center space-y-4">
-            <div className="w-12 h-12 mx-auto bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl flex items-center justify-center text-xl mb-3">
-              🔗
-            </div>
-            <h3 className="text-xl font-bold text-white">
-              Connection Details
-            </h3>
-            <p className="text-gray-400 text-sm max-w-md mx-auto">
-              View connection information and active sessions
-            </p>
-          </div>
-        )}
+        {/* dApp-only: remove wallet-side modal content */}
 
         {activeTab === "existing" ? (
           <div className="space-y-4">
-            {/* Only show main content when no WalletConnect modal is active */}
-            {!walletConnectMode && (
+            {/* Main content */}
               <div className="text-center space-y-2">
                 <div className="w-12 h-12 mx-auto bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-xl mb-3">
                   🔗
@@ -109,18 +89,15 @@ export default function WalletConnectionOptions({
                   Connect your wallet to start participating in syndicates and join the community
                 </p>
               </div>
-            )}
+            
 
             <div className="bg-gradient-to-br from-blue-900/30 to-purple-900/30 rounded-xl p-4 border border-blue-500/20">
               <ConnectWallet
                 onConnect={handleWalletConnect}
-                onWalletConnectModeChange={handleWalletConnectModeChange}
-                walletConnectMode={walletConnectMode}
               />
             </div>
 
-            {/* Terms and Privacy Agreement - only show when no WalletConnect modal is active */}
-            {!walletConnectMode && (
+            {/* Terms and Privacy Agreement */}
               <div className="space-y-3 pt-2 border-t border-gray-700">
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input
@@ -147,14 +124,12 @@ export default function WalletConnectionOptions({
                   </div>
                 )}
               </div>
-            )}
 
-            {/* Footer text - only show when no WalletConnect modal is active */}
-            {!walletConnectMode && (
+            {/* Footer text */}
               <div className="text-xs text-gray-500 text-center">
                 Supports MetaMask, Phantom, WalletConnect, and 300+ other wallets
               </div>
-            )}
+            
           </div>
         ) : (
           <div className="space-y-4">
