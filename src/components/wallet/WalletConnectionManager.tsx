@@ -114,24 +114,26 @@ export default function WalletConnectionManager({
   const getButtonClasses = () => {
     switch (variant) {
       case "compact":
-        return "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm py-2 px-3";
+        return "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm py-2 px-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg";
       case "minimal":
-        return "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600";
+        return "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 active:scale-95";
       default:
-        return "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl";
+        return "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl rounded-xl font-bold transition-all duration-200 transform hover:scale-105 active:scale-95 px-6 py-3";
     }
   };
 
   return (
     <>
-      <Button
-        variant="default"
-        size={variant === "compact" ? "sm" : "lg"}
-        onClick={handleConnectClick}
-        className={`${getButtonClasses()} ${className}`}
-      >
-        {getButtonContent()}
-      </Button>
+      {!state.isModalOpen && (
+        <Button
+          variant="default"
+          size={variant === "compact" ? "sm" : "lg"}
+          onClick={handleConnectClick}
+          className={`${getButtonClasses()} ${className} transition-all duration-200 transform hover:scale-105 active:scale-95`}
+        >
+          {getButtonContent()}
+        </Button>
+      )}
 
       <UnifiedModal
         isOpen={state.isModalOpen}

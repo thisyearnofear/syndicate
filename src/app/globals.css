@@ -105,6 +105,23 @@ body {
   }
 }
 
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out forwards;
+}
+
 @keyframes glow {
   0%, 100% {
     box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);

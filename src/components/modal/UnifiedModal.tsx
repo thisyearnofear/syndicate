@@ -51,7 +51,7 @@ export default function UnifiedModal({
 
   return (
     <div 
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 modal-overlay"
+      className="fixed inset-0 bg-black/90 backdrop-blur-lg flex items-center justify-center z-[9999] p-4 modal-overlay animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
@@ -59,7 +59,7 @@ export default function UnifiedModal({
       }}
     >
       <div
-        className={`bg-gray-900 rounded-2xl p-6 w-full ${maxWidthClasses[maxWidth]} max-h-[90vh] overflow-y-auto border border-gray-700 modal-content relative z-[10000] ${className}`}
+        className={`bg-gray-900 rounded-2xl p-6 w-full ${maxWidthClasses[maxWidth]} max-h-[90vh] overflow-y-auto border border-gray-700 modal-content relative z-[10000] ${className} animate-scale-in shadow-2xl`}
         onClick={(e) => e.stopPropagation()}
       >
         {(title || showCloseButton) && (
@@ -68,7 +68,7 @@ export default function UnifiedModal({
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-white text-2xl ml-auto"
+                className="text-gray-400 hover:text-white text-2xl ml-auto w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-800 transition-colors duration-200"
               >
                 ×
               </button>
