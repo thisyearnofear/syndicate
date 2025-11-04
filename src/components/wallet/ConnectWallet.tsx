@@ -13,8 +13,8 @@
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
-CompactStack,
-CompactFlex,
+  CompactStack,
+  CompactFlex,
 } from "@/shared/components/premium/CompactLayout";
 import { WalletType } from "@/domains/wallet/services/unifiedWalletService";
 import WalletConnectManager from "./WalletConnectManager";
@@ -22,11 +22,15 @@ import WalletConnectManager from "./WalletConnectManager";
 interface ConnectWalletProps {
   onConnect?: (walletType: WalletType) => void;
   showLabels?: boolean;
+  onWalletConnectModeChange?: (mode: "main" | "qr" | "oneclick" | null) => void;
+  walletConnectMode?: "main" | "qr" | "oneclick" | null;
 }
 
 export default function ConnectWallet({
   onConnect,
   showLabels = true,
+  onWalletConnectModeChange,
+  walletConnectMode,
 }: ConnectWalletProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
@@ -58,22 +62,22 @@ export default function ConnectWallet({
   );
 
   const wallets = [
-  {
-  name: "MetaMask",
-  type: "metamask" as WalletType,
-  icon: "🦊",
-  variant: "primary" as const,
-  description: "Most popular Ethereum wallet",
-  color: "from-blue-600 to-purple-600",
-  },
-  {
-  name: "Phantom",
-  type: "phantom" as WalletType,
-  icon: "👻",
-  variant: "secondary" as const,
-  description: "Solana & multi-chain wallet",
-  color: "from-emerald-500 to-teal-600",
-  },
+    {
+      name: "MetaMask",
+      type: "metamask" as WalletType,
+      icon: "🦊",
+      variant: "primary" as const,
+      description: "Most popular Ethereum wallet",
+      color: "from-blue-600 to-purple-600",
+    },
+    {
+      name: "Phantom",
+      type: "phantom" as WalletType,
+      icon: "👻",
+      variant: "secondary" as const,
+      description: "Solana & multi-chain wallet",
+      color: "from-emerald-500 to-teal-600",
+    },
   ];
 
   return (
@@ -91,78 +95,87 @@ export default function ConnectWallet({
         </div>
       )}
 
-      {/* Main wallet options */}
-      <CompactStack spacing="sm">
-        {wallets.map((wallet) => (
-          <Button
-            key={wallet.name}
-            variant="default"
-            size="lg"
-            onClick={() => {
-              handleConnect(wallet.type);
-            }}
-            disabled={isConnecting}
-            className={`w-full justify-start touch-manipulation cursor-pointer select-none bg-gradient-to-r ${wallet.color} hover:opacity-90 text-white shadow-lg hover:shadow-xl border border-white/10 transition-all duration-200`}
-          >
-            <div className="flex-1 text-left">
-              <div className="font-semibold flex items-center gap-2">
-                {isConnecting && connectingWallet === wallet.type ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    <span>Connecting...</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-lg">{wallet.icon}</span>
-                    {showLabels && <span>{wallet.name}</span>}
-                  </>
+      {/* Main wallet options - hide when WalletConnect modal is active */}
+      {!walletConnectMode && (
+        <CompactStack spacing="sm">
+          {wallets.map((wallet) => (
+            <Button
+              key={wallet.name}
+              variant="default"
+              size="lg"
+              onClick={() => {
+                handleConnect(wallet.type);
+              }}
+              disabled={isConnecting}
+              className={`w-full justify-start touch-manipulation cursor-pointer select-none bg-gradient-to-r ${wallet.color} hover:opacity-90 text-white shadow-lg hover:shadow-xl border border-white/10 transition-all duration-200`}
+            >
+              <div className="flex-1 text-left">
+                <div className="font-semibold flex items-center gap-2">
+                  {isConnecting && connectingWallet === wallet.type ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      <span>Connecting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-lg">{wallet.icon}</span>
+                      {showLabels && <span>{wallet.name}</span>}
+                    </>
+                  )}
+                </div>
+                {showLabels && (
+                  <div className="text-xs opacity-80 mt-1">
+                    {wallet.description}
+                  </div>
                 )}
               </div>
-              {showLabels && (
-                <div className="text-xs opacity-80 mt-1">
-                  {wallet.description}
-                </div>
-              )}
-            </div>
-          </Button>
-        ))}
-      </CompactStack>
+            </Button>
+          ))}
+        </CompactStack>
+      )}
 
       {/* WalletConnect option */}
       <div className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 rounded-xl p-4 border border-purple-500/20">
-        <WalletConnectManager />
+        <WalletConnectManager
+          onModeChange={onWalletConnectModeChange}
+          currentMode={walletConnectMode}
+        />
       </div>
 
-      {/* Social login option */}
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-white/20" />
-        </div>
-        <div className="relative flex justify-center text-sm">
-          <span className="bg-gray-900 px-2 text-gray-400">or</span>
-        </div>
-      </div>
+      {/* Social login option - hide when WalletConnect modal is active */}
+      {!walletConnectMode && (
+        <>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-white/20" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="bg-gray-900 px-2 text-gray-400">or</span>
+            </div>
+          </div>
 
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => {
-          handleConnect("social" as WalletType);
-        }}
-        disabled={true}
-        className="w-full hover:bg-gray-700/50 opacity-50 cursor-not-allowed"
-      >
-        <div className="flex items-center justify-center gap-2">
-          <span className="text-lg">🔐</span>
-          {showLabels && <span>Connect with Social Login (Coming Soon)</span>}
-        </div>
-      </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              handleConnect("social" as WalletType);
+            }}
+            disabled={true}
+            className="w-full hover:bg-gray-700/50 opacity-50 cursor-not-allowed"
+          >
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-lg">🔐</span>
+              {showLabels && <span>Connect with Social Login (Coming Soon)</span>}
+            </div>
+          </Button>
 
-      {/* Help text */}
-      {showLabels && (
-        <p className="text-xs text-gray-500 text-center leading-relaxed">
-          New to crypto? Social login creates a wallet for you automatically.
-        </p>
+          {/* Help text */}
+          {showLabels && (
+            <p className="text-xs text-gray-500 text-center leading-relaxed">
+              New to crypto? Social login creates a wallet for you automatically.
+            </p>
+          )}
+        </>
       )}
     </CompactStack>
   );
