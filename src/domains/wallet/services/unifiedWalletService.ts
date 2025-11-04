@@ -11,7 +11,6 @@
 import { useCallback } from 'react';
 import { createError } from '@/shared/utils';
 import { useWalletContext } from '@/context/WalletContext';
-import { useWalletConnect } from '@/services/walletConnectService';
 
 // =============================================================================
 // TYPES
@@ -120,7 +119,6 @@ export function useUnifiedWallet(): {
   clearError: () => void;
 } {
   const { state, dispatch } = useWalletContext();
-  const { connectWithUri } = useWalletConnect();
 
   /**
    * PERFORMANT: Connect to wallet with error handling
