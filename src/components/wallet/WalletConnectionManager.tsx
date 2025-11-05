@@ -161,13 +161,9 @@ export default function WalletConnectionManager({
           )}
 
           <WalletConnectionOptions
-            onSocialLoginClick={handleSocialLoginClick}
-            onWalletConnect={handleWalletConnect}
+          onSocialLoginClick={handleSocialLoginClick}
+          onWalletConnect={handleWalletConnect}
           />
-
-          <div className="text-xs text-gray-500 text-center mt-4">
-            By connecting, you agree to our Terms of Service and Privacy Policy
-          </div>
         </div>
       </UnifiedModal>
     </>
