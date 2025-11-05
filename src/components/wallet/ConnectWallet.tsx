@@ -146,41 +146,7 @@ export default function ConnectWallet({
         <ConnectButton showBalance={false} chainStatus="icon" />
       </div>
 
-      {/* Social login option */}
-      (
-        <>
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/20" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="bg-gray-900 px-2 text-gray-400">or</span>
-            </div>
-          </div>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              handleConnect("social" as WalletType);
-            }}
-            disabled={true}
-            className="w-full hover:bg-gray-700/50 opacity-50 cursor-not-allowed"
-          >
-            <div className="flex items-center justify-center gap-2">
-              <span className="text-lg">🔐</span>
-              {showLabels && <span>Connect with Social Login (Coming Soon)</span>}
-            </div>
-          </Button>
-
-          {/* Help text */}
-          {showLabels && (
-            <p className="text-xs text-gray-500 text-center leading-relaxed">
-              New to crypto? Social login creates a wallet for you automatically.
-            </p>
-          )}
-        </>
-      )
+      
     </CompactStack>
   );
 }

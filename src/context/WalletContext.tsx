@@ -1,12 +1,13 @@
 "use client";
 
 import React, {
-  createContext,
-  useContext,
-  useReducer,
-  useEffect,
-  ReactNode,
+createContext,
+useContext,
+useReducer,
+useEffect,
+ReactNode,
 } from "react";
+import { useAccount } from "wagmi";
 import { WalletType } from "@/domains/wallet/services/unifiedWalletService";
 
 // =============================================================================
@@ -166,6 +167,27 @@ export function WalletProvider({ children }: WalletProviderProps) {
     isModalOpen: false,
   });
 
+  const { address, isConnected: wagmiConnected, chainId: wagmiChainId, connector } = useAccount();
+
+  // Sync with wagmi/RainbowKit state
+  useEffect(() => {
+    if (wagmiConnected && address) {
+      const walletType = connector?.id === 'metaMask' ? 'metamask' :
+                        connector?.id === 'walletConnect' ? 'metamask' : // Treat WalletConnect as MetaMask-like
+                        'metamask'; // Default
+      dispatch({
+        type: 'CONNECT_SUCCESS',
+        payload: {
+          address,
+          walletType,
+          chainId: wagmiChainId || 8453,
+        },
+      });
+    } else if (!wagmiConnected && state.isConnected) {
+      dispatch({ type: 'DISCONNECT' });
+    }
+  }, [wagmiConnected, address, wagmiChainId, connector, state.isConnected, dispatch]);
+
   // Persist state to localStorage
   useEffect(() => {
     try {
@@ -195,10 +217,10 @@ export function WalletProvider({ children }: WalletProviderProps) {
         if (savedState) {
           const parsedState = JSON.parse(savedState);
           dispatch({ type: "RESTORE_STATE", payload: parsedState });
-        }
       }
-    } catch (error) {
-      console.warn("Failed to restore wallet state:", error);
+  }
+  } catch (error) {
+    console.warn("Failed to restore wallet state:", error);
       localStorage.removeItem("wallet_state");
     }
   }, []);
