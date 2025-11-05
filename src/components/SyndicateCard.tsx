@@ -113,8 +113,8 @@ export default function SyndicateCard({
         </div>
       )}
 
-      {/* Action buttons */}
-      <div className="flex gap-2">
+      {/* Action buttons with progressive disclosure */}
+      <div className="flex flex-col gap-2">
         <Button 
           variant="default" 
           size="sm" 
@@ -123,19 +123,31 @@ export default function SyndicateCard({
         >
           Join Syndicate
         </Button>
-        <SocialShare 
-          url={`${typeof window !== 'undefined' ? window.location.origin : ''}/syndicate/${syndicate.id}`}
-          title={`Join ${syndicate.name}`}
-          description={syndicate.description}
-        />
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="px-2"
-          onClick={() => onView?.(syndicate.id)}
-        >
-          <Trophy className="w-3 h-3" />
-        </Button>
+        
+        {/* Advanced options for yield strategies */}
+        <div className="flex gap-1">
+          <SocialShare 
+            url={`${typeof window !== 'undefined' ? window.location.origin : ''}/syndicate/${syndicate.id}`}
+            title={`Join ${syndicate.name}`}
+            description={syndicate.description}
+          />
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="px-2 flex-1"
+            onClick={() => onView?.(syndicate.id)}
+          >
+            <Trophy className="w-3 h-3 mr-1" />
+            <span className="text-xs">Details</span>
+          </Button>
+          
+          {/* Yield strategy indicator */}
+          {syndicate.vaultStrategy && (
+            <div className="flex items-center justify-center px-2 py-1 bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-md border border-purple-500/30">
+              <span className="text-xs text-purple-300">Yield</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <style jsx>{`

@@ -15,13 +15,18 @@ const mockSyndicates = [
       maxFundAction: 10,
       actionTimeLimit: 24
     },
+    // New hybrid approach fields
+    yieldToTicketsPercentage: 85,
+    yieldToCausesPercentage: 15,
+    vaultStrategy: 'aave',
     ticketsPooled: 3420,
     totalImpact: 8500,
     isActive: true,
     isTrending: true,
     recentActivity: [
       { type: 'join', count: 23, timeframe: 'last hour' },
-      { type: 'tickets', count: 156, timeframe: 'today' }
+      { type: 'tickets', count: 156, timeframe: 'today' },
+      { type: 'yield', count: 42, timeframe: 'today', amount: 125 }
     ],
     cause: {
       id: 'ocean-cleanup-1',
@@ -47,13 +52,18 @@ const mockSyndicates = [
       quorumPercentage: 50,
       executionDelay: 168 // 7 days in hours
     },
+    // New hybrid approach fields
+    yieldToTicketsPercentage: 80,
+    yieldToCausesPercentage: 20,
+    vaultStrategy: 'morpho',
     ticketsPooled: 2180,
     totalImpact: 12300,
     isActive: true,
     isTrending: false,
     recentActivity: [
       { type: 'join', count: 8, timeframe: 'last hour' },
-      { type: 'tickets', count: 89, timeframe: 'today' }
+      { type: 'tickets', count: 89, timeframe: 'today' },
+      { type: 'yield', count: 28, timeframe: 'today', amount: 85 }
     ],
     cause: {
       id: 'education-access-2',
@@ -79,13 +89,18 @@ const mockSyndicates = [
       thresholdAmount: 1000,
       emergencySwitch: true
     },
+    // New hybrid approach fields
+    yieldToTicketsPercentage: 90,
+    yieldToCausesPercentage: 10,
+    vaultStrategy: 'octant',
     ticketsPooled: 5670,
     totalImpact: 15600,
     isActive: true,
     isTrending: true,
     recentActivity: [
       { type: 'join', count: 45, timeframe: 'last hour' },
-      { type: 'tickets', count: 234, timeframe: 'today' }
+      { type: 'tickets', count: 234, timeframe: 'today' },
+      { type: 'yield', count: 67, timeframe: 'today', amount: 180 }
     ],
     cause: {
       id: 'climate-action-3',
@@ -111,13 +126,18 @@ const mockSyndicates = [
       maxFundAction: 5,
       actionTimeLimit: 48
     },
+    // New hybrid approach fields
+    yieldToTicketsPercentage: 82,
+    yieldToCausesPercentage: 18,
+    vaultStrategy: 'spark',
     ticketsPooled: 1890,
     totalImpact: 4200,
     isActive: true,
     isTrending: false,
     recentActivity: [
       { type: 'join', count: 12, timeframe: 'last hour' },
-      { type: 'tickets', count: 67, timeframe: 'today' }
+      { type: 'tickets', count: 67, timeframe: 'today' },
+      { type: 'yield', count: 19, timeframe: 'today', amount: 54 }
     ],
     cause: {
       id: 'food-security-4',

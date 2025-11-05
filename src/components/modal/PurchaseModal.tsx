@@ -27,6 +27,7 @@ import { SelectStep } from './purchase/SelectStep';
 import { ProcessingStep } from './purchase/ProcessingStep';
 import { SuccessStep } from './purchase/SuccessStep';
 import { ShareModal } from './purchase/ShareModal';
+import { YieldStrategyStep } from './purchase/YieldStrategyStep';
 
 export interface PurchaseModalProps {
   isOpen: boolean;
@@ -65,9 +66,12 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   } = useTicketPurchase();
 
   const [ticketCount, setTicketCount] = useState(1);
-  const [step, setStep] = useState<'mode' | 'select' | 'confirm' | 'processing' | 'success' | 'share'>('mode');
+  const [step, setStep] = useState<'mode' | 'yield' | 'select' | 'confirm' | 'processing' | 'success' | 'share'>('mode');
   const [purchaseMode, setPurchaseMode] = useState<'individual' | 'syndicate'>('individual');
   const [selectedSyndicate, setSelectedSyndicate] = useState<SyndicateInfo | null>(null);
+  const [selectedVaultStrategy, setSelectedVaultStrategy] = useState<SyndicateInfo['vaultStrategy'] | null>(null);
+  const [yieldToTicketsPercentage, setYieldToTicketsPercentage] = useState<number>(85);
+  const [yieldToCausesPercentage, setYieldToCausesPercentage] = useState<number>(15);
   const [syndicates, setSyndicates] = useState<SyndicateInfo[]>([]);
   const [showShareModal, setShowShareModal] = useState(false);
 
@@ -83,8 +87,8 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
       jackpotStats.oddsPerTicket && Number(jackpotStats.oddsPerTicket) > 0
         ? Number(jackpotStats.oddsPerTicket)
         : (typeof jackpotStats.ticketsSoldCount === 'number' && jackpotStats.ticketsSoldCount > 0
-            ? Number(jackpotStats.ticketsSoldCount)
-            : null);
+          ? Number(jackpotStats.ticketsSoldCount)
+          : null);
 
     if (!baseOddsRaw || baseOddsRaw <= 0) {
       return null;
@@ -175,10 +179,13 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
     setStep('processing');
 
     try {
-      // Use the enhanced purchaseTickets function with syndicate support
+      // Use the enhanced purchaseTickets function with syndicate and yield strategy support
       const result = await purchaseTickets(
         ticketCount,
-        purchaseMode === 'syndicate' ? selectedSyndicate?.id : undefined
+        purchaseMode === 'syndicate' ? selectedSyndicate?.id : undefined,
+        selectedVaultStrategy || undefined,
+        yieldToTicketsPercentage,
+        yieldToCausesPercentage
       );
 
       if (result.success) {
@@ -186,9 +193,10 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
       } else {
         setStep('select');
         // Show error toast
+        const errorMessage = result.error || 'Unable to complete ticket purchase. Please try again.';
         errorToast(
           'Purchase Failed',
-          result.error || 'Unable to complete ticket purchase. Please try again.',
+          errorMessage,
           {
             label: 'Retry',
             onClick: () => handlePurchase()
@@ -220,7 +228,22 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
             selectedSyndicate={selectedSyndicate}
             setSelectedSyndicate={setSelectedSyndicate}
             syndicates={syndicates}
-            setStep={setStep as (step: 'select') => void}
+            setStep={() => setStep('yield')}
+          />
+        );
+      case 'yield':
+        return (
+          <YieldStrategyStep
+            selectedStrategy={selectedVaultStrategy}
+            onStrategySelect={setSelectedVaultStrategy}
+            ticketsAllocation={yieldToTicketsPercentage}
+            causesAllocation={yieldToCausesPercentage}
+            onAllocationChange={(tickets, causes) => {
+              setYieldToTicketsPercentage(tickets);
+              setYieldToCausesPercentage(causes);
+            }}
+            onNext={() => setStep('select')}
+            onBack={() => setStep('mode')}
           />
         );
       case 'select':
@@ -291,11 +314,17 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
             <h2 className="font-bold text-2xl md:text-4xl lg:text-5xl leading-tight tracking-tight text-white">
               {step === 'success' ? '🎉 Success!' :
                 step === 'mode' ? '🎫 Buy Tickets' :
-                  selectedSyndicate ? `🌊 ${selectedSyndicate.name}` : '🎫 Buy Tickets'}
+                  step === 'yield' ? '💰 Yield Strategy' :
+                    selectedSyndicate ? `🌊 ${selectedSyndicate.name}` : '🎫 Buy Tickets'}
             </h2>
-            {selectedSyndicate && step !== 'mode' && (
+            {selectedSyndicate && step !== 'mode' && step !== 'yield' && (
               <p className="text-sm text-gray-400 mt-1">
                 Supporting {selectedSyndicate.cause.name} • {selectedSyndicate.membersCount.toLocaleString()} members
+              </p>
+            )}
+            {step === 'yield' && (
+              <p className="text-sm text-gray-400 mt-1">
+                Choose how your capital generates yield to support causes and amplify participation
               </p>
             )}
           </div>

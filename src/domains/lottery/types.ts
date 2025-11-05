@@ -117,6 +117,10 @@ export interface SyndicateInfo {
     thresholdAmount?: number;    // Amount above which DAO approval required
     emergencySwitch?: boolean;   // Allow temporary leader control in emergencies
   };
+  // Yield allocation preferences
+  yieldToTicketsPercentage?: number;  // 80-90% of yield used to buy more tickets
+  yieldToCausesPercentage?: number;   // 10-20% of yield directly funds causes
+  vaultStrategy?: 'spark' | 'morpho' | 'octant' | 'aave' | 'uniswap';
   membersCount: number;
   ticketsPooled: number;
   totalImpact: number;
@@ -144,7 +148,7 @@ export interface ImpactMetric {
 }
 
 export interface SyndicateActivity {
-  type: 'join' | 'tickets' | 'win' | 'donation';
+  type: 'join' | 'tickets' | 'win' | 'donation' | 'yield';
   count: number;
   timeframe: string;
   amount?: number;
@@ -182,4 +186,8 @@ export type PurchaseResult = {
   syndicateId?: string;
   syndicateImpact?: SyndicateImpact;
   mode?: 'individual' | 'syndicate';
+  // NEW: Yield strategy fields
+  vaultStrategy?: 'spark' | 'morpho' | 'octant' | 'aave' | 'uniswap';
+  yieldToTicketsPercentage?: number;
+  yieldToCausesPercentage?: number;
 };

@@ -10,7 +10,7 @@ import { web3Service, type TicketPurchaseResult, type UserBalance, type UserTick
 import { useWalletConnection } from './useWalletConnection';
 import { nearChainSignatureService } from '@/services/nearChainSignatureService';
 import { WalletTypes } from '@/domains/wallet/services/unifiedWalletService';
-import type { SyndicateInfo, PurchaseOptions, SyndicateImpact } from '@/domains/lottery/types';
+import type { SyndicateInfo, PurchaseOptions, SyndicateImpact, PurchaseResult } from '@/domains/lottery/types';
 
 export interface TicketPurchaseState {
   // Loading states
@@ -54,8 +54,14 @@ export interface TicketPurchaseState {
 
 export interface TicketPurchaseActions {
   initializeWeb3: () => Promise<boolean>;
-  // ENHANCEMENT: Enhanced to support both individual and syndicate purchases
-  purchaseTickets: (ticketCount: number, syndicateId?: string) => Promise<TicketPurchaseResult>;
+  // ENHANCEMENT: Enhanced to support both individual and syndicate purchases with yield strategies
+  purchaseTickets: (
+    ticketCount: number,
+    syndicateId?: string,
+    vaultStrategy?: SyndicateInfo['vaultStrategy'],
+    yieldToTicketsPercentage?: number,
+    yieldToCausesPercentage?: number
+  ) => Promise<TicketPurchaseResult>;
   // New syndicate-specific actions
   purchaseForSyndicate: (options: PurchaseOptions) => Promise<TicketPurchaseResult>;
   getSyndicateImpactPreview: (ticketCount: number, syndicate: SyndicateInfo) => SyndicateImpact;
@@ -71,7 +77,7 @@ export interface TicketPurchaseActions {
 
 export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions {
   const { isConnected, walletType, address } = useWalletConnection();
-  
+
   const [state, setState] = useState<TicketPurchaseState>({
     isInitializing: false,
     isPurchasing: false,
@@ -122,11 +128,11 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
         // Default: EVM Base purchase path
         success = await web3Service.initialize();
       }
-      
+
       if (success) {
         // Wait a bit for the service to be fully ready
         await new Promise(resolve => setTimeout(resolve, 100));
-        
+
         // Only load user-specific data - jackpot is already available from API via useLottery hook
         try {
           // Only load EVM-specific data when using EVM wallet
@@ -140,10 +146,10 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
 
           // Load user ticket info and odds info
           try {
-          const ticketInfo = await web3Service.getCurrentTicketInfo();
-          setState(prev => ({ ...prev, userTicketInfo: ticketInfo }));
+            const ticketInfo = await web3Service.getCurrentTicketInfo();
+            setState(prev => ({ ...prev, userTicketInfo: ticketInfo }));
           } catch (ticketError) {
-          console.warn('Failed to load user ticket info:', ticketError);
+            console.warn('Failed to load user ticket info:', ticketError);
           }
 
           try {
@@ -266,10 +272,16 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
   /**
    * Purchase tickets
    */
-  const purchaseTickets = useCallback(async (ticketCount: number, syndicateId?: string): Promise<TicketPurchaseResult> => {
-    setState(prev => ({ 
-      ...prev, 
-      isPurchasing: true, 
+  const purchaseTickets = useCallback(async (
+    ticketCount: number,
+    syndicateId?: string,
+    vaultStrategy?: SyndicateInfo['vaultStrategy'],
+    yieldToTicketsPercentage?: number,
+    yieldToCausesPercentage?: number
+  ): Promise<TicketPurchaseResult> => {
+    setState(prev => ({
+      ...prev,
+      isPurchasing: true,
       error: null,
       purchaseSuccess: false,
       nearStages: [],
@@ -290,7 +302,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
               try {
                 const bal = await provider.getBalance(recipient);
                 balanceEth = (await import('ethers')).ethers.formatEther(bal);
-              } catch {}
+              } catch { }
               setState(prev => ({ ...prev, nearRecipient: recipient, nearEthBalance: balanceEth }));
             }
             if (stage === 'tx_ready' && data?.unsignedParams) {
@@ -304,7 +316,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
                   nearEstimatedFeeEth: estimatedEth,
                   nearHasEnoughGas: prev.nearEthBalance ? Number(prev.nearEthBalance) >= Number(estimatedEth) : undefined,
                 }));
-              } catch {}
+              } catch { }
             }
             if (stage === 'signature_requested' && data?.requestId) {
               setState(prev => ({ ...prev, nearRequestId: data.requestId }));
@@ -318,11 +330,11 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
         // Default: EVM Base purchase path
         result = await web3Service.purchaseTickets(ticketCount);
       }
-      
+
       // Determine purchase mode and create syndicate impact if applicable
       const purchaseMode: 'individual' | 'syndicate' = syndicateId ? 'syndicate' : 'individual';
       let syndicateImpact: SyndicateImpact | null = null;
-      
+
       if (syndicateId && result.success) {
         // Fetch syndicate info for impact calculation
         try {
@@ -340,8 +352,8 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       }
 
       if (result.success) {
-        setState(prev => ({ 
-          ...prev, 
+        setState(prev => ({
+          ...prev,
           isPurchasing: false,
           purchaseSuccess: true,
           purchasedTicketCount: ticketCount,
@@ -357,34 +369,48 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
           refreshBalance();
         }, 2000);
       } else {
-        setState(prev => ({ 
-          ...prev, 
+        setState(prev => ({
+          ...prev,
           isPurchasing: false,
           error: result.error || 'Purchase failed'
         }));
       }
 
-      // ENHANCEMENT: Return enhanced result with syndicate context
-      return {
+      // ENHANCEMENT: Return enhanced result with syndicate context and yield strategy info
+      const enhancedResult: any = {
         ...result,
         mode: purchaseMode,
         syndicateId: syndicateId,
         syndicateImpact: syndicateImpact,
       };
+
+      // Add optional yield strategy fields
+      if (vaultStrategy) enhancedResult.vaultStrategy = vaultStrategy;
+      if (yieldToTicketsPercentage !== undefined) enhancedResult.yieldToTicketsPercentage = yieldToTicketsPercentage;
+      if (yieldToCausesPercentage !== undefined) enhancedResult.yieldToCausesPercentage = yieldToCausesPercentage;
+
+      return enhancedResult;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Purchase failed';
-      setState(prev => ({ 
-        ...prev, 
+      setState(prev => ({
+        ...prev,
         isPurchasing: false,
         error: errorMessage
       }));
 
-      return {
+      const enhancedResult: any = {
         success: false,
         error: errorMessage,
         mode: syndicateId ? 'syndicate' : 'individual',
         syndicateId: syndicateId,
       };
+
+      // Add optional yield strategy fields
+      if (vaultStrategy) enhancedResult.vaultStrategy = vaultStrategy;
+      if (yieldToTicketsPercentage !== undefined) enhancedResult.yieldToTicketsPercentage = yieldToTicketsPercentage;
+      if (yieldToCausesPercentage !== undefined) enhancedResult.yieldToCausesPercentage = yieldToCausesPercentage;
+
+      return enhancedResult;
     }
   }, [refreshBalance, refreshJackpot, walletType]);
 
@@ -447,7 +473,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
         nearHasEnoughGas: prev.nearEstimatedFeeEth ? Number(balanceEth) >= Number(prev.nearEstimatedFeeEth) : undefined,
         nearStages: [...prev.nearStages, 'balance_refreshed'],
       }));
-    } catch {}
+    } catch { }
   }, [state.nearRecipient, state.nearEstimatedFeeEth]);
 
   /**

@@ -15,6 +15,7 @@ import Link from "next/link";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { useTicketPurchase } from "@/hooks/useTicketPurchase";
 import { socialService } from "@/services/socialService";
+import { TrendingUp } from "lucide-react";
 
 // Premium UI Components
 import { Button } from "@/shared/components/ui/Button";
@@ -179,15 +180,16 @@ export default function PremiumHome() {
                   <WalletConnectionManager />
                 </div>
 
-                {/* Central Jackpot Puzzle Piece */}
+                {/* Central Jackpot Puzzle Piece with Progressive Disclosure */}
                 <div
-                  className="animate-scale-in relative"
+                  className="animate-scale-in relative w-full max-w-2xl"
                   style={{
                     position: "relative",
                     overflow: "visible",
                   }}
                 >
                   <PremiumJackpotPiece onBuyClick={handlePurchaseAction} userIdentity={userIdentity} />
+                  
                   {/* DELIGHT: Subtle floating particles around jackpot */}
                   <div
                     className="absolute -top-4 -left-4 w-2 h-2 bg-yellow-400 rounded-full opacity-70 animate-pulse"
@@ -201,6 +203,51 @@ export default function PremiumHome() {
                     className="absolute -bottom-4 -right-4 w-2 h-2 bg-red-400 rounded-full opacity-70 animate-pulse"
                     style={{ animationDelay: "0.8s" }}
                   ></div>
+                  
+                  {/* Progressive Disclosure Options */}
+                  <div className="mt-6 w-full">
+                    <div className="glass-premium border border-white/20 rounded-xl p-4 mb-4">
+                      <p className="text-center text-gray-300 mb-3">Or join a community effort</p>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 border-purple-500/50 text-purple-300 hover:bg-purple-500/10"
+                          onClick={() => {
+                            // Navigate to syndicates page to join existing pools
+                            window.location.href = '/syndicates';
+                          }}
+                        >
+                          👥 Join Syndicate
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 border-blue-500/50 text-blue-300 hover:bg-blue-500/10"
+                          onClick={() => {
+                            // Navigate to create syndicate page
+                            window.location.href = '/create-syndicate';
+                          }}
+                        >
+                          ✨ Create Syndicate
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="glass-premium border border-white/20 rounded-xl p-4">
+                      <p className="text-center text-gray-300 mb-3">Advanced: Maximize impact with yield strategies</p>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 border-green-500/50 text-green-300 hover:bg-green-500/10"
+                          onClick={() => {
+                            // Show advanced modal or navigate to yield strategy page
+                            setShowPurchaseModal(true);
+                          }}
+                        >
+                          💰 Use Yield Strategy
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </CompactStack>
             </CompactContainer>
@@ -227,6 +274,103 @@ export default function PremiumHome() {
               {/* Vertical Stats */}
               <div className="mt-12 w-full">
                 <StatsPieces />
+              </div>
+              
+              {/* Yield Strategy Section - Progressive Disclosure */}
+              <div className="mt-16 w-full">
+                <div className="text-center mb-12">
+                  <h2 className="font-black text-3xl md:text-4xl bg-gradient-to-r from-blue-400 via-purple-500 to-pink-400 bg-clip-text text-transparent mb-4">
+                    Advanced Yield Strategies
+                  </h2>
+                  <p className="text-gray-400 max-w-2xl mx-auto">
+                    Maximize your impact with yield-generating strategies that support causes while amplifying your lottery participation
+                  </p>
+                </div>
+                
+                <div className="glass-premium rounded-2xl p-8 border border-white/20">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                    <div>
+                      <h3 className="text-2xl font-bold text-white mb-4">Capital Preservation + Dual Impact</h3>
+                      <p className="text-gray-300 mb-6">
+                        Your principal is preserved while generating yield through DeFi strategies. 
+                        That yield is intelligently allocated between purchasing more lottery tickets 
+                        (amplifying your chances to win) and direct cause funding (providing consistent impact).
+                      </p>
+                      <ul className="space-y-3">
+                        <li className="flex items-start gap-3">
+                          <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span className="text-green-400 text-sm">✓</span>
+                          </div>
+                          <span className="text-gray-300">Capital remains secure while generating yield</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                          <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span className="text-green-400 text-sm">✓</span>
+                          </div>
+                          <span className="text-gray-300">Yield-to-tickets increases winning chances</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                          <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span className="text-green-400 text-sm">✓</span>
+                          </div>
+                          <span className="text-gray-300">Yield-to-causes provides consistent funding</span>
+                        </li>
+                      </ul>
+                    </div>
+                    <div className="flex flex-col gap-4">
+                      <div className="glass-premium p-6 rounded-xl border border-white/10">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                            <span className="text-white font-bold">1</span>
+                          </div>
+                          <h4 className="font-bold text-white">Select Strategy</h4>
+                        </div>
+                        <p className="text-gray-400 text-sm">
+                          Choose from Aave, Morpho, Spark, Uniswap, or Octant-native strategies
+                        </p>
+                      </div>
+                      
+                      <div className="glass-premium p-6 rounded-xl border border-white/10">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center">
+                            <span className="text-white font-bold">2</span>
+                          </div>
+                          <h4 className="font-bold text-white">Set Allocation</h4>
+                        </div>
+                        <p className="text-gray-400 text-sm">
+                          Decide how to split yield: tickets vs direct cause funding
+                        </p>
+                      </div>
+                      
+                      <div className="glass-premium p-6 rounded-xl border border-white/10">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
+                            <span className="text-white font-bold">3</span>
+                          </div>
+                          <h4 className="font-bold text-white">Maximize Impact</h4>
+                        </div>
+                        <p className="text-gray-400 text-sm">
+                          Reap both amplified lottery participation and consistent cause support
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-8 text-center">
+                    <Button 
+                      variant="default"
+                      size="lg"
+                      className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white px-8 py-6 text-lg"
+                      onClick={() => {
+                        // Navigate to the yield strategies page
+                        window.location.href = '/yield-strategies';
+                      }}
+                    >
+                      <TrendingUp className="w-5 h-5 mr-2" />
+                      Try Yield Strategy
+                    </Button>
+                  </div>
+                </div>
               </div>
             </CompactContainer>
           </CompactSection>
