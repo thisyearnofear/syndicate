@@ -45,11 +45,13 @@ Transform lottery participation into **impact investing** through sustainable sy
    - Platform fee (separate) allocated per syndicate settings
    - Proportional ownership in syndicate pool
    - Governance model choice: Leader-guided (high-risk, high-speed) vs DAO-governed (secure, consensus-based)
+   - Yield allocation preferences: Users can select between ticket amplification focus vs direct cause funding
 
 3. **Execution & Win Distribution**
-   - At chosen date: Vault funds (principal + yield) buy lottery tickets
+   - During funding period: Yield accumulates and splits per governance settings (e.g., 80% to more tickets, 20% to causes)
+   - At chosen date: Principal + amplified tickets participate in lottery
    - If syndicate wins: Proportional split among contributors + cause allocation
-   - Yield amplifies total tickets purchased
+   - Continuous cause funding: Even without winning, yield-to-causes provides steady impact
    - All fund flows controlled by main smart contract regardless of governance path
 
 ### Governance Models
@@ -97,17 +99,42 @@ Transform lottery participation into **impact investing** through sustainable sy
   - 70% ($0.07) → Cause wallet (governance-controlled routing)
   - 30% ($0.03) → Platform revenue
 
+### Hybrid Yield Strategy: Yield-to-Tickets + Yield-to-Causes Model
+**Innovative Approach:**
+- **Yield-to-Tickets**: Majority of yield (e.g., 80-90%) automatically purchases additional lottery tickets for amplification
+- **Yield-to-Causes**: Portion of yield (e.g., 10-20%) directly funds public goods for consistent impact
+- **Win-to-Causes**: When syndicate wins, allocate percentage to causes based on governance model
+- **User Optionality**: Users can choose yield allocation preferences (conservative vs amplification-focused)
+
+**Benefit Structure:**
+- **Amplified Participation**: Yield generates more lottery tickets, increasing winning chances
+- **Steady Cause Funding**: Consistent yield donations regardless of lottery outcomes
+- **Hybrid Impact**: Combines compounding ticket purchasing with direct cause funding
+- **Governance Control**: Governance models determine allocation ratios for both yield and wins
+
+**Technical Flow:**
+1. $1 principal ticket goes to vault
+2. Yield accumulates in vault
+3. Yield automatically splits based on governance settings:
+   - 10-20% → Direct cause funding
+   - 80-90% → Additional lottery ticket purchases
+4. When syndicate executes: Principal + amplified tickets participate in lottery
+5. If syndicate wins: Winnings split based on governance model (participants + causes)
+
 ### Vault Strategy Selection
 **Multi-Vault Support:**
 - **Spark.fi**: Conservative lending protocols for stable yields
 - **Morpho Vault V2**: Optimized lending markets with competitive rates
 - **Octant Native**: Built-in yield strategies with audited security
+- **Aave V3**: Advanced lending markets with flexible yield strategies
+- **Uniswap V4**: AMM-based yield opportunities through concentrated liquidity
 
 **User Vault Selection:**
 - Syndicate creators choose vault strategy for their cause
 - Risk-adjusted options (Conservative, Balanced, Yield-Maximizing)
 - Real-time yield performance comparison
 - Automatic vault switching for optimization (governance-approved)
+- Yield allocation preferences (ticket amplification vs direct cause funding)
 
 ### Technical Implementation
 ```typescript
@@ -140,9 +167,13 @@ interface Syndicate {
     verificationTimestamp: Date; // When verification occurred
     verificationTier: 1 | 2 | 3; // Verification tier (1=automatic, 2=community, 3=nominated)
   };
-  vaultStrategy: 'spark' | 'morpho' | 'octant';
+  vaultStrategy: 'spark' | 'morpho' | 'octant' | 'aave' | 'uniswap';
   octantVaultAddress: string;
   executionDate: Date;          // When syndicate executes
+  yieldAllocation: {
+    yieldToTicketsPercentage: number;  // 80-90% of yield used to buy more tickets
+    yieldToCausesPercentage: number;   // 10-20% of yield directly funds causes
+  };
   feeAllocation: {
     causePercentage: number;    // 0-100% of platform fees to cause
     platformPercentage: number; // Remaining to platform
@@ -152,7 +183,9 @@ interface Syndicate {
     totalContributed: number;   // $1 tickets in vault
     totalFeesCollected: number; // Platform fees collected
     yieldGenerated: number;     // DeFi yield earned
-    finalTicketCount: number;   // After execution
+    yieldToTickets: number;     // Amount of yield converted to additional tickets
+    yieldToCauses: number;      // Amount of yield directly donated to causes
+    finalTicketCount: number;   // After yield amplification
   };
 }
 
@@ -244,10 +277,12 @@ interface VerifiedCause {
 
 ### Vault Strategy Integration
 - Octant vault deployment automation
-- Spark.fi and Morpho strategy connectors
-- Real-time yield performance monitoring
+- Spark.fi, Morpho, Aave V3, and Uniswap V4 strategy connectors
+- Real-time yield performance monitoring with amplification metrics
+- Yield allocation controls (ticket vs direct cause funding)
 - Risk assessment and optimization suggestions
 - Governance-constrained strategy switching
+- Yield-to-ticket automated purchasing mechanisms
 
 ---
 
@@ -321,6 +356,7 @@ interface VerifiedCause {
 - **Win-Funded Causes**: $75K+ distributed through syndicate wins
 - **Fee-Funded Causes**: $150K+ from platform fees to causes
 - **Sustainable Funding**: $300K+ annual yield funding for causes
+- **Amplified Impact**: 3x+ increase in lottery participation through yield-to-tickets
 - **Projects Supported**: 20+ active public goods initiatives
 - **Community Growth**: 25K+ engaged users
 
@@ -417,7 +453,8 @@ interface VerifiedCause {
 - **Spark.fi**: Conservative lending protocols for stable cause funding
 - **Morpho**: Optimized lending markets with competitive yields
 - **Octant**: Native yield strategies with audited security
-- **Aave**: Decentralized lending protocols
+- **Aave V3**: Advanced lending markets with flexible yield strategies
+- **Uniswap V4**: AMM-based yield opportunities through concentrated liquidity
 - **Compound**: Established lending markets
 
 ### Technical Partners
@@ -450,13 +487,15 @@ interface VerifiedCause {
 
 This roadmap creates a **sophisticated three-tier ecosystem** where cause enthusiasts lead curated campaigns, users choose governance models (Leader-guided vs DAO-governed), and everyday users participate with appropriate risk levels. The full $1 lottery ticket goes to DeFi vaults earning yield, platform fees are allocated by governance model, and proportional ownership creates fair win distribution with fund security maintained by main smart contracts.
 
-**Key Innovation**: **Hybrid Governance + Proportional Ownership + DeFi Yield + Fund Security**. Users choose between leader-guided (faster, higher risk) and DAO-governed (slower, higher security) models while all funds remain controlled by smart contracts. Syndicate leaders curate campaigns with verified causes and optimal strategies, while participants enjoy amplified odds through yield and fair proportional payouts with complete fund security.
+**Key Innovation**: **Hybrid Governance + Proportional Ownership + Dual Yield Strategy + Fund Security**. Users choose between leader-guided (faster, higher risk) and DAO-governed (slower, higher security) models while all funds remain controlled by smart contracts. Syndicate leaders curate campaigns with verified causes and optimal yield strategies, while participants enjoy amplified odds through yield-to-tickets and consistent cause impact through yield-to-causes, with complete fund security.
 
 **Feasibility Assessment**: ✅ **Highly Feasible**
-- **Technical**: Smart contracts can handle proportional ownership, multiple governance models, and fund security
-- **Economic**: $1 tickets in vaults create meaningful yield pools for lottery amplification regardless of governance model
-- **UX**: Three-tier approach provides choice while preventing complexity overload for regular users
+- **Technical**: Smart contracts can handle proportional ownership, multiple governance models, dual yield allocation, and fund security
+- **Economic**: $1 tickets in vaults create meaningful yield pools that amplify lottery participation while providing steady cause funding
+- **UX**: Three-tier approach with yield allocation controls provides choice while preventing complexity overload for regular users
 - **Legal**: Transparent on-chain cause funding with wallet verification and governance constraints
+
+**Marketing Power**: "Choose Ocean Warriors campaign - decide governance (fast leader-guided or secure DAO-governed), select yield allocation (ticket amplification vs direct cause funding), verify cause wallet, set execution date. Participants get amplified odds + consistent impact + proportional wins with fund security. When we win, causes get funded automatically!" This creates authentic leadership opportunities, user choice in risk tolerance, yield strategy preferences, and genuine impact signaling with complete security.
 
 **Marketing Power**: "Choose Ocean Warriors campaign - decide governance (fast leader-guided or secure DAO-governed), select vault strategy, verify cause wallet, set execution date. Participants get amplified odds + proportional wins with fund security. When we win, cause gets funded automatically!" This creates authentic leadership opportunities, user choice in risk tolerance, and genuine impact signaling with complete security.
 

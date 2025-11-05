@@ -53,13 +53,31 @@ export default function SyndicatesPage() {
             <CompactContainer maxWidth="2xl" padding="lg">
                 <CompactStack spacing="lg">
                     {/* Header */}
-                    <div className="pt-8">
+                    <div className="pt-8 text-center">
                         <h1 className="font-black text-4xl md:text-6xl bg-gradient-to-r from-purple-400 via-blue-500 to-green-400 bg-clip-text text-transparent">
                             Active Syndicates
                         </h1>
-                        <p className="text-xl text-gray-300 mt-2">
+                        <p className="text-xl text-gray-300 mt-2 mb-6">
                             Join forces with others to support causes and increase your chances
                         </p>
+                        <div className="flex flex-col sm:flex-row justify-center gap-3">
+                            <Link href="/create-syndicate">
+                                <Button 
+                                    variant="default"
+                                    className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+                                >
+                                    ✨ Create Syndicate
+                                </Button>
+                            </Link>
+                            <Link href="/yield-strategies">
+                                <Button 
+                                    variant="outline"
+                                    className="border-green-500/50 text-green-300 hover:bg-green-500/10"
+                                >
+                                    💰 Use Yield Strategy
+                                </Button>
+                            </Link>
+                        </div>
                     </div>
 
                     {/* Syndicates Grid */}

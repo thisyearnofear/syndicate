@@ -45,6 +45,9 @@ export default function SyndicateDetailPage({ params }: { params: any }) {
           description: "Join the fight to clean our oceans and protect marine life. Every ticket purchased helps remove plastic waste and supports marine conservation efforts.",
           causePercentage: 20,
           governanceModel: "leader",
+          yieldToTicketsPercentage: 85,
+          yieldToCausesPercentage: 15,
+          vaultStrategy: "aave",
           membersCount: 1247,
           ticketsPooled: 3420,
           totalImpact: 8500,
@@ -54,7 +57,8 @@ export default function SyndicateDetailPage({ params }: { params: any }) {
             { type: 'join', count: 23, timeframe: 'last hour' },
             { type: 'tickets', count: 156, timeframe: 'today' },
             { type: 'win', count: 1, timeframe: 'this week', amount: 2500 },
-            { type: 'donation', count: 1, timeframe: 'this month', amount: 1200 }
+            { type: 'donation', count: 1, timeframe: 'this month', amount: 1200 },
+            { type: 'yield', count: 1, timeframe: 'today', amount: 45 }
           ]
         };
         
@@ -170,12 +174,17 @@ export default function SyndicateDetailPage({ params }: { params: any }) {
               </div>
             </div>
             
-            <div className="flex gap-2">
-              <Button onClick={handleShare} disabled={isSharing}>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Button 
+                variant="outline" 
+                className="border-purple-500/50 text-purple-300 hover:bg-purple-500/10"
+                onClick={handleShare} 
+                disabled={isSharing}
+              >
                 <Share2 className="w-4 h-4 mr-2" />
                 {isSharing ? 'Sharing...' : 'Share'}
               </Button>
-              <Button variant="default">
+              <Button variant="default" className="flex-1">
                 Join Syndicate
               </Button>
             </div>
@@ -255,6 +264,52 @@ export default function SyndicateDetailPage({ params }: { params: any }) {
           </div>
         </div>
 
+        {/* Yield Strategy Information */}
+        <div className="glass-premium rounded-2xl p-6 border border-white/20">
+          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-blue-400" />
+            Yield Strategy
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="font-semibold text-gray-300 mb-3">Capital Preservation & Impact</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Vault Strategy</span>
+                  <span className="text-white font-medium">{syndicate.vaultStrategy?.toUpperCase() || 'Standard'}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Tickets Allocation</span>
+                  <span className="text-yellow-400 font-medium">{syndicate.yieldToTicketsPercentage || 85}%</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Causes Allocation</span>
+                  <span className="text-red-400 font-medium">{syndicate.yieldToCausesPercentage || 15}%</span>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="font-semibold text-gray-300 mb-3">Yield Impact</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Your Tickets → Winnings</span>
+                  <span className="text-green-400 font-medium">Amplified</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Yield → Causes</span>
+                  <span className="text-red-400 font-medium">Consistent</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Capital Security</span>
+                  <span className="text-white font-medium">Preserved</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         {/* Impact Breakdown */}
         <div className="glass-premium rounded-2xl p-6 border border-white/20">
           <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
