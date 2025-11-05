@@ -51,9 +51,15 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
     error,
     purchaseSuccess,
     purchasedTicketCount,
+    // NEAR status
+    nearStages,
+    nearRecipient,
+    nearEthBalance,
+    nearEstimatedFeeEth,
     // Actions
     purchaseTickets,
     refreshBalance,
+    retryAfterFunding,
     clearError,
     reset
   } = useTicketPurchase();
@@ -241,7 +247,16 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
           />
         );
       case 'processing':
-        return <ProcessingStep isApproving={isApproving} />;
+        return (
+          <ProcessingStep
+            isApproving={isApproving}
+            nearStages={nearStages}
+            nearRecipient={nearRecipient}
+            nearEthBalance={nearEthBalance}
+            nearEstimatedFeeEth={nearEstimatedFeeEth}
+            onRetryAfterFunding={retryAfterFunding}
+          />
+        );
       case 'success':
         return (
           <SuccessStep

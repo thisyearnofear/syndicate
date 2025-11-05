@@ -74,6 +74,14 @@ export default function ConnectWallet({
       description: "Solana & multi-chain wallet",
       color: "from-emerald-500 to-teal-600",
     },
+    {
+      name: "NEAR",
+      type: "near" as WalletType,
+      icon: "🌌",
+      variant: "secondary" as const,
+      description: "NEAR account via Wallet Selector",
+      color: "from-purple-600 to-indigo-600",
+    },
   ];
 
   return (

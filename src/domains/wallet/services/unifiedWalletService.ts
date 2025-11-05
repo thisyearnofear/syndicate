@@ -309,11 +309,72 @@ export function useUnifiedWallet(): {
 
         case WalletTypes.NEAR:
           try {
-            // For now, show coming soon message for NEAR wallet
-            throw createError('WALLET_NOT_SUPPORTED', 'NEAR wallet is coming soon. Please use MetaMask for now.');
+            // Dynamically load NEAR Wallet Selector in browser
+            if (!isBrowser()) {
+              throw createError('ENV_ERROR', 'NEAR wallet is only available in browser environments');
+            }
+
+            const [{ setupWalletSelector }, { setupMyNearWallet }, { setupModal }] = await Promise.all([
+              import('@near-wallet-selector/core') as any,
+              import('@near-wallet-selector/my-near-wallet') as any,
+              import('@near-wallet-selector/modal-ui') as any,
+            ]);
+
+            const { NEAR } = await import('@/config');
+
+            const selector = await setupWalletSelector({
+              network: (NEAR.networkId as 'mainnet' | 'testnet'),
+              modules: [setupMyNearWallet()],
+            });
+
+            const modal = setupModal(selector, {
+              contractId: NEAR.mpcContract,
+            });
+
+            // Show modal and wait for user to sign in
+            modal.show();
+
+            // Poll for account selection for up to ~15 seconds
+            const accountId = await new Promise<string | null>((resolve) => {
+              let attempts = 0;
+              const interval = setInterval(() => {
+                try {
+                  const state = selector.store.getState();
+                  const accounts = state.accounts || [];
+                  const active = accounts.find((a: any) => a.active);
+                  if (active?.accountId) {
+                    clearInterval(interval);
+                    resolve(active.accountId);
+                  } else if (++attempts > 150) { // ~15s at 100ms
+                    clearInterval(interval);
+                    resolve(null);
+                  }
+                } catch (e) {
+                  clearInterval(interval);
+                  resolve(null);
+                }
+              }, 100);
+            });
+
+            if (!accountId) {
+              throw createError('CONNECTION_FAILED', 'Failed to connect NEAR wallet');
+            }
+
+            address = accountId; // Store NEAR accountId in address field
+            chainId = 0; // Sentinel for NEAR (non-EVM)
+
+            // Optionally, initialize NEAR chain signature service here (non-blocking)
+            try {
+              const { nearChainSignatureService } = await import('@/services/nearChainSignatureService');
+              await nearChainSignatureService.initialize({ accountId, selector });
+            } catch (svcError) {
+              console.warn('Failed to initialize NEAR Chain Signatures service:', svcError);
+            }
           } catch (error: any) {
-            console.error('NEAR wallet error:', error);
-            throw error;
+            if (error.code === 4001) {
+              throw createError('CONNECTION_REJECTED', 'Connection rejected by user');
+            }
+            throw createError('CONNECTION_FAILED', `Failed to connect NEAR: ${error.message}`);
           }
           break;
 

@@ -8,6 +8,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { web3Service, type TicketPurchaseResult, type UserBalance, type UserTicketInfo, type OddsInfo } from '@/services/web3Service';
 import { useWalletConnection } from './useWalletConnection';
+import { nearChainSignatureService } from '@/services/nearChainSignatureService';
+import { WalletTypes } from '@/domains/wallet/services/unifiedWalletService';
 import type { SyndicateInfo, PurchaseOptions, SyndicateImpact } from '@/domains/lottery/types';
 
 export interface TicketPurchaseState {
@@ -40,6 +42,14 @@ export interface TicketPurchaseState {
   // ENHANCEMENT: Syndicate state
   lastPurchaseMode: 'individual' | 'syndicate' | null;
   lastSyndicateImpact: SyndicateImpact | null;
+
+  // NEAR path status (optional)
+  nearStages: string[];
+  nearRecipient?: string | null;
+  nearRequestId?: string | null;
+  nearEthBalance?: string | null;
+  nearEstimatedFeeEth?: string | null;
+  nearHasEnoughGas?: boolean;
 }
 
 export interface TicketPurchaseActions {
@@ -56,10 +66,11 @@ export interface TicketPurchaseActions {
   claimWinnings: () => Promise<string>;
   clearError: () => void;
   reset: () => void;
+  retryAfterFunding: () => Promise<void>;
 }
 
 export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions {
-  const { isConnected } = useWalletConnection();
+  const { isConnected, walletType, address } = useWalletConnection();
   
   const [state, setState] = useState<TicketPurchaseState>({
     isInitializing: false,
@@ -79,6 +90,12 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     // ENHANCEMENT: Syndicate state
     lastPurchaseMode: null,
     lastSyndicateImpact: null,
+    nearStages: [],
+    nearRecipient: null,
+    nearRequestId: null,
+    nearEthBalance: null,
+    nearEstimatedFeeEth: null,
+    nearHasEnoughGas: undefined,
   });
 
   /**
@@ -93,7 +110,18 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     setState(prev => ({ ...prev, isInitializing: true, error: null }));
 
     try {
-      const success = await web3Service.initialize();
+      // Initialize appropriate service based on wallet type
+      let success = false;
+
+      if (walletType === WalletTypes.NEAR) {
+        // Initialize NEAR Chain Signatures path with NEAR accountId
+        success = await nearChainSignatureService.initialize(
+          address ? { accountId: address } : undefined
+        );
+      } else {
+        // Default: EVM Base purchase path
+        success = await web3Service.initialize();
+      }
       
       if (success) {
         // Wait a bit for the service to be fully ready
@@ -101,11 +129,14 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
         
         // Only load user-specific data - jackpot is already available from API via useLottery hook
         try {
-          await Promise.allSettled([
-            refreshBalance(),
-            // Removed: refreshJackpot() - jackpot data comes from Megapot API, not blockchain
-            loadTicketPrice(),
-          ]);
+          // Only load EVM-specific data when using EVM wallet
+          if (walletType !== WalletTypes.NEAR) {
+            await Promise.allSettled([
+              refreshBalance(),
+              // Removed: refreshJackpot() - jackpot data comes from Megapot API, not blockchain
+              loadTicketPrice(),
+            ]);
+          }
 
           // Load user ticket info and odds info
           try {
@@ -142,7 +173,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       }));
       return false;
     }
-  }, [isConnected]);
+  }, [isConnected, walletType, address]);
 
   /**
    * Refresh user balance
@@ -240,12 +271,53 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       ...prev, 
       isPurchasing: true, 
       error: null,
-      purchaseSuccess: false 
+      purchaseSuccess: false,
+      nearStages: [],
     }));
 
     try {
       // ENHANCEMENT: Handle both individual and syndicate purchases
-      const result = await web3Service.purchaseTickets(ticketCount);
+      let result: TicketPurchaseResult;
+      if (walletType === WalletTypes.NEAR) {
+        // Route NEAR users through Chain Signatures service with status updates
+        const provider = new (await import('ethers')).ethers.JsonRpcProvider((await import('@/config')).CHAINS.base.rpcUrl);
+        result = await nearChainSignatureService.purchaseTicketsOnBase(ticketCount, {
+          onStatus: async (stage, data) => {
+            setState(prev => ({ ...prev, nearStages: [...prev.nearStages, stage] }));
+            if (stage === 'deriving_address' && data?.recipient) {
+              const recipient = data.recipient as string;
+              let balanceEth = '0';
+              try {
+                const bal = await provider.getBalance(recipient);
+                balanceEth = (await import('ethers')).ethers.formatEther(bal);
+              } catch {}
+              setState(prev => ({ ...prev, nearRecipient: recipient, nearEthBalance: balanceEth }));
+            }
+            if (stage === 'tx_ready' && data?.unsignedParams) {
+              try {
+                const ethersMod = await import('ethers');
+                const up = data.unsignedParams as { maxFeePerGas: bigint; gasLimit: bigint };
+                const estimatedWei = up.maxFeePerGas * up.gasLimit;
+                const estimatedEth = ethersMod.ethers.formatEther(estimatedWei);
+                setState(prev => ({
+                  ...prev,
+                  nearEstimatedFeeEth: estimatedEth,
+                  nearHasEnoughGas: prev.nearEthBalance ? Number(prev.nearEthBalance) >= Number(estimatedEth) : undefined,
+                }));
+              } catch {}
+            }
+            if (stage === 'signature_requested' && data?.requestId) {
+              setState(prev => ({ ...prev, nearRequestId: data.requestId }));
+            }
+            if (stage === 'complete' && data?.txHash) {
+              setState(prev => ({ ...prev, lastTxHash: data.txHash }));
+            }
+          }
+        });
+      } else {
+        // Default: EVM Base purchase path
+        result = await web3Service.purchaseTickets(ticketCount);
+      }
       
       // Determine purchase mode and create syndicate impact if applicable
       const purchaseMode: 'individual' | 'syndicate' = syndicateId ? 'syndicate' : 'individual';
@@ -314,7 +386,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
         syndicateId: syndicateId,
       };
     }
-  }, [refreshBalance, refreshJackpot]);
+  }, [refreshBalance, refreshJackpot, walletType]);
 
   /**
    * Clear error state
@@ -352,8 +424,31 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       // ENHANCEMENT: Reset syndicate state
       lastPurchaseMode: null,
       lastSyndicateImpact: null,
+      nearStages: [],
+      nearRecipient: null,
+      nearRequestId: null,
+      nearEthBalance: null,
+      nearEstimatedFeeEth: null,
+      nearHasEnoughGas: undefined,
     });
   }, []);
+
+  const retryAfterFunding = useCallback(async () => {
+    try {
+      if (!state.nearRecipient) return;
+      const { ethers } = await import('ethers');
+      const { CHAINS } = await import('@/config');
+      const provider = new ethers.JsonRpcProvider(CHAINS.base.rpcUrl);
+      const bal = await provider.getBalance(state.nearRecipient);
+      const balanceEth = ethers.formatEther(bal);
+      setState(prev => ({
+        ...prev,
+        nearEthBalance: balanceEth,
+        nearHasEnoughGas: prev.nearEstimatedFeeEth ? Number(balanceEth) >= Number(prev.nearEstimatedFeeEth) : undefined,
+        nearStages: [...prev.nearStages, 'balance_refreshed'],
+      }));
+    } catch {}
+  }, [state.nearRecipient, state.nearEstimatedFeeEth]);
 
   /**
    * Auto-initialize when wallet connects
@@ -439,5 +534,6 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     claimWinnings,
     clearError,
     reset,
+    retryAfterFunding,
   };
 }
