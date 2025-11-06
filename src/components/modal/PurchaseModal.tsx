@@ -21,13 +21,13 @@ import { WalletConnectionCard } from '@/components/wallet/WalletConnectionCard';
 import { useSuccessToast, useErrorToast } from '@/shared/components/ui/Toast';
 import type { SyndicateInfo } from '@/domains/lottery/types';
 
-// Lazy load modal steps for better performance
+// Lazy load modal steps for better performance (restored with animations)
 const ModeStep = lazy(() => import('./purchase/ModeStep').then(mod => ({ default: mod.ModeStep })));
 const SelectStep = lazy(() => import('./purchase/SelectStep').then(mod => ({ default: mod.SelectStep })));
 const ProcessingStep = lazy(() => import('./purchase/ProcessingStep').then(mod => ({ default: mod.ProcessingStep })));
 const SuccessStep = lazy(() => import('./purchase/SuccessStep').then(mod => ({ default: mod.SuccessStep })));
-const ShareModal = lazy(() => import('./purchase/ShareModal').then(mod => ({ default: mod.ShareModal })));
 const YieldStrategyStep = lazy(() => import('./purchase/YieldStrategyStep').then(mod => ({ default: mod.YieldStrategyStep })));
+import { ShareModal } from './ShareModal';
 
 export interface PurchaseModalProps {
   isOpen: boolean;
@@ -397,21 +397,14 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
           {renderStep()}
         </Suspense>
 
-        {/* Share Modal */}
-        {showShareModal && (
-          <Suspense fallback={
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-              <Loader2 size={32} className="animate-spin text-white" />
-            </div>
-          }>
-            <ShareModal
-              setShowShareModal={setShowShareModal}
-              purchasedTicketCount={purchasedTicketCount}
-              prizeAmount={prizeAmount}
-              oddsInfo={oddsInfo}
-            />
-          </Suspense>
-        )}
+        {/* Share Modal - Restored for user delight */}
+        <ShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          ticketCount={purchasedTicketCount}
+          prizeAmount={prizeAmount}
+          syndicateName={selectedSyndicate?.name}
+        />
       </div>
     </div>
   );

@@ -1,6 +1,33 @@
-# Syndicate - Hyper-Performant Social Lottery Platform
+# 🎯 Syndicate - Octant v2 Yield Donating Lottery Platform
 
-A production-ready, domain-driven lottery application built with performance, reliability, and maintainability as core principles.
+> **🏆 Octant DeFi Hackathon 2025 - "Best use of a Yield Donating Strategy"**
+
+A revolutionary lottery platform combining **DeFi yield strategies** with **lottery mechanics** for sustainable public goods funding. Built on Octant v2's yield donating infrastructure with production-ready architecture.
+
+## 🚀 Hackathon Innovation
+
+**The Game Changer**: Use Octant v2 yield to generate lottery tickets while preserving capital and automatically funding causes.
+
+### How It Works
+1. **Deposit USDC** → Octant v2 vaults (capital preserved, 12.5% APY)
+2. **Yield generates** → 80% buys lottery tickets, 20% funds causes  
+3. **Win lottery** → Prize distributed + continuous cause funding
+4. **Capital safe** → Withdraw principal anytime
+
+**Result**: Sustainable public goods funding through gamified DeFi yield strategies.
+
+## ✨ Key Features
+
+### 🎪 **Three Purchase Modes**
+- **Buy for Myself**: Traditional individual lottery tickets
+- **Join Pool & Support Causes**: Syndicate pooling with cause allocation  
+- **Yield Strategies**: **NEW** - Octant v2 yield donating integration
+
+### 💰 **Octant v2 Integration**
+- **Factory Contracts**: `MorphoCompounderStrategyFactory` & `SkyCompounderStrategyFactory`
+- **Yield Donation**: Built-in cause allocation via `_donationAddress`
+- **Capital Preservation**: ERC-4626 vault standard with principal protection
+- **Real-time Dashboard**: Live yield tracking and conversion monitoring
 
 ## 🏗️ Architecture
 
@@ -281,4 +308,26 @@ window.__performanceMonitor.getRealTimeStats()
 
 ---
 
-Built with ❤️ for performance, reliability, and developer experience.
+## 🎮 Quick Demo
+
+```bash
+git clone https://github.com/thisyearnofear/syndicate
+cd syndicate
+npm install
+npm run dev
+```
+
+Visit `http://localhost:3000` and try the **Yield Strategies** flow!
+
+## 🏆 Hackathon Submission
+
+**Track**: Best use of a Yield Donating Strategy ($4,000)  
+**Innovation**: First lottery platform using DeFi yield for ticket generation  
+**Public Goods Impact**: Sustainable cause funding through gamified DeFi
+
+### 📚 Documentation
+- 📖 [Octant Integration Guide](./docs/OCTANT_INTEGRATION.md)
+- 🗺️ [Development Roadmap](./docs/ROADMAP.md)
+- 📋 [Syndicate Specifications](./docs/SYNDICATES.md)
+
+Built with ❤️ for **Octant v2**, **public goods**, and **sustainable DeFi innovation**.

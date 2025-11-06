@@ -29,7 +29,7 @@ import {
   CompactFlex,
 } from "@/shared/components/premium/CompactLayout";
 
-// Wallet Connection Manager
+// Wallet Connection Manager (restored with multi-wallet support)
 import WalletConnectionManager from "@/components/wallet/WalletConnectionManager";
 
 // Lazy load heavy components
