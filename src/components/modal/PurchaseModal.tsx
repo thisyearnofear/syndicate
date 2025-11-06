@@ -67,7 +67,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
 
   const [ticketCount, setTicketCount] = useState(1);
   const [step, setStep] = useState<'mode' | 'yield' | 'select' | 'confirm' | 'processing' | 'success' | 'share'>('mode');
-  const [purchaseMode, setPurchaseMode] = useState<'individual' | 'syndicate'>('individual');
+  const [purchaseMode, setPurchaseMode] = useState<'individual' | 'syndicate' | 'yield'>('individual');
   const [selectedSyndicate, setSelectedSyndicate] = useState<SyndicateInfo | null>(null);
   const [selectedVaultStrategy, setSelectedVaultStrategy] = useState<SyndicateInfo['vaultStrategy'] | null>(null);
   const [yieldToTicketsPercentage, setYieldToTicketsPercentage] = useState<number>(85);
@@ -183,9 +183,9 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
       const result = await purchaseTickets(
         ticketCount,
         purchaseMode === 'syndicate' ? selectedSyndicate?.id : undefined,
-        selectedVaultStrategy || undefined,
-        yieldToTicketsPercentage,
-        yieldToCausesPercentage
+        purchaseMode === 'yield' ? selectedVaultStrategy || undefined : undefined,
+        purchaseMode === 'yield' ? yieldToTicketsPercentage : undefined,
+        purchaseMode === 'yield' ? yieldToCausesPercentage : undefined
       );
 
       if (result.success) {
@@ -228,7 +228,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
             selectedSyndicate={selectedSyndicate}
             setSelectedSyndicate={setSelectedSyndicate}
             syndicates={syndicates}
-            setStep={() => setStep('yield')}
+            setStep={(step: 'select' | 'yield') => setStep(step)}
           />
         );
       case 'yield':
