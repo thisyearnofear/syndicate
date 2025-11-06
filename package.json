@@ -38,7 +38,6 @@
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-slot": "^1.2.3",
     "@rainbow-me/rainbowkit": "^2.2.8",
-    "@react-native-async-storage/async-storage": "^2.2.0",
     "@reown/walletkit": "^1.4.1",
     "@solana/spl-name-service": "^0.2.1",
     "@solana/wallet-adapter-base": "^0.9.23",
@@ -89,5 +88,30 @@
     "typescript": "^5",
     "webpack-bundle-analyzer": "^4.10.2"
   },
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",
+  "overrides": {
+    "@fractalwagmi/popup-connection": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    },
+    "@keystonehq/sdk": {
+      "qrcode.react": "3.1.0",
+      "react-qr-reader": "3.0.0-beta-1"
+    },
+    "qrcode.react": {
+      "react": "$react"
+    },
+    "react-qr-reader": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    }
+  },
+  "resolutions": {
+    "@fractalwagmi/popup-connection": {
+      "react": "^19.0.0",
+      "react-dom": "^19.0.0"
+    },
+    "qrcode.react": "3.1.0",
+    "react-qr-reader": "3.0.0-beta-1"
+  }
 }
