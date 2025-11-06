@@ -480,10 +480,10 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
    * Auto-initialize when wallet connects
    */
   useEffect(() => {
-    if (isConnected && !state.isInitializing && !web3Service.isReady()) {
+    if (isConnected && walletType && !state.isInitializing && !web3Service.isReady()) {
       initializeWeb3();
     }
-  }, [isConnected, initializeWeb3, state.isInitializing]);
+  }, [isConnected, walletType, initializeWeb3, state.isInitializing]);
 
   /**
    * Reset when wallet disconnects

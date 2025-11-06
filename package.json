@@ -4,10 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:fast": "NODE_ENV=development next dev --turbo --port 3001",
     "dev:turbo": "next dev --turbo",
+    "dev:debug": "NODE_ENV=development DEBUG=* next dev",
     "build": "next build",
     "build:analyze": "ANALYZE=true next build",
     "start": "next start",
+    "start:dev": "NODE_ENV=development next start",
     "lint": "next lint",
     "analyze": "npx @next/bundle-analyzer",
     "perf": "npm run build && npm run analyze",
@@ -63,7 +66,6 @@
     "next": "15.2.2",
     "permissionless": "^0.2.46",
     "polished": "^4.3.1",
-
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwind-merge": "^3.3.1",
@@ -74,7 +76,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@next/bundle-analyzer": "^15.2.2",
+    "@next/bundle-analyzer": "^15.5.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -85,7 +87,7 @@
     "postcss": "^8.5.3",
     "tailwindcss": "^4.1.1",
     "typescript": "^5",
-    "webpack-bundle-analyzer": "^4.10.1"
+    "webpack-bundle-analyzer": "^4.10.2"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

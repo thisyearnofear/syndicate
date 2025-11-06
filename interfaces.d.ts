@@ -4,6 +4,32 @@ import type {
   MetaMaskInpageProvider,
 } from '@metamask/providers';
 
+interface Purchase {
+  startTicket?: number;
+  endTicket?: number;
+  ticketsPurchased?: number;
+  transactionHashes?: string[];
+  txHash?: string;
+  timestamp?: string | number;
+  createdAt?: string | number;
+  updatedAt?: string | number;
+  jackpotRoundId: number;
+  recipient: string;
+  referrer?: string;
+  buyer: string;
+}
+
+interface UserIdentity {
+  farcaster?: {
+    username: string;
+    followerCount?: number;
+  };
+  twitter?: {
+    username: string;
+    followerCount?: number;
+  };
+}
+
 /*
  * Window type extension to support ethereum and phantom
  */

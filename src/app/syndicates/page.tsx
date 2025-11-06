@@ -17,15 +17,17 @@ import {
     CompactStack,
     CompactSection,
 } from "@/shared/components/premium/CompactLayout";
-import { ArrowLeft } from "lucide-react";
+
 import Link from "next/link";
 
+
+import type { SyndicateInfo } from "@/domains/lottery/types";
 
 // Lazy load the SyndicateCard component
 const SyndicateCard = lazy(() => import("@/components/SyndicateCard"));
 
 export default function SyndicatesPage() {
-    const [syndicates, setSyndicates] = useState<any[]>([]);
+    const [syndicates, setSyndicates] = useState<SyndicateInfo[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 

@@ -4,13 +4,15 @@ import { useState, useEffect, Suspense, lazy } from 'react';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
 import { CompactStack } from '@/shared/components/premium/CompactLayout';
 
+import type { SyndicateInfo } from '@/domains/lottery/types';
+
 const SyndicateCard = lazy(() => import('@/components/SyndicateCard'));
 
 /**
  * MODULAR: Syndicates Puzzle Piece
  */
 export function SyndicatesPiece() {
-  const [syndicates, setSyndicates] = useState<any[]>([]);
+  const [syndicates, setSyndicates] = useState<SyndicateInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

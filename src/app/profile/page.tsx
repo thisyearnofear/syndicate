@@ -13,6 +13,7 @@
 import { useState, useEffect } from "react";
 import { useWalletContext } from "@/context/WalletContext";
 import { megapotService } from "@/domains/lottery/services/megapotService";
+import type { TicketPurchase } from "@/domains/lottery/types";
 import { socialService, type MemoryIdentity } from "@/services/socialService";
 import { performance } from "@/config";
 import { Button } from "@/shared/components/ui/Button";
@@ -32,7 +33,7 @@ import { Ticket, History, Trophy, Wallet, TrendingUp, Twitter, MessageCircle, Us
 
 export default function ProfilePage() {
   const { state: walletState } = useWalletContext();
-  const [ticketPurchases, setTicketPurchases] = useState<any[]>([]);
+  const [ticketPurchases, setTicketPurchases] = useState<TicketPurchase[]>([]);
   const [userIdentity, setUserIdentity] = useState<MemoryIdentity | null>(null);
   const [loading, setLoading] = useState(true);
   const [identityLoading, setIdentityLoading] = useState(false);

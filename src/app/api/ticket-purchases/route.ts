@@ -64,8 +64,9 @@ export async function GET(request: NextRequest) {
 
         // Simple in-memory cache for tx timestamps to reduce RPC calls on warm starts
         // Note: Cache persists across requests only while the serverless function stays warm
-        const txTimestampCache: Map<string, string> = (global as any).__txTimestampCache || new Map();
-        (global as any).__txTimestampCache = txTimestampCache;
+        const globalCache = global as { __txTimestampCache?: Map<string, string> };
+        const txTimestampCache: Map<string, string> = globalCache.__txTimestampCache || new Map();
+        globalCache.__txTimestampCache = txTimestampCache;
 
         // Basescan fallback
         const resolveTimestampViaBaseScan = async (txHash?: string): Promise<string | null> => {
@@ -136,7 +137,22 @@ export async function GET(request: NextRequest) {
         };
 
         // Transform + enrich with timestamps
-        const transformedData = await Promise.all(data.map(async (purchase: any) => {
+        interface MegapotPurchase {
+            startTicket?: number;
+            endTicket?: number;
+            ticketsPurchased?: number;
+            transactionHashes?: string[];
+            txHash?: string;
+            timestamp?: string | number;
+            createdAt?: string | number;
+            updatedAt?: string | number;
+            jackpotRoundId: number;
+            recipient: string;
+            referrer?: string;
+            buyer: string;
+        }
+
+        const transformedData = await Promise.all(data.map(async (purchase: MegapotPurchase) => {
             // Compute ticket count: prefer API field, fallback to range
             const rangeCount =
                 typeof purchase.startTicket === 'number' && typeof purchase.endTicket === 'number'

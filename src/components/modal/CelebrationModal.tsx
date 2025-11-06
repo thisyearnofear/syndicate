@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { X, Trophy, Ticket, Star, Gift } from 'lucide-react';
+import { X, Ticket, Gift } from 'lucide-react';
 
 interface CelebrationModalProps {
   isOpen: boolean;
@@ -17,17 +17,23 @@ interface CelebrationModalProps {
 export default function CelebrationModal({ isOpen, onClose, achievement }: CelebrationModalProps) {
   const [showConfetti, setShowConfetti] = useState(false);
   const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; color: string; delay: number }>>([]);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && mounted) {
       setShowConfetti(true);
       
-      // DELIGHT: Generate confetti particles
+      // DELIGHT: Generate confetti particles - only after mount to prevent hydration mismatch
+      const colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
       const newParticles = Array.from({ length: 50 }, (_, i) => ({
         id: i,
         x: Math.random() * 100,
         y: Math.random() * 100,
-        color: ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'][Math.floor(Math.random() * 6)],
+        color: colors[Math.floor(Math.random() * colors.length)],
         delay: Math.random() * 2
       }));
       setParticles(newParticles);
@@ -39,7 +45,7 @@ export default function CelebrationModal({ isOpen, onClose, achievement }: Celeb
 
       return () => clearTimeout(timer);
     }
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, mounted]);
 
   if (!isOpen) return null;
 

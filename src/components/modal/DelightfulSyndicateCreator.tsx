@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { X, Users, Heart, Sparkles, Target, Share2, Copy, Check, Eye } from "lucide-react";
+import { X, Users, Heart, Sparkles, Target, Eye } from "lucide-react";
 import { Button } from "@/shared/components/ui/Button";
 // import SyndicateStepIndicator from "@/components/SyndicateStepIndicator";
 // import SyndicatePreview from "@/components/SyndicatePreview";
@@ -60,8 +60,8 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
   const [isCreating, setIsCreating] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [animateStep, setAnimateStep] = useState(false);
-  const [memberPreview, setMemberPreview] = useState<Array<{ id: number; avatar: string; name: string }>>([]);
-  const [impactPreview, setImpactPreview] = useState({ totalRaised: 0, causesSupported: 0 });
+  const [, setMemberPreview] = useState<Array<{ id: number; avatar: string; name: string }>>([]);
+  const [, setImpactPreview] = useState({ totalRaised: 0, causesSupported: 0 });
 
   // DELIGHT: Generate preview members and impact stats
   useEffect(() => {
@@ -187,7 +187,7 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
           </div>
           <h3 className="text-2xl font-bold text-white mb-4">Syndicate Created!</h3>
           <p className="text-green-200 mb-6">
-            "{formData.name}" is ready to change the world! Share with friends to start building your team.
+            &quot;{formData.name}&quot; is ready to change the world! Share with friends to start building your team.
           </p>
           <div className="flex items-center justify-center gap-2 text-green-300">
             <Users className="w-5 h-5" />
@@ -258,7 +258,7 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={4}
                 className="w-full p-4 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none transition-colors"
-                placeholder="Describe your syndicate's mission and goals..."
+                placeholder="Describe your syndicate&apos;s mission and goals..."
               />
               {errors.description && <p className="text-red-400 text-sm mt-1">{errors.description}</p>}
             </div>

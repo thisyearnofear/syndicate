@@ -9,14 +9,13 @@ import {
   TrendingUp, 
   Share2, 
   Trophy, 
-  Calendar, 
   Gift, 
   Award,
   ArrowLeft
 } from "lucide-react";
 import type { SyndicateInfo } from "@/domains/lottery/types";
 
-export default function SyndicateDetailPage({ params }: { params: any }) {
+export default function SyndicateDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [syndicate, setSyndicate] = useState<SyndicateInfo | null>(null);
   const [loading, setLoading] = useState(true);

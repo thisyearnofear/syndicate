@@ -30,6 +30,7 @@ declare global {
     phantom?: PhantomProvider;
     solana?: SolanaProvider;
   }
+  var __txTimestampCache: Map<string, string>;
 }
 
 export {};

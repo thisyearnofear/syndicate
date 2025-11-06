@@ -173,9 +173,18 @@ export function ToastContainer() {
 // Toast provider
 export function ToastProvider({ children }: { children: React.ReactNode }) {
     const [toasts, setToasts] = useState<Toast[]>([]);
+    const [mounted, setMounted] = useState(false);
+    const [idCounter, setIdCounter] = useState(0);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const addToast = useCallback((toastData: Omit<Toast, 'id'>) => {
-        const id = Math.random().toString(36).substr(2, 9);
+        // Generate predictable ID for server-side rendering, then switch to random for client
+        const id = mounted
+            ? Math.random().toString(36).substr(2, 9)
+            : `ssr-${idCounter}`;
         const toast: Toast = {
             id,
             duration: 5000, // Default 5 seconds
@@ -183,7 +192,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         };
 
         setToasts(prev => [...prev, toast]);
-    }, []);
+        // Only increment counter on server to maintain consistency
+        if (!mounted) {
+            setIdCounter(prev => prev + 1);
+        }
+    }, [mounted, idCounter]);
 
     const removeToast = useCallback((id: string) => {
         setToasts(prev => prev.filter(toast => toast.id !== id));

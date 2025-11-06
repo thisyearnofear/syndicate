@@ -6,24 +6,29 @@ import { socialService } from '@/services/socialService';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
 import { CompactStack, CompactFlex } from '@/shared/components/premium/CompactLayout';
 
+interface Activity {
+  text: string;
+  icon: string;
+  time: string;
+}
+
 /**
 * MODULAR: Activity Feed Puzzle Piece with Social Personalization
 */
 export function ActivityFeedPiece() {
     const [hoveredActivity, setHoveredActivity] = useState<number | null>(null);
-    const [personalizedActivities, setPersonalizedActivities] = useState<any[]>([]);
+    const [personalizedActivities, setPersonalizedActivities] = useState<Activity[]>([]);
     const [loading, setLoading] = useState(false);
     const { address, isConnected } = useWalletConnection();
 
-    // Default activities for non-connected users
-    const defaultActivities = [
-        { text: "Sarah joined Ocean Warriors", icon: "🌊", time: "2m ago" },
-        { text: "Climate Network won $500", icon: "🌍", time: "5m ago" },
-        { text: "Education Alliance milestone", icon: "📚", time: "8m ago" },
-        { text: "Food Security raised $1.2K", icon: "🌾", time: "12m ago" },
-    ];
-
     useEffect(() => {
+        const defaultActivities = [
+            { text: "Sarah joined Ocean Warriors", icon: "🌊", time: "2m ago" },
+            { text: "Climate Network won $500", icon: "🌍", time: "5m ago" },
+            { text: "Education Alliance milestone", icon: "📚", time: "8m ago" },
+            { text: "Food Security raised $1.2K", icon: "🌾", time: "12m ago" },
+        ];
+
         const loadPersonalizedActivities = async () => {
             if (!isConnected || !address) {
                 setPersonalizedActivities(defaultActivities);

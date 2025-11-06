@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import ConnectWallet from "./ConnectWallet";
+import { WalletConnectionCard } from "./WalletConnectionCard";
 import UnifiedModal from "../modal/UnifiedModal";
 import { Button } from "@/components/ui/button";
 import { WalletType } from "@/domains/wallet/services/unifiedWalletService";
@@ -42,47 +42,9 @@ export default function WalletConnectionOptions({
 
   return (
     <>
-      {/* Tab content */}
-      <div className="space-y-6">
-  {/* dApp-only: remove wallet-side modal content */}
-        <div className="space-y-4">
-          {/* Main content */}
-          <div className="text-center space-y-2">
-            <div className="w-12 h-12 mx-auto bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-xl mb-3">
-              🔗
-            </div>
-            <h3 className="text-xl font-bold text-white">
-              Connect Wallet
-            </h3>
-            <p className="text-gray-400 text-sm max-w-md mx-auto">
-              Connect your wallet to start participating in syndicates and join the community
-            </p>
-          </div>
-
-  <div className="bg-gradient-to-br from-blue-900/30 to-purple-900/30 rounded-xl p-4 border border-blue-500/20">
-            <ConnectWallet
-              onConnect={handleWalletConnect}
-            />
-          </div>
-
-  {/* Terms and Privacy Agreement */}
-          <div className="text-xs text-gray-400 text-center pt-2 border-t border-gray-700">
-            By connecting, you agree to our{" "}
-            <a href="/terms" className="text-blue-400 hover:text-blue-300 underline">
-            Terms of Service
-            </a>{" "}
-            and{" "}
-            <a href="/privacy" className="text-blue-400 hover:text-blue-300 underline">
-            Privacy Policy
-            </a>
-          </div>
-
-  {/* Footer text */}
-          <div className="text-xs text-gray-500 text-center">
-            Supports MetaMask, Phantom, WalletConnect, and 300+ other wallets
-          </div>
-        </div>
-      </div>
+      <WalletConnectionCard
+        onConnect={handleWalletConnect}
+      />
 
   {/* Coming Soon Modal */}
       <UnifiedModal

@@ -162,7 +162,7 @@ export function useUnifiedWallet(): {
 
             const network = await (window as any).ethereum.request({ method: 'eth_chainId' });
             const numericChainId = parseInt((network as string) || '0x1', 16);
-            
+
             // Check if we're on Base network (8453), if not, try to switch
             if (numericChainId !== 8453) {
               try {
@@ -198,7 +198,7 @@ export function useUnifiedWallet(): {
               // Import web3Service statically to avoid webpack issues
               const { web3Service } = await import('@/services/web3Service');
               const initialized = await web3Service.initialize();
-              
+
               if (!initialized) {
                 console.warn('Web3 service initialization failed');
                 // Don't throw here - wallet connection can work without Web3 service for basic functionality
@@ -242,7 +242,7 @@ export function useUnifiedWallet(): {
             }) as string;
 
             const currentChainId = parseInt(phantomChainId, 16);
-            
+
             if (currentChainId !== 8453) {
               try {
                 // Try to switch to Base network
@@ -277,7 +277,7 @@ export function useUnifiedWallet(): {
             try {
               const { web3Service } = await import('@/services/web3Service');
               const initialized = await web3Service.initialize();
-              
+
               if (!initialized) {
                 console.warn('Web3 service initialization failed for Phantom');
               }
@@ -382,9 +382,9 @@ export function useUnifiedWallet(): {
           throw createError('UNSUPPORTED_WALLET', `Wallet type ${walletType} is not supported`);
       }
 
-      dispatch({ 
-        type: 'CONNECT_SUCCESS', 
-        payload: { address, walletType, chainId } 
+      dispatch({
+        type: 'CONNECT_SUCCESS',
+        payload: { address, walletType, chainId }
       });
 
     } catch (error) {
@@ -398,6 +398,25 @@ export function useUnifiedWallet(): {
    * CLEAN: Disconnect wallet
    */
   const disconnect = useCallback(async () => {
+    try {
+      // Try to disconnect from wagmi if available (WagmiProvider might not be ready)
+      if (typeof window !== 'undefined') {
+        try {
+          const wagmi = await import('wagmi');
+          const { useDisconnect } = wagmi;
+          if (useDisconnect) {
+            const { disconnect } = useDisconnect();
+            await disconnect();
+          }
+        } catch (error) {
+          // WagmiProvider not available, that's fine
+          console.warn('Wagmi not available for disconnect:', error);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to disconnect from wagmi:', error);
+    }
+    // Then update internal state
     dispatch({ type: 'DISCONNECT' });
   }, [dispatch]);
 

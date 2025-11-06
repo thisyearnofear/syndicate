@@ -10,7 +10,7 @@
  * - PERFORMANT: Efficient data loading and caching
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { useTicketPurchase } from "@/hooks/useTicketPurchase";
 import { useTicketHistory } from "@/hooks/useTicketHistory";
@@ -26,6 +26,7 @@ import { PuzzlePiece } from "@/shared/components/premium/PuzzlePiece";
 import { ExternalLink, ArrowLeft, RefreshCw } from "lucide-react";
 import Link from "next/link";
 
+import type { UserTicketInfo } from "@/services/web3Service";
 import type { TicketPurchaseHistory } from "@/hooks/useTicketHistory";
 
 
@@ -96,7 +97,7 @@ function TicketHistoryCard({ ticket }: { ticket: TicketPurchaseHistory }) {
 }
 
 function TicketStats({ userTicketInfo, ticketHistory, onClaimWinnings, isClaiming }: {
-    userTicketInfo: any;
+    userTicketInfo: UserTicketInfo | null;
     ticketHistory: TicketPurchaseHistory[];
     onClaimWinnings: () => void;
     isClaiming: boolean;
@@ -161,21 +162,21 @@ export default function MyTicketsPage() {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isClaiming, setIsClaiming] = useState(false);
 
-    // Load ticket data when component mounts or wallet connects
-    useEffect(() => {
-        if (isConnected) {
-            loadTicketData();
-        }
-    }, [isConnected]);
-
-    const loadTicketData = async () => {
+const loadTicketData = useCallback(async () => {
         try {
             // Load user ticket info from blockchain
             await getCurrentTicketInfo();
         } catch (error) {
             console.error('Failed to load ticket data:', error);
         }
-    };
+    }, [getCurrentTicketInfo]);
+
+    // Load ticket data when component mounts or wallet connects
+    useEffect(() => {
+        if (isConnected) {
+            loadTicketData();
+        }
+    }, [isConnected, loadTicketData]);
 
     const handleRefresh = async () => {
         setIsRefreshing(true);

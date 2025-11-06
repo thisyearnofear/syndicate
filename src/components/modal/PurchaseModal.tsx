@@ -10,24 +10,24 @@
  * - PERFORMANT: Optimized animations
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { useTicketPurchase } from '@/hooks/useTicketPurchase';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { useLottery } from '@/domains/lottery/hooks/useLottery';
 import { Button } from "@/shared/components/ui/Button";
-import { CompactStack, CompactFlex } from '@/shared/components/premium/CompactLayout';
-import ConnectWallet from '@/components/wallet/ConnectWallet';
+import { CompactFlex } from '@/shared/components/premium/CompactLayout';
+import { WalletConnectionCard } from '@/components/wallet/WalletConnectionCard';
 import { useSuccessToast, useErrorToast } from '@/shared/components/ui/Toast';
-import { socialService } from '@/services/socialService';
 import type { SyndicateInfo } from '@/domains/lottery/types';
 
-import { ModeStep } from './purchase/ModeStep';
-import { SelectStep } from './purchase/SelectStep';
-import { ProcessingStep } from './purchase/ProcessingStep';
-import { SuccessStep } from './purchase/SuccessStep';
-import { ShareModal } from './purchase/ShareModal';
-import { YieldStrategyStep } from './purchase/YieldStrategyStep';
+// Lazy load modal steps for better performance
+const ModeStep = lazy(() => import('./purchase/ModeStep').then(mod => ({ default: mod.ModeStep })));
+const SelectStep = lazy(() => import('./purchase/SelectStep').then(mod => ({ default: mod.SelectStep })));
+const ProcessingStep = lazy(() => import('./purchase/ProcessingStep').then(mod => ({ default: mod.ProcessingStep })));
+const SuccessStep = lazy(() => import('./purchase/SuccessStep').then(mod => ({ default: mod.SuccessStep })));
+const ShareModal = lazy(() => import('./purchase/ShareModal').then(mod => ({ default: mod.ShareModal })));
+const YieldStrategyStep = lazy(() => import('./purchase/YieldStrategyStep').then(mod => ({ default: mod.YieldStrategyStep })));
 
 export interface PurchaseModalProps {
   isOpen: boolean;
@@ -74,6 +74,15 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   const [yieldToCausesPercentage, setYieldToCausesPercentage] = useState<number>(15);
   const [syndicates, setSyndicates] = useState<SyndicateInfo[]>([]);
   const [showShareModal, setShowShareModal] = useState(false);
+
+  // Handle modal close with proper cleanup
+  const handleClose = () => {
+    onClose();
+    // Only reset if we're in success state to avoid clearing state during navigation
+    if (purchaseSuccess) {
+      reset();
+    }
+  };
 
   // Compute odds using authoritative API data (no estimates)
   // Only show odds when we have real jackpot data
@@ -163,13 +172,10 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
         }
       );
 
-      // Auto-close after success
-      setTimeout(() => {
-        onClose();
-        reset();
-      }, 5000);
+      // Don't auto-close - let user control when to close
+      // Users can click "Continue Playing" or navigate via other buttons
     }
-  }, [purchaseSuccess, purchasedTicketCount, onSuccess, onClose, reset, successToast]);
+  }, [purchaseSuccess, purchasedTicketCount, onSuccess, successToast]);
 
   const handlePurchase = async () => {
     if (!isConnected) {
@@ -287,7 +293,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
             purchasedTicketCount={purchasedTicketCount}
             selectedSyndicate={selectedSyndicate}
             lastTxHash={lastTxHash}
-            onClose={onClose}
+            onClose={handleClose}
             setShowShareModal={setShowShareModal}
           />
         );
@@ -303,7 +309,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
       {/* Premium backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-md"
-        onClick={onClose}
+        onClick={handleClose}
       />
 
       {/* Premium modal */}
@@ -331,7 +337,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
           <Button
             variant="ghost"
             size="sm"
-            onClick={onClose}
+            onClick={handleClose}
             className="w-8 h-8 p-0 rounded-full"
           >
             ✕
@@ -341,13 +347,12 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
         {/* Wallet Connection */}
         {!isConnected && (
           <div className="mb-6">
-            <div className="bg-blue-500/20 border border-blue-500/30 rounded-lg p-4 mb-4">
-              <div className="flex items-center gap-2 text-blue-400 mb-2">
-                <AlertCircle size={20} />
-                <span>Connect your wallet to purchase tickets</span>
-              </div>
-            </div>
-            <ConnectWallet onConnect={connect} />
+            <WalletConnectionCard
+              onConnect={connect}
+              title="Connect Wallet to Purchase"
+              subtitle="Connect your wallet to purchase lottery tickets and join syndicates"
+              compact={true}
+            />
           </div>
         )}
 
@@ -384,16 +389,28 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
         )}
 
         {/* Content based on step */}
-        {renderStep()}
+        <Suspense fallback={
+          <div className="flex items-center justify-center py-12">
+            <Loader2 size={32} className="animate-spin text-white" />
+          </div>
+        }>
+          {renderStep()}
+        </Suspense>
 
         {/* Share Modal */}
         {showShareModal && (
-          <ShareModal
-            setShowShareModal={setShowShareModal}
-            purchasedTicketCount={purchasedTicketCount}
-            prizeAmount={prizeAmount}
-            oddsInfo={oddsInfo}
-          />
+          <Suspense fallback={
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+              <Loader2 size={32} className="animate-spin text-white" />
+            </div>
+          }>
+            <ShareModal
+              setShowShareModal={setShowShareModal}
+              purchasedTicketCount={purchasedTicketCount}
+              prizeAmount={prizeAmount}
+              oddsInfo={oddsInfo}
+            />
+          </Suspense>
         )}
       </div>
     </div>
