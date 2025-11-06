@@ -283,7 +283,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                     <WalletConnectionOptions
                         onWalletConnect={handleWalletConnect}
                         onSocialLoginClick={() => {
-                            // Social login placeholder
+                            // Social login placeholder (removed for now)
                             console.log("Social login clicked");
                         }}
                     />

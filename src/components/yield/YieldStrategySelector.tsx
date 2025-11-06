@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { CompactCard } from '@/shared/components/premium/CompactLayout';
 import { Button } from '@/shared/components/ui/Button';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
 import type { SyndicateInfo } from '@/domains/lottery/types';
+import { octantVaultService, type OctantVaultInfo } from '@/services/octantVaultService';
 
 interface YieldStrategySelectorProps {
   selectedStrategy: SyndicateInfo['vaultStrategy'] | null;
   onStrategySelect: (strategy: SyndicateInfo['vaultStrategy'] | undefined) => void;
   className?: string;
+  userAddress?: string; // For fetching user-specific vault data
 }
 
 const strategies = [
@@ -50,14 +52,38 @@ const strategies = [
     icon: '🎯',
     color: 'bg-gradient-to-br from-indigo-500 to-purple-400',
     risk: 'Low',
+    isOctant: true, // Flag for Octant integration
   },
 ];
 
 export function YieldStrategySelector({ 
   selectedStrategy, 
   onStrategySelect, 
-  className = '' 
+  className = '',
+  userAddress 
 }: YieldStrategySelectorProps) {
+  const [octantVaults, setOctantVaults] = useState<OctantVaultInfo[]>([]);
+  const [loadingVaults, setLoadingVaults] = useState(false);
+  
+  // Load Octant vault data when component mounts
+  useEffect(() => {
+    async function loadOctantVaults() {
+      if (!userAddress) return;
+      
+      setLoadingVaults(true);
+      try {
+        // TODO: Get chainId from wallet context
+        const vaults = await octantVaultService.getAvailableVaults(8453); // Base chainId
+        setOctantVaults(vaults);
+      } catch (error) {
+        console.error('Failed to load Octant vaults:', error);
+      } finally {
+        setLoadingVaults(false);
+      }
+    }
+    
+    loadOctantVaults();
+  }, [userAddress]);
   return (
     <div className={`w-full ${className}`}>
       <h3 className="text-lg font-bold text-white mb-4">Yield Strategy</h3>
@@ -89,15 +115,29 @@ export function YieldStrategySelector({
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold text-white">{strategy.name}</h4>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      strategy.risk === 'Low' ? 'bg-green-500/20 text-green-400' :
-                      strategy.risk === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                      'bg-red-500/20 text-red-400'
-                    }`}>
-                      {strategy.risk}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {strategy.isOctant && octantVaults.length > 0 && (
+                        <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full">
+                          {octantVaults[0].apy.toFixed(1)}% APY
+                        </span>
+                      )}
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        strategy.risk === 'Low' ? 'bg-green-500/20 text-green-400' :
+                        strategy.risk === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                        'bg-red-500/20 text-red-400'
+                      }`}>
+                        {strategy.risk}
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">{strategy.description}</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {strategy.description}
+                    {strategy.isOctant && octantVaults.length > 0 && (
+                      <span className="block text-yellow-400 mt-1">
+                        💎 ${parseFloat(octantVaults[0].totalDeposits).toLocaleString()} TVL
+                      </span>
+                    )}
+                  </p>
                 </div>
               </div>
             </PuzzlePiece>

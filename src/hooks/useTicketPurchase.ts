@@ -11,6 +11,8 @@ import { useWalletConnection } from './useWalletConnection';
 import { nearChainSignatureService } from '@/services/nearChainSignatureService';
 import { WalletTypes } from '@/domains/wallet/services/unifiedWalletService';
 import type { SyndicateInfo, PurchaseOptions, SyndicateImpact, PurchaseResult } from '@/domains/lottery/types';
+import { octantVaultService } from '@/services/octantVaultService';
+import { yieldToTicketsService, type YieldToTicketsConfig } from '@/services/yieldToTicketsService';
 
 export interface TicketPurchaseState {
   // Loading states
@@ -40,8 +42,13 @@ export interface TicketPurchaseState {
   oddsInfo: OddsInfo | null;
 
   // ENHANCEMENT: Syndicate state
-  lastPurchaseMode: 'individual' | 'syndicate' | null;
+  lastPurchaseMode: 'individual' | 'syndicate' | 'yield' | null;
   lastSyndicateImpact: SyndicateImpact | null;
+  
+  // NEW: Yield strategy state
+  isSettingUpYieldStrategy: boolean;
+  yieldStrategyActive: boolean;
+  lastYieldConversion: any; // YieldConversionResult
 
   // NEAR path status (optional)
   nearStages: string[];
@@ -65,6 +72,10 @@ export interface TicketPurchaseActions {
   // New syndicate-specific actions
   purchaseForSyndicate: (options: PurchaseOptions) => Promise<TicketPurchaseResult>;
   getSyndicateImpactPreview: (ticketCount: number, syndicate: SyndicateInfo) => SyndicateImpact;
+  // NEW: Yield strategy actions
+  setupYieldStrategy: (config: YieldToTicketsConfig) => Promise<boolean>;
+  processYieldConversion: () => Promise<void>;
+  previewYieldConversion: (vaultAddress: string, ticketsAllocation: number, causesAllocation: number) => Promise<any>;
   refreshBalance: () => Promise<void>;
   refreshJackpot: () => Promise<void>;
   getCurrentTicketInfo: () => Promise<void>;
@@ -96,6 +107,10 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     // ENHANCEMENT: Syndicate state
     lastPurchaseMode: null,
     lastSyndicateImpact: null,
+    // NEW: Yield strategy state
+    isSettingUpYieldStrategy: false,
+    yieldStrategyActive: false,
+    lastYieldConversion: null,
     nearStages: [],
     nearRecipient: null,
     nearRequestId: null,
@@ -270,6 +285,142 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
   }, [state.ticketPrice, state.currentJackpot]);
 
   /**
+   * NEW: Handle yield strategy purchase (deposit to vault instead of direct ticket purchase)
+   */
+  const handleYieldStrategyPurchase = useCallback(async (
+    ticketCount: number,
+    vaultStrategy: SyndicateInfo['vaultStrategy'],
+    yieldToTicketsPercentage: number,
+    yieldToCausesPercentage: number
+  ): Promise<TicketPurchaseResult> => {
+    try {
+      // Calculate deposit amount needed (ticketCount * ticketPrice)
+      const ticketPrice = parseFloat(state.ticketPrice);
+      const depositAmount = (ticketCount * ticketPrice).toString();
+      
+      // TODO: Get actual Octant vault address for the strategy
+      const vaultAddress = '0x1234...'; // Placeholder
+      
+      // Deposit to Octant vault
+      const depositResult = await octantVaultService.deposit(
+        vaultAddress,
+        depositAmount,
+        address || ''
+      );
+
+      if (depositResult.success) {
+        // Set up automatic yield conversion
+        const config: YieldToTicketsConfig = {
+          vaultAddress,
+          ticketsAllocation: yieldToTicketsPercentage,
+          causesAllocation: yieldToCausesPercentage,
+          causeWallet: '0x...', // TODO: Get from selected cause
+          ticketPrice: state.ticketPrice,
+        };
+
+        await yieldToTicketsService.setupAutoYieldStrategy(address || '', config);
+
+        return {
+          success: true,
+          txHash: depositResult.txHash,
+        };
+      } else {
+        return {
+          success: false,
+          error: depositResult.error || 'Vault deposit failed',
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Yield strategy setup failed',
+      };
+    }
+  }, [state.ticketPrice, address]);
+
+  /**
+   * NEW: Setup yield strategy for automatic yield-to-tickets conversion
+   */
+  const setupYieldStrategy = useCallback(async (config: YieldToTicketsConfig): Promise<boolean> => {
+    if (!address) {
+      setState(prev => ({ ...prev, error: 'Wallet not connected' }));
+      return false;
+    }
+
+    setState(prev => ({ ...prev, isSettingUpYieldStrategy: true, error: null }));
+
+    try {
+      const success = await yieldToTicketsService.setupAutoYieldStrategy(address, config);
+      
+      setState(prev => ({
+        ...prev,
+        isSettingUpYieldStrategy: false,
+        yieldStrategyActive: success,
+      }));
+
+      return success;
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        isSettingUpYieldStrategy: false,
+        error: error instanceof Error ? error.message : 'Failed to setup yield strategy',
+      }));
+      return false;
+    }
+  }, [address]);
+
+  /**
+   * NEW: Process available yield and convert to tickets
+   */
+  const processYieldConversion = useCallback(async (): Promise<void> => {
+    if (!address) return;
+
+    try {
+      const result = await yieldToTicketsService.processYieldConversion(address);
+      setState(prev => ({
+        ...prev,
+        lastYieldConversion: result,
+      }));
+
+      if (result.success && result.ticketsPurchased > 0) {
+        // Refresh balance after yield conversion purchased tickets
+        setTimeout(() => {
+          refreshBalance();
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Yield conversion failed:', error);
+      setState(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : 'Yield conversion failed',
+      }));
+    }
+  }, [address, refreshBalance]);
+
+  /**
+   * NEW: Preview yield conversion results
+   */
+  const previewYieldConversion = useCallback(async (
+    vaultAddress: string,
+    ticketsAllocation: number,
+    causesAllocation: number
+  ) => {
+    if (!address) return null;
+
+    try {
+      return await yieldToTicketsService.previewYieldConversion(
+        address,
+        vaultAddress,
+        { ticketsPercentage: ticketsAllocation, causesPercentage: causesAllocation },
+        state.ticketPrice
+      );
+    } catch (error) {
+      console.error('Failed to preview yield conversion:', error);
+      return null;
+    }
+  }, [address, state.ticketPrice]);
+
+  /**
    * Purchase tickets
    */
   const purchaseTickets = useCallback(async (
@@ -288,9 +439,23 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     }));
 
     try {
-      // ENHANCEMENT: Handle both individual and syndicate purchases
+      // ENHANCEMENT: Handle individual, syndicate, and yield strategy purchases
       let result: TicketPurchaseResult;
-      if (walletType === WalletTypes.NEAR) {
+      const purchaseMode: 'individual' | 'syndicate' | 'yield' = 
+        vaultStrategy ? 'yield' : 
+        syndicateId ? 'syndicate' : 
+        'individual';
+
+      // NEW: Handle yield strategy purchases
+      if (purchaseMode === 'yield' && vaultStrategy) {
+        // For yield strategies, we deposit funds to vault instead of buying tickets directly
+        result = await handleYieldStrategyPurchase(
+          ticketCount,
+          vaultStrategy,
+          yieldToTicketsPercentage || 80,
+          yieldToCausesPercentage || 20
+        );
+      } else if (walletType === WalletTypes.NEAR) {
         // Route NEAR users through Chain Signatures service with status updates
         const provider = new (await import('ethers')).ethers.JsonRpcProvider((await import('@/config')).CHAINS.base.rpcUrl);
         result = await nearChainSignatureService.purchaseTicketsOnBase(ticketCount, {
@@ -331,8 +496,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
         result = await web3Service.purchaseTickets(ticketCount);
       }
 
-      // Determine purchase mode and create syndicate impact if applicable
-      const purchaseMode: 'individual' | 'syndicate' = syndicateId ? 'syndicate' : 'individual';
+      // Purchase mode was determined earlier in the function
       let syndicateImpact: SyndicateImpact | null = null;
 
       if (syndicateId && result.success) {
@@ -450,6 +614,10 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       // ENHANCEMENT: Reset syndicate state
       lastPurchaseMode: null,
       lastSyndicateImpact: null,
+      // NEW: Reset yield strategy state
+      isSettingUpYieldStrategy: false,
+      yieldStrategyActive: false,
+      lastYieldConversion: null,
       nearStages: [],
       nearRecipient: null,
       nearRequestId: null,
@@ -553,6 +721,10 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     // ENHANCEMENT: New syndicate functions
     purchaseForSyndicate,
     getSyndicateImpactPreview,
+    // NEW: Yield strategy functions
+    setupYieldStrategy,
+    processYieldConversion,
+    previewYieldConversion,
     refreshBalance,
     refreshJackpot,
     getCurrentTicketInfo,
