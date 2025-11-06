@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, memo } from "react";
 import { useLottery } from "@/domains/lottery/hooks/useLottery";
 import { MagneticPiece } from "@/shared/components/premium/PuzzlePiece";
 import { CompactStack, CompactFlex } from "@/shared/components/premium/CompactLayout";
@@ -9,7 +9,9 @@ import { LoadingSpinner } from "@/shared/components/LoadingSpinner";
 import { CountUpText } from "@/shared/components/ui/CountUpText";
 import { formatTimeRemaining } from "@/shared/utils";
 
-export function PremiumJackpotPiece({ onBuyClick, userIdentity }: { onBuyClick: () => void; userIdentity?: any }) {
+import type { UserIdentity } from '../../../interfaces';
+
+export function PremiumJackpotPiece({ onBuyClick, userIdentity }: { onBuyClick: () => void; userIdentity?: UserIdentity | null }) {
   const { jackpotStats, isLoading, error, refresh } = useLottery();
 
   const oddsDisplay = useMemo(() => {
@@ -137,3 +139,5 @@ export function PremiumJackpotPiece({ onBuyClick, userIdentity }: { onBuyClick: 
     </MagneticPiece>
   );
 }
+
+export default memo(PremiumJackpotPiece);

@@ -8,8 +8,7 @@ import {
   Check, 
   Twitter, 
   Facebook, 
-  Linkedin, 
-  MessageSquare
+  Linkedin
 } from "lucide-react";
 
 interface SocialShareProps {
@@ -25,20 +24,16 @@ export default function SocialShare({
   description,
   className = ""
 }: SocialShareProps) {
-  const [isCopying, setIsCopying] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
   const handleCopy = async () => {
-    setIsCopying(true);
     try {
       await navigator.clipboard.writeText(url);
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
     } catch (error) {
       console.error('Failed to copy:', error);
-    } finally {
-      setIsCopying(false);
     }
   };
 

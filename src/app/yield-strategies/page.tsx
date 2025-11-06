@@ -11,7 +11,7 @@ import {
   Zap
 } from "lucide-react";
 import { CompactCard, CompactStack, CompactContainer, CompactSection } from '@/shared/components/premium/CompactLayout';
-import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
+
 import { YieldStrategySelector } from '@/components/yield/YieldStrategySelector';
 import { YieldAllocationControl } from '@/components/yield/YieldAllocationControl';
 import { YieldDashboard } from '@/components/yield/YieldDashboard';

@@ -7,7 +7,7 @@ useReducer,
 useEffect,
 ReactNode,
 } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useDisconnect } from "wagmi";
 import { WalletType } from "@/domains/wallet/services/unifiedWalletService";
 
 // =============================================================================
@@ -47,6 +47,19 @@ interface WalletContextType {
   state: WalletState;
   dispatch: React.Dispatch<WalletAction>;
 }
+
+const defaultWalletState: WalletState = {
+  isConnected: false,
+  address: null,
+  walletType: null,
+  chainId: null,
+  isConnecting: false,
+  error: null,
+  lastConnectedAt: null,
+  isModalOpen: false,
+};
+
+const noopDispatch: React.Dispatch<WalletAction> = () => undefined;
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
@@ -156,16 +169,7 @@ interface WalletProviderProps {
 }
 
 export function WalletProvider({ children }: WalletProviderProps) {
-  const [state, dispatch] = useReducer(walletReducer, {
-    isConnected: false,
-    address: null,
-    walletType: null,
-    chainId: null,
-    isConnecting: false,
-    error: null,
-    lastConnectedAt: null,
-    isModalOpen: false,
-  });
+  const [state, dispatch] = useReducer(walletReducer, defaultWalletState);
 
   const { address, isConnected: wagmiConnected, chainId: wagmiChainId, connector } = useAccount();
 
@@ -239,6 +243,12 @@ export function WalletProvider({ children }: WalletProviderProps) {
 export function useWalletContext() {
   const context = useContext(WalletContext);
   if (!context) {
+    if (typeof window === "undefined") {
+      return {
+        state: { ...defaultWalletState },
+        dispatch: noopDispatch,
+      };
+    }
     throw new Error("useWalletContext must be used within a WalletProvider");
   }
   return context;

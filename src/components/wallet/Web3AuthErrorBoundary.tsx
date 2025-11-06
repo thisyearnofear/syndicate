@@ -23,41 +23,13 @@ export class Web3AuthErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log Web3Auth-specific errors
+    // Skip logging indexedDB errors as they're handled at console level
     if (
-      error.message.includes("indexedDB is not defined") ||
-      error.message.includes("ReferenceError: indexedDB is not defined")
+      !error.message.includes("indexedDB is not defined") &&
+      !error.message.includes("ReferenceError: indexedDB is not defined")
     ) {
-      console.error("Web3Auth indexedDB error detected:", error);
-      console.error(
-        "This error occurs when Web3Auth tries to access indexedDB during SSR"
-      );
+      console.error("Web3Auth error boundary caught error:", error);
     }
-
-    // Log unhandled promise rejections related to Web3Auth
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      if (
-        event.reason?.message?.includes("indexedDB is not defined") ||
-        event.reason?.message?.includes(
-          "ReferenceError: indexedDB is not defined"
-        )
-      ) {
-        console.error("Web3Auth indexedDB unhandled rejection:", event.reason);
-        console.error(
-          "This error occurs when Web3Auth tries to access indexedDB during SSR"
-        );
-      }
-    };
-
-    window.addEventListener("unhandledrejection", handleUnhandledRejection);
-
-    // Cleanup listener after logging
-    setTimeout(() => {
-      window.removeEventListener(
-        "unhandledrejection",
-        handleUnhandledRejection
-      );
-    }, 1000);
   }
 
   render() {

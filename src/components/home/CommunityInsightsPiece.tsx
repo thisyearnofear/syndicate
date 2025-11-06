@@ -4,11 +4,20 @@ import { useState, useEffect } from 'react';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
 import { CompactStack } from '@/shared/components/premium/CompactLayout';
 
+import type { UserIdentity } from '../../../interfaces';
+
+interface Insight {
+  icon: string;
+  title: string;
+  description: string;
+  color: string;
+}
+
 /**
  * MODULAR: Community Insights Puzzle Piece
  */
-export function CommunityInsightsPiece({ userIdentity }: { userIdentity: any }) {
-  const [insights, setInsights] = useState<any[]>([]);
+export function CommunityInsightsPiece({ userIdentity }: { userIdentity: UserIdentity | null }) {
+  const [insights, setInsights] = useState<Insight[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -38,8 +47,11 @@ export function CommunityInsightsPiece({ userIdentity }: { userIdentity: any }) 
           });
         }
 
-        // Add insights based on verification status
-        const verifiedPlatforms = [userIdentity.farcaster?.verified, userIdentity.twitter?.verified].filter(Boolean).length;
+        // Add insights based on verification status (when available)
+        const verifiedPlatforms = [
+          (userIdentity.farcaster as any)?.verified,
+          (userIdentity.twitter as any)?.verified
+        ].filter(Boolean).length;
         if (verifiedPlatforms > 0) {
           userInsights.push({
             icon: "✅",

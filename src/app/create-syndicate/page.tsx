@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
-import { 
-  Users, 
-  Heart, 
-  TrendingUp, 
-  ArrowLeft, 
+import {
+  TrendingUp,
+  ArrowLeft,
   Target,
   Shield
 } from "lucide-react";
@@ -17,23 +15,36 @@ import { YieldStrategySelector } from '@/components/yield/YieldStrategySelector'
 import { YieldAllocationControl } from '@/components/yield/YieldAllocationControl';
 import type { SyndicateInfo } from "@/domains/lottery/types";
 
+type GovernanceModel = 'leader' | 'dao' | 'hybrid';
+
+type SyndicateFormData = {
+  name: string;
+  description: string;
+  cause: string;
+  causePercentage: number;
+  governanceModel: GovernanceModel;
+  vaultStrategy: SyndicateInfo['vaultStrategy'] | null;
+  yieldToTicketsPercentage: number;
+  yieldToCausesPercentage: number;
+};
+
 export default function CreateSyndicatePage() {
   const router = useRouter();
-  const [step, setStep] = useState(1); // 1: Basic Info, 2: Governance, 3: Yield Strategies
-  const [formData, setFormData] = useState({
+  const [step, setStep] = useState(1);
+  const [formData, setFormData] = useState<SyndicateFormData>({
     name: "",
     description: "",
     cause: "",
     causePercentage: 20,
-    governanceModel: 'leader' as 'leader' | 'dao' | 'hybrid',
-    vaultStrategy: null as SyndicateInfo['vaultStrategy'] | null,
+    governanceModel: 'leader',
+    vaultStrategy: null,
     yieldToTicketsPercentage: 85,
     yieldToCausesPercentage: 15,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = <K extends keyof SyndicateFormData>(field: K, value: SyndicateFormData[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -56,7 +67,7 @@ export default function CreateSyndicatePage() {
       
       // Redirect to syndicate page
       router.push('/syndicates');
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error creating syndicate:', err);
       setError('Failed to create syndicate. Please try again.');
     } finally {

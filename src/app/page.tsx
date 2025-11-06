@@ -14,6 +14,7 @@ import { useState, useCallback, useEffect, Suspense, lazy } from "react";
 import Link from "next/link";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { useTicketPurchase } from "@/hooks/useTicketPurchase";
+import type { UserIdentity } from '../../interfaces';
 import { socialService } from "@/services/socialService";
 import { TrendingUp } from "lucide-react";
 
@@ -36,23 +37,15 @@ const PurchaseModal = lazy(() => import("@/components/modal/PurchaseModal"));
 const SocialFeed = lazy(() => import("@/components/SocialFeed"));
 
 
-
-
-
 // =============================================================================
 // PREMIUM PUZZLE PIECE COMPONENTS
 // =============================================================================
 
 import { PremiumJackpotPiece } from "@/components/home/PremiumJackpotPiece";
-
 import { ActivityFeedPiece } from "@/components/home/ActivityFeedPiece";
-
 import { CommunityInsightsPiece } from "@/components/home/CommunityInsightsPiece";
-
 import { SyndicatesPiece } from "@/components/home/SyndicatesPiece";
-
 import { UserTicketPiece } from "@/components/home/UserTicketPiece";
-
 import { StatsPieces } from "@/components/home/StatsPieces";
 
 // =============================================================================
@@ -61,33 +54,43 @@ import { StatsPieces } from "@/components/home/StatsPieces";
 
 export default function PremiumHome() {
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
-  const [userIdentity, setUserIdentity] = useState<any>(null);
+  const [userIdentity, setUserIdentity] = useState<UserIdentity | null>(null);
   const [identityLoading, setIdentityLoading] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const { isConnected, address } = useWalletConnection();
-  const { purchaseTickets, userTicketInfo, claimWinnings, isClaimingWinnings } = useTicketPurchase();
+  const { userTicketInfo, claimWinnings, isClaimingWinnings } = useTicketPurchase();
 
-  // Load user identity for personalization
+  // Set mounted state for hydration consistency
   useEffect(() => {
-    const loadIdentity = async () => {
-      if (!isConnected || !address) {
-        setUserIdentity(null);
-        return;
-      }
+    setIsMounted(true);
+  }, []);
 
-      setIdentityLoading(true);
-      try {
-        const identity = await socialService.getUserIdentity(address);
-        setUserIdentity(identity);
-      } catch (error) {
-        console.error('Failed to load user identity:', error);
-        setUserIdentity(null);
-      } finally {
-        setIdentityLoading(false);
-      }
-    };
+  // Memoized identity loading function for better performance
+  const loadIdentity = useCallback(async () => {
+    // Only load identity after component is mounted to avoid hydration issues
+    if (!isMounted || !isConnected || !address) {
+      setUserIdentity(null);
+      return;
+    }
 
-    loadIdentity();
-  }, [isConnected, address]);
+    setIdentityLoading(true);
+    try {
+      const identity = await socialService.getUserIdentity(address);
+      setUserIdentity(identity);
+    } catch (error) {
+      console.error('Failed to load user identity:', error);
+      setUserIdentity(null);
+    } finally {
+      setIdentityLoading(false);
+    }
+  }, [isMounted, isConnected, address]);
+
+  // Load user identity for personalization only after mount
+  useEffect(() => {
+    if (isMounted) {
+      loadIdentity();
+    }
+  }, [isMounted, loadIdentity]);
 
   const handlePurchaseAction = useCallback(() => {
     setShowPurchaseModal(true);
@@ -138,44 +141,44 @@ export default function PremiumHome() {
                     <span className="absolute inset-0 bg-gradient-to-r from-purple-400 via-blue-500 to-green-400 bg-clip-text text-transparent blur-lg opacity-30 animate-pulse"></span>
                   </h1>
                   <p className="text-xl mt-4 max-w-2xl text-gray-300 leading-relaxed">
-                  Social lottery coordination • Cross-chain • Cause-driven
+                    Social lottery coordination • Cross-chain • Cause-driven
                   </p>
+                </div>
+
+                {/* Personalized Welcome Message - only render after mount */}
+                {isMounted && isConnected && !identityLoading && userIdentity && (
+                  <div className="animate-fade-in-up delay-300">
+                    <PuzzlePiece variant="primary" size="sm" shape="rounded" glow>
+                      <CompactStack spacing="sm" align="center">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">👋</span>
+                          <span className="text-white font-semibold">Welcome back!</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-gray-300">
+                          {userIdentity.farcaster && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-purple-400">💜</span>
+                              <span>@{userIdentity.farcaster.username}</span>
+                            </div>
+                          )}
+                          {userIdentity.twitter && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-blue-400">🐦</span>
+                              <span>@{userIdentity.twitter.username}</span>
+                            </div>
+                          )}
+                        </div>
+                        {(userIdentity.farcaster?.followerCount || userIdentity.twitter?.followerCount) && (
+                          <p className="text-xs text-gray-400 text-center">
+                            Connected to {((userIdentity.farcaster?.followerCount || 0) + (userIdentity.twitter?.followerCount || 0)).toLocaleString()}+ community members
+                          </p>
+                        )}
+                      </CompactStack>
+                    </PuzzlePiece>
                   </div>
+                )}
 
-                  {/* Personalized Welcome Message */}
-                 {isConnected && !identityLoading && userIdentity && (
-                   <div className="animate-fade-in-up delay-300">
-                     <PuzzlePiece variant="primary" size="sm" shape="rounded" glow>
-                       <CompactStack spacing="sm" align="center">
-                         <div className="flex items-center gap-2">
-                           <span className="text-lg">👋</span>
-                           <span className="text-white font-semibold">Welcome back!</span>
-                         </div>
-                         <div className="flex items-center gap-4 text-sm text-gray-300">
-                           {userIdentity.farcaster && (
-                             <div className="flex items-center gap-1">
-                               <span className="text-purple-400">💜</span>
-                               <span>@{userIdentity.farcaster.username}</span>
-                             </div>
-                           )}
-                           {userIdentity.twitter && (
-                             <div className="flex items-center gap-1">
-                               <span className="text-blue-400">🐦</span>
-                               <span>@{userIdentity.twitter.username}</span>
-                             </div>
-                           )}
-                         </div>
-                         {(userIdentity.farcaster?.followerCount || userIdentity.twitter?.followerCount) && (
-                           <p className="text-xs text-gray-400 text-center">
-                             Connected to {((userIdentity.farcaster?.followerCount || 0) + (userIdentity.twitter?.followerCount || 0)).toLocaleString()}+ community members
-                           </p>
-                         )}
-                       </CompactStack>
-                     </PuzzlePiece>
-                   </div>
-                 )}
-
-                 {/* Wallet Connection Manager */}
+                {/* Wallet Connection Manager */}
                 <div className="mb-8 flex justify-center animate-slide-in-left">
                   <WalletConnectionManager />
                 </div>
@@ -267,7 +270,7 @@ export default function PremiumHome() {
                   claimWinnings={claimWinnings}
                   isClaimingWinnings={isClaimingWinnings}
                 />
-                {userIdentity && <CommunityInsightsPiece userIdentity={userIdentity} />}
+                {isMounted && userIdentity && <CommunityInsightsPiece userIdentity={userIdentity} />}
                 <SyndicatesPiece />
               </CompactStack>
 

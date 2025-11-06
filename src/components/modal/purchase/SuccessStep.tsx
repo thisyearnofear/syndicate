@@ -95,10 +95,10 @@ export function SuccessStep({
         </CompactFlex>
 
         <Button
-          variant="ghost"
-          size="sm"
+          variant="outline"
+          size="lg"
           onClick={onClose}
-          className="w-full text-gray-400 hover:text-white"
+          className="w-full border-white/20 text-white hover:bg-white/10"
         >
           Continue Playing
         </Button>

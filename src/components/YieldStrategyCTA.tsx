@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/shared/components/ui/Button';
-import { TrendingUp, Zap } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 
 interface YieldStrategyCTAProps {
