@@ -5,12 +5,12 @@ import { CompactStack, CompactFlex } from "@/shared/components/premium/CompactLa
 import type { SyndicateInfo } from "@/domains/lottery/types";
 
 interface ModeStepProps {
-  purchaseMode: 'individual' | 'syndicate';
-  setPurchaseMode: (mode: 'individual' | 'syndicate') => void;
+  purchaseMode: 'individual' | 'syndicate' | 'yield';
+  setPurchaseMode: (mode: 'individual' | 'syndicate' | 'yield') => void;
   selectedSyndicate: SyndicateInfo | null;
   setSelectedSyndicate: (syndicate: SyndicateInfo | null) => void;
   syndicates: SyndicateInfo[];
-  setStep: (step: 'select') => void;
+  setStep: (step: 'select' | 'yield') => void;
 }
 
 export function ModeStep({
@@ -61,7 +61,10 @@ export function ModeStep({
 
         {/* Syndicate Mode */}
         <div
-          onClick={() => setPurchaseMode('syndicate')}
+          onClick={() => {
+            setPurchaseMode('syndicate');
+            // Don't go to select step yet, let user choose syndicate first
+          }}
           className={`glass p-6 rounded-2xl cursor-pointer transition-all duration-300 hover:scale-105 ${purchaseMode === 'syndicate'
             ? 'ring-2 ring-purple-500 bg-purple-500/10'
             : 'hover:bg-white/5'
@@ -81,6 +84,38 @@ export function ModeStep({
                 </span>
                 <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded-full">
                   🔥 Popular
+                </span>
+              </div>
+            </div>
+          </CompactFlex>
+        </div>
+
+        {/* Yield Strategies Mode */}
+        <div
+          onClick={() => {
+            setPurchaseMode('yield');
+            setSelectedSyndicate(null);
+            setStep('yield');
+          }}
+          className={`glass p-6 rounded-2xl cursor-pointer transition-all duration-300 hover:scale-105 ${purchaseMode === 'yield'
+            ? 'ring-2 ring-yellow-500 bg-yellow-500/10'
+            : 'hover:bg-white/5'
+            }`}
+        >
+          <CompactFlex align="center" gap="md">
+            <div className="text-3xl">💰</div>
+            <div className="flex-1">
+              <h4 className="font-bold text-white mb-1">Yield Strategies</h4>
+              <p className="text-sm text-gray-400">Buy tickets with yield, capital preservation</p>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded-full">
+                  💎 Capital Preserved
+                </span>
+                <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
+                  📈 Yield Generated
+                </span>
+                <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-1 rounded-full">
+                  🔬 Advanced
                 </span>
               </div>
             </div>

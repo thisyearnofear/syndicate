@@ -25,7 +25,7 @@ interface SelectStepProps {
   handlePurchase: () => void;
   isPurchasing: boolean;
   isInitializing: boolean;
-  purchaseMode: 'individual' | 'syndicate';
+  purchaseMode: 'individual' | 'syndicate' | 'yield';
 }
 
 export function SelectStep({

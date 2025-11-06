@@ -6,7 +6,7 @@ import { ExternalLink, Share2 } from 'lucide-react';
 import type { SyndicateInfo } from "@/domains/lottery/types";
 
 interface SuccessStepProps {
-  purchaseMode: 'individual' | 'syndicate';
+  purchaseMode: 'individual' | 'syndicate' | 'yield';
   purchasedTicketCount: number;
   selectedSyndicate: SyndicateInfo | null;
   lastTxHash: string | null;
