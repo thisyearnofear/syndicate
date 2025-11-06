@@ -15,7 +15,8 @@ import {
 } from "lucide-react";
 import type { SyndicateInfo } from "@/domains/lottery/types";
 
-export default function SyndicateDetailPage({ params }: { params: { id: string } }) {
+export default async function SyndicateDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const router = useRouter();
   const [syndicate, setSyndicate] = useState<SyndicateInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,7 +30,7 @@ export default function SyndicateDetailPage({ params }: { params: { id: string }
         // In a real app, this would fetch from the API
         // For now, we'll simulate with mock data
         const mockSyndicate: SyndicateInfo = {
-          id: params.id,
+          id: id,
           name: "Ocean Warriors Collective",
           cause: {
             id: "ocean-cleanup",
@@ -73,7 +74,7 @@ export default function SyndicateDetailPage({ params }: { params: { id: string }
     };
 
     fetchSyndicate();
-  }, [params.id]);
+  }, [id]);
 
   const handleShare = async () => {
     setIsSharing(true);
@@ -83,10 +84,10 @@ export default function SyndicateDetailPage({ params }: { params: { id: string }
         await navigator.share({
           title: `Join ${syndicate?.name}`,
           text: syndicate?.description,
-          url: `${window.location.origin}/syndicate/${params.id}`,
+          url: `${window.location.origin}/syndicate/${id}`,
         });
       } else {
-        await navigator.clipboard.writeText(`${window.location.origin}/syndicate/${params.id}`);
+        await navigator.clipboard.writeText(`${window.location.origin}/syndicate/${id}`);
         // You could show a toast notification here
       }
     } catch (error) {
