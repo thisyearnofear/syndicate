@@ -9,6 +9,7 @@
  */
 
 import { sepolia, base, avalanche, mainnet, baseSepolia } from "viem/chains";
+import { CCTP } from './cctpConfig';
 
 // =============================================================================
 // BLOCKCHAIN CONFIGURATION
@@ -21,6 +22,14 @@ export const CHAINS = {
     explorerUrl: "https://basescan.org",
     rpcUrl: process.env.NEXT_PUBLIC_BASE_RPC_URL || "https://base-mainnet.g.alchemy.com/v2/zXTB8midlluEtdL8Gay5bvz5RI-FfsDH",
     pimlicoRpcUrl: process.env.NEXT_PUBLIC_PIMLICO_BASE_RPC || "https://api.pimlico.io/v2/8453/rpc?apikey=pim_JppWZ3Cupeq1sG3SJ4fLTa",
+  },
+  tenderlyFork: {
+    id: 8,
+    name: "Tenderly Mainnet Fork",
+    network: "tenderly-mainnet-fork",
+    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+    rpcUrl: process.env.NEXT_PUBLIC_TENDERLY_MAINNET_FORK_RPC || "https://virtual.mainnet.eu.rpc.tenderly.co/82c86106-662e-4d7f-a974-c311987358ff",
+    explorerUrl: "",
   },
   avalanche: {
     ...avalanche,
@@ -232,6 +241,7 @@ export { DESIGN as design };
 export { API as api };
 export { PERFORMANCE as performance };
 export { FEATURES as features };
+export { CCTP as cctp };
 
 // Type exports
 export type ChainConfig = typeof CHAINS[keyof typeof CHAINS];

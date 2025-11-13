@@ -7,13 +7,24 @@
 
 import { octantVaultService, type YieldAllocation } from './octantVaultService';
 import { web3Service } from './web3Service';
+import { bridgeService } from './bridgeService';
+import { CHAINS } from '@/config';
+import { ethers } from 'ethers';
 
 export interface YieldToTicketsConfig {
   vaultAddress: string;
   ticketsAllocation: number; // 0-100%
   causesAllocation: number; // 0-100%
   causeWallet: string; // Verified cause wallet address
+  /** Optional donation address used by YDS for donating shares. Defaults to userAddress. */
+  donationAddress?: string;
   ticketPrice: string; // Current ticket price
+  /** Origin chain for vault yield (default: Ethereum mainnet). */
+  originChainId?: number;
+  /** Destination chain for ticket purchases (default: Base). */
+  destinationChainId?: number;
+  /** Optional minimum interval (minutes) between auto-processing runs. */
+  minIntervalMinutes?: number;
 }
 
 export interface YieldConversionResult {
@@ -50,30 +61,25 @@ class YieldToTicketsService {
         throw new Error('Allocation percentages must sum to 100%');
       }
 
-      // Set yield allocation on the vault contract
+      // Persist strategy config (timelock + chain defaults)
       const allocation: YieldAllocation = {
         ticketsPercentage: config.ticketsAllocation,
         causesPercentage: config.causesAllocation,
       };
-
-      const success = await octantVaultService.setYieldAllocation(
-        config.vaultAddress,
-        allocation
-      );
-
-      if (success) {
+        // Defaults: Ethereum -> Base with 60-minute cadence
+        const originChainId = config.originChainId ?? CHAINS.ethereum.id;
+        const destinationChainId = config.destinationChainId ?? CHAINS.base.id;
+        const minIntervalMinutes = config.minIntervalMinutes ?? 60;
         // Store strategy configuration
         this.strategies.set(userAddress, {
           isActive: true,
-          config,
-          lastProcessed: new Date(),
+          config: { ...config, originChainId, destinationChainId, minIntervalMinutes },
+          lastProcessed: new Date(0),
           totalYieldProcessed: '0',
           totalTicketsBought: 0,
           totalCausesFunded: '0',
         });
-      }
-
-      return success;
+      return true;
     } catch (error) {
       console.error('Failed to setup auto yield strategy:', error);
       return false;
@@ -99,13 +105,33 @@ class YieldToTicketsService {
     const { config } = strategy;
 
     try {
+      // Timelock gating based on lastProcessed and minInterval
+      if (config.minIntervalMinutes && config.minIntervalMinutes > 0) {
+        const nextAt = strategy.lastProcessed.getTime() + config.minIntervalMinutes * 60 * 1000;
+        if (Date.now() < nextAt) {
+          return {
+            success: true,
+            yieldAmount: '0',
+            ticketsPurchased: 0,
+            causesAmount: '0',
+            txHashes: [],
+          };
+        }
+      }
+
       // Get vault info to check available yield
       const vaultInfo = await octantVaultService.getVaultInfo(
         config.vaultAddress,
         userAddress
       );
 
-      const availableYield = parseFloat(vaultInfo.yieldGenerated);
+      // Read donation shares from donation address (YDS profit)
+      const donationAddress = config.donationAddress || userAddress;
+      const donationShares = await octantVaultService.getDonationShares(
+        config.vaultAddress,
+        donationAddress
+      );
+      const availableYield = parseFloat(donationShares);
       if (availableYield <= 0) {
         return {
           success: true,
@@ -127,21 +153,24 @@ class YieldToTicketsService {
 
       const txHashes: string[] = [];
 
-      // 1. Claim yield from vault
-      try {
-        const claimTxHash = await octantVaultService.claimYield(config.vaultAddress);
-        txHashes.push(claimTxHash);
-      } catch (error) {
-        console.error('Failed to claim yield:', error);
+      // 1. Redeem donation shares to underlying USDC
+      const redeemResult = await octantVaultService.redeemDonationShares(
+        config.vaultAddress,
+        donationShares,
+        donationAddress,
+        donationAddress
+      );
+      if (!redeemResult.success) {
         return {
           success: false,
-          error: 'Failed to claim yield from vault',
-          yieldAmount: vaultInfo.yieldGenerated,
+          error: redeemResult.error || 'Failed to redeem donation shares',
+          yieldAmount: donationShares,
           ticketsPurchased: 0,
           causesAmount: '0',
           txHashes,
         };
       }
+      if (redeemResult.txHash) txHashes.push(redeemResult.txHash);
 
       let ticketsPurchased = 0;
 
@@ -153,6 +182,20 @@ class YieldToTicketsService {
         );
 
         if (ticketCount > 0) {
+          // Bridge tickets allocation from origin to destination if chains differ
+          const origin = config.originChainId ?? CHAINS.ethereum.id;
+          const dest = config.destinationChainId ?? CHAINS.base.id;
+          if (origin !== dest) {
+            // Bridge service will auto-initialize from centralized web3Service
+            const bridge = await bridgeService.bridgeUsdcEthereumToBase(
+              yieldAllocation.tickets,
+              userAddress
+            );
+            if (bridge.success && bridge.txHash) {
+              txHashes.push(bridge.txHash);
+            }
+          }
+
           try {
             const purchaseResult = await web3Service.purchaseTickets(ticketCount);
             if (purchaseResult.success && purchaseResult.txHash) {
@@ -195,7 +238,7 @@ class YieldToTicketsService {
 
       return {
         success: true,
-        yieldAmount: vaultInfo.yieldGenerated,
+        yieldAmount: donationShares,
         ticketsPurchased,
         causesAmount: yieldAllocation.causes,
         txHashes,
@@ -263,9 +306,13 @@ class YieldToTicketsService {
     causesAmount: string;
   }> {
     try {
-      const vaultInfo = await octantVaultService.getVaultInfo(vaultAddress, userAddress);
+      // Use donation shares as the realizable yield according to YDS
+      const donationShares = await octantVaultService.getDonationShares(
+        vaultAddress,
+        userAddress
+      );
       const yieldAllocation = octantVaultService.calculateYieldAllocation(
-        vaultInfo.yieldGenerated,
+        donationShares,
         allocation
       );
       
@@ -275,7 +322,7 @@ class YieldToTicketsService {
       );
 
       return {
-        yieldAmount: vaultInfo.yieldGenerated,
+        yieldAmount: donationShares,
         ticketsAmount: yieldAllocation.tickets,
         ticketCount,
         causesAmount: yieldAllocation.causes,
@@ -301,9 +348,12 @@ class YieldToTicketsService {
     ticketPrice: string
   ): Promise<boolean> {
     try {
-      const vaultInfo = await octantVaultService.getVaultInfo(vaultAddress, userAddress);
+      const donationShares = await octantVaultService.getDonationShares(
+        vaultAddress,
+        userAddress
+      );
       const availableTickets = octantVaultService.convertYieldToTickets(
-        vaultInfo.yieldGenerated,
+        donationShares,
         ticketPrice
       );
       return availableTickets >= minTickets;

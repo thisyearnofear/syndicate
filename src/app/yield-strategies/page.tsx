@@ -11,13 +11,15 @@ import {
   Zap
 } from "lucide-react";
 import { CompactCard, CompactStack, CompactContainer, CompactSection } from '@/shared/components/premium/CompactLayout';
+import { useWalletConnection } from '@/hooks/useWalletConnection';
 
-import { YieldStrategySelector } from '@/components/yield/YieldStrategySelector';
+import { ImprovedYieldStrategySelector } from '@/components/yield/ImprovedYieldStrategySelector';
 import { YieldAllocationControl } from '@/components/yield/YieldAllocationControl';
 import { YieldDashboard } from '@/components/yield/YieldDashboard';
 import Link from "next/link";
 
 export default function YieldStrategiesPage() {
+  const { address } = useWalletConnection();
   const [activeTab, setActiveTab] = useState<'overview' | 'strategies' | 'allocation'>('overview');
   const [selectedStrategy, setSelectedStrategy] = useState<'aave' | 'morpho' | 'spark' | 'uniswap' | 'octant' | null>(null);
   const [yieldToTickets, setYieldToTickets] = useState(85);
@@ -93,9 +95,13 @@ export default function YieldStrategiesPage() {
             
             {activeTab === 'strategies' && (
               <CompactStack spacing="lg">
-                <YieldStrategySelector 
+                <ImprovedYieldStrategySelector 
                   selectedStrategy={selectedStrategy} 
                   onStrategySelect={(strategy) => setSelectedStrategy(strategy || null)}
+                  ticketsAllocation={85}
+                  causesAllocation={15}
+                  onAllocationChange={() => {}}  // Not used in this context
+                  userAddress={address}
                 />
                 
                 {selectedStrategy && (

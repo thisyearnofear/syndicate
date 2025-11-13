@@ -11,8 +11,9 @@ import {
 } from "lucide-react";
 import { CompactCard, CompactStack, CompactContainer, CompactSection } from '@/shared/components/premium/CompactLayout';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
-import { YieldStrategySelector } from '@/components/yield/YieldStrategySelector';
+import { ImprovedYieldStrategySelector } from '@/components/yield/ImprovedYieldStrategySelector';
 import { YieldAllocationControl } from '@/components/yield/YieldAllocationControl';
+import { useWalletConnection } from '@/hooks/useWalletConnection';
 import type { SyndicateInfo } from "@/domains/lottery/types";
 
 type GovernanceModel = 'leader' | 'dao' | 'hybrid';
@@ -30,6 +31,7 @@ type SyndicateFormData = {
 
 export default function CreateSyndicatePage() {
   const router = useRouter();
+  const { address } = useWalletConnection();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<SyndicateFormData>({
     name: "",
@@ -296,15 +298,13 @@ export default function CreateSyndicatePage() {
             </div>
             
             <CompactStack spacing="md">
-              <YieldStrategySelector 
+              <ImprovedYieldStrategySelector 
                 selectedStrategy={formData.vaultStrategy} 
                 onStrategySelect={(strategy) => handleInputChange('vaultStrategy', strategy)}
-              />
-              
-              <YieldAllocationControl
                 ticketsAllocation={formData.yieldToTicketsPercentage}
                 causesAllocation={formData.yieldToCausesPercentage}
                 onAllocationChange={handleAllocationChange}
+                userAddress={address}
               />
             </CompactStack>
             

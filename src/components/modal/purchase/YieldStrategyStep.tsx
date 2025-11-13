@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/shared/components/ui/Button';
 import { CompactStack } from '@/shared/components/premium/CompactLayout';
-import { YieldStrategySelector } from '../../yield/YieldStrategySelector';
-import { YieldAllocationControl } from '../../yield/YieldAllocationControl';
+import { ImprovedYieldStrategySelector } from '../../yield/ImprovedYieldStrategySelector';
 import type { SyndicateInfo } from '@/domains/lottery/types';
 
 interface YieldStrategyStepProps {
@@ -14,6 +13,7 @@ interface YieldStrategyStepProps {
   onNext: () => void;
   onBack: () => void;
   className?: string;
+  userAddress?: string;
 }
 
 export function YieldStrategyStep({ 
@@ -24,6 +24,7 @@ export function YieldStrategyStep({
   onAllocationChange,
   onNext,
   onBack,
+  userAddress,
   className = '' 
 }: YieldStrategyStepProps) {
   const [localTicketsAllocation, setLocalTicketsAllocation] = useState(ticketsAllocation);
@@ -47,18 +48,14 @@ export function YieldStrategyStep({
       </div>
       
       <CompactStack spacing="lg">
-        <YieldStrategySelector 
+        <ImprovedYieldStrategySelector 
           selectedStrategy={selectedStrategy} 
           onStrategySelect={onStrategySelect}
+          ticketsAllocation={localTicketsAllocation}
+          causesAllocation={localCausesAllocation}
+          onAllocationChange={handleAllocationChange}
+          userAddress={userAddress}
         />
-        
-        {selectedStrategy && (
-          <YieldAllocationControl
-            ticketsAllocation={localTicketsAllocation}
-            causesAllocation={localCausesAllocation}
-            onAllocationChange={handleAllocationChange}
-          />
-        )}
         
         <div className="flex gap-3 pt-4">
           <Button 

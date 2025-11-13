@@ -3,14 +3,16 @@ import { CompactSection, CompactContainer, CompactStack } from '@/shared/compone
 import { PuzzlePiece, PuzzleGrid } from '@/shared/components/premium/PuzzlePiece';
 import { Button } from '@/shared/components/ui/Button';
 import { TrendingUp, Heart, Trophy, Shield, Zap } from 'lucide-react';
-import { YieldStrategySelector } from '@/components/yield/YieldStrategySelector';
+import { useWalletConnection } from '@/hooks/useWalletConnection';
+import { ImprovedYieldStrategySelector } from '@/components/yield/ImprovedYieldStrategySelector';
 import { YieldAllocationControl } from '@/components/yield/YieldAllocationControl';
 
 interface YieldStrategyHeroProps {
   onExploreStrategies?: () => void;
+  userAddress?: string;
 }
 
-export function YieldStrategyHero({ onExploreStrategies }: YieldStrategyHeroProps) {
+export function YieldStrategyHero({ onExploreStrategies, userAddress }: YieldStrategyHeroProps) {
   return (
     <CompactSection spacing="xl" className="relative">
       {/* Background elements */}
@@ -41,16 +43,13 @@ export function YieldStrategyHero({ onExploreStrategies }: YieldStrategyHeroProp
           
           {/* Strategy Selection Area */}
           <div className="w-full max-w-4xl">
-            <YieldStrategySelector 
+            <ImprovedYieldStrategySelector 
               selectedStrategy="octant"
               onStrategySelect={() => {}}
-              className="mb-8"
-            />
-            
-            <YieldAllocationControl 
               ticketsAllocation={85}
               causesAllocation={15}
               onAllocationChange={() => {}}
+              userAddress={userAddress}
               className="mb-8"
             />
           </div>

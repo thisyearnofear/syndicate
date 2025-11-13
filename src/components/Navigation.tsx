@@ -19,7 +19,7 @@ import { useWalletConnection } from '@/hooks/useWalletConnection';
 
 import { useUnifiedWallet, WalletType } from '@/domains/wallet/services/unifiedWalletService';
 import WalletInfo from './wallet/WalletInfo';
-import { Home, Ticket, Users, Menu, X, Loader2 } from 'lucide-react';
+import { Home, Ticket, Users, TrendingUp, Menu, X, Loader2 } from 'lucide-react';
 import { useRef, useEffect } from 'react';
 
 // Lazy load heavy modal components
@@ -67,6 +67,12 @@ export default function Navigation({ className = '' }: NavigationProps) {
             label: 'Syndicates',
             icon: Users,
             active: pathname === '/syndicates',
+        },
+        {
+            href: '/yield-strategies',
+            label: 'Yield',
+            icon: TrendingUp,
+            active: pathname === '/yield-strategies',
         },
     ];
 

@@ -13,6 +13,7 @@ import { CountUpText } from '@/shared/components/ui/CountUpText';
 import { useTicketPurchase } from '@/hooks/useTicketPurchase';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { octantVaultService, type OctantVaultInfo } from '@/services/octantVaultService';
+import { OCTANT_CONFIG } from '@/config/octantConfig';
 import { yieldToTicketsService } from '@/services/yieldToTicketsService';
 
 interface OctantYieldDashboardProps {
@@ -21,7 +22,7 @@ interface OctantYieldDashboardProps {
 }
 
 export function OctantYieldDashboard({ 
-  vaultAddress = '0x1234...', // TODO: Get from config
+  vaultAddress,
   className = '' 
 }: OctantYieldDashboardProps) {
   const { address } = useWalletConnection();
@@ -37,13 +38,18 @@ export function OctantYieldDashboard({
   const [isProcessing, setIsProcessing] = useState(false);
   const [strategyStatus, setStrategyStatus] = useState<any>(null);
 
+  // Resolve vault address from config unless explicitly provided
+  const resolvedVaultAddress = vaultAddress || (OCTANT_CONFIG.useMockVault 
+    ? 'mock:octant-usdc' 
+    : OCTANT_CONFIG.vaults.ethereumUsdcVault);
+
   // Load vault information
   useEffect(() => {
     async function loadVaultInfo() {
       if (!address) return;
 
       try {
-        const info = await octantVaultService.getVaultInfo(vaultAddress, address);
+        const info = await octantVaultService.getVaultInfo(resolvedVaultAddress, address);
         setVaultInfo(info);
         
         // Get strategy status
@@ -59,7 +65,7 @@ export function OctantYieldDashboard({
     // Refresh every 30 seconds
     const interval = setInterval(loadVaultInfo, 30000);
     return () => clearInterval(interval);
-  }, [address, vaultAddress]);
+  }, [address, resolvedVaultAddress]);
 
   // Preview yield conversion when allocation changes
   useEffect(() => {
@@ -67,7 +73,7 @@ export function OctantYieldDashboard({
       if (!address || !strategyStatus?.config) return;
 
       const preview = await previewYieldConversion(
-        vaultAddress,
+        resolvedVaultAddress,
         strategyStatus.config.ticketsAllocation,
         strategyStatus.config.causesAllocation
       );
@@ -75,7 +81,7 @@ export function OctantYieldDashboard({
     }
 
     updatePreview();
-  }, [address, vaultAddress, strategyStatus, previewYieldConversion]);
+  }, [address, resolvedVaultAddress, strategyStatus, previewYieldConversion]);
 
   const handleProcessYield = async () => {
     setIsProcessing(true);
@@ -321,7 +327,9 @@ export function OctantYieldDashboard({
           </div>
 
           <div className="text-xs text-gray-400">
-            Vault: {vaultInfo.address.substring(0, 6)}...{vaultInfo.address.substring(-4)}
+            Vault: {vaultInfo.address.startsWith('0x')
+              ? `${vaultInfo.address.substring(0, 6)}...${vaultInfo.address.slice(-4)}`
+              : vaultInfo.address}
           </div>
         </CompactStack>
       </PuzzlePiece>
