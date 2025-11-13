@@ -6,6 +6,9 @@
  */
 
 export const OCTANT_V2_CONFIG = {
+  // Feature flags
+  useMockVault: true, // Toggle to use in-memory mock vault for MVP
+
   // Contract addresses (to be filled with real addresses from Octant team)
   contracts: {
     morphoFactory: '0x...', // MorphoCompounderStrategyFactory
@@ -13,10 +16,19 @@ export const OCTANT_V2_CONFIG = {
     yieldStrategy: '0x...', // YieldDonatingTokenizedStrategy
   },
 
-  // Token addresses on Base
+  // Token addresses by network (mainnet and Base)
   tokens: {
-    usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // Base USDC
-    usdt: '0x...', // Base USDT (if needed)
+    ethereum: {
+      usdc: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // Ethereum USDC
+    },
+    base: {
+      usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // Base USDC
+    },
+  },
+
+  // Vault addresses (fill with real ERC-4626 USDC vault when moving off mock)
+  vaults: {
+    ethereumUsdcVault: '0x...', // Yearn v3 ERC-4626 USDC or Octant TokenizedStrategy vault
   },
 
   // Default yield allocation percentages
@@ -58,6 +70,11 @@ export const OCTANT_V2_CONFIG = {
   minimumDeposits: {
     individual: 10, // $10 minimum for individual deposits
     strategy: 100, // $100 minimum for yield strategies
+  },
+
+  // MVP lock configuration (short lock for demo/testing)
+  lock: {
+    durationSeconds: 5 * 60, // 5 minutes lock for MVP
   },
 } as const;
 

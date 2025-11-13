@@ -143,6 +143,20 @@ class Web3Service {
   }
 
   /**
+   * Get the current provider (BrowserProvider) if initialized
+   */
+  getProvider(): ethers.BrowserProvider | null {
+    return this.provider;
+  }
+
+  /**
+   * Get the current signer if initialized
+   */
+  getSigner(): ethers.Signer | null {
+    return this.signer;
+  }
+
+  /**
    * Ensure user is connected to Base network
    */
   private async ensureCorrectNetwork(): Promise<void> {

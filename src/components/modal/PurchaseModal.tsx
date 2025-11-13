@@ -36,7 +36,7 @@ export interface PurchaseModalProps {
 }
 
 export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps) {
-  const { isConnected, connect } = useWalletConnection();
+  const { isConnected, connect, address } = useWalletConnection();
   const successToast = useSuccessToast();
   const errorToast = useErrorToast();
   const { jackpotStats, prizeAmount, isLoading: jackpotLoading, error: jackpotError, refresh: refreshLottery } = useLottery();
@@ -250,6 +250,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
             }}
             onNext={() => setStep('select')}
             onBack={() => setStep('mode')}
+            userAddress={isConnected ? address : undefined}
           />
         );
       case 'select':

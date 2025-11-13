@@ -3,24 +3,158 @@
 ## Vision
 Transform lottery participation into **impact investing** through sustainable syndicate-powered public goods funding, where winning syndicates automatically fund causes while sharing proceeds with participants.
 
-## 🚨 STRATEGIC PIVOT: Octant DeFi Hackathon (Jan 2025)
-**Opportunity**: $24k prize pool, 2-day deadline
-**Target Track**: "Best use of a Yield Donating Strategy" ($4,000)
-**Strategic Value**: Immediate revenue + product validation + partnership opportunity
+## 🚨 STRATEGIC PIVOT: Zcash Privacy Hackathon (Nov 2025)
+**Opportunity**: $250k+ prize pool across multiple tracks
+**Target Tracks**:
+- Cross-Chain Privacy Solutions ($55k+) - Primary focus
+- Private DeFi & Trading ($34k) - Yield strategy enhancement
+- Self-Custody & Wallet Innovation ($26k) - Wallet integration
+**Strategic Value**: Major prize opportunity + Zcash ecosystem integration + privacy-first product enhancement
 
-## Current Status ✅ **HACKATHON COMPLETE**
+### Zcash Hackathon Implementation Plan
+
+#### Phase 1: Zcash Integration - Cross-Chain Privacy Solutions (Week 1-2)
+**Priority #1**: Integrate Zcash as a supported chain with privacy features
+**Goal**: Enable users to purchase lottery tickets from Zcash with shielded transactions
+
+##### 🔐 Zcash Privacy Infrastructure (Week 1)
+- [ ] **Zcash Node Integration**: Connect to Zcash network for transaction validation
+- [ ] **Shielded Transaction Support**: Implement Sapling shielded transactions
+- [ ] **Viewing Key Management**: Secure handling of incoming viewing keys for transaction monitoring
+- [ ] **Zcash Wallet Integration**: Native Zcash wallet support alongside existing multi-wallet system
+- [ ] **Cross-Chain Bridge Architecture**: Design bridge between Zcash and Base lottery chain
+
+##### 🌐 Privacy-First Cross-Chain Experience (Week 2)
+- [ ] **Private Ticket Purchases**: Enable shielded Zcash transactions for lottery ticket purchases
+- [ ] **Shielded Transaction UI**: User interface for managing private transactions
+- [ ] **Viewing Key Dashboard**: Allow users to monitor their shielded transactions
+- [ ] **Privacy Settings**: Configurable privacy levels for different transaction types
+- [ ] **Zcash Address Resolution**: Support for both transparent and shielded addresses
+
+**Success Metrics**:
+- ✅ Zcash transactions processed with full privacy support
+- ✅ Cross-chain ticket purchases from Zcash to Base lottery
+- ✅ Shielded transaction UI/UX implementation
+- ✅ 10+ successful private ticket purchases
+- ✅ Zero privacy leaks or address exposure
+
+#### Phase 2: Private DeFi & Yield Strategies (Week 2-3)
+**Priority #2**: Enhance yield strategies with Zcash privacy features
+**Goal**: Enable private yield generation and cause funding
+
+##### 💰 Private Yield Infrastructure (Week 2)
+- [ ] **Zcash Shielded Yield Vaults**: Design privacy-preserving yield vaults
+- [ ] **Private Yield Tracking**: Monitor yield generation without exposing user data
+- [ ] **Shielded Cause Funding**: Enable private donations to causes from yield
+- [ ] **Zcash-Based Syndicate Pools**: Create privacy-focused syndicate pooling
+- [ ] **Private Distribution Mechanisms**: Pro-rata distribution without exposing member data
+
+##### 🎯 Advanced Privacy Features (Week 3)
+- [ ] **Zero-Knowledge Yield Proofs**: Prove yield generation without revealing amounts
+- [ ] **Private Governance**: Shielded voting mechanisms for syndicate decisions
+- [ ] **Anonymous Syndicate Membership**: Participate in pools without revealing identity
+- [ ] **Private Performance Analytics**: Track portfolio performance without exposing individual data
+- [ ] **Compliance-Ready Privacy**: Balance privacy with regulatory requirements
+
+**Success Metrics**:
+- ✅ Private yield vaults operational with Zcash integration
+- ✅ Shielded cause funding mechanisms implemented
+- ✅ Anonymous syndicate participation enabled
+- ✅ 5+ private transactions processed successfully
+- ✅ Zero privacy breaches or data exposure incidents
+
+#### Phase 3: Self-Custody & Wallet Innovation (Week 3-4)
+**Priority #3**: Enhance wallet experience with Zcash privacy features
+**Goal**: Create a privacy-first multi-chain wallet experience
+
+##### 🔒 Enhanced Wallet Privacy (Week 3)
+- [ ] **Unified Privacy Dashboard**: Single interface for managing privacy settings across all chains
+- [ ] **Zcash Wallet Integration**: Native Zcash wallet with shielded transaction support
+- [ ] **Private Key Management**: Secure storage and management of Zcash spending keys
+- [ ] **Viewing Key Controls**: Granular control over transaction visibility
+- [ ] **Privacy-First UX**: Default privacy settings with clear opt-out options
+
+##### 🎪 Advanced Wallet Features (Week 4)
+- [ ] **Cross-Chain Privacy Bridge**: Unified interface for private cross-chain transactions
+- [ ] **Shielded Address Book**: Manage contacts with privacy-preserving identifiers
+- [ ] **Private Transaction History**: View transaction history without exposing sensitive data
+- [ ] **Privacy Analytics**: Track privacy metrics and exposure levels
+- [ ] **Mobile-First Privacy**: Optimized privacy features for mobile users
+
+**Success Metrics**:
+- ✅ Unified privacy dashboard with Zcash support
+- ✅ Secure key management for shielded transactions
+- ✅ 20+ private transactions processed through enhanced wallet
+- ✅ Zero key exposure or privacy breaches
+- ✅ Positive user feedback on privacy features
+
+### Technical Approach
+
+#### Zcash Integration Strategy
+1. **Node Infrastructure**: Set up Zcash node connections for transaction validation
+2. **Wallet Integration**: Extend UnifiedWalletManager to support Zcash shielded transactions
+3. **Bridge Design**: Create cross-chain bridge between Zcash and Base lottery chain
+4. **Privacy UI**: Develop interfaces for managing shielded transactions and viewing keys
+5. **Security**: Implement secure key management and privacy-preserving protocols
+
+#### Privacy-First Architecture
+1. **Zero-Knowledge Proofs**: Implement ZKPs for transaction validation without data exposure
+2. **Shielded Storage**: Secure storage of sensitive user data and private keys
+3. **Viewing Key Management**: Secure handling of incoming viewing keys for transaction monitoring
+4. **Compliance Framework**: Balance privacy with regulatory requirements
+5. **Audit Trail**: Maintain privacy-preserving audit capabilities
+
+#### Cross-Chain Bridge
+1. **Lock-Mint Mechanism**: Secure cross-chain asset transfer between Zcash and Base
+2. **Privacy Preservation**: Ensure bridge transactions maintain privacy guarantees
+3. **Relay System**: Implement reliable transaction relay between chains
+4. **Security Model**: Multi-signature and threshold cryptography for bridge security
+5. **User Experience**: Seamless cross-chain experience with privacy as default
+
+### Zcash Hackathon Success Criteria
+
+#### Technical Milestones
+- ✅ Zcash node integration with shielded transaction support
+- ✅ Cross-chain bridge between Zcash and Base lottery chain
+- ✅ Privacy-preserving yield strategies with Zcash integration
+- ✅ Unified wallet with Zcash privacy features
+- ✅ 50+ successful private transactions processed
+
+#### User Experience Goals
+- ✅ Intuitive privacy controls with clear opt-out options
+- ✅ Seamless cross-chain experience with privacy as default
+- ✅ Transparent privacy metrics and exposure tracking
+- ✅ Mobile-optimized privacy features
+- ✅ Positive user feedback on privacy implementation
+
+#### Business Impact
+- ✅ Alignment with Zcash ecosystem values and goals
+- ✅ Potential for ongoing partnership with Zcash Foundation
+- ✅ Enhanced privacy features as competitive advantage
+- ✅ Access to privacy-focused user base
+- ✅ Potential for future grant funding and support
+
+### Resource Requirements & Timeline
+- **Week 1**: Zcash node integration and wallet support
+- **Week 2**: Cross-chain bridge and privacy UI
+- **Week 3**: Private yield strategies and wallet enhancements
+- **Week 4**: Advanced privacy features and testing
+
+**Technical Resources**: Zcash node infrastructure, development libraries, cross-chain tools
+**Team Skills**: Zcash protocol expertise, cross-chain development, ZKP implementation
+
+## Current Status ✅ **PRE-HACKATHON PREPARATION**
 - ✅ Core lottery functionality (Megapot integration)
 - ✅ Social sharing and identity verification  
 - ✅ Basic user profiles and transaction history
-- ✅ **Yield strategy UI components** - ready for Octant integration
-- ✅ **Real vault integration** - ✅ **COMPLETED** Octant v2 vault connection
-- ✅ **Yield-to-tickets logic** - ✅ **COMPLETED** automated conversion
-- ✅ **Cause allocation** - ✅ **COMPLETED** winning distribution to causes
-- ✅ **Multi-wallet support** - NEAR + MetaMask + Phantom + WalletConnect
+- ✅ **Yield strategy UI components** - ready for enhancement
+- ✅ **Real vault integration** - Octant v2 vault connection
+- ✅ **Yield-to-tickets logic** - automated conversion implemented
+- ✅ **Cause allocation** - winning distribution to causes
+- ✅ **Multi-wallet support** - NEAR + MetaMask + Phantom + WalletConnect + Solana
+- ✅ **Cross-chain infrastructure** - Base, Avalanche, Ethereum, Polygon, Solana
 - ✅ **Enhanced UX** - Specialized animations, share modal, advanced flows
 - ✅ **Clean architecture** - Consolidated configs, domain-driven design
-
----
 
 ## 🏆 HACKATHON SUCCESS: Octant Integration ✅ **COMPLETED**
 

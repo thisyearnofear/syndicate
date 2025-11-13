@@ -44,9 +44,13 @@ class OctantVaultService {
   private provider: ethers.Provider | null = null;
   private signer: ethers.Signer | null = null;
   private vaultContracts: Map<string, Contract> = new Map();
+  private locks: Map<string, number> = new Map(); // key: vault|user -> lockUntil ts
+  private mockBalances: Map<string, { shares: bigint; assets: bigint }> = new Map(); // key: vault|user
 
   // Real Octant v2 addresses (from centralized config)
   private readonly OCTANT_ADDRESSES = OCTANT_CONFIG.contracts;
+  private readonly LOCK_DURATION_SEC = OCTANT_CONFIG.lock.durationSeconds;
+  private readonly MOCK_VAULT_ADDR = 'mock:octant-usdc';
 
   /**
    * Initialize the service with provider and signer
@@ -66,12 +70,31 @@ class OctantVaultService {
    * Get vault contract instance
    */
   private getVaultContract(vaultAddress: string): Contract {
+    // In MVP mock mode, no on-chain contract
+    if (vaultAddress === this.MOCK_VAULT_ADDR) {
+      throw new Error('Mock vault: no on-chain contract');
+    }
     if (!this.vaultContracts.has(vaultAddress)) {
+      if (!this.provider) {
+        // Attempt to auto-initialize from centralized web3Service
+        try {
+          const { web3Service } = require('@/services/web3Service');
+          const provider = web3Service.getProvider();
+          const signer = web3Service.getSigner();
+          if (provider) {
+            this.provider = provider;
+            this.signer = signer || null;
+          }
+        } catch (err) {
+          // noop; will throw below if provider still missing
+        }
+      }
+
       if (!this.provider) throw new Error('Provider not initialized');
-      
+
       const contract = new Contract(
-        vaultAddress, 
-        OctantV2ABI, 
+        vaultAddress,
+        OctantV2ABI,
         this.signer || this.provider
       );
       this.vaultContracts.set(vaultAddress, contract);
@@ -83,61 +106,97 @@ class OctantVaultService {
    * Get available vaults for current network
    */
   async getAvailableVaults(chainId: number): Promise<OctantVaultInfo[]> {
-    // TODO: Replace with real vault discovery from Octant contracts
-    const mockVaults: OctantVaultInfo[] = [
+    // Resolve whether to return mock or real vault based on config toggle
+    const assetAddr = OCTANT_CONFIG.tokens.ethereum.usdc; // Use Ethereum USDC on Tenderly fork
+    const useMock = OCTANT_CONFIG.useMockVault || !OCTANT_CONFIG.vaults?.ethereumUsdcVault || OCTANT_CONFIG.vaults.ethereumUsdcVault === '0x...';
+
+    if (useMock) {
+      return [
+        {
+          address: this.MOCK_VAULT_ADDR,
+          name: 'Octant USDC Vault (MVP Mock)',
+          symbol: 'octUSDC',
+          asset: assetAddr,
+          apy: OCTANT_CONFIG.expectedAPY.default,
+          totalDeposits: '0',
+          userShares: '0',
+          userAssets: '0',
+          yieldGenerated: '0',
+        },
+      ];
+    }
+
+    // Real vault summary; detailed TVL/user share fetched by getVaultInfo
+    return [
       {
-        address: '0x1234...',
-        name: 'Octant USDC Vault',
+        address: OCTANT_CONFIG.vaults.ethereumUsdcVault,
+        name: 'USDC Vault (ERC-4626)',
         symbol: 'octUSDC',
-        asset: '0xA0b86a33E6441a0C6C1b5e2b1F5c8F1e3e3c3b8e', // USDC on Base
-        apy: 12.5,
-        totalDeposits: '1000000',
+        asset: assetAddr,
+        apy: OCTANT_CONFIG.expectedAPY.default,
+        totalDeposits: '0',
         userShares: '0',
         userAssets: '0',
         yieldGenerated: '0',
-      }
+      },
     ];
-
-    return mockVaults;
   }
 
   /**
    * Get vault information for a specific vault
    */
   async getVaultInfo(vaultAddress: string, userAddress?: string): Promise<OctantVaultInfo> {
+    // Mock vault info for MVP
+    if (vaultAddress === this.MOCK_VAULT_ADDR) {
+      const asset = OCTANT_CONFIG.tokens.ethereum.usdc;
+      let userShares = '0';
+      let userAssets = '0';
+      let yieldGenerated = '0';
+      const key = `${vaultAddress}|${userAddress || ''}`;
+      const bal = this.mockBalances.get(key);
+      if (bal) {
+        userShares = ethers.formatUnits(bal.shares, 18);
+        userAssets = ethers.formatUnits(bal.assets, 6);
+      }
+      return {
+        address: vaultAddress,
+        name: 'Octant USDC Vault (MVP Mock)',
+        symbol: 'octUSDC',
+        asset,
+        apy: OCTANT_CONFIG.expectedAPY.default,
+        totalDeposits: '0',
+        userShares,
+        userAssets,
+        yieldGenerated,
+      };
+    }
+
     const contract = this.getVaultContract(vaultAddress);
-    
     try {
       const [asset, totalAssets] = await Promise.all([
         contract.asset(),
         contract.totalAssets(),
       ]);
-
       let userShares = '0';
       let userAssets = '0';
       let yieldGenerated = '0';
-
       if (userAddress) {
-        [userShares] = await Promise.all([
-          contract.balanceOf(userAddress),
-          // Note: Yield tracking will be handled differently in Octant v2
-        ]);
-        // For now, calculate yield as a simple percentage of deposits
-        // TODO: Implement proper yield tracking from Octant v2 events
-        yieldGenerated = (parseFloat(ethers.formatUnits(userShares, 18)) * 0.001).toString(); // Mock 0.1% yield
-        userAssets = await contract.convertToAssets(userShares);
+        const sharesBn = await contract.balanceOf(userAddress);
+        userShares = ethers.formatUnits(sharesBn, 18);
+        const userAssetsBn = await contract.convertToAssets(sharesBn);
+        userAssets = ethers.formatUnits(userAssetsBn, 6);
+        yieldGenerated = '0';
       }
-
       return {
         address: vaultAddress,
-        name: 'Octant Vault', // TODO: Get from contract or registry
+        name: 'Octant Vault',
         symbol: 'octVault',
         asset: asset,
-        apy: 12.0, // TODO: Calculate from historical data
-        totalDeposits: ethers.formatUnits(totalAssets, 6), // Assuming USDC (6 decimals)
-        userShares: ethers.formatUnits(userShares, 18),
-        userAssets: ethers.formatUnits(userAssets, 6),
-        yieldGenerated: ethers.formatUnits(yieldGenerated, 6),
+        apy: OCTANT_CONFIG.expectedAPY.default,
+        totalDeposits: ethers.formatUnits(totalAssets, 6),
+        userShares,
+        userAssets,
+        yieldGenerated,
       };
     } catch (error) {
       console.error('Failed to get vault info:', error);
@@ -152,18 +211,40 @@ class OctantVaultService {
     if (!this.signer) {
       return { success: false, error: 'Signer required for deposits' };
     }
+    // Mock deposit for MVP: record balances and start 5-min lock
+    if (vaultAddress === this.MOCK_VAULT_ADDR) {
+      try {
+        const amountWei = ethers.parseUnits(amount, 6);
+        const key = `${vaultAddress}|${receiverAddress}`;
+        const current = this.mockBalances.get(key) || { shares: 0n, assets: 0n };
+        // Simplified 1:1 shares for MVP
+        const addedShares = ethers.parseUnits(amount, 18);
+        const updated = {
+          shares: current.shares + addedShares,
+          assets: current.assets + amountWei,
+        };
+        this.mockBalances.set(key, updated);
+        // Start lock
+        const lockKey = key;
+        const lockUntil = Math.floor(Date.now() / 1000) + this.LOCK_DURATION_SEC;
+        this.locks.set(lockKey, lockUntil);
+        return {
+          success: true,
+          txHash: `mock-deposit-${Date.now()}`,
+          shares: ethers.formatUnits(addedShares, 18),
+        };
+      } catch (error) {
+        console.error('Mock deposit failed:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Deposit failed' };
+      }
+    }
 
     try {
       const contract = this.getVaultContract(vaultAddress);
-      const amountWei = ethers.parseUnits(amount, 6); // Assuming USDC
-
-      // Preview deposit to get expected shares
+      const amountWei = ethers.parseUnits(amount, 6);
       const expectedShares = await contract.previewDeposit(amountWei);
-
-      // Execute deposit
       const tx = await contract.deposit(amountWei, receiverAddress);
       const receipt = await tx.wait();
-
       return {
         success: true,
         txHash: receipt.hash,
@@ -171,10 +252,7 @@ class OctantVaultService {
       };
     } catch (error) {
       console.error('Deposit failed:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Deposit failed',
-      };
+      return { success: false, error: error instanceof Error ? error.message : 'Deposit failed' };
     }
   }
 
@@ -185,67 +263,86 @@ class OctantVaultService {
     if (!this.signer) {
       return { success: false, error: 'Signer required for withdrawals' };
     }
+    // Mock withdrawal with lock enforcement for MVP
+    if (vaultAddress === this.MOCK_VAULT_ADDR) {
+      try {
+        const key = `${vaultAddress}|${ownerAddress}`;
+        const lockUntil = this.locks.get(key) || 0;
+        const now = Math.floor(Date.now() / 1000);
+        if (now < lockUntil) {
+          const secondsLeft = lockUntil - now;
+          return { success: false, error: `Locked: ${secondsLeft}s remaining` };
+        }
+        const bal = this.mockBalances.get(key);
+        if (!bal) return { success: false, error: 'No balance to withdraw' };
+        const amountWei = ethers.parseUnits(amount, 6);
+        if (amountWei > bal.assets) return { success: false, error: 'Insufficient assets' };
+        const sharesDelta = ethers.parseUnits(amount, 18);
+        const updated = {
+          shares: bal.shares - sharesDelta,
+          assets: bal.assets - amountWei,
+        };
+        this.mockBalances.set(key, updated);
+        return { success: true, txHash: `mock-withdraw-${Date.now()}`, assets: amount };
+      } catch (error) {
+        console.error('Mock withdrawal failed:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Withdrawal failed' };
+      }
+    }
 
     try {
       const contract = this.getVaultContract(vaultAddress);
-      const amountWei = ethers.parseUnits(amount, 6); // Assuming USDC
-
-      // Execute withdrawal
+      const amountWei = ethers.parseUnits(amount, 6);
       const tx = await contract.withdraw(amountWei, receiverAddress, ownerAddress);
       const receipt = await tx.wait();
+      return { success: true, txHash: receipt.hash, assets: amount };
+    } catch (error) {
+      console.error('Withdrawal failed:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Withdrawal failed' };
+    }
+  }
 
+  /**
+   * Get donation shares held by the donation address.
+   * Note: In YDS, profits are represented as donation shares.
+   */
+  async getDonationShares(vaultAddress: string, donationAddress: string): Promise<string> {
+    const contract = this.getVaultContract(vaultAddress);
+    const sharesBn = await contract.balanceOf(donationAddress);
+    return ethers.formatUnits(sharesBn, 18);
+  }
+
+  /**
+   * Redeem donation shares into underlying assets.
+   * Requires the signer to control the donation address.
+   */
+  async redeemDonationShares(
+    vaultAddress: string,
+    shares: string,
+    receiverAddress: string,
+    donationAddress: string
+  ): Promise<WithdrawResult> {
+    if (!this.signer) {
+      return { success: false, error: 'Signer required for redeeming donation shares' };
+    }
+    try {
+      const contract = this.getVaultContract(vaultAddress);
+      const sharesWei = ethers.parseUnits(shares, 18);
+      const tx = await contract.redeem(sharesWei, receiverAddress, donationAddress);
+      const receipt = await tx.wait();
+      // Convert redeemed shares to assets using preview for an estimate
+      const assetsBn = await contract.convertToAssets(sharesWei);
       return {
         success: true,
         txHash: receipt.hash,
-        assets: amount,
+        assets: ethers.formatUnits(assetsBn, 6),
       };
     } catch (error) {
-      console.error('Withdrawal failed:', error);
+      console.error('Redeem donation shares failed:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Withdrawal failed',
+        error: error instanceof Error ? error.message : 'Redeem donation shares failed',
       };
-    }
-  }
-
-  /**
-   * Set yield allocation percentages
-   */
-  async setYieldAllocation(vaultAddress: string, allocation: YieldAllocation): Promise<boolean> {
-    if (!this.signer) {
-      throw new Error('Signer required for setting yield allocation');
-    }
-
-    try {
-      const contract = this.getVaultContract(vaultAddress);
-      const tx = await contract.setYieldAllocation(
-        allocation.ticketsPercentage,
-        allocation.causesPercentage
-      );
-      await tx.wait();
-      return true;
-    } catch (error) {
-      console.error('Failed to set yield allocation:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Claim generated yield
-   */
-  async claimYield(vaultAddress: string): Promise<string> {
-    if (!this.signer) {
-      throw new Error('Signer required for claiming yield');
-    }
-
-    try {
-      const contract = this.getVaultContract(vaultAddress);
-      const tx = await contract.claimYield();
-      const receipt = await tx.wait();
-      return receipt.hash;
-    } catch (error) {
-      console.error('Failed to claim yield:', error);
-      throw error;
     }
   }
 
