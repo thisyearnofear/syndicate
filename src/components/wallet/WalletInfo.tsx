@@ -22,7 +22,7 @@ export default function WalletInfo({
   }
 
   const getChainName = (chainId: number | null) => {
-    if (!chainId) return "Unknown Network";
+    if (chainId === null || chainId === undefined) return "Unknown Network";
 
     switch (chainId) {
       case CHAIN_IDS.BASE:
@@ -34,14 +34,15 @@ export default function WalletInfo({
       case CHAIN_IDS.AVALANCHE:
         return "Avalanche";
       case 0:
-        return "NEAR"; // Sentinel value for NEAR wallets
+        // Check wallet type to distinguish between Solana and NEAR
+        return state.walletType === 'phantom' ? "Solana" : "NEAR";
       default:
         return `Network (${chainId})`;
     }
   };
 
   const getChainColor = (chainId: number | null) => {
-    if (!chainId) return "gray";
+    if (chainId === null || chainId === undefined) return "gray";
 
     switch (chainId) {
       case CHAIN_IDS.BASE:
@@ -53,7 +54,8 @@ export default function WalletInfo({
       case CHAIN_IDS.AVALANCHE:
         return "red";
       case 0:
-        return "green"; // NEAR network color
+        // Different colors for Solana vs NEAR
+        return state.walletType === 'phantom' ? "purple" : "green";
       default:
         return "gray";
     }
