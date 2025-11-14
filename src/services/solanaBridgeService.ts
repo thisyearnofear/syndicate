@@ -25,8 +25,8 @@ type SolanaBridgeConfig = {
 };
 
 const SOLANA: SolanaBridgeConfig = {
-  usdcMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC (native) on Solana mainnet
-  rpcUrl: process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://api.mainnet-beta.solana.com',
+  usdcMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+  rpcUrl: process.env.NEXT_PUBLIC_SOLANA_RPC || '/api/solana-rpc',
 };
 
 // Solana program addresses from centralized CCTP config
@@ -126,8 +126,37 @@ class SolanaBridgeService {
 
       const walletPublicKey = new PublicKey(phantom.publicKey.toString());
 
-      // Create connection to Solana RPC
-      const connection = new Connection(SOLANA.rpcUrl, 'confirmed');
+      const selectRpcUrls = () => {
+        const raw = (process.env.NEXT_PUBLIC_SOLANA_RPC_FALLBACKS || '').split(',').map(s => s.trim()).filter(Boolean);
+        const urls = [SOLANA.rpcUrl, ...raw];
+        const seen = new Set<string>();
+        return urls.filter(u => {
+          if (!u) return false;
+          const key = u.toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      };
+
+      const createConnectionWithFallback = async (): Promise<InstanceType<typeof Connection>> => {
+        const urls = selectRpcUrls();
+        for (const url of urls) {
+          const conn = new Connection(url, 'confirmed');
+          try {
+            await conn.getLatestBlockhash();
+            return conn;
+          } catch (e: any) {
+            const msg = e?.message || String(e);
+            if (msg.includes('403')) {
+              continue;
+            }
+          }
+        }
+        return new Connection(urls[0] || SOLANA.rpcUrl, 'confirmed');
+      };
+
+      const connection = await createConnectionWithFallback();
 
       // Parse amount to integer (6 decimals for USDC)
       const amountInDecimals = Math.floor(parseFloat(amount) * 1_000_000);
@@ -142,7 +171,16 @@ class SolanaBridgeService {
       const usdcAta = await getAssociatedTokenAddress(usdcMint, walletPublicKey);
 
       // Check if ATA exists
-      const ataInfo = await connection.getAccountInfo(usdcAta);
+      let ataInfo: any = null;
+      try {
+        ataInfo = await connection.getAccountInfo(usdcAta);
+      } catch (e: any) {
+        const msg = e?.message || String(e);
+        if (msg.includes('403')) {
+          throw new Error('Solana RPC access forbidden (403). Configure NEXT_PUBLIC_SOLANA_RPC or use /api/solana-rpc.');
+        }
+        throw e;
+      }
       if (!ataInfo) {
         // Create ATA instruction
         const createAtaIx = createAssociatedTokenAccountInstruction(
@@ -156,12 +194,30 @@ class SolanaBridgeService {
 
         // Send create ATA transaction
         const createAtaTx = new Transaction().add(createAtaIx);
-        const { blockhash } = await connection.getLatestBlockhash();
+        let blockhash: string = '';
+        try {
+          const bh = await connection.getLatestBlockhash();
+          blockhash = bh.blockhash;
+        } catch (e: any) {
+          const msg = e?.message || String(e);
+          if (msg.includes('403')) {
+            throw new Error('Solana RPC access forbidden (403). Configure NEXT_PUBLIC_SOLANA_RPC or use /api/solana-rpc.');
+          }
+          throw e;
+        }
         createAtaTx.recentBlockhash = blockhash;
         createAtaTx.feePayer = walletPublicKey;
 
         const signedCreateAtaTx = await phantom.signAndSendTransaction(createAtaTx);
-        await connection.confirmTransaction(signedCreateAtaTx.signature, 'confirmed');
+        try {
+          await connection.confirmTransaction(signedCreateAtaTx.signature, 'confirmed');
+        } catch (e: any) {
+          const msg = e?.message || String(e);
+          if (msg.includes('403')) {
+            throw new Error('Solana RPC access forbidden (403). Configure NEXT_PUBLIC_SOLANA_RPC or use /api/solana-rpc.');
+          }
+          throw e;
+        }
       }
 
       // Now build depositForBurn instruction
@@ -245,8 +301,16 @@ class SolanaBridgeService {
       const transaction = new Transaction().add(depositForBurnIx);
 
       // Get latest blockhash
-      const { blockhash } = await connection.getLatestBlockhash();
-      transaction.recentBlockhash = blockhash;
+      try {
+        const bh2 = await connection.getLatestBlockhash();
+        transaction.recentBlockhash = bh2.blockhash;
+      } catch (e: any) {
+        const msg = e?.message || String(e);
+        if (msg.includes('403')) {
+          throw new Error('Solana RPC access forbidden (403). Configure NEXT_PUBLIC_SOLANA_RPC or use /api/solana-rpc.');
+        }
+        throw e;
+      }
       transaction.feePayer = walletPublicKey;
 
       // Sign and send transaction
@@ -257,7 +321,16 @@ class SolanaBridgeService {
       onStatus?.('solana_cctp:sent', { signature });
 
       // Confirm transaction
-      const confirmation = await connection.confirmTransaction(signature, 'confirmed');
+      let confirmation: any = null;
+      try {
+        confirmation = await connection.confirmTransaction(signature, 'confirmed');
+      } catch (e: any) {
+        const msg = e?.message || String(e);
+        if (msg.includes('403')) {
+          throw new Error('Solana RPC access forbidden (403). Configure NEXT_PUBLIC_SOLANA_RPC or use /api/solana-rpc.');
+        }
+        throw e;
+      }
 
       if (confirmation.value.err) {
         throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
@@ -266,7 +339,16 @@ class SolanaBridgeService {
       onStatus?.('solana_cctp:confirmed', { signature });
 
       // Extract message from transaction logs
-      const txInfo = await connection.getTransaction(signature, { commitment: 'confirmed' });
+      let txInfo: any = null;
+      try {
+        txInfo = await connection.getTransaction(signature, { commitment: 'confirmed' });
+      } catch (e: any) {
+        const msg = e?.message || String(e);
+        if (msg.includes('403')) {
+          throw new Error('Solana RPC access forbidden (403). Configure NEXT_PUBLIC_SOLANA_RPC or use /api/solana-rpc.');
+        }
+        throw e;
+      }
       if (!txInfo) {
         throw new Error('Failed to get transaction info');
       }
@@ -302,7 +384,9 @@ class SolanaBridgeService {
       };
 
     } catch (e: any) {
-      return { success: false, error: e?.message || 'CCTP Solana failed', protocol: 'cctp' };
+      const msg = e?.message || 'CCTP Solana failed';
+      const normalized = msg.includes('403') ? 'Solana RPC access forbidden (403). Configure NEXT_PUBLIC_SOLANA_RPC or use /api/solana-rpc.' : msg;
+      return { success: false, error: normalized, protocol: 'cctp' };
     }
   }
 

@@ -524,14 +524,13 @@ select:focus-visible {
 }
 
 /* =============================================================================
-   WALLET DROPDOWN Z-INDEX FIXES
-   ============================================================================= */
+    WALLET DROPDOWN Z-INDEX FIXES
+    ============================================================================= */
 
 /* Ensure wallet dropdown in navigation appears above all content */
 /* Fix for wallet details dropdown being hidden behind page content */
 .wallet-dropdown {
   z-index: 100001 !important;
-  position: relative;
 }
 
 /* Enhanced wallet dropdown backdrop for better visibility */
