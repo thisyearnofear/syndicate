@@ -141,8 +141,9 @@ export function useUnifiedWallet(): {
         );
       }
 
-      let address: string;
-      let chainId: number;
+      // Initialize variables - MetaMask case throws error so won't get here
+      let address: string = '';
+      let chainId: number = 0;
 
       switch (walletType) {
         case WalletTypes.METAMASK:
@@ -155,83 +156,60 @@ export function useUnifiedWallet(): {
           break;
 
         case WalletTypes.PHANTOM:
-          // Check if Phantom is installed
-          if (!(window as any).phantom?.ethereum) {
+          // SOLANA-FIRST APPROACH: Always connect via Solana interface first
+          // This ensures we get Phantom specifically (not MetaMask via window.ethereum)
+          const hasPhantomSolana = (window as any).solana?.isPhantom;
+          
+          if (!hasPhantomSolana) {
             throw createError('WALLET_NOT_FOUND', 'Phantom wallet is not installed. Please install it from phantom.app');
           }
 
           try {
-            // Request account access
-            const phantomAccounts = await (window as any).phantom.ethereum.request({
-              method: 'eth_requestAccounts',
-            }) as string[];
-
-            if (!phantomAccounts || phantomAccounts.length === 0) {
-              throw createError('CONNECTION_REJECTED', 'No accounts found. Please unlock your Phantom wallet.');
+            // Always connect via Solana interface first to guarantee Phantom connection
+            const solanaWallet = (window as any).solana;
+            let connection;
+            
+            // Check if already connected
+            if (solanaWallet.publicKey) {
+              connection = { publicKey: solanaWallet.publicKey };
+            } else {
+              // Connect to Phantom via Solana (avoids MetaMask conflicts)
+              connection = await solanaWallet.connect();
             }
 
-            address = phantomAccounts[0];
-
-            // Check if we're on the correct network (Base - 8453)
-            const phantomChainId = await (window as any).phantom.ethereum.request({
-              method: 'eth_chainId',
-            }) as string;
-
-            const currentChainId = parseInt(phantomChainId, 16);
-
-            if (currentChainId !== 8453) {
-              try {
-                // Try to switch to Base network
-                await (window as any).phantom.ethereum.request({
-                  method: 'wallet_switchEthereumChain',
-                  params: [{ chainId: '0x2105' }], // Base mainnet in hex
-                });
-              } catch (switchError: any) {
-                // If the chain hasn't been added to Phantom yet, add it
-                if (switchError.code === 4902) {
-                  await (window as any).phantom.ethereum.request({
-                    method: 'wallet_addEthereumChain',
-                    params: [{
-                      chainId: '0x2105',
-                      chainName: 'Base',
-                      nativeCurrency: {
-                        name: 'Ethereum',
-                        symbol: 'ETH',
-                        decimals: 18,
-                      },
-                      rpcUrls: ['https://mainnet.base.org'],
-                      blockExplorerUrls: ['https://basescan.org'],
-                    }],
-                  });
-                } else {
-                  throw switchError;
-                }
-              }
+            if (!connection?.publicKey) {
+              throw createError('CONNECTION_REJECTED', 'Failed to connect to Phantom. Please approve the connection.');
             }
 
-            // Initialize Web3 service
+            // Store Solana address
+            address = connection.publicKey.toString();
+            chainId = 0; // Use 0 for Solana (non-EVM)
+
+            // Initialize Solana wallet service for cross-chain operations
             try {
-              const { web3Service } = await import('@/services/web3Service');
-              const initialized = await web3Service.initialize();
-
-              if (!initialized) {
-                console.warn('Web3 service initialization failed for Phantom');
+              const { solanaWalletService } = await import('@/services/solanaWalletService');
+              await solanaWalletService.init();
+              
+              // Update service state to reflect connection
+              if (!solanaWalletService.isReady()) {
+                await solanaWalletService.connectPhantom();
               }
-            } catch (web3Error) {
-              console.warn('Web3 service initialization failed:', web3Error);
-              // Continue without Web3 service for basic wallet functionality
+            } catch (solanaServiceError) {
+              console.warn('Solana wallet service initialization failed:', solanaServiceError);
+              // Continue without service for basic wallet functionality
             }
 
-            chainId = 8453; // Base network
+            // Note: For lottery purchases, users will use the cross-chain bridge
+            // via useCrossChainPurchase hook to bridge Solana USDC -> Base -> Purchase
+            console.log('Phantom connected via Solana. Cross-chain purchases available via CCTP bridge.');
+
           } catch (error: any) {
-            if (error.code === 4001) {
+            if (error.code === 4001 || error.message?.includes('User rejected')) {
               throw createError('CONNECTION_REJECTED', 'Connection rejected by user');
             }
             throw createError('CONNECTION_FAILED', `Failed to connect to Phantom: ${error.message}`);
           }
           break;
-
-
 
         case WalletTypes.SOCIAL:
           try {
@@ -377,13 +355,9 @@ export function useUnifiedWallet(): {
         });
 
         dispatch({ type: 'NETWORK_CHANGED', payload: { chainId: targetChainId } });
-      } else if (state.walletType === WalletTypes.PHANTOM && (window as any).phantom?.ethereum) {
-        await (window as any).phantom.ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: `0x${targetChainId.toString(16)}` }],
-        });
-
-        dispatch({ type: 'NETWORK_CHANGED', payload: { chainId: targetChainId } });
+      } else if (state.walletType === WalletTypes.PHANTOM) {
+        // Phantom connected via Solana - chain switching happens through cross-chain bridge
+        throw createError('UNSUPPORTED_OPERATION', 'Phantom is connected via Solana. Use cross-chain bridge for EVM operations.');
       } else {
         throw createError('UNSUPPORTED_OPERATION', 'Chain switching not supported for this wallet');
       }
