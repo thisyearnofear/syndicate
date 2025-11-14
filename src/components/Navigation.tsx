@@ -19,7 +19,7 @@ import { useWalletConnection } from '@/hooks/useWalletConnection';
 
 import { useUnifiedWallet, WalletType } from '@/domains/wallet/services/unifiedWalletService';
 import WalletInfo from './wallet/WalletInfo';
-import { Home, Ticket, Users, TrendingUp, Menu, X, Loader2 } from 'lucide-react';
+import { Home, Ticket, Users, TrendingUp, Menu, X, Loader2, ArrowLeftRight } from 'lucide-react';
 import { useRef, useEffect } from 'react';
 
 // Lazy load heavy modal components
@@ -48,6 +48,11 @@ export default function Navigation({ className = '' }: NavigationProps) {
         }
     };
 
+    // Determine if Bridge should be emphasized in nav
+    // Enhancement-first: derive minimal signal from route (hide on /bridge itself)
+    // Prevent bloat: no heavy balance checks here; Buy page shows full "Get Ready" panel
+    const shouldShowBridge = pathname !== '/bridge';
+
     const navigationItems = [
         {
             href: '/',
@@ -74,6 +79,16 @@ export default function Navigation({ className = '' }: NavigationProps) {
             icon: TrendingUp,
             active: pathname === '/yield-strategies',
         },
+        // Bridge (secondary journey): discoverable, minimal logic here
+        // Clean + DRY: single place to define nav items
+        ...(shouldShowBridge
+            ? [{
+                href: '/bridge',
+                label: 'Bridge',
+                icon: ArrowLeftRight,
+                active: pathname === '/bridge',
+            }]
+            : []),
     ];
 
     const visibleItems = navigationItems.filter(item =>
@@ -119,6 +134,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                             return (
                             <Link key={item.href} href={item.href}>
                             <button
+                            {...(item.label === 'Bridge' ? { title: 'Move USDC to Base to buy tickets' } : {})}
                             className={`
                             flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium
                             ${item.active
@@ -221,6 +237,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                                 onClick={() => setIsMobileMenuOpen(false)}
                                 >
                                 <button
+                                {...(item.label === 'Bridge' ? { 'aria-label': 'Bridge USDC to Base to buy tickets' } as any : {})}
                                 className={`
                                 w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-left
                                 ${item.active
