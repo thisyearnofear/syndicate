@@ -5,6 +5,8 @@ import { bridgeService } from '@/services/bridgeService';
 import { ethers, Contract } from 'ethers';
 import { cctp as CCTP } from '@/config';
 import { BridgeStatus } from './BridgeStatus';
+import { Button } from '@/shared/components/ui/Button';
+import { LoadingSpinner } from '@/shared/components/LoadingSpinner';
 
 export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void }) {
   const [sourceChain, setSourceChain] = useState<'solana' | 'ethereum'>('solana');
@@ -87,43 +89,138 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void 
   }, [logs]);
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <label className="text-sm">Source Chain</label>
-        <select className="w-full bg-transparent border rounded p-2" value={sourceChain} onChange={(e) => setSourceChain(e.target.value as any)}>
-          <option value="solana">Solana</option>
-          <option value="ethereum">Ethereum</option>
-        </select>
+    <div className="space-y-6">
+      {/* Source Chain Selection */}
+      <div className="space-y-3">
+        <label className="block text-sm font-semibold text-white">Source Chain</label>
+        <div className="relative">
+          <select 
+            className="w-full glass-premium p-4 rounded-xl border border-white/20 text-white bg-white/5 backdrop-blur-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 appearance-none cursor-pointer" 
+            value={sourceChain} 
+            onChange={(e) => setSourceChain(e.target.value as any)}
+          >
+            <option value="solana" className="bg-slate-800 text-white">🟣 Solana</option>
+            <option value="ethereum" className="bg-slate-800 text-white">🔷 Ethereum</option>
+          </select>
+          <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none">
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
       </div>
 
-      <div className="space-y-2">
-        <label className="text-sm">Amount (USDC)</label>
-        <input className="w-full bg-transparent border rounded p-2" value={amount} onChange={(e) => setAmount(e.target.value)} />
+      {/* Amount Input */}
+      <div className="space-y-3">
+        <label className="block text-sm font-semibold text-white">Amount (USDC)</label>
+        <div className="relative">
+          <input 
+            type="number"
+            step="0.01"
+            min="0"
+            className="w-full glass-premium p-4 rounded-xl border border-white/20 text-white bg-white/5 backdrop-blur-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 placeholder-gray-400" 
+            value={amount} 
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="10.00"
+          />
+          <div className="absolute inset-y-0 right-0 flex items-center px-4">
+            <span className="text-sm font-medium text-blue-400">USDC</span>
+          </div>
+        </div>
       </div>
 
-      <div className="space-y-2">
-        <label className="text-sm">Recipient (Base address)</label>
-        <input className="w-full bg-transparent border rounded p-2" value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="0x..." />
+      {/* Recipient Address */}
+      <div className="space-y-3">
+        <label className="block text-sm font-semibold text-white">Recipient Address (Base Network)</label>
+        <input 
+          type="text"
+          className="w-full glass-premium p-4 rounded-xl border border-white/20 text-white bg-white/5 backdrop-blur-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 placeholder-gray-400 font-mono text-sm" 
+          value={recipient} 
+          onChange={(e) => setRecipient(e.target.value)} 
+          placeholder="0x1234567890abcdef..."
+        />
       </div>
 
-      <div className="flex gap-2">
-        <button disabled={!canSubmit} className="px-3 py-2 border rounded disabled:opacity-50" onClick={handleBridge}>
-          {isSubmitting ? 'Processing...' : 'Bridge'}
-        </button>
-        {sourceChain === 'solana' && (
-          <button className="px-3 py-2 border rounded" onClick={handleMintOnBase}>Mint on Base</button>
+      {/* Action Buttons */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <Button 
+          disabled={!canSubmit} 
+          className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 h-12 text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed" 
+          onClick={handleBridge}
+        >
+          {isSubmitting ? (
+            <div className="flex items-center gap-2">
+              <LoadingSpinner size="sm" color="white" />
+              <span>Processing...</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span>🌉</span>
+              <span>Bridge Assets</span>
+            </div>
+          )}
+        </Button>
+        
+        {sourceChain === 'solana' && cctpMessage && cctpAttestation && (
+          <Button 
+            variant="outline"
+            className="flex-1 border-green-400/50 text-green-300 hover:bg-green-400/10 h-12 text-base font-semibold" 
+            onClick={handleMintOnBase}
+          >
+            <div className="flex items-center gap-2">
+              <span>⚡</span>
+              <span>Mint on Base</span>
+            </div>
+          </Button>
         )}
       </div>
 
+      {/* Bridge Status */}
       <BridgeStatus logs={logs} error={error} />
 
+      {/* Success Actions */}
       {mintTx && (
-        <div className="text-sm mt-2 space-y-2">
-          <div>
-            Mint Tx: <a className="text-blue-400" target="_blank" rel="noreferrer" href={`https://basescan.org/tx/${mintTx}`}>{mintTx}</a>
+        <div className="glass-premium p-6 rounded-xl border border-green-400/20 bg-green-400/5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-green-400 to-emerald-500 flex items-center justify-center">
+              <span className="text-white text-lg">✅</span>
+            </div>
+            <h3 className="text-green-300 font-semibold">Bridge Complete!</h3>
           </div>
-          <div>
-            <a className="px-3 py-2 border rounded inline-block" href="/my-tickets">Go buy tickets</a>
+          
+          <div className="space-y-4">
+            <div className="bg-green-500/10 p-4 rounded-lg border border-green-400/20">
+              <p className="text-sm text-green-200 mb-2">Transaction Hash:</p>
+              <a 
+                className="text-green-400 hover:text-green-300 font-mono text-sm break-all underline" 
+                target="_blank" 
+                rel="noreferrer" 
+                href={`https://basescan.org/tx/${mintTx}`}
+              >
+                {mintTx}
+              </a>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                asChild
+                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+              >
+                <a href="/my-tickets">
+                  <span>🎫</span>
+                  <span>Buy Tickets Now</span>
+                </a>
+              </Button>
+              
+              <Button
+                variant="outline"
+                className="flex-1 border-blue-400/50 text-blue-300 hover:bg-blue-400/10"
+                onClick={() => window.location.reload()}
+              >
+                <span>🔄</span>
+                <span>Bridge More</span>
+              </Button>
+            </div>
           </div>
         </div>
       )}
