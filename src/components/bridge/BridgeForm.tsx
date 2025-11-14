@@ -40,7 +40,9 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void 
       });
 
       if (!res.success) {
-        setError(res.error || 'Bridge failed');
+        const err = res.error || 'Bridge failed';
+        const isRpc = err.includes('403') || err.toLowerCase().includes('rpc');
+        setError(isRpc ? 'Solana RPC blocked or misconfigured. Set NEXT_PUBLIC_SOLANA_RPC to a provider RPC or use /api/solana-rpc with SOLANA_RPC_TARGET.' : err);
         setIsSubmitting(false);
         return;
       }
