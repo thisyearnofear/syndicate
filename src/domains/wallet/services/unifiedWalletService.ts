@@ -164,6 +164,24 @@ export function useUnifiedWallet(): {
             throw createError('WALLET_NOT_FOUND', 'Phantom wallet is not installed. Please install it from phantom.app');
           }
 
+          // METAMASK CONFLICT PREVENTION: Disable MetaMask auto-connection while using Phantom
+          // This prevents wagmi from interfering with Solana wallet connections
+          try {
+            if ((window as any).ethereum) {
+              // Temporarily disable ethereum provider to prevent MetaMask auto-connect
+              const originalProvider = (window as any).ethereum;
+              (window as any).ethereum = null;
+              
+              // Restore after a brief delay to prevent immediate re-trigger
+              setTimeout(() => {
+                (window as any).ethereum = originalProvider;
+              }, 1000);
+            }
+          } catch (error) {
+            console.warn('Could not disable MetaMask auto-connect:', error);
+            // Continue anyway - not critical
+          }
+
           try {
             // Always connect via Solana interface first to guarantee Phantom connection
             const solanaWallet = (window as any).solana;

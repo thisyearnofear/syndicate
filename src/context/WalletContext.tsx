@@ -175,7 +175,11 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
   // Sync with wagmi/RainbowKit state - synchronizes EVM wallet connections only
   useEffect(() => {
-    if (wagmiConnected && address) {
+    // PHANTOM FIX: Don't let wagmi interfere with non-EVM wallet connections
+    // Skip wagmi sync if we're already connected to a non-EVM wallet (Phantom, NEAR)
+    const isNonEvmWallet = state.walletType === 'phantom' || state.walletType === 'near';
+    
+    if (wagmiConnected && address && !isNonEvmWallet) {
       // Only sync wagmi connections for EVM wallets, don't interfere with custom unified wallet connections
       const currentWalletType = (window as any).wagmiStore?.getState?.()?.currentConnector?.id;
 
@@ -199,14 +203,14 @@ export function WalletProvider({ children }: WalletProviderProps) {
           chainId: wagmiChainId || 8453,
         },
       });
-    } else if (!wagmiConnected) {
+    } else if (!wagmiConnected && !isNonEvmWallet) {
       // wagmi disconnected - only disconnect if we were using wagmi (MetaMask)
       // This avoids disrupting custom wallet connections managed elsewhere
       if (state.walletType === 'metamask') {
         dispatch({ type: 'DISCONNECT' });
       }
     }
-  }, [wagmiConnected, address, wagmiChainId, connector, dispatch]);
+  }, [wagmiConnected, address, wagmiChainId, connector, dispatch, state.walletType]);
 
   // Persist state to localStorage
   useEffect(() => {
