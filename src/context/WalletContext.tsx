@@ -176,9 +176,36 @@ export function WalletProvider({ children }: WalletProviderProps) {
   // Sync with wagmi/RainbowKit state
   useEffect(() => {
     if (wagmiConnected && address) {
-      const walletType = connector?.id === 'metaMask' ? 'metamask' :
-                        connector?.id === 'walletConnect' ? 'metamask' : // Treat WalletConnect as MetaMask-like
-                        'metamask'; // Default
+      // Don't override wallet type if already correctly set (e.g., Phantom detected by unified service)
+      if (state.isConnected && state.walletType && state.walletType !== 'metamask') {
+        // Wallet type is already correctly set, just update address/chain if needed
+        if (state.address !== address || state.chainId !== (wagmiChainId || 8453)) {
+          dispatch({
+            type: 'CONNECT_SUCCESS',
+            payload: {
+              address,
+              walletType: state.walletType, // Preserve existing wallet type
+              chainId: wagmiChainId || 8453,
+            },
+          });
+        }
+        return;
+      }
+
+      // Determine wallet type for wagmi connections
+      let walletType: WalletType = 'metamask'; // Default
+
+      if (connector?.id === 'metaMask') {
+        walletType = 'metamask';
+      } else if (connector?.id === 'walletConnect') {
+        walletType = 'metamask'; // Treat WalletConnect as MetaMask-like
+      } else if (typeof window !== 'undefined' && (window as any).solana?.isPhantom) {
+        // Check if Phantom is the active wallet by examining the provider
+        walletType = 'phantom';
+      } else {
+        walletType = 'metamask'; // Default fallback
+      }
+
       dispatch({
         type: 'CONNECT_SUCCESS',
         payload: {
@@ -187,10 +214,11 @@ export function WalletProvider({ children }: WalletProviderProps) {
           chainId: wagmiChainId || 8453,
         },
       });
-    } else if (!wagmiConnected && state.isConnected) {
+    } else if (!wagmiConnected && state.isConnected && state.walletType !== 'near') {
+      // Only disconnect if wagmi disconnected and we're not using a non-EVM wallet (like NEAR)
       dispatch({ type: 'DISCONNECT' });
     }
-  }, [wagmiConnected, address, wagmiChainId, connector, state.isConnected, dispatch]);
+  }, [wagmiConnected, address, wagmiChainId, connector, state.isConnected, state.walletType, state.address, state.chainId, dispatch]);
 
   // Persist state to localStorage
   useEffect(() => {
