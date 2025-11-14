@@ -1,10 +1,14 @@
-import { CONTRACTS, CHAINS, cctp as CCTP } from '@/config';
+import { CONTRACTS, CHAINS, cctp as CCTP, ccip as CCIP } from '@/config';
 import { ethers, Contract } from 'ethers';
+import { nearChainSignatureService } from './nearChainSignatureService';
+import { solanaBridgeService } from './solanaBridgeService';
 
 export interface BridgeResult {
   success: boolean;
   txHash?: string;
+  messageId?: string;
   bridgeId?: string;
+  protocol: 'cctp' | 'ccip' | 'near' | 'none';
   error?: string;
   estimatedFee?: string; // in USDC
   etaMinutes?: number;
@@ -14,6 +18,16 @@ export interface BridgeResult {
 export interface BridgeOptions {
   onStatus?: (stage: string, info?: Record<string, any>) => void;
   dryRun?: boolean;
+  preferredProtocol?: 'cctp' | 'ccip' | 'near' | 'auto';
+  wallet?: any; // Solana wallet adapter or similar
+}
+
+export interface CrossChainTransferRequest {
+  sourceChain: string;
+  destinationChain: string;
+  amount: string;
+  recipient: string;
+  ticketCount?: number;
 }
 
 /**
@@ -39,6 +53,13 @@ class BridgeService {
   // MessageTransmitterV2: receiveMessage(bytes message, bytes attestation)
   private readonly MESSAGE_TRANSMITTER_ABI = [
     'function receiveMessage(bytes calldata message, bytes calldata attestation) external returns (bool)'
+  ];
+
+  // CCIP Router ABI for sending tokens
+  private readonly CCIP_ROUTER_ABI = [
+    'function getFee(uint64 destinationChainSelector, bytes memory message) external view returns (uint256 fee)',
+    'function ccipSend(uint64 destinationChainSelector, bytes memory message) external payable returns (bytes32 messageId)',
+    'function isChainSupported(uint64 chainSelector) external view returns (bool)'
   ];
 
   // CCTP addresses and domain IDs are provided by centralized config
@@ -119,14 +140,14 @@ class BridgeService {
       this.tryInitFromWeb3();
     }
     if (!this.signer || !this.provider) {
-      return { success: false, error: 'BridgeService not initialized with signer/provider' };
+      return { success: false, error: 'BridgeService not initialized with signer/provider', protocol: 'none' };
     }
 
     const eth = CCTP.ethereum;
     const base = CCTP.base;
     const baseUsdc = CONTRACTS?.usdc;
     if (!baseUsdc) {
-      return { success: false, error: 'USDC Base address missing in unified CONTRACTS config' };
+      return { success: false, error: 'USDC Base address missing in unified CONTRACTS config', protocol: 'cctp' };
     }
 
     // Normalize recipient to bytes32 (left-padded)
@@ -137,6 +158,7 @@ class BridgeService {
       return {
         success: true,
         bridgeId: 'dryrun-cctp',
+        protocol: 'cctp',
         details: { originToken: eth.usdc, destToken: base.usdc, recipient },
       };
     }
@@ -171,6 +193,7 @@ class BridgeService {
         return {
           success: false,
           error: 'Failed to fetch CCTP attestation',
+          protocol: 'cctp',
           details: { burnTxHash: rcBurn.hash },
         };
       }
@@ -186,12 +209,14 @@ class BridgeService {
         success: true,
         txHash: rcMint.hash,
         bridgeId: 'cctp-v2',
+        protocol: 'cctp',
         details: { burnTxHash: rcBurn.hash, mintTxHash: rcMint.hash, recipient },
       };
     } catch (error) {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'CCTP transfer failed',
+        protocol: 'cctp',
       };
     }
   }
@@ -214,6 +239,109 @@ class BridgeService {
       return '0x';
     } catch (_) {
       return '0x';
+    }
+  }
+
+  /**
+   * Bridges USDC using Chainlink CCIP between supported chains
+   */
+  async bridgeUsdcViaCCIP(
+    sourceChain: string,
+    destinationChain: string,
+    amount: string,
+    recipient: string,
+    options?: BridgeOptions
+  ): Promise<BridgeResult> {
+    const onStatus = options?.onStatus;
+    if (!this.signer || !this.provider) {
+      this.tryInitFromWeb3();
+    }
+    if (!this.signer || !this.provider) {
+      return { success: false, error: 'BridgeService not initialized with signer/provider', protocol: 'ccip' };
+    }
+
+    // Validate chains are supported
+    const sourceConfig = CCIP[sourceChain as keyof typeof CCIP];
+    const destConfig = CCIP[destinationChain as keyof typeof CCIP];
+    if (!sourceConfig || !destConfig) {
+      return { success: false, error: `Unsupported chain combination: ${sourceChain} → ${destinationChain}`, protocol: 'ccip' };
+    }
+
+    try {
+      onStatus?.('initializing', { sourceChain, destinationChain, amount });
+
+      // Create CCIP router contract instance
+      const router = new Contract(sourceConfig.router, this.CCIP_ROUTER_ABI, this.signer);
+
+      // Check if destination chain is supported
+      const isSupported = await router.isChainSupported(destConfig.chainSelector);
+      if (!isSupported) {
+        return { success: false, error: `Destination chain ${destinationChain} not supported by CCIP router`, protocol: 'ccip' };
+      }
+
+      // Prepare token transfer
+      const amountWei = ethers.parseUnits(amount, 6); // USDC has 6 decimals
+      const tokenAmounts = [{
+        token: sourceConfig.usdc,
+        amount: amountWei
+      }];
+
+      // Encode the CCIP message
+      const message = {
+        tokenAmounts,
+        receiver: ethers.zeroPadValue(recipient, 32),
+        data: '0x',
+        feeTokenAmount: 0n,
+        extraArgs: '0x'
+      };
+
+      // Get the fee for the transfer
+      onStatus?.('calculating_fee');
+      const fee = await router.getFee(destConfig.chainSelector, message);
+      
+      // Approve USDC spending
+      onStatus?.('approve', { token: sourceConfig.usdc, amount });
+      if (!options?.dryRun) {
+        const usdc = new Contract(sourceConfig.usdc, this.ERC20_ABI, this.signer);
+        const allowance = await usdc.allowance(await this.signer.getAddress(), sourceConfig.router);
+        if (allowance < amountWei) {
+          const txApprove = await usdc.approve(sourceConfig.router, amountWei);
+          const rcApprove = await txApprove.wait();
+          onStatus?.('approved', { txHash: rcApprove.hash });
+        }
+      }
+
+      if (options?.dryRun) {
+        return {
+          success: true,
+          bridgeId: 'dryrun-ccip',
+          protocol: 'ccip',
+          estimatedFee: ethers.formatEther(fee),
+          details: { sourceToken: sourceConfig.usdc, destToken: destConfig.usdc, recipient },
+        };
+      }
+
+      // Execute the CCIP transfer
+      onStatus?.('sending', { fee: ethers.formatEther(fee) });
+      const tx = await router.ccipSend(destConfig.chainSelector, message, { value: fee });
+      const receipt = await tx.wait();
+      
+      onStatus?.('sent', { txHash: receipt.hash });
+
+      return {
+        success: true,
+        txHash: receipt.hash,
+        bridgeId: 'ccip-v1',
+        protocol: 'ccip',
+        estimatedFee: ethers.formatEther(fee),
+        details: { sourceToken: sourceConfig.usdc, destToken: destConfig.usdc, recipient },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'CCIP transfer failed',
+        protocol: 'ccip',
+      };
     }
   }
 
@@ -262,6 +390,136 @@ class BridgeService {
     } catch (_) {
       return null;
     }
+  }
+
+  /**
+   * Unified cross-chain transfer supporting CCTP, CCIP, and NEAR protocols
+   */
+  async transferCrossChain(request: CrossChainTransferRequest, options?: BridgeOptions): Promise<BridgeResult> {
+    const { sourceChain, destinationChain, amount, recipient } = request;
+    const protocol = this.selectProtocol(sourceChain, destinationChain, options?.preferredProtocol);
+
+    if (protocol === 'cctp' && sourceChain === 'ethereum' && destinationChain === 'base') {
+      return this.bridgeUsdcEthereumToBase(amount, recipient, options);
+    }
+
+    // Solana → Base path with primary+fallback routing
+    if (sourceChain === 'solana' && destinationChain === 'base') {
+      options?.onStatus?.('solana_bridge:start', { amount, recipient });
+      const res = await solanaBridgeService.bridgeUsdcSolanaToBase(amount, recipient, options);
+      if (res.success) return res;
+      return res; // propagate detailed error
+    }
+    
+    // Handle CCIP transfers
+    if (protocol === 'ccip' && CCIP[sourceChain as keyof typeof CCIP] && CCIP[destinationChain as keyof typeof CCIP]) {
+      return this.bridgeUsdcViaCCIP(sourceChain, destinationChain, amount, recipient, options);
+    }
+
+    // For now, return not implemented for other combinations
+    // NEAR protocols would be implemented here
+    return {
+      success: false,
+      error: `Cross-chain transfer not implemented for ${sourceChain} → ${destinationChain} via ${protocol}`,
+      protocol,
+    };
+  }
+
+
+  // Protocol selection logic
+  private selectProtocol(sourceChain: string, destinationChain: string, preferred?: 'cctp' | 'ccip' | 'near' | 'auto'): 'cctp' | 'ccip' | 'near' {
+    if (preferred && preferred !== 'auto') {
+      if (this.isProtocolSupported(preferred, sourceChain, destinationChain)) {
+        return preferred;
+      }
+    }
+
+    // Auto-selection: CCTP first (most reliable), then CCIP, then NEAR
+    const protocols: Array<'cctp' | 'ccip' | 'near'> = ['cctp', 'ccip', 'near'];
+    for (const protocol of protocols) {
+      if (this.isProtocolSupported(protocol, sourceChain, destinationChain)) {
+        return protocol;
+      }
+    }
+
+    return 'cctp'; // Default fallback
+  }
+
+  private isProtocolSupported(protocol: string, sourceChain: string, destinationChain: string): boolean {
+    switch (protocol) {
+      case 'cctp':
+        return (sourceChain === 'ethereum' && destinationChain === 'base') ||
+          (sourceChain === 'base' && destinationChain === 'ethereum');
+
+      case 'ccip':
+        // CCIP supports multiple chains - check if both chains are configured
+        return CCIP[sourceChain as keyof typeof CCIP] !== undefined && 
+               CCIP[destinationChain as keyof typeof CCIP] !== undefined;
+
+      case 'near':
+        return destinationChain === 'base' && nearChainSignatureService.isReady();
+
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Get estimated fees across supported protocols
+   */
+  async estimateCrossChainFees(sourceChain: string, destinationChain: string, amount: string): Promise<Array<{ protocol: string; fee: string; etaMinutes: number }>> {
+    const estimates = [];
+
+    if (this.isProtocolSupported('cctp', sourceChain, destinationChain)) {
+      estimates.push({ protocol: 'cctp', fee: '0.01', etaMinutes: 20 }); // Placeholder
+    }
+
+    if (this.isProtocolSupported('ccip', sourceChain, destinationChain)) {
+      // Try to get actual CCIP fee estimation
+      try {
+        if (this.provider && this.signer) {
+          const sourceConfig = CCIP[sourceChain as keyof typeof CCIP];
+          const destConfig = CCIP[destinationChain as keyof typeof CCIP];
+          
+          if (sourceConfig && destConfig) {
+            const router = new Contract(sourceConfig.router, this.CCIP_ROUTER_ABI, this.provider);
+            
+            // Prepare token transfer for fee calculation
+            const amountWei = ethers.parseUnits(amount, 6); // USDC has 6 decimals
+            const tokenAmounts = [{
+              token: sourceConfig.usdc,
+              amount: amountWei
+            }];
+            
+            const message = {
+              tokenAmounts,
+              receiver: ethers.zeroPadValue(ethers.ZeroAddress, 32),
+              data: '0x',
+              feeTokenAmount: 0n,
+              extraArgs: '0x'
+            };
+            
+            const fee = await router.getFee(destConfig.chainSelector, message);
+            estimates.push({ 
+              protocol: 'ccip', 
+              fee: ethers.formatEther(fee), 
+              etaMinutes: 5 // CCIP is typically faster than CCTP
+            });
+          } else {
+            // Fallback to placeholder if we can't get actual fee
+            estimates.push({ protocol: 'ccip', fee: '0.005', etaMinutes: 10 });
+          }
+        } else {
+          // Fallback to placeholder if we don't have provider/signer
+          estimates.push({ protocol: 'ccip', fee: '0.005', etaMinutes: 10 });
+        }
+      } catch (error) {
+        // Fallback to placeholder if fee estimation fails
+        estimates.push({ protocol: 'ccip', fee: '0.005', etaMinutes: 10 });
+      }
+    }
+
+    return estimates;
   }
 }
 

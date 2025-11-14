@@ -20,6 +20,7 @@ This guide walks you through deploying and wiring a minimal ERC-4626 USDC vault 
   - Fund ETH in the fork via Tenderly.
   - For USDC, use Tenderly to mint or impersonate a holder to transfer to your wallet (fork-only).
 - Tooling: `Foundry` or `Hardhat` with Node.js `>=18`.
+- **For cross-chain testing**: Configure additional networks in MetaMask (Base, Polygon, Avalanche) with appropriate RPC URLs.
 
 ## Components To Deploy
 
@@ -166,6 +167,28 @@ Record returned strategy address: `STRATEGY_ADDRESS`.
 
 - Missing approvals: Call `USDC.approve(VAULT_ADDRESS, amount)` before deposit.
 - Decimals mismatch: USDC is `6` decimals; shares often use `18`. Ensure your vault math normalizes conversion.
+
+## Testing Cross-Chain Functionality
+
+### CCTP Testing (Ethereum ↔ Base)
+1. Use your Tenderly mainnet fork for Ethereum operations
+2. Connect MetaMask to the fork
+3. Ensure you have USDC on the fork
+4. Call `bridgeUsdcEthereumToBase()` method
+5. Verify USDC arrives on Base network
+
+### CCIP Testing (Multi-chain)
+1. Configure MetaMask with multiple networks:
+   - Ethereum mainnet
+   - Base
+   - Polygon
+   - Avalanche
+2. Ensure you have USDC on the source chain
+3. Use the `transferCrossChain()` method with appropriate chain parameters
+4. Monitor status updates through callbacks
+5. Verify funds arrive on the destination chain
+
+Note: For testing purposes, you can use testnet versions of these networks if preferred, but you'll need to update the CCIP configuration accordingly.
 - Provider issues: Confirm `NEXT_PUBLIC_TENDERLY_MAINNET_FORK_RPC` and MetaMask network settings.
 - Strategy creation: Ensure factory/implementation addresses are correct if using Octant Tokenized Strategy.
 

@@ -250,7 +250,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
             }}
             onNext={() => setStep('select')}
             onBack={() => setStep('mode')}
-            userAddress={isConnected ? address : undefined}
+            userAddress={isConnected ? (address || undefined) : undefined}
           />
         );
       case 'select':

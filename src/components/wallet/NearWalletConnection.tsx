@@ -1,20 +1,13 @@
 "use client";
 
-// import {
-//   useNearWallet,
-//   useNearWalletConnection,
-// } from "@/providers/NearWalletProvider";
 import { useState, useEffect } from "react";
-// import { getCrossChainTicketService } from "@/services/crossChainTicketService";
+import { nearChainSignatureService } from "@/services/nearChainSignatureService";
 
 export default function NearWalletConnection() {
-  // const { isConnected, accountId, connect, connectWeb3Auth, disconnect, isLoading, isWeb3Auth } =
-  //   useNearWalletConnection();
-  // const nearWallet = useNearWallet();
-  const isConnected = false;
-  const accountId = null;
-  const isLoading = false;
-  const isWeb3Auth = false;
+  const [isConnected, setIsConnected] = useState(false);
+  const [accountId, setAccountId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isWeb3Auth, setIsWeb3Auth] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const [chainSignatureAvailable, setChainSignatureAvailable] = useState(false);
 

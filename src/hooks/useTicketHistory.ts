@@ -27,6 +27,10 @@ export interface TicketPurchaseHistory {
     endTicket?: number;
     referrer?: string;
     buyer?: string;
+    // NEW: Cross-chain purchase tracking
+    sourceChain?: string;
+    sourceWallet?: string;
+    bridgeTransactionHash?: string;
 }
 
 export interface TicketHistoryState {
@@ -78,6 +82,17 @@ export function useTicketHistory(): TicketHistoryState & TicketHistoryActions {
 
             const purchases = await response.json();
 
+            // Fetch cross-chain purchases for this wallet
+            let crossChainPurchases: any[] = [];
+            try {
+                const crossChainResponse = await fetch(`/api/cross-chain-purchases?wallet=${address}`);
+                if (crossChainResponse.ok) {
+                    crossChainPurchases = await crossChainResponse.json();
+                }
+            } catch (crossChainError) {
+                console.warn('Failed to fetch cross-chain purchases:', crossChainError);
+            }
+
             // Map API response to our interface structure, preserving transformed fields
             const mappedPurchases: TicketPurchaseHistory[] = purchases.map((purchase: any): TicketPurchaseHistory => {
                 // Fallbacks for older API shapes
@@ -108,12 +123,37 @@ export function useTicketHistory(): TicketHistoryState & TicketHistoryActions {
                     endTicket: purchase.endTicket,
                     referrer: purchase.referrer,
                     buyer: purchase.buyer,
+                    // Cross-chain purchase data
+                    sourceChain: purchase.sourceChain,
+                    sourceWallet: purchase.sourceWallet,
+                    bridgeTransactionHash: purchase.bridgeTransactionHash,
                 };
             });
 
+            // Add cross-chain purchases to the list
+            const allPurchases = [...mappedPurchases];
+            for (const crossChainPurchase of crossChainPurchases) {
+                // Check if this cross-chain purchase is already in the list
+                const existingIndex = mappedPurchases.findIndex(p => p.txHash === crossChainPurchase.ticketPurchaseTx);
+                if (existingIndex === -1) {
+                    // Add as a new purchase entry
+                    allPurchases.push({
+                        id: `cross-chain-${crossChainPurchase.id}`,
+                        ticketCount: crossChainPurchase.ticketCount,
+                        totalCost: crossChainPurchase.ticketCount.toString(), // $1 per ticket
+                        txHash: crossChainPurchase.ticketPurchaseTx,
+                        timestamp: crossChainPurchase.timestamp,
+                        status: 'active',
+                        sourceChain: crossChainPurchase.sourceChain,
+                        sourceWallet: crossChainPurchase.sourceWallet,
+                        bridgeTransactionHash: crossChainPurchase.bridgeTxHash,
+                    });
+                }
+            }
+
             setState(prev => ({
                 ...prev,
-                purchases: mappedPurchases,
+                purchases: allPurchases,
                 isLoading: false,
                 lastUpdated: Date.now(),
             }));
