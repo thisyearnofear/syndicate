@@ -8,6 +8,7 @@ useEffect,
 ReactNode,
 } from "react";
 import { useAccount, useDisconnect } from "wagmi";
+import { useCallback } from "react";
 import { WalletType } from "@/domains/wallet/services/unifiedWalletService";
 
 // =============================================================================
@@ -46,6 +47,7 @@ export type WalletAction =
 interface WalletContextType {
   state: WalletState;
   dispatch: React.Dispatch<WalletAction>;
+  disconnectWallet: () => void;
 }
 
 const defaultWalletState: WalletState = {
@@ -60,6 +62,7 @@ const defaultWalletState: WalletState = {
 };
 
 const noopDispatch: React.Dispatch<WalletAction> = () => undefined;
+const noopDisconnect = () => undefined;
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
@@ -172,19 +175,19 @@ export function WalletProvider({ children }: WalletProviderProps) {
   const [state, dispatch] = useReducer(walletReducer, defaultWalletState);
 
   const { address, isConnected: wagmiConnected, chainId: wagmiChainId, connector } = useAccount();
+  const { disconnect: wagmiDisconnect } = useDisconnect();
 
   // ANTI-SPAM FIX: Completely disable automatic wagmi sync to prevent aggressive MetaMask connection attempts
   // Only sync wagmi state when explicitly requested by user action
   useEffect(() => {
-    // DISABLED: Auto-sync with wagmi causes aggressive MetaMask connection requests
-    // Instead, wagmi connections should only happen through user-initiated actions
-    // This prevents the app from spamming MetaMask on page load
-    
-    // If user manually connects through RainbowKit modal, we'll sync in a different way
-    // For now, completely disable auto-sync to stop the spam
+    // EMERGENCY FIX: Force disconnect wagmi if it auto-connects to stop MetaMask spam
+    if (wagmiConnected && !state.isConnected) {
+      console.log('WalletContext: Force disconnecting wagmi auto-connection to prevent spam');
+      wagmiDisconnect();
+    }
     
     console.log('WalletContext: Auto-sync disabled to prevent MetaMask spam');
-  }, []);
+  }, [wagmiConnected, wagmiDisconnect, state.isConnected]);
 
   // Manual wagmi sync function (called only when user explicitly connects)
   const syncWithWagmi = useCallback(() => {
@@ -211,6 +214,40 @@ export function WalletProvider({ children }: WalletProviderProps) {
       });
     }
   }, [wagmiConnected, address, wagmiChainId, connector, dispatch, state.walletType]);
+
+  // Enhanced disconnect function that handles all wallet types
+  const disconnectWallet = useCallback(async () => {
+    try {
+      // First disconnect from wagmi (MetaMask, WalletConnect, etc.)
+      if (wagmiConnected && state.walletType === 'metamask') {
+        await wagmiDisconnect();
+      }
+      
+      // Handle Phantom (Solana) disconnection
+      if (state.walletType === 'phantom' && (window as any).solana) {
+        try {
+          await (window as any).solana.disconnect();
+        } catch (phantomError) {
+          console.warn('Phantom disconnect failed:', phantomError);
+        }
+      }
+      
+      // Handle NEAR disconnection
+      if (state.walletType === 'near') {
+        // NEAR disconnect logic would go here
+        console.log('NEAR disconnect - implement if needed');
+      }
+      
+      // Always clear our internal state
+      dispatch({ type: 'DISCONNECT' });
+      
+      console.log('Wallet disconnected successfully');
+    } catch (error) {
+      console.error('Failed to disconnect wallet:', error);
+      // Still clear our state even if underlying wallet disconnect fails
+      dispatch({ type: 'DISCONNECT' });
+    }
+  }, [wagmiConnected, wagmiDisconnect, state.walletType]);
 
   // Persist state to localStorage
   useEffect(() => {
@@ -250,7 +287,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
   }, []);
 
   return (
-    <WalletContext.Provider value={{ state, dispatch }}>
+    <WalletContext.Provider value={{ state, dispatch, disconnectWallet }}>
       {children}
     </WalletContext.Provider>
   );
@@ -267,6 +304,7 @@ export function useWalletContext() {
       return {
         state: { ...defaultWalletState },
         dispatch: noopDispatch,
+        disconnectWallet: noopDisconnect,
       };
     }
     throw new Error("useWalletContext must be used within a WalletProvider");

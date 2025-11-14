@@ -15,7 +15,7 @@ export default function WalletInfo({
   showFullAddress = false,
   showNetworkIndicator = true,
 }: WalletInfoProps) {
-  const { state, dispatch } = useWalletContext();
+  const { state, disconnectWallet } = useWalletContext();
 
   if (!state.isConnected || !state.address) {
     return null;
@@ -106,7 +106,7 @@ export default function WalletInfo({
   };
 
   const handleDisconnect = () => {
-    dispatch({ type: "DISCONNECT" });
+    disconnectWallet();
   };
 
   return (
@@ -172,17 +172,21 @@ export default function WalletInfo({
             variant="ghost"
             size="sm"
             onClick={handleDisconnect}
-            className="flex-1 text-xs text-gray-400 hover:text-gray-300"
+            className="flex-1 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10"
           >
-            Disconnect
+            🔌 Disconnect
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => dispatch({ type: "OPEN_MODAL" })}
-            className="flex-1 text-xs text-gray-400 hover:text-gray-300"
+            onClick={() => {
+              // For now, disconnect and let user reconnect with different wallet
+              // TODO: Implement proper wallet switching modal
+              disconnectWallet();
+            }}
+            className="flex-1 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
           >
-            Switch
+            🔄 Switch
           </Button>
         </div>
       </div>

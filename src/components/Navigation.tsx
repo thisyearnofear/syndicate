@@ -176,7 +176,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                             {showWalletDetails && (
                             <div
                             ref={walletDetailsRef}
-                            className="absolute top-full right-0 mt-2 z-50"
+                            className="absolute top-full right-0 mt-2 z-[9999]"
                             >
                             <WalletInfo
                             showFullAddress={false}
