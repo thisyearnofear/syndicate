@@ -496,3 +496,29 @@ select:focus-visible {
     padding: 3rem;
   }
 }
+
+/* =============================================================================
+   RAINBOWKIT MODAL Z-INDEX FIXES
+   ============================================================================= */
+
+/* Ensure RainbowKit connect modal appears above all other elements */
+/* Fix for wallet connect dropdown being hidden behind syndicates backdrop */
+[data-rk] {
+  z-index: 99999 !important;
+}
+
+/* RainbowKit backdrop */
+[data-rk] [role="dialog"] {
+  z-index: 99999 !important;
+}
+
+/* RainbowKit modal content */
+[data-rk] [role="dialog"] > div {
+  z-index: 100000 !important;
+}
+
+/* RainbowKit connect button dropdown */
+[data-rk] [data-testid="connect-button"] + div,
+[data-rk] [data-testid="account-button"] + div {
+  z-index: 100000 !important;
+}
