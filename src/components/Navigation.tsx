@@ -174,16 +174,24 @@ export default function Navigation({ className = '' }: NavigationProps) {
                                         <span className="text-green-400 text-sm font-semibold">Connected</span>
                                     </div>
                             {showWalletDetails && (
-                            <div
-                            ref={walletDetailsRef}
-                            className="absolute top-full right-0 mt-2 z-[9999]"
-                            >
-                            <WalletInfo
-                            showFullAddress={false}
-                            showNetworkIndicator={true}
-                            className="w-80"
-                            />
-                            </div>
+                            <>
+                                {/* Backdrop for better visibility */}
+                                <div 
+                                    className="fixed inset-0 z-[100000] wallet-dropdown-backdrop"
+                                    onClick={() => setShowWalletDetails(false)}
+                                />
+                                {/* Wallet dropdown */}
+                                <div
+                                    ref={walletDetailsRef}
+                                    className="absolute top-full right-0 mt-2 z-[100001] wallet-dropdown"
+                                >
+                                    <WalletInfo
+                                        showFullAddress={false}
+                                        showNetworkIndicator={true}
+                                        className="w-80 shadow-2xl"
+                                    />
+                                </div>
+                            </>
                             )}
                             </div>
                             ) : (
