@@ -33,6 +33,8 @@ export default function WalletInfo({
         return "Ethereum";
       case CHAIN_IDS.AVALANCHE:
         return "Avalanche";
+      case 0:
+        return "NEAR"; // Sentinel value for NEAR wallets
       default:
         return `Network (${chainId})`;
     }
@@ -50,6 +52,8 @@ export default function WalletInfo({
         return "gray";
       case CHAIN_IDS.AVALANCHE:
         return "red";
+      case 0:
+        return "green"; // NEAR network color
       default:
         return "gray";
     }
