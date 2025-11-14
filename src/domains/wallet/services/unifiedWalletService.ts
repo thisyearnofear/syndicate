@@ -31,15 +31,12 @@ export const WalletTypes = {
 
 /**
  * CLEAN: Detect available wallets
+ * Note: MetaMask is handled by wagmi/RainbowKit to avoid conflicts
  */
 export function getAvailableWallets(): WalletType[] {
   const available: WalletType[] = [];
 
-  // Check for MetaMask
-  if (typeof window !== 'undefined' && (window as any).ethereum?.isMetaMask) {
-    available.push(WalletTypes.METAMASK);
-  }
-
+  // MetaMask is handled by wagmi/RainbowKit - skip here to avoid conflicts
   // Check for Phantom
   if (typeof window !== 'undefined' && (window as any).solana?.isPhantom) {
     available.push(WalletTypes.PHANTOM);
@@ -149,73 +146,12 @@ export function useUnifiedWallet(): {
 
       switch (walletType) {
         case WalletTypes.METAMASK:
-          // Check if MetaMask is available
-          if (!(window as any).ethereum) {
-            throw createError('WALLET_NOT_FOUND', 'MetaMask is not installed. Please install it from metamask.io');
-          }
-
-          try {
-            const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' }) as string[];
-            if (!accounts || accounts.length === 0) {
-              throw createError('WALLET_ERROR', 'No accounts found. Please unlock MetaMask.');
-            }
-
-            const network = await (window as any).ethereum.request({ method: 'eth_chainId' });
-            const numericChainId = parseInt((network as string) || '0x1', 16);
-
-            // Check if we're on Base network (8453), if not, try to switch
-            if (numericChainId !== 8453) {
-              try {
-                await (window as any).ethereum.request({
-                  method: 'wallet_switchEthereumChain',
-                  params: [{ chainId: '0x2105' }], // Base mainnet in hex
-                });
-              } catch (switchError: any) {
-                // If Base network is not added to wallet, add it
-                if (switchError.code === 4902) {
-                  await (window as any).ethereum.request({
-                    method: 'wallet_addEthereumChain',
-                    params: [{
-                      chainId: '0x2105',
-                      chainName: 'Base',
-                      nativeCurrency: {
-                        name: 'Ethereum',
-                        symbol: 'ETH',
-                        decimals: 18,
-                      },
-                      rpcUrls: ['https://mainnet.base.org'],
-                      blockExplorerUrls: ['https://basescan.org'],
-                    }],
-                  });
-                } else {
-                  throw switchError;
-                }
-              }
-            }
-
-            // Initialize Web3 service after successful connection
-            try {
-              // Import web3Service statically to avoid webpack issues
-              const { web3Service } = await import('@/services/web3Service');
-              const initialized = await web3Service.initialize();
-
-              if (!initialized) {
-                console.warn('Web3 service initialization failed');
-                // Don't throw here - wallet connection can work without Web3 service for basic functionality
-              }
-            } catch (importError) {
-              console.warn('Web3 service not available:', importError);
-              // Don't throw here - wallet connection can work without Web3 service for basic functionality
-            }
-
-            address = accounts[0] || '';
-            chainId = 8453; // Base network
-          } catch (error: any) {
-            if (error.code === 4001) {
-              throw createError('CONNECTION_REJECTED', 'Connection rejected by user');
-            }
-            throw createError('CONNECTION_FAILED', `Failed to connect to MetaMask: ${error.message}`);
-          }
+          // For MetaMask, prefer wagmi/RainbowKit connection to avoid conflicts
+          // wagmi will handle the connection and our WalletContext will sync with it
+          throw createError(
+            'WALLET_CONNECTION_METHOD',
+            'Please use the RainbowKit modal to connect MetaMask, or switch WalletConnect for seamless connection.'
+          );
           break;
 
         case WalletTypes.PHANTOM:

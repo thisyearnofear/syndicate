@@ -76,22 +76,13 @@ export function WalletConnectionCard({
 
   const wallets = [
     {
-      name: "MetaMask",
-      type: "metamask" as WalletType,
-      icon: "🦊",
-      variant: "primary" as const,
-      description: "Most popular Ethereum wallet",
-      gradient: "from-orange-500 to-red-500",
-      bgColor: "bg-orange-500/10 border-orange-500/20",
-    },
-    {
       name: "WalletConnect",
       type: "metamask" as WalletType, // WalletConnect uses same connection logic
       icon: "🔗",
-      variant: "secondary" as const,
-      description: "Connect via WalletConnect",
-      gradient: "from-purple-500 to-blue-500",
-      bgColor: "bg-purple-500/10 border-purple-500/20",
+      variant: "primary" as const,
+      description: "Connect via WalletConnect (300+ wallets including MetaMask)",
+      gradient: "from-blue-500 to-purple-500",
+      bgColor: "bg-blue-500/10 border-blue-500/20",
       isWalletConnect: true,
     },
     {
