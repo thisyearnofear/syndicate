@@ -173,28 +173,34 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
   const { address, isConnected: wagmiConnected, chainId: wagmiChainId, connector } = useAccount();
 
-  // Sync with wagmi/RainbowKit state - synchronizes EVM wallet connections only
+  // ANTI-SPAM FIX: Completely disable automatic wagmi sync to prevent aggressive MetaMask connection attempts
+  // Only sync wagmi state when explicitly requested by user action
   useEffect(() => {
-    // PHANTOM FIX: Don't let wagmi interfere with non-EVM wallet connections
-    // Skip wagmi sync if we're already connected to a non-EVM wallet (Phantom, NEAR)
+    // DISABLED: Auto-sync with wagmi causes aggressive MetaMask connection requests
+    // Instead, wagmi connections should only happen through user-initiated actions
+    // This prevents the app from spamming MetaMask on page load
+    
+    // If user manually connects through RainbowKit modal, we'll sync in a different way
+    // For now, completely disable auto-sync to stop the spam
+    
+    console.log('WalletContext: Auto-sync disabled to prevent MetaMask spam');
+  }, []);
+
+  // Manual wagmi sync function (called only when user explicitly connects)
+  const syncWithWagmi = useCallback(() => {
     const isNonEvmWallet = state.walletType === 'phantom' || state.walletType === 'near';
     
     if (wagmiConnected && address && !isNonEvmWallet) {
-      // Only sync wagmi connections for EVM wallets, don't interfere with custom unified wallet connections
-      const currentWalletType = (window as any).wagmiStore?.getState?.()?.currentConnector?.id;
-
-      // Determine wallet type for wagmi connections
-      let walletType: WalletType = 'metamask'; // Default
+      let walletType: WalletType = 'metamask';
 
       if (connector?.id === 'metaMask') {
         walletType = 'metamask';
       } else if (connector?.id === 'walletConnect') {
-        walletType = 'metamask'; // Treat WalletConnect as MetaMask-like
+        walletType = 'metamask';
       } else {
-        walletType = 'metamask'; // Default fallback
+        walletType = 'metamask';
       }
 
-      // Always update with wagmi state for consistency
       dispatch({
         type: 'CONNECT_SUCCESS',
         payload: {
@@ -203,12 +209,6 @@ export function WalletProvider({ children }: WalletProviderProps) {
           chainId: wagmiChainId || 8453,
         },
       });
-    } else if (!wagmiConnected && !isNonEvmWallet) {
-      // wagmi disconnected - only disconnect if we were using wagmi (MetaMask)
-      // This avoids disrupting custom wallet connections managed elsewhere
-      if (state.walletType === 'metamask') {
-        dispatch({ type: 'DISCONNECT' });
-      }
     }
   }, [wagmiConnected, address, wagmiChainId, connector, dispatch, state.walletType]);
 
@@ -230,22 +230,22 @@ export function WalletProvider({ children }: WalletProviderProps) {
     }
   }, [state]);
 
-  // Restore state from localStorage
+  // ANTI-SPAM FIX: Disable auto-restoration from localStorage to prevent automatic connection attempts
+  // This prevents the app from trying to reconnect on page load
   useEffect(() => {
+    console.log('WalletContext: Auto-restoration disabled to prevent connection spam on page load');
+    
+    // Clear any saved wallet state to prevent future auto-connections
     try {
-      if (
-        typeof window !== "undefined" &&
-        typeof localStorage !== "undefined"
-      ) {
+      if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
         const savedState = localStorage.getItem("wallet_state");
         if (savedState) {
-          const parsedState = JSON.parse(savedState);
-          dispatch({ type: "RESTORE_STATE", payload: parsedState });
+          console.log('Clearing saved wallet state to prevent auto-connection');
+          localStorage.removeItem("wallet_state");
+        }
       }
-  }
-  } catch (error) {
-    console.warn("Failed to restore wallet state:", error);
-      localStorage.removeItem("wallet_state");
+    } catch (error) {
+      console.warn("Failed to clear wallet state:", error);
     }
   }, []);
 
