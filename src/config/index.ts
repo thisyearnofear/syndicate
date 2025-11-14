@@ -10,6 +10,7 @@
 
 import { sepolia, base, avalanche, mainnet, baseSepolia } from "viem/chains";
 import { CCTP } from './cctpConfig';
+import { CCIP } from './ccipConfig';
 
 // =============================================================================
 // BLOCKCHAIN CONFIGURATION
@@ -242,6 +243,7 @@ export { API as api };
 export { PERFORMANCE as performance };
 export { FEATURES as features };
 export { CCTP as cctp };
+export { CCIP as ccip };
 
 // Type exports
 export type ChainConfig = typeof CHAINS[keyof typeof CHAINS];

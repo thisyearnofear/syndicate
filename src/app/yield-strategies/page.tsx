@@ -101,7 +101,7 @@ export default function YieldStrategiesPage() {
                   ticketsAllocation={85}
                   causesAllocation={15}
                   onAllocationChange={() => {}}  // Not used in this context
-                  userAddress={address}
+                  userAddress={address || undefined}
                 />
                 
                 {selectedStrategy && (

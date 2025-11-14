@@ -196,7 +196,9 @@ Transform lottery participation into **impact investing** through sustainable sy
 
 #### 🌐 Cross-Chain Infrastructure (Month 1)
 - [ ] **Near Protocol Integration**: Native ticket purchases via Near wallet
-- [ ] **CCIP Implementation**: Chainlink Cross-Chain Interoperability Protocol for unified ticket purchasing
+- [x] **CCIP Implementation**: Chainlink Cross-Chain Interoperability Protocol for unified ticket purchasing
+- [x] **Bridge Page (MVP)**: Minimal /bridge page to unlock full flow when needed
+- [x] **Solana CCTP (burn + attestation)**: Wired with in-app Base receiveMessage
 - [ ] **Chain Abstraction Layer**: Users don't need to think about which chain they're on
 - [ ] **Unified Wallet Experience**: Single interface supporting Near, EVM chains, and bridging
 - [ ] **Cross-Chain State Sync**: Ticket ownership tracked across all chains
@@ -307,7 +309,7 @@ Transform lottery participation into **impact investing** through sustainable sy
 - ✅ **Public Goods Impact**: Automated cause funding from yield
 
 ### **📊 Feature Completion Status**
-- **Phase 1 (Cross-Chain)**: 85% complete - Multi-wallet ready, CCIP pending
+- **Phase 1 (Cross-Chain)**: 92% complete - Bridge page MVP live, CCIP implemented, Solana CCTP wired
 - **Phase 2 (Syndicates)**: 70% complete - UI complete, contracts pending  
 - **Phase 3 (Yield Strategies)**: 90% complete - Octant integrated, expansion ready
 - **Hackathon Goals**: 100% complete - Ready for submission

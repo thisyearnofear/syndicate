@@ -23,6 +23,13 @@ A revolutionary lottery platform combining **DeFi yield strategies** with **lott
 - **Join Pool & Support Causes**: Syndicate pooling with cause allocation  
 - **Yield Strategies**: **NEW** - Octant v2 yield donating integration
 
+### 🌐 **Cross-Chain Support**
+- **CCTP**: Ethereum ↔ Base USDC bridging (production-ready)
+- **CCIP**: Ethereum, Base, Polygon, Avalanche cross-chain transfers (newly integrated)
+- **Solana → Base (CCTP)**: Burn + attestation wired; mint on Base via in-app EVM signer
+- **Bridge Page**: Minimal /bridge page (not in main nav) for power users
+- **NEAR**: Chain signature integration (in development)
+
 ### 💰 **Octant v2 Integration**
 - **Factory Contracts**: `MorphoCompounderStrategyFactory` & `SkyCompounderStrategyFactory`
 - **Yield Donation**: Built-in cause allocation via `_donationAddress`
@@ -114,6 +121,7 @@ window.__performanceMonitor.getReport()
 - **Smart Caching**: Optimized API calls with intelligent cache invalidation
 - **Error Recovery**: Graceful error handling with retry mechanisms
 - **Performance Tracking**: Detailed performance metrics for all operations
+- **Cross-Chain Transfers**: CCIP integration for seamless asset transfers between EVM chains
 
 ### Syndicate Domain
 - **Social Pools**: Community-driven lottery pools supporting social causes
@@ -224,6 +232,28 @@ export const PERFORMANCE = {
     blockchain: 60000,     // 1 minute
   },
 };
+
+### Cross-Chain Configuration
+The platform now supports multiple cross-chain protocols:
+
+1. **CCTP (Circle Cross-Chain Transfer Protocol)**: Used for Ethereum ↔ Base transfers
+2. **CCIP (Chainlink Cross-Chain Interoperability Protocol)**: Used for transfers between Ethereum, Base, Polygon, and Avalanche
+3. **NEAR Chain Signatures**: In development for NEAR wallet integration
+
+#### CCIP Contract Addresses
+```typescript
+// Ethereum
+Router: 0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D
+
+// Base  
+Router: 0x881e3A65B4d4a04dD529061dd0071cf975F58bCD
+
+// Polygon
+Router: 0x849c5ED5a80F5B408Dd4969b78c2C8fdf0565Bfe
+
+// Avalanche
+Router: 0xF4c7E640EdA248ef95972845a62bdC74237805dB
+```
 ```
 
 ## 🧪 Testing
@@ -327,6 +357,7 @@ Visit `http://localhost:3000` and try the **Yield Strategies** flow!
 
 ### 📚 Documentation
 - 📖 [Octant Integration Guide](./docs/OCTANT_INTEGRATION.md)
+- 🌐 [Cross-Chain Integration Guide](./docs/CROSS_CHAIN.md)
 - 🗺️ [Development Roadmap](./docs/ROADMAP.md)
 - 📋 [Syndicate Specifications](./docs/SYNDICATES.md)
 

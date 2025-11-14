@@ -304,7 +304,7 @@ export default function CreateSyndicatePage() {
                 ticketsAllocation={formData.yieldToTicketsPercentage}
                 causesAllocation={formData.yieldToCausesPercentage}
                 onAllocationChange={handleAllocationChange}
-                userAddress={address}
+                userAddress={address ?? undefined}
               />
             </CompactStack>
             

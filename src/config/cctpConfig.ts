@@ -21,6 +21,12 @@ export const CCTP = {
     // USDC on Base is managed by unified CONTRACTS config; left undefined here
     usdc: undefined as string | undefined,
   },
+  solana: {
+    domain: 5, // Solana domain ID
+    messageTransmitter: 'CCTPV2Sm4AdWt5296sk4P66VBZ7bEhcARwFaaS9YPbeC',
+    tokenMessengerMinter: 'CCTPV2vPZJS2u2BBsUoscuikbYjnpFmbFsvVuJdgUMQe',
+    usdc: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC mint on Solana
+  },
 } as const;
 
 export type CctpChainKey = keyof typeof CCTP;

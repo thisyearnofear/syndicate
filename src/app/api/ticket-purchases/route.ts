@@ -150,6 +150,10 @@ export async function GET(request: NextRequest) {
             recipient: string;
             referrer?: string;
             buyer: string;
+            // NEW: Cross-chain purchase tracking
+            sourceChain?: string;
+            sourceWallet?: string;
+            bridgeTransactionHash?: string;
         }
 
         const transformedData = await Promise.all(data.map(async (purchase: MegapotPurchase) => {

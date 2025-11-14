@@ -55,6 +55,12 @@ function TicketHistoryCard({ ticket }: { ticket: TicketPurchaseHistory }) {
                             Round #{ticket.jackpotRoundId} • Tickets {ticket.startTicket}-{ticket.endTicket}
                             {formattedDate ? ` • ${formattedDate}` : ''}
                         </p>
+                        {/* Show cross-chain information */}
+                        {ticket.sourceChain && (
+                            <p className="text-xs text-purple-400 mt-1">
+                                Purchased via {ticket.sourceChain} → Base bridge
+                            </p>
+                        )}
                     </div>
                 </div>
 

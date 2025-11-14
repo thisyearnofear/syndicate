@@ -48,6 +48,14 @@ class NearChainSignatureService {
     return this.initialized;
   }
 
+  // Convenience initializer using selector + accountId
+  async initializeFromSelector(selector: WalletSelector | null, accountId: string | null): Promise<boolean> {
+    this.nearWallet = selector && accountId ? { accountId, selector } : null;
+    this.nearProvider = new JsonRpcProvider({ url: NEAR.nodeUrl });
+    this.initialized = !!this.nearWallet && this.isChainSignatureAvailable();
+    return this.initialized;
+  }
+
   /**
    * Basic availability check: ensure MPC contract is set to v1.signer
    */
