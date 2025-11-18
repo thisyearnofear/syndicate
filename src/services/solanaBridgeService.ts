@@ -26,7 +26,7 @@ type SolanaBridgeConfig = {
 
 const SOLANA: SolanaBridgeConfig = {
   usdcMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-  rpcUrl: process.env.NEXT_PUBLIC_SOLANA_RPC || '/api/solana-rpc',
+  rpcUrl: process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://api.mainnet-beta.solana.com',
 };
 
 // Solana program addresses from centralized CCTP config
