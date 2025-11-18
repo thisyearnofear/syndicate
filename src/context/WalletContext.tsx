@@ -177,20 +177,6 @@ export function WalletProvider({ children }: WalletProviderProps) {
   const { address, isConnected: wagmiConnected, chainId: wagmiChainId, connector } = useAccount();
   const { disconnect: wagmiDisconnect } = useDisconnect();
 
-  // Properly sync with wagmi state for all EVM wallets (including WalletConnect)
-  useEffect(() => {
-    // Sync when wagmi is connected but our internal state is not
-    if (wagmiConnected && address && !state.isConnected) {
-      console.log('WalletContext: Syncing with wagmi connection');
-      syncWithWagmi();
-    }
-    // Disconnect when wagmi is disconnected but our internal state still shows connected EVM wallet
-    else if (!wagmiConnected && state.isConnected && (state.walletType === 'metamask' || !state.walletType) && state.address) {
-      console.log('WalletContext: Wagmi disconnected, updating internal state');
-      dispatch({ type: 'DISCONNECT' });
-    }
-  }, [wagmiConnected, address, syncWithWagmi, state.isConnected, state.walletType, state.address]);
-
   // Manual wagmi sync function (called only when user explicitly connects)
   const syncWithWagmi = useCallback(() => {
     const isNonEvmWallet = state.walletType === 'phantom' || state.walletType === 'near';
@@ -217,47 +203,16 @@ export function WalletProvider({ children }: WalletProviderProps) {
     }
   }, [wagmiConnected, address, wagmiChainId, connector, dispatch, state.walletType]);
 
-  // Enhanced disconnect function that handles all wallet types
-  const disconnectWallet = useCallback(async () => {
-    try {
-      // First disconnect from wagmi (MetaMask, WalletConnect, etc.)
-      if (wagmiConnected && (state.walletType === 'metamask' || !state.walletType)) {
-        await wagmiDisconnect();
-      }
-      
-      // Handle Phantom (Solana) disconnection
-      if (state.walletType === 'phantom' && (window as any).solana) {
-        try {
-          await (window as any).solana.disconnect();
-        } catch (phantomError) {
-          console.warn('Phantom disconnect failed:', phantomError);
-        }
-      }
-      
-      // Handle NEAR disconnection
-      if (state.walletType === 'near') {
-        // NEAR disconnect logic would go here
-        console.log('NEAR disconnect - implement if needed');
-      }
-      
-      // Always clear our internal state
-      dispatch({ type: 'DISCONNECT' });
-      
-      console.log('Wallet disconnected successfully');
-    } catch (error) {
-      console.error('Failed to disconnect wallet:', error);
-      // Still clear our state even if underlying wallet disconnect fails
-      dispatch({ type: 'DISCONNECT' });
-    }
-  }, [wagmiConnected, wagmiDisconnect, state.walletType]);
-
-  // Auto-sync with wagmi when connection state changes
+  // Properly sync with wagmi state for all EVM wallets (including WalletConnect)
   useEffect(() => {
-    // Only sync if wagmi state has changed but our internal state hasn't been updated yet
+    // Sync when wagmi is connected but our internal state is not
     if (wagmiConnected && address && !state.isConnected) {
+      console.log('WalletContext: Syncing with wagmi connection');
       syncWithWagmi();
-    } else if (!wagmiConnected && state.isConnected && (state.walletType === 'metamask' || !state.walletType) && state.address) {
-      // Only disconnect if it was an EVM wallet and we have a valid address
+    }
+    // Disconnect when wagmi is disconnected but our internal state still shows connected EVM wallet
+    else if (!wagmiConnected && state.isConnected && (state.walletType === 'metamask' || !state.walletType) && state.address) {
+      console.log('WalletContext: Wagmi disconnected, updating internal state');
       dispatch({ type: 'DISCONNECT' });
     }
   }, [wagmiConnected, address, syncWithWagmi, state.isConnected, state.walletType, state.address]);
@@ -266,7 +221,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
   const disconnectWallet = useCallback(async () => {
     try {
       // First disconnect from wagmi (MetaMask, WalletConnect, etc.)
-      if (wagmiConnected && state.walletType === 'metamask') {
+      if (wagmiConnected && (state.walletType === 'metamask' || !state.walletType)) {
         await wagmiDisconnect();
       }
       
