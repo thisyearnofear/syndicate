@@ -39,7 +39,7 @@ export interface PurchaseModalProps {
 }
 
 export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps) {
-  const { isConnected, connect, address } = useWalletConnection();
+  const { isConnected, connect, address, walletType } = useWalletConnection();
   const successToast = useSuccessToast();
   const errorToast = useErrorToast();
   const { jackpotStats, prizeAmount, isLoading: jackpotLoading, error: jackpotError, refresh: refreshLottery } = useLottery();
@@ -50,6 +50,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
     isApproving,
     isCheckingBalance,
     userBalance,
+    solanaBalance,
     ticketPrice,
     lastTxHash,
     error,
@@ -65,7 +66,8 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
     refreshBalance,
     retryAfterFunding,
     clearError,
-    reset
+    reset,
+    needsBridgeGuidance
   } = useTicketPurchase();
 
   const [ticketCount, setTicketCount] = useState(1);
@@ -89,13 +91,6 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
     }
   };
 
-  // Check for bridge guidance when wallet is connected and wallet type is Phantom
-  useEffect(() => {
-    if (isConnected && walletType === WalletTypes.PHANTOM && needsBridgeGuidance(totalCost)) {
-      setShowBridgeGuidance(true);
-    }
-  }, [isConnected, walletType, totalCost, needsBridgeGuidance]);
-
   // Bridge handler functions
   const handleStartBridge = () => {
     setShowBridgeGuidance(false);
@@ -104,12 +99,39 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
 
   const handleBridgeComplete = (result: any) => {
     setIsBridging(false);
-    // Refresh balances and proceed to purchase
-    refreshBalance();
-    // Auto-proceed to purchase after a short delay to allow balance to update
-    setTimeout(() => {
-      handlePurchase();
-    }, 2000);
+    // Poll balance until Base balance actually increases
+    pollBalanceUntilBridged();
+  };
+
+  const pollBalanceUntilBridged = async () => {
+    const requiredAmount = parseFloat(totalCost || '0');
+    let attempts = 0;
+    const maxAttempts = 60; // 5 minutes max (5 second intervals)
+
+    const pollInterval = setInterval(async () => {
+      attempts++;
+      await refreshBalance();
+
+      const currentBaseBalance = parseFloat(userBalance?.usdc || '0');
+      
+      if (currentBaseBalance >= requiredAmount || attempts >= maxAttempts) {
+        clearInterval(pollInterval);
+        
+        if (currentBaseBalance >= requiredAmount) {
+          // Show confirmation before auto-purchasing
+          setStep('select');
+          successToast(
+            'Bridge Complete!',
+            'Your USDC is now on Base. Ready to buy your tickets?'
+          );
+        } else {
+          errorToast(
+            'Bridge Timeout',
+            'The bridge took longer than expected. Please verify your balance and try again.'
+          );
+        }
+      }
+    }, 5000); // Check every 5 seconds
   };
 
   const handleBridgeError = (error: string) => {
@@ -258,6 +280,26 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   const totalCost = (parseFloat(ticketPrice) * ticketCount).toFixed(2);
   const hasInsufficientBalance = userBalance && parseFloat(userBalance.usdc) < parseFloat(totalCost);
 
+  // Smart bridge flow detection - runs after totalCost is computed
+  useEffect(() => {
+    if (!isConnected || walletType !== WalletTypes.PHANTOM) return;
+
+    const baseUSDC = parseFloat(userBalance?.usdc || '0');
+    const requiredAmount = parseFloat(totalCost || '0');
+    const hasSufficientBaseBalance = baseUSDC >= requiredAmount;
+
+    // Skip bridge entirely if they already have sufficient Base balance
+    if (hasSufficientBaseBalance) {
+      setShowBridgeGuidance(false);
+      return;
+    }
+
+    // Show bridge guidance only if they need it
+    if (needsBridgeGuidance(totalCost)) {
+      setShowBridgeGuidance(true);
+    }
+  }, [isConnected, walletType, userBalance?.usdc, totalCost, needsBridgeGuidance]);
+
   const renderStep = () => {
     switch (step) {
       case 'mode':
@@ -391,15 +433,44 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
           </div>
         )}
 
-        {/* Balance Display */}
+        {/* Balance Display - Dual for Phantom, Single for EVM */}
         {isConnected && userBalance && (
-          <div className="bg-white/5 rounded-lg p-4 mb-6">
-            <div className="flex justify-between items-center">
-              <span className="text-white/70">Your USDC Balance:</span>
-              <span className="text-white font-semibold">${userBalance.usdc}</span>
+          <div className="space-y-3 mb-6">
+            {/* Info message for Phantom users */}
+            {walletType === WalletTypes.PHANTOM && (
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                <p className="text-blue-300 text-sm">
+                  💡 USDC lives on Solana and Base. To buy tickets here, we need your tokens on Base.
+                </p>
+              </div>
+            )}
+
+            {/* Solana Balance (Phantom only) */}
+            {walletType === WalletTypes.PHANTOM && (
+              <div className="bg-white/5 rounded-lg p-4 border border-purple-500/20">
+                <div className="flex justify-between items-center">
+                  <span className="text-white/70">🟣 Your USDC on Solana:</span>
+                  <span className="text-white font-semibold">${solanaBalance || '0'}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Base Balance */}
+            <div className={`rounded-lg p-4 ${
+              walletType === WalletTypes.PHANTOM 
+                ? 'bg-white/5 border border-blue-500/20' 
+                : 'bg-white/5'
+            }`}>
+              <div className="flex justify-between items-center">
+                <span className="text-white/70">
+                  🔵 Your USDC on Base:
+                </span>
+                <span className="text-white font-semibold">${userBalance.usdc}</span>
+              </div>
             </div>
+
             {isCheckingBalance && (
-              <div className="flex items-center gap-2 mt-2 text-white/60">
+              <div className="flex items-center gap-2 text-white/60">
                 <Loader2 size={16} className="animate-spin" />
                 <span className="text-sm">Updating balance...</span>
               </div>

@@ -8,7 +8,7 @@ export interface BridgeResult {
   txHash?: string;
   messageId?: string;
   bridgeId?: string;
-  protocol: 'cctp' | 'ccip' | 'near' | 'none';
+  protocol: 'cctp' | 'ccip' | 'wormhole' | 'near' | 'none';
   error?: string;
   estimatedFee?: string; // in USDC
   etaMinutes?: number;
