@@ -151,7 +151,7 @@ export function useUnifiedWallet(): {
           // wagmi will handle the connection and our WalletContext will sync with it
           throw createError(
             'WALLET_CONNECTION_METHOD',
-            'Please use the RainbowKit modal to connect MetaMask, or switch WalletConnect for seamless connection.'
+            'Please use the WalletConnect option to connect your wallet.'
           );
           break;
 

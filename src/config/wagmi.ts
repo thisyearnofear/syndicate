@@ -16,12 +16,14 @@ export function getConfig() {
 
   // On server, always return a config that doesn't trigger indexedDB
   if (isServer) {
-    return getDefaultConfig({
+    const config = getDefaultConfig({
       appName: 'Syndicate',
       projectId: isValidProjectId ? projectId : 'placeholder-project-id',
       chains: [base, baseSepolia],
       ssr: false, // Disable SSR on server to prevent any indexedDB access
     });
+    (config as any).autoConnect = false;
+    return config;
   }
 
   // Client-side configuration
@@ -39,6 +41,7 @@ export function getConfig() {
       ],
       ssr: false, // Disable SSR to prevent indexedDB access on server
     });
+    (cachedConfig as any).autoConnect = false;
     return cachedConfig;
   }
 
@@ -53,5 +56,6 @@ export function getConfig() {
     ],
     ssr: false, // Set to false to prevent server-side indexedDB access
   });
+  (cachedConfig as any).autoConnect = false;
   return cachedConfig;
 }

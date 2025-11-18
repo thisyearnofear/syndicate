@@ -215,6 +215,16 @@ export function WalletProvider({ children }: WalletProviderProps) {
     }
   }, [wagmiConnected, address, wagmiChainId, connector, dispatch, state.walletType]);
 
+  // Auto-sync with wagmi when connection state changes
+  useEffect(() => {
+    if (wagmiConnected && address) {
+      syncWithWagmi();
+    } else if (!wagmiConnected && state.isConnected && (state.walletType === 'metamask' || !state.walletType)) {
+      // Only disconnect if it was an EVM wallet
+      dispatch({ type: 'DISCONNECT' });
+    }
+  }, [wagmiConnected, address, syncWithWagmi, state.isConnected, state.walletType]);
+
   // Enhanced disconnect function that handles all wallet types
   const disconnectWallet = useCallback(async () => {
     try {

@@ -47,9 +47,12 @@ export default function WalletConnectionManager({
         dispatch({ type: "CLOSE_MODAL" });
       } catch (error: any) {
         console.error("Wallet connection failed:", error);
-        const errorMessage =
-          error?.message || "Failed to connect wallet. Please try again.";
-        dispatch({ type: "CONNECT_FAILURE", payload: { error: errorMessage } });
+        // Don't show error for WalletConnect method since RainbowKit handles its own UI
+        if (walletType !== 'metamask') {
+          const errorMessage =
+            error?.message || "Failed to connect wallet. Please try again.";
+          dispatch({ type: "CONNECT_FAILURE", payload: { error: errorMessage } });
+        }
       }
     },
     [connect, dispatch]
