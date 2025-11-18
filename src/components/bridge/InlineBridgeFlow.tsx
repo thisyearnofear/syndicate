@@ -224,30 +224,45 @@ export function InlineBridgeFlow({
 
             {/* Error Actions */}
             {error && (
-                <div className="flex gap-3">
-                    <Button
-                        onClick={startBridge}
-                        variant="outline"
-                        className="flex-1 border-red-500/50 text-red-300 hover:bg-red-500/10"
-                    >
-                        Retry Bridge
-                    </Button>
-                    <Button
-                        onClick={() => window.open('https://bridge.base.org', '_blank')}
-                        variant="outline"
-                        className="flex-1 border-white/20"
-                    >
-                        Use Alternative
-                    </Button>
+                <div className="space-y-3">
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                        <p className="text-red-300 text-sm">
+                            <strong>Bridge Error:</strong> {error}
+                        </p>
+                        <p className="text-red-300/70 text-xs mt-2">
+                            You can retry above or use an alternative bridge service.
+                        </p>
+                    </div>
+                    <div className="flex gap-3">
+                        <Button
+                            onClick={startBridge}
+                            variant="outline"
+                            className="flex-1 border-red-500/50 text-red-300 hover:bg-red-500/10"
+                        >
+                            Retry Bridge
+                        </Button>
+                        <Button
+                            onClick={() => window.open('https://bridge.base.org', '_blank')}
+                            variant="outline"
+                            className="flex-1 border-white/20"
+                        >
+                            Use Alternative
+                        </Button>
+                    </div>
                 </div>
             )}
 
             {/* Success Actions */}
             {currentStatus === 'complete' && (
-                <div className="text-center">
-                    <div className="inline-flex items-center gap-2 text-green-400 font-medium">
-                        <CheckCircle2 className="w-5 h-5" />
-                        <span>Bridge Complete! Proceeding to purchase...</span>
+                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                        <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <p className="text-green-400 font-medium">Bridge Complete!</p>
+                            <p className="text-green-300/70 text-sm mt-1">
+                                Your USDC has arrived on Base. Your balance will update in a moment.
+                            </p>
+                        </div>
                     </div>
                 </div>
             )}

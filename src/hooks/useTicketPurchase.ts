@@ -78,6 +78,8 @@ export interface TicketPurchaseActions {
   setupYieldStrategy: (config: YieldToTicketsConfig) => Promise<boolean>;
   processYieldConversion: () => Promise<void>;
   previewYieldConversion: (vaultAddress: string, ticketsAllocation: number, causesAllocation: number) => Promise<any>;
+  // NEW: Solana bridge actions
+  needsBridgeGuidance: (totalCost: string) => boolean;
   refreshBalance: () => Promise<void>;
   refreshJackpot: () => Promise<void>;
   getCurrentTicketInfo: () => Promise<void>;
@@ -207,42 +209,32 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     setState(prev => ({ ...prev, isCheckingBalance: true }));
     
     try {
-      // Check if walletType is PHANTOM
-      if (walletType === WalletTypes.PHANTOM) {
-        // For Solana wallets, set Base balance to 0 and check Solana balance
-        setState(prev => ({
-          ...prev,
-          userBalance: { usdc: '0', eth: '0' },
-          isCheckingBalance: false
-        }));
-        
-        // Check Solana balance for Phantom wallets
-        if (address) {
-          setState(prev => ({ ...prev, isCheckingSolanaBalance: true }));
-          try {
-            const { getSolanaUSDCBalance } = await import('@/services/solanaBalanceService');
-            const solanaBalance = await getSolanaUSDCBalance(address);
-            setState(prev => ({
-              ...prev,
-              solanaBalance,
-              isCheckingSolanaBalance: false
-            }));
-          } catch (error) {
-            console.error('Failed to refresh Solana balance:', error);
-            setState(prev => ({
-              ...prev,
-              isCheckingSolanaBalance: false
-            }));
-          }
+      // Always check Base balance for all wallet types
+      const balance = await web3Service.getUserBalance();
+      setState(prev => ({
+        ...prev,
+        userBalance: balance,
+        isCheckingBalance: false
+      }));
+      
+      // Additionally check Solana balance for Phantom wallets
+      if (walletType === WalletTypes.PHANTOM && address) {
+        setState(prev => ({ ...prev, isCheckingSolanaBalance: true }));
+        try {
+          const { getSolanaUSDCBalance } = await import('@/services/solanaBalanceService');
+          const solanaBalance = await getSolanaUSDCBalance(address);
+          setState(prev => ({
+            ...prev,
+            solanaBalance,
+            isCheckingSolanaBalance: false
+          }));
+        } catch (error) {
+          console.error('Failed to refresh Solana balance:', error);
+          setState(prev => ({
+            ...prev,
+            isCheckingSolanaBalance: false
+          }));
         }
-      } else {
-        // Always check Base balance for EVM wallets
-        const balance = await web3Service.getUserBalance();
-        setState(prev => ({
-          ...prev,
-          userBalance: balance,
-          isCheckingBalance: false
-        }));
       }
     } catch (error) {
       console.error('Failed to refresh balance:', error);
@@ -645,8 +637,10 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       isPurchasing: false,
       isApproving: false,
       isCheckingBalance: false,
+      isCheckingSolanaBalance: false,
       isClaimingWinnings: false,
       userBalance: null,
+      solanaBalance: null,
       ticketPrice: '1',
       currentJackpot: '0',
       lastTxHash: null,

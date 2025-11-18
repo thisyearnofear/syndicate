@@ -424,8 +424,8 @@ class SolanaBridgeService {
 
       onStatus?.('solana_wormhole:connecting');
 
-      // Initialize Wormhole SDK
-      const wh = await wormhole.wormhole('Mainnet', [evm.EvmPlatform, solana.SolanaPlatform]);
+      // Initialize Wormhole SDK (v4 API)
+      const wh = await (wormhole as any).wormhole('Mainnet', [evm.EvmPlatform, solana.SolanaPlatform]);
 
       // Get chain contexts
       const sendChain = wh.getChain('Solana');

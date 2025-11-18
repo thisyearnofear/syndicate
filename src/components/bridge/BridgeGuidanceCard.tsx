@@ -86,8 +86,7 @@ export function BridgeGuidanceCard({
                     <span className="text-xl">💡</span>
                     <div className="flex-1">
                         <p className="text-blue-300 text-sm leading-relaxed">
-                            <strong>Quick Bridge:</strong> Transfer USDC from {sourceName} to Base using Circle CCTP or Wormhole.
-                            Your funds will arrive automatically.
+                            <strong>Bridge {requiredAmount} USDC:</strong> We'll transfer exactly the amount you need from {sourceName} to Base using Circle CCTP or Wormhole. Fast and secure.
                         </p>
                     </div>
                 </div>
