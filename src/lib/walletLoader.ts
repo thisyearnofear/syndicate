@@ -45,13 +45,20 @@ class WalletLoader {
         break;
 
       default:
-        throw new Error(`Unsupported wallet type: ${walletType}`);
+        // For unknown wallet types, don't throw an error but return a resolved promise
+        console.warn(`Unknown wallet type: ${walletType}, skipping library load`);
+        return Promise.resolve({});
     }
 
     this.libraryPromises.set(walletType, libraryPromise);
     this.loadedLibraries.add(walletType);
 
-    return libraryPromise;
+    return libraryPromise.catch((error) => {
+      // Remove from loaded libraries if loading failed
+      this.loadedLibraries.delete(walletType);
+      this.libraryPromises.delete(walletType);
+      throw error;
+    });
   }
 
   /**

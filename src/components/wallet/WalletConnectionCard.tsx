@@ -20,6 +20,7 @@ import { WalletType } from "@/domains/wallet/services/unifiedWalletService";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { walletLoader } from "@/lib/walletLoader";
 import { AlertCircle } from "lucide-react";
+import { useWalletContext } from "@/context/WalletContext";
 
 interface WalletConnectionCardProps {
   onConnect?: (walletType: WalletType) => void;
@@ -38,6 +39,7 @@ export function WalletConnectionCard({
   const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const { state } = useWalletContext();
 
   // FIX: Always call hooks in the same order - move handleConnect before the mounted check
   const handleConnect = useCallback(
@@ -138,67 +140,65 @@ export function WalletConnectionCard({
       {/* Wallet Options */}
       <CompactStack spacing="sm" className="max-w-sm mx-auto">
         {wallets.map((wallet) => (
-        wallet.isWalletConnect ? (
-        <div
-          key={wallet.name}
-          className={`${wallet.bgColor} hover:bg-opacity-20 border rounded-lg p-4 w-full transition-all duration-200 hover:scale-[1.02]`}
-        >
-          <CompactFlex justify="between" className="w-full">
-            <CompactFlex gap="md" align="center">
-                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${wallet.gradient} flex items-center justify-center text-lg shadow-sm`}>
+          wallet.isWalletConnect ? (
+            <div
+              key={wallet.name}
+              className={`${wallet.bgColor} hover:bg-opacity-20 border rounded-lg p-4 w-full transition-all duration-200 hover:scale-[1.02]`}
+            >
+              <CompactFlex justify="between" className="w-full">
+                <CompactFlex gap="md" align="center">
+                  <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${wallet.gradient} flex items-center justify-center text-lg shadow-sm`}>
                     {wallet.icon}
                   </div>
                   <div className="text-left">
                     <div className="text-white font-medium">
                       {wallet.name}
                     </div>
-                    {(compact ? wallet.isWalletConnect : true) && (
-                      <div className="text-gray-400 text-xs">
-                        {wallet.isWalletConnect ? "Supports 300+ wallets" : wallet.description}
-                      </div>
-                    )}
+                    <div className="text-gray-400 text-xs">
+                      {wallet.isWalletConnect ? "Supports 300+ wallets" : wallet.description}
+                    </div>
                   </div>
                 </CompactFlex>
                 <div className="flex items-center">
-                  <ConnectButton showBalance={false} chainStatus="none" />
+                  {state.walletType !== 'phantom' && (
+                    <ConnectButton showBalance={false} chainStatus="none" />
+                  )}
                 </div>
               </CompactFlex>
-              </div>
-              ) : (
-              <Button
+            </div>
+          ) : (
+            <Button
               key={wallet.name}
               variant="ghost"
               size="lg"
               onClick={() => handleConnect(wallet.type)}
               disabled={isConnecting}
               className={`${wallet.bgColor} hover:bg-opacity-20 border w-full justify-start transition-all duration-200 hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100`}
-              >
-                <CompactFlex justify="between" className="w-full">
+            >
+              <CompactFlex justify="between" className="w-full">
                 <CompactFlex gap="md" align="center">
-                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${wallet.gradient} flex items-center justify-center text-lg shadow-sm`}>
-                {wallet.icon}
-                </div>
-                <div className="text-left">
-                <div className="text-white font-medium">
-                {isConnecting && connectingWallet === wallet.type ? (
-                <>
-                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2 inline-block" />
-                Connecting...
-                </>
-                ) : (
-                wallet.name
-                )}
-                </div>
-                {(compact ? wallet.isWalletConnect : true) && (
-                <div className="text-gray-400 text-xs">
-                {wallet.isWalletConnect ? "Supports 300+ wallets" : wallet.description}
-                </div>
-                )}
-                </div>
+                  <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${wallet.gradient} flex items-center justify-center text-lg shadow-sm`}>
+                    {wallet.icon}
+                  </div>
+                  <div className="text-left">
+                    <div className="text-white font-medium">
+                      {isConnecting && connectingWallet === wallet.type ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2 inline-block" />
+                          Connecting...
+                        </>
+                      ) : (
+                        wallet.name
+                      )}
+                    </div>
+                    <div className="text-gray-400 text-xs">
+                      {wallet.description}
+                    </div>
+                  </div>
                 </CompactFlex>
-                </CompactFlex>
-                </Button>
-                )
+              </CompactFlex>
+            </Button>
+          )
         ))}
       </CompactStack>
 
