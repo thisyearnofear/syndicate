@@ -314,12 +314,21 @@ window.__performanceMonitor.getRealTimeStats()
 ## 📚 Documentation
 
 ### System Architecture
-- [Roadmap & Vision](./docs/ROADMAP.md)
-- [Syndicate Features](./docs/SYNDICATES.md)
+- [Platform Roadmap & Vision](./docs/PLATFORM_ROADMAP.md)
+- [Syndicate Features](./docs/PLATFORM_ROADMAP.md#syndicate-features)
 
 ### Development Guides
 - [Architecture Principles](./README.md#-architecture)
 - [Development Workflow](./README.md#-contributing)
+
+### Technical Documentation
+- [Cross-Chain Integration Guide](./docs/CROSS_CHAIN_INTEGRATION.md)
+- [Octant Yield Strategies](./docs/OCTANT_YIELD_STRATEGIES.md)
+- [Solana Bridge UX](./docs/SOLANA_BRIDGE_UX.md)
+- [Development & Deployment](./docs/DEVELOPMENT_DEPLOYMENT.md)
+
+### Documentation Management
+- [Documentation Consolidation Summary](./docs/DOCUMENTATION_CONSOLIDATION_SUMMARY.md)
 
 ## 🤝 Contributing
 
@@ -356,9 +365,9 @@ Visit `http://localhost:3000` and try the **Yield Strategies** flow!
 **Public Goods Impact**: Sustainable cause funding through gamified DeFi
 
 ### 📚 Documentation
-- 📖 [Octant Integration Guide](./docs/OCTANT_INTEGRATION.md)
-- 🌐 [Cross-Chain Integration Guide](./docs/CROSS_CHAIN.md)
-- 🗺️ [Development Roadmap](./docs/ROADMAP.md)
-- 📋 [Syndicate Specifications](./docs/SYNDICATES.md)
+- 📖 [Octant Yield Strategies](./docs/OCTANT_YIELD_STRATEGIES.md)
+- 🌐 [Cross-Chain Integration Guide](./docs/CROSS_CHAIN_INTEGRATION.md)
+- 🗺️ [Platform Roadmap](./docs/PLATFORM_ROADMAP.md)
+- 📋 [Syndicate Features](./docs/PLATFORM_ROADMAP.md#syndicate-features)
 
 Built with ❤️ for **Octant v2**, **public goods**, and **sustainable DeFi innovation**.

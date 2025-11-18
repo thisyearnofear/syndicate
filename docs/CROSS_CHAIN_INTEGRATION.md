@@ -1,6 +1,6 @@
 # Cross-Chain Integration Guide
 
-This guide explains how to use the cross-chain functionality in the Syndicate platform, which supports multiple protocols for transferring assets between chains and outlines the upcoming UX roadmap for bridging experiences.
+This guide explains how to use the cross-chain functionality in the Syndicate platform, which supports multiple protocols for transferring assets between chains and outlines the implementation details.
 
 ## Supported Protocols
 
@@ -112,59 +112,151 @@ const result = await bridgeService.transferCrossChain({
 // submit receiveMessage(message, attestation) on Base with an EVM signer/relayer.
 ```
 
+## Solana Bridge Implementation
+
+### Overview
+
+The Solana → Base bridge now supports **two protocols** with automatic fallback:
+
+1. **Primary: Circle CCTP** (Cross-Chain Transfer Protocol)
+2. **Fallback: Wormhole** (Token Bridge with automatic relaying)
+
+### Bridge Flow
+
+```
+User initiates bridge
+    ↓
+Try CCTP (Primary)
+    ↓
+Success? → Complete ✅
+    ↓
+Failure? → Try Wormhole (Fallback)
+    ↓
+Success? → Complete ✅
+    ↓
+Failure? → Show error ❌
+```
+
+### Protocol Comparison
+
+| Feature | CCTP | Wormhole |
+|---------|------|----------|
+| **Speed** | ~15-20 minutes | ~5-10 minutes |
+| **Fees** | Lower (gas only) | Higher (includes relayer fee) |
+| **Reliability** | High | Very High |
+| **Native USDC** | Yes | No (wrapped) |
+| **Automatic Completion** | Manual mint required | Automatic via relayers |
+
+### Implementation Details
+
+#### CCTP Flow
+
+1. **Burn on Solana**: User burns USDC on Solana via TokenMessenger
+2. **Get Attestation**: Poll Circle's Iris API for attestation (~15 min)
+3. **Mint on Base**: User (or relayer) mints USDC on Base using attestation
+
+**Status Events:**
+- `solana_cctp:init`
+- `solana_cctp:prepare`
+- `solana_cctp:signing`
+- `solana_cctp:sent`
+- `solana_cctp:confirmed`
+- `solana_cctp:message_extracted`
+- `solana_cctp:attestation_fetched`
+
+#### Wormhole Flow
+
+1. **Lock on Solana**: User locks USDC in Wormhole bridge
+2. **Get VAA**: Wormhole guardians sign the transfer (~5 min)
+3. **Auto-Relay**: Wormhole relayers automatically complete on Base
+
+**Status Events:**
+- `solana_wormhole:init`
+- `solana_wormhole:prepare`
+- `solana_wormhole:connecting`
+- `solana_wormhole:initiating_transfer`
+- `solana_wormhole:signing`
+- `solana_wormhole:sent`
+- `solana_wormhole:waiting_for_vaa`
+- `solana_wormhole:vaa_received`
+- `solana_wormhole:relaying`
+
+### Configuration
+
+#### Environment Variables
+
+```bash
+# Solana RPC Configuration
+NEXT_PUBLIC_SOLANA_RPC=https://api.mainnet-beta.solana.com
+NEXT_PUBLIC_SOLANA_RPC_FALLBACKS=https://solana-mainnet.g.alchemy.com/v2/demo,https://rpc.ankr.com/solana
+SOLANA_RPC_TARGET=https://api.mainnet-beta.solana.com
+
+# Wormhole Configuration
+NEXT_PUBLIC_WORMHOLE_RPC=https://wormhole-v2-mainnet-api.certus.one
+```
+
+#### Dependencies
+
+The following packages are required:
+
+```json
+{
+  "@solana/web3.js": "^1.98.4",
+  "@solana/spl-token": "^0.4.14",
+  "@wormhole-foundation/sdk": "latest",
+  "@wormhole-foundation/sdk-evm": "latest",
+  "@wormhole-foundation/sdk-solana": "latest"
+}
+```
+
+### Usage Example
+
+```typescript
+import { solanaBridgeService } from '@/services/solanaBridgeService';
+
+// Bridge 10 USDC from Solana to Base
+const result = await solanaBridgeService.bridgeUsdcSolanaToBase(
+  '10', // amount in USDC
+  '0xYourBaseAddress', // recipient on Base
+  {
+    onStatus: (status, data) => {
+      console.log(`Bridge status: ${status}`, data);
+    }
+  }
+);
+
+if (result.success) {
+  console.log('Bridge successful!', result.details);
+} else {
+  console.error('Bridge failed:', result.error);
+}
+```
+
+### Error Handling
+
+#### Common Errors
+
+1. **"Phantom wallet not found"**
+   - Solution: Install Phantom browser extension
+
+2. **"Endpoint URL must start with 'http:' or 'https:'"**
+   - Solution: Ensure `NEXT_PUBLIC_SOLANA_RPC` is set correctly
+
+3. **"Solana RPC access forbidden (403)"**
+   - Solution: Use a different RPC endpoint or get API key
+
+4. **"Failed to fetch attestation"**
+   - Solution: Wait longer (CCTP can take 15-20 minutes) or use Wormhole fallback
+
+5. **"Failed to fetch VAA from Wormhole guardians"**
+   - Solution: Check Wormhole network status or retry
+
 ## Fee Estimation
 
 ```typescript
 const fees = await bridgeService.estimateCrossChainFees('ethereum', 'base', '10.00');
 console.log(fees);
 ```
-
-## Roadmap / Upcoming (UI/UX Plan)
-
-### 1) Primary User Journey: Buy Tickets on Base (Smart “Get Ready” Panel)
-- Detect readiness on the Buy page:
-  - If on Base with enough USDC → show “Buy”
-  - Else show a compact “Get Ready” panel:
-    - Show Base USDC, Solana USDC, NEAR presence
-    - Recommend best action: Solana bridge / NEAR chain signatures / EVM CCTP
-    - One-click “Bridge and continue” CTA
-- After bridging and mint, auto-advance to Approve + Buy on Base
-- Use onStatus hooks for real-time progress
-
-Components (lean):
-- ReadyToBuyPanel: reads wallet states, calls bridgeService; triggers Base receiveMessage when possible; finishes with web3Service.purchaseTickets
-
-### 2) Secondary Journey: Dedicated Bridge Page (/bridge)
-- Source: Solana, Ethereum, Base (NEAR later if applicable)
-- Destination: Base (primary)
-- Asset: USDC
-- Route selection: auto primary (CCTP), fallback (Wormhole) on failure; optional manual switch
-- Fee estimates + ETA via dryRun
-- Status panel with explorer links
-- Post-bridge CTA: “Go buy tickets now”
-
-Developer testing notes:
-- Page path: /bridge (not linked in nav)
-- Solana path: Phantom, then Bridge → Mint on Base → My Tickets
-- EVM path: Connect wallet, Bridge; proceeds directly without mint step
-
-Components (lean):
-- BridgeForm, RouteCard(s), StatusPanel
-
-### 3) Power Features (Optional)
-- Smart suggestions based on balances
-- Dry-run estimates
-- Persist last route choice locally
-
-### 4) Error Handling UX
-- Inline error + “Try fallback route”
-- Disclosable technical details
-- Persist progress across retries
-
-### 5) Implementation Approach (No Bloat)
-- Reuse services/hooks: bridgeService, solanaBridgeService, solanaWalletService/useSolanaWallet, nearWalletSelectorService/useNearWallet, web3Service
-- Lazy load SDKs only when flows are active
-- Keep example components isolated in src/components/examples
 
 ## Status Hooks Reference
 - Solana CCTP: `solana_cctp:prepare | burn_initiated | burn_sent | burn_confirmed | attestation_polling | mint_initiated | ready_to_mint`

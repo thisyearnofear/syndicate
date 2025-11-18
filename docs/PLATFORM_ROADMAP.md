@@ -1,4 +1,4 @@
-# Syndicate Lottery Platform Roadmap
+# Platform Roadmap
 
 ## Vision
 Transform lottery participation into **impact investing** through sustainable syndicate-powered public goods funding, where winning syndicates automatically fund causes while sharing proceeds with participants.
@@ -315,7 +315,7 @@ Transform lottery participation into **impact investing** through sustainable sy
 - **Hackathon Goals**: 100% complete - Ready for submission
 
 ### **🚀 Next Immediate Opportunities**
-1. **Hackathon Submission** - $4,000 prize (immediate)
+1. **Hackathon Submission** - $4k prize (immediate)
 2. **Real Vault Addresses** - Connect to live Octant deployments
 3. **Verified Causes** - Partner with established public goods organizations
 4. **Multi-Vault Expansion** - Add Spark, Morpho, Aave integrations
@@ -398,3 +398,51 @@ Transform lottery participation into **impact investing** through sustainable sy
 - **Ultimate Vision**: 10,000+ users, $10M+ transaction volume, $500k+ cause funding
 
 This roadmap now prioritizes immediate opportunity capture while maintaining the long-term vision of impact-driven lottery participation. The hackathon sprint will validate core yield strategy concepts and provide momentum for subsequent development phases.
+
+## Syndicate Features
+
+### Overview
+Syndicates allow users to pool their lottery tickets together to support social causes while increasing their chances of winning. Users can choose between different governance models: Leader-guided (faster decision-making, higher risk) or DAO-governed (slower consensus-based decisions, higher security).
+
+### Key Components
+
+#### 1. SyndicateCard
+Displays syndicate information with:
+- Cause and description
+- Governance model indicator (Leader/DAO/Hybrid)
+- Member count and impact metrics
+- Recent activity feed
+- Social sharing options
+
+#### 2. SocialFeed
+Shows real-time community activity:
+- New members joining
+- Tickets purchased
+- Wins and donations
+- Trending syndicates
+- Governance activity (for DAO-governed syndicates)
+
+#### 3. Purchase Flow
+Enhanced modal with syndicate mode:
+- Choose between individual or syndicate purchase
+- Select specific syndicate to support
+- View governance model information
+- View impact preview before purchase
+- Configure governance parameters (for hybrid syndicates)
+
+#### 4. Syndicate Detail Page
+Dedicated page for each syndicate showing:
+- Detailed impact metrics
+- Complete activity history
+- Member statistics
+- Governance model details and history
+- Social sharing
+
+### API Endpoints
+- `GET /api/syndicates` - Returns list of active syndicates with rich data including governance model
+
+### Core Types
+- `SyndicateInfo` - Main syndicate data structure with governance model
+- `SyndicateActivity` - Activity events (joins, tickets, wins, donations)
+- `SyndicateImpact` - Impact calculations for purchases
+- `GovernanceAction` - Governance actions and voting history
