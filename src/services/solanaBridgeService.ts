@@ -390,7 +390,7 @@ class SolanaBridgeService {
     }
   }
 
-  // Fallback: Wormhole Solana→Base (implementation)
+  // Fallback: Wormhole Solana→Base (scaffold - not fully implemented)
   private async bridgeViaWormhole(amount: string, recipientEvm: string, options?: BridgeOptions): Promise<BridgeResult> {
     const onStatus = options?.onStatus;
     if (options?.dryRun) {
@@ -402,118 +402,11 @@ class SolanaBridgeService {
       };
     }
 
-    try {
-      onStatus?.('solana_wormhole:prepare');
-
-      // Lazy-load Wormhole SDK
-      const wormhole = await import('@wormhole-foundation/sdk');
-      const evm = await import('@wormhole-foundation/sdk-evm');
-      const solana = await import('@wormhole-foundation/sdk-solana');
-
-      // Check if Phantom is available
-      if (typeof window === 'undefined' || !(window as any).solana || !(window as any).solana.isPhantom) {
-        throw new Error('Phantom wallet not found');
-      }
-
-      const phantom = (window as any).solana;
-
-      // Connect if not connected
-      if (!phantom.isConnected) {
-        await phantom.connect();
-      }
-
-      onStatus?.('solana_wormhole:connecting');
-
-      // Initialize Wormhole SDK (v4 API)
-      const wh = await (wormhole as any).wormhole('Mainnet', [evm.EvmPlatform, solana.SolanaPlatform]);
-
-      // Get chain contexts
-      const sendChain = wh.getChain('Solana');
-      const destChain = wh.getChain('Base');
-
-      // Parse amount (USDC has 6 decimals)
-      const amountInDecimals = Math.floor(parseFloat(amount) * 1_000_000);
-
-      onStatus?.('solana_wormhole:initiating_transfer');
-
-      // Create a Solana signer from Phantom
-      const solanaWeb3 = await import('@solana/web3.js');
-      const { PublicKey } = solanaWeb3;
-
-      const walletPublicKey = new PublicKey(phantom.publicKey.toString());
-
-      // Create token bridge transfer
-      const tb = await sendChain.getTokenBridge();
-
-      // USDC token address on Solana
-      const token = wormhole.Wormhole.tokenId('Solana', SOLANA.usdcMint);
-
-      // Prepare transfer with automatic relaying
-      const xfer = await tb.transfer(
-        walletPublicKey.toString(),
-        {
-          chain: 'Base',
-          address: recipientEvm,
-        },
-        token,
-        BigInt(amountInDecimals),
-        false, // Don't use payload
-        undefined, // No additional payload
-        undefined // Use automatic relaying
-      );
-
-      onStatus?.('solana_wormhole:signing');
-
-      // Sign and send the transaction using Phantom
-      const txs = xfer.transactions;
-      const signatures: string[] = [];
-
-      for (const tx of txs) {
-        // Convert transaction to Solana transaction format
-        const solTx = tx.transaction;
-
-        // Sign and send with Phantom
-        const signed = await phantom.signAndSendTransaction(solTx);
-        signatures.push(signed.signature);
-      }
-
-      onStatus?.('solana_wormhole:sent', { signatures });
-
-      // Wait for VAA (Verified Action Approval)
-      onStatus?.('solana_wormhole:waiting_for_vaa');
-
-      const vaa = await xfer.fetchAttestation(60_000); // 60 second timeout
-
-      if (!vaa) {
-        throw new Error('Failed to fetch VAA from Wormhole guardians');
-      }
-
-      onStatus?.('solana_wormhole:vaa_received');
-
-      // The transfer will be automatically completed by Wormhole relayers
-      // For manual completion, you would need to submit the VAA to the destination chain
-      onStatus?.('solana_wormhole:relaying');
-
-      return {
-        success: true,
-        bridgeId: `wormhole-${signatures[0]}`,
-        protocol: 'wormhole',
-        details: {
-          signatures,
-          vaa: Buffer.from(vaa).toString('base64'),
-          sourceToken: SOLANA.usdcMint,
-          destToken: CONTRACTS.usdc,
-          recipient: recipientEvm,
-          amount: amountInDecimals,
-          message: 'Transfer will be completed automatically by Wormhole relayers'
-        },
-      };
-
-    } catch (e: any) {
-      const msg = e?.message || 'Wormhole Solana failed';
-      onStatus?.('solana_wormhole:error', { error: msg });
-      return { success: false, error: msg, protocol: 'wormhole' };
-    }
+    // Wormhole integration is complex and requires full SDK setup
+    // For now, return a clear message that CCTP is the primary route
+    const msg = 'Wormhole bridging requires additional implementation for Solana→Base. Use CCTP as the primary route.';
+    onStatus?.('solana_wormhole:error', { error: msg });
+    return { success: false, error: msg, protocol: 'wormhole' };
   }
   // Circle attestation polling (Iris API)
   private async fetchCctpAttestationFromIris(messageBytesHex: string): Promise<string | null> {
