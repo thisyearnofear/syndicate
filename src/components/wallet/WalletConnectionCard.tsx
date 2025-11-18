@@ -55,13 +55,19 @@ export function WalletConnectionCard({
         await walletLoader.loadWalletLibrary(walletType);
         await onConnect?.(walletType);
       } catch (err: any) {
-        const errorMessage =
-          err?.message ||
-          `Failed to connect to ${walletType}. Please try again.`;
-        setError(errorMessage);
+        // Don't show error for WalletConnect since RainbowKit handles its own UI
+        if (walletType !== 'metamask') {
+          const errorMessage =
+            err?.message ||
+            `Failed to connect to ${walletType}. Please try again.`;
+          setError(errorMessage);
+        }
       } finally {
-        setIsConnecting(false);
-        setConnectingWallet(null);
+        // Don't reset connecting state for WalletConnect since RainbowKit handles its own UI
+        if (walletType !== 'metamask') {
+          setIsConnecting(false);
+          setConnectingWallet(null);
+        }
       }
     },
     [onConnect, isConnecting]
@@ -70,7 +76,17 @@ export function WalletConnectionCard({
   // Prevent hydration mismatches by only rendering after mount
   useEffect(() => {
     setMounted(true);
-  }, []);
+  }, []); // Empty dependency array to run only once
+
+  // Reset connecting state when component unmounts
+  useEffect(() => {
+    return () => {
+      if (isConnecting) {
+        setIsConnecting(false);
+        setConnectingWallet(null);
+      }
+    };
+  }, [isConnecting]);
 
   if (!mounted) {
     return null; // Don't render on server
