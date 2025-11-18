@@ -149,10 +149,9 @@ export function useUnifiedWallet(): {
         case WalletTypes.METAMASK:
           // For MetaMask, prefer wagmi/RainbowKit connection to avoid conflicts
           // wagmi will handle the connection and our WalletContext will sync with it
-          throw createError(
-            'WALLET_CONNECTION_METHOD',
-            'Please use the WalletConnect option to connect your wallet.'
-          );
+          // We don't need to do anything here as RainbowKit handles the connection flow
+          console.log('MetaMask connection handled by RainbowKit');
+          return;
           break;
 
         case WalletTypes.PHANTOM:

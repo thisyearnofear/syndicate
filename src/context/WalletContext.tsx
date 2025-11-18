@@ -217,13 +217,14 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
   // Auto-sync with wagmi when connection state changes
   useEffect(() => {
-    if (wagmiConnected && address) {
+    // Only sync if wagmi state has changed but our internal state hasn't been updated yet
+    if (wagmiConnected && address && !state.isConnected) {
       syncWithWagmi();
-    } else if (!wagmiConnected && state.isConnected && (state.walletType === 'metamask' || !state.walletType)) {
-      // Only disconnect if it was an EVM wallet
+    } else if (!wagmiConnected && state.isConnected && (state.walletType === 'metamask' || !state.walletType) && state.address) {
+      // Only disconnect if it was an EVM wallet and we have a valid address
       dispatch({ type: 'DISCONNECT' });
     }
-  }, [wagmiConnected, address, syncWithWagmi, state.isConnected, state.walletType]);
+  }, [wagmiConnected, address, syncWithWagmi, state.isConnected, state.walletType, state.address]);
 
   // Enhanced disconnect function that handles all wallet types
   const disconnectWallet = useCallback(async () => {

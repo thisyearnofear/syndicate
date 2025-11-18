@@ -44,7 +44,10 @@ export default function WalletConnectionManager({
     async (walletType: WalletType) => {
       try {
         await connect(walletType);
-        dispatch({ type: "CLOSE_MODAL" });
+        // Don't automatically close modal for WalletConnect since RainbowKit handles its own UI flow
+        if (walletType !== 'metamask') {
+          dispatch({ type: "CLOSE_MODAL" });
+        }
       } catch (error: any) {
         console.error("Wallet connection failed:", error);
         // Don't show error for WalletConnect method since RainbowKit handles its own UI
