@@ -20,10 +20,12 @@ export interface TicketPurchaseState {
   isPurchasing: boolean;
   isApproving: boolean;
   isCheckingBalance: boolean;
+  isCheckingSolanaBalance: boolean; // New property for Solana balance loading state
   isClaimingWinnings: boolean;
 
   // Data
   userBalance: UserBalance | null;
+  solanaBalance: string | null; // New property for Solana USDC balance
   ticketPrice: string;
   currentJackpot: string;
 
@@ -94,8 +96,10 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     isPurchasing: false,
     isApproving: false,
     isCheckingBalance: false,
+    isCheckingSolanaBalance: false, // New property for Solana balance loading state
     isClaimingWinnings: false,
     userBalance: null,
+    solanaBalance: null, // New property for Solana USDC balance
     ticketPrice: '1',
     currentJackpot: '0',
     lastTxHash: null,
@@ -200,30 +204,55 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
    * Refresh user balance
    */
   const refreshBalance = useCallback(async (): Promise<void> => {
-    // Check if service is ready before attempting to refresh
-    if (!web3Service.isReady()) {
-      console.warn('Web3 service not ready, skipping balance refresh');
-      return;
-    }
-
     setState(prev => ({ ...prev, isCheckingBalance: true }));
-
+    
     try {
-      const balance = await web3Service.getUserBalance();
-      setState(prev => ({
-        ...prev,
-        userBalance: balance,
-        isCheckingBalance: false
-      }));
+      // Check if walletType is PHANTOM
+      if (walletType === WalletTypes.PHANTOM) {
+        // For Solana wallets, set Base balance to 0 and check Solana balance
+        setState(prev => ({
+          ...prev,
+          userBalance: { usdc: '0', eth: '0' },
+          isCheckingBalance: false
+        }));
+        
+        // Check Solana balance for Phantom wallets
+        if (address) {
+          setState(prev => ({ ...prev, isCheckingSolanaBalance: true }));
+          try {
+            const { getSolanaUSDCBalance } = await import('@/services/solanaBalanceService');
+            const solanaBalance = await getSolanaUSDCBalance(address);
+            setState(prev => ({
+              ...prev,
+              solanaBalance,
+              isCheckingSolanaBalance: false
+            }));
+          } catch (error) {
+            console.error('Failed to refresh Solana balance:', error);
+            setState(prev => ({
+              ...prev,
+              isCheckingSolanaBalance: false
+            }));
+          }
+        }
+      } else {
+        // Always check Base balance for EVM wallets
+        const balance = await web3Service.getUserBalance();
+        setState(prev => ({
+          ...prev,
+          userBalance: balance,
+          isCheckingBalance: false
+        }));
+      }
     } catch (error) {
       console.error('Failed to refresh balance:', error);
       setState(prev => ({
         ...prev,
         isCheckingBalance: false,
-        // Don't set error for balance refresh failures
+        isCheckingSolanaBalance: false
       }));
     }
-  }, []);
+  }, [walletType, address]);
 
   /**
    * Refresh current jackpot
@@ -419,6 +448,21 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       return null;
     }
   }, [address, state.ticketPrice]);
+
+  /**
+   * NEW: Check if bridge guidance is needed for Solana users
+   */
+  const needsBridgeGuidance = useCallback((totalCost: string): boolean => {
+    if (walletType !== WalletTypes.PHANTOM) return false;
+    if (!state.userBalance || !state.solanaBalance) return false;
+    
+    // Check if user has insufficient Base USDC but sufficient Solana USDC
+    const baseUSDC = parseFloat(state.userBalance.usdc || '0');
+    const solanaUSDC = parseFloat(state.solanaBalance || '0');
+    const requiredAmount = parseFloat(totalCost || '0');
+    
+    return baseUSDC < requiredAmount && solanaUSDC >= requiredAmount;
+  }, [walletType, state.userBalance, state.solanaBalance]);
 
   /**
    * Purchase tickets
@@ -725,6 +769,8 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     setupYieldStrategy,
     processYieldConversion,
     previewYieldConversion,
+    // NEW: Solana bridge functions
+    needsBridgeGuidance,
     refreshBalance,
     refreshJackpot,
     getCurrentTicketInfo,

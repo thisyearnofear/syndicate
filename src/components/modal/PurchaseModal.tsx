@@ -20,6 +20,9 @@ import { CompactFlex } from '@/shared/components/premium/CompactLayout';
 import { WalletConnectionCard } from '@/components/wallet/WalletConnectionCard';
 import { useSuccessToast, useErrorToast } from '@/shared/components/ui/Toast';
 import type { SyndicateInfo } from '@/domains/lottery/types';
+import { WalletTypes } from '@/domains/wallet/services/unifiedWalletService';
+import { BridgeGuidanceCard } from '@/components/bridge/BridgeGuidanceCard';
+import { InlineBridgeFlow } from '@/components/bridge/InlineBridgeFlow';
 
 // Lazy load modal steps for better performance (restored with animations)
 const ModeStep = lazy(() => import('./purchase/ModeStep').then(mod => ({ default: mod.ModeStep })));
@@ -74,6 +77,8 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   const [yieldToCausesPercentage, setYieldToCausesPercentage] = useState<number>(15);
   const [syndicates, setSyndicates] = useState<SyndicateInfo[]>([]);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showBridgeGuidance, setShowBridgeGuidance] = useState(false);
+  const [isBridging, setIsBridging] = useState(false);
 
   // Handle modal close with proper cleanup
   const handleClose = () => {
@@ -82,6 +87,35 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
     if (purchaseSuccess) {
       reset();
     }
+  };
+
+  // Check for bridge guidance when wallet is connected and wallet type is Phantom
+  useEffect(() => {
+    if (isConnected && walletType === WalletTypes.PHANTOM && needsBridgeGuidance(totalCost)) {
+      setShowBridgeGuidance(true);
+    }
+  }, [isConnected, walletType, totalCost, needsBridgeGuidance]);
+
+  // Bridge handler functions
+  const handleStartBridge = () => {
+    setShowBridgeGuidance(false);
+    setIsBridging(true);
+  };
+
+  const handleBridgeComplete = (result: any) => {
+    setIsBridging(false);
+    // Refresh balances and proceed to purchase
+    refreshBalance();
+    // Auto-proceed to purchase after a short delay to allow balance to update
+    setTimeout(() => {
+      handlePurchase();
+    }, 2000);
+  };
+
+  const handleBridgeError = (error: string) => {
+    setIsBridging(false);
+    setShowBridgeGuidance(true);
+    errorToast('Bridge Failed', error);
   };
 
   // Compute odds using authoritative API data (no estimates)
@@ -386,6 +420,36 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
             >
               Dismiss
             </button>
+          </div>
+        )}
+
+        {/* Bridge Guidance Card */}
+        {showBridgeGuidance && !isBridging && (
+          <div className="mb-6">
+            <BridgeGuidanceCard
+              sourceChain="solana"
+              sourceBalance={solanaBalance || '0'}
+              targetChain="base"
+              targetBalance={userBalance?.usdc || '0'}
+              requiredAmount={totalCost}
+              onBridge={handleStartBridge}
+              onDismiss={() => setShowBridgeGuidance(false)}
+            />
+          </div>
+        )}
+
+        {/* Inline Bridge Flow */}
+        {isBridging && (
+          <div className="mb-6">
+            <InlineBridgeFlow
+              sourceChain="solana"
+              destinationChain="base"
+              amount={totalCost}
+              recipient={address || ''}
+              onComplete={handleBridgeComplete}
+              onError={handleBridgeError}
+              autoStart={true}
+            />
           </div>
         )}
 
