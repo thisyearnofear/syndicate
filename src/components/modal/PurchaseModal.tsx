@@ -453,7 +453,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
       />
 
       {/* Premium modal */}
-      <div className="relative glass-premium rounded-3xl p-8 w-full max-w-lg border border-white/20 animate-scale-in">
+      <div className="relative glass-premium rounded-3xl p-6 w-full max-w-lg border border-white/20 animate-scale-in max-h-[85vh] overflow-y-auto">
         {/* Header */}
         <CompactFlex align="center" justify="between" className="mb-6">
           <div className="flex-1">
@@ -496,8 +496,8 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
           </div>
         )}
 
-        {/* Balance Display - Dual for Phantom, Single for EVM */}
-        {isConnected && userBalance && (
+        {/* Balance Display - show after mode selection for compact first view */}
+        {isConnected && userBalance && step === 'select' && (
           <div className="space-y-3 mb-6">
             {/* Info message for Phantom users */}
             {walletType === WalletTypes.PHANTOM && (
@@ -576,7 +576,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
         )}
 
         {/* Bridge Guidance Card */}
-        {showBridgeGuidance && !isBridging && (
+        {showBridgeGuidance && !isBridging && step === 'select' && (
           <div className="mb-6">
             <BridgeGuidanceCard
               sourceChain="solana"
