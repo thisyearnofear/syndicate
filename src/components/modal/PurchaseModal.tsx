@@ -23,6 +23,10 @@ import type { SyndicateInfo } from '@/domains/lottery/types';
 import { WalletTypes } from '@/domains/wallet/services/unifiedWalletService';
 import { BridgeGuidanceCard } from '@/components/bridge/BridgeGuidanceCard';
 import { InlineBridgeFlow } from '@/components/bridge/InlineBridgeFlow';
+import { useAccount } from 'wagmi';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { ethers, Contract } from 'ethers';
+import { cctp as CCTP } from '@/config';
 
 // Lazy load modal steps for better performance (restored with animations)
 const ModeStep = lazy(() => import('./purchase/ModeStep').then(mod => ({ default: mod.ModeStep })));
@@ -81,6 +85,8 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   const [showShareModal, setShowShareModal] = useState(false);
   const [showBridgeGuidance, setShowBridgeGuidance] = useState(false);
   const [isBridging, setIsBridging] = useState(false);
+  const { address: evmAddress, isConnected: evmConnected } = useAccount();
+  const [bridgeMetadata, setBridgeMetadata] = useState<{ protocol?: string; bridgeId?: string; burnSignature?: string; message?: string; attestation?: string; mintTxHash?: string } | null>(null);
 
   // Handle modal close with proper cleanup
   const handleClose = () => {
@@ -93,14 +99,50 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
 
   // Bridge handler functions
   const handleStartBridge = () => {
+    if (!evmConnected || !evmAddress) {
+      errorToast('EVM Wallet Required', 'Connect an EVM wallet to receive USDC on Base');
+      return;
+    }
     setShowBridgeGuidance(false);
     setIsBridging(true);
   };
 
-  const handleBridgeComplete = (result: any) => {
+  const handleBridgeComplete = async (result: any) => {
     setIsBridging(false);
-    // Poll balance until Base balance actually increases
-    pollBalanceUntilBridged();
+    try {
+      if (result?.protocol === 'cctp' && result?.details?.message && result?.details?.attestation) {
+        if (!evmConnected || !evmAddress || !(window as any).ethereum) {
+          errorToast('EVM Wallet Required', 'Connect an EVM wallet to mint bridged USDC on Base');
+          return;
+        }
+        const provider = new ethers.BrowserProvider((window as any).ethereum);
+        const network = await provider.getNetwork();
+        if (network.chainId !== BigInt(8453)) {
+          await (window as any).ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] });
+        }
+        const signer = await provider.getSigner();
+        const transmitter = new Contract(CCTP.base.messageTransmitter, ['function receiveMessage(bytes calldata message, bytes calldata attestation) external returns (bool)'], signer);
+        const tx = await transmitter.receiveMessage(result.details.message, result.details.attestation);
+        const rc = await tx.wait();
+        setBridgeMetadata({
+          protocol: 'cctp',
+          bridgeId: result.bridgeId,
+          burnSignature: result.details.burnSignature,
+          message: result.details.message,
+          attestation: result.details.attestation,
+          mintTxHash: rc.hash,
+        });
+        successToast('Bridge Minted', 'USDC minted on Base. Proceeding to purchase...');
+        await refreshBalance();
+        setStep('select');
+        await handlePurchase();
+        return;
+      }
+      pollBalanceUntilBridged();
+    } catch (e: any) {
+      errorToast('Mint Failed', e?.message || 'Failed to mint bridged USDC on Base');
+      setShowBridgeGuidance(true);
+    }
   };
 
   const pollBalanceUntilBridged = async () => {
@@ -228,10 +270,28 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
         }
       );
 
+      try {
+        const sourceChain = walletType === WalletTypes.PHANTOM ? 'solana' : 'ethereum';
+        const body = {
+          sourceChain,
+          sourceWallet: walletType === WalletTypes.PHANTOM ? address : undefined,
+          baseWallet: evmAddress || address || undefined,
+          bridgeTxHash: bridgeMetadata?.burnSignature,
+          mintTxHash: bridgeMetadata?.mintTxHash,
+          ticketPurchaseTx: lastTxHash,
+          ticketCount: purchasedTicketCount,
+        };
+        fetch('/api/cross-chain-purchases', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      } catch (_) {}
+
       // Don't auto-close - let user control when to close
       // Users can click "Continue Playing" or navigate via other buttons
     }
-  }, [purchaseSuccess, purchasedTicketCount, onSuccess, successToast]);
+  }, [purchaseSuccess, purchasedTicketCount, onSuccess, successToast, walletType, address, evmAddress, bridgeMetadata, lastTxHash]);
 
   const handlePurchase = async () => {
     if (!isConnected) {
@@ -350,6 +410,9 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
             isPurchasing={isPurchasing}
             isInitializing={isInitializing}
             purchaseMode={purchaseMode}
+            walletType={walletType}
+            solanaBalance={solanaBalance}
+            onStartBridge={handleStartBridge}
           />
         );
       case 'processing':
@@ -440,8 +503,17 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
             {walletType === WalletTypes.PHANTOM && (
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
                 <p className="text-blue-300 text-sm">
-                  💡 USDC lives on Solana and Base. To buy tickets here, we need your tokens on Base.
+                  💡 USDC lives on Solana and Base.
                 </p>
+                <div className="text-blue-200 text-xs mt-1">
+                  {(() => {
+                    const baseUSDC = parseFloat(userBalance?.usdc || '0');
+                    const requiredAmount = parseFloat(totalCost || '0');
+                    const deficit = Math.max(0, requiredAmount - baseUSDC);
+                    const solUSDC = parseFloat(solanaBalance || '0');
+                    return `Need $${requiredAmount.toFixed(2)} • Have $${baseUSDC.toFixed(2)} on Base (deficit $${deficit.toFixed(2)}) • $${solUSDC.toFixed(2)} on Solana`;
+                  })()}
+                </div>
               </div>
             )}
 
@@ -451,6 +523,15 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
                 <div className="flex justify-between items-center">
                   <span className="text-white/70">🟣 Your USDC on Solana:</span>
                   <span className="text-white font-semibold">${solanaBalance || '0'}</span>
+                </div>
+              </div>
+            )}
+
+            {walletType === WalletTypes.PHANTOM && !evmConnected && (
+              <div className="bg-white/5 rounded-lg p-4 border border-blue-500/20">
+                <div className="flex items-center justify-between">
+                  <div className="text-white/70">Connect an EVM wallet to receive bridged USDC on Base</div>
+                  <ConnectButton showBalance={false} chainStatus="none" />
                 </div>
               </div>
             )}
@@ -516,7 +597,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
               sourceChain="solana"
               destinationChain="base"
               amount={totalCost}
-              recipient={address || ''}
+              recipient={evmAddress || ''}
               onComplete={handleBridgeComplete}
               onError={handleBridgeError}
               autoStart={true}

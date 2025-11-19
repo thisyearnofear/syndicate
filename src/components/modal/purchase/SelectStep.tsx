@@ -4,6 +4,7 @@ import { Button } from "@/shared/components/ui/Button";
 import { CompactStack, CompactFlex } from "@/shared/components/premium/CompactLayout";
 import { AlertCircle } from 'lucide-react';
 import type { SyndicateInfo } from "@/domains/lottery/types";
+import { WalletTypes } from '@/domains/wallet/services/unifiedWalletService';
 
 interface SelectStepProps {
   setStep: (step: 'mode') => void;
@@ -26,6 +27,9 @@ interface SelectStepProps {
   isPurchasing: boolean;
   isInitializing: boolean;
   purchaseMode: 'individual' | 'syndicate' | 'yield';
+  walletType?: string | null;
+  solanaBalance?: string | null;
+  onStartBridge?: () => void;
 }
 
 export function SelectStep({
@@ -47,7 +51,16 @@ export function SelectStep({
   isPurchasing,
   isInitializing,
   purchaseMode,
+  walletType,
+  solanaBalance,
+  onStartBridge,
 }: SelectStepProps) {
+  const canBridgeAndBuy = Boolean(
+    isConnected &&
+    walletType === WalletTypes.PHANTOM &&
+    hasInsufficientBalance &&
+    parseFloat(solanaBalance || '0') >= parseFloat(totalCost || '0')
+  );
   return (
     <CompactStack spacing="lg">
       {/* Back to Mode Selection */}
@@ -218,25 +231,36 @@ export function SelectStep({
 
       {/* Purchase button - only show when connected */}
       {isConnected && (
-        <Button
-          variant="default"
-          size="lg"
-          className="w-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white shadow-2xl hover:shadow-yellow-500/30 border border-yellow-400/30 disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={handlePurchase}
-          disabled={isPurchasing || isInitializing || !!hasInsufficientBalance}
-        >
-          {isInitializing ? (
-            <>⏳ Initializing...</>
-          ) : isPurchasing ? (
-            <>⚡ Processing...</>
-          ) : hasInsufficientBalance ? (
-            'Insufficient Balance'
-          ) : selectedSyndicate ? (
-            `🌊 Join ${selectedSyndicate.name} - $${totalCost}`
-          ) : (
-            `⚡ Purchase ${ticketCount} Ticket${ticketCount > 1 ? 's' : ''} - $${totalCost}`
-          )}
-        </Button>
+        canBridgeAndBuy ? (
+          <Button
+            variant="default"
+            size="lg"
+            className="w-full bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 hover:from-blue-700 hover:via-purple-700 hover:to-indigo-700 text-white shadow-2xl hover:shadow-blue-500/30 border border-blue-400/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={onStartBridge}
+          >
+            {`🔁 Bridge & Buy - $${totalCost}`}
+          </Button>
+        ) : (
+          <Button
+            variant="default"
+            size="lg"
+            className="w-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white shadow-2xl hover:shadow-yellow-500/30 border border-yellow-400/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handlePurchase}
+            disabled={isPurchasing || isInitializing || !!hasInsufficientBalance}
+          >
+            {isInitializing ? (
+              <>⏳ Initializing...</>
+            ) : isPurchasing ? (
+              <>⚡ Processing...</>
+            ) : hasInsufficientBalance ? (
+              'Insufficient Balance'
+            ) : selectedSyndicate ? (
+              `🌊 Join ${selectedSyndicate.name} - $${totalCost}`
+            ) : (
+              `⚡ Purchase ${ticketCount} Ticket${ticketCount > 1 ? 's' : ''} - $${totalCost}`
+            )}
+          </Button>
+        )
       )}
 
       {/* Terms */}

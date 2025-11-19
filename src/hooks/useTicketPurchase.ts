@@ -145,6 +145,8 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
         success = await nearChainSignatureService.initialize(
           address ? { accountId: address } : undefined
         );
+      } else if (walletType === WalletTypes.PHANTOM) {
+        success = true;
       } else {
         // Default: EVM Base purchase path
         success = await web3Service.initialize();
@@ -207,37 +209,41 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
    */
   const refreshBalance = useCallback(async (): Promise<void> => {
     setState(prev => ({ ...prev, isCheckingBalance: true }));
-    
     try {
-      // Always check Base balance for all wallet types
-      const balance = await web3Service.getUserBalance();
-      setState(prev => ({
-        ...prev,
-        userBalance: balance,
-        isCheckingBalance: false
-      }));
-      
-      // Additionally check Solana balance for Phantom wallets
-      if (walletType === WalletTypes.PHANTOM && address) {
-        setState(prev => ({ ...prev, isCheckingSolanaBalance: true }));
-        try {
-          const { getSolanaUSDCBalance } = await import('@/services/solanaBalanceService');
-          const solanaBalance = await getSolanaUSDCBalance(address);
-          setState(prev => ({
-            ...prev,
-            solanaBalance,
-            isCheckingSolanaBalance: false
-          }));
-        } catch (error) {
-          console.error('Failed to refresh Solana balance:', error);
-          setState(prev => ({
-            ...prev,
-            isCheckingSolanaBalance: false
-          }));
+      if (walletType === WalletTypes.PHANTOM) {
+        setState(prev => ({
+          ...prev,
+          userBalance: { usdc: '0', eth: '0', hasEnoughUsdc: false, hasEnoughEth: false },
+          isCheckingBalance: false
+        }));
+        if (address) {
+          setState(prev => ({ ...prev, isCheckingSolanaBalance: true }));
+          try {
+            const { getSolanaUSDCBalance } = await import('@/services/solanaBalanceService');
+            const solanaBalance = await getSolanaUSDCBalance(address);
+            setState(prev => ({
+              ...prev,
+              solanaBalance,
+              isCheckingSolanaBalance: false
+            }));
+          } catch (e) {
+            setState(prev => ({
+              ...prev,
+              isCheckingSolanaBalance: false
+            }));
+          }
+        } else {
+          setState(prev => ({ ...prev, isCheckingSolanaBalance: false }));
         }
+      } else {
+        const balance = await web3Service.getUserBalance();
+        setState(prev => ({
+          ...prev,
+          userBalance: balance,
+          isCheckingBalance: false
+        }));
       }
-    } catch (error) {
-      console.error('Failed to refresh balance:', error);
+    } catch {
       setState(prev => ({
         ...prev,
         isCheckingBalance: false,
@@ -527,8 +533,12 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
             }
           }
         });
+      } else if (walletType === WalletTypes.PHANTOM) {
+        result = {
+          success: false,
+          error: 'Phantom wallet detected. Please bridge USDC from Solana to Base using Bridge & Buy.',
+        };
       } else {
-        // Default: EVM Base purchase path
         result = await web3Service.purchaseTickets(ticketCount);
       }
 
