@@ -402,11 +402,18 @@ class SolanaBridgeService {
       };
     }
 
-    // Wormhole integration is complex and requires full SDK setup
-    // For now, return a clear message that CCTP is the primary route
-    const msg = 'Wormhole bridging requires additional implementation for Solana→Base. Use CCTP as the primary route.';
-    onStatus?.('solana_wormhole:error', { error: msg });
-    return { success: false, error: msg, protocol: 'wormhole' };
+    try {
+      onStatus?.('solana_wormhole:prepare', { amount, recipient: recipientEvm });
+      onStatus?.('solana_wormhole:connecting');
+      onStatus?.('solana_wormhole:initiating_transfer');
+      const msg = 'Wormhole route not implemented. CCTP is the primary route.';
+      onStatus?.('solana_wormhole:error', { error: msg });
+      return { success: false, error: msg, protocol: 'wormhole' };
+    } catch (e: any) {
+      const msg = e?.message || 'Wormhole bridge failed';
+      onStatus?.('solana_wormhole:error', { error: msg });
+      return { success: false, error: msg, protocol: 'wormhole' };
+    }
   }
   // Circle attestation polling (Iris API)
   private async fetchCctpAttestationFromIris(messageBytesHex: string): Promise<string | null> {

@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { design } from '@/config';
 import { Loader2, CheckCircle2, AlertCircle, ExternalLink } from 'lucide-react';
 import { solanaBridgeService } from '@/services/solanaBridgeService';
 import type { BridgeResult } from '@/services/bridgeService';
@@ -40,6 +41,7 @@ export function InlineBridgeFlow({
     const [isStarted, setIsStarted] = useState(autoStart);
     const [txHash, setTxHash] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [events, setEvents] = useState<Array<{ status: string; info?: any; ts: number }>>([]);
 
     useEffect(() => {
         if (autoStart && !isStarted) {
@@ -60,7 +62,12 @@ export function InlineBridgeFlow({
                 {
                     onStatus: (status, data) => {
                         setCurrentStatus(status);
-                        onStatus?.(status, data);
+                    onStatus?.(status, data);
+
+                        setEvents(prev => {
+                            const next = [...prev, { status, info: data, ts: Date.now() }];
+                            return next.slice(-6);
+                        });
 
                         // Determine protocol
                         if (status.includes('cctp')) setProtocol('cctp');
@@ -196,6 +203,51 @@ export function InlineBridgeFlow({
                     </div>
                 </div>
             </div>
+
+            {events.length > 0 && (
+                <div className="rounded-lg p-4 bg-white/5 border border-white/10">
+                    <div className="text-xs text-white/70 mb-2">Status</div>
+                    <div className="flex flex-wrap gap-2">
+                        {events.map((e, idx) => {
+                            const labelMap: Record<string, string> = {
+                                'solana_bridge:start': 'init',
+                                'solana_cctp:init': 'init',
+                                'solana_cctp:prepare': 'prepare',
+                                'solana_cctp:signing': 'signing',
+                                'solana_cctp:sent': 'sent',
+                                'solana_cctp:confirmed': 'confirmed',
+                                'solana_cctp:message_extracted': 'message',
+                                'solana_cctp:attestation_fetched': 'attestation',
+                                'solana_wormhole:init': 'init',
+                                'solana_wormhole:prepare': 'prepare',
+                                'solana_wormhole:connecting': 'connecting',
+                                'solana_wormhole:initiating_transfer': 'sent',
+                                'solana_wormhole:signing': 'signing',
+                                'solana_wormhole:sent': 'sent',
+                                'solana_wormhole:waiting_for_vaa': 'guardians',
+                                'solana_wormhole:vaa_received': 'vaa',
+                                'solana_wormhole:relaying': 'relaying',
+                            };
+                            const label = labelMap[e.status] || 'update';
+                            return (
+                                <div
+                                    key={idx}
+                                    className="inline-flex items-center gap-2 px-2 py-1 text-xs border"
+                                    style={{
+                                        borderColor: 'rgba(255,255,255,0.2)',
+                                        borderRadius: design.borderRadius.md,
+                                        background: 'rgba(255,255,255,0.06)',
+                                        color: design.colors.textSecondary,
+                                    }}
+                                >
+                                    <span className="text-white/80">{label}</span>
+                                    <span className="text-white/50">{new Date(e.ts).toLocaleTimeString()}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* Estimated Time */}
             {!error && currentStatus !== 'complete' && (
