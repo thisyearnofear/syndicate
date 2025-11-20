@@ -143,7 +143,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                             }
                             `}
                             >
-                                                  <Icon size={16} />
+                                                  <Icon className="w-4 h-4" />
                                 {item.label}
                             </button>
                             </Link>
@@ -220,7 +220,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                             className="text-gray-300 hover:text-white"
                         >
-                            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                         </Button>
                     </CompactFlex>
 
@@ -246,7 +246,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                                 }
                                 `}
                                 >
-                                                <Icon size={16} />
+                                                <Icon className="w-4 h-4" />
                                                 {item.label}
                                                 </button>
                                         </Link>
@@ -292,7 +292,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
             <Suspense fallback={
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                     <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 flex items-center gap-3">
-                        <Loader2 size={24} className="animate-spin text-white" />
+                        <Loader2 className="w-6 h-6 animate-spin text-white" />
                         <span className="text-white">Loading...</span>
                     </div>
                 </div>

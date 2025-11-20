@@ -552,7 +552,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
 
             {isCheckingBalance && (
               <div className="flex items-center gap-2 text-white/60">
-                <Loader2 size={16} className="animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
                 <span className="text-sm">Updating balance...</span>
               </div>
             )}
@@ -563,7 +563,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
         {error && (
           <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-6">
             <div className="flex items-center gap-2 text-red-400">
-              <AlertCircle size={20} />
+              <AlertCircle className="w-5 h-5" />
               <span>{error}</span>
             </div>
             <button
@@ -608,7 +608,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
         {/* Content based on step */}
         <Suspense fallback={
           <div className="flex items-center justify-center py-12">
-            <Loader2 size={32} className="animate-spin text-white" />
+            <Loader2 className="w-8 h-8 animate-spin text-white" />
           </div>
         }>
           {renderStep()}

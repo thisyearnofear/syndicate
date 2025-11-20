@@ -144,7 +144,7 @@ export function WalletConnectionCard({
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 max-w-sm mx-auto">
           <CompactFlex align="start" gap="sm">
-            <AlertCircle size={20} className="text-red-400 mt-0.5 flex-shrink-0" />
+            <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
             <div className="text-left">
               <div className="text-red-400 font-medium text-sm">Connection Failed</div>
               <div className="text-red-300/80 text-xs mt-1">{error}</div>

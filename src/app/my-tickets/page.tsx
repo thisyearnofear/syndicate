@@ -93,7 +93,7 @@ function TicketHistoryCard({ ticket }: { ticket: TicketPurchaseHistory }) {
                     className="flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm transition-colors"
                 >
                     View Transaction
-                    <ExternalLink size={14} />
+                    <ExternalLink className="w-3.5 h-3.5" />
                 </a>
 
                 

@@ -217,7 +217,7 @@ export function SelectStep({
       {hasInsufficientBalance && (
         <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4">
           <div className="flex items-center gap-2 text-yellow-400">
-            <AlertCircle size={20} />
+            <AlertCircle className="w-5 h-5" />
             <span>Insufficient USDC balance</span>
           </div>
           <button
