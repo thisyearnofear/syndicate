@@ -219,8 +219,9 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
         if (address) {
           setState(prev => ({ ...prev, isCheckingSolanaBalance: true }));
           try {
-            const { getSolanaUSDCBalance } = await import('@/services/solanaBalanceService');
-            const solanaBalance = await getSolanaUSDCBalance(address);
+            const response = await fetch(`/api/solana-balance?wallet=${encodeURIComponent(address)}`);
+            const data = await response.json();
+            const solanaBalance = data.balance || '0';
             setState(prev => ({
               ...prev,
               solanaBalance,
