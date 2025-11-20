@@ -32,6 +32,11 @@ export default async function SyndicateDetailPage({ params }: { params: Promise<
         const mockSyndicate: SyndicateInfo = {
           id: id,
           name: "Ocean Warriors Collective",
+          model: 'altruistic',
+          distributionModel: 'proportional',
+          poolAddress: '0x1111111111111111111111111111111111111111',
+          executionDate: new Date('2025-12-01T00:00:00Z'),
+          cutoffDate: new Date('2025-11-30T00:00:00Z'),
           cause: {
             id: "ocean-cleanup",
             name: "Ocean Cleanup",

@@ -91,6 +91,11 @@ export interface TicketPurchaseProps {
 export interface SyndicateInfo {
   id: string;
   name: string;
+  model: 'pure' | 'altruistic';
+  distributionModel: 'proportional';
+  poolAddress: string;
+  executionDate: Date;
+  cutoffDate: Date;
   cause: {
     id: string;
     name: string;

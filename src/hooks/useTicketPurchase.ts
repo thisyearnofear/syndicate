@@ -539,7 +539,23 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
           error: 'Phantom wallet detected. Please bridge USDC from Solana to Base using Bridge & Buy.',
         };
       } else {
-        result = await web3Service.purchaseTickets(ticketCount);
+        if (purchaseMode === 'syndicate' && syndicateId) {
+          try {
+            const syndicateResponse = await fetch('/api/syndicates');
+            if (syndicateResponse.ok) {
+              const syndicates = await syndicateResponse.json();
+              const syndicate = syndicates.find((s: any) => s.id === syndicateId);
+              const recipientOverride = syndicate?.poolAddress;
+              result = await web3Service.purchaseTickets(ticketCount, recipientOverride);
+            } else {
+              result = await web3Service.purchaseTickets(ticketCount);
+            }
+          } catch {
+            result = await web3Service.purchaseTickets(ticketCount);
+          }
+        } else {
+          result = await web3Service.purchaseTickets(ticketCount);
+        }
       }
 
       // Purchase mode was determined earlier in the function

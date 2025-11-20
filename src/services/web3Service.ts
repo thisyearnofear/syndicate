@@ -286,7 +286,7 @@ class Web3Service {
   /**
    * Purchase lottery tickets
    */
-  async purchaseTickets(ticketCount: number): Promise<TicketPurchaseResult> {
+  async purchaseTickets(ticketCount: number, recipientOverride?: string): Promise<TicketPurchaseResult> {
     try {
       if (!this.isInitialized || !this.megapotContract || !this.signer) {
         throw new Error('Contracts not initialized');
@@ -324,7 +324,7 @@ class Web3Service {
       // value is USDC amount in szabo (6 decimals) = ticketCount * ticketPrice
       const usdcAmount = ticketPrice * BigInt(ticketCount);
       const referrer = ethers.ZeroAddress; // Default to address(0) for no referrer
-      const recipient = await this.signer.getAddress(); // Buy for ourselves
+      const recipient = recipientOverride ?? await this.signer.getAddress();
 
       const tx = await this.megapotContract.purchaseTickets(referrer, usdcAmount, recipient);
 

@@ -5,6 +5,11 @@ const mockSyndicates = [
   {
     id: '1',
     name: 'Ocean Warriors',
+    model: 'altruistic',
+    distributionModel: 'proportional',
+    poolAddress: '0x1111111111111111111111111111111111111111',
+    executionDate: new Date('2025-12-01T00:00:00Z'),
+    cutoffDate: new Date('2025-11-30T00:00:00Z'),
     membersCount: 1247,
     imageUrl: '/images/ocean-cleanup.jpg',
     description: 'Join the fight to clean our oceans and protect marine life',
@@ -42,6 +47,11 @@ const mockSyndicates = [
   {
     id: '2', 
     name: 'Education First',
+    model: 'altruistic',
+    distributionModel: 'proportional',
+    poolAddress: '0x2222222222222222222222222222222222222222',
+    executionDate: new Date('2025-12-15T00:00:00Z'),
+    cutoffDate: new Date('2025-12-14T00:00:00Z'),
     membersCount: 892,
     imageUrl: '/images/education.jpg',
     description: 'Ensuring quality education access for all communities',
@@ -79,11 +89,16 @@ const mockSyndicates = [
   {
     id: '3',
     name: 'Climate Action',
+    model: 'pure',
+    distributionModel: 'proportional',
+    poolAddress: '0x3333333333333333333333333333333333333333',
+    executionDate: new Date('2025-12-20T00:00:00Z'),
+    cutoffDate: new Date('2025-12-19T00:00:00Z'),
     membersCount: 2156,
     imageUrl: '/images/climate.jpg',
     description: 'Taking action against climate change for a sustainable future',
     // Enhanced fields
-    causePercentage: 30,
+    causePercentage: 0,
     governanceModel: 'hybrid',
     governanceParameters: {
       thresholdAmount: 1000,
@@ -116,6 +131,11 @@ const mockSyndicates = [
   {
     id: '4',
     name: 'Food Security',
+    model: 'altruistic',
+    distributionModel: 'proportional',
+    poolAddress: '0x4444444444444444444444444444444444444444',
+    executionDate: new Date('2026-01-01T00:00:00Z'),
+    cutoffDate: new Date('2025-12-31T00:00:00Z'),
     membersCount: 634,
     imageUrl: '/images/food-security.jpg',
     description: 'Fighting hunger and ensuring food security worldwide',
