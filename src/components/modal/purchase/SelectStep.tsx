@@ -30,6 +30,8 @@ interface SelectStepProps {
   walletType?: string | null;
   solanaBalance?: string | null;
   onStartBridge?: () => void;
+  isBridging?: boolean;
+  showBridgeGuidance?: boolean;
 }
 
 export function SelectStep({
@@ -54,6 +56,8 @@ export function SelectStep({
   walletType,
   solanaBalance,
   onStartBridge,
+  isBridging,
+  showBridgeGuidance,
 }: SelectStepProps) {
   const canBridgeAndBuy = Boolean(
     isConnected &&
@@ -61,6 +65,19 @@ export function SelectStep({
     hasInsufficientBalance &&
     parseFloat(solanaBalance || '0') >= parseFloat(totalCost || '0')
   );
+  // Hide ticket buying content when bridge is needed or in progress to reduce cognitive load
+  if (showBridgeGuidance || isBridging) {
+    return (
+      <CompactStack spacing="lg">
+        <div className="text-center py-4">
+          <p className="text-white/70 text-sm">
+            Complete the bridge to continue with ticket purchase
+          </p>
+        </div>
+      </CompactStack>
+    );
+  }
+
   return (
     <CompactStack spacing="lg">
       {/* Back to Mode Selection */}
