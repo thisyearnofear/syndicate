@@ -458,7 +458,7 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
               onClick={onClose}
               className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-700 rounded-lg"
             >
-              <X size={24} />
+              <X className="w-6 h-6" />
             </button>
           </div>
           

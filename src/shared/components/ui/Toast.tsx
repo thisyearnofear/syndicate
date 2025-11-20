@@ -144,7 +144,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
                     onClick={handleRemove}
                     className="w-6 h-6 p-0 rounded-full flex-shrink-0 text-gray-400 hover:text-white"
                 >
-                    <X size={14} />
+                    <X className="w-3.5 h-3.5" />
                 </Button>
             </div>
         </div>

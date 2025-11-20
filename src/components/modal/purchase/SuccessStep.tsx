@@ -61,7 +61,7 @@ export function SuccessStep({
               className="flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm"
             >
               View on Basescan
-              <ExternalLink size={14} />
+              <ExternalLink className="w-3.5 h-3.5" />
             </a>
           </div>
         </div>
@@ -89,7 +89,7 @@ export function SuccessStep({
             onClick={() => setShowShareModal(true)}
             className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl"
           >
-            <Share2 size={18} className="mr-2" />
+            <Share2 className="w-4 h-4 mr-2" />
             Share Win
           </Button>
         </CompactFlex>
