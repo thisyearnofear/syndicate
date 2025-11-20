@@ -29,7 +29,7 @@ import {
 } from "@/shared/components/premium/PuzzlePiece";
 
 // Icons
-import { Ticket, History, Trophy, Wallet, TrendingUp, Twitter, MessageCircle, User, CheckCircle } from "lucide-react";
+import { Ticket, History, Trophy, Wallet, TrendingUp, Twitter, MessageCircle, User, CheckCircle2 } from "lucide-react";
 
 export default function ProfilePage() {
   const { state: walletState } = useWalletContext();
@@ -117,7 +117,7 @@ export default function ProfilePage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-white">{userIdentity.farcaster.displayName}</span>
-                        {userIdentity.farcaster.verified && <CheckCircle className="w-4 h-4 text-green-400" />}
+                        {userIdentity.farcaster.verified && <CheckCircle2 className="w-4 h-4 text-green-400" />}
                       </div>
                       <span className="text-sm text-gray-400">@{userIdentity.farcaster.username}</span>
                       <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
@@ -134,7 +134,7 @@ export default function ProfilePage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-white">{userIdentity.twitter.displayName}</span>
-                        {userIdentity.twitter.verified && <CheckCircle className="w-4 h-4 text-green-400" />}
+                        {userIdentity.twitter.verified && <CheckCircle2 className="w-4 h-4 text-green-400" />}
                       </div>
                       <span className="text-sm text-gray-400">@{userIdentity.twitter.username}</span>
                       <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">

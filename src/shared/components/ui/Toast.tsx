@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
-import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
+import { X, CheckCircle2, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 import { Button } from './Button';
 
 export interface Toast {
@@ -73,7 +73,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
     const getIcon = () => {
         switch (toast.type) {
             case 'success':
-                return <CheckCircle className="w-5 h-5 text-green-400" />;
+                return <CheckCircle2 className="w-5 h-5 text-green-400" />;
             case 'error':
                 return <AlertCircle className="w-5 h-5 text-red-400" />;
             case 'warning':
