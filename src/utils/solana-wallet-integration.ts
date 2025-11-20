@@ -1,14 +1,5 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 
-// Type declaration for Phantom wallet
-declare global {
-  interface Window {
-    phantom?: {
-      solana?: any;
-    };
-  }
-}
-
 // Secure implementation for Solana/Phantom wallet integration
 class SolanaWalletIntegration {
   private ALCHEMY_API_KEY: string;
@@ -24,7 +15,7 @@ class SolanaWalletIntegration {
 
   // Check if Phantom wallet is available
   isPhantomInstalled(): boolean {
-    return typeof window !== 'undefined' && window.phantom?.solana?.isPhantom;
+    return typeof window !== 'undefined' && (window as any).phantom?.solana?.isPhantom;
   }
 
   // Connect to Phantom wallet
@@ -34,7 +25,7 @@ class SolanaWalletIntegration {
     }
 
     try {
-      const provider = window.phantom!.solana;
+      const provider = (window as any).phantom.solana;
       const response = await provider.connect();
       return response.publicKey.toString();
     } catch (error) {

@@ -516,6 +516,24 @@ class Web3Service {
     this.usdcContract = null;
     this.isInitialized = false;
   }
+
+  async getAdHocBatchPurchaseCalls(ticketCount: number, recipientOverride?: string): Promise<Array<{ to: string; data: string; value: string }>> {
+    if (!this.megapotContract || !this.usdcContract) {
+      throw new Error('Contracts not initialized');
+    }
+    const ticketPrice = await this.megapotContract.ticketPrice();
+    const usdcAmount = ticketPrice * BigInt(ticketCount);
+    const referrer = ethers.ZeroAddress;
+    const recipient = recipientOverride ?? (this.signer ? await this.signer.getAddress() : ethers.ZeroAddress);
+    const usdcIface = new ethers.Interface(USDC_ABI);
+    const megapotIface = new ethers.Interface(MEGAPOT_ABI);
+    const approveData = usdcIface.encodeFunctionData('approve', [CONTRACTS.megapot, usdcAmount]);
+    const purchaseData = megapotIface.encodeFunctionData('purchaseTickets', [referrer, usdcAmount, recipient]);
+    return [
+      { to: CONTRACTS.usdc, data: approveData, value: '0' },
+      { to: CONTRACTS.megapot, data: purchaseData, value: '0' },
+    ];
+  }
 }
 
 // Export singleton instance

@@ -22,54 +22,19 @@ export default async function SyndicateDetailPage({ params }: { params: Promise<
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const [snapshotInfo, setSnapshotInfo] = useState<null | { createdAt: string; participants: number }>(null);
 
   useEffect(() => {
     const fetchSyndicate = async () => {
       try {
         setLoading(true);
-        // In a real app, this would fetch from the API
-        // For now, we'll simulate with mock data
-        const mockSyndicate: SyndicateInfo = {
-          id: id,
-          name: "Ocean Warriors Collective",
-          model: 'altruistic',
-          distributionModel: 'proportional',
-          poolAddress: '0x1111111111111111111111111111111111111111',
-          executionDate: new Date('2025-12-01T00:00:00Z'),
-          cutoffDate: new Date('2025-11-30T00:00:00Z'),
-          cause: {
-            id: "ocean-cleanup",
-            name: "Ocean Cleanup",
-            verifiedWallet: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-            description: "Global ocean cleanup and marine conservation efforts",
-            verificationSource: "community",
-            verificationScore: 85,
-            verificationTimestamp: new Date("2024-01-15"),
-            verificationTier: 2,
-          },
-          description: "Join the fight to clean our oceans and protect marine life. Every ticket purchased helps remove plastic waste and supports marine conservation efforts.",
-          causePercentage: 20,
-          governanceModel: "leader",
-          yieldToTicketsPercentage: 85,
-          yieldToCausesPercentage: 15,
-          vaultStrategy: "aave",
-          membersCount: 1247,
-          ticketsPooled: 3420,
-          totalImpact: 8500,
-          isActive: true,
-          isTrending: true,
-          recentActivity: [
-            { type: 'join', count: 23, timeframe: 'last hour' },
-            { type: 'tickets', count: 156, timeframe: 'today' },
-            { type: 'win', count: 1, timeframe: 'this week', amount: 2500 },
-            { type: 'donation', count: 1, timeframe: 'this month', amount: 1200 },
-            { type: 'yield', count: 1, timeframe: 'today', amount: 45 }
-          ]
-        };
-        
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setSyndicate(mockSyndicate);
+        const response = await fetch('/api/syndicates');
+        if (!response.ok) throw new Error('Failed to fetch syndicates');
+        const data: SyndicateInfo[] = await response.json();
+        const found = data.find(s => s.id === id);
+        if (!found) throw new Error('Syndicate not found');
+        setSyndicate(found);
       } catch (err) {
         console.error('Error fetching syndicate:', err);
         setError('Failed to load syndicate');
@@ -99,6 +64,26 @@ export default async function SyndicateDetailPage({ params }: { params: Promise<
       console.error('Error sharing:', error);
     } finally {
       setIsSharing(false);
+    }
+  };
+
+  const handleSnapshot = async () => {
+    if (!syndicate) return;
+    setSnapshotLoading(true);
+    try {
+      const participants = [{ address: syndicate.poolAddress, contributionUsd: 1000 }];
+      const res = await fetch('/api/syndicates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'snapshot', syndicateId: syndicate.id, participants, lockMinutes: 60, roundId: 'adhoc' }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSnapshotInfo({ createdAt: data.createdAt, participants: (data.participants || []).length });
+      }
+    } catch (_) {
+    } finally {
+      setSnapshotLoading(false);
     }
   };
 
@@ -188,6 +173,10 @@ export default async function SyndicateDetailPage({ params }: { params: Promise<
               >
                 <Share2 className="w-4 h-4 mr-2" />
                 {isSharing ? 'Sharing...' : 'Share'}
+              </Button>
+              <Button variant="outline" className="border-blue-500/50 text-blue-300 hover:bg-blue-500/10" onClick={handleSnapshot} disabled={snapshotLoading}>
+                <Award className="w-4 h-4 mr-2" />
+                {snapshotLoading ? 'Snapshotting...' : 'Snapshot Weights'}
               </Button>
               <Button variant="default" className="flex-1">
                 Join Syndicate
@@ -368,12 +357,17 @@ export default async function SyndicateDetailPage({ params }: { params: Promise<
                 <Trophy className="w-4 h-4 mr-2" />
                 Join to Make an Impact
               </Button>
+              {snapshotInfo && (
+                <div className="mt-3 text-xs text-gray-400">
+                  Snapshot created {new Date(snapshotInfo.createdAt).toLocaleString()} • {snapshotInfo.participants} participant(s)
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .glass-premium {
           background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
           backdrop-filter: blur(12px);

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { syndicateService } from '@/domains/syndicate/services/syndicateService';
 
 // ENHANCEMENT FIRST: Enhanced syndicate data with additional fields for purchase modal
 const mockSyndicates = [
@@ -205,4 +206,28 @@ export async function OPTIONS() {
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
   });
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const action = body?.action;
+    if (action === 'snapshot') {
+      const syndicateId = body?.syndicateId as string;
+      const participants = (body?.participants || []) as Array<{ address: string; contributionUsd: number }>;
+      const lockMinutes = (body?.lockMinutes ?? 60) as number;
+      const roundId = body?.roundId as string | undefined;
+      const snapshot = syndicateService.snapshotProportionalWeights(syndicateId, participants, lockMinutes, roundId);
+      return NextResponse.json(snapshot, {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      });
+    }
+    return NextResponse.json({ error: 'Unsupported action' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+  }
 }

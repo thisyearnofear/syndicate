@@ -47,10 +47,10 @@
     "@solana/wallet-adapter-wallets": "^0.19.32",
     "@solana/web3.js": "^1.98.4",
     "@tanstack/react-query": "^5.76.1",
-    "@walletconnect/core": "^2.23.0",
+    "@reown/appkit": "^1.6.0",
+    "@reown/appkit-core": "^1.6.0",
+    "@reown/appkit-utils": "^1.6.0",
     "@walletconnect/ethereum-provider": "^2.21.10",
-    "@walletconnect/modal": "^2.7.0",
-    "@walletconnect/utils": "^2.23.0",
     "@web3auth/base": "^9.7.0",
     "@web3auth/ethereum-provider": "^9.7.0",
     "@web3auth/modal": "^10.3.1",
@@ -60,7 +60,7 @@
     "@wormhole-foundation/sdk-solana": "^4.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "critters": "^0.0.25",
+    "beasties": "^0.2.0",
     "ethers": "^6.14.3",
     "js-sha3": "^0.9.3",
     "lucide-react": "^0.487.0",
@@ -94,19 +94,19 @@
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",
   "overrides": {
     "@fractalwagmi/popup-connection": {
-      "react": "$react",
-      "react-dom": "$react-dom"
+      "react": "^19.0.0",
+      "react-dom": "^19.0.0"
     },
     "@keystonehq/sdk": {
       "qrcode.react": "3.1.0",
       "react-qr-reader": "3.0.0-beta-1"
     },
     "qrcode.react": {
-      "react": "$react"
+      "react": "^19.0.0"
     },
     "react-qr-reader": {
-      "react": "$react",
-      "react-dom": "$react-dom"
+      "react": "^19.0.0",
+      "react-dom": "^19.0.0"
     }
   },
   "resolutions": {
