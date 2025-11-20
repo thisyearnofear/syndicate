@@ -43,30 +43,53 @@ class SolanaBridgeService {
     options?: BridgeOptions
   ): Promise<BridgeResult> {
     const onStatus = options?.onStatus;
+    const preferredProtocol = options?.preferredProtocol;
 
     // Ensure contracts exist
     if (!CONTRACTS?.usdc) {
       return { success: false, error: 'Base USDC address missing in config', protocol: 'cctp' };
     }
 
-    // Try primary: CCTP Solana → Base
-    try {
-      onStatus?.('solana_cctp:init', { amount, recipient: recipientEvm });
-      const res = await this.bridgeViaCCTP(amount, recipientEvm, options);
-      if (res.success) return res;
-      onStatus?.('solana_cctp:failed', { error: res.error });
-    } catch (e: any) {
-      onStatus?.('solana_cctp:error', { error: e?.message || String(e) });
-    }
+    // If a specific protocol is preferred, try that first
+    if (preferredProtocol === 'wormhole') {
+      try {
+        onStatus?.('solana_wormhole:init', { amount, recipient: recipientEvm });
+        const res = await this.bridgeViaWormhole(amount, recipientEvm, options);
+        if (res.success) return res;
+        onStatus?.('solana_wormhole:failed', { error: res.error });
+      } catch (e: any) {
+        onStatus?.('solana_wormhole:error', { error: e?.message || String(e) });
+      }
+      
+      // Fallback to CCTP if Wormhole fails
+      try {
+        onStatus?.('solana_cctp:init', { amount, recipient: recipientEvm });
+        const res = await this.bridgeViaCCTP(amount, recipientEvm, options);
+        if (res.success) return res;
+        onStatus?.('solana_cctp:failed', { error: res.error });
+      } catch (e: any) {
+        onStatus?.('solana_cctp:error', { error: e?.message || String(e) });
+      }
+    } else {
+      // Default behavior: Try primary CCTP first, then fallback to Wormhole
+      try {
+        onStatus?.('solana_cctp:init', { amount, recipient: recipientEvm });
+        const res = await this.bridgeViaCCTP(amount, recipientEvm, options);
+        if (res.success) return res;
+        onStatus?.('solana_cctp:failed', { error: res.error });
+      } catch (e: any) {
+        onStatus?.('solana_cctp:error', { error: e?.message || String(e) });
+      }
 
-    // Fallback: Wormhole (scaffold)
-    try {
-      onStatus?.('solana_wormhole:init', { amount, recipient: recipientEvm });
-      const res = await this.bridgeViaWormhole(amount, recipientEvm, options);
-      if (res.success) return res;
-      onStatus?.('solana_wormhole:failed', { error: res.error });
-    } catch (e: any) {
-      onStatus?.('solana_wormhole:error', { error: e?.message || String(e) });
+      // Fallback: Wormhole (scaffold)
+      try {
+        onStatus?.('solana_wormhole:init', { amount, recipient: recipientEvm });
+        const res = await this.bridgeViaWormhole(amount, recipientEvm, options);
+        if (res.success) return res;
+        onStatus?.('solana_wormhole:failed', { error: res.error });
+      } catch (e: any) {
+        onStatus?.('solana_wormhole:error', { error: e?.message || String(e) });
+      }
     }
 
     return { success: false, error: 'All Solana→Base routes failed', protocol: 'none' };

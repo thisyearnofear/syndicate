@@ -23,6 +23,7 @@ import type { SyndicateInfo } from '@/domains/lottery/types';
 import { WalletTypes } from '@/domains/wallet/services/unifiedWalletService';
 import { BridgeGuidanceCard } from '@/components/bridge/BridgeGuidanceCard';
 import { InlineBridgeFlow } from '@/components/bridge/InlineBridgeFlow';
+import { FocusedBridgeFlow } from '@/components/bridge/FocusedBridgeFlow';
 import { useAccount } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { ethers, Contract } from 'ethers';
@@ -592,14 +593,17 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
         {/* Inline Bridge Flow */}
         {isBridging && (
           <div className="mb-6">
-            <InlineBridgeFlow
+            <FocusedBridgeFlow
               sourceChain="solana"
               destinationChain="base"
               amount={totalCost}
               recipient={evmAddress || ''}
               onComplete={handleBridgeComplete}
               onError={handleBridgeError}
-              autoStart={true}
+              onCancel={() => {
+                setIsBridging(false);
+                setShowBridgeGuidance(true);
+              }}
             />
           </div>
         )}
