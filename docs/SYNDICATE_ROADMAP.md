@@ -87,3 +87,23 @@
 - M1: Recipient override path wired; API enriched; ad hoc execution UI; manual Safe execution.
 - M2: Proportional distribution via ephemeral 0xSplits; donation enforcement for altruistic pools.
 - M3: Automation and indexing; governance surfaces; performance and reliability hardening.
+
+## Progress Update — 2025-11-20
+- Purchasing recipient override implemented
+  - `web3Service.purchaseTickets(ticketCount, recipientOverride?)` routes tickets to syndicate pool `src/services/web3Service.ts:289` and sets recipient at `src/services/web3Service.ts:327`.
+  - Hook wiring passes `poolAddress` when in syndicate mode `src/hooks/useTicketPurchase.ts:536`.
+- Safe batch calldata helper added
+  - `getAdHocBatchPurchaseCalls(ticketCount, recipientOverride?)` returns `[USDC.approve, Megapot.purchaseTickets]` calls for Safe submission `src/services/web3Service.ts:520`.
+- API now supports ad hoc schedule and snapshots
+  - `GET /api/syndicates` fields include `model`, `distributionModel`, `poolAddress`, `executionDate`, `cutoffDate` `src/app/api/syndicates/route.ts:6`.
+  - `POST /api/syndicates { action: 'snapshot' }` creates proportional weight snapshots `src/app/api/syndicates/route.ts:211`.
+- UI surfaces ad hoc execution and cutoff
+  - Syndicate cards display model and execution timestamp `src/components/SyndicateCard.tsx:45` and cutoff `src/components/SyndicateCard.tsx:103`.
+  - Detail page fetches from API and includes a snapshot trigger button `src/app/syndicate/[id]/page.tsx:26`, `src/app/syndicate/[id]/page.tsx:152`.
+- Splits scaffold leveraged for proportional only
+  - Snapshot creation `src/services/splitsService.ts:65` and distribution method `src/services/splitsService.ts:100`.
+- Syndicate service orchestration
+  - Fetch active syndicates `src/domains/syndicate/services/syndicateService.ts:21`.
+  - Prepare ad hoc purchase targeting pool recipient `src/domains/syndicate/services/syndicateService.ts:38`.
+  - Snapshot proportional weights `src/domains/syndicate/services/syndicateService.ts:46`.
+  - Distribute remainder proportionally after optional donation leg `src/domains/syndicate/services/syndicateService.ts:53`.

@@ -42,6 +42,14 @@ export default function SyndicateCard({
           <div>
             <h3 className="font-bold text-white truncate max-w-[120px]">{syndicate.name}</h3>
             <p className="text-xs text-gray-400">{syndicate.cause.name}</p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-[10px] px-2 py-[2px] rounded-full bg-white/10 text-gray-300">
+                {syndicate.model === 'altruistic' ? `Altruistic • ${syndicate.causePercentage}%` : 'Pure'}
+              </span>
+              <span className="text-[10px] px-2 py-[2px] rounded-full bg-white/10 text-yellow-300">
+                {new Date(syndicate.executionDate).toLocaleString()}
+              </span>
+            </div>
           </div>
         </div>
         
@@ -90,6 +98,13 @@ export default function SyndicateCard({
             <span className="text-xs text-gray-400">Per Member</span>
           </div>
           <p className="font-bold text-white">${impactPerMember.toFixed(0)}</p>
+        </div>
+        <div className="glass p-2 rounded-lg col-span-2">
+          <div className="flex items-center gap-1 mb-1">
+            <Trophy className="w-3 h-3 text-blue-300" />
+            <span className="text-xs text-gray-400">Cutoff</span>
+          </div>
+          <p className="font-bold text-white">{new Date(syndicate.cutoffDate).toLocaleString()}</p>
         </div>
       </div>
 

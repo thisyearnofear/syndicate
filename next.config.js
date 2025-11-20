@@ -2,6 +2,15 @@
 const nextConfig = {
   // Basic optimizations for better performance
   reactStrictMode: true,
+  transpilePackages: [
+    'viem',
+    'wagmi',
+    '@wagmi/core',
+    '@wagmi/connectors',
+    'ens-normalize',
+    'noble-hashes',
+    '@metamask/delegation-abis',
+  ],
   
   // Optimize images
   images: {
@@ -163,6 +172,6 @@ const nextConfig = {
    eslint: {
      ignoreDuringBuilds: true,
    },
- };
+};
 
 module.exports = nextConfig;
