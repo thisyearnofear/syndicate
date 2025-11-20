@@ -3,6 +3,7 @@ import type {
   EIP6963RequestProviderEvent,
   MetaMaskInpageProvider,
 } from '@metamask/providers';
+import type React from 'react';
 
 interface Purchase {
   startTicket?: number;
@@ -50,5 +51,16 @@ declare global {
   interface WindowEventMap {
     'eip6963:requestProvider': EIP6963RequestProviderEvent;
     'eip6963:announceProvider': EIP6963AnnounceProviderEvent;
+  }
+
+  // Styled-jsx type declaration
+  namespace JSX {
+    interface IntrinsicElements {
+      style: React.StyleHTMLAttributes<HTMLStyleElement> & { 
+        jsx?: boolean;
+        global?: boolean;
+        children?: string;
+      };
+    }
   }
 }

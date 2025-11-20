@@ -19,7 +19,7 @@ import { useWalletConnection } from '@/hooks/useWalletConnection';
 
 import { useUnifiedWallet, WalletType } from '@/domains/wallet/services/unifiedWalletService';
 import WalletInfo from './wallet/WalletInfo';
-import { Home, Ticket, Users, TrendingUp, Menu, X, Loader2, ArrowLeftRight } from 'lucide-react';
+import { Home, Ticket, Users, TrendingUp, Menu, X, Loader, ArrowLeftRight } from 'lucide-react';
 import { useRef, useEffect } from 'react';
 
 // Lazy load heavy modal components
@@ -92,7 +92,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
     ];
 
     const visibleItems = navigationItems.filter(item =>
-    !item.requiresWallet || (item.requiresWallet && isConnected)
+        !item.requiresWallet || (item.requiresWallet && isConnected)
     );
 
     // Handle click outside to close wallet details
@@ -130,33 +130,33 @@ export default function Navigation({ className = '' }: NavigationProps) {
                         {/* Navigation Items */}
                         <CompactFlex align="center" gap="sm" className="flex-1">
                             {visibleItems.map((item) => {
-                            const Icon = item.icon;
-                            return (
-                            <Link key={item.href} href={item.href}>
-                            <button
-                            {...(item.label === 'Bridge' ? { title: 'Move USDC to Base to buy tickets' } : {})}
-                            className={`
+                                const Icon = item.icon;
+                                return (
+                                    <Link key={item.href} href={item.href}>
+                                        <button
+                                            {...(item.label === 'Bridge' ? { title: 'Move USDC to Base to buy tickets' } : {})}
+                                            className={`
                             flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium
                             ${item.active
-                                                         ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-                                                         : 'text-gray-300 hover:text-white hover:bg-white/10'
-                            }
+                                                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                                                    : 'text-gray-300 hover:text-white hover:bg-white/10'
+                                                }
                             `}
-                            >
-                                                  <Icon className="w-4 h-4" />
-                                {item.label}
-                            </button>
-                            </Link>
-                            );
+                                        >
+                                            <Icon className="w-4 h-4" />
+                                            {item.label}
+                                        </button>
+                                    </Link>
+                                );
                             })}
                         </CompactFlex>
 
                         {/* Wallet Status & Terms */}
                         <CompactFlex align="center" gap="md">
-                        {/* Terms Link */}
-                        <Button
-                        variant="ghost"
-                            size="sm"
+                            {/* Terms Link */}
+                            <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => window.open('https://docs.megapot.io/terms-of-service', '_blank')}
                                 className="text-gray-400 hover:text-white text-xs"
                             >
@@ -166,26 +166,26 @@ export default function Navigation({ className = '' }: NavigationProps) {
                             {/* Wallet Status Indicator */}
                             {isConnected ? (
                                 <div className="relative">
-                                <div
-                                   className="flex items-center gap-2 px-3 py-1 bg-green-500/20 border border-green-500/30 rounded-full cursor-pointer hover:bg-green-500/30 transition-colors"
-                                       onClick={handleWalletStatusClick}
+                                    <div
+                                        className="flex items-center gap-2 px-3 py-1 bg-green-500/20 border border-green-500/30 rounded-full cursor-pointer hover:bg-green-500/30 transition-colors"
+                                        onClick={handleWalletStatusClick}
                                     >
                                         <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
                                         <span className="text-green-400 text-sm font-semibold">Connected</span>
                                     </div>
-                            {showWalletDetails && (
-                                <div
-                                    ref={walletDetailsRef}
-                                    className="absolute top-full right-0 mt-2 z-[100001] wallet-dropdown"
-                                >
-                                    <WalletInfo
-                                        showFullAddress={false}
-                                        showNetworkIndicator={true}
-                                        className="w-80 shadow-2xl border border-white/20 bg-slate-900/95 backdrop-blur-xl"
-                                    />
+                                    {showWalletDetails && (
+                                        <div
+                                            ref={walletDetailsRef}
+                                            className="absolute top-full right-0 mt-2 z-[100001] wallet-dropdown"
+                                        >
+                                            <WalletInfo
+                                                showFullAddress={false}
+                                                showNetworkIndicator={true}
+                                                className="w-80 shadow-2xl border border-white/20 bg-slate-900/95 backdrop-blur-xl"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                            </div>
                             ) : (
                                 <Button
                                     variant="ghost"
@@ -229,26 +229,26 @@ export default function Navigation({ className = '' }: NavigationProps) {
                         <div className="mt-4 pt-4 border-t border-white/10">
                             <div className="space-y-2">
                                 {visibleItems.map((item) => {
-                                const Icon = item.icon;
-                                return (
-                                <Link
-                                key={item.href}
-                                href={item.href}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                                >
-                                <button
-                                {...(item.label === 'Bridge' ? { 'aria-label': 'Bridge USDC to Base to buy tickets' } as any : {})}
-                                className={`
+                                    const Icon = item.icon;
+                                    return (
+                                        <Link
+                                            key={item.href}
+                                            href={item.href}
+                                            onClick={() => setIsMobileMenuOpen(false)}
+                                        >
+                                            <button
+                                                {...(item.label === 'Bridge' ? { 'aria-label': 'Bridge USDC to Base to buy tickets' } as any : {})}
+                                                className={`
                                 w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-left
                                 ${item.active
-                                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-                                : 'text-gray-300 hover:text-white hover:bg-white/10'
-                                }
+                                                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                                                        : 'text-gray-300 hover:text-white hover:bg-white/10'
+                                                    }
                                 `}
-                                >
+                                            >
                                                 <Icon className="w-4 h-4" />
                                                 {item.label}
-                                                </button>
+                                            </button>
                                         </Link>
                                     );
                                 })}
@@ -292,7 +292,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
             <Suspense fallback={
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                     <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 flex items-center gap-3">
-                        <Loader2 className="w-6 h-6 animate-spin text-white" />
+                        <Loader className="w-6 h-6 animate-spin text-white" />
                         <span className="text-white">Loading...</span>
                     </div>
                 </div>

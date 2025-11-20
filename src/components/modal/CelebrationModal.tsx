@@ -26,7 +26,7 @@ export default function CelebrationModal({ isOpen, onClose, achievement }: Celeb
   useEffect(() => {
     if (isOpen && mounted) {
       setShowConfetti(true);
-      
+
       // DELIGHT: Generate confetti particles - only after mount to prevent hydration mismatch
       const colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
       const newParticles = Array.from({ length: 50 }, (_, i) => ({
@@ -132,52 +132,7 @@ export default function CelebrationModal({ isOpen, onClose, achievement }: Celeb
         </div>
       </div>
 
-      <style jsx>{`
-        @keyframes scale-in {
-          from {
-            transform: scale(0.8);
-            opacity: 0;
-          }
-          to {
-            transform: scale(1);
-            opacity: 1;
-          }
-        }
-        
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        @keyframes fade-in-delay {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        .animate-scale-in {
-          animation: scale-in 0.5s ease-out;
-        }
-        
-        .animate-fade-in {
-          animation: fade-in 0.6s ease-out 0.2s both;
-        }
-        
-        .animate-fade-in-delay {
-          animation: fade-in-delay 0.6s ease-out 0.4s both;
-        }
-      `}</style>
+
     </div>
   );
 }

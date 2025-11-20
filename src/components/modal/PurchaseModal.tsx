@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader, AlertCircle } from 'lucide-react';
 import { useTicketPurchase } from '@/hooks/useTicketPurchase';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { useLottery } from '@/domains/lottery/hooks/useLottery';
@@ -155,10 +155,10 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
       await refreshBalance();
 
       const currentBaseBalance = parseFloat(userBalance?.usdc || '0');
-      
+
       if (currentBaseBalance >= requiredAmount || attempts >= maxAttempts) {
         clearInterval(pollInterval);
-        
+
         if (currentBaseBalance >= requiredAmount) {
           // Show confirmation before auto-purchasing
           setStep('select');
@@ -286,7 +286,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         });
-      } catch (_) {}
+      } catch (_) { }
 
       // Don't auto-close - let user control when to close
       // Users can click "Continue Playing" or navigate via other buttons
@@ -537,11 +537,10 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
             )}
 
             {/* Base Balance */}
-            <div className={`rounded-lg p-4 ${
-              walletType === WalletTypes.PHANTOM 
-                ? 'bg-white/5 border border-blue-500/20' 
-                : 'bg-white/5'
-            }`}>
+            <div className={`rounded-lg p-4 ${walletType === WalletTypes.PHANTOM
+              ? 'bg-white/5 border border-blue-500/20'
+              : 'bg-white/5'
+              }`}>
               <div className="flex justify-between items-center">
                 <span className="text-white/70">
                   🔵 Your USDC on Base:
@@ -552,7 +551,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
 
             {isCheckingBalance && (
               <div className="flex items-center gap-2 text-white/60">
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader className="w-4 h-4 animate-spin" />
                 <span className="text-sm">Updating balance...</span>
               </div>
             )}
@@ -608,7 +607,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
         {/* Content based on step */}
         <Suspense fallback={
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-white" />
+            <Loader className="w-8 h-8 animate-spin text-white" />
           </div>
         }>
           {renderStep()}
