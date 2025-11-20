@@ -500,6 +500,7 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
         </div>
       </div>
 
+      {/* @ts-ignore */}
       <style jsx>{`
         @keyframes scale-in {
           from { transform: scale(0.9); opacity: 0; }

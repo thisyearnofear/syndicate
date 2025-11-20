@@ -9,7 +9,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { design } from '@/config';
-import { Loader2, CheckCircle2, AlertCircle, ExternalLink } from 'lucide-react';
+import { Loader, CircleCheck, AlertCircle, ExternalLink } from 'lucide-react';
 import { solanaBridgeService } from '@/services/solanaBridgeService';
 import type { BridgeResult } from '@/services/bridgeService';
 import { Button } from '@/shared/components/ui/Button';
@@ -62,7 +62,7 @@ export function InlineBridgeFlow({
                 {
                     onStatus: (status, data) => {
                         setCurrentStatus(status);
-                    onStatus?.(status, data);
+                        onStatus?.(status, data);
 
                         setEvents(prev => {
                             const next = [...prev, { status, info: data, ts: Date.now() }];
@@ -123,8 +123,8 @@ export function InlineBridgeFlow({
 
     const getStatusIcon = () => {
         if (error) return <AlertCircle className="w-6 h-6 text-red-400" />;
-        if (currentStatus === 'complete') return <CheckCircle2 className="w-6 h-6 text-green-400" />;
-        return <Loader2 className="w-6 h-6 animate-spin text-blue-400" />;
+        if (currentStatus === 'complete') return <CircleCheck className="w-6 h-6 text-green-400" />;
+        return <Loader className="w-6 h-6 animate-spin text-blue-400" />;
     };
 
     const getStatusColor = () => {
@@ -253,7 +253,7 @@ export function InlineBridgeFlow({
             {!error && currentStatus !== 'complete' && (
                 <div className="text-center">
                     <div className="inline-flex items-center gap-2 text-gray-400 text-sm">
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader className="w-4 h-4 animate-spin" />
                         <span>
                             ⏱️ {protocol === 'cctp' ? '15-20 minutes' : protocol === 'wormhole' ? '5-10 minutes' : '5-20 minutes'} remaining
                         </span>
@@ -308,7 +308,7 @@ export function InlineBridgeFlow({
             {currentStatus === 'complete' && (
                 <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
                     <div className="flex items-start gap-3">
-                        <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                        <CircleCheck className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
                         <div>
                             <p className="text-green-400 font-medium">Bridge Complete!</p>
                             <p className="text-green-300/70 text-sm mt-1">
