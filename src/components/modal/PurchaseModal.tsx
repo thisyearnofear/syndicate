@@ -414,6 +414,8 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
             walletType={walletType}
             solanaBalance={solanaBalance}
             onStartBridge={handleStartBridge}
+            isBridging={isBridging}
+            showBridgeGuidance={showBridgeGuidance}
           />
         );
       case 'processing':
