@@ -161,6 +161,12 @@ export function ModeStep({
                       <span className="text-green-400">
                         🎯 {syndicate.cause.name}
                       </span>
+                      <span className="text-yellow-300">
+                        🕒 {new Date(syndicate.executionDate).toLocaleString()}
+                      </span>
+                      <span className="text-gray-300">
+                        ⛔ {new Date(syndicate.cutoffDate).toLocaleString()}
+                      </span>
                     </div>
                   </div>
                 </CompactFlex>
