@@ -18,7 +18,7 @@ export interface BridgeResult {
 export interface BridgeOptions {
   onStatus?: (stage: string, info?: Record<string, any>) => void;
   dryRun?: boolean;
-  preferredProtocol?: 'cctp' | 'ccip' | 'near' | 'auto';
+  preferredProtocol?: 'cctp' | 'ccip' | 'wormhole' | 'near' | 'auto';
   wallet?: any; // Solana wallet adapter or similar
 }
 
@@ -393,7 +393,7 @@ class BridgeService {
   }
 
   /**
-   * Unified cross-chain transfer supporting CCTP, CCIP, and NEAR protocols
+   * Unified cross-chain transfer supporting CCTP, CCIP, Wormhole, and NEAR protocols
    */
   async transferCrossChain(request: CrossChainTransferRequest, options?: BridgeOptions): Promise<BridgeResult> {
     const { sourceChain, destinationChain, amount, recipient } = request;
@@ -427,15 +427,15 @@ class BridgeService {
 
 
   // Protocol selection logic
-  private selectProtocol(sourceChain: string, destinationChain: string, preferred?: 'cctp' | 'ccip' | 'near' | 'auto'): 'cctp' | 'ccip' | 'near' {
+  private selectProtocol(sourceChain: string, destinationChain: string, preferred?: 'cctp' | 'ccip' | 'wormhole' | 'near' | 'auto'): 'cctp' | 'ccip' | 'wormhole' | 'near' {
     if (preferred && preferred !== 'auto') {
       if (this.isProtocolSupported(preferred, sourceChain, destinationChain)) {
         return preferred;
       }
     }
 
-    // Auto-selection: CCTP first (most reliable), then CCIP, then NEAR
-    const protocols: Array<'cctp' | 'ccip' | 'near'> = ['cctp', 'ccip', 'near'];
+    // Auto-selection: CCTP first (most reliable), then Wormhole, then CCIP, then NEAR
+    const protocols: Array<'cctp' | 'wormhole' | 'ccip' | 'near'> = ['cctp', 'wormhole', 'ccip', 'near'];
     for (const protocol of protocols) {
       if (this.isProtocolSupported(protocol, sourceChain, destinationChain)) {
         return protocol;
@@ -449,12 +449,19 @@ class BridgeService {
     switch (protocol) {
       case 'cctp':
         return (sourceChain === 'ethereum' && destinationChain === 'base') ||
-          (sourceChain === 'base' && destinationChain === 'ethereum');
+          (sourceChain === 'base' && destinationChain === 'ethereum') ||
+          (sourceChain === 'solana' && destinationChain === 'base');
 
       case 'ccip':
         // CCIP supports multiple chains - check if both chains are configured
         return CCIP[sourceChain as keyof typeof CCIP] !== undefined && 
                CCIP[destinationChain as keyof typeof CCIP] !== undefined;
+
+      case 'wormhole':
+        // Wormhole supports Solana to Base
+        return (sourceChain === 'solana' && destinationChain === 'base') ||
+               (sourceChain === 'ethereum' && destinationChain === 'base') ||
+               (sourceChain === 'base' && destinationChain === 'solana');
 
       case 'near':
         return destinationChain === 'base' && nearChainSignatureService.isReady();
@@ -471,7 +478,13 @@ class BridgeService {
     const estimates = [];
 
     if (this.isProtocolSupported('cctp', sourceChain, destinationChain)) {
-      estimates.push({ protocol: 'cctp', fee: '0.01', etaMinutes: 20 }); // Placeholder
+      // For CCTP, fee is typically very low (around $0.01-0.02)
+      estimates.push({ protocol: 'cctp', fee: '0.01', etaMinutes: 15 }); // 15 minutes for CCTP
+    }
+
+    if (this.isProtocolSupported('wormhole', sourceChain, destinationChain)) {
+      // For Wormhole, fee is typically around $0.001-0.005
+      estimates.push({ protocol: 'wormhole', fee: '0.001', etaMinutes: 5 }); // 5 minutes for Wormhole
     }
 
     if (this.isProtocolSupported('ccip', sourceChain, destinationChain)) {

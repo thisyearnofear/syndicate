@@ -19,6 +19,7 @@ export interface InlineBridgeFlowProps {
     destinationChain: 'base';
     amount: string;
     recipient: string;
+    selectedProtocol?: 'cctp' | 'wormhole' | 'ccip';
     onComplete: (result: BridgeResult) => void;
     onStatus?: (status: string, data?: any) => void;
     onError: (error: string) => void;
@@ -30,6 +31,7 @@ export function InlineBridgeFlow({
     destinationChain,
     amount,
     recipient,
+    selectedProtocol,
     onComplete,
     onStatus,
     onError,
@@ -37,6 +39,7 @@ export function InlineBridgeFlow({
 }: InlineBridgeFlowProps) {
     const [currentStatus, setCurrentStatus] = useState<string>('idle');
     const [protocol, setProtocol] = useState<'cctp' | 'wormhole' | null>(null);
+    const [protocolState] = useState<'cctp' | 'wormhole' | null>(null);
     const [progress, setProgress] = useState(0);
     const [isStarted, setIsStarted] = useState(autoStart);
     const [txHash, setTxHash] = useState<string | null>(null);
@@ -47,7 +50,7 @@ export function InlineBridgeFlow({
         if (autoStart && !isStarted) {
             startBridge();
         }
-    }, [autoStart]);
+    }, [autoStart, isStarted]);
 
     const startBridge = async () => {
         setIsStarted(true);
@@ -56,6 +59,10 @@ export function InlineBridgeFlow({
         setProgress(5);
 
         try {
+            // Use selected protocol or default to CCTP
+            const protocol = selectedProtocol || 'cctp';
+            setProtocol(protocol as 'cctp' | 'wormhole' | null);
+
             const result = await solanaBridgeService.bridgeUsdcSolanaToBase(
                 amount,
                 recipient,
@@ -69,9 +76,11 @@ export function InlineBridgeFlow({
                             return next.slice(-6);
                         });
 
-                        // Determine protocol
-                        if (status.includes('cctp')) setProtocol('cctp');
-                        if (status.includes('wormhole')) setProtocol('wormhole');
+                        // Determine protocol based on status or selection
+                        if (!protocolState) {
+                            if (status.includes('cctp')) setProtocol('cctp');
+                            if (status.includes('wormhole')) setProtocol('wormhole');
+                        }
 
                         // Extract transaction hash
                         if (data?.signature) setTxHash(data.signature);
@@ -102,7 +111,8 @@ export function InlineBridgeFlow({
 
                         const newProgress = progressMap[status];
                         if (newProgress) setProgress(newProgress);
-                    }
+                    },
+                    preferredProtocol: selectedProtocol
                 }
             );
 

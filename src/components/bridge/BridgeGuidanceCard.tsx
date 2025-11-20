@@ -4,7 +4,7 @@
  * BRIDGE GUIDANCE CARD
  * 
  * Shows Solana users that they need to bridge USDC to Base
- * Provides clear guidance and one-click bridge initiation
+ * Provides clear guidance and initiates bridge flow
  */
 
 import React from 'react';
@@ -17,7 +17,7 @@ export interface BridgeGuidanceCardProps {
     targetChain: 'base';
     targetBalance: string;
     requiredAmount: string;
-    onBridge: () => void;
+    onBridge: (protocol?: any) => void;
     onDismiss: () => void;
 }
 
@@ -86,7 +86,7 @@ export function BridgeGuidanceCard({
                     <span className="text-xl">💡</span>
                     <div className="flex-1">
                         <p className="text-blue-300 text-sm leading-relaxed">
-                            <strong>Bridge {requiredAmount} USDC:</strong> We'll transfer exactly the amount you need from {sourceName} to Base using Circle CCTP or Wormhole. Fast and secure.
+                            <strong>Bridge {requiredAmount} USDC:</strong> We'll help you transfer the exact amount you need from {sourceName} to Base. You'll choose from multiple secure protocols with transparent costs and timing.
                         </p>
                     </div>
                 </div>
@@ -95,12 +95,12 @@ export function BridgeGuidanceCard({
             {/* Actions */}
             <div className="space-y-3">
                 <Button
-                    onClick={onBridge}
+                    onClick={() => onBridge()}
                     className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold"
                     size="lg"
                 >
                     <span className="text-lg mr-2">🌉</span>
-                    Bridge from {sourceName} (Recommended)
+                    Start Bridge Process
                 </Button>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -127,15 +127,7 @@ export function BridgeGuidanceCard({
             {/* Estimated Time */}
             <div className="mt-4 flex items-center justify-center gap-2 text-gray-400 text-sm">
                 <Clock className="w-4 h-4" />
-                <span>Estimated time: 5-20 minutes</span>
-            </div>
-
-            {/* Protocol Info */}
-            <div className="mt-4 pt-4 border-t border-white/10">
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>Powered by Circle CCTP & Wormhole</span>
-                    <span>Secure & Decentralized</span>
-                </div>
+                <span>Choose from multiple protocols with different speeds and costs</span>
             </div>
         </div>
     );
