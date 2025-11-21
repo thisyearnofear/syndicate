@@ -107,6 +107,8 @@ export function InlineBridgeFlow({
                             'solana_wormhole:waiting_for_vaa': 70,
                             'solana_wormhole:vaa_received': 85,
                             'solana_wormhole:relaying': 95,
+                            'solana_wormhole:swapping': 97,
+                            'solana_wormhole:swap_complete': 99,
                         };
 
                         const newProgress = progressMap[status];

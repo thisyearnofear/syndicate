@@ -6,12 +6,14 @@ const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 let cache: Record<string, { ts: number; balance: string }> = {};
 
 function selectRpcUrls(): string[] {
-  const primary = process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://api.mainnet-beta.solana.com';
+  const primary = process.env.NEXT_PUBLIC_SOLANA_RPC || '/api/solana-rpc';
   const fallbacks = (process.env.NEXT_PUBLIC_SOLANA_RPC_FALLBACKS || '')
     .split(',')
     .map(s => s.trim())
     .filter(Boolean);
-  const urls = [primary, ...fallbacks];
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const urls = [primary, ...fallbacks]
+    .map(u => (u && u.startsWith('/') && origin ? origin + u : u));
   const seen = new Set<string>();
   return urls.filter(u => {
     const key = (u || '').toLowerCase();

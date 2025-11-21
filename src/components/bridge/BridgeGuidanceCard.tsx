@@ -17,7 +17,7 @@ export interface BridgeGuidanceCardProps {
     targetChain: 'base';
     targetBalance: string;
     requiredAmount: string;
-    onBridge: (protocol?: any) => void;
+    onBridge: (amount: string) => void;
     onDismiss: () => void;
 }
 
@@ -32,6 +32,7 @@ export function BridgeGuidanceCard({
 }: BridgeGuidanceCardProps) {
     const sourceIcon = sourceChain === 'solana' ? '🟣' : '⟠';
     const sourceName = sourceChain === 'solana' ? 'Solana' : 'Ethereum';
+    const [amountInput, setAmountInput] = React.useState<string>(requiredAmount);
 
     return (
         <div className="glass-premium rounded-xl p-6 border border-blue-500/30 animate-fade-in">
@@ -94,8 +95,23 @@ export function BridgeGuidanceCard({
 
             {/* Actions */}
             <div className="space-y-3">
+                <div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-400">Amount to bridge (USDC)</span>
+                        <span className="text-xs text-gray-500">Editable</span>
+                    </div>
+                    <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={amountInput}
+                        onChange={(e) => setAmountInput(e.target.value)}
+                        className="mt-2 w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-400"
+                        placeholder={requiredAmount}
+                    />
+                </div>
                 <Button
-                    onClick={() => onBridge()}
+                    onClick={() => onBridge(amountInput)}
                     className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold"
                     size="lg"
                 >
