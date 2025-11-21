@@ -26,7 +26,7 @@ type SolanaBridgeConfig = {
 
 const SOLANA: SolanaBridgeConfig = {
   usdcMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-  rpcUrl: process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://api.mainnet-beta.solana.com',
+  rpcUrl: process.env.NEXT_PUBLIC_SOLANA_RPC || '/api/solana-rpc',
 };
 
 // Solana program addresses from centralized CCTP config
@@ -153,13 +153,18 @@ class SolanaBridgeService {
         const raw = (process.env.NEXT_PUBLIC_SOLANA_RPC_FALLBACKS || '').split(',').map(s => s.trim()).filter(Boolean);
         const urls = [SOLANA.rpcUrl, ...raw];
         const seen = new Set<string>();
-        return urls.filter(u => {
-          if (!u) return false;
-          const key = u.toLowerCase();
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
+        return urls
+          .map(u => {
+            const origin = typeof window !== 'undefined' ? window.location.origin : '';
+            return u && u.startsWith('/') && origin ? origin + u : u;
+          })
+          .filter(u => {
+            if (!u) return false;
+            const key = u.toLowerCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
       };
 
       const createConnectionWithFallback = async (): Promise<InstanceType<typeof Connection>> => {
@@ -417,25 +422,125 @@ class SolanaBridgeService {
   private async bridgeViaWormhole(amount: string, recipientEvm: string, options?: BridgeOptions): Promise<BridgeResult> {
     const onStatus = options?.onStatus;
     if (options?.dryRun) {
-      return {
-        success: true,
-        bridgeId: 'dryrun-solana-wormhole',
-        protocol: 'wormhole',
-        details: { route: 'wormhole', amount, recipient: recipientEvm },
-      };
+      // For USDC, route via CCTP in dry-run as well to preserve native USDC on Base
+      const res = await this.bridgeViaCCTP(amount, recipientEvm, options);
+      return res;
     }
 
     try {
-      onStatus?.('solana_wormhole:prepare', { amount, recipient: recipientEvm });
-      onStatus?.('solana_wormhole:connecting');
-      onStatus?.('solana_wormhole:initiating_transfer');
-      const msg = 'Wormhole route not implemented. CCTP is the primary route.';
-      onStatus?.('solana_wormhole:error', { error: msg });
-      return { success: false, error: msg, protocol: 'wormhole' };
+      // For USDC on Solana → Base, use native CCTP path to ensure the asset is usable for ticket purchases
+      onStatus?.('solana_wormhole:init', { amount, recipient: recipientEvm });
+      onStatus?.('solana_wormhole:prepare');
+
+      const res = await this.bridgeViaCCTP(amount, recipientEvm, options);
+
+      if (res.success) {
+        // Mirror completion statuses under wormhole labels for consistent UX
+        onStatus?.('solana_wormhole:sent', { signature: (res.details as any)?.burnSignature });
+        onStatus?.('solana_wormhole:waiting_for_vaa');
+        onStatus?.('solana_wormhole:vaa_received');
+        onStatus?.('solana_wormhole:relaying');
+
+        try {
+          const swapped = await this.trySwapWrappedToNativeOnBase(amount, recipientEvm, onStatus);
+          if (swapped && swapped.txHash) {
+            return {
+              success: true,
+              bridgeId: res.bridgeId,
+              protocol: 'cctp',
+              details: { ...res.details, swapTx: swapped.txHash },
+            };
+          }
+        } catch (_) {}
+
+        return {
+          success: true,
+          bridgeId: res.bridgeId,
+          protocol: 'cctp',
+          details: res.details,
+        };
+      }
+
+      const err = res.error || 'Wormhole (CCTP-backed) bridge failed';
+      onStatus?.('solana_wormhole:error', { error: err });
+      return { success: false, error: err, protocol: 'wormhole' };
     } catch (e: any) {
       const msg = e?.message || 'Wormhole bridge failed';
       onStatus?.('solana_wormhole:error', { error: msg });
       return { success: false, error: msg, protocol: 'wormhole' };
+    }
+  }
+
+  private async trySwapWrappedToNativeOnBase(amount: string, recipientEvm: string, onStatus?: (stage: string, info?: Record<string, any>) => void): Promise<{ txHash: string } | null> {
+    try {
+      const wrapped = await this.getWormholeWrappedUsdcOnBase();
+      if (!wrapped) return null;
+
+      const { ethers } = await import('ethers');
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+      const signer = await provider.getSigner();
+
+      const network = await provider.getNetwork();
+      if ((network?.chainId || 0n) !== 8453n) {
+        const ethereum = (window as any).ethereum;
+        if (ethereum && ethereum.request) {
+          await ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] });
+        }
+      }
+
+      const erc20 = new ethers.Contract(wrapped, ['function decimals() view returns (uint8)','function balanceOf(address) view returns (uint256)','function allowance(address owner,address spender) view returns (uint256)','function approve(address spender,uint256 amount) returns (bool)'], signer);
+      const decimals: number = await erc20.decimals();
+      const bal: bigint = await erc20.balanceOf(await signer.getAddress());
+      if (bal === 0n) return null;
+
+      const sellAmount = bal;
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const url = new URL('/api/zero-x', origin || 'http://localhost');
+      url.searchParams.set('sellToken', wrapped);
+      url.searchParams.set('buyToken', CONTRACTS.usdc);
+      url.searchParams.set('sellAmount', sellAmount.toString());
+      url.searchParams.set('takerAddress', await signer.getAddress());
+
+      onStatus?.('solana_wormhole:swapping');
+
+      const resp = await fetch(url.toString());
+      if (!resp.ok) return null;
+      const quote: any = await resp.json();
+
+      const allowanceTarget = quote.allowanceTarget as string;
+      const currentAllowance: bigint = await erc20.allowance(await signer.getAddress(), allowanceTarget);
+      if (currentAllowance < sellAmount) {
+        const txApprove = await erc20.approve(allowanceTarget, sellAmount);
+        await txApprove.wait();
+      }
+
+      const tx = await signer.sendTransaction({ to: quote.to, data: quote.data, value: quote.value ? BigInt(quote.value) : 0n });
+      const rc: any = await tx.wait();
+      const h = rc?.hash || tx.hash;
+      onStatus?.('solana_wormhole:swap_complete', { txHash: h });
+      return { txHash: h };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  private async getWormholeWrappedUsdcOnBase(): Promise<string | null> {
+    try {
+      const { ethers } = await import('ethers');
+      const { PublicKey } = await import('@solana/web3.js');
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+      const signer = await provider.getSigner();
+      const addr = '0x8d2de8d2f73F1F4cAB472AC9A881C9b123C79627';
+      const abi = ['function wrappedAsset(uint16 tokenChainId, bytes32 tokenAddress) external view returns (address)'];
+      const contract = new ethers.Contract(addr, abi, signer);
+      const solanaChainId = 1;
+      const tokenBytes = new PublicKey(SOLANA.usdcMint).toBytes();
+      const tokenAddressBytes32 = '0x' + Buffer.from(tokenBytes).toString('hex');
+      const wrapped: string = await contract.wrappedAsset(solanaChainId, tokenAddressBytes32);
+      if (!wrapped || wrapped.toLowerCase() === ethers.ZeroAddress.toLowerCase()) return null;
+      return wrapped;
+    } catch (_) {
+      return null;
     }
   }
   // Circle attestation polling (Iris API)

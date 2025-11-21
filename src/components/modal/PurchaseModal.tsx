@@ -88,6 +88,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   const [isBridging, setIsBridging] = useState(false);
   const { address: evmAddress, isConnected: evmConnected } = useAccount();
   const [bridgeMetadata, setBridgeMetadata] = useState<{ protocol?: string; bridgeId?: string; burnSignature?: string; message?: string; attestation?: string; mintTxHash?: string } | null>(null);
+  const [bridgeAmount, setBridgeAmount] = useState<string | null>(null);
 
   // Handle modal close with proper cleanup
   const handleClose = () => {
@@ -99,10 +100,15 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   };
 
   // Bridge handler functions
-  const handleStartBridge = () => {
+  const handleStartBridge = (amt?: string) => {
     if (!evmConnected || !evmAddress) {
       errorToast('EVM Wallet Required', 'Connect an EVM wallet to receive USDC on Base');
       return;
+    }
+    if (amt && parseFloat(amt) > 0) {
+      setBridgeAmount(amt);
+    } else {
+      setBridgeAmount(null);
     }
     setShowBridgeGuidance(false);
     setIsBridging(true);
@@ -586,7 +592,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
               targetChain="base"
               targetBalance={userBalance?.usdc || '0'}
               requiredAmount={totalCost}
-              onBridge={handleStartBridge}
+              onBridge={(amt) => handleStartBridge(amt)}
               onDismiss={() => setShowBridgeGuidance(false)}
             />
           </div>
@@ -598,7 +604,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
             <FocusedBridgeFlow
               sourceChain="solana"
               destinationChain="base"
-              amount={totalCost}
+              amount={bridgeAmount || totalCost}
               recipient={evmAddress || ''}
               onComplete={handleBridgeComplete}
               onError={handleBridgeError}
