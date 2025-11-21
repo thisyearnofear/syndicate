@@ -221,7 +221,8 @@ class SolanaBridgeService {
         }
         throw e;
       }
-      if (!ataInfo) {
+      const ataExists = !!(ataInfo && (ataInfo.value || ataInfo.owner || ataInfo.data));
+      if (!ataExists) {
         // Create ATA instruction
         const createAtaIx = createAssociatedTokenAccountInstruction(
           walletPublicKey, // payer
@@ -250,6 +251,23 @@ class SolanaBridgeService {
 
         const signedCreateAtaTx = await phantom.signAndSendTransaction(createAtaTx);
         await this.confirmWithHttpPolling(rpc, signedCreateAtaTx.signature);
+      }
+
+      // Ensure sufficient USDC balance before attempting burn
+      try {
+        const balRes = await rpc.getTokenAccountBalance(usdcAta);
+        const uiStr = balRes?.value?.uiAmountString || balRes?.value?.uiAmount?.toString?.() || '0';
+        const have = parseFloat(uiStr || '0');
+        const need = parseFloat(amount);
+        if (!(have >= need)) {
+          throw new Error(`Insufficient USDC balance on Solana: have ${have}, need ${need}`);
+        }
+      } catch (e: any) {
+        const msg = e?.message || String(e);
+        if (msg.includes('403')) {
+          throw new Error('Solana RPC access forbidden (403). Configure NEXT_PUBLIC_SOLANA_RPC or use /api/solana-rpc.');
+        }
+        throw e;
       }
 
       // Now build depositForBurn instruction
