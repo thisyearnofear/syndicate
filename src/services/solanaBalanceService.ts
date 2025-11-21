@@ -1,4 +1,4 @@
-import { Connection, PublicKey } from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
 import { getAssociatedTokenAddress } from '@solana/spl-token';
 
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
@@ -38,18 +38,23 @@ export async function getSolanaUSDCBalance(walletAddress: string): Promise<strin
     const urls = selectRpcUrls();
     let lastBalance = '0';
 
+    const post = async (u: string, body: any) => {
+      const resp = await fetch(u, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      if (!resp.ok) throw new Error('rpc_failed');
+      const json = await resp.json();
+      if (json.error) throw new Error(json.error.message || 'rpc_error');
+      return json.result;
+    };
     for (const url of urls) {
       try {
-        const connection = new Connection(url, 'confirmed');
-        const bal = await connection.getTokenAccountBalance(ata);
-        lastBalance = bal?.value?.uiAmount?.toString() || '0';
+        const result = await post(url, { jsonrpc: '2.0', id: 1, method: 'getTokenAccountBalance', params: [ata.toString(), { commitment: 'confirmed' }] });
+        const ui = result?.value?.uiAmountString || result?.value?.uiAmount?.toString?.() || '0';
+        lastBalance = ui;
         cache[walletAddress] = { ts: now, balance: lastBalance };
         return lastBalance;
       } catch (e: any) {
         const msg = e?.message || String(e);
-        if (msg.includes('403')) {
-          continue;
-        }
+        if (msg.includes('403')) continue;
         continue;
       }
     }

@@ -167,24 +167,36 @@ class SolanaBridgeService {
           });
       };
 
-      const createConnectionWithFallback = async (): Promise<InstanceType<typeof Connection>> => {
+      const createHttpRpcWithFallback = async () => {
         const urls = selectRpcUrls();
+        const post = async (u: string, body: any) => {
+          const resp = await fetch(u, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+          if (!resp.ok) throw new Error('rpc_failed');
+          const json = await resp.json();
+          if (json.error) throw new Error(json.error.message || 'rpc_error');
+          return json.result;
+        };
+        const clientFor = (u: string) => ({
+          getLatestBlockhash: async () => post(u, { jsonrpc: '2.0', id: 1, method: 'getLatestBlockhash', params: [{ commitment: 'confirmed' }] }),
+          getAccountInfo: async (pk: any) => post(u, { jsonrpc: '2.0', id: 1, method: 'getAccountInfo', params: [pk.toString(), { commitment: 'confirmed' }] }),
+          getSignatureStatuses: async (sigs: string[]) => post(u, { jsonrpc: '2.0', id: 1, method: 'getSignatureStatuses', params: [sigs, { searchTransactionHistory: true }] }),
+          getTransaction: async (sig: string) => post(u, { jsonrpc: '2.0', id: 1, method: 'getTransaction', params: [sig, { commitment: 'confirmed', maxSupportedTransactionVersion: 0 }] }),
+          getTokenAccountBalance: async (pk: any) => post(u, { jsonrpc: '2.0', id: 1, method: 'getTokenAccountBalance', params: [pk.toString(), { commitment: 'confirmed' }] }),
+        });
         for (const url of urls) {
-          const conn = new Connection(url, 'confirmed');
           try {
-            await conn.getLatestBlockhash();
-            return conn;
+            const c = clientFor(url);
+            await c.getLatestBlockhash();
+            return c;
           } catch (e: any) {
             const msg = e?.message || String(e);
-            if (msg.includes('403')) {
-              continue;
-            }
+            if (msg.includes('403')) continue;
           }
         }
-        return new Connection(urls[0] || SOLANA.rpcUrl, 'confirmed');
+        return clientFor(urls[0] || SOLANA.rpcUrl);
       };
 
-      const connection = await createConnectionWithFallback();
+      const rpc = await createHttpRpcWithFallback();
 
       // Parse amount to integer (6 decimals for USDC)
       const amountInDecimals = Math.floor(parseFloat(amount) * 1_000_000);
@@ -201,7 +213,7 @@ class SolanaBridgeService {
       // Check if ATA exists
       let ataInfo: any = null;
       try {
-        ataInfo = await connection.getAccountInfo(usdcAta);
+        ataInfo = await rpc.getAccountInfo(usdcAta);
       } catch (e: any) {
         const msg = e?.message || String(e);
         if (msg.includes('403')) {
@@ -224,8 +236,8 @@ class SolanaBridgeService {
         const createAtaTx = new Transaction().add(createAtaIx);
         let blockhash: string = '';
         try {
-          const bh = await connection.getLatestBlockhash();
-          blockhash = bh.blockhash;
+          const bh = await rpc.getLatestBlockhash();
+          blockhash = bh.blockhash || bh.value?.blockhash || bh?.blockhash;
         } catch (e: any) {
           const msg = e?.message || String(e);
           if (msg.includes('403')) {
@@ -237,15 +249,7 @@ class SolanaBridgeService {
         createAtaTx.feePayer = walletPublicKey;
 
         const signedCreateAtaTx = await phantom.signAndSendTransaction(createAtaTx);
-        try {
-          await connection.confirmTransaction(signedCreateAtaTx.signature, 'confirmed');
-        } catch (e: any) {
-          const msg = e?.message || String(e);
-          if (msg.includes('403')) {
-            throw new Error('Solana RPC access forbidden (403). Configure NEXT_PUBLIC_SOLANA_RPC or use /api/solana-rpc.');
-          }
-          throw e;
-        }
+        await this.confirmWithHttpPolling(rpc, signedCreateAtaTx.signature);
       }
 
       // Now build depositForBurn instruction
@@ -330,8 +334,8 @@ class SolanaBridgeService {
 
       // Get latest blockhash
       try {
-        const bh2 = await connection.getLatestBlockhash();
-        transaction.recentBlockhash = bh2.blockhash;
+        const bh2 = await rpc.getLatestBlockhash();
+        transaction.recentBlockhash = bh2.blockhash || bh2.value?.blockhash || bh2?.blockhash;
       } catch (e: any) {
         const msg = e?.message || String(e);
         if (msg.includes('403')) {
@@ -349,27 +353,14 @@ class SolanaBridgeService {
       onStatus?.('solana_cctp:sent', { signature });
 
       // Confirm transaction
-      let confirmation: any = null;
-      try {
-        confirmation = await connection.confirmTransaction(signature, 'confirmed');
-      } catch (e: any) {
-        const msg = e?.message || String(e);
-        if (msg.includes('403')) {
-          throw new Error('Solana RPC access forbidden (403). Configure NEXT_PUBLIC_SOLANA_RPC or use /api/solana-rpc.');
-        }
-        throw e;
-      }
-
-      if (confirmation.value.err) {
-        throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
-      }
+      await this.confirmWithHttpPolling(rpc, signature);
 
       onStatus?.('solana_cctp:confirmed', { signature });
 
       // Extract message from transaction logs
       let txInfo: any = null;
       try {
-        txInfo = await connection.getTransaction(signature, { commitment: 'confirmed' });
+        txInfo = await rpc.getTransaction(signature);
       } catch (e: any) {
         const msg = e?.message || String(e);
         if (msg.includes('403')) {
@@ -416,6 +407,21 @@ class SolanaBridgeService {
       const normalized = msg.includes('403') ? 'Solana RPC access forbidden (403). Configure NEXT_PUBLIC_SOLANA_RPC or use /api/solana-rpc.' : msg;
       return { success: false, error: normalized, protocol: 'cctp' };
     }
+  }
+
+  private async confirmWithHttpPolling(connection: any, signature: string): Promise<void> {
+    const maxAttempts = 40;
+    const delayMs = 1500;
+    for (let i = 0; i < maxAttempts; i++) {
+      const statuses = await connection.getSignatureStatuses([signature]);
+      const s = statuses?.value?.[0];
+      const cs = (s?.confirmationStatus || s?.confirmationStatus) as string | undefined;
+      const err = s?.err;
+      if (err) throw new Error('Transaction failed');
+      if (cs === 'confirmed' || cs === 'finalized') return;
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+    throw new Error('Confirmation timeout');
   }
 
   // Fallback: Wormhole Solana→Base (scaffold - not fully implemented)
@@ -556,7 +562,10 @@ class SolanaBridgeService {
       const baseDelayMs = 3000;
       for (let i = 0; i < maxAttempts; i++) {
         let resp: Response | null = null;
-        try { resp = await fetch(proxyUrl); } catch (_) { try { resp = await fetch(directUrl); } catch { resp = null; } }
+        try { resp = await fetch(proxyUrl); } catch (_) { resp = null; }
+        if (!resp || !resp.ok) {
+          try { resp = await fetch(directUrl); } catch { resp = null; }
+        }
         if (!resp || !resp.ok) { await new Promise(r => setTimeout(r, baseDelayMs)); continue; }
         let json: any = null; try { json = await resp.json(); } catch { json = null; }
         const status = json?.status; const att = json?.attestation;
