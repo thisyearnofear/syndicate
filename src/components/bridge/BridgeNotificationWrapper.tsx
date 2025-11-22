@@ -31,7 +31,7 @@ export function BridgeNotificationWrapper() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         address: state.address,
-                        chainId: state.chainId || 8453 // Base mainnet
+                        chainId: 8453 // Base mainnet
                     })
                 });
 
@@ -51,7 +51,7 @@ export function BridgeNotificationWrapper() {
         // Refresh balance every 30 seconds to detect completed bridges
         const interval = setInterval(fetchBalance, 30000);
         return () => clearInterval(interval);
-    }, [state.isConnected, state.address, state.chainId]);
+    }, [state.isConnected, state.address]);
 
     // Handle bridge completion
     const handleBridgeComplete = () => {
