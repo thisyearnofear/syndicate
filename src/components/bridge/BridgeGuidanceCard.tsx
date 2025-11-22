@@ -17,7 +17,7 @@ export interface BridgeGuidanceCardProps {
     targetChain: 'base';
     targetBalance: string;
     requiredAmount: string;
-    onBridge: (amount: string) => void;
+    onBridge: (amount: string, protocol?: 'cctp' | 'wormhole') => void;
     onDismiss: () => void;
 }
 
@@ -33,6 +33,7 @@ export function BridgeGuidanceCard({
     const sourceIcon = sourceChain === 'solana' ? '🟣' : '⟠';
     const sourceName = sourceChain === 'solana' ? 'Solana' : 'Ethereum';
     const [amountInput, setAmountInput] = React.useState<string>(requiredAmount);
+    const [selectedProtocol, setSelectedProtocol] = React.useState<'wormhole' | 'cctp'>('wormhole');
 
     return (
         <div className="glass-premium rounded-xl p-6 border border-blue-500/30 animate-fade-in">
@@ -81,15 +82,33 @@ export function BridgeGuidanceCard({
                 </div>
             </div>
 
-            {/* Info Box */}
-            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-6">
-                <div className="flex items-start gap-3">
-                    <span className="text-xl">💡</span>
-                    <div className="flex-1">
-                        <p className="text-blue-300 text-sm leading-relaxed">
-                            <strong>Bridge {requiredAmount} USDC:</strong> We'll help you transfer the exact amount you need from {sourceName} to Base. You'll choose from multiple secure protocols with transparent costs and timing.
-                        </p>
-                    </div>
+            {/* Protocol Selection */}
+            <div className="mb-6">
+                <p className="text-gray-400 text-sm mb-3">Choose Bridge Protocol:</p>
+                <div className="grid grid-cols-2 gap-3">
+                    <button
+                        onClick={() => setSelectedProtocol('wormhole')}
+                        className={`p-4 rounded-lg border-2 transition-all ${selectedProtocol === 'wormhole'
+                            ? 'border-blue-500 bg-blue-500/10'
+                            : 'border-white/10 bg-white/5 hover:border-white/20'
+                            }`}
+                    >
+                        <div className="text-white font-bold text-lg mb-1">Wormhole</div>
+                        <div className="text-gray-400 text-sm mb-2">5-10 minutes</div>
+                        <div className="text-green-400 text-xs font-medium">⚡ Recommended</div>
+                    </button>
+
+                    <button
+                        onClick={() => setSelectedProtocol('cctp')}
+                        className={`p-4 rounded-lg border-2 transition-all ${selectedProtocol === 'cctp'
+                            ? 'border-blue-500 bg-blue-500/10'
+                            : 'border-white/10 bg-white/5 hover:border-white/20'
+                            }`}
+                    >
+                        <div className="text-white font-bold text-lg mb-1">CCTP</div>
+                        <div className="text-gray-400 text-sm mb-2">15-20 minutes</div>
+                        <div className="text-blue-400 text-xs font-medium">🔵 Native USDC</div>
+                    </button>
                 </div>
             </div>
 
@@ -111,12 +130,12 @@ export function BridgeGuidanceCard({
                     />
                 </div>
                 <Button
-                    onClick={() => onBridge(amountInput)}
+                    onClick={() => onBridge(amountInput, selectedProtocol)}
                     className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold"
                     size="lg"
                 >
                     <span className="text-lg mr-2">🌉</span>
-                    Start Bridge Process
+                    Start Bridge ({selectedProtocol === 'wormhole' ? '5-10 min' : '15-20 min'})
                 </Button>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -143,7 +162,9 @@ export function BridgeGuidanceCard({
             {/* Estimated Time */}
             <div className="mt-4 flex items-center justify-center gap-2 text-gray-400 text-sm">
                 <Clock className="w-4 h-4" />
-                <span>Choose from multiple protocols with different speeds and costs</span>
+                <span>
+                    {selectedProtocol === 'wormhole' ? 'Faster option selected' : 'Slower but native USDC'}
+                </span>
             </div>
         </div>
     );

@@ -13,6 +13,7 @@ import { Loader, CircleCheck, AlertCircle, ExternalLink } from 'lucide-react';
 import { solanaBridgeService } from '@/services/solanaBridgeService';
 import type { BridgeResult } from '@/services/bridgeService';
 import { Button } from '@/shared/components/ui/Button';
+import { savePendingBridge, saveBalanceBeforeBridge, getSolanaExplorerLink } from '@/utils/bridgeStateManager';
 
 export interface InlineBridgeFlowProps {
     sourceChain: 'solana' | 'ethereum';
@@ -82,8 +83,21 @@ export function InlineBridgeFlow({
                             if (status.includes('wormhole')) setProtocol('wormhole');
                         }
 
-                        // Extract transaction hash
-                        if (data?.signature) setTxHash(data.signature);
+                        // Extract transaction hash and save state
+                        if (data?.signature) {
+                            setTxHash(data.signature);
+
+                            // Save bridge state for later checking
+                            savePendingBridge({
+                                signature: data.signature,
+                                protocol: protocol as 'cctp' | 'wormhole',
+                                amount,
+                                recipient,
+                                timestamp: Date.now(),
+                                sourceChain,
+                                destinationChain
+                            });
+                        }
                         if (data?.signatures && Array.isArray(data.signatures)) {
                             setTxHash(data.signatures[0]);
                         }
@@ -273,15 +287,26 @@ export function InlineBridgeFlow({
                 </div>
             )}
 
-            {/* Info Box */}
-            {!error && currentStatus !== 'complete' && (
+            {/* Info Box - You Can Leave */}
+            {!error && currentStatus !== 'complete' && txHash && (
                 <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
                     <div className="flex items-start gap-3">
                         <span className="text-xl flex-shrink-0">💡</span>
-                        <p className="text-blue-300 text-sm leading-relaxed">
-                            Your bridge is in progress. You can close this modal and we'll continue in the background.
-                            We'll notify you when it's complete.
-                        </p>
+                        <div className="flex-1">
+                            <p className="text-blue-300 text-sm leading-relaxed mb-3">
+                                <strong>You can safely close this page!</strong> Your bridge will complete in the background.
+                                The transaction is confirmed on Solana and will finish in {protocol === 'cctp' ? '15-20' : '5-10'} minutes.
+                            </p>
+                            <a
+                                href={getSolanaExplorerLink(txHash)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm font-medium"
+                            >
+                                <ExternalLink className="w-4 h-4" />
+                                Track on Solana Explorer
+                            </a>
+                        </div>
                     </div>
                 </div>
             )}
