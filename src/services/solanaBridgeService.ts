@@ -60,7 +60,7 @@ class SolanaBridgeService {
       } catch (e: any) {
         onStatus?.('solana_wormhole:error', { error: e?.message || String(e) });
       }
-      
+
       // Fallback to CCTP if Wormhole fails
       try {
         onStatus?.('solana_cctp:init', { amount, recipient: recipientEvm });
@@ -98,6 +98,16 @@ class SolanaBridgeService {
   // Primary: Circle CCTP Solana→Base (implementation)
   private async bridgeViaCCTP(amount: string, recipientEvm: string, options?: BridgeOptions): Promise<BridgeResult> {
     const onStatus = options?.onStatus;
+
+    // CRITICAL: Validate recipient is an EVM address, not Solana address
+    if (!recipientEvm || !recipientEvm.startsWith('0x') || recipientEvm.length !== 42) {
+      return {
+        success: false,
+        error: 'Recipient must be a valid EVM address (0x... format, 42 characters). Do not use your Solana/Phantom address as recipient.',
+        protocol: 'cctp'
+      };
+    }
+
     if (options?.dryRun) {
       return {
         success: true,
@@ -330,6 +340,8 @@ class SolanaBridgeService {
       const depositForBurnIx = new TransactionInstruction({
         programId: tokenMessengerMinterId,
         keys: [
+          // CRITICAL: Wallet must be first and marked as signer for fee payment
+          { pubkey: walletPublicKey, isSigner: true, isWritable: true },
           { pubkey: custodyToken, isSigner: false, isWritable: true },
           { pubkey: authorityPda, isSigner: false, isWritable: false },
           { pubkey: usdcMint, isSigner: false, isWritable: true },
@@ -428,18 +440,57 @@ class SolanaBridgeService {
   }
 
   private async confirmWithHttpPolling(connection: any, signature: string): Promise<void> {
-    const maxAttempts = 40;
+    const maxAttempts = 60; // Increase to 90 seconds for better reliability
     const delayMs = 1500;
+    let confirmedAt = -1;
+
     for (let i = 0; i < maxAttempts; i++) {
-      const statuses = await connection.getSignatureStatuses([signature]);
-      const s = statuses?.value?.[0];
-      const cs = (s?.confirmationStatus || s?.confirmationStatus) as string | undefined;
-      const err = s?.err;
-      if (err) throw new Error('Transaction failed');
-      if (cs === 'confirmed' || cs === 'finalized') return;
-      await new Promise(r => setTimeout(r, delayMs));
+      try {
+        const statuses = await connection.getSignatureStatuses([signature]);
+        const status = statuses?.value?.[0];
+
+        if (!status) {
+          await new Promise(r => setTimeout(r, delayMs));
+          continue;
+        }
+
+        // Check for transaction errors
+        if (status.err) {
+          const errorMsg = JSON.stringify(status.err);
+          throw new Error(`Transaction failed on Solana: ${errorMsg}`);
+        }
+
+        const confirmationStatus = status.confirmationStatus as string | undefined;
+
+        // For CCTP security, we should wait for 'finalized' status
+        if (confirmationStatus === 'finalized') {
+          console.log(`Transaction finalized after ${i + 1} attempts`);
+          return; // Success!
+        }
+
+        // Track when we first see 'confirmed'
+        if (confirmationStatus === 'confirmed' && confirmedAt === -1) {
+          confirmedAt = i;
+          console.log(`Transaction confirmed at attempt ${i + 1}, waiting for finalization...`);
+        }
+
+        // If confirmed for more than 30 seconds, accept it (UX vs security tradeoff)
+        if (confirmedAt !== -1 && (i - confirmedAt) > 20) {
+          console.warn('Transaction confirmed but not finalized after 30s. Proceeding anyway.');
+          return;
+        }
+
+        await new Promise(r => setTimeout(r, delayMs));
+      } catch (e: any) {
+        // If it's a transaction error, throw immediately
+        if (e.message?.includes('Transaction failed')) throw e;
+        // Otherwise, retry
+        if (i === maxAttempts - 1) throw e;
+        await new Promise(r => setTimeout(r, delayMs));
+      }
     }
-    throw new Error('Confirmation timeout');
+
+    throw new Error('Transaction confirmation timeout after 90 seconds. Check Solana Explorer for transaction status.');
   }
 
   // Fallback: Wormhole Solana→Base (scaffold - not fully implemented)
@@ -475,7 +526,7 @@ class SolanaBridgeService {
               details: { ...res.details, swapTx: swapped.txHash },
             };
           }
-        } catch (_) {}
+        } catch (_) { }
 
         return {
           success: true,
@@ -512,7 +563,7 @@ class SolanaBridgeService {
         }
       }
 
-      const erc20 = new ethers.Contract(wrapped, ['function decimals() view returns (uint8)','function balanceOf(address) view returns (uint256)','function allowance(address owner,address spender) view returns (uint256)','function approve(address spender,uint256 amount) returns (bool)'], signer);
+      const erc20 = new ethers.Contract(wrapped, ['function decimals() view returns (uint8)', 'function balanceOf(address) view returns (uint256)', 'function allowance(address owner,address spender) view returns (uint256)', 'function approve(address spender,uint256 amount) returns (bool)'], signer);
       const decimals: number = await erc20.decimals();
       const bal: bigint = await erc20.balanceOf(await signer.getAddress());
       if (bal === 0n) return null;
@@ -599,37 +650,56 @@ class SolanaBridgeService {
   // Extract message bytes from Solana transaction logs
   private extractMessageFromLogs(logs: string[]): string | null {
     try {
-      // Look for MessageSent event in logs
-      // The log format is typically: "Program data: <base64>"
-      for (const log of logs) {
-        if (log.includes('MessageSent')) {
-          // Extract the message data from the log
-          // This is a simplified extraction - in practice, you'd parse the event data properly
-          const match = log.match(/MessageSent\s+([0-9a-fA-Fx]+)/);
-          if (match) {
-            return '0x' + match[1];
-          }
-        }
-      }
+      console.log('Extracting CCTP message from logs:', logs.length, 'log entries');
 
-      // Alternative: look for program log with message data
+      // CCTP emits messages as program data in base64 format
+      // Format: "Program data: <base64_encoded_data>"
       for (const log of logs) {
         if (log.startsWith('Program data: ')) {
-          // Decode base64 and look for message pattern
+          const base64Data = log.slice('Program data: '.length).trim();
           try {
-            const data = Buffer.from(log.slice(14), 'base64');
-            // Look for message pattern (this is approximate)
-            if (data.length > 100) { // messages are typically long
-              return '0x' + data.toString('hex');
+            const data = Buffer.from(base64Data, 'base64');
+
+            // CCTP message structure (minimum 116 bytes):
+            // - Version (4 bytes)
+            // - Source domain (4 bytes)
+            // - Destination domain (4 bytes)
+            // - Nonce (8 bytes)
+            // - Sender (32 bytes)
+            // - Recipient (32 bytes)
+            // - Destination caller (32 bytes)
+            // - Message body (variable)
+
+            if (data.length >= 116) {
+              const hexMessage = '0x' + data.toString('hex');
+              console.log('Found CCTP message:', hexMessage.slice(0, 66) + '...');
+              return hexMessage;
             }
-          } catch (_) {
+          } catch (e) {
+            console.warn('Failed to decode base64 log data:', e);
             continue;
           }
         }
       }
 
+      // Fallback: Look for MessageSent event pattern
+      for (const log of logs) {
+        if (log.includes('MessageSent')) {
+          console.log('Found MessageSent event:', log);
+          // Try to extract hex data
+          const hexMatch = log.match(/0x[0-9a-fA-F]{100,}/);
+          if (hexMatch) {
+            console.log('Extracted message from MessageSent:', hexMatch[0].slice(0, 66) + '...');
+            return hexMatch[0];
+          }
+        }
+      }
+
+      console.error('No CCTP message found in transaction logs');
+      console.log('All logs:', logs);
       return null;
-    } catch (_) {
+    } catch (e) {
+      console.error('Failed to extract message from logs:', e);
       return null;
     }
   }
