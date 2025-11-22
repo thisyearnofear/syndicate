@@ -25,7 +25,7 @@ export function BridgeNotificationWrapper() {
 
         const fetchBalance = async () => {
             try {
-                // Use the existing USDC contract to get balance
+                // Use the new multi-chain balance endpoint
                 const response = await fetch('/api/balance', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -37,7 +37,8 @@ export function BridgeNotificationWrapper() {
 
                 if (response.ok) {
                     const data = await response.json();
-                    const usdcBalance = parseFloat(data.usdc || '0');
+                    // Get USDC/balance field depending on chain
+                    const usdcBalance = parseFloat(data.usdc || data.balance || '0');
                     setBaseBalance(usdcBalance);
                 }
             } catch (error) {

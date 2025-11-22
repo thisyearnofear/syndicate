@@ -16,12 +16,21 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // Validate wallet address format
-        if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+        // Validate wallet address format - support both EVM and Solana addresses
+        const isEvmAddress = /^0x[a-fA-F0-9]{40}$/.test(walletAddress);
+        const isSolanaAddress = /^[1-9A-HJ-NP-Z]{43,44}$/.test(walletAddress); // Solana base58
+        
+        if (!isEvmAddress && !isSolanaAddress) {
             return NextResponse.json(
-                { error: 'Invalid wallet address format' },
+                { error: 'Invalid wallet address format - must be EVM (0x...) or Solana address' },
                 { status: 400 }
             );
+        }
+
+        // Megapot API only supports EVM addresses
+        // If a Solana address is provided, return empty list (Solana purchases are tracked separately)
+        if (isSolanaAddress) {
+            return NextResponse.json([]);
         }
 
         const endpoint = `/ticket-purchases/${walletAddress}`;

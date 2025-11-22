@@ -24,6 +24,7 @@ export interface FocusedBridgeFlowProps {
   onStatus?: (status: string, data?: any) => void;
   onError: (error: string) => void;
   onCancel: () => void;
+  preselectedProtocol?: "cctp" | "wormhole";
 }
 
 export function FocusedBridgeFlow({
@@ -35,10 +36,12 @@ export function FocusedBridgeFlow({
   onStatus,
   onError,
   onCancel,
+  preselectedProtocol,
 }: FocusedBridgeFlowProps) {
+  // If protocol is preselected, skip selection stage and go directly to bridging
   const [stage, setStage] = useState<
     "select" | "bridging" | "complete" | "error"
-  >("select");
+  >(preselectedProtocol ? "bridging" : "select");
   const [selectedProtocol, setSelectedProtocol] =
     useState<ProtocolOption | null>(null);
   const [currentStatus, setCurrentStatus] = useState<string>("idle");
@@ -54,9 +57,31 @@ export function FocusedBridgeFlow({
     setAmountInput(amount);
   }, [amount]);
 
+  // If protocol is preselected, set it and auto-start bridge
+  useEffect(() => {
+    if (preselectedProtocol && stage === "bridging" && !selectedProtocol) {
+      const protocol = preselectedProtocol === "wormhole" ? "wormhole" : "cctp";
+      const protocolOption: ProtocolOption = {
+        protocol: protocol,
+        name: protocol === "wormhole" ? "Wormhole" : "CCTP",
+        icon: protocol === "wormhole" ? "⚡" : "🔵",
+        etaMinutes: protocol === "wormhole" ? "5-10" : "15-20",
+        description: protocol === "wormhole" ? "Fast cross-chain bridge" : "Native USDC bridge"
+      };
+      setSelectedProtocol(protocolOption);
+    }
+  }, [preselectedProtocol, stage, selectedProtocol]);
+
   const handleProtocolSelect = (protocol: ProtocolOption) => {
     setSelectedProtocol(protocol);
   };
+
+  // Auto-start bridge when protocol is set
+  useEffect(() => {
+    if (selectedProtocol && stage === "bridging" && preselectedProtocol) {
+      startBridge();
+    }
+  }, [selectedProtocol, preselectedProtocol]);
 
   const startBridge = async () => {
     if (!selectedProtocol) return;
