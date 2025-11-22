@@ -33,42 +33,79 @@ if (!recipientEvm || !recipientEvm.startsWith('0x') || recipientEvm.length !== 4
 }
 ```
 
-### 2. 🔄 Background Processing (NEEDED)
+### 2. ✅ Background Processing (IMPLEMENTED - Minimal Approach)
 
-**Current Issue:** Bridge takes 15-20 minutes (CCTP) or 5-10 minutes (Wormhole)
-**User Experience Problem:** Users must keep page open entire time
+**Solution:** Minimal state management without polling
+- Stores only tx signature + metadata in localStorage
+- Checks balance on page load (reuses existing logic)
+- Shows notification if bridge completed
+- No resource-intensive polling
 
-**Recommended Solution:**
-1. **Store bridge state** in localStorage/IndexedDB
-2. **Poll for completion** in background
-3. **Show notification** when complete
-4. **Allow users to leave** and return later
-
-**Implementation Needed:**
+**Implementation:**
 ```typescript
-// Store bridge transaction
-localStorage.setItem('pendingBridge', JSON.stringify({
-  signature: txSignature,
+// Save state when tx sent
+savePendingBridge({
+  signature,
+  protocol,
   amount,
   recipient,
-  protocol: 'cctp',
-  startTime: Date.now(),
-  status: 'waiting_attestation'
-}));
+  timestamp: Date.now()
+});
 
-// Background polling service
-setInterval(() => {
-  const pending = JSON.parse(localStorage.getItem('pendingBridge'));
-  if (pending) {
-    checkBridgeStatus(pending.signature).then(status => {
-      if (status === 'complete') {
-        showNotification('Bridge complete! USDC ready on Base');
-        localStorage.removeItem('pendingBridge');
-      }
-    });
-  }
-}, 60000); // Check every minute
+// Check on page load (usePendingBridge hook)
+const pending = getPendingBridge();
+if (pending && hasBridgeCompleted(currentBalance, expectedAmount)) {
+  toast.success('Bridge complete! USDC arrived on Base');
+  clearPendingBridge();
+}
 ```
+
+### 3. ✅ Protocol Selection (IMPLEMENTED)
+
+**Solution:** Clear visual comparison in BridgeGuidanceCard
+- Side-by-side protocol cards
+- Shows time estimate (5-10 min vs 15-20 min)
+- Visual indicators (⚡ Recommended vs 🔵 Native USDC)
+- Defaults to Wormhole (faster)
+
+**UI:**
+```tsx
+<div className="grid grid-cols-2 gap-3">
+  <ProtocolCard name="Wormhole" time="5-10 min" badge="⚡ Recommended" />
+  <ProtocolCard name="CCTP" time="15-20 min" badge="🔵 Native USDC" />
+</div>
+```
+
+### 4. ✅ User Can Leave (IMPLEMENTED)
+
+**Solution:** Clear messaging + explorer link
+- Shows "You can safely close this page!" message
+- Displays estimated completion time
+- Provides Solana Explorer link for tracking
+- Transaction completes regardless
+
+**UI in InlineBridgeFlow:**
+```tsx
+<div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+  <p>💡 <strong>You can safely close this page!</strong></p>
+  <p>Your bridge will complete in {protocol === 'cctp' ? '15-20' : '5-10'} minutes.</p>
+  <a href={getSolanaExplorerLink(txHash)}>Track on Solana Explorer</a>
+</div>
+```
+
+### 5. ✅ Resume Notification (IMPLEMENTED)
+
+**Solution:** Automatic detection on page load
+- `PendingBridgeNotification` component
+- Shows pending bridge info
+- Links to explorer
+- Dismissible
+- Auto-clears when complete
+
+**Components Created:**
+- `src/utils/bridgeStateManager.ts` - State management
+- `src/hooks/usePendingBridge.ts` - Detection hook
+- `src/components/bridge/PendingBridgeNotification.tsx` - UI component
 
 ### 3. 🚀 Faster Bridging Options
 
@@ -341,6 +378,98 @@ If issues persist:
 3. Confirm using Phantom's EVM address (0x...)
 4. Wait full time for protocol (20 min CCTP, 10 min Wormhole)
 5. Report with transaction signature and error details
+
+## Integration Guide
+
+### Using PendingBridgeNotification
+
+Add to your main layout or app component to show notifications on page load:
+
+```tsx
+// In app/layout.tsx or similar
+import { PendingBridgeNotification } from '@/components/bridge/PendingBridgeNotification';
+import { useTicketPurchase } => '@/hooks/useTicketPurchase';
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  const { userBalance } = useTicketPurchase();
+  const baseBalance = parseFloat(userBalance?.usdc || '0');
+
+  return (
+    <>
+      {children}
+      <PendingBridgeNotification 
+        currentBalance={baseBalance}
+        onBridgeComplete={() => {
+          // Optional: Refresh balance, show success message, etc.
+          console.log('Bridge completed!');
+        }}
+      />
+    </>
+  );
+}
+```
+
+### Using BridgeGuidanceCard with Protocol Selection
+
+```tsx
+// In PurchaseModal or similar
+import { BridgeGuidanceCard } from '@/components/bridge/BridgeGuidanceCard';
+import { saveBalanceBeforeBridge } from '@/utils/bridgeStateManager';
+
+function PurchaseModal() {
+  const handleBridge = (amount: string, protocol?: 'cctp' | 'wormhole') => {
+    // Save current balance for later comparison
+    saveBalanceBeforeBridge(userBalance?.usdc || '0');
+    
+    // Start bridge with selected protocol
+    setShowBridgeFlow(true);
+    setSelectedProtocol(protocol || 'wormhole');
+  };
+
+  return (
+    <BridgeGuidanceCard
+      sourceChain="solana"
+      sourceBalance={solanaBalance || '0'}
+      targetChain="base"
+      targetBalance={userBalance?.usdc || '0'}
+      requiredAmount={totalCost}
+      onBridge={handleBridge}
+      onDismiss={() => setShowBridgeGuidance(false)}
+    />
+  );
+}
+```
+
+### Files Created
+
+**State Management:**
+- `src/utils/bridgeStateManager.ts` - Minimal localStorage-based state management
+
+**Hooks:**
+- `src/hooks/usePendingBridge.ts` - Check for pending bridges on mount
+
+**Components:**
+- `src/components/bridge/PendingBridgeNotification.tsx` - Notification UI
+- Enhanced `src/components/bridge/BridgeGuidanceCard.tsx` - Protocol selection
+- Enhanced `src/components/bridge/InlineBridgeFlow.tsx` - "You can leave" message
+
+### Key Features
+
+✅ **No Polling** - Only checks on page load
+✅ **Minimal State** - Just tx signature + metadata  
+✅ **Reuses Existing Code** - Balance checks already exist
+✅ **Clear UX** - Users know they can leave
+✅ **Auto-Detection** - Finds completed bridges automatically
+✅ **Protocol Choice** - Visual comparison of options
+
+### Testing Checklist
+
+- [ ] Start bridge, close page, return - notification appears
+- [ ] Bridge completes - notification shows success
+- [ ] Dismiss notification - clears state
+- [ ] Protocol selection - defaults to Wormhole
+- [ ] "You can leave" message - shows after tx sent
+- [ ] Explorer link - opens correct transaction
 
 
 ## Root Causes Identified
