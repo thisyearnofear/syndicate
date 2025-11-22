@@ -5,6 +5,7 @@ import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getConfig } from "@/config/wagmi";
 import { Web3AuthErrorBoundary } from "@/components/wallet";
+import { useMemo } from "react";
 
 // Suppress specific console warnings that are not breaking functionality - only on client
 if (typeof window !== 'undefined') {
@@ -40,9 +41,14 @@ if (typeof window !== 'undefined') {
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  // Create QueryClient and config consistently on both server and client
-  const queryClient = new QueryClient();
-  const config = getConfig();
+  // Create QueryClient and config only on client - lazily initialized
+  const queryClient = useMemo(() => new QueryClient(), []);
+  const config = useMemo(() => getConfig(), []);
+
+  // Failsafe: if config is null (shouldn't happen on client), don't render providers
+  if (!config) {
+    return <>{children}</>;
+  }
 
   return (
     <WagmiProvider config={config}>

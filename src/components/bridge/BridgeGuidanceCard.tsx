@@ -19,6 +19,8 @@ export interface BridgeGuidanceCardProps {
     requiredAmount: string;
     onBridge: (amount: string, protocol?: 'cctp' | 'wormhole') => void;
     onDismiss: () => void;
+    skipProtocolSelection?: boolean;
+    preselectedProtocol?: 'cctp' | 'wormhole';
 }
 
 export function BridgeGuidanceCard({
@@ -28,12 +30,14 @@ export function BridgeGuidanceCard({
     targetBalance,
     requiredAmount,
     onBridge,
-    onDismiss
+    onDismiss,
+    skipProtocolSelection = false,
+    preselectedProtocol = 'wormhole'
 }: BridgeGuidanceCardProps) {
     const sourceIcon = sourceChain === 'solana' ? '🟣' : '⟠';
     const sourceName = sourceChain === 'solana' ? 'Solana' : 'Ethereum';
     const [amountInput, setAmountInput] = React.useState<string>(requiredAmount);
-    const [selectedProtocol, setSelectedProtocol] = React.useState<'wormhole' | 'cctp'>('wormhole');
+    const [selectedProtocol, setSelectedProtocol] = React.useState<'wormhole' | 'cctp'>(preselectedProtocol);
 
     return (
         <div className="glass-premium rounded-xl p-6 border border-blue-500/30 animate-fade-in">
@@ -82,35 +86,37 @@ export function BridgeGuidanceCard({
                 </div>
             </div>
 
-            {/* Protocol Selection */}
-            <div className="mb-6">
-                <p className="text-gray-400 text-sm mb-3">Choose Bridge Protocol:</p>
-                <div className="grid grid-cols-2 gap-3">
-                    <button
-                        onClick={() => setSelectedProtocol('wormhole')}
-                        className={`p-4 rounded-lg border-2 transition-all ${selectedProtocol === 'wormhole'
-                            ? 'border-blue-500 bg-blue-500/10'
-                            : 'border-white/10 bg-white/5 hover:border-white/20'
-                            }`}
-                    >
-                        <div className="text-white font-bold text-lg mb-1">Wormhole</div>
-                        <div className="text-gray-400 text-sm mb-2">5-10 minutes</div>
-                        <div className="text-green-400 text-xs font-medium">⚡ Recommended</div>
-                    </button>
+            {/* Protocol Selection - Only show if not skipping */}
+            {!skipProtocolSelection && (
+                <div className="mb-6">
+                    <p className="text-gray-400 text-sm mb-3">Choose Bridge Protocol:</p>
+                    <div className="grid grid-cols-2 gap-3">
+                        <button
+                            onClick={() => setSelectedProtocol('wormhole')}
+                            className={`p-4 rounded-lg border-2 transition-all ${selectedProtocol === 'wormhole'
+                                ? 'border-blue-500 bg-blue-500/10'
+                                : 'border-white/10 bg-white/5 hover:border-white/20'
+                                }`}
+                        >
+                            <div className="text-white font-bold text-lg mb-1">Wormhole</div>
+                            <div className="text-gray-400 text-sm mb-2">5-10 minutes</div>
+                            <div className="text-green-400 text-xs font-medium">⚡ Recommended</div>
+                        </button>
 
-                    <button
-                        onClick={() => setSelectedProtocol('cctp')}
-                        className={`p-4 rounded-lg border-2 transition-all ${selectedProtocol === 'cctp'
-                            ? 'border-blue-500 bg-blue-500/10'
-                            : 'border-white/10 bg-white/5 hover:border-white/20'
-                            }`}
-                    >
-                        <div className="text-white font-bold text-lg mb-1">CCTP</div>
-                        <div className="text-gray-400 text-sm mb-2">15-20 minutes</div>
-                        <div className="text-blue-400 text-xs font-medium">🔵 Native USDC</div>
-                    </button>
+                        <button
+                            onClick={() => setSelectedProtocol('cctp')}
+                            className={`p-4 rounded-lg border-2 transition-all ${selectedProtocol === 'cctp'
+                                ? 'border-blue-500 bg-blue-500/10'
+                                : 'border-white/10 bg-white/5 hover:border-white/20'
+                                }`}
+                        >
+                            <div className="text-white font-bold text-lg mb-1">CCTP</div>
+                            <div className="text-gray-400 text-sm mb-2">15-20 minutes</div>
+                            <div className="text-blue-400 text-xs font-medium">🔵 Native USDC</div>
+                        </button>
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Actions */}
             <div className="space-y-3">

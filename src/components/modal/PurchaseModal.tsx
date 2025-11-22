@@ -86,6 +86,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   const [showShareModal, setShowShareModal] = useState(false);
   const [showBridgeGuidance, setShowBridgeGuidance] = useState(false);
   const [isBridging, setIsBridging] = useState(false);
+  const [selectedBridgeProtocol, setSelectedBridgeProtocol] = useState<'cctp' | 'wormhole' | null>(null);
   const { address: evmAddress, isConnected: evmConnected } = useAccount();
   const [bridgeMetadata, setBridgeMetadata] = useState<{ protocol?: string; bridgeId?: string; burnSignature?: string; message?: string; attestation?: string; mintTxHash?: string } | null>(null);
   const [bridgeAmount, setBridgeAmount] = useState<string | null>(null);
@@ -100,7 +101,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   };
 
   // Bridge handler functions
-  const handleStartBridge = (amt?: string) => {
+  const handleStartBridge = (amt?: string, protocol?: 'cctp' | 'wormhole') => {
     if (!evmConnected || !evmAddress) {
       errorToast('EVM Wallet Required', 'Connect an EVM wallet to receive USDC on Base');
       return;
@@ -109,6 +110,9 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
       setBridgeAmount(amt);
     } else {
       setBridgeAmount(null);
+    }
+    if (protocol) {
+      setSelectedBridgeProtocol(protocol);
     }
     setShowBridgeGuidance(false);
     setIsBridging(true);
@@ -592,8 +596,10 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
               targetChain="base"
               targetBalance={userBalance?.usdc || '0'}
               requiredAmount={totalCost}
-              onBridge={(amt) => handleStartBridge(amt)}
+              onBridge={(amt, protocol) => handleStartBridge(amt, protocol)}
               onDismiss={() => setShowBridgeGuidance(false)}
+              skipProtocolSelection={selectedBridgeProtocol !== null}
+              preselectedProtocol={selectedBridgeProtocol || 'wormhole'}
             />
           </div>
         )}
@@ -612,6 +618,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
                 setIsBridging(false);
                 setShowBridgeGuidance(true);
               }}
+              preselectedProtocol={selectedBridgeProtocol || undefined}
             />
           </div>
         )}
