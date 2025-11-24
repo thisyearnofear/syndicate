@@ -1,7 +1,25 @@
 # Cross-Chain Bridge Implementation
 
-**Last Updated**: Nov 22, 2025  
+**Last Updated**: Nov 24, 2025  
 **Status**: Implementation in Progress
+
+## Recent Review (Nov 24, 2025)
+
+**3 Issues Fixed:**
+1. ✅ **UI Inconsistency** - `/bridge` page now uses `FocusedBridgeFlow` (consistent with modal)
+2. ✅ **Bridge Doesn't Work** - Unified wallet state; EVM address now guaranteed; better error messages
+3. ✅ **Wallet State Scattered** - `useWalletConnection()` now returns both Solana + EVM wallet data
+
+**Changes Made:**
+- `src/hooks/useWalletConnection.ts` - Returns `evmAddress, evmConnected` (NEW)
+- `src/app/bridge/page.tsx` - Uses `FocusedBridgeFlow` instead of custom form
+- `src/services/solanaBridgeService.ts` - Improved validation: specific errors for each failure case
+
+**Testing:**
+- [ ] Connect both Phantom + MetaMask
+- [ ] Test CCTP bridge from `/bridge` → should complete
+- [ ] Test Wormhole fallback → should work
+- [ ] Verify error messages are specific (not generic "Bridge failed")
 
 ## Solana Bridge Overview
 
