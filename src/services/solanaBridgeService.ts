@@ -100,10 +100,26 @@ class SolanaBridgeService {
     const onStatus = options?.onStatus;
 
     // CRITICAL: Validate recipient is an EVM address, not Solana address
-    if (!recipientEvm || !recipientEvm.startsWith('0x') || recipientEvm.length !== 42) {
+    if (!recipientEvm || !recipientEvm.trim()) {
       return {
         success: false,
-        error: 'Recipient must be a valid EVM address (0x... format, 42 characters). Do not use your Solana/Phantom address as recipient.',
+        error: 'Recipient EVM address is required. Please connect your MetaMask or Rainbow wallet.',
+        protocol: 'cctp'
+      };
+    }
+
+    if (!recipientEvm.startsWith('0x')) {
+      return {
+        success: false,
+        error: `Invalid EVM address format. Got: ${recipientEvm.substring(0, 20)}... (must start with 0x)`,
+        protocol: 'cctp'
+      };
+    }
+
+    if (recipientEvm.length !== 42) {
+      return {
+        success: false,
+        error: `Invalid EVM address length. Got ${recipientEvm.length} characters (expected 42).`,
         protocol: 'cctp'
       };
     }
