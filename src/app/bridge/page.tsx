@@ -77,11 +77,22 @@ export default function BridgePage() {
                     />
                   )}
                   {!evmConnected && (
-                    <WalletConnectionCard
-                      title="Connect EVM Wallet"
-                      description="You need an EVM wallet (MetaMask, Rainbow) to receive USDC on Base"
-                      walletType="metamask"
-                    />
+                    <div className="glass-premium rounded-xl p-6 border border-yellow-500/30 bg-yellow-500/5">
+                      <div className="flex items-start gap-3 mb-4">
+                        <span className="text-2xl flex-shrink-0">🔗</span>
+                        <div>
+                          <h4 className="text-white font-semibold mb-1">Connect EVM Wallet</h4>
+                          <p className="text-gray-300 text-sm mb-3">
+                            Connect an EVM wallet (MetaMask, Rainbow, or Phantom EVM) to receive on Base
+                          </p>
+                        </div>
+                      </div>
+                      <WalletConnectionCard
+                        title="Connect EVM Wallet"
+                        description="Required to receive bridged USDC on Base"
+                        walletType="metamask"
+                      />
+                    </div>
                   )}
                 </div>
               ) : showSuccess ? (

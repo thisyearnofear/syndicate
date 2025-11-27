@@ -21,6 +21,8 @@ export interface BridgeGuidanceCardProps {
     onDismiss: () => void;
     skipProtocolSelection?: boolean;
     preselectedProtocol?: 'cctp' | 'wormhole';
+    evmConnected?: boolean;
+    evmAddress?: string;
 }
 
 export function BridgeGuidanceCard({
@@ -32,7 +34,9 @@ export function BridgeGuidanceCard({
     onBridge,
     onDismiss,
     skipProtocolSelection = false,
-    preselectedProtocol = 'wormhole'
+    preselectedProtocol = 'wormhole',
+    evmConnected = false,
+    evmAddress
 }: BridgeGuidanceCardProps) {
     const sourceIcon = sourceChain === 'solana' ? '🟣' : '⟠';
     const sourceName = sourceChain === 'solana' ? 'Solana' : 'Ethereum';
@@ -120,6 +124,21 @@ export function BridgeGuidanceCard({
 
             {/* Actions */}
             <div className="space-y-3">
+                {/* EVM Wallet Warning */}
+                {!evmConnected && (
+                    <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-3">
+                        <div className="flex items-start gap-3">
+                            <span className="text-xl flex-shrink-0">⚠️</span>
+                            <div>
+                                <p className="text-yellow-300 font-semibold text-sm mb-1">EVM Wallet Required</p>
+                                <p className="text-yellow-200/80 text-xs leading-relaxed">
+                                    Connect an EVM wallet (MetaMask, Rainbow, or Phantom EVM) to receive on Base
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                
                 <div>
                     <div className="flex items-center justify-between">
                         <span className="text-sm text-gray-400">Amount to bridge (USDC)</span>
@@ -137,11 +156,12 @@ export function BridgeGuidanceCard({
                 </div>
                 <Button
                     onClick={() => onBridge(amountInput, selectedProtocol)}
-                    className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold"
+                    disabled={!evmConnected || !evmAddress}
+                    className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                     size="lg"
                 >
                     <span className="text-lg mr-2">🌉</span>
-                    Start Bridge ({selectedProtocol === 'wormhole' ? '5-10 min' : '15-20 min'})
+                    {!evmConnected ? 'Connect EVM Wallet First' : `Start Bridge (${selectedProtocol === 'wormhole' ? '5-10 min' : '15-20 min'})`}
                 </Button>
 
                 <div className="grid grid-cols-2 gap-3">
