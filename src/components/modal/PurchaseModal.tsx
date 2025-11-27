@@ -589,7 +589,29 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
 
         {/* Bridge Guidance Card */}
         {showBridgeGuidance && !isBridging && step === 'select' && (
-          <div className="mb-6">
+          <div className="mb-6 space-y-4">
+            {/* EVM Wallet Connection Prompt */}
+            {!evmConnected && (
+              <div className="glass-premium rounded-xl p-5 border border-yellow-500/30 bg-yellow-500/5">
+                <div className="flex items-start gap-3 mb-4">
+                  <span className="text-2xl flex-shrink-0">🔗</span>
+                  <div>
+                    <h4 className="text-white font-semibold mb-1">Connect EVM Wallet</h4>
+                    <p className="text-gray-300 text-sm">
+                      To bridge from Solana to Base, you need both wallets connected:
+                    </p>
+                    <ul className="text-gray-400 text-sm mt-2 space-y-1 ml-4">
+                      <li>✅ Solana wallet (Phantom) - Connected</li>
+                      <li>⚠️ EVM wallet (MetaMask/Rainbow/Phantom EVM) - Not connected</li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="flex justify-center">
+                  <ConnectButton />
+                </div>
+              </div>
+            )}
+            
             <BridgeGuidanceCard
               sourceChain="solana"
               sourceBalance={solanaBalance || '0'}
@@ -600,6 +622,8 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
               onDismiss={() => setShowBridgeGuidance(false)}
               skipProtocolSelection={selectedBridgeProtocol !== null}
               preselectedProtocol={selectedBridgeProtocol || 'wormhole'}
+              evmConnected={evmConnected}
+              evmAddress={evmAddress}
             />
           </div>
         )}
