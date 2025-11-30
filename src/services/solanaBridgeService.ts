@@ -10,9 +10,15 @@
  */
 
 import type { BridgeResult, BridgeOptions } from '@/services/bridgeService';
-import { CONTRACTS, CHAINS, cctp as CCTP } from '@/config';
+import { CONTRACTS, CHAINS, cctp as CCTP, BRIDGE } from '@/config';
 import { Buffer } from 'buffer';
 import CCTP_CONFIG from '@/config/cctpConfig';
+import { 
+  validateConnection, 
+  withRetry, 
+  pollWithBackoff, 
+  CircuitBreaker 
+} from '@/utils/asyncRetryHelper';
 
 // Placeholder types to avoid importing large Solana SDKs eagerly
 // Real implementation would import @solana/web3.js, CCTP or Wormhole SDKs lazily
@@ -33,9 +39,16 @@ const SOLANA: SolanaBridgeConfig = {
 const SOLANA_CCTP_PROGRAMS = CCTP_CONFIG.solana;
 
 class SolanaBridgeService {
+  // Circuit breaker for RPC endpoints - prevents hammering dead endpoints
+  private rpcCircuitBreaker = new CircuitBreaker(
+    BRIDGE.health.failureThreshold,
+    BRIDGE.health.resetTimeMs
+  );
+
   /**
    * Bridge USDC from Solana to Base
    * Strategy: Try primary (CCTP) → fallback (Wormhole) with onStatus hooks
+   * ENHANCEMENT: Uses new retry/timeout utilities for robustness
    */
   async bridgeUsdcSolanaToBase(
     amount: string, // decimal string, 6 decimals
@@ -93,6 +106,61 @@ class SolanaBridgeService {
     }
 
     return { success: false, error: 'All Solana→Base routes failed', protocol: 'none' };
+  }
+
+  /**
+   * Validate and select healthy RPC endpoint with circuit breaker
+   * ENHANCEMENT: Prevents hammering dead endpoints, uses configured fallbacks
+   */
+  private async selectHealthyRpcUrl(): Promise<string> {
+    const urls = [
+      BRIDGE.rpc.primaryUrl,
+      ...BRIDGE.rpc.fallbackUrls,
+    ].filter(Boolean);
+
+    if (urls.length === 0) {
+      throw new Error('No Solana RPC endpoints configured');
+    }
+
+    // Try each URL with circuit breaker
+    for (const url of urls) {
+      try {
+        await this.rpcCircuitBreaker.execute(url, async () => {
+          // Test with getHealth call
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: 1,
+              method: 'getHealth',
+              params: [],
+            }),
+            signal: AbortSignal.timeout(3000),
+          });
+
+          if (!response.ok) {
+            throw new Error(`RPC returned ${response.status}`);
+          }
+
+          const data = await response.json();
+          if (data.error || data.result !== 'ok') {
+            throw new Error('RPC not healthy');
+          }
+
+          console.log(`✅ Using RPC endpoint: ${url.substring(0, 50)}...`);
+          return true;
+        });
+        return url;
+      } catch (error) {
+        console.warn(`❌ RPC failed: ${url}: ${error instanceof Error ? error.message : String(error)}`);
+        continue;
+      }
+    }
+
+    // Fallback to primary if all failed (circuit breaker might block them)
+    console.warn('⚠️ All RPC endpoints unavailable, using primary as fallback');
+    return urls[0];
   }
 
   // Primary: Circle CCTP Solana→Base (implementation)
@@ -161,68 +229,65 @@ class SolanaBridgeService {
         ASSOCIATED_TOKEN_PROGRAM_ID
       } = splToken;
 
-      // Check if Phantom is available
-      if (typeof window === 'undefined' || !(window as any).solana || !(window as any).solana.isPhantom) {
-        throw new Error('Phantom wallet not found');
+      // Validate Phantom wallet is available
+      if (typeof window === 'undefined' || !(window as any).solana?.isPhantom) {
+        throw new Error('Phantom wallet not installed. Install from phantom.app');
       }
 
       const phantom = (window as any).solana;
+      onStatus?.('solana_cctp:phantom_check');
 
-      // Connect if not connected
-      if (!phantom.isConnected) {
-        await phantom.connect();
-      }
-
-      const walletPublicKey = new PublicKey(phantom.publicKey.toString());
-
-      const selectRpcUrls = () => {
-        const raw = (process.env.NEXT_PUBLIC_SOLANA_RPC_FALLBACKS || '').split(',').map(s => s.trim()).filter(Boolean);
-        const urls = [SOLANA.rpcUrl, ...raw];
-        const seen = new Set<string>();
-        return urls
-          .map(u => {
-            const origin = typeof window !== 'undefined' ? window.location.origin : '';
-            return u && u.startsWith('/') && origin ? origin + u : u;
-          })
-          .filter(u => {
-            if (!u) return false;
-            const key = u.toLowerCase();
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-          });
-      };
-
-      const createHttpRpcWithFallback = async () => {
-        const urls = selectRpcUrls();
-        const post = async (u: string, body: any) => {
-          const resp = await fetch(u, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-          if (!resp.ok) throw new Error('rpc_failed');
-          const json = await resp.json();
-          if (json.error) throw new Error(json.error.message || 'rpc_error');
-          return json.result;
-        };
-        const clientFor = (u: string) => ({
-          getLatestBlockhash: async () => post(u, { jsonrpc: '2.0', id: 1, method: 'getLatestBlockhash', params: [{ commitment: 'confirmed' }] }),
-          getAccountInfo: async (pk: any) => post(u, { jsonrpc: '2.0', id: 1, method: 'getAccountInfo', params: [pk.toString(), { commitment: 'confirmed' }] }),
-          getSignatureStatuses: async (sigs: string[]) => post(u, { jsonrpc: '2.0', id: 1, method: 'getSignatureStatuses', params: [sigs, { searchTransactionHistory: true }] }),
-          getTransaction: async (sig: string) => post(u, { jsonrpc: '2.0', id: 1, method: 'getTransaction', params: [sig, { commitment: 'confirmed', maxSupportedTransactionVersion: 0 }] }),
-          getTokenAccountBalance: async (pk: any) => post(u, { jsonrpc: '2.0', id: 1, method: 'getTokenAccountBalance', params: [pk.toString(), { commitment: 'confirmed' }] }),
-        });
-        for (const url of urls) {
-          try {
-            const c = clientFor(url);
-            await c.getLatestBlockhash();
-            return c;
-          } catch (e: any) {
-            const msg = e?.message || String(e);
-            if (msg.includes('403')) continue;
+      // Validate Phantom connection with timeout & retry
+      // ENHANCEMENT: Uses consolidated validateConnection utility with circuit breaker approach
+      const walletPublicKey = await validateConnection(
+        async () => {
+          if (!phantom.isConnected) {
+            await phantom.connect();
           }
+          
+          if (!phantom.publicKey) {
+            throw new Error('No wallet public key available');
+          }
+
+          return new PublicKey(phantom.publicKey.toString());
+        },
+        {
+          context: 'Phantom wallet',
+          maxAttempts: BRIDGE.connection.maxAttempts,
+          timeoutMs: BRIDGE.connection.timeoutMs,
         }
-        return clientFor(urls[0] || SOLANA.rpcUrl);
+      );
+
+      onStatus?.('solana_cctp:phantom_ready', { 
+        address: phantom.publicKey.toString() 
+      });
+
+      // Select healthy RPC endpoint with circuit breaker
+      // ENHANCEMENT: Consolidated RPC selection with health checking
+      onStatus?.('solana_cctp:rpc_select');
+      const rpcUrl = await this.selectHealthyRpcUrl();
+
+      // Create HTTP RPC client for selected endpoint
+      const post = async (u: string, body: any) => {
+        const resp = await fetch(u, { 
+          method: 'POST', 
+          headers: { 'content-type': 'application/json' }, 
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(5000), // Add timeout to each RPC call
+        });
+        if (!resp.ok) throw new Error('rpc_failed');
+        const json = await resp.json();
+        if (json.error) throw new Error(json.error.message || 'rpc_error');
+        return json.result;
       };
 
-      const rpc = await createHttpRpcWithFallback();
+      const rpc = {
+        getLatestBlockhash: async () => post(rpcUrl, { jsonrpc: '2.0', id: 1, method: 'getLatestBlockhash', params: [{ commitment: 'confirmed' }] }),
+        getAccountInfo: async (pk: any) => post(rpcUrl, { jsonrpc: '2.0', id: 1, method: 'getAccountInfo', params: [pk.toString(), { commitment: 'confirmed' }] }),
+        getSignatureStatuses: async (sigs: string[]) => post(rpcUrl, { jsonrpc: '2.0', id: 1, method: 'getSignatureStatuses', params: [sigs, { searchTransactionHistory: true }] }),
+        getTransaction: async (sig: string) => post(rpcUrl, { jsonrpc: '2.0', id: 1, method: 'getTransaction', params: [sig, { commitment: 'confirmed', maxSupportedTransactionVersion: 0 }] }),
+        getTokenAccountBalance: async (pk: any) => post(rpcUrl, { jsonrpc: '2.0', id: 1, method: 'getTokenAccountBalance', params: [pk.toString(), { commitment: 'confirmed' }] }),
+      };
 
       // Parse amount to integer (6 decimals for USDC)
       const amountInDecimals = Math.floor(parseFloat(amount) * 1_000_000);
@@ -455,18 +520,27 @@ class SolanaBridgeService {
     }
   }
 
+  // ENHANCEMENT: Uses BRIDGE configuration for timeout and confirms from settings
   private async confirmWithHttpPolling(connection: any, signature: string): Promise<void> {
-    const maxAttempts = 60; // Increase to 90 seconds for better reliability
-    const delayMs = 1500;
-    let confirmedAt = -1;
+    const maxWaitMs = BRIDGE.confirmation.timeoutMs;
+    const initialDelayMs = BRIDGE.confirmation.initialDelayMs;
+    const maxDelayMs = BRIDGE.confirmation.maxDelayMs;
 
-    for (let i = 0; i < maxAttempts; i++) {
+    const startTime = Date.now();
+    let delayMs = initialDelayMs;
+    let confirmedAt = -1;
+    let attemptCount = 0;
+
+    while (Date.now() - startTime < maxWaitMs) {
+      attemptCount++;
+
       try {
         const statuses = await connection.getSignatureStatuses([signature]);
         const status = statuses?.value?.[0];
 
         if (!status) {
           await new Promise(r => setTimeout(r, delayMs));
+          delayMs = Math.min(delayMs * 1.2, maxDelayMs); // Gentle backoff
           continue;
         }
 
@@ -478,35 +552,50 @@ class SolanaBridgeService {
 
         const confirmationStatus = status.confirmationStatus as string | undefined;
 
-        // For CCTP security, we should wait for 'finalized' status
+        // For CCTP security, wait for 'finalized' status
         if (confirmationStatus === 'finalized') {
-          console.log(`Transaction finalized after ${i + 1} attempts`);
-          return; // Success!
+          console.log(`✅ Transaction finalized after ${attemptCount} polls (${Date.now() - startTime}ms)`);
+          return;
         }
 
         // Track when we first see 'confirmed'
         if (confirmationStatus === 'confirmed' && confirmedAt === -1) {
-          confirmedAt = i;
-          console.log(`Transaction confirmed at attempt ${i + 1}, waiting for finalization...`);
+          confirmedAt = Date.now();
+          console.log(`✓ Transaction confirmed, waiting for finalization...`);
         }
 
-        // If confirmed for more than 30 seconds, accept it (UX vs security tradeoff)
-        if (confirmedAt !== -1 && (i - confirmedAt) > 20) {
-          console.warn('Transaction confirmed but not finalized after 30s. Proceeding anyway.');
+        // If confirmed for >30s, accept it (UX vs security tradeoff)
+        if (confirmedAt !== -1 && Date.now() - confirmedAt > 30000) {
+          console.warn('⚠️ Transaction confirmed but not finalized after 30s. Proceeding anyway.');
           return;
         }
 
         await new Promise(r => setTimeout(r, delayMs));
-      } catch (e: any) {
+        delayMs = Math.min(delayMs * 1.2, maxDelayMs);
+      } catch (error) {
         // If it's a transaction error, throw immediately
-        if (e.message?.includes('Transaction failed')) throw e;
-        // Otherwise, retry
-        if (i === maxAttempts - 1) throw e;
+        if (error instanceof Error && error.message.includes('Transaction failed')) {
+          throw error;
+        }
+
+        // Otherwise, retry or timeout
+        const elapsedMs = Date.now() - startTime;
+        if (elapsedMs >= maxWaitMs) {
+          throw new Error(
+            `Transaction confirmation timeout after ${Math.round(elapsedMs / 1000)}s. ` +
+            `Check Solana Explorer for signature: ${signature}`
+          );
+        }
+
         await new Promise(r => setTimeout(r, delayMs));
+        delayMs = Math.min(delayMs * 1.2, maxDelayMs);
       }
     }
 
-    throw new Error('Transaction confirmation timeout after 90 seconds. Check Solana Explorer for transaction status.');
+    throw new Error(
+      `Transaction confirmation timeout after ${Math.round(maxWaitMs / 1000)}s. ` +
+      `Check Solana Explorer for signature: ${signature}`
+    );
   }
 
   // Fallback: Wormhole Solana→Base (scaffold - not fully implemented)
@@ -635,30 +724,61 @@ class SolanaBridgeService {
     }
   }
   // Circle attestation polling (Iris API)
+  // ENHANCEMENT: Uses pollWithBackoff utility for exponential backoff
   private async fetchCctpAttestationFromIris(messageBytesHex: string): Promise<string | null> {
     try {
       if (!messageBytesHex || messageBytesHex === '0x') return null;
+
       const { ethers } = await import('ethers');
       const msgHash = ethers.keccak256(messageBytesHex as any);
       const proxyUrl = `/api/attestation?messageHash=${msgHash}`;
       const directUrl = `https://iris-api.circle.com/v1/attestations/${msgHash}`;
 
-      const maxAttempts = 12;
-      const baseDelayMs = 3000;
-      for (let i = 0; i < maxAttempts; i++) {
-        let resp: Response | null = null;
-        try { resp = await fetch(proxyUrl); } catch (_) { resp = null; }
-        if (!resp || !resp.ok) {
-          try { resp = await fetch(directUrl); } catch { resp = null; }
+      // Use pollWithBackoff for intelligent retry with exponential backoff
+      const attestation = await pollWithBackoff(
+        async () => {
+          let resp: Response | null = null;
+
+          try {
+            resp = await fetch(proxyUrl, { signal: AbortSignal.timeout(5000) });
+          } catch (_) {
+            resp = null;
+          }
+
+          if (!resp?.ok) {
+            try {
+              resp = await fetch(directUrl, { signal: AbortSignal.timeout(5000) });
+            } catch {
+              resp = null;
+            }
+          }
+
+          if (!resp?.ok) {
+            return null;
+          }
+
+          const json = await resp.json().catch(() => null);
+          const status = json?.status;
+          const att = json?.attestation;
+
+          if (status === 'complete' && typeof att === 'string' && att.startsWith('0x')) {
+            return att;
+          }
+
+          return null;
+        },
+        {
+          maxWaitMs: BRIDGE.attestation.timeoutMs,
+          initialDelayMs: BRIDGE.attestation.initialDelayMs,
+          maxDelayMs: BRIDGE.attestation.maxDelayMs,
+          backoffMultiplier: BRIDGE.attestation.backoffMultiplier,
+          context: 'Circle CCTP attestation',
         }
-        if (!resp || !resp.ok) { await new Promise(r => setTimeout(r, baseDelayMs)); continue; }
-        let json: any = null; try { json = await resp.json(); } catch { json = null; }
-        const status = json?.status; const att = json?.attestation;
-        if (status === 'complete' && typeof att === 'string' && att.startsWith('0x')) return att;
-        await new Promise(r => setTimeout(r, baseDelayMs));
-      }
-      return null;
-    } catch (_) {
+      );
+
+      return attestation;
+    } catch (error) {
+      console.error('Attestation fetch error:', error);
       return null;
     }
   }

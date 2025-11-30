@@ -7,6 +7,7 @@
 
 import { ethers } from 'ethers';
 import { CONTRACTS, CHAINS } from '@/config';
+import { getConfig } from '@/config/wagmi';
 
 // Megapot contract ABI (minimal required functions)
 const MEGAPOT_ABI = [
@@ -44,6 +45,19 @@ const USDC_ABI = [
   "function transfer(address to, uint256 amount) external returns (bool)",
   "function decimals() external view returns (uint8)",
 ];
+
+// Helper to get signer from wagmi/window.ethereum
+async function getSigner(): Promise<ethers.Signer | null> {
+  if (!isBrowser() || !(window as any).ethereum) {
+    return null;
+  }
+  try {
+    const provider = new ethers.BrowserProvider((window as any).ethereum);
+    return await provider.getSigner();
+  } catch {
+    return null;
+  }
+}
 
 export interface TicketPurchaseResult {
   success: boolean;
@@ -93,9 +107,8 @@ function isBrowser(): boolean {
 
 class Web3Service {
   private provider: ethers.BrowserProvider | null = null;
-  private signer: ethers.Signer | null = null;
-  private megapotContract: ethers.Contract | null = null;
-  private usdcContract: ethers.Contract | null = null;
+  private megapotContractAddress: string = CONTRACTS.megapot;
+  private usdcContractAddress: string = CONTRACTS.usdc;
   private isInitialized: boolean = false;
 
   /**
@@ -114,23 +127,9 @@ class Web3Service {
       }
 
       this.provider = new ethers.BrowserProvider((window as any).ethereum);
-      this.signer = await this.provider.getSigner();
 
-      // Ensure we're on Base network BEFORE initializing contracts
+      // Ensure we're on Base network BEFORE marking as initialized
       await this.ensureCorrectNetwork();
-
-      // Initialize contracts AFTER network is correct
-      this.megapotContract = new ethers.Contract(
-        CONTRACTS.megapot,
-        MEGAPOT_ABI,
-        this.signer
-      );
-
-      this.usdcContract = new ethers.Contract(
-        CONTRACTS.usdc,
-        USDC_ABI,
-        this.signer
-      );
 
       this.isInitialized = true;
       console.log('Web3 service initialized successfully');
@@ -150,10 +149,13 @@ class Web3Service {
   }
 
   /**
-   * Get the current signer if initialized
+   * Get a fresh signer (not cached) - crucial for wagmi compatibility
    */
-  getSigner(): ethers.Signer | null {
-    return this.signer;
+  async getFreshSigner(): Promise<ethers.Signer> {
+    if (!this.provider) {
+      throw new Error('Provider not initialized');
+    }
+    return await this.provider.getSigner();
   }
 
   /**
@@ -200,7 +202,7 @@ class Web3Service {
    * Get user's balance information
    */
   async getUserBalance(): Promise<UserBalance> {
-    if (!this.isInitialized || !this.signer || !this.usdcContract) {
+    if (!this.isInitialized || !this.provider) {
       throw new Error('Web3 service not initialized');
     }
     if (!isBrowser()) {
@@ -208,14 +210,20 @@ class Web3Service {
     }
 
     try {
-      const address = await this.signer.getAddress();
+      const signer = await this.getFreshSigner();
+      const address = await signer.getAddress();
       
       // Get USDC balance (6 decimals)
-      const usdcBalance = await this.usdcContract.balanceOf(address);
+      const usdcContract = new ethers.Contract(
+        this.usdcContractAddress,
+        USDC_ABI,
+        this.provider
+      );
+      const usdcBalance = await usdcContract.balanceOf(address);
       const usdcFormatted = ethers.formatUnits(usdcBalance, 6);
 
       // Get ETH balance for gas
-      const ethBalance = await this.provider!.getBalance(address);
+      const ethBalance = await this.provider.getBalance(address);
       const ethFormatted = ethers.formatEther(ethBalance);
 
       return {
@@ -240,7 +248,7 @@ class Web3Service {
    * Check if user has approved USDC spending for Megapot contract
    */
   async checkUsdcAllowance(ticketCount: number): Promise<boolean> {
-    if (!this.isInitialized || !this.signer || !this.usdcContract || !this.megapotContract) {
+    if (!this.isInitialized || !this.provider) {
       throw new Error('Web3 service not initialized');
     }
     if (!isBrowser()) {
@@ -248,9 +256,22 @@ class Web3Service {
     }
 
     try {
-      const address = await this.signer.getAddress();
-      const allowance = await this.usdcContract.allowance(address, CONTRACTS.megapot);
-      const ticketPrice = await this.megapotContract.ticketPrice();
+      const signer = await this.getFreshSigner();
+      const address = await signer.getAddress();
+      
+      const usdcContract = new ethers.Contract(
+        this.usdcContractAddress,
+        USDC_ABI,
+        this.provider
+      );
+      const megapotContract = new ethers.Contract(
+        this.megapotContractAddress,
+        MEGAPOT_ABI,
+        this.provider
+      );
+      
+      const allowance = await usdcContract.allowance(address, this.megapotContractAddress);
+      const ticketPrice = await megapotContract.ticketPrice();
       const requiredAmount = ticketPrice * BigInt(ticketCount);
 
       return allowance >= requiredAmount;
@@ -264,31 +285,43 @@ class Web3Service {
    * Approve USDC spending for ticket purchases
    */
   async approveUsdc(ticketCount: number): Promise<string> {
-    if (!this.isInitialized || !this.usdcContract || !this.megapotContract) {
+    if (!this.isInitialized || !this.provider) {
       throw new Error('Contracts not initialized');
     }
     if (!isBrowser()) {
       throw new Error('Web3 service can only be used in browser environments');
     }
 
-    const ticketPrice = await this.megapotContract.ticketPrice();
+    const signer = await this.getFreshSigner();
+    const usdcContract = new ethers.Contract(
+      this.usdcContractAddress,
+      USDC_ABI,
+      signer
+    );
+    const megapotContract = new ethers.Contract(
+      this.megapotContractAddress,
+      MEGAPOT_ABI,
+      this.provider
+    );
+
+    const ticketPrice = await megapotContract.ticketPrice();
     const requiredAmount = ticketPrice * BigInt(ticketCount);
 
     // Approve a bit more to handle multiple purchases
     const approvalAmount = requiredAmount * BigInt(10);
 
-    const tx = await this.usdcContract.approve(CONTRACTS.megapot, approvalAmount);
-    await tx.wait();
+    const tx = await usdcContract.approve(this.megapotContractAddress, approvalAmount);
+    const receipt = await tx.wait();
 
-    return tx.hash;
+    return receipt?.hash || tx.hash;
   }
 
   /**
-   * Purchase lottery tickets
+   * Purchase lottery tickets with improved error handling
    */
   async purchaseTickets(ticketCount: number, recipientOverride?: string): Promise<TicketPurchaseResult> {
     try {
-      if (!this.isInitialized || !this.megapotContract || !this.signer) {
+      if (!this.isInitialized || !this.provider) {
         throw new Error('Contracts not initialized');
       }
       if (!isBrowser()) {
@@ -311,29 +344,48 @@ class Web3Service {
         };
       }
 
+      // Get fresh signer
+      const signer = await this.getFreshSigner();
+      const signerAddress = await signer.getAddress();
+
       // Check and handle USDC allowance
       const hasAllowance = await this.checkUsdcAllowance(ticketCount);
       if (!hasAllowance) {
+        console.log('Approving USDC spending...');
         await this.approveUsdc(ticketCount);
       }
 
       // Get actual ticket price from contract
-      const ticketPrice = await this.megapotContract.ticketPrice();
+      const megapotContract = new ethers.Contract(
+        this.megapotContractAddress,
+        MEGAPOT_ABI,
+        this.provider
+      );
+      const ticketPrice = await megapotContract.ticketPrice();
 
       // Purchase tickets - contract takes referrer, value, recipient
       // value is USDC amount in szabo (6 decimals) = ticketCount * ticketPrice
       const usdcAmount = ticketPrice * BigInt(ticketCount);
       const referrer = ethers.ZeroAddress; // Default to address(0) for no referrer
-      const recipient = recipientOverride ?? await this.signer.getAddress();
+      const recipient = recipientOverride ?? signerAddress;
 
-      const tx = await this.megapotContract.purchaseTickets(referrer, usdcAmount, recipient);
+      // Get fresh signer again for transaction
+      const txSigner = await this.getFreshSigner();
+      const megapotContractTx = new ethers.Contract(
+        this.megapotContractAddress,
+        MEGAPOT_ABI,
+        txSigner
+      );
+
+      console.log(`Purchasing ${ticketCount} tickets for ${recipient}...`);
+      const tx = await megapotContractTx.purchaseTickets(referrer, usdcAmount, recipient);
 
       // Wait for transaction confirmation
       const receipt = await tx.wait();
 
       return {
         success: true,
-        txHash: receipt.hash,
+        txHash: receipt?.hash || tx.hash,
         ticketCount,
       };
 
@@ -342,12 +394,17 @@ class Web3Service {
       
       let errorMessage = 'Purchase failed. Please try again.';
       
-      if (error.code === 'ACTION_REJECTED') {
-        errorMessage = 'Transaction was rejected by user.';
+      if (error.code === 'ACTION_REJECTED' || error.code === -32603) {
+        errorMessage = 'Transaction was rejected. Please approve the transaction in your wallet.';
       } else if (error.message?.includes('insufficient funds')) {
         errorMessage = 'Insufficient funds for transaction.';
       } else if (error.message?.includes('allowance')) {
         errorMessage = 'USDC approval failed. Please try again.';
+      } else if (error.message?.includes('user rejected') || error.message?.includes('User rejected')) {
+        errorMessage = 'Transaction was rejected by user.';
+      } else if (error.message) {
+        // Log the full error for debugging
+        console.error('Full error message:', error.message);
       }
 
       return {

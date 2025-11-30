@@ -187,7 +187,7 @@ export const DESIGN = {
 } as const;
 
 // =============================================================================
-// PERFORMANCE CONFIGURATION
+// PERFORMANCE & BRIDGE CONFIGURATION
 // =============================================================================
 
 export const PERFORMANCE = {
@@ -207,6 +207,56 @@ export const PERFORMANCE = {
     activityFeed: 20,
     syndicates: 50,
     transactions: 100,
+  },
+} as const;
+
+// =============================================================================
+// BRIDGE CONFIGURATION (Solana → Base)
+// =============================================================================
+
+export const BRIDGE = {
+  // RPC Configuration
+  rpc: {
+    primaryUrl: process.env.NEXT_PUBLIC_SOLANA_RPC || "https://api.mainnet-beta.solana.com",
+    fallbackUrls: (process.env.NEXT_PUBLIC_SOLANA_RPC_FALLBACKS || "")
+      .split(",")
+      .map((url) => url.trim())
+      .filter(Boolean),
+  },
+
+  // Connection timeouts & retries
+  connection: {
+    timeoutMs: parseInt(process.env.NEXT_PUBLIC_BRIDGE_CONNECTION_TIMEOUT_MS || "5000"),
+    maxAttempts: 3,
+    backoffMultiplier: 1.5,
+  },
+
+  // Transaction confirmation
+  confirmation: {
+    timeoutMs: parseInt(process.env.NEXT_PUBLIC_BRIDGE_CONFIRM_TIMEOUT_MS || "180000"), // 3 minutes
+    initialDelayMs: 1500,
+    maxDelayMs: 5000,
+  },
+
+  // Attestation polling (Circle CCTP)
+  attestation: {
+    timeoutMs: parseInt(process.env.NEXT_PUBLIC_BRIDGE_ATTESTATION_TIMEOUT_MS || "120000"), // 2 minutes
+    initialDelayMs: 2000,
+    maxDelayMs: 10000,
+    backoffMultiplier: 1.5,
+  },
+
+  // RPC health checking
+  health: {
+    checkIntervalMs: 60000, // Check RPC health every 60 seconds
+    failureThreshold: 3, // Open circuit after 3 failures
+    resetTimeMs: 60000, // Reset circuit after 60 seconds of no failures
+  },
+
+  // Protocol selection
+  protocols: {
+    primary: "cctp" as const, // CCTP for native USDC
+    fallback: "wormhole" as const, // Wormhole fallback (not yet implemented)
   },
 } as const;
 
@@ -241,6 +291,7 @@ export { LOTTERY as lottery };
 export { DESIGN as design };
 export { API as api };
 export { PERFORMANCE as performance };
+export { BRIDGE as bridge };
 export { FEATURES as features };
 export { CCTP as cctp };
 export { CCIP as ccip };
