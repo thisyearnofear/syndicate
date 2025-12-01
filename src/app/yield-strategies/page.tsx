@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { CompactCard, CompactStack, CompactContainer, CompactSection } from '@/shared/components/premium/CompactLayout';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
+import WalletConnectionManager from '@/components/wallet/WalletConnectionManager';
 
 import { ImprovedYieldStrategySelector } from '@/components/yield/ImprovedYieldStrategySelector';
 import { YieldAllocationControl } from '@/components/yield/YieldAllocationControl';
@@ -56,6 +57,11 @@ export default function YieldStrategiesPage() {
                 amplifying your lottery participation. Your capital is preserved while generating 
                 dual benefits: consistent cause funding and potential lottery wins.
               </p>
+              
+              {/* Wallet Connection Status */}
+              <div className="flex justify-center mt-6">
+                <WalletConnectionManager />
+              </div>
             </div>
           </div>
 
