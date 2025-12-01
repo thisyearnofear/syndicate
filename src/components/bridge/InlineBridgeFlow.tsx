@@ -10,10 +10,10 @@
 import React, { useState, useEffect } from 'react';
 import { design } from '@/config';
 import { Loader, CircleCheck, AlertCircle, ExternalLink } from 'lucide-react';
-import { solanaBridgeService } from '@/services/solanaBridgeService';
-import type { BridgeResult } from '@/services/bridgeService';
+import { bridgeManager } from '@/services/bridges';
+import type { BridgeResult } from '@/services/bridges/types';
 import { Button } from '@/shared/components/ui/Button';
-import { savePendingBridge, saveBalanceBeforeBridge, getSolanaExplorerLink } from '@/utils/bridgeStateManager';
+import { savePendingBridge, getSolanaExplorerLink } from '@/utils/bridgeStateManager';
 
 export interface InlineBridgeFlowProps {
     sourceChain: 'solana' | 'ethereum';
@@ -61,76 +61,86 @@ export function InlineBridgeFlow({
 
         try {
             // Use selected protocol or default to CCTP
-            const protocol = selectedProtocol || 'cctp';
-            setProtocol(protocol as 'cctp' | 'wormhole' | null);
+            const initialProtocol = selectedProtocol || 'cctp';
+            setProtocol(initialProtocol as 'cctp' | 'wormhole' | null);
 
-            const result = await solanaBridgeService.bridgeUsdcSolanaToBase(
+            const result = await bridgeManager.bridge({
+                sourceChain,
+                destinationChain: 'base',
                 amount,
-                recipient,
-                {
-                    onStatus: (status, data) => {
-                        setCurrentStatus(status);
-                        onStatus?.(status, data);
+                destinationAddress: recipient,
+                sourceAddress: recipient, // Placeholder
+                sourceToken: 'USDC',
+                protocol: initialProtocol,
+                onStatus: (status, data) => {
+                    setCurrentStatus(status);
+                    onStatus?.(status, data);
 
-                        setEvents(prev => {
-                            const next = [...prev, { status, info: data, ts: Date.now() }];
-                            return next.slice(-6);
+                    setEvents(prev => {
+                        const next = [...prev, { status, info: data, ts: Date.now() }];
+                        return next.slice(-6);
+                    });
+
+                    // Determine protocol based on status or selection
+                    if (!protocolState) {
+                        if (status.includes('cctp')) setProtocol('cctp');
+                        if (status.includes('wormhole')) setProtocol('wormhole');
+                    }
+
+                    // Extract transaction hash and save state
+                    const hash = data?.signature || data?.txHash || (data?.signatures && data.signatures[0]);
+                    if (hash) {
+                        setTxHash(hash);
+
+                        // Save bridge state for later checking
+                        savePendingBridge({
+                            signature: hash,
+                            protocol: (protocol || 'cctp') as 'cctp' | 'wormhole',
+                            amount,
+                            recipient,
+                            timestamp: Date.now(),
+                            sourceChain,
+                            destinationChain
                         });
+                    }
 
-                        // Determine protocol based on status or selection
-                        if (!protocolState) {
-                            if (status.includes('cctp')) setProtocol('cctp');
-                            if (status.includes('wormhole')) setProtocol('wormhole');
-                        }
+                    // Update progress based on status
+                    const progressMap: Record<string, number> = {
+                        "initializing": 10,
+                        "validating": 15,
+                        "approving": 20,
+                        "sending": 30,
+                        "sent": 50,
+                        "confirmed": 70,
+                        "waiting_attestation": 80,
+                        "attestation_fetched": 90,
+                        "minting": 95,
+                        "complete": 100,
 
-                        // Extract transaction hash and save state
-                        if (data?.signature) {
-                            setTxHash(data.signature);
+                        // Legacy
+                        'solana_bridge:start': 5,
+                        'solana_cctp:init': 10,
+                        'solana_cctp:prepare': 20,
+                        'solana_cctp:signing': 30,
+                        'solana_cctp:sent': 50,
+                        'solana_cctp:confirmed': 70,
+                        'solana_cctp:message_extracted': 80,
+                        'solana_cctp:attestation_fetched': 95,
+                        'solana_wormhole:init': 10,
+                        'solana_wormhole:prepare': 20,
+                        'solana_wormhole:connecting': 25,
+                        'solana_wormhole:initiating_transfer': 30,
+                        'solana_wormhole:signing': 40,
+                        'solana_wormhole:sent': 60,
+                        'solana_wormhole:waiting_for_vaa': 70,
+                        'solana_wormhole:vaa_received': 85,
+                        'solana_wormhole:relaying': 95,
+                    };
 
-                            // Save bridge state for later checking
-                            savePendingBridge({
-                                signature: data.signature,
-                                protocol: protocol as 'cctp' | 'wormhole',
-                                amount,
-                                recipient,
-                                timestamp: Date.now(),
-                                sourceChain,
-                                destinationChain
-                            });
-                        }
-                        if (data?.signatures && Array.isArray(data.signatures)) {
-                            setTxHash(data.signatures[0]);
-                        }
-
-                        // Update progress based on status
-                        const progressMap: Record<string, number> = {
-                            'solana_bridge:start': 5,
-                            'solana_cctp:init': 10,
-                            'solana_cctp:prepare': 20,
-                            'solana_cctp:signing': 30,
-                            'solana_cctp:sent': 50,
-                            'solana_cctp:confirmed': 70,
-                            'solana_cctp:message_extracted': 80,
-                            'solana_cctp:attestation_fetched': 95,
-                            'solana_wormhole:init': 10,
-                            'solana_wormhole:prepare': 20,
-                            'solana_wormhole:connecting': 25,
-                            'solana_wormhole:initiating_transfer': 30,
-                            'solana_wormhole:signing': 40,
-                            'solana_wormhole:sent': 60,
-                            'solana_wormhole:waiting_for_vaa': 70,
-                            'solana_wormhole:vaa_received': 85,
-                            'solana_wormhole:relaying': 95,
-                            'solana_wormhole:swapping': 97,
-                            'solana_wormhole:swap_complete': 99,
-                        };
-
-                        const newProgress = progressMap[status];
-                        if (newProgress) setProgress(newProgress);
-                    },
-                    preferredProtocol: selectedProtocol
+                    const newProgress = progressMap[status];
+                    if (newProgress) setProgress(newProgress);
                 }
-            );
+            });
 
             if (result.success) {
                 setProgress(100);
@@ -235,26 +245,6 @@ export function InlineBridgeFlow({
                     <div className="text-xs text-white/70 mb-2">Status</div>
                     <div className="flex flex-wrap gap-2">
                         {events.map((e, idx) => {
-                            const labelMap: Record<string, string> = {
-                                'solana_bridge:start': 'init',
-                                'solana_cctp:init': 'init',
-                                'solana_cctp:prepare': 'prepare',
-                                'solana_cctp:signing': 'signing',
-                                'solana_cctp:sent': 'sent',
-                                'solana_cctp:confirmed': 'confirmed',
-                                'solana_cctp:message_extracted': 'message',
-                                'solana_cctp:attestation_fetched': 'attestation',
-                                'solana_wormhole:init': 'init',
-                                'solana_wormhole:prepare': 'prepare',
-                                'solana_wormhole:connecting': 'connecting',
-                                'solana_wormhole:initiating_transfer': 'sent',
-                                'solana_wormhole:signing': 'signing',
-                                'solana_wormhole:sent': 'sent',
-                                'solana_wormhole:waiting_for_vaa': 'guardians',
-                                'solana_wormhole:vaa_received': 'vaa',
-                                'solana_wormhole:relaying': 'relaying',
-                            };
-                            const label = labelMap[e.status] || 'update';
                             return (
                                 <div
                                     key={idx}
@@ -266,7 +256,7 @@ export function InlineBridgeFlow({
                                         color: design.colors.textSecondary,
                                     }}
                                 >
-                                    <span className="text-white/80">{label}</span>
+                                    <span className="text-white/80">{e.status}</span>
                                     <span className="text-white/50">{new Date(e.ts).toLocaleTimeString()}</span>
                                 </div>
                             );
@@ -365,6 +355,17 @@ function getStatusMessage(status: string, error: string | null): string {
 
     const messages: Record<string, string> = {
         'starting': 'Starting Bridge...',
+        'initializing': 'Initializing...',
+        'validating': 'Validating...',
+        'approving': 'Approving Token...',
+        'sending': 'Sending Transaction...',
+        'sent': 'Transaction Sent!',
+        'confirmed': 'Confirmed on Source Chain',
+        'waiting_attestation': 'Waiting for Attestation...',
+        'attestation_fetched': 'Attestation Received',
+        'minting': 'Minting on Destination...',
+
+        // Legacy
         'solana_bridge:start': 'Initializing Bridge...',
         'solana_cctp:init': 'Initializing CCTP Bridge...',
         'solana_cctp:prepare': 'Preparing Transaction...',
@@ -392,6 +393,13 @@ function getStatusDescription(status: string, error: string | null): string {
     if (status === 'complete') return 'Your USDC has been successfully bridged to Base Network';
 
     const descriptions: Record<string, string> = {
+        'approving': 'Please approve the transaction in your wallet',
+        'sending': 'Please confirm the transfer in your wallet',
+        'sent': 'Waiting for network confirmation',
+        'waiting_attestation': 'Waiting for Circle to verify the transfer (can take ~15 mins)',
+        'attestation_fetched': 'Ready to mint on Base',
+
+        // Legacy
         'solana_cctp:signing': 'Please approve the transaction in your Phantom wallet',
         'solana_cctp:sent': 'Waiting for Solana network confirmation',
         'solana_cctp:confirmed': 'Fetching attestation from Circle',

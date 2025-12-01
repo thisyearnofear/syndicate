@@ -8,7 +8,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { web3Service, type TicketPurchaseResult, type UserBalance, type UserTicketInfo, type OddsInfo } from '@/services/web3Service';
 import { useWalletConnection } from './useWalletConnection';
-import { nearChainSignatureService } from '@/services/nearChainSignatureService';
 import { WalletTypes } from '@/domains/wallet/services/unifiedWalletService';
 import type { SyndicateInfo, PurchaseOptions, SyndicateImpact, PurchaseResult } from '@/domains/lottery/types';
 import { octantVaultService } from '@/services/octantVaultService';
@@ -141,10 +140,8 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       let success = false;
 
       if (walletType === WalletTypes.NEAR) {
-        // Initialize NEAR Chain Signatures path with NEAR accountId
-        success = await nearChainSignatureService.initialize(
-          address ? { accountId: address } : undefined
-        );
+        // NEAR uses bridge manager directly, no separate initialization needed
+        success = true;
       } else if (walletType === WalletTypes.PHANTOM) {
         success = true;
       } else {
@@ -499,41 +496,11 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
           yieldToCausesPercentage || 20
         );
       } else if (walletType === WalletTypes.NEAR) {
-        // Route NEAR users through Chain Signatures service with status updates
-        const provider = new (await import('ethers')).ethers.JsonRpcProvider((await import('@/config')).CHAINS.base.rpcUrl);
-        result = await nearChainSignatureService.purchaseTicketsOnBase(ticketCount, {
-          onStatus: async (stage, data) => {
-            setState(prev => ({ ...prev, nearStages: [...prev.nearStages, stage] }));
-            if (stage === 'deriving_address' && data?.recipient) {
-              const recipient = data.recipient as string;
-              let balanceEth = '0';
-              try {
-                const bal = await provider.getBalance(recipient);
-                balanceEth = (await import('ethers')).ethers.formatEther(bal);
-              } catch { }
-              setState(prev => ({ ...prev, nearRecipient: recipient, nearEthBalance: balanceEth }));
-            }
-            if (stage === 'tx_ready' && data?.unsignedParams) {
-              try {
-                const ethersMod = await import('ethers');
-                const up = data.unsignedParams as { maxFeePerGas: bigint; gasLimit: bigint };
-                const estimatedWei = up.maxFeePerGas * up.gasLimit;
-                const estimatedEth = ethersMod.ethers.formatEther(estimatedWei);
-                setState(prev => ({
-                  ...prev,
-                  nearEstimatedFeeEth: estimatedEth,
-                  nearHasEnoughGas: prev.nearEthBalance ? Number(prev.nearEthBalance) >= Number(estimatedEth) : undefined,
-                }));
-              } catch { }
-            }
-            if (stage === 'signature_requested' && data?.requestId) {
-              setState(prev => ({ ...prev, nearRequestId: data.requestId }));
-            }
-            if (stage === 'complete' && data?.txHash) {
-              setState(prev => ({ ...prev, lastTxHash: data.txHash }));
-            }
-          }
-        });
+        // NEAR wallet flow - to be implemented with bridge manager
+        result = {
+          success: false,
+          error: 'NEAR wallet purchases coming soon. Please use an EVM wallet for now.',
+        };
       } else if (walletType === WalletTypes.PHANTOM) {
         result = {
           success: false,

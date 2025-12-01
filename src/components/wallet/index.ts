@@ -8,7 +8,7 @@
  */
 
 // Multi-wallet support (restored)
-export { default as NearWalletConnection } from './NearWalletConnection';
+
 export { default as SolanaWalletConnection } from './SolanaWalletConnection';
 export { default as WalletConnectionOptions } from './WalletConnectionOptions';
 export { default as WalletConnectionManager } from './WalletConnectionManager';

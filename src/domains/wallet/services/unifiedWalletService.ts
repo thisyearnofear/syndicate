@@ -294,13 +294,8 @@ export function useUnifiedWallet(): {
             address = accountId; // Store NEAR accountId in address field
             chainId = 0; // Sentinel for NEAR (non-EVM)
 
-            // Optionally, initialize NEAR chain signature service here (non-blocking)
-            try {
-              const { nearChainSignatureService } = await import('@/services/nearChainSignatureService');
-              await nearChainSignatureService.initialize({ accountId, selector });
-            } catch (svcError) {
-              console.warn('Failed to initialize NEAR Chain Signatures service:', svcError);
-            }
+            // NEAR wallet connected successfully
+            // Bridge manager will handle NEAR operations when needed
           } catch (error: any) {
             if (error.code === 4001) {
               throw createError('CONNECTION_REJECTED', 'Connection rejected by user');

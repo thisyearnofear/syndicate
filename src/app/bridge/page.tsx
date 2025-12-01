@@ -21,7 +21,7 @@ import {
   CompactStack,
   CompactSection,
 } from '@/shared/components/premium/CompactLayout';
-import type { BridgeResult } from '@/services/bridgeService';
+import type { BridgeResult } from '@/services/bridges/types';
 
 export default function BridgePage() {
   // Get both Solana and EVM wallet state from unified hook
