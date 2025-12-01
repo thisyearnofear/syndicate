@@ -110,6 +110,9 @@ class Web3Service {
   private megapotContractAddress: string = CONTRACTS.megapot;
   private usdcContractAddress: string = CONTRACTS.usdc;
   private isInitialized: boolean = false;
+  private megapotContract: ethers.Contract | null = null;
+  private usdcContract: ethers.Contract | null = null;
+  private signer: ethers.Signer | null = null;
 
   /**
    * Initialize Web3 service with user's wallet
@@ -130,6 +133,18 @@ class Web3Service {
 
       // Ensure we're on Base network BEFORE marking as initialized
       await this.ensureCorrectNetwork();
+
+      this.signer = await this.provider.getSigner();
+      this.megapotContract = new ethers.Contract(
+        this.megapotContractAddress,
+        MEGAPOT_ABI,
+        this.provider
+      );
+      this.usdcContract = new ethers.Contract(
+        this.usdcContractAddress,
+        USDC_ABI,
+        this.provider
+      );
 
       this.isInitialized = true;
       console.log('Web3 service initialized successfully');
@@ -498,7 +513,7 @@ class Web3Service {
   * Claim winnings if user has won
   */
   async claimWinnings(): Promise<string> {
-  if (!this.isInitialized || !this.megapotContract) {
+  if (!this.isInitialized) {
       throw new Error('Contracts not initialized');
     }
     if (!isBrowser()) {
@@ -506,7 +521,12 @@ class Web3Service {
     }
 
     try {
-      const tx = await this.megapotContract.withdrawWinnings();
+      const txContract = new ethers.Contract(
+        this.megapotContractAddress,
+        MEGAPOT_ABI,
+        await this.getFreshSigner()
+      );
+      const tx = await txContract.withdrawWinnings();
       const receipt = await tx.wait();
       return receipt.hash;
     } catch (error) {

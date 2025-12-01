@@ -95,7 +95,7 @@ export function PuzzlePiece({
       </div>
 
       {/* Floating animation */}
-      <style jsx>{`
+      <style>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px) rotate(0deg); }
           33% { transform: translateY(-10px) rotate(1deg); }
@@ -159,7 +159,7 @@ export function PuzzleGrid({
         </div>
       ))}
 
-      <style jsx>{`
+      <style>{`
         .staggered-grid .stagger-0 { transform: translateY(0); }
         .staggered-grid .stagger-1 { transform: translateY(1rem); }
         .staggered-grid .stagger-2 { transform: translateY(0.5rem); }

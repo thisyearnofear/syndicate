@@ -165,7 +165,7 @@ export default function SyndicateCard({
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .animate-pulse-slow {
           animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }

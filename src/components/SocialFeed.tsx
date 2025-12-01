@@ -198,7 +198,7 @@ export default function SocialFeed({ className = "" }: SocialFeedProps) {
         </div>
       ))}
       
-      <style jsx>{`
+      <style>{`
         .glass-premium {
           background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
           backdrop-filter: blur(12px);

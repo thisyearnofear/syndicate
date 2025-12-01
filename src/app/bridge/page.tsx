@@ -2,7 +2,7 @@
 
 /**
  * BRIDGE PAGE
- * 
+ *
  * Core Principles Applied:
  * - ENHANCEMENT FIRST: Premium design with glass effects and gradients
  * - MODULAR: Uses FocusedBridgeFlow for consistency with modal
@@ -11,24 +11,25 @@
  * - FIX: Unified wallet state and single bridge implementation
  */
 
-import React, { useState } from 'react';
-import { FocusedBridgeFlow } from '@/components/bridge/FocusedBridgeFlow';
-import { useWalletConnection } from '@/hooks/useWalletConnection';
-import { Button } from '@/shared/components/ui/Button';
-import { WalletConnectionCard } from '@/components/wallet/WalletConnectionCard';
-import WalletConnectionManager from '@/components/wallet/WalletConnectionManager';
+import React, { useState } from "react";
+import { FocusedBridgeFlow } from "@/components/bridge/FocusedBridgeFlow";
+import { useWalletConnection } from "@/hooks/useWalletConnection";
+import { Button } from "@/shared/components/ui/Button";
+import { WalletConnectionCard } from "@/components/wallet/WalletConnectionCard";
+import WalletConnectionManager from "@/components/wallet/WalletConnectionManager";
 import {
   CompactContainer,
   CompactStack,
   CompactSection,
-} from '@/shared/components/premium/CompactLayout';
-import type { BridgeResult } from '@/services/bridges/types';
+} from "@/shared/components/premium/CompactLayout";
+import type { BridgeResult } from "@/services/bridges/types";
 
 export default function BridgePage() {
   // Get both Solana and EVM wallet state from unified hook
-  const { address, isConnected, evmAddress, evmConnected } = useWalletConnection();
+  const { address, isConnected, evmAddress, evmConnected } =
+    useWalletConnection();
   const [isBridging, setIsBridging] = useState(false);
-  const [bridgeAmount, setBridgeAmount] = useState('10');
+  const [bridgeAmount, setBridgeAmount] = useState("10");
   const [showSuccess, setShowSuccess] = useState(false);
 
   const handleBridgeComplete = (result: BridgeResult) => {
@@ -36,12 +37,12 @@ export default function BridgePage() {
     setIsBridging(false);
     setTimeout(() => {
       setShowSuccess(false);
-      setBridgeAmount('10');
+      setBridgeAmount("10");
     }, 3000);
   };
 
   const handleBridgeError = (error: string) => {
-    console.error('Bridge error:', error);
+    console.error("Bridge error:", error);
     // Error is displayed in the FocusedBridgeFlow component
   };
 
@@ -60,7 +61,8 @@ export default function BridgePage() {
               Cross-Chain Bridge
             </h1>
             <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Seamlessly bridge your USDC to Base Network and get ready to participate in cross-chain lotteries
+              Seamlessly bridge your USDC to Base Network and get ready to
+              participate in cross-chain lotteries
             </p>
           </div>
 
@@ -78,8 +80,7 @@ export default function BridgePage() {
                   {!isConnected && (
                     <WalletConnectionCard
                       title="Connect Solana Wallet"
-                      description="You need a Solana wallet (Phantom) to send USDC"
-                      walletType="phantom"
+                      subtitle="You need a Solana wallet (Phantom) to send USDC"
                     />
                   )}
                   {!evmConnected && (
@@ -87,16 +88,18 @@ export default function BridgePage() {
                       <div className="flex items-start gap-3 mb-4">
                         <span className="text-2xl flex-shrink-0">🔗</span>
                         <div>
-                          <h4 className="text-white font-semibold mb-1">Connect EVM Wallet</h4>
+                          <h4 className="text-white font-semibold mb-1">
+                            Connect EVM Wallet
+                          </h4>
                           <p className="text-gray-300 text-sm mb-3">
-                            Connect an EVM wallet (MetaMask, Rainbow, or Phantom EVM) to receive on Base
+                            Connect an EVM wallet (MetaMask, Rainbow, or Phantom
+                            EVM) to receive on Base
                           </p>
                         </div>
                       </div>
                       <WalletConnectionCard
                         title="Connect EVM Wallet"
-                        description="Required to receive bridged USDC on Base"
-                        walletType="metamask"
+                        subtitle="Required to receive bridged USDC on Base"
                       />
                     </div>
                   )}
@@ -107,8 +110,12 @@ export default function BridgePage() {
                     <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center mx-auto">
                       <span className="text-2xl">✅</span>
                     </div>
-                    <h2 className="text-2xl font-bold text-white">Bridge Successful!</h2>
-                    <p className="text-green-300">Your USDC has been bridged to Base Network</p>
+                    <h2 className="text-2xl font-bold text-white">
+                      Bridge Successful!
+                    </h2>
+                    <p className="text-green-300">
+                      Your USDC has been bridged to Base Network
+                    </p>
                   </div>
                 </div>
               ) : (
@@ -116,7 +123,9 @@ export default function BridgePage() {
                   {!isBridging ? (
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-semibold text-white mb-2">Amount to Bridge (USDC)</label>
+                        <label className="block text-sm font-semibold text-white mb-2">
+                          Amount to Bridge (USDC)
+                        </label>
                         <input
                           type="number"
                           min="0.01"
@@ -130,7 +139,9 @@ export default function BridgePage() {
 
                       <Button
                         onClick={() => setIsBridging(true)}
-                        disabled={!bridgeAmount || parseFloat(bridgeAmount) <= 0}
+                        disabled={
+                          !bridgeAmount || parseFloat(bridgeAmount) <= 0
+                        }
                         className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <span className="text-lg mr-2">🌉</span>
@@ -142,7 +153,7 @@ export default function BridgePage() {
                       sourceChain="solana"
                       destinationChain="base"
                       amount={bridgeAmount}
-                      recipient={evmAddress || ''}
+                      recipient={evmAddress || ""}
                       onComplete={handleBridgeComplete}
                       onError={handleBridgeError}
                       onCancel={() => setIsBridging(false)}
@@ -160,7 +171,9 @@ export default function BridgePage() {
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-green-400 to-emerald-500 flex items-center justify-center mx-auto mb-4">
                   <span className="text-white text-xl">🚀</span>
                 </div>
-                <h3 className="text-white font-semibold mb-2">Fast Transfers</h3>
+                <h3 className="text-white font-semibold mb-2">
+                  Fast Transfers
+                </h3>
                 <p className="text-gray-400 text-sm">
                   Bridge assets quickly with Circle's CCTP protocol
                 </p>

@@ -1,7 +1,7 @@
 # Current State and Roadmap
 
-**Last Updated**: Nov 22, 2025  
-**Status**: Phase 0 (Stabilization in Progress)
+**Last Updated**: Dec 2, 2025  
+**Status**: Phase 0 (Stabilization progressing)
 
 ## Quick Summary
 
@@ -9,8 +9,9 @@
 |-----------|--------|-------|
 | **EVM Wallet (MetaMask)** | ✅ Working | Connects reliably |
 | **Solana Wallet (Phantom)** | ✅ Working | Detects, balance queries sometimes slow |
-| **EVM → Base Bridge (CCTP)** | ⚠️ Unreliable | Occasionally fails, retries help |
-| **Solana → Base Bridge (CCTP)** | ⚠️ Unreliable | Burn succeeds, mint sometimes fails |
+| **EVM → Base Bridge (CCTP)** | ✅ Improved | Consolidated attestation, better redemption |
+| **Solana → Base Bridge (CCTP)** | ⚠️ Operational (manual mint) | Burn + attestation stable; UI mint fallback |
+| **Wormhole Fallback (EVM)** | ✅ Working | SDK v4 transfer/redeem; EVM signer adapter |
 | **Yield Strategies (Aave/Morpho)** | ❌ Not Working | UI built but vault integration untested |
 | **Syndicates (Pooling)** | ❌ Not Working | Components exist, governance/distribution not implemented |
 | **Cause Funding** | ❌ Removed | Deprioritized (was Octant-specific) |
@@ -77,11 +78,11 @@ npm run dev
 # Check balance displayed
 ```
 
-### ⚠️ Unreliable: EVM → Base Bridge (CCTP)
+### ✅ Improved: EVM → Base Bridge (CCTP)
 
 **Files**:
-- `src/services/bridgeService.ts`
-- `src/hooks/useCrossChainPurchase.ts`
+- `src/services/bridges/protocols/cctp.ts`
+- `src/services/bridges/index.ts`
 - `src/components/bridge/BridgeForm.tsx`
 
 **What Works**:
@@ -89,12 +90,11 @@ npm run dev
 - Amount validation
 - Protocol selection
 
-**What Doesn't**:
-- CCTP burn succeeds ~70% of the time
-- Attestation service unreliable
-- Mint on Base fails if attestation delayed
-- No retry logic for failed steps
-- User has no visibility into failure reason
+**Improvements**:
+- Consolidated attestation polling with backoff
+- Automatic redemption on Base when signer available
+- Manual mint flow exposed in UI when auto fails
+- Clear status callbacks and error surfaced
 
 **Error Pattern**:
 ```
@@ -120,21 +120,20 @@ npm run dev
 # Monitor bridge status (often shows "pending" indefinitely)
 ```
 
-### ⚠️ Unreliable: Solana → Base Bridge (CCTP)
+### ⚠️ Operational (Manual Mint): Solana → Base Bridge (CCTP)
 
 **Files**:
-- `src/services/solanaBridgeService.ts`
-- `src/components/bridge/SolanaCheckout.tsx`
+- `src/services/bridges/protocols/cctp.ts`
+- `src/components/bridge/BridgeForm.tsx`
 
 **What Works**:
 - Burn on Solana completes
 - UI shows transaction hash
 
-**What Doesn't**:
-- Attestation retrieval fails frequently
-- Mint transaction on Base fails
-- No fallback mechanism
-- Error messages unclear
+**Status**:
+- Burn + message extraction aligned with CCTP V2 Solana programs
+- Attestation retrieval consolidated
+- UI provides manual `receiveMessage` mint flow on Base
 
 **Error Pattern**:
 ```
@@ -176,7 +175,7 @@ const mintResult = await mintOnBase(attestation);
 - [ ] Add bridge transaction monitoring
 - [ ] Create integration tests for happy path + failure modes
 
-**Deliverable**: Reliable Ethereum → Base bridge
+**Deliverable**: Reliable Ethereum → Base bridge (delivered: improved)
 
 #### Week 3: Stabilize Solana
 - [ ] Fix Phantom wallet balance queries
@@ -185,7 +184,7 @@ const mintResult = await mintOnBase(attestation);
 - [ ] Test on devnet before mainnet
 - [ ] Document Solana-specific edge cases
 
-**Deliverable**: Stable Solana ticket purchase flow
+**Deliverable**: Stable Solana ticket purchase flow (in progress: manual mint enabled)
 
 **Output**: 
 ```

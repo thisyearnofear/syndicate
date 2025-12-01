@@ -237,27 +237,26 @@ export class CctpProtocol implements BridgeProtocol {
                     const baseSigner = await this.getEvmProviderSigner(wallet);
                     if (baseSigner.signer) {
                         const transmitterWithSigner = messageTransmitter.connect(baseSigner.signer);
-                        const mintTx = await transmitterWithSigner.receiveMessage(message, attestation);
+                        const receiveMessage = transmitterWithSigner.getFunction('receiveMessage');
+                        const mintTx = await receiveMessage(message, attestation);
                         const mintReceipt = await mintTx.wait();
                         mintTxHash = mintReceipt.hash;
                         onStatus?.('complete', { mintTxHash });
                     }
                 }
             } catch (mintError) {
-                // Minting on Base requires user to have connected to Base network
-                // Return attestation for manual completion
                 console.warn('[CCTP] Automatic Base minting failed, returning attestation for manual redemption:', mintError);
-                onStatus?.('minting_manual_required', { 
+                onStatus?.('minting', { 
                     message, 
                     attestation,
-                    reason: 'Base wallet connection required for automatic minting'
+                    requiresManualMint: true,
                 });
             }
 
             return {
                 success: true,
                 protocol: 'cctp',
-                status: mintTxHash ? 'complete' : 'waiting_redemption',
+                status: mintTxHash ? 'complete' : 'minting',
                 sourceTxHash: rcBurn.hash,
                 destinationTxHash: mintTxHash || undefined,
                 bridgeId: 'cctp-evm-v2',
@@ -370,24 +369,44 @@ export class CctpProtocol implements BridgeProtocol {
             // Get the correct domain for Base (Ethereum testnet/mainnet routing)
             const destinationDomain = 6; // Base domain in CCTP
 
-            // Build complete depositForBurn instruction with all required keys
+            const discriminator = await this.anchorDiscriminator('deposit_for_burn');
+            const destinationCaller = new Uint8Array(32);
+            const maxFee = this.u64ToBuffer(0n);
+            const minFinalityThreshold = this.u32ToBuffer(2000);
+
             const instructionData = Buffer.concat([
-                Buffer.from([0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]), // depositForBurn discriminator
+                discriminator,
                 this.u64ToBuffer(BigInt(amountInLamports)),
                 this.u32ToBuffer(destinationDomain),
-                recipientBytes32 // 32-byte padded recipient
+                Buffer.from(recipientBytes32),
+                Buffer.from(destinationCaller),
+                maxFee,
+                minFinalityThreshold,
             ]);
+
+            const tokenMessengerPda = PublicKey.findProgramAddressSync([
+                Buffer.from('token_messenger')
+            ], tokenMessengerProgram)[0];
+            const tokenMinterPda = PublicKey.findProgramAddressSync([
+                Buffer.from('token_minter')
+            ], tokenMessengerProgram)[0];
+            const localTokenPda = PublicKey.findProgramAddressSync([
+                Buffer.from('local_token'),
+                usdcMint.toBuffer(),
+            ], tokenMessengerProgram)[0];
 
             const depositForBurnIx = new TransactionInstruction({
                 programId: tokenMessengerProgram,
                 keys: [
-                    { pubkey: walletPublicKey, isSigner: true, isWritable: true }, // payer
-                    { pubkey: usdcAta, isSigner: false, isWritable: true }, // source token account
-                    { pubkey: burnTokenAddress, isSigner: false, isWritable: true }, // burn token mint
-                    { pubkey: messageTransmitterId, isSigner: false, isWritable: true }, // message transmitter
-                    { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false }, // spl-token program
-                    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }, // system program
-                    { pubkey: new PublicKey('CCTPmPZJUH85LnrXYXJKvb6xLvrqCJzRvnVHYZvBz8N5'), isSigner: false, isWritable: true }, // message sender authority
+                    { pubkey: walletPublicKey, isSigner: true, isWritable: true },
+                    { pubkey: usdcAta, isSigner: false, isWritable: true },
+                    { pubkey: burnTokenAddress, isSigner: false, isWritable: true },
+                    { pubkey: tokenMessengerPda, isSigner: false, isWritable: false },
+                    { pubkey: tokenMinterPda, isSigner: false, isWritable: true },
+                    { pubkey: localTokenPda, isSigner: false, isWritable: true },
+                    { pubkey: messageTransmitterId, isSigner: false, isWritable: false },
+                    { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+                    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
                 ],
                 data: instructionData,
             });
@@ -576,6 +595,23 @@ export class CctpProtocol implements BridgeProtocol {
         const addr = evmAddress.toLowerCase().replace('0x', '');
         const padded = addr.padStart(64, '0');
         return new Uint8Array(Buffer.from(padded, 'hex'));
+    }
+
+    private async anchorDiscriminator(name: string): Promise<Buffer> {
+        const input = new TextEncoder().encode(`global:${name}`);
+        if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
+            const digest = await window.crypto.subtle.digest('SHA-256', input.buffer as ArrayBuffer);
+            const arr = new Uint8Array(digest).slice(0, 8);
+            return Buffer.from(arr);
+        }
+        try {
+            const crypto = await import('crypto');
+            const h = crypto.createHash('sha256').update(input).digest();
+            return Buffer.from(h.slice(0, 8));
+        } catch {
+            const arr = new Uint8Array(8);
+            return Buffer.from(arr);
+        }
     }
 
     /**
