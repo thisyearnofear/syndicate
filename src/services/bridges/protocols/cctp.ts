@@ -274,11 +274,17 @@ export class CctpProtocol implements BridgeProtocol {
         } catch (error) {
             if (error instanceof BridgeError) throw error;
 
-            throw new BridgeError(
-                BridgeErrorCode.TRANSACTION_FAILED,
-                error instanceof Error ? error.message : 'CCTP EVM bridge failed',
-                'cctp'
-            );
+            const errorMsg = error instanceof Error ? error.message : 'CCTP EVM bridge failed';
+            console.error('[CCTP EVM] Bridge failed:', errorMsg);
+
+            // Return failure instead of throwing to allow fallback
+            return {
+                success: false,
+                protocol: 'cctp',
+                status: 'failed',
+                error: errorMsg,
+                errorCode: BridgeErrorCode.TRANSACTION_FAILED,
+            };
         }
     }
 
@@ -335,8 +341,14 @@ export class CctpProtocol implements BridgeProtocol {
                 { context: 'Phantom wallet', maxAttempts: 3, timeoutMs: 10000 }
             );
 
-            // Simple RPC connection (use configured endpoint)
-            const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://api.mainnet-beta.solana.com';
+            // Use RPC with fallback to proxy
+            // Prefer /api/solana-rpc proxy to avoid rate limiting
+            let rpcUrl: string;
+            if (typeof window !== 'undefined') {
+                rpcUrl = window.location.origin + '/api/solana-rpc';
+            } else {
+                rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://api.mainnet-beta.solana.com';
+            }
             const connection = new Connection(rpcUrl, 'confirmed');
 
             // Parse amount
@@ -439,11 +451,19 @@ export class CctpProtocol implements BridgeProtocol {
         } catch (error) {
             if (error instanceof BridgeError) throw error;
 
-            throw new BridgeError(
-                BridgeErrorCode.TRANSACTION_FAILED,
-                error instanceof Error ? error.message : 'CCTP Solana bridge failed',
-                'cctp'
-            );
+            const errorMsg = error instanceof Error ? error.message : 'CCTP Solana bridge failed';
+            console.error('[CCTP Solana] Bridge failed:', errorMsg);
+
+            // Return failure instead of throwing to allow fallback
+            return {
+                success: false,
+                protocol: 'cctp',
+                status: 'failed',
+                error: errorMsg,
+                errorCode: errorMsg.includes('RPC') || errorMsg.includes('403') || errorMsg.includes('blocked')
+                    ? BridgeErrorCode.NETWORK_ERROR
+                    : BridgeErrorCode.TRANSACTION_FAILED,
+            };
         }
     }
 

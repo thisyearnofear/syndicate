@@ -125,46 +125,76 @@ export class UnifiedBridgeManager {
 
             const result = await primaryProtocol.bridge(params);
 
-            // Update health cache on success
+            // Check if bridge succeeded
             if (result.success) {
+                // Update health cache on success
                 await this.updateHealthCache(primaryProtocol.name, true);
+                return result;
             }
 
-            return result;
-
-        } catch (error) {
-            console.warn(`[BridgeManager] ${primaryProtocol.name} failed:`, error);
-
-            // Update health cache on failure
+            // Protocol returned failure - try fallback
+            console.warn(`[BridgeManager] ${primaryProtocol.name} returned failure:`, result.error);
             await this.updateHealthCache(primaryProtocol.name, false);
 
-            // If fallback is disabled, throw error
-            if (params.allowFallback === false) {
-                throw error;
+        } catch (error) {
+            console.warn(`[BridgeManager] ${primaryProtocol.name} threw error:`, error);
+            await this.updateHealthCache(primaryProtocol.name, false);
+        }
+
+        // If fallback is disabled, return failure
+        if (params.allowFallback === false) {
+            return {
+                success: false,
+                protocol: primaryProtocol.name,
+                status: 'failed',
+                error: 'Primary protocol failed and fallback disabled',
+                errorCode: BridgeErrorCode.PROTOCOL_UNAVAILABLE,
+            };
+        }
+
+        // Try fallback protocol
+        const fallbackProtocol = await this.selectFallbackProtocol(
+            primaryProtocol.name,
+            params
+        );
+
+        if (!fallbackProtocol) {
+            return {
+                success: false,
+                protocol: primaryProtocol.name,
+                status: 'failed',
+                error: `All protocols failed for ${params.sourceChain} → ${params.destinationChain}`,
+                errorCode: BridgeErrorCode.PROTOCOL_UNAVAILABLE,
+            };
+        }
+
+        params.onStatus?.('validating', {
+            protocol: fallbackProtocol.name,
+            attempt: 'fallback',
+            reason: 'Primary protocol failed'
+        });
+
+        console.log(`[BridgeManager] Trying fallback: ${fallbackProtocol.name}`);
+        
+        try {
+            const fallbackResult = await fallbackProtocol.bridge(params);
+            if (fallbackResult.success) {
+                await this.updateHealthCache(fallbackProtocol.name, true);
+            } else {
+                await this.updateHealthCache(fallbackProtocol.name, false);
             }
+            return fallbackResult;
+        } catch (fallbackError) {
+            console.warn(`[BridgeManager] Fallback protocol ${fallbackProtocol.name} also failed:`, fallbackError);
+            await this.updateHealthCache(fallbackProtocol.name, false);
 
-            // Try fallback protocol
-            const fallbackProtocol = await this.selectFallbackProtocol(
-                primaryProtocol.name,
-                params
-            );
-
-            if (!fallbackProtocol) {
-                throw new BridgeError(
-                    BridgeErrorCode.PROTOCOL_UNAVAILABLE,
-                    `All protocols failed for ${params.sourceChain} → ${params.destinationChain}`,
-                    primaryProtocol.name
-                );
-            }
-
-            params.onStatus?.('validating', {
+            return {
+                success: false,
                 protocol: fallbackProtocol.name,
-                attempt: 'fallback',
-                reason: 'Primary protocol failed'
-            });
-
-            console.log(`[BridgeManager] Trying fallback: ${fallbackProtocol.name}`);
-            return await fallbackProtocol.bridge(params);
+                status: 'failed',
+                error: fallbackError instanceof Error ? fallbackError.message : 'Fallback protocol failed',
+                errorCode: BridgeErrorCode.PROTOCOL_UNAVAILABLE,
+            };
         }
     }
 
