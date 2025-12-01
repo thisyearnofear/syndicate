@@ -25,8 +25,17 @@ export function BridgeNotificationWrapper() {
 
         const fetchBalance = async () => {
             try {
+                // Detect if Solana or EVM address
+                const isSolanaAddress = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(state.address);
+                
+                // Build URL - only include chainId for EVM addresses
+                let url = `/api/balance?address=${encodeURIComponent(state.address)}`;
+                if (!isSolanaAddress) {
+                    url += '&chainId=8453'; // Base mainnet for EVM
+                }
+
                 // Try GET first (faster), fall back to POST
-                let response = await fetch(`/api/balance?address=${state.address}&chainId=8453`);
+                let response = await fetch(url);
                 
                 if (!response.ok && response.status === 405) {
                     // Method Not Allowed - try POST
@@ -35,7 +44,7 @@ export function BridgeNotificationWrapper() {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             address: state.address,
-                            chainId: 8453 // Base mainnet
+                            chainId: isSolanaAddress ? undefined : 8453 // Base mainnet for EVM only
                         })
                     });
                 }
@@ -43,7 +52,7 @@ export function BridgeNotificationWrapper() {
                 if (response.ok) {
                     const data = await response.json();
                     // Get USDC/balance field depending on chain
-                    const usdcBalance = parseFloat(data.usdc || data.balance || data.solana || '0');
+                    const usdcBalance = parseFloat(data.usdc || data.balance || data.solana || data.base || '0');
                     setBaseBalance(usdcBalance);
                 } else {
                     console.warn(`[BridgeNotification] Balance fetch failed with status ${response.status}`);
