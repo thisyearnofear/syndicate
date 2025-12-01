@@ -7,8 +7,10 @@ import { cctp as CCTP } from '@/config';
 import { Button } from '@/shared/components/ui/Button';
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner';
 import type { ChainIdentifier } from '@/services/bridges/types';
+import { useWalletConnection } from '@/hooks/useWalletConnection';
 
 export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void }) {
+  const { address: sourceAddress } = useWalletConnection();
   const [sourceChain, setSourceChain] = useState<ChainIdentifier>('solana');
   const [amount, setAmount] = useState('10.00');
   const [recipient, setRecipient] = useState('');
@@ -30,12 +32,16 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void 
     setMintTx(null);
 
     try {
+      if (!sourceAddress) {
+        throw new Error('Wallet not connected');
+      }
+
       const res = await bridgeManager.bridge({
         sourceChain,
         destinationChain: 'base',
         amount,
-        destinationAddress: recipient,
-        sourceAddress: recipient, // Placeholder
+        sourceAddress, // Actual wallet address
+        destinationAddress: recipient, // Destination address
         sourceToken: 'USDC',
         onStatus: (stage, info) => setLogs((prev) => [...prev, { stage, info }])
       });

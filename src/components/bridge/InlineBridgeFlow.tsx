@@ -14,6 +14,7 @@ import { bridgeManager } from '@/services/bridges';
 import type { BridgeResult } from '@/services/bridges/types';
 import { Button } from '@/shared/components/ui/Button';
 import { savePendingBridge, getSolanaExplorerLink } from '@/utils/bridgeStateManager';
+import { useWalletConnection } from '@/hooks/useWalletConnection';
 
 export interface InlineBridgeFlowProps {
     sourceChain: 'solana' | 'ethereum';
@@ -38,6 +39,7 @@ export function InlineBridgeFlow({
     onError,
     autoStart = false
 }: InlineBridgeFlowProps) {
+    const { address: sourceAddress } = useWalletConnection();
     const [currentStatus, setCurrentStatus] = useState<string>('idle');
     const [protocol, setProtocol] = useState<'cctp' | 'wormhole' | null>(null);
     const [protocolState] = useState<'cctp' | 'wormhole' | null>(null);
@@ -60,6 +62,10 @@ export function InlineBridgeFlow({
         setProgress(5);
 
         try {
+            if (!sourceAddress) {
+                throw new Error('Wallet not connected');
+            }
+
             // Use selected protocol or default to CCTP
             const initialProtocol = selectedProtocol || 'cctp';
             setProtocol(initialProtocol as 'cctp' | 'wormhole' | null);
@@ -68,8 +74,8 @@ export function InlineBridgeFlow({
                 sourceChain,
                 destinationChain: 'base',
                 amount,
-                destinationAddress: recipient,
-                sourceAddress: recipient, // Placeholder
+                sourceAddress, // Actual wallet address
+                destinationAddress: recipient, // Destination address
                 sourceToken: 'USDC',
                 protocol: initialProtocol,
                 onStatus: (status, data) => {

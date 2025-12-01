@@ -14,12 +14,13 @@ import { bridgeManager } from "@/services/bridges";
 import type { BridgeResult } from "@/services/bridges/types";
 import { Button } from "@/shared/components/ui/Button";
 import { ProtocolSelector, ProtocolOption } from "./ProtocolSelector";
+import { useWalletConnection } from "@/hooks/useWalletConnection";
 
 export interface FocusedBridgeFlowProps {
   sourceChain: "solana" | "ethereum";
   destinationChain: "base";
   amount: string;
-  recipient: string;
+  recipient: string; // Destination EVM address
   onComplete: (result: BridgeResult) => void;
   onStatus?: (status: string, data?: any) => void;
   onError: (error: string) => void;
@@ -38,6 +39,8 @@ export function FocusedBridgeFlow({
   onCancel,
   preselectedProtocol,
 }: FocusedBridgeFlowProps) {
+  // Get source wallet address
+  const { address: sourceAddress } = useWalletConnection();
   // If protocol is preselected, skip selection stage and go directly to bridging
   const [stage, setStage] = useState<
     "select" | "bridging" | "complete" | "error"
@@ -94,12 +97,16 @@ export function FocusedBridgeFlow({
     setProgress(5);
 
     try {
+      if (!sourceAddress) {
+        throw new Error('Source wallet not connected');
+      }
+
       const result = await bridgeManager.bridge({
         sourceChain,
         destinationChain: 'base',
         amount: amountInput,
-        destinationAddress: recipient,
-        sourceAddress: recipient, // Placeholder
+        sourceAddress, // Actual wallet address
+        destinationAddress: recipient, // Destination EVM address
         sourceToken: 'USDC',
         protocol: selectedProtocol.protocol,
         onStatus: (status, data) => {
