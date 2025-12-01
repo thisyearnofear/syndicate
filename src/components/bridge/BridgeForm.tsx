@@ -1,15 +1,15 @@
 "use client";
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { bridgeService } from '@/services/bridgeService';
+import { bridgeManager } from '@/services/bridges';
 import { ethers, Contract } from 'ethers';
 import { cctp as CCTP } from '@/config';
-import { BridgeStatus } from './BridgeStatus';
 import { Button } from '@/shared/components/ui/Button';
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner';
+import type { ChainIdentifier } from '@/services/bridges/types';
 
 export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void }) {
-  const [sourceChain, setSourceChain] = useState<'solana' | 'ethereum'>('solana');
+  const [sourceChain, setSourceChain] = useState<ChainIdentifier>('solana');
   const [amount, setAmount] = useState('10.00');
   const [recipient, setRecipient] = useState('');
   const [logs, setLogs] = useState<Array<{ stage: string; info?: any }>>([]);
@@ -30,12 +30,13 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void 
     setMintTx(null);
 
     try {
-      const res = await bridgeService.transferCrossChain({
+      const res = await bridgeManager.bridge({
         sourceChain,
         destinationChain: 'base',
         amount,
-        recipient,
-      }, {
+        destinationAddress: recipient,
+        sourceAddress: recipient, // Placeholder
+        sourceToken: 'USDC',
         onStatus: (stage, info) => setLogs((prev) => [...prev, { stage, info }])
       });
 
@@ -48,9 +49,11 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void 
       }
 
       // If Solana CCTP, prepare to mint on Base
-      const message = (res.details as any)?.message;
-      const attestation = (res.details as any)?.attestation;
-      if (sourceChain === 'solana' && message && attestation) {
+      const message = res.details?.message;
+      const attestation = res.details?.attestation;
+
+      // Check protocol and chain to determine if manual minting is needed
+      if (sourceChain === 'solana' && res.protocol === 'cctp' && message && attestation) {
         setCctpMessage(message);
         setCctpAttestation(attestation);
         setLogs((prev) => [...prev, { stage: 'ready_to_mint_on_base' }]);
@@ -88,7 +91,7 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void 
     } catch (e: any) {
       setError(e?.message || 'Mint on Base failed');
     }
-  }, [logs]);
+  }, [cctpMessage, cctpAttestation]);
 
   return (
     <div className="space-y-6">
@@ -96,9 +99,9 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void 
       <div className="space-y-3">
         <label className="block text-sm font-semibold text-white">Source Chain</label>
         <div className="relative">
-          <select 
-            className="w-full glass-premium p-4 rounded-xl border border-white/20 text-white bg-white/5 backdrop-blur-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 appearance-none cursor-pointer" 
-            value={sourceChain} 
+          <select
+            className="w-full glass-premium p-4 rounded-xl border border-white/20 text-white bg-white/5 backdrop-blur-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 appearance-none cursor-pointer"
+            value={sourceChain}
             onChange={(e) => setSourceChain(e.target.value as any)}
           >
             <option value="solana" className="bg-slate-800 text-white">🟣 Solana</option>
@@ -116,12 +119,12 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void 
       <div className="space-y-3">
         <label className="block text-sm font-semibold text-white">Amount (USDC)</label>
         <div className="relative">
-          <input 
+          <input
             type="number"
             step="0.01"
             min="0"
-            className="w-full glass-premium p-4 rounded-xl border border-white/20 text-white bg-white/5 backdrop-blur-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 placeholder-gray-400" 
-            value={amount} 
+            className="w-full glass-premium p-4 rounded-xl border border-white/20 text-white bg-white/5 backdrop-blur-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 placeholder-gray-400"
+            value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="10.00"
           />
@@ -134,20 +137,20 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void 
       {/* Recipient Address */}
       <div className="space-y-3">
         <label className="block text-sm font-semibold text-white">Recipient Address (Base Network)</label>
-        <input 
+        <input
           type="text"
-          className="w-full glass-premium p-4 rounded-xl border border-white/20 text-white bg-white/5 backdrop-blur-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 placeholder-gray-400 font-mono text-sm" 
-          value={recipient} 
-          onChange={(e) => setRecipient(e.target.value)} 
+          className="w-full glass-premium p-4 rounded-xl border border-white/20 text-white bg-white/5 backdrop-blur-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 placeholder-gray-400 font-mono text-sm"
+          value={recipient}
+          onChange={(e) => setRecipient(e.target.value)}
           placeholder="0x1234567890abcdef..."
         />
       </div>
 
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row gap-4">
-        <Button 
-          disabled={!canSubmit} 
-          className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 h-12 text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed" 
+        <Button
+          disabled={!canSubmit}
+          className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 h-12 text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={handleBridge}
         >
           {isSubmitting ? (
@@ -162,11 +165,11 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void 
             </div>
           )}
         </Button>
-        
+
         {sourceChain === 'solana' && cctpMessage && cctpAttestation && (
-          <Button 
+          <Button
             variant="outline"
-            className="flex-1 border-green-400/50 text-green-300 hover:bg-green-400/10 h-12 text-base font-semibold" 
+            className="flex-1 border-green-400/50 text-green-300 hover:bg-green-400/10 h-12 text-base font-semibold"
             onClick={handleMintOnBase}
           >
             <div className="flex items-center gap-2">
@@ -178,7 +181,18 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void 
       </div>
 
       {/* Bridge Status */}
-      <BridgeStatus logs={logs} error={error} />
+      {logs.length > 0 && (
+        <div className="glass-premium p-4 rounded-xl">
+          {logs.map((log, i) => (
+            <div key={i} className="text-sm text-gray-300">{log.stage}</div>
+          ))}
+        </div>
+      )}
+      {error && (
+        <div className="glass-premium p-4 rounded-xl border border-red-400/20 bg-red-400/5">
+          <div className="text-red-300">{error}</div>
+        </div>
+      )}
 
       {/* Success Actions */}
       {mintTx && (
@@ -189,20 +203,20 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void 
             </div>
             <h3 className="text-green-300 font-semibold">Bridge Complete!</h3>
           </div>
-          
+
           <div className="space-y-4">
             <div className="bg-green-500/10 p-4 rounded-lg border border-green-400/20">
               <p className="text-sm text-green-200 mb-2">Transaction Hash:</p>
-              <a 
-                className="text-green-400 hover:text-green-300 font-mono text-sm break-all underline" 
-                target="_blank" 
-                rel="noreferrer" 
+              <a
+                className="text-green-400 hover:text-green-300 font-mono text-sm break-all underline"
+                target="_blank"
+                rel="noreferrer"
                 href={`https://basescan.org/tx/${mintTx}`}
               >
                 {mintTx}
               </a>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 asChild
@@ -213,7 +227,7 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void 
                   <span>Buy Tickets Now</span>
                 </a>
               </Button>
-              
+
               <Button
                 variant="outline"
                 className="flex-1 border-blue-400/50 text-blue-300 hover:bg-blue-400/10"

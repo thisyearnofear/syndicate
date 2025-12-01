@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { bridgeService } from '@/services/bridgeService';
+import { bridgeManager } from '@/services/bridges';
 import { Button } from '@/shared/components/ui/Button';
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner';
+import type { ChainIdentifier, BridgeProtocolType } from '@/services/bridges/types';
 
 export interface ProtocolOption {
   id: string;
@@ -12,12 +13,12 @@ export interface ProtocolOption {
   icon: string;
   estimatedFee: string;
   etaMinutes: number;
-  protocol: 'cctp' | 'wormhole' | 'ccip';
+  protocol: BridgeProtocolType;
 }
 
 export interface ProtocolSelectorProps {
-  sourceChain: string;
-  destinationChain: string;
+  sourceChain: ChainIdentifier;
+  destinationChain: ChainIdentifier;
   amount: string;
   onSelect: (protocol: ProtocolOption) => void;
   onEstimateError?: (error: string) => void;
@@ -39,20 +40,24 @@ export function ProtocolSelector({
       try {
         setLoading(true);
         setError(null);
-        
-        // Get fee estimates from bridge service
-        const estimates = await bridgeService.estimateCrossChainFees(
+
+        // Get fee estimates from unified bridge manager
+        // This will query all available protocols in parallel
+        const estimates = await bridgeManager.estimate({
           sourceChain,
           destinationChain,
-          amount
-        );
-        
+          amount,
+          destinationAddress: '0x0000000000000000000000000000000000000000', // Dummy for estimation
+          sourceAddress: '0x0000000000000000000000000000000000000000',
+          sourceToken: 'USDC'
+        });
+
         // Map to our protocol options format
         const options: ProtocolOption[] = estimates.map((estimate, index) => {
           let name = '';
           let description = '';
           let icon = '';
-          
+
           switch (estimate.protocol) {
             case 'cctp':
               name = 'Circle CCTP';
@@ -69,37 +74,28 @@ export function ProtocolSelector({
               description = 'Reliable cross-chain messaging with Chainlink infrastructure.';
               icon = '🔗';
               break;
+            case 'near':
+              name = 'NEAR Chain Sigs';
+              description = 'Control EVM accounts directly from NEAR using MPC.';
+              icon = '∞';
+              break;
             default:
               name = estimate.protocol;
               description = `Bridging via ${estimate.protocol}`;
               icon = '🌉';
           }
-          
+
           return {
             id: `${estimate.protocol}-${index}`,
             name,
             description,
             icon,
             estimatedFee: estimate.fee,
-            etaMinutes: estimate.etaMinutes,
-            protocol: estimate.protocol as 'cctp' | 'wormhole' | 'ccip'
+            etaMinutes: Math.ceil(estimate.timeMs / 60000),
+            protocol: estimate.protocol
           };
         });
-        
-        // Add Wormhole as an option even if not in estimates (as it's a fallback)
-        const hasWormhole = options.some(opt => opt.protocol === 'wormhole');
-        if (!hasWormhole && sourceChain === 'solana') {
-          options.push({
-            id: 'wormhole-0',
-            name: 'Wormhole',
-            description: 'Fast bridging with guardian network verification. Used as fallback for CCTP.',
-            icon: '🌀',
-            estimatedFee: '0.001',
-            etaMinutes: 10,
-            protocol: 'wormhole'
-          });
-        }
-        
+
         setProtocols(options);
       } catch (err: any) {
         const errorMsg = err?.message || 'Failed to fetch protocol estimates';
@@ -152,10 +148,10 @@ export function ProtocolSelector({
           Select the bridging option that works best for you
         </p>
       </div>
-      
+
       <div className="space-y-3">
         {protocols.map((protocol) => (
-          <div 
+          <div
             key={protocol.id}
             className="glass-premium rounded-lg p-4 border border-white/20 hover:border-blue-400/50 transition-all cursor-pointer"
             onClick={() => onSelect(protocol)}
@@ -181,8 +177,8 @@ export function ProtocolSelector({
                 </p>
                 <div className="flex items-center justify-between mt-3">
                   <div className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-300">
-                    {protocol.etaMinutes <= 5 ? 'Fast' : 
-                     protocol.etaMinutes <= 15 ? 'Medium' : 'Slow'}
+                    {protocol.etaMinutes <= 5 ? 'Fast' :
+                      protocol.etaMinutes <= 15 ? 'Medium' : 'Slow'}
                   </div>
                   <div className="text-gray-400 text-xs">
                     ⏱️ {protocol.etaMinutes} min
@@ -193,7 +189,7 @@ export function ProtocolSelector({
           </div>
         ))}
       </div>
-      
+
       <div className="text-center text-xs text-gray-500 mt-2">
         <p>All protocols are secure and audited. Choose based on your preference for speed vs. cost.</p>
       </div>

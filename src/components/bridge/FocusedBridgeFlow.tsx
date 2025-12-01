@@ -10,8 +10,8 @@
 import React, { useState, useEffect } from "react";
 import { design } from "@/config";
 import { Loader, CircleCheck, AlertCircle, ExternalLink } from "lucide-react";
-import { solanaBridgeService } from "@/services/solanaBridgeService";
-import type { BridgeResult } from "@/services/bridgeService";
+import { bridgeManager } from "@/services/bridges";
+import type { BridgeResult } from "@/services/bridges/types";
 import { Button } from "@/shared/components/ui/Button";
 import { ProtocolSelector, ProtocolOption } from "./ProtocolSelector";
 
@@ -63,9 +63,11 @@ export function FocusedBridgeFlow({
       const protocol = preselectedProtocol === "wormhole" ? "wormhole" : "cctp";
       const protocolOption: ProtocolOption = {
         protocol: protocol,
+        id: `${protocol}-preselected`,
         name: protocol === "wormhole" ? "Wormhole" : "CCTP",
         icon: protocol === "wormhole" ? "⚡" : "🔵",
-        etaMinutes: protocol === "wormhole" ? "5-10" : "15-20",
+        estimatedFee: "0.01", // Placeholder
+        etaMinutes: protocol === "wormhole" ? 10 : 20,
         description: protocol === "wormhole" ? "Fast cross-chain bridge" : "Native USDC bridge"
       };
       setSelectedProtocol(protocolOption);
@@ -92,54 +94,54 @@ export function FocusedBridgeFlow({
     setProgress(5);
 
     try {
-      const result = await solanaBridgeService.bridgeUsdcSolanaToBase(
-        amountInput,
-        recipient,
-        {
-          onStatus: (status, data) => {
-            setCurrentStatus(status);
-            onStatus?.(status, data);
+      const result = await bridgeManager.bridge({
+        sourceChain,
+        destinationChain: 'base',
+        amount: amountInput,
+        destinationAddress: recipient,
+        sourceAddress: recipient, // Placeholder
+        sourceToken: 'USDC',
+        protocol: selectedProtocol.protocol,
+        onStatus: (status, data) => {
+          setCurrentStatus(status);
+          onStatus?.(status, data);
 
-            setEvents((prev) => {
-              const next = [...prev, { status, info: data, ts: Date.now() }];
-              return next.slice(-3); // Show only last 3 events
-            });
+          setEvents((prev) => {
+            const next = [...prev, { status, info: data, ts: Date.now() }];
+            return next.slice(-3); // Show only last 3 events
+          });
 
-            // Extract transaction hash
-            if (data?.signature) setTxHash(data.signature);
-            if (data?.signatures && Array.isArray(data.signatures)) {
-              setTxHash(data.signatures[0]);
-            }
+          // Extract transaction hash
+          if (data?.txHash) setTxHash(data.txHash);
+          if (data?.signature) setTxHash(data.signature);
 
-            // Update progress based on status
-            const progressMap: Record<string, number> = {
-              "solana_bridge:start": 5,
-              "solana_cctp:init": 10,
-              "solana_cctp:prepare": 20,
-              "solana_cctp:signing": 30,
-              "solana_cctp:sent": 50,
-              "solana_cctp:confirmed": 70,
-              "solana_cctp:message_extracted": 80,
-              "solana_cctp:attestation_fetched": 95,
-              "solana_wormhole:init": 10,
-              "solana_wormhole:prepare": 20,
-              "solana_wormhole:connecting": 25,
-              "solana_wormhole:initiating_transfer": 30,
-              "solana_wormhole:signing": 40,
-              "solana_wormhole:sent": 60,
-              "solana_wormhole:waiting_for_vaa": 70,
-              "solana_wormhole:vaa_received": 85,
-              "solana_wormhole:relaying": 95,
-              "solana_wormhole:swapping": 97,
-              "solana_wormhole:swap_complete": 99,
-            };
+          // Update progress based on status
+          const progressMap: Record<string, number> = {
+            "initializing": 10,
+            "validating": 15,
+            "approving": 20,
+            "sending": 30,
+            "sent": 50,
+            "confirmed": 70,
+            "waiting_attestation": 80,
+            "attestation_fetched": 90,
+            "minting": 95,
+            "complete": 100,
 
-            const newProgress = progressMap[status];
-            if (newProgress) setProgress(newProgress);
-          },
-          preferredProtocol: selectedProtocol.protocol,
+            // Legacy/Specific mappings
+            "solana_cctp:init": 10,
+            "solana_cctp:prepare": 20,
+            "solana_cctp:signing": 30,
+            "solana_cctp:sent": 50,
+            "solana_cctp:confirmed": 70,
+            "solana_cctp:message_extracted": 80,
+            "solana_cctp:attestation_fetched": 95,
+          };
+
+          const newProgress = progressMap[status];
+          if (newProgress) setProgress(newProgress);
         }
-      );
+      });
 
       if (result.success) {
         setProgress(100);
@@ -179,7 +181,17 @@ export function FocusedBridgeFlow({
 
     const messages: Record<string, string> = {
       starting: "Starting Bridge...",
-      "solana_bridge:start": "Initializing Bridge...",
+      initializing: "Initializing...",
+      validating: "Validating...",
+      approving: "Approving Token...",
+      sending: "Sending Transaction...",
+      sent: "Transaction Sent!",
+      confirmed: "Confirmed on Source Chain",
+      waiting_attestation: "Waiting for Attestation...",
+      attestation_fetched: "Attestation Received",
+      minting: "Minting on Destination...",
+
+      // Legacy
       "solana_cctp:init": "Initializing CCTP Bridge...",
       "solana_cctp:prepare": "Preparing Transaction...",
       "solana_cctp:signing": "Waiting for Signature...",
@@ -187,17 +199,6 @@ export function FocusedBridgeFlow({
       "solana_cctp:confirmed": "Confirmed on Solana",
       "solana_cctp:message_extracted": "Message Extracted",
       "solana_cctp:attestation_fetched": "Attestation Received",
-      "solana_wormhole:init": "Initializing Wormhole...",
-      "solana_wormhole:prepare": "Preparing Transfer...",
-      "solana_wormhole:connecting": "Connecting to Wormhole...",
-      "solana_wormhole:initiating_transfer": "Creating Transfer...",
-      "solana_wormhole:signing": "Waiting for Signature...",
-      "solana_wormhole:sent": "Transfer Initiated!",
-      "solana_wormhole:waiting_for_vaa": "Waiting for Guardians...",
-      "solana_wormhole:vaa_received": "VAA Received",
-      "solana_wormhole:relaying": "Relaying to Base...",
-      "solana_wormhole:swapping": "Swapping to native USDC...",
-      "solana_wormhole:swap_complete": "Swap Complete",
     };
 
     return messages[status] || "Processing...";
@@ -212,20 +213,18 @@ export function FocusedBridgeFlow({
       return "Your USDC has been successfully bridged to Base Network";
 
     const descriptions: Record<string, string> = {
+      approving: "Please approve the transaction in your wallet",
+      sending: "Please confirm the transfer in your wallet",
+      sent: "Waiting for network confirmation",
+      waiting_attestation: "Waiting for Circle to verify the transfer (can take ~15 mins)",
+      attestation_fetched: "Ready to mint on Base",
+
+      // Legacy
       "solana_cctp:signing":
         "Please approve the transaction in your Phantom wallet",
       "solana_cctp:sent": "Waiting for Solana network confirmation",
       "solana_cctp:confirmed": "Fetching attestation from Circle",
       "solana_cctp:attestation_fetched": "Ready to mint on Base",
-      "solana_wormhole:signing":
-        "Please approve the transaction in your Phantom wallet",
-      "solana_wormhole:sent": "Transaction confirmed on Solana",
-      "solana_wormhole:waiting_for_vaa":
-        "Wormhole guardians are signing your transfer",
-      "solana_wormhole:vaa_received": "Transfer approved by guardians",
-      "solana_wormhole:relaying": "Automatic relaying to Base in progress",
-      "solana_wormhole:swapping": "Executing swap on Base",
-      "solana_wormhole:swap_complete": "USDC ready on Base",
     };
 
     return (
@@ -355,7 +354,7 @@ export function FocusedBridgeFlow({
                   className="inline-flex items-center gap-2 mt-3 text-blue-400 hover:text-blue-300 text-sm"
                 >
                   <ExternalLink className="w-4 h-4" />
-                  View on Solana Explorer
+                  View on Explorer
                 </a>
               )}
             </div>
@@ -368,26 +367,6 @@ export function FocusedBridgeFlow({
             <div className="text-xs text-white/70 mb-2">Recent Activity</div>
             <div className="space-y-2">
               {events.map((e, idx) => {
-                const labelMap: Record<string, string> = {
-                  "solana_bridge:start": "init",
-                  "solana_cctp:init": "init",
-                  "solana_cctp:prepare": "prepare",
-                  "solana_cctp:signing": "signing",
-                  "solana_cctp:sent": "sent",
-                  "solana_cctp:confirmed": "confirmed",
-                  "solana_cctp:message_extracted": "message",
-                  "solana_cctp:attestation_fetched": "attestation",
-                  "solana_wormhole:init": "init",
-                  "solana_wormhole:prepare": "prepare",
-                  "solana_wormhole:connecting": "connecting",
-                  "solana_wormhole:initiating_transfer": "sent",
-                  "solana_wormhole:signing": "signing",
-                  "solana_wormhole:sent": "sent",
-                  "solana_wormhole:waiting_for_vaa": "guardians",
-                  "solana_wormhole:vaa_received": "vaa",
-                  "solana_wormhole:relaying": "relaying",
-                };
-                const label = labelMap[e.status] || "update";
                 return (
                   <div
                     key={idx}
@@ -399,7 +378,7 @@ export function FocusedBridgeFlow({
                       color: design.colors.textSecondary,
                     }}
                   >
-                    <span className="text-white/80">{label}</span>
+                    <span className="text-white/80">{e.status}</span>
                     <span className="text-white/50">
                       {new Date(e.ts).toLocaleTimeString()}
                     </span>
