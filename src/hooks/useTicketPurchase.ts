@@ -5,7 +5,7 @@
  * Integrates with Web3 service and provides UI state management
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { web3Service, type TicketPurchaseResult, type UserBalance, type UserTicketInfo, type OddsInfo } from '@/services/web3Service';
 import { useWalletConnection } from './useWalletConnection';
 import { WalletTypes } from '@/domains/wallet/services/unifiedWalletService';
@@ -91,6 +91,10 @@ export interface TicketPurchaseActions {
 
 export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions {
   const { isConnected, walletType, address } = useWalletConnection();
+  
+  // Debouncing refs for balance refresh
+  const lastBalanceRefreshRef = useRef<number>(0);
+  const balanceRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [state, setState] = useState<TicketPurchaseState>({
     isInitializing: false,
@@ -202,9 +206,31 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
   }, [isConnected, walletType, address]);
 
   /**
-   * Refresh user balance
+   * Refresh user balance - with debouncing to avoid excessive requests
+   * Min 2 seconds between requests
    */
   const refreshBalance = useCallback(async (): Promise<void> => {
+    const now = Date.now();
+    const timeSinceLastRefresh = now - lastBalanceRefreshRef.current;
+    const minRefreshInterval = 2000; // 2 seconds minimum
+
+    // If called too soon, debounce the request
+    if (timeSinceLastRefresh < minRefreshInterval) {
+      // Clear pending timeout and schedule a new one
+      if (balanceRefreshTimeoutRef.current) {
+        clearTimeout(balanceRefreshTimeoutRef.current);
+      }
+      
+      const delay = minRefreshInterval - timeSinceLastRefresh;
+      balanceRefreshTimeoutRef.current = setTimeout(async () => {
+        await refreshBalance(); // Recursive call after debounce
+      }, delay);
+      
+      return;
+    }
+
+    lastBalanceRefreshRef.current = now;
+
     setState(prev => ({ ...prev, isCheckingBalance: true }));
     try {
       if (walletType === WalletTypes.PHANTOM) {
@@ -225,6 +251,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
               isCheckingSolanaBalance: false
             }));
           } catch (e) {
+            console.warn('Failed to fetch Solana balance:', e);
             setState(prev => ({
               ...prev,
               isCheckingSolanaBalance: false
