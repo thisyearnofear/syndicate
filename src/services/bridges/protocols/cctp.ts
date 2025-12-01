@@ -226,21 +226,48 @@ export class CctpProtocol implements BridgeProtocol {
 
             onStatus?.('minting');
 
-            // 5. Mint on Base (would need Base signer)
-            // For now, return success with attestation
-            // UI can complete minting step
+            // 5. Mint on Base - try automatic redemption if we have provider
+            let mintTxHash: string | null = null;
+            try {
+                const baseProvider = new ethers.JsonRpcProvider(process.env.BASE_RPC_URL || 'https://mainnet.base.org');
+                const messageTransmitter = new Contract(base.messageTransmitter, this.MESSAGE_TRANSMITTER_ABI, baseProvider);
+                
+                // Check if we can get a signer for Base
+                if (typeof window !== 'undefined' && (window as any).ethereum) {
+                    const baseSigner = await this.getEvmProviderSigner(wallet);
+                    if (baseSigner.signer) {
+                        const transmitterWithSigner = messageTransmitter.connect(baseSigner.signer);
+                        const mintTx = await transmitterWithSigner.receiveMessage(message, attestation);
+                        const mintReceipt = await mintTx.wait();
+                        mintTxHash = mintReceipt.hash;
+                        onStatus?.('complete', { mintTxHash });
+                    }
+                }
+            } catch (mintError) {
+                // Minting on Base requires user to have connected to Base network
+                // Return attestation for manual completion
+                console.warn('[CCTP] Automatic Base minting failed, returning attestation for manual redemption:', mintError);
+                onStatus?.('minting_manual_required', { 
+                    message, 
+                    attestation,
+                    reason: 'Base wallet connection required for automatic minting'
+                });
+            }
 
             return {
                 success: true,
                 protocol: 'cctp',
-                status: 'complete',
+                status: mintTxHash ? 'complete' : 'waiting_redemption',
                 sourceTxHash: rcBurn.hash,
+                destinationTxHash: mintTxHash || undefined,
                 bridgeId: 'cctp-evm-v2',
                 details: {
                     burnTxHash: rcBurn.hash,
                     message,
                     attestation,
                     recipient: destinationAddress,
+                    mintTxHash: mintTxHash || undefined,
+                    requiresManualMint: !mintTxHash,
                 },
             };
 
