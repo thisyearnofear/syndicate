@@ -8,37 +8,58 @@ const BASE_RPC_URL = process.env.BASE_RPC_URL || 'https://mainnet.base.org';
 const SOLANA_USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const BASE_USDC_ADDRESS = process.env.NEXT_PUBLIC_BASE_USDC_ADDRESS || '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
+/**
+ * Internal function to handle balance fetching
+ */
+async function handleBalanceRequest(address: string, chainId?: number) {
+  if (!address) {
+    return NextResponse.json(
+      { error: 'Missing address parameter' },
+      { status: 400 }
+    );
+  }
+
+  // Detect wallet type from address format
+  const isEvmAddress = /^0x[a-fA-F0-9]{40}$/.test(address);
+  const isSolanaAddress = /^[1-9A-HJ-NP-Z]{43,44}$/.test(address);
+
+  if (!isEvmAddress && !isSolanaAddress) {
+    return NextResponse.json(
+      { error: 'Invalid address format - must be EVM (0x...) or Solana address' },
+      { status: 400 }
+    );
+  }
+
+  // Determine which chain to query
+  let targetChainId = chainId || 8453; // Default to Base
+
+  if (isSolanaAddress) {
+    return await getSolanaBalance(address);
+  } else {
+    return await getEvmBalance(address, targetChainId);
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const address = searchParams.get('address');
+    const chainId = searchParams.get('chainId') ? parseInt(searchParams.get('chainId')!) : undefined;
+    return handleBalanceRequest(address || '', chainId);
+  } catch (error: any) {
+    console.error('Balance API error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch balance', details: error?.message },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { address, chainId } = body;
-
-    if (!address) {
-      return NextResponse.json(
-        { error: 'Missing address parameter' },
-        { status: 400 }
-      );
-    }
-
-    // Detect wallet type from address format
-    const isEvmAddress = /^0x[a-fA-F0-9]{40}$/.test(address);
-    const isSolanaAddress = /^[1-9A-HJ-NP-Z]{43,44}$/.test(address);
-
-    if (!isEvmAddress && !isSolanaAddress) {
-      return NextResponse.json(
-        { error: 'Invalid address format - must be EVM (0x...) or Solana address' },
-        { status: 400 }
-      );
-    }
-
-    // Determine which chain to query
-    let targetChainId = chainId || 8453; // Default to Base
-
-    if (isSolanaAddress) {
-      return await getSolanaBalance(address);
-    } else {
-      return await getEvmBalance(address, targetChainId);
-    }
+    return handleBalanceRequest(address, chainId);
   } catch (error: any) {
     console.error('Balance API error:', error);
     return NextResponse.json(

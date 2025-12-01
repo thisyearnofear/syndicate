@@ -25,21 +25,28 @@ export function BridgeNotificationWrapper() {
 
         const fetchBalance = async () => {
             try {
-                // Use the new multi-chain balance endpoint
-                const response = await fetch('/api/balance', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        address: state.address,
-                        chainId: 8453 // Base mainnet
-                    })
-                });
+                // Try GET first (faster), fall back to POST
+                let response = await fetch(`/api/balance?address=${state.address}&chainId=8453`);
+                
+                if (!response.ok && response.status === 405) {
+                    // Method Not Allowed - try POST
+                    response = await fetch('/api/balance', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            address: state.address,
+                            chainId: 8453 // Base mainnet
+                        })
+                    });
+                }
 
                 if (response.ok) {
                     const data = await response.json();
                     // Get USDC/balance field depending on chain
-                    const usdcBalance = parseFloat(data.usdc || data.balance || '0');
+                    const usdcBalance = parseFloat(data.usdc || data.balance || data.solana || '0');
                     setBaseBalance(usdcBalance);
+                } else {
+                    console.warn(`[BridgeNotification] Balance fetch failed with status ${response.status}`);
                 }
             } catch (error) {
                 console.warn('Failed to fetch balance for bridge notification:', error);
