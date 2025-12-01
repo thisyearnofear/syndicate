@@ -21,7 +21,7 @@ async function handleBalanceRequest(address: string, chainId?: number) {
 
   // Detect wallet type from address format
   const isEvmAddress = /^0x[a-fA-F0-9]{40}$/.test(address);
-  const isSolanaAddress = /^[1-9A-HJ-NP-Z]{43,44}$/.test(address);
+  const isSolanaAddress = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address); // More flexible Solana address detection
 
   if (!isEvmAddress && !isSolanaAddress) {
     return NextResponse.json(
@@ -30,12 +30,12 @@ async function handleBalanceRequest(address: string, chainId?: number) {
     );
   }
 
-  // Determine which chain to query
-  let targetChainId = chainId || 8453; // Default to Base
-
+  // Route based on address type, ignore chainId for Solana
   if (isSolanaAddress) {
     return await getSolanaBalance(address);
   } else {
+    // For EVM, use provided chainId or default to Base
+    const targetChainId = chainId || 8453;
     return await getEvmBalance(address, targetChainId);
   }
 }
