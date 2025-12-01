@@ -7,7 +7,7 @@
 
 import { octantVaultService, type YieldAllocation } from './octantVaultService';
 import { web3Service } from './web3Service';
-import { bridgeService } from './bridgeService';
+import { bridgeManager } from './bridges';
 import { CHAINS } from '@/config';
 import { ethers } from 'ethers';
 
@@ -186,11 +186,13 @@ class YieldToTicketsService {
           const origin = config.originChainId ?? CHAINS.ethereum.id;
           const dest = config.destinationChainId ?? CHAINS.base.id;
           if (origin !== dest) {
-            // Bridge service will auto-initialize from centralized web3Service
-            const bridge = await bridgeService.bridgeUsdcEthereumToBase(
-              yieldAllocation.tickets,
-              userAddress
-            );
+            // Bridge using unified bridge manager
+            const bridge = await bridgeManager.bridge({
+              sourceChain: 'ethereum',
+              destinationChain: 'base',
+              amount: yieldAllocation.tickets,
+              destinationAddress: userAddress,
+            });
             if (bridge.success && bridge.txHash) {
               txHashes.push(bridge.txHash);
             }
