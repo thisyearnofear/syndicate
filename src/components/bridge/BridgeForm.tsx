@@ -80,7 +80,7 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void 
       const provider = new ethers.BrowserProvider((window as any).ethereum);
       const signer = await provider.getSigner();
       const transmitter = new Contract(CCTP.base.messageTransmitter, [
-        'function receiveMessage(bytes calldata message, bytes calldata attestation) external returns (bool)'
+        'function receiveMessage(bytes message, bytes attestation) returns (bool)'
       ], signer);
 
       const message = cctpMessage;
@@ -90,7 +90,8 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void 
         return;
       }
 
-      const tx = await transmitter.receiveMessage(message, attestation);
+      const receiveMessage = transmitter.getFunction('receiveMessage');
+      const tx = await receiveMessage(message, attestation);
       const rc = await tx.wait();
       setMintTx(rc.hash);
       setLogs((prev) => [...prev, { stage: 'mint_complete', info: { txHash: rc.hash } }]);

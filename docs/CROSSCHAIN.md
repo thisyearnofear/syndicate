@@ -1,7 +1,16 @@
 # Cross-Chain Bridge Implementation
 
-**Last Updated**: Nov 24, 2025  
-**Status**: Implementation in Progress
+**Last Updated**: Dec 2, 2025  
+**Status**: Improved and partially stabilized
+
+## Progress Update (Dec 2025)
+
+- Unified Bridge Manager orchestrates protocols with automatic fallback
+- CCTP consolidated into `src/services/bridges/protocols/cctp.ts` with shared attestation logic
+- Solana→Base CCTP V2 aligned: manual instruction build, correct PDAs, and message extraction
+- Base mint flow: automatic redemption attempted; UI provides manual mint on Base via `receiveMessage`
+- Wormhole fallback updated to SDK v4 for EVM routes; signers adapted; VAA retrieval and redeem implemented
+- Protocol selection uses `estimateAllRoutes` for cost/time estimates in `ProtocolSelector`
 
 ## Recent Review (Nov 24, 2025)
 
@@ -11,15 +20,17 @@
 3. ✅ **Wallet State Scattered** - `useWalletConnection()` now returns both Solana + EVM wallet data
 
 **Changes Made:**
-- `src/hooks/useWalletConnection.ts` - Returns `evmAddress, evmConnected` (NEW)
-- `src/app/bridge/page.tsx` - Uses `FocusedBridgeFlow` instead of custom form
-- `src/services/solanaBridgeService.ts` - Improved validation: specific errors for each failure case
+- `src/services/bridges/index.ts` - Unified manager, lazy protocol loading
+- `src/services/bridges/protocols/cctp.ts` - Consolidated CCTP (EVM + Solana) and attestation fetch
+- `src/services/bridges/protocols/wormhole.ts` - Updated to SDK v4, EVM signer adapter, VAA redeem
+- `src/components/bridge/ProtocolSelector.tsx` - Estimates fetched from unified manager
+- `src/app/bridge/page.tsx` - Clean wallet cards and bridge flow
 
 **Testing:**
-- [ ] Connect both Phantom + MetaMask
-- [ ] Test CCTP bridge from `/bridge` → should complete
-- [ ] Test Wormhole fallback → should work
-- [ ] Verify error messages are specific (not generic "Bridge failed")
+- [ ] Test CCTP Solana→Base burn and attestation; use manual Base mint if auto-redeem fails
+- [ ] Test EVM→Base CCTP with consolidated attestation
+- [ ] Test Wormhole EVM→EVM fallback routes (Ethereum/Base/Polygon/Avalanche)
+- [ ] Verify ProtocolSelector shows estimates and routes
 
 ## Solana Bridge Overview
 

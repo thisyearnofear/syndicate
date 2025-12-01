@@ -419,6 +419,18 @@ export class UnifiedBridgeManager {
      * Estimate fees across all available protocols
      */
     async estimateAllRoutes(params: BridgeParams): Promise<BridgeRoute[]> {
+        await Promise.all([
+            'cctp',
+            'ccip',
+            'wormhole',
+            'near',
+            'zcash',
+        ].map(async (name) => {
+            try {
+                await this.loadProtocol(name as BridgeProtocolType);
+            } catch { }
+        }));
+
         return this.getSuggestedRoutes(params);
     }
 

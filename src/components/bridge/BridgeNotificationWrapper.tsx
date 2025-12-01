@@ -25,11 +25,11 @@ export function BridgeNotificationWrapper() {
 
         const fetchBalance = async () => {
             try {
-                // Detect if Solana or EVM address
-                const isSolanaAddress = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(state.address);
+                const address = state.address as string;
+                const isSolanaAddress = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address);
                 
                 // Build URL - only include chainId for EVM addresses
-                let url = `/api/balance?address=${encodeURIComponent(state.address)}`;
+                let url = `/api/balance?address=${encodeURIComponent(address)}`;
                 if (!isSolanaAddress) {
                     url += '&chainId=8453'; // Base mainnet for EVM
                 }
@@ -43,7 +43,7 @@ export function BridgeNotificationWrapper() {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            address: state.address,
+                            address,
                             chainId: isSolanaAddress ? undefined : 8453 // Base mainnet for EVM only
                         })
                     });

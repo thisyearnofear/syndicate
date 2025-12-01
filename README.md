@@ -5,6 +5,7 @@ A multi-chain lottery platform built on top of [Megapot](https://megapot.io), en
 ## 🏗️ Three Layers
 
 ### Layer 1: Direct Ticket Purchases
+
 **Simple, cross-chain lottery participation**
 
 - Buy Megapot lottery tickets from multiple chains (Base, Ethereum, Solana, Polygon, Avalanche)
@@ -13,6 +14,7 @@ A multi-chain lottery platform built on top of [Megapot](https://megapot.io), en
 - Supports MetaMask, Phantom, WalletConnect, and more
 
 ### Layer 2: Syndicates
+
 **Pooled participation with trustless distribution**
 
 - Create or join pools of players to increase collective odds
@@ -22,6 +24,7 @@ A multi-chain lottery platform built on top of [Megapot](https://megapot.io), en
 - Build community and drive participation through shared goals
 
 ### Layer 3: DeFi Yield Strategies
+
 **Generate tickets from capital yields**
 
 - Deposit capital into DeFi vaults (Aave, Morpho, Spark)
@@ -31,14 +34,14 @@ A multi-chain lottery platform built on top of [Megapot](https://megapot.io), en
 
 ## 🌐 Supported Chains
 
-| Chain | Status | Bridge Protocol |
-|-------|--------|-----------------|
-| Base | ✅ Primary | Native |
-| Ethereum | ✅ Working | CCTP, CCIP |
-| Solana | ⚠️ In Progress | CCTP |
-| Polygon | ✅ Working | CCIP |
-| Avalanche | ✅ Working | CCIP |
-| Bitcoin/ICP | 🔜 Planned | ICP Canisters |
+| Chain       | Status         | Bridge Protocol |
+| ----------- | -------------- | --------------- |
+| Base        | ✅ Primary     | Native          |
+| Ethereum    | ✅ Working     | CCTP, CCIP      |
+| Solana      | ⚠️ In Progress | CCTP            |
+| Polygon     | ✅ Working     | CCIP            |
+| Avalanche   | ✅ Working     | CCIP            |
+| Bitcoin/ICP | 🔜 Planned     | ICP Canisters   |
 
 ## 🚀 Quick Start
 
@@ -57,12 +60,19 @@ Visit `http://localhost:3000` to try the platform.
 
 ## 📚 Documentation
 
-| Document | Description |
-|----------|-------------|
-| [Current State & Roadmap](./docs/CURRENT_STATE_AND_ROADMAP.md) | Platform status, what works, phased roadmap |
-| [Cross-Chain Bridges](./docs/CROSS_CHAIN_BRIDGE_IMPLEMENTATION.md) | CCTP, CCIP, Solana bridge implementation |
-| [Development Setup](./docs/DEVELOPMENT_SETUP_AND_DEPLOYMENT.md) | Setup, testing, deployment guides |
-| [Bitcoin/ICP Integration](./docs/BITCOIN_ICP_TECHNICAL_IMPLEMENTATION.md) | ICP canister development |
+| Document                             | Description                                       |
+| ------------------------------------ | ------------------------------------------------- |
+| [Roadmap](./docs/ROADMAP.md)         | Current status and phased roadmap                 |
+| [Cross-Chain](./docs/CROSSCHAIN.md)  | Bridge protocols (CCTP, CCIP, Wormhole) and flows |
+| [Development](./docs/DEVELOPMENT.md) | Setup, testing, deployment                        |
+| [Bitcoin/ICP](./docs/BTC_ICP.md)     | ICP canister and Bitcoin integration              |
+
+### Progress Update (Dec 2025)
+
+- CCTP Solana→Base aligned with V2 programs and consolidated attestation fetch
+- Manual Base mint available from UI when automatic redemption isn't possible
+- Wormhole fallback updated to SDK v4 with EVM signer adapters and VAA redemption
+- Protocol selection uses `estimateAllRoutes` with lazy module loading
 
 ## 🔧 Configuration
 

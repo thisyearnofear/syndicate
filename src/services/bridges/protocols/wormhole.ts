@@ -17,15 +17,15 @@ import type {
 import { BridgeError, BridgeErrorCode } from '../types';
 import {
     wormhole,
-    amount,
     signSendWait,
     Wormhole,
-    TokenId,
     Chain,
     Network
 } from '@wormhole-foundation/sdk';
+import { TokenBridge } from '@wormhole-foundation/sdk-definitions';
 import evm from '@wormhole-foundation/sdk/evm';
 import solana from '@wormhole-foundation/sdk/solana';
+import { ethers } from 'ethers';
 
 // ============================================================================
 // Wormhole Protocol Implementation
@@ -46,8 +46,7 @@ export class WormholeProtocol implements BridgeProtocol {
     // ============================================================================
 
     supports(sourceChain: ChainIdentifier, destinationChain: ChainIdentifier): boolean {
-        // Wormhole supports almost everything, but we limit to project scope
-        const supported = ['ethereum', 'base', 'solana', 'avalanche', 'polygon'];
+        const supported: ChainIdentifier[] = ['ethereum', 'base', 'avalanche', 'polygon'];
         return supported.includes(sourceChain) && supported.includes(destinationChain);
     }
 
@@ -100,8 +99,7 @@ export class WormholeProtocol implements BridgeProtocol {
             // Get token bridge
             const tb = await srcContext.getTokenBridge();
 
-            // Parse amount (USDC has 6 decimals)
-            const amt = amount.units(amount.parse(amountStr, 6));
+            const amt = ethers.parseUnits(amountStr, 6);
 
             // Get signer for source chain
             const signer = await this.getWormholeSigner(sourceChain, wallet);
@@ -113,18 +111,18 @@ export class WormholeProtocol implements BridgeProtocol {
                 );
             }
 
-            // Use USDC token address for source chain
             const sourceTokenAddress = this.getUsdcAddress(sourceChain);
+            const senderAddress = Wormhole.parseAddress(srcChain, signer.address());
+            const receiver = Wormhole.chainAddress(dstChain, destinationAddress);
+            const tokenAddress = Wormhole.parseAddress(srcChain, sourceTokenAddress);
 
             onStatus?.('approving');
 
-            // Create transfer transaction using Wormhole SDK
-            // The SDK handles the attestation and VAA creation automatically
             const transferTx = tb.transfer(
-                sourceTokenAddress,
-                amt,
-                dstChain,
-                destinationAddress
+                senderAddress,
+                receiver,
+                tokenAddress,
+                amt
             );
 
             onStatus?.('burning');
@@ -133,14 +131,16 @@ export class WormholeProtocol implements BridgeProtocol {
             const result = await signSendWait(srcContext, transferTx, signer);
 
             onStatus?.('burn_confirmed', {
-                txHash: result.txid
+                txHash: Array.isArray(result) ? result[result.length - 1]?.txid : undefined
             });
 
             // Wait for VAA to be available (Wormhole attestation equivalent)
             onStatus?.('waiting_attestation');
 
-            // Poll for VAA
-            const vaa = await this.pollForVaa(result);
+            const lastTxid = Array.isArray(result) ? result[result.length - 1]?.txid : undefined;
+            const vaa = lastTxid
+                ? await this.wh.getVaa(lastTxid, TokenBridge.getTransferDiscriminator(), 600_000)
+                : null;
             if (!vaa) {
                 throw new BridgeError(
                     BridgeErrorCode.ATTESTATION_TIMEOUT,
@@ -153,7 +153,9 @@ export class WormholeProtocol implements BridgeProtocol {
 
             // Redeem on destination (if needed)
             // Some destinations require explicit redemption
-            const redeemTx = dstContext.redeem(vaa);
+            const dstTb = await dstContext.getTokenBridge();
+            const destSender = Wormhole.parseAddress(dstChain, destinationAddress);
+            const redeemTx = dstTb.redeem(destSender, vaa);
             const redeemResult = await signSendWait(dstContext, redeemTx, signer);
 
             onStatus?.('complete');
@@ -166,9 +168,9 @@ export class WormholeProtocol implements BridgeProtocol {
                 success: true,
                 protocol: 'wormhole',
                 status: 'complete',
-                sourceTxHash: result.txid,
-                destinationTxHash: redeemResult?.txid,
-                messageId: vaa,
+                sourceTxHash: Array.isArray(result) ? result[result.length - 1]?.txid : undefined,
+                destinationTxHash: Array.isArray(redeemResult) ? redeemResult[redeemResult.length - 1]?.txid : undefined,
+                messageId: typeof lastTxid === 'string' ? lastTxid : undefined,
                 bridgeId: 'wormhole-v1',
                 actualTimeMs: totalTime,
                 details: {
@@ -256,28 +258,22 @@ export class WormholeProtocol implements BridgeProtocol {
      */
     private async getWormholeSigner(chain: ChainIdentifier, wallet?: any) {
         try {
-            if (chain === 'solana' || chain === 'base' || chain === 'ethereum') {
-                // For EVM chains, try to get Ethers signer
-                if (chain !== 'solana') {
-                    if (wallet?.signer) return wallet.signer;
+            if (chain === 'ethereum' || chain === 'base' || chain === 'polygon' || chain === 'avalanche') {
+                const ethSigner: ethers.Signer | null = wallet?.signer
+                    ? wallet.signer
+                    : await (async () => {
+                        try {
+                            const { web3Service } = await import('@/services/web3Service');
+                            return await web3Service.getFreshSigner();
+                        } catch {
+                            return null;
+                        }
+                    })();
 
-                    // Try to get from web3Service
-                    try {
-                        const { web3Service } = await import('@/services/web3Service');
-                        return await web3Service.getFreshSigner();
-                    } catch {
-                        return null;
-                    }
-                } else {
-                    // For Solana, get Phantom wallet
-                    if (typeof window === 'undefined') return null;
+                if (!ethSigner) return null;
 
-                    const phantom = (window as any).solana;
-                    if (!phantom?.isPhantom) return null;
-
-                    if (!phantom.isConnected) await phantom.connect();
-                    return phantom;
-                }
+                const { getEvmSignerForSigner } = await import('@wormhole-foundation/sdk-evm');
+                return await getEvmSignerForSigner(ethSigner);
             }
 
             return null;
@@ -291,36 +287,8 @@ export class WormholeProtocol implements BridgeProtocol {
      * Poll for Wormhole VAA (Verified Action Approval)
      * VAA is the cross-chain attestation that proves the token burn
      */
-    private async pollForVaa(
-        txResult: any,
-        maxWaitMs: number = 600000 // 10 minutes
-    ): Promise<string | null> {
-        const startTime = Date.now();
-        const pollIntervalMs = 3000; // 3 seconds
-
-        while (Date.now() - startTime < maxWaitMs) {
-            try {
-                // In a real implementation, this would query the Wormhole API
-                // for the VAA status. For now, return a placeholder.
-                // The SDK typically provides a helper for this:
-                // const vaa = await getVAAFromLog(txResult);
-
-                // Simulate polling delay
-                await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
-
-                // Check if VAA is available (would be from API call)
-                if (txResult?.vaa) {
-                    return txResult.vaa;
-                }
-
-                // Continue polling...
-            } catch (error) {
-                console.warn('[Wormhole] VAA polling error:', error);
-                // Continue polling on error
-            }
-        }
-
-        return null; // Timeout
+    private async pollForVaa(_txResult: any, _maxWaitMs: number = 600000): Promise<string | null> {
+        return null;
     }
 }
 
