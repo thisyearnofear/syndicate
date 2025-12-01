@@ -159,10 +159,12 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   const pollBalanceUntilBridged = async () => {
     const requiredAmount = parseFloat(totalCost || '0');
     let attempts = 0;
-    const maxAttempts = 60; // 5 minutes max (5 second intervals)
+    const maxAttempts = 12; // 1 minute max (5 second intervals, but less aggressive)
 
     const pollInterval = setInterval(async () => {
       attempts++;
+      
+      // Refresh balance (debounced in refreshBalance)
       await refreshBalance();
 
       const currentBaseBalance = parseFloat(userBalance?.usdc || '0');
@@ -184,7 +186,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
           );
         }
       }
-    }, 5000); // Check every 5 seconds
+    }, 5000); // Check every 5 seconds (max 12 checks = 1 minute)
   };
 
   const handleBridgeError = (error: string) => {

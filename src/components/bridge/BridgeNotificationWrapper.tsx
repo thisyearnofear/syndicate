@@ -64,9 +64,10 @@ export function BridgeNotificationWrapper() {
 
         fetchBalance();
 
-        // Refresh balance every 30 seconds to detect completed bridges
-        const interval = setInterval(fetchBalance, 30000);
-        return () => clearInterval(interval);
+        // Only refresh balance if there are pending bridges (30 second check is too aggressive)
+        // Let the PurchaseModal handle polling for bridge completion
+        // This just refreshes when wallet connects/changes
+        return () => {};
     }, [state.isConnected, state.address]);
 
     // Handle bridge completion
