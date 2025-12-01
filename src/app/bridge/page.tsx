@@ -16,6 +16,7 @@ import { FocusedBridgeFlow } from '@/components/bridge/FocusedBridgeFlow';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { Button } from '@/shared/components/ui/Button';
 import { WalletConnectionCard } from '@/components/wallet/WalletConnectionCard';
+import WalletConnectionManager from '@/components/wallet/WalletConnectionManager';
 import {
   CompactContainer,
   CompactStack,
@@ -61,6 +62,11 @@ export default function BridgePage() {
             <p className="text-xl text-gray-300 max-w-2xl mx-auto">
               Seamlessly bridge your USDC to Base Network and get ready to participate in cross-chain lotteries
             </p>
+          </div>
+
+          {/* Wallet Connection Status */}
+          <div className="flex justify-center">
+            <WalletConnectionManager />
           </div>
 
           {/* Bridge Flow Section */}
