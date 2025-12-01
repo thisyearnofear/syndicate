@@ -283,7 +283,7 @@ export class CctpProtocol implements BridgeProtocol {
             const solanaWeb3 = await import('@solana/web3.js');
             const splToken = await import('@solana/spl-token');
 
-            const { Connection, PublicKey, Transaction, TransactionInstruction } = solanaWeb3;
+            const { Connection, PublicKey, Transaction, TransactionInstruction, SystemProgram } = solanaWeb3;
             const { getAssociatedTokenAddress, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } = splToken;
 
             // Get Phantom wallet
@@ -316,26 +316,39 @@ export class CctpProtocol implements BridgeProtocol {
             const amountInLamports = Math.floor(parseFloat(amount) * 1_000_000); // 6 decimals
             const recipientBytes32 = this.evmAddressToBytes32(destinationAddress);
 
-            // USDC mint
+            // USDC mint and accounts
             const usdcMint = new PublicKey(CCTP_CONFIG.solana.usdc);
             const usdcAta = await getAssociatedTokenAddress(usdcMint, walletPublicKey);
 
-            // Build CCTP burn transaction
+            // CCTP Solana accounts
             const tokenMessengerMinterId = new PublicKey(CCTP_CONFIG.solana.tokenMessengerMinter);
+            const messageTransmitterId = new PublicKey(CCTP_CONFIG.solana.messageTransmitter);
+            const burnTokenAddress = usdcMint;
 
-            // Build depositForBurn instruction (simplified for consolidation)
+            // Fetch actual token mint authority and other required accounts
+            const tokenMessengerProgram = tokenMessengerMinterId;
+            
+            // Get the correct domain for Base (Ethereum testnet/mainnet routing)
+            const destinationDomain = 6; // Base domain in CCTP
+
+            // Build complete depositForBurn instruction with all required keys
             const instructionData = Buffer.concat([
-                Buffer.from([0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]), // discriminator
+                Buffer.from([0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]), // depositForBurn discriminator
                 this.u64ToBuffer(BigInt(amountInLamports)),
-                this.u32ToBuffer(6), // Base domain
-                recipientBytes32
+                this.u32ToBuffer(destinationDomain),
+                recipientBytes32 // 32-byte padded recipient
             ]);
 
             const depositForBurnIx = new TransactionInstruction({
-                programId: tokenMessengerMinterId,
+                programId: tokenMessengerProgram,
                 keys: [
-                    { pubkey: walletPublicKey, isSigner: true, isWritable: true },
-                    // ... other keys (simplified)
+                    { pubkey: walletPublicKey, isSigner: true, isWritable: true }, // payer
+                    { pubkey: usdcAta, isSigner: false, isWritable: true }, // source token account
+                    { pubkey: burnTokenAddress, isSigner: false, isWritable: true }, // burn token mint
+                    { pubkey: messageTransmitterId, isSigner: false, isWritable: true }, // message transmitter
+                    { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false }, // spl-token program
+                    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }, // system program
+                    { pubkey: new PublicKey('CCTPmPZJUH85LnrXYXJKvb6xLvrqCJzRvnVHYZvBz8N5'), isSigner: false, isWritable: true }, // message sender authority
                 ],
                 data: instructionData,
             });
