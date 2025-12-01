@@ -16,6 +16,7 @@ import { useTicketPurchase } from "@/hooks/useTicketPurchase";
 import { useTicketHistory } from "@/hooks/useTicketHistory";
 import { Button } from "@/shared/components/ui/Button";
 import { LoadingSpinner } from "@/shared/components/LoadingSpinner";
+import WalletConnectionManager from "@/components/wallet/WalletConnectionManager";
 import {
     CompactContainer,
     CompactStack,
@@ -254,6 +255,12 @@ const loadTicketData = useCallback(async () => {
                         <p className="text-xl text-gray-300 mt-2">
                             Track your lottery tickets and winnings
                         </p>
+                        
+                        {/* Wallet Connection Status */}
+                        <div className="flex justify-center my-6">
+                            <WalletConnectionManager />
+                        </div>
+                        
                         <div className="flex items-center gap-4 justify-center mt-4">
                             <Button
                                 variant="ghost"

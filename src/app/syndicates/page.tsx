@@ -12,6 +12,7 @@
 import { useState, useEffect, Suspense, lazy } from "react";
 import { Button } from "@/shared/components/ui/Button";
 import { LoadingSpinner } from "@/shared/components/LoadingSpinner";
+import WalletConnectionManager from "@/components/wallet/WalletConnectionManager";
 import {
     CompactContainer,
     CompactStack,
@@ -62,6 +63,12 @@ export default function SyndicatesPage() {
                         <p className="text-xl text-gray-300 mt-2 mb-6">
                             Join forces with others to support causes and increase your chances
                         </p>
+                        
+                        {/* Wallet Connection Status */}
+                        <div className="flex justify-center mb-6">
+                            <WalletConnectionManager />
+                        </div>
+                        
                         <div className="flex flex-col sm:flex-row justify-center gap-3">
                             <Link href="/create-syndicate">
                                 <Button 
