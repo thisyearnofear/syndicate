@@ -16,7 +16,6 @@ import { FocusedBridgeFlow } from '@/components/bridge/FocusedBridgeFlow';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { Button } from '@/shared/components/ui/Button';
 import { WalletConnectionCard } from '@/components/wallet/WalletConnectionCard';
-import WalletConnectionManager from '@/components/wallet/WalletConnectionManager';
 import {
   CompactContainer,
   CompactStack,
@@ -49,11 +48,6 @@ export default function BridgePage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
       <CompactContainer maxWidth="xl" padding="lg">
         <CompactStack spacing="xl">
-          {/* Wallet Connection Widget */}
-          <div className="flex justify-center pt-4">
-            <WalletConnectionManager />
-          </div>
-
           {/* Hero Section */}
           <div className="pt-8 text-center">
             <div className="inline-flex items-center gap-3 mb-6">
