@@ -69,7 +69,7 @@ class OctantVaultService {
   /**
    * Get vault contract instance
    */
-  private getVaultContract(vaultAddress: string): Contract {
+  private async getVaultContract(vaultAddress: string): Promise<Contract> {
     // In MVP mock mode, no on-chain contract
     if (vaultAddress === this.MOCK_VAULT_ADDR) {
       throw new Error('Mock vault: no on-chain contract');
@@ -78,14 +78,16 @@ class OctantVaultService {
       if (!this.provider) {
         // Attempt to auto-initialize from centralized web3Service
         try {
-          const { web3Service } = require('@/services/web3Service');
+          const { web3Service } = await import('@/services/web3Service');
           const provider = web3Service.getProvider();
-          const signer = web3Service.getSigner();
+          const signer = await (async () => {
+            try { return await web3Service.getFreshSigner(); } catch { return null; }
+          })();
           if (provider) {
             this.provider = provider;
             this.signer = signer || null;
           }
-        } catch (err) {
+        } catch {
           // noop; will throw below if provider still missing
         }
       }
@@ -105,7 +107,8 @@ class OctantVaultService {
   /**
    * Get available vaults for current network
    */
-  async getAvailableVaults(chainId: number): Promise<OctantVaultInfo[]> {
+  async getAvailableVaults(_chainId: number): Promise<OctantVaultInfo[]> {
+    void _chainId;
     // Resolve whether to return mock or real vault based on config toggle
     const assetAddr = OCTANT_CONFIG.tokens.ethereum.usdc; // Use Ethereum USDC on Tenderly fork
     const useMock = OCTANT_CONFIG.useMockVault || !OCTANT_CONFIG.vaults?.ethereumUsdcVault || OCTANT_CONFIG.vaults.ethereumUsdcVault === '0x...';
@@ -151,7 +154,7 @@ class OctantVaultService {
       const asset = OCTANT_CONFIG.tokens.ethereum.usdc;
       let userShares = '0';
       let userAssets = '0';
-      let yieldGenerated = '0';
+      const yieldGenerated = '0';
       const key = `${vaultAddress}|${userAddress || ''}`;
       const bal = this.mockBalances.get(key);
       if (bal) {
@@ -171,7 +174,7 @@ class OctantVaultService {
       };
     }
 
-    const contract = this.getVaultContract(vaultAddress);
+    const contract = await this.getVaultContract(vaultAddress);
     try {
       const [asset, totalAssets] = await Promise.all([
         contract.asset(),
@@ -240,7 +243,7 @@ class OctantVaultService {
     }
 
     try {
-      const contract = this.getVaultContract(vaultAddress);
+      const contract = await this.getVaultContract(vaultAddress);
       const amountWei = ethers.parseUnits(amount, 6);
       const expectedShares = await contract.previewDeposit(amountWei);
       const tx = await contract.deposit(amountWei, receiverAddress);
@@ -291,7 +294,7 @@ class OctantVaultService {
     }
 
     try {
-      const contract = this.getVaultContract(vaultAddress);
+      const contract = await this.getVaultContract(vaultAddress);
       const amountWei = ethers.parseUnits(amount, 6);
       const tx = await contract.withdraw(amountWei, receiverAddress, ownerAddress);
       const receipt = await tx.wait();
@@ -307,7 +310,7 @@ class OctantVaultService {
    * Note: In YDS, profits are represented as donation shares.
    */
   async getDonationShares(vaultAddress: string, donationAddress: string): Promise<string> {
-    const contract = this.getVaultContract(vaultAddress);
+    const contract = await this.getVaultContract(vaultAddress);
     const sharesBn = await contract.balanceOf(donationAddress);
     return ethers.formatUnits(sharesBn, 18);
   }
@@ -326,7 +329,7 @@ class OctantVaultService {
       return { success: false, error: 'Signer required for redeeming donation shares' };
     }
     try {
-      const contract = this.getVaultContract(vaultAddress);
+      const contract = await this.getVaultContract(vaultAddress);
       const sharesWei = ethers.parseUnits(shares, 18);
       const tx = await contract.redeem(sharesWei, receiverAddress, donationAddress);
       const receipt = await tx.wait();

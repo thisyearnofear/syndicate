@@ -13,6 +13,7 @@ import { useState, useEffect, Suspense, lazy } from "react";
 import { Button } from "@/shared/components/ui/Button";
 import { LoadingSpinner } from "@/shared/components/LoadingSpinner";
 import WalletConnectionManager from "@/components/wallet/WalletConnectionManager";
+import { ComingSoonBanner } from "@/components/ui/ComingSoonBanner";
 import {
     CompactContainer,
     CompactStack,
@@ -89,9 +90,16 @@ export default function SyndicatesPage() {
                         </div>
                     </div>
 
+                    {/* Feature Status */}
+                    <ComingSoonBanner 
+                        title="Syndicate Pooling Under Development"
+                        description="Syndicate creation and pooling mechanics are being finalized. Governance and yield distribution will be fully integrated in the next release."
+                        variant="info"
+                    />
+
                     {/* Syndicates Grid */}
                     <CompactSection spacing="lg">
-                        {isLoading ? (
+                         {isLoading ? (
                             <div className="flex justify-center py-12">
                                 <LoadingSpinner size="lg" color="white" />
                             </div>

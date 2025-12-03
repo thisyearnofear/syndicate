@@ -227,7 +227,7 @@ export async function POST(request: Request) {
       });
     }
     return NextResponse.json({ error: 'Unsupported action' }, { status: 400 });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
 }

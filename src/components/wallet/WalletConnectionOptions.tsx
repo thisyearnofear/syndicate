@@ -4,12 +4,10 @@ import { useState, useCallback } from "react";
 import { WalletConnectionCard } from "./WalletConnectionCard";
 import UnifiedModal from "../modal/UnifiedModal";
 import { Button } from "@/components/ui/button";
-import { WalletType } from "@/domains/wallet/services/unifiedWalletService";
+import { WalletType } from "@/domains/wallet/types";
 
 interface WalletConnectionOptionsProps {
-  onSocialLoginClick: () => void;
   onWalletConnect?: (walletType: WalletType) => void;
-  onModalClose?: () => void;
 }
 
 /**
@@ -17,17 +15,10 @@ interface WalletConnectionOptionsProps {
  * Presents both existing and new wallet options with enhanced UI/UX
  */
 export default function WalletConnectionOptions({
-  onSocialLoginClick,
   onWalletConnect,
-  onModalClose,
 }: WalletConnectionOptionsProps) {
   const [showComingSoon, setShowComingSoon] = useState(false);
   // dApp-only: no wallet-side WalletConnect modal state
-
-  const handleSocialLoginClick = useCallback(() => {
-    // Show coming soon message instead of opening modal
-    setShowComingSoon(true);
-  }, []);
 
   const handleWalletConnect = useCallback((walletType: WalletType) => {
     if (onWalletConnect) {
@@ -46,7 +37,7 @@ export default function WalletConnectionOptions({
         onConnect={handleWalletConnect}
       />
 
-  {/* Coming Soon Modal */}
+      {/* Coming Soon Modal */}
       <UnifiedModal
         isOpen={showComingSoon}
         onClose={() => setShowComingSoon(false)}

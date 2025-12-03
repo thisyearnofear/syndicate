@@ -10,7 +10,7 @@ export async function GET(request: Request): Promise<Response> {
     const resp = await fetch(target.toString(), { headers });
     const text = await resp.text();
     return new Response(text, { status: resp.status, headers: { 'content-type': 'application/json' } });
-  } catch (_) {
+  } catch {
     return Response.json({ error: 'Aggregator proxy request failed' }, { status: 502 });
   }
 }

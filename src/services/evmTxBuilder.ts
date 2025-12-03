@@ -1,6 +1,7 @@
 import { CHAINS } from '@/config';
 import { ethers } from 'ethers';
 import { serializeTransaction } from 'viem';
+import type { AccessList } from 'viem';
 
 export type Eip1559Params = {
   chainId: bigint;
@@ -39,7 +40,7 @@ export async function fetchNonceAndFees(address: string): Promise<{
     if (typeof p === 'string') {
       priorityFee = BigInt(p);
     }
-  } catch (e) {
+  } catch {
     // ignore, use fallback
   }
 
@@ -103,7 +104,7 @@ export function serializeSignedEip1559(params: Eip1559Params, sig: SignatureRSV)
     to: params.to as `0x${string}`,
     value: params.value,
     data: params.data as `0x${string}`,
-    accessList: [] as any,
+    accessList: [] as AccessList,
   };
   return serializeTransaction(txViem, {
     r: sig.r,

@@ -1,4 +1,6 @@
-import { Connection, PublicKey } from '@solana/web3.js';
+// STUB: Using stubs while Solana deps are disabled for hackathon
+// TO RE-ENABLE: Replace with '@solana/web3.js'
+import { Connection, PublicKey } from '@/stubs/solana';
 
 async function testUsdcBalanceForWallet() {
   try {

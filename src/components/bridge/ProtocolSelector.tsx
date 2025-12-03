@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from "react";
 import { bridgeManager } from "@/services/bridges";
 import { USDC_ADDRESSES } from "@/services/bridges/types";
-import { Button } from "@/shared/components/ui/Button";
 import { LoadingSpinner } from "@/shared/components/LoadingSpinner";
 import type {
   ChainIdentifier,
   BridgeProtocolType,
+  BridgeRoute,
 } from "@/services/bridges/types";
 
 export interface ProtocolOption {
@@ -58,8 +58,7 @@ export function ProtocolSelector({
         });
 
         // Map to our protocol options format
-        const options: ProtocolOption[] = estimates.map(
-          (estimate: any, index: number) => {
+        const options: ProtocolOption[] = estimates.map((estimate: BridgeRoute, index: number) => {
             let name = "";
             let description = "";
             let icon = "";
@@ -108,8 +107,9 @@ export function ProtocolSelector({
         );
 
         setProtocols(options);
-      } catch (err: any) {
-        const errorMsg = err?.message || "Failed to fetch protocol estimates";
+      } catch (err: unknown) {
+        const error = err as Error;
+        const errorMsg = error?.message || "Failed to fetch protocol estimates";
         setError(errorMsg);
         onEstimateError?.(errorMsg);
       } finally {
@@ -120,7 +120,7 @@ export function ProtocolSelector({
     if (amount && parseFloat(amount) > 0) {
       fetchProtocolEstimates();
     }
-  }, [sourceChain, destinationChain, amount]);
+  }, [sourceChain, destinationChain, amount, onEstimateError]);
 
   if (loading) {
     return (

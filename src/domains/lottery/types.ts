@@ -180,7 +180,7 @@ export interface SyndicateImpact {
 export type LotteryError = {
   code: 'NETWORK_ERROR' | 'CONTRACT_ERROR' | 'USER_REJECTED' | 'INSUFFICIENT_FUNDS' | 'SYNDICATE_ERROR' | 'UNKNOWN';
   message: string;
-  details?: any;
+  details?: unknown;
 };
 
 export type PurchaseResult = {

@@ -1,6 +1,6 @@
 // Simple verification that the implementation is properly structured
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 // Check if the required files exist
 const filesToCheck = [
@@ -12,7 +12,7 @@ console.log('Verifying implementation structure...\n');
 
 let allFilesExist = true;
 for (const file of filesToCheck) {
-  const fullPath = path.join(__dirname, file);
+  const fullPath = path.join(process.cwd(), 'src', 'utils', file);
   if (fs.existsSync(fullPath)) {
     console.log(`✓ ${file} exists`);
   } else {

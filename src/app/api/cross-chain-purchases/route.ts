@@ -11,13 +11,13 @@ async function ensureStore() {
   try { await fs.access(FILE_PATH); } catch { await fs.writeFile(FILE_PATH, '[]', 'utf-8'); }
 }
 
-async function readAll(): Promise<any[]> {
+async function readAll(): Promise<Array<Record<string, unknown>>> {
   await ensureStore();
   const content = await fs.readFile(FILE_PATH, 'utf-8');
   try { return JSON.parse(content); } catch { return []; }
 }
 
-async function writeAll(items: any[]) {
+async function writeAll(items: Array<Record<string, unknown>>) {
   await ensureStore();
   await fs.writeFile(FILE_PATH, JSON.stringify(items, null, 2), 'utf-8');
 }
@@ -27,7 +27,12 @@ export async function GET(req: NextRequest) {
   const wallet = url.searchParams.get('wallet');
   const all = await readAll();
   if (!wallet) return NextResponse.json(all);
-  const filtered = all.filter((i: any) => (i.baseWallet?.toLowerCase?.() === wallet.toLowerCase()) || (i.sourceWallet?.toLowerCase?.() === wallet.toLowerCase()));
+  const filtered = all.filter((i) => {
+    const baseWallet = typeof i.baseWallet === 'string' ? i.baseWallet : '';
+    const sourceWallet = typeof i.sourceWallet === 'string' ? i.sourceWallet : '';
+    const w = wallet.toLowerCase();
+    return baseWallet.toLowerCase() === w || sourceWallet.toLowerCase() === w;
+  });
   return NextResponse.json(filtered);
 }
 
@@ -43,7 +48,8 @@ export async function POST(req: NextRequest) {
     all.push(item);
     await writeAll(all);
     return NextResponse.json(item, { status: 201 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Failed to store mapping' }, { status: 500 });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return NextResponse.json({ error: msg || 'Failed to store mapping' }, { status: 500 });
   }
 }

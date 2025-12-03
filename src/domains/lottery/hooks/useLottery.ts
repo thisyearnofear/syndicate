@@ -11,7 +11,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { megapotService } from '../services/megapotService';
 import { performance, features } from '@/config';
-import type { LotteryState, JackpotStats } from '../types';
+import type { LotteryState } from '../types';
 
 export function useLottery() {
   const [state, setState] = useState<LotteryState>({
@@ -160,13 +160,13 @@ export function useTicketPurchase() {
 
     try {
       // This would integrate with the actual contract interaction
-      // For now, simulate the purchase
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      // For now, simulate the purchase based on ticketCount
+      await new Promise(resolve => setTimeout(resolve, 2000 + (ticketCount * 100))); // Simulate time based on number of tickets
+
       const mockTxHash = `0x${Math.random().toString(16).substr(2, 64)}`;
       setTxHash(mockTxHash);
-      
-      return { success: true, txHash: mockTxHash };
+
+      return { success: true, txHash: mockTxHash, ticketCount };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Purchase failed';
       setError(errorMessage);

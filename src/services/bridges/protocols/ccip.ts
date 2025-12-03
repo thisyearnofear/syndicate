@@ -69,7 +69,8 @@ export class CcipProtocol implements BridgeProtocol {
 
         try {
             // Get provider
-            const { provider } = await this.getEvmProviderSigner(wallet);
+            const walletTyped = wallet as { provider?: ethers.Provider; signer?: ethers.Signer } | undefined;
+            const { provider } = await this.getEvmProviderSigner(walletTyped);
             if (!provider) {
                 return { fee: '0.005', timeMs: 600000, gasEstimate: '~0.001 ETH' };
             }
@@ -111,7 +112,8 @@ export class CcipProtocol implements BridgeProtocol {
         const { sourceChain, destinationChain, amount, destinationAddress, onStatus, wallet, dryRun } = params;
 
         // Get provider/signer
-        const { provider, signer } = await this.getEvmProviderSigner(wallet);
+        const walletTyped = wallet as { provider?: ethers.Provider; signer?: ethers.Signer } | undefined;
+        const { provider, signer } = await this.getEvmProviderSigner(walletTyped);
         if (!signer || !provider) {
             throw new BridgeError(
                 BridgeErrorCode.WALLET_REJECTED,
@@ -269,12 +271,12 @@ export class CcipProtocol implements BridgeProtocol {
     /**
      * Get EVM provider and signer
      */
-    private async getEvmProviderSigner(wallet?: any): Promise<{
+    private async getEvmProviderSigner(wallet?: { provider?: ethers.Provider; signer?: ethers.Signer }): Promise<{
         provider: ethers.Provider | null;
         signer: ethers.Signer | null;
     }> {
         if (wallet) {
-            return { provider: wallet.provider, signer: wallet.signer };
+            return { provider: wallet.provider ?? null, signer: wallet.signer ?? null };
         }
 
         // Try to get from web3Service

@@ -8,10 +8,12 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Connection, PublicKey, Transaction, VersionedTransaction } from '@solana/web3.js';
+// STUB: Using stubs while Solana/Web3Auth deps are disabled for hackathon
+import { Connection, PublicKey, Transaction, VersionedTransaction } from '@/stubs/solana';
+import type { IProvider } from '@/stubs/web3auth';
+// NEAR deps are kept - needed for hackathon
 import { WalletSelector, Wallet } from '@near-wallet-selector/core';
 import { WalletSelectorModal } from '@near-wallet-selector/modal-ui';
-import type { IProvider } from '@web3auth/base';
 
 // CLEAN: Unified wallet interface
 interface UnifiedWalletState {
@@ -34,8 +36,8 @@ interface UnifiedWalletState {
   signTransaction?: (transaction: Transaction | VersionedTransaction) => Promise<Transaction | VersionedTransaction>;
   signAllTransactions?: (transactions: (Transaction | VersionedTransaction)[]) => Promise<(Transaction | VersionedTransaction)[]>;
   signMessage?: (message: Uint8Array) => Promise<Uint8Array>;
-  viewMethod?: (contractId: string, methodName: string, args?: any) => Promise<any>;
-  callMethod?: (contractId: string, methodName: string, args?: any, gas?: string, deposit?: string) => Promise<any>;
+  viewMethod?: (contractId: string, methodName: string, args?: Record<string, unknown>) => Promise<unknown>;
+  callMethod?: (contractId: string, methodName: string, args?: Record<string, unknown>, gas?: string, deposit?: string) => Promise<unknown>;
 }
 
 interface UnifiedWalletContextType {
@@ -108,7 +110,7 @@ class WalletFactory {
       const config = getConfig();
       const selector = await setupWalletSelector({
         network: config.networkId as "mainnet" | "testnet",
-        modules: [setupMyNearWallet() as any, setupBitteWallet() as any],
+        modules: [setupMyNearWallet(), setupBitteWallet()] as any[],
       });
 
       const modal = setupModal(selector, {
@@ -130,12 +132,21 @@ class WalletFactory {
         disconnect: async () => {
           // Implementation would go here
         },
-        viewMethod: async (contractId: string, methodName: string, args?: any) => {
+        viewMethod: async (_contractId: string, _methodName: string, _args?: Record<string, unknown>) => {
           // Implementation would go here
+          void _contractId;
+          void _methodName;
+          void _args;
           return null;
         },
-        callMethod: async (contractId: string, methodName: string, args?: any) => {
+        callMethod: async (_contractId: string, _methodName: string, _args?: Record<string, unknown>, _gas?: string, _deposit?: string) => {
           // Implementation would go here
+          // Reference parameters to prevent linting errors without actual usage
+          void _contractId;
+          void _methodName;
+          void _args;
+          void _gas;
+          void _deposit;
           return null;
         },
       };
@@ -148,7 +159,6 @@ class WalletFactory {
   private async createSolanaWallet(): Promise<UnifiedWalletState | null> {
     try {
       const { Connection } = await import('@solana/web3.js');
-      const { SolanaWallet } = await import('@web3auth/solana-provider');
 
       const connection = new Connection(
         process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com"
@@ -353,11 +363,10 @@ export function WalletStatus() {
         <button
           key={wallet.id}
           onClick={() => switchWallet(wallet.id)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm border transition-all ${
-            activeWallet?.id === wallet.id
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm border transition-all ${activeWallet?.id === wallet.id
               ? "bg-blue-600 border-blue-400 text-white"
               : "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600"
-          }`}
+            }`}
         >
           <span>{wallet.icon}</span>
           <span>{wallet.name}</span>

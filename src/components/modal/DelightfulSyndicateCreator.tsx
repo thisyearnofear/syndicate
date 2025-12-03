@@ -60,32 +60,13 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
   const [isCreating, setIsCreating] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [animateStep, setAnimateStep] = useState(false);
-  const [, setMemberPreview] = useState<Array<{ id: number; avatar: string; name: string }>>([]);
-  const [, setImpactPreview] = useState({ totalRaised: 0, causesSupported: 0 });
 
   // DELIGHT: Generate preview members and impact stats
   useEffect(() => {
     if (formData.maxMembers > 0) {
-      const avatars = ['A', 'S', 'J', 'C', 'R', 'M', 'V', 'Q'];
-      const names = ['Alex', 'Sam', 'Jordan', 'Casey', 'Riley', 'Morgan', 'Avery', 'Quinn'];
-      
-      const previewMembers = Array.from({ length: Math.min(8, formData.maxMembers) }, (_, i) => ({
-        id: i,
-        avatar: avatars[i % avatars.length],
-        name: names[i % names.length]
-      }));
-      setMemberPreview(previewMembers);
-      
       // Calculate potential impact
-      const avgTicketsPerMember = formData.minTicketsPerMember * 2;
-      const totalTickets = formData.maxMembers * avgTicketsPerMember;
-      const estimatedRaised = totalTickets * 1;
-      const causeAmount = (estimatedRaised * formData.causePercentage) / 100;
-      
-      setImpactPreview({
-        totalRaised: causeAmount,
-        causesSupported: 1
-      });
+      //  // This was unused
+      // const estimatedRaised = totalTickets * 1; // This was unused, commenting out
     }
   }, [formData.maxMembers, formData.minTicketsPerMember, formData.causePercentage]);
 
@@ -187,7 +168,7 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
           </div>
           <h3 className="text-2xl font-bold text-white mb-4">Syndicate Created!</h3>
           <p className="text-green-200 mb-6">
-            &quot;{formData.name}&quot; is ready to change the world! Share with friends to start building your team.
+            &#34;{formData.name}&#34; is ready to change the world! Share with friends to start building your team.
           </p>
           <div className="flex items-center justify-center gap-2 text-green-300">
             <Users className="w-5 h-5" />
@@ -231,7 +212,7 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
           <div className="space-y-6">
             <div className="text-center mb-6">
               <Users className="w-12 h-12 text-purple-400 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-white mb-2">Let's start with the basics</h3>
+              <h3 className="text-xl font-bold text-white mb-2">Let&#39;s start with the basics</h3>
               <p className="text-gray-400">Give your syndicate a name and describe your mission</p>
             </div>
             
@@ -258,7 +239,7 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={4}
                 className="w-full p-4 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none transition-colors"
-                placeholder="Describe your syndicate&apos;s mission and goals..."
+                placeholder="Describe your syndicate&#39;s mission and goals..."
               />
               {errors.description && <p className="text-red-400 text-sm mt-1">{errors.description}</p>}
             </div>
@@ -500,7 +481,7 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
         </div>
       </div>
 
-      {/* @ts-ignore */}
+      {/* @ts-expect-error: JSX style tag requires ignore for TypeScript */}
       <style jsx>{`
         @keyframes scale-in {
           from { transform: scale(0.9); opacity: 0; }

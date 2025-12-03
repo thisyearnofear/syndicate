@@ -23,7 +23,7 @@ export interface InlineBridgeFlowProps {
     recipient: string;
     selectedProtocol?: 'cctp' | 'wormhole' | 'ccip';
     onComplete: (result: BridgeResult) => void;
-    onStatus?: (status: string, data?: any) => void;
+    onStatus?: (status: string, data?: Record<string, unknown>) => void;
     onError: (error: string) => void;
     autoStart?: boolean;
 }
@@ -42,20 +42,13 @@ export function InlineBridgeFlow({
     const { address: sourceAddress } = useWalletConnection();
     const [currentStatus, setCurrentStatus] = useState<string>('idle');
     const [protocol, setProtocol] = useState<'cctp' | 'wormhole' | null>(null);
-    const [protocolState] = useState<'cctp' | 'wormhole' | null>(null);
     const [progress, setProgress] = useState(0);
     const [isStarted, setIsStarted] = useState(autoStart);
     const [txHash, setTxHash] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [events, setEvents] = useState<Array<{ status: string; info?: any; ts: number }>>([]);
+    const [events, setEvents] = useState<Array<{ status: string; info?: Record<string, unknown>; ts: number }>>([]);
 
-    useEffect(() => {
-        if (autoStart && !isStarted) {
-            startBridge();
-        }
-    }, [autoStart, isStarted]);
-
-    const startBridge = async () => {
+    const startBridge = React.useCallback(async () => {
         setIsStarted(true);
         setError(null);
         setCurrentStatus('starting');
@@ -80,21 +73,27 @@ export function InlineBridgeFlow({
                 protocol: initialProtocol,
                 onStatus: (status, data) => {
                     setCurrentStatus(status);
-                    onStatus?.(status, data);
+                    const dataObj = data && typeof data === 'object' && !Array.isArray(data) && data !== null ? data as Record<string, unknown> : undefined;
+                    onStatus?.(status, dataObj);
 
                     setEvents(prev => {
-                        const next = [...prev, { status, info: data, ts: Date.now() }];
+                        const next = [...prev, { status: status as string, info: dataObj, ts: Date.now() }];
                         return next.slice(-6);
                     });
 
                     // Determine protocol based on status or selection
-                    if (!protocolState) {
+                    if (!protocol) {
                         if (status.includes('cctp')) setProtocol('cctp');
                         if (status.includes('wormhole')) setProtocol('wormhole');
                     }
 
                     // Extract transaction hash and save state
-                    const hash = data?.signature || data?.txHash || (data?.signatures && data.signatures[0]);
+                    const hash = String(
+                        (dataObj && typeof dataObj.signature !== 'undefined' && dataObj.signature) ||
+                        (dataObj && typeof dataObj.txHash !== 'undefined' && dataObj.txHash) ||
+                        (dataObj && Array.isArray(dataObj.signatures) && dataObj.signatures.length > 0 && dataObj.signatures[0]) ||
+                        ''
+                    );
                     if (hash) {
                         setTxHash(hash);
 
@@ -156,12 +155,30 @@ export function InlineBridgeFlow({
                 setError(result.error || 'Bridge failed');
                 onError(result.error || 'Bridge failed');
             }
-        } catch (err: any) {
-            const errorMessage = err.message || 'Bridge failed';
+        } catch (err) {
+            const error = err as Error;
+            const errorMessage = error.message || 'Bridge failed';
             setError(errorMessage);
             onError(errorMessage);
         }
-    };
+    }, [
+        sourceAddress,
+        selectedProtocol,
+        protocol,
+        amount,
+        recipient,
+        sourceChain,
+        destinationChain,
+        onStatus,
+        onComplete,
+        onError
+    ]);
+
+    useEffect(() => {
+        if (autoStart && !isStarted) {
+            startBridge();
+        }
+    }, [autoStart, isStarted, startBridge]);
 
     const getStatusIcon = () => {
         if (error) return <AlertCircle className="w-6 h-6 text-red-400" />;

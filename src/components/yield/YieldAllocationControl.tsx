@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { CompactCard } from '@/shared/components/premium/CompactLayout';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
-import { Heart, Trophy, TrendingUp } from 'lucide-react';
+import { Heart, Trophy } from 'lucide-react';
 
 interface YieldAllocationControlProps {
   ticketsAllocation: number; // Percentage allocated to tickets (0-100)

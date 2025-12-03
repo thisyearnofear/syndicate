@@ -15,7 +15,6 @@ import type {
     BridgeResult,
     BridgeProtocol,
     BridgeProtocolType,
-    ChainIdentifier,
     BridgeRoute,
     ProtocolHealth,
 } from './types';

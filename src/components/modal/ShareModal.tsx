@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { X, Twitter, MessageCircle, Copy, Check } from 'lucide-react';
+import { X, Twitter, Copy, Check } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 import { CompactStack, CompactFlex } from '@/shared/components/premium/CompactLayout';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';

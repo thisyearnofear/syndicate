@@ -25,12 +25,12 @@ export class SyndicateService {
     return data as SyndicateInfo[];
   }
 
-  async joinPool(poolId: string, ticketCount: number): Promise<boolean> {
+  async joinPool(): Promise<boolean> {
     // Implementation here
     return true;
   }
 
-  async createPool(pool: Omit<SyndicatePool, 'id'>): Promise<string> {
+  async createPool(): Promise<string> {
     // Implementation here
     return 'new-pool-id';
   }

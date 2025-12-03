@@ -14,7 +14,7 @@ import { useTicketPurchase } from '@/hooks/useTicketPurchase';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { octantVaultService, type OctantVaultInfo } from '@/services/octantVaultService';
 import { OCTANT_CONFIG } from '@/config/octantConfig';
-import { yieldToTicketsService } from '@/services/yieldToTicketsService';
+import { yieldToTicketsService, type AutoYieldStrategy } from '@/services/yieldToTicketsService';
 
 interface OctantYieldDashboardProps {
   vaultAddress?: string;
@@ -34,9 +34,14 @@ export function OctantYieldDashboard({
   } = useTicketPurchase();
 
   const [vaultInfo, setVaultInfo] = useState<OctantVaultInfo | null>(null);
-  const [yieldPreview, setYieldPreview] = useState<any>(null);
+  const [yieldPreview, setYieldPreview] = useState<{
+    yieldAmount: string;
+    ticketsAmount: string;
+    ticketCount: number;
+    causesAmount: string;
+  } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [strategyStatus, setStrategyStatus] = useState<any>(null);
+  const [strategyStatus, setStrategyStatus] = useState<AutoYieldStrategy | null>(null);
 
   // Resolve vault address from config unless explicitly provided
   const resolvedVaultAddress = vaultAddress || (OCTANT_CONFIG.useMockVault 

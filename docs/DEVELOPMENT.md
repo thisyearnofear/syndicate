@@ -1,7 +1,34 @@
 # Development Setup and Deployment
 
-**Last Updated**: Nov 22, 2025  
-**Status**: Active Development
+**Last Updated**: Dec 4, 2025  
+**Status**: Active Development (Zcash Hackathon Focus)
+
+---
+
+## ⚠️ Temporarily Disabled Features
+
+The following features are **temporarily disabled** to reduce build times for the Zcash hackathon:
+
+| Feature | Status | Re-enable Instructions |
+|---------|--------|------------------------|
+| **Solana Bridge** | Disabled | See `src/stubs/solana.ts` |
+| **Wormhole Bridge** | Disabled | See `src/stubs/wormhole.ts` |
+| **Web3Auth Social Login** | Disabled | See `src/stubs/web3auth.ts` |
+
+### How to Re-enable
+
+Each stub file contains instructions. Generally:
+1. Add the dependencies back to `package.json`
+2. Find imports from `@/stubs/*` and replace with original packages
+3. Run `npm install`
+
+### Why Stubs?
+
+- Reduced `node_modules` from ~4.2GB to ~2GB
+- Faster build times (was hanging, now completes)
+- Focus on NEAR + Zcash integration for hackathon
+
+---
 
 ## Quick Start Testing
 

@@ -14,10 +14,12 @@ export class ZcashProtocol implements BridgeProtocol {
     }
 
     async estimate(params: BridgeParams) {
+        void params;
         return { fee: '0.02', timeMs: 180000, gasEstimate: '~0.001 ZEC' };
     }
 
     async bridge(params: BridgeParams): Promise<BridgeResult> {
+        void params;
         throw new Error('Zcash protocol not yet implemented - Week 2 task');
     }
 

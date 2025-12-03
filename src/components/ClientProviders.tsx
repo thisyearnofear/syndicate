@@ -1,7 +1,6 @@
 'use client';
 
 import { ReactNode } from 'react';
-import dynamic from 'next/dynamic';
 
 // Import providers directly for consistent rendering
 import { Providers } from './Providers';

@@ -117,8 +117,7 @@ export function useOptimizedPurchase() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ ticketCount, syndicateId }: { ticketCount: number; syndicateId?: string }) => {
-      // Implement purchase logic
+    mutationFn: async ({ ticketCount }: { ticketCount: number }) => {
       return { success: true, ticketCount };
     },
     onSuccess: () => {
@@ -155,7 +154,7 @@ export function useBackgroundSync() {
 }
 
 // Connection-aware data fetching
-export function useConnectionAwareQuery(options: any) {
+export function useConnectionAwareQuery(options: Parameters<typeof useQuery>[0]) {
   const { isConnected } = useMemo(() => {
     // This would integrate with wallet connection state
     return { isConnected: typeof window !== 'undefined' }; // Simplified

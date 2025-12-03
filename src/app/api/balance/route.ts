@@ -46,10 +46,11 @@ export async function GET(request: NextRequest) {
     const address = searchParams.get('address');
     const chainId = searchParams.get('chainId') ? parseInt(searchParams.get('chainId')!) : undefined;
     return handleBalanceRequest(address || '', chainId);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     console.error('Balance API error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch balance', details: error?.message },
+      { error: 'Failed to fetch balance', details: msg },
       { status: 500 }
     );
   }
@@ -60,10 +61,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { address, chainId } = body;
     return handleBalanceRequest(address, chainId);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     console.error('Balance API error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch balance', details: error?.message },
+      { error: 'Failed to fetch balance', details: msg },
       { status: 500 }
     );
   }
@@ -118,10 +120,11 @@ async function getSolanaBalance(walletAddress: string): Promise<NextResponse> {
       wallet: walletAddress,
       chain: 'solana'
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     console.error('Failed to fetch Solana balance:', error);
     return NextResponse.json(
-      { solana: '0', base: '0', total: '0', error: error?.message },
+      { solana: '0', base: '0', total: '0', error: msg },
       { status: 200 }
     );
   }
@@ -156,10 +159,11 @@ async function getEvmBalance(walletAddress: string, chainId: number): Promise<Ne
       chain: chainId === 8453 ? 'base' : chainId === 1 ? 'ethereum' : 'unknown',
       chainId
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     console.error('Failed to fetch EVM balance:', error);
     return NextResponse.json(
-      { usdc: '0', balance: '0', error: error?.message },
+      { usdc: '0', balance: '0', error: msg },
       { status: 200 }
     );
   }

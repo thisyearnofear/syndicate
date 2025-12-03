@@ -11,23 +11,12 @@
 import { useCallback } from 'react';
 import { createError } from '@/shared/utils';
 import { useWalletContext } from '@/context/WalletContext';
-
-// =============================================================================
-// TYPES
-// =============================================================================
-
-export type WalletType = 'metamask' | 'phantom' | 'social' | 'near';
+import type { AccountState } from '@near-wallet-selector/core';
+import { WalletType, WalletTypes } from '../types';
 
 // =============================================================================
 // WALLET DETECTION
 // =============================================================================
-
-export const WalletTypes = {
-  METAMASK: 'metamask' as const,
-  PHANTOM: 'phantom' as const,
-  SOCIAL: 'social' as const,
-  NEAR: 'near' as const,
-};
 
 /**
  * CLEAN: Detect available wallets
@@ -38,7 +27,7 @@ export function getAvailableWallets(): WalletType[] {
 
   // MetaMask is handled by wagmi/RainbowKit - skip here to avoid conflicts
   // Check for Phantom
-  if (typeof window !== 'undefined' && (window as any).solana?.isPhantom) {
+  if (typeof window !== 'undefined' && window.solana?.isPhantom) {
     available.push(WalletTypes.PHANTOM);
   }
 
@@ -64,15 +53,15 @@ export function getWalletStatus(walletType: WalletType): {
   switch (walletType) {
     case WalletTypes.METAMASK:
       return {
-        isAvailable: typeof window !== 'undefined' && !!(window as any).ethereum?.isMetaMask,
-        isInstalled: typeof window !== 'undefined' && !!(window as any).ethereum?.isMetaMask,
+        isAvailable: typeof window !== 'undefined' && !!window.ethereum?.isMetaMask,
+        isInstalled: typeof window !== 'undefined' && !!window.ethereum?.isMetaMask,
         downloadUrl: 'https://metamask.io/download/',
       };
 
     case WalletTypes.PHANTOM:
       return {
-        isAvailable: typeof window !== 'undefined' && !!(window as any).solana?.isPhantom,
-        isInstalled: typeof window !== 'undefined' && !!(window as any).solana?.isPhantom,
+        isAvailable: typeof window !== 'undefined' && !!window.solana?.isPhantom,
+        isInstalled: typeof window !== 'undefined' && !!window.solana?.isPhantom,
         downloadUrl: 'https://phantom.app/',
       };
 
@@ -157,8 +146,8 @@ export function useUnifiedWallet(): {
         case WalletTypes.PHANTOM:
           // SOLANA-FIRST APPROACH: Always connect via Solana interface first
           // This ensures we get Phantom specifically (not MetaMask via window.ethereum)
-          const hasPhantomSolana = (window as any).solana?.isPhantom;
-          
+          const hasPhantomSolana = window.solana?.isPhantom;
+
           if (!hasPhantomSolana) {
             throw createError('WALLET_NOT_FOUND', 'Phantom wallet is not installed. Please install it from phantom.app');
           }
@@ -166,14 +155,11 @@ export function useUnifiedWallet(): {
           // METAMASK CONFLICT PREVENTION: Disable MetaMask auto-connection while using Phantom
           // This prevents wagmi from interfering with Solana wallet connections
           try {
-            if ((window as any).ethereum) {
-              // Temporarily disable ethereum provider to prevent MetaMask auto-connect
-              const originalProvider = (window as any).ethereum;
-              (window as any).ethereum = null;
-              
-              // Restore after a brief delay to prevent immediate re-trigger
+            if (window.ethereum) {
+              const originalProvider = window.ethereum as unknown;
+              (window as unknown as { ethereum?: unknown }).ethereum = null;
               setTimeout(() => {
-                (window as any).ethereum = originalProvider;
+                (window as unknown as { ethereum?: unknown }).ethereum = originalProvider;
               }, 1000);
             }
           } catch (error) {
@@ -183,15 +169,15 @@ export function useUnifiedWallet(): {
 
           try {
             // Always connect via Solana interface first to guarantee Phantom connection
-            const solanaWallet = (window as any).solana;
+            const solanaWallet = window.solana as { isPhantom?: boolean; publicKey?: { toString(): string }; connect(): Promise<{ publicKey: { toString(): string } }> } | undefined;
             let connection;
-            
+
             // Check if already connected
-            if (solanaWallet.publicKey) {
-              connection = { publicKey: solanaWallet.publicKey };
+            if (solanaWallet?.publicKey) {
+              connection = { publicKey: solanaWallet.publicKey.toString() };
             } else {
               // Connect to Phantom via Solana (avoids MetaMask conflicts)
-              connection = await solanaWallet.connect();
+              connection = await solanaWallet?.connect();
             }
 
             if (!connection?.publicKey) {
@@ -206,7 +192,7 @@ export function useUnifiedWallet(): {
             try {
               const { solanaWalletService } = await import('@/services/solanaWalletService');
               await solanaWalletService.init();
-              
+
               // Update service state to reflect connection
               if (!solanaWalletService.isReady()) {
                 await solanaWalletService.connectPhantom();
@@ -220,11 +206,13 @@ export function useUnifiedWallet(): {
             // via useCrossChainPurchase hook to bridge Solana USDC -> Base -> Purchase
             console.log('Phantom connected via Solana. Cross-chain purchases available via CCTP bridge.');
 
-          } catch (error: any) {
-            if (error.code === 4001 || error.message?.includes('User rejected')) {
+          } catch (error: unknown) {
+            const code = (error as { code?: number }).code;
+            const message = (error as { message?: string }).message || '';
+            if (code === 4001 || message.includes('User rejected')) {
               throw createError('CONNECTION_REJECTED', 'Connection rejected by user');
             }
-            throw createError('CONNECTION_FAILED', `Failed to connect to Phantom: ${error.message}`);
+            throw createError('CONNECTION_FAILED', `Failed to connect to Phantom: ${message}`);
           }
           break;
 
@@ -232,9 +220,9 @@ export function useUnifiedWallet(): {
           try {
             // For now, show coming soon message for social login
             throw createError('WALLET_NOT_SUPPORTED', 'Social login is coming soon. Please use MetaMask for now.');
-          } catch (error: any) {
+          } catch (error: unknown) {
             console.error('Social login error:', error);
-            throw error;
+            throw error as Error;
           }
           break;
 
@@ -246,9 +234,9 @@ export function useUnifiedWallet(): {
             }
 
             const [{ setupWalletSelector }, { setupMyNearWallet }, { setupModal }] = await Promise.all([
-              import('@near-wallet-selector/core') as any,
-              import('@near-wallet-selector/my-near-wallet') as any,
-              import('@near-wallet-selector/modal-ui') as any,
+              import('@near-wallet-selector/core'),
+              import('@near-wallet-selector/my-near-wallet'),
+              import('@near-wallet-selector/modal-ui'),
             ]);
 
             const { NEAR } = await import('@/config');
@@ -270,9 +258,9 @@ export function useUnifiedWallet(): {
               let attempts = 0;
               const interval = setInterval(() => {
                 try {
-                  const state = selector.store.getState();
+                  const state = selector.store.getState() as { accounts?: AccountState[] };
                   const accounts = state.accounts || [];
-                  const active = accounts.find((a: any) => a.active);
+                  const active = accounts.find((a) => a.active);
                   if (active?.accountId) {
                     clearInterval(interval);
                     resolve(active.accountId);
@@ -280,7 +268,7 @@ export function useUnifiedWallet(): {
                     clearInterval(interval);
                     resolve(null);
                   }
-                } catch (e) {
+                } catch {
                   clearInterval(interval);
                   resolve(null);
                 }
@@ -296,11 +284,13 @@ export function useUnifiedWallet(): {
 
             // NEAR wallet connected successfully
             // Bridge manager will handle NEAR operations when needed
-          } catch (error: any) {
-            if (error.code === 4001) {
+          } catch (error: unknown) {
+            const code = (error as { code?: number }).code;
+            const message = (error as { message?: string }).message || '';
+            if (code === 4001) {
               throw createError('CONNECTION_REJECTED', 'Connection rejected by user');
             }
-            throw createError('CONNECTION_FAILED', `Failed to connect NEAR: ${error.message}`);
+            throw createError('CONNECTION_FAILED', `Failed to connect NEAR: ${message}`);
           }
           break;
 
@@ -324,24 +314,7 @@ export function useUnifiedWallet(): {
    * CLEAN: Disconnect wallet
    */
   const disconnect = useCallback(async () => {
-    try {
-      // Try to disconnect from wagmi if available (WagmiProvider might not be ready)
-      if (typeof window !== 'undefined') {
-        try {
-          const wagmi = await import('wagmi');
-          const { useDisconnect } = wagmi;
-          if (useDisconnect) {
-            const { disconnect } = useDisconnect();
-            await disconnect();
-          }
-        } catch (error) {
-          // WagmiProvider not available, that's fine
-          console.warn('Wagmi not available for disconnect:', error);
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to disconnect from wagmi:', error);
-    }
+    // No direct wagmi hook calls in callbacks; rely on context state
     // Then update internal state
     dispatch({ type: 'DISCONNECT' });
   }, [dispatch]);
@@ -360,8 +333,8 @@ export function useUnifiedWallet(): {
     }
 
     try {
-      if (state.walletType === WalletTypes.METAMASK && (window as any).ethereum) {
-        await (window as any).ethereum.request({
+      if (state.walletType === WalletTypes.METAMASK && window.ethereum) {
+        await window.ethereum.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: `0x${targetChainId.toString(16)}` }],
         });

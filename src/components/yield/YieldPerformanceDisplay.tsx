@@ -1,5 +1,4 @@
 import React from 'react';
-import { CompactCard } from '@/shared/components/premium/CompactLayout';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
 import { TrendingUp, Heart, Trophy, Wallet } from 'lucide-react';
 

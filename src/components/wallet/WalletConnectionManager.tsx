@@ -30,15 +30,7 @@ export default function WalletConnectionManager({
     dispatch({ type: "CLOSE_MODAL" });
   }, [dispatch]);
 
-  const handleSocialLoginClick = useCallback(() => {
-    // Placeholder for social login functionality
-    dispatch({
-      type: "CONNECT_FAILURE",
-      payload: {
-        error: "Social login is coming soon. Please use MetaMask for now.",
-      },
-    });
-  }, [dispatch]);
+
 
   const handleWalletConnect = useCallback(
     async (walletType: WalletType) => {
@@ -48,18 +40,24 @@ export default function WalletConnectionManager({
         if (walletType !== 'metamask') {
           dispatch({ type: "CLOSE_MODAL" });
         }
-      } catch (error: any) {
-        console.error("Wallet connection failed:", error);
+      } catch (error) {
+        const err = error as Error;
+        console.error("Wallet connection failed:", err);
         // Don't show error for WalletConnect method since RainbowKit handles its own UI
         if (walletType !== 'metamask') {
           const errorMessage =
-            error?.message || "Failed to connect wallet. Please try again.";
+            err?.message || "Failed to connect wallet. Please try again.";
           dispatch({ type: "CONNECT_FAILURE", payload: { error: errorMessage } });
         }
       }
     },
     [connect, dispatch]
   );
+
+  const onSocialLoginClick = () => {
+    // Placeholder for social login functionality
+    console.log("Social login clicked");
+  };
 
   const handleDisconnect = useCallback(async () => {
     try {
@@ -167,8 +165,7 @@ export default function WalletConnectionManager({
           )}
 
           <WalletConnectionOptions
-          onSocialLoginClick={handleSocialLoginClick}
-          onWalletConnect={handleWalletConnect}
+            onWalletConnect={handleWalletConnect}
           />
         </div>
       </UnifiedModal>

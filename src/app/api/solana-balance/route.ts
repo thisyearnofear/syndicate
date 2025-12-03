@@ -1,5 +1,6 @@
-import { Connection, PublicKey } from '@solana/web3.js';
-import { getAssociatedTokenAddress } from '@solana/spl-token';
+// STUB: Using stubs while Solana deps are disabled for hackathon
+// TO RE-ENABLE: Replace with '@solana/web3.js' and '@solana/spl-token'
+import { Connection, PublicKey, getAssociatedTokenAddress } from '@/stubs/solana';
 
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 
@@ -67,8 +68,8 @@ export async function GET(request: Request): Promise<Response> {
           { balance, success: true },
           { status: 200 }
         );
-      } catch (e: any) {
-        lastError = e?.message || String(e);
+      } catch (e: unknown) {
+        lastError = e instanceof Error ? e.message : String(e);
         continue;
       }
     }
@@ -78,9 +79,10 @@ export async function GET(request: Request): Promise<Response> {
       { balance: '0', success: false, error: lastError },
       { status: 200 }
     );
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'unknown error';
     return Response.json(
-      { error: e?.message || 'unknown error' },
+      { error: msg },
       { status: 500 }
     );
   }

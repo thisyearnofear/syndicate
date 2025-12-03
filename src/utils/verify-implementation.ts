@@ -6,7 +6,7 @@ process.env.SOLANA_ALCHEMY_API_KEY = 'G0vLpBA5CeTNUKONNo2gz';
 
 // Simple test to verify the class can be instantiated
 try {
-  const walletIntegration = new SolanaWalletIntegration();
+  new SolanaWalletIntegration();
   console.log('✓ SolanaWalletIntegration class instantiated successfully');
   
   // Verify properties are set correctly

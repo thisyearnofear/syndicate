@@ -173,14 +173,16 @@ class PerformanceMonitor {
 
   private getMemoryUsage(): number {
     if ('memory' in performance) {
-      return (performance as any).memory.usedJSHeapSize / 1024 / 1024; // MB
+      const pm = performance as (typeof performance & { memory?: { usedJSHeapSize: number } });
+      return (pm.memory?.usedJSHeapSize || 0) / 1024 / 1024;
     }
     return 0;
   }
 
   private getConnectionType(): string {
     if ('connection' in navigator) {
-      return (navigator as any).connection.effectiveType || 'unknown';
+      const nav = navigator as (Navigator & { connection?: { effectiveType?: string } });
+      return nav.connection?.effectiveType || 'unknown';
     }
     return 'unknown';
   }
@@ -248,7 +250,7 @@ export const performanceMonitor = new PerformanceMonitor();
 
 if (features.enableDebugMode && typeof window !== 'undefined') {
   // Expose performance monitor to window for debugging
-  (window as any).__performanceMonitor = performanceMonitor;
+  (window as unknown as { __performanceMonitor?: PerformanceMonitor }).__performanceMonitor = performanceMonitor;
   
   // Log performance stats every 30 seconds in development
   setInterval(() => {

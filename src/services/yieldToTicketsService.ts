@@ -10,7 +10,6 @@ import { web3Service } from './web3Service';
 import { bridgeManager } from './bridges';
 import { USDC_ADDRESSES, type BridgeParams, type ChainIdentifier } from './bridges/types';
 import { CHAINS } from '@/config';
-import { ethers } from 'ethers';
 
 export interface YieldToTicketsConfig {
   vaultAddress: string;
@@ -63,10 +62,6 @@ class YieldToTicketsService {
       }
 
       // Persist strategy config (timelock + chain defaults)
-      const allocation: YieldAllocation = {
-        ticketsPercentage: config.ticketsAllocation,
-        causesPercentage: config.causesAllocation,
-      };
         // Defaults: Ethereum -> Base with 60-minute cadence
         const originChainId = config.originChainId ?? CHAINS.ethereum.id;
         const destinationChainId = config.destinationChainId ?? CHAINS.base.id;

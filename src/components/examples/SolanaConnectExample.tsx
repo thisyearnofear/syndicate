@@ -11,11 +11,11 @@ export function SolanaConnectExample() {
   const [err, setErr] = useState<string | null>(null);
 
   const onConnect = useCallback(async () => {
-    try { await connect(); await refreshUsdc(); setErr(null); } catch (e: any) { setErr(e?.message || 'Connect failed'); }
+    try { await connect(); await refreshUsdc(); setErr(null); } catch (e: unknown) { const error = e as Error; setErr(error?.message || 'Connect failed'); }
   }, [connect, refreshUsdc]);
 
   const onRefresh = useCallback(async () => {
-    try { await refreshUsdc(); setErr(null); } catch (e: any) { setErr(e?.message || 'Refresh failed'); }
+    try { await refreshUsdc(); setErr(null); } catch (e: unknown) { const error = e as Error; setErr(error?.message || 'Refresh failed'); }
   }, [refreshUsdc]);
 
   return (

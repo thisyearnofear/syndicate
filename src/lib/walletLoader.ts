@@ -6,26 +6,26 @@
  */
 
 interface WalletLibraries {
-  metamask: any;
-  walletconnect: any;
-  phantom: any;
-  solana: any;
-  near: any;
+  metamask: unknown;
+  walletconnect: unknown;
+  phantom: unknown;
+  solana: unknown;
+  near: unknown;
 }
 
 class WalletLoader {
   private loadedLibraries = new Set<string>();
-  private libraryPromises = new Map<string, Promise<any>>();
+  private libraryPromises = new Map<string, Promise<unknown>>();
 
   /**
    * Load only the wallet library needed for the selected wallet type
    */
-  async loadWalletLibrary(walletType: string): Promise<any> {
+  async loadWalletLibrary(walletType: string): Promise<unknown> {
     if (this.loadedLibraries.has(walletType)) {
       return this.libraryPromises.get(walletType);
     }
 
-    let libraryPromise: Promise<any>;
+    let libraryPromise: Promise<unknown>;
 
     switch (walletType) {
       case 'metamask':
@@ -64,46 +64,36 @@ class WalletLoader {
   /**
    * Load basic Ethereum/Web3 libraries
    */
-  private async loadBasicWeb3(): Promise<any> {
+  private async loadBasicWeb3(): Promise<{ ethers: typeof import('ethers'); rainbowkit: unknown }> {
     const [ethersModule, rainbowModule] = await Promise.all([
       import('ethers'),
       import('@rainbow-me/rainbowkit'),
     ]);
 
-    return {
-      ethers: ethersModule,
-      rainbowkit: rainbowModule,
-    };
+    return { ethers: ethersModule, rainbowkit: rainbowModule };
   }
 
   /**
    * Load Solana wallet libraries only when Phantom is selected
+   * STUB: Returns stubs while Solana deps are disabled for hackathon
    */
-  private async loadSolanaWallet(): Promise<any> {
-    const [solanaWalletAdapter, solanaWeb3] = await Promise.all([
-      import('@solana/wallet-adapter-react'),
-      import('@solana/web3.js'),
-    ]);
-
-    return {
-      walletAdapter: solanaWalletAdapter,
-      web3: solanaWeb3,
-    };
+  private async loadSolanaWallet(): Promise<{ walletAdapter: unknown; web3: unknown }> {
+    // STUB: Solana deps disabled for hackathon
+    console.warn('[WalletLoader] Solana libraries disabled - using stubs');
+    const solanaStubs = await import('@/stubs/solana');
+    return { walletAdapter: null, web3: solanaStubs };
   }
 
   /**
    * Load NEAR wallet libraries only when NEAR is selected
    */
-  private async loadNearWallet(): Promise<any> {
+  private async loadNearWallet(): Promise<{ providers: unknown; walletSelector: unknown }> {
     const [nearApi, nearWalletSelector] = await Promise.all([
       import('@near-js/providers'),
       import('@near-wallet-selector/core'),
     ]);
 
-    return {
-      providers: nearApi,
-      walletSelector: nearWalletSelector,
-    };
+    return { providers: nearApi, walletSelector: nearWalletSelector };
   }
 
   /**

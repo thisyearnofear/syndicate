@@ -6,8 +6,8 @@
  */
 
 import { ethers } from 'ethers';
-import { CONTRACTS, CHAINS } from '@/config';
-import { getConfig } from '@/config/wagmi';
+import { CONTRACTS } from '@/config';
+import type { SyndicateImpact } from '@/domains/lottery/types';
 
 // Megapot contract ABI (minimal required functions)
 const MEGAPOT_ABI = [
@@ -46,18 +46,6 @@ const USDC_ABI = [
   "function decimals() external view returns (uint8)",
 ];
 
-// Helper to get signer from wagmi/window.ethereum
-async function getSigner(): Promise<ethers.Signer | null> {
-  if (!isBrowser() || !(window as any).ethereum) {
-    return null;
-  }
-  try {
-    const provider = new ethers.BrowserProvider((window as any).ethereum);
-    return await provider.getSigner();
-  } catch {
-    return null;
-  }
-}
 
 export interface TicketPurchaseResult {
   success: boolean;
@@ -67,7 +55,7 @@ export interface TicketPurchaseResult {
   // ENHANCEMENT: Added syndicate fields for enhanced purchase flow
   mode?: 'individual' | 'syndicate';
   syndicateId?: string;
-  syndicateImpact?: any; // Will be properly typed when we import from lottery types
+  syndicateImpact?: SyndicateImpact;
 }
 
 export interface UserBalance {
@@ -125,11 +113,11 @@ class Web3Service {
         return false;
       }
 
-      if (!(window as any).ethereum) {
+      if (!('ethereum' in window) || !window.ethereum) {
         throw new Error('No wallet found. Please install MetaMask or another Web3 wallet.');
       }
 
-      this.provider = new ethers.BrowserProvider((window as any).ethereum);
+      this.provider = new ethers.BrowserProvider(window.ethereum);
 
       // Ensure we're on Base network BEFORE marking as initialized
       await this.ensureCorrectNetwork();
@@ -184,15 +172,22 @@ class Web3Service {
     const baseChainId = BigInt(8453); // Base mainnet
 
     if (network.chainId !== baseChainId) {
+      if (!window.ethereum) {
+        throw new Error('Ethereum provider not found');
+      }
       try {
-        await (window as any).ethereum.request({
+        await window.ethereum.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: '0x2105' }], // Base mainnet in hex
         });
-      } catch (switchError: any) {
+      } catch (switchError: unknown) {
         // If Base network is not added to wallet, add it
-        if (switchError.code === 4902) {
-          await (window as any).ethereum.request({
+        const code = (switchError as { code?: number }).code;
+        if (code === 4902) {
+          if (!window.ethereum) {
+            throw new Error('Ethereum provider not found');
+          }
+          await window.ethereum.request({
             method: 'wallet_addEthereumChain',
             params: [{
               chainId: '0x2105',
@@ -404,22 +399,24 @@ class Web3Service {
         ticketCount,
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Ticket purchase failed:', error);
       
       let errorMessage = 'Purchase failed. Please try again.';
       
-      if (error.code === 'ACTION_REJECTED' || error.code === -32603) {
+      const code = (error as { code?: string | number }).code;
+      const message = (error as { message?: string }).message || '';
+      if (code === 'ACTION_REJECTED' || code === -32603) {
         errorMessage = 'Transaction was rejected. Please approve the transaction in your wallet.';
-      } else if (error.message?.includes('insufficient funds')) {
+      } else if (message.includes('insufficient funds')) {
         errorMessage = 'Insufficient funds for transaction.';
-      } else if (error.message?.includes('allowance')) {
+      } else if (message.includes('allowance')) {
         errorMessage = 'USDC approval failed. Please try again.';
-      } else if (error.message?.includes('user rejected') || error.message?.includes('User rejected')) {
+      } else if (message.includes('user rejected') || message.includes('User rejected')) {
         errorMessage = 'Transaction was rejected by user.';
-      } else if (error.message) {
+      } else if (message) {
         // Log the full error for debugging
-        console.error('Full error message:', error.message);
+        console.error('Full error message:', message);
       }
 
       return {
@@ -552,11 +549,9 @@ class Web3Service {
       // Get odds per ticket from contract (if available) or estimate
       // For now, we'll use the jackpot size to estimate odds
       const jackpotSize = await this.megapotContract.getCurrentJackpot();
-      const ticketPrice = await this.megapotContract.ticketPrice();
 
       // Convert to readable numbers
       const jackpotUSD = parseFloat(ethers.formatUnits(jackpotSize, 6));
-      const ticketPriceUSD = parseFloat(ethers.formatUnits(ticketPrice, 6));
 
       // Calculate odds per ticket: jackpot / 0.7 (since 70% of ticket value goes to jackpot pool)
       const oddsPerTicket = jackpotUSD / 0.7;

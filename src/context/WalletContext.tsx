@@ -1,15 +1,15 @@
 "use client";
 
 import React, {
-createContext,
-useContext,
-useReducer,
-useEffect,
-ReactNode,
+  createContext,
+  useContext,
+  useReducer,
+  useEffect,
+  ReactNode,
 } from "react";
 import { useAccount, useDisconnect } from "wagmi";
 import { useCallback } from "react";
-import { WalletType } from "@/domains/wallet/services/unifiedWalletService";
+import { WalletType } from "@/domains/wallet/types";
 
 // =============================================================================
 // TYPES
@@ -29,9 +29,9 @@ export interface WalletState {
 export type WalletAction =
   | { type: "CONNECT_START" }
   | {
-      type: "CONNECT_SUCCESS";
-      payload: { address: string; walletType: WalletType; chainId: number };
-    }
+    type: "CONNECT_SUCCESS";
+    payload: { address: string; walletType: WalletType; chainId: number };
+  }
   | { type: "CONNECT_FAILURE"; payload: { error: string } }
   | { type: "DISCONNECT" }
   | { type: "CLEAR_ERROR" }
@@ -128,15 +128,15 @@ export const walletReducer = (
       return isRecent
         ? { ...action.payload, isModalOpen: false }
         : {
-            isConnected: false,
-            address: null,
-            walletType: null,
-            chainId: null,
-            isConnecting: false,
-            error: null,
-            lastConnectedAt: null,
-            isModalOpen: false,
-          };
+          isConnected: false,
+          address: null,
+          walletType: null,
+          chainId: null,
+          isConnecting: false,
+          error: null,
+          lastConnectedAt: null,
+          isModalOpen: false,
+        };
 
     case "NETWORK_CHANGED":
       return {
@@ -180,7 +180,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
   // Manual wagmi sync function (called only when user explicitly connects)
   const syncWithWagmi = useCallback(() => {
     const isNonEvmWallet = state.walletType === 'phantom' || state.walletType === 'near';
-    
+
     if (wagmiConnected && address && !isNonEvmWallet) {
       let walletType: WalletType = 'metamask';
 
@@ -224,25 +224,28 @@ export function WalletProvider({ children }: WalletProviderProps) {
       if (wagmiConnected && (state.walletType === 'metamask' || !state.walletType)) {
         await wagmiDisconnect();
       }
-      
+
       // Handle Phantom (Solana) disconnection
-      if (state.walletType === 'phantom' && (window as any).solana) {
-        try {
-          await (window as any).solana.disconnect();
-        } catch (phantomError) {
-          console.warn('Phantom disconnect failed:', phantomError);
+      if (state.walletType === 'phantom' && typeof window !== 'undefined') {
+        const solanaWindow = window as Window & typeof globalThis & { solana?: { disconnect: () => Promise<void> } };
+        if (solanaWindow.solana) {
+          try {
+            await solanaWindow.solana.disconnect();
+          } catch (phantomError) {
+            console.warn('Phantom disconnect failed:', phantomError);
+          }
         }
       }
-      
+
       // Handle NEAR disconnection
       if (state.walletType === 'near') {
         // NEAR disconnect logic would go here
         console.log('NEAR disconnect - implement if needed');
       }
-      
+
       // Always clear our internal state
       dispatch({ type: 'DISCONNECT' });
-      
+
       console.log('Wallet disconnected successfully');
     } catch (error) {
       console.error('Failed to disconnect wallet:', error);
@@ -273,7 +276,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
   // This prevents the app from trying to reconnect on page load
   useEffect(() => {
     console.log('WalletContext: Auto-restoration disabled to prevent connection spam on page load');
-    
+
     // Clear any saved wallet state to prevent future auto-connections
     try {
       if (typeof window !== "undefined" && typeof localStorage !== "undefined") {

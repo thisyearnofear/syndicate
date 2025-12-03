@@ -25,8 +25,6 @@ export default function UnifiedModal({
   showCloseButton = true,
   className = "",
 }: UnifiedModalProps) {
-  if (!isOpen) return null;
-
   const maxWidthClasses = {
     sm: "max-w-sm",
     md: "max-w-md",
@@ -37,6 +35,8 @@ export default function UnifiedModal({
 
   // Handle escape key press
   React.useEffect(() => {
+    if (!isOpen) return;
+    
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
@@ -47,7 +47,9 @@ export default function UnifiedModal({
     return () => {
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [onClose]);
+  }, [onClose, isOpen]);
+
+  if (!isOpen) return null;
 
   return (
     <div 

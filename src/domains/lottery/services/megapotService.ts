@@ -12,7 +12,7 @@ import { api, performance } from '@/config';
 import type { JackpotStats, TicketPurchase, DailyGiveawayWin } from '../types';
 
 class MegapotService {
-  private cache = new Map<string, { data: any; timestamp: number }>();
+  private cache = new Map<string, { data: unknown; timestamp: number }>();
   private readonly baseUrl = api.megapot.baseUrl;
   private readonly apiKey = api.megapot.apiKey;
 
@@ -34,7 +34,7 @@ class MegapotService {
     if (cache) {
       const cached = this.cache.get(cacheKey);
       if (cached && Date.now() - cached.timestamp < cacheDuration) {
-        return cached.data;
+        return cached.data as T;
       }
     }
 

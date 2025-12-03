@@ -2,22 +2,33 @@
 
 /**
  * Solana Wallet Service (Phantom)
- * - Minimal, modular service to connect Phantom and read balances (USDC)
- * - Lazy loads @solana/web3.js and @solana/spl-token to prevent bloat
+ * 
+ * STATUS: DISABLED for hackathon (Solana dependencies removed)
+ * 
+ * TO RE-ENABLE:
+ * 1. Add Solana deps back to package.json
+ * 2. Replace stub imports with real '@solana/*' packages
+ * 3. Restore dynamic imports below
  */
 
-import { walletLoader } from '@/lib/walletLoader';
+// STUB: Using stubs while Solana deps are disabled
+import * as SolanaStubs from '@/stubs/solana';
 
 export type SolanaWalletState = {
   connected: boolean;
   publicKey: string | null; // base58
 };
 
+type PhantomProvider = {
+  isPhantom?: boolean;
+  connect?: (options?: { onlyIfTrusted?: boolean }) => Promise<{ publicKey?: { toString?: () => string } | string }>;
+  disconnect?: () => Promise<void>;
+};
+
 class SolanaWalletService {
   private state: SolanaWalletState = { connected: false, publicKey: null };
-  private solana: any | null = null; // window.solana
-  private web3: any | null = null; // @solana/web3.js
-  private splToken: any | null = null; // @solana/spl-token
+  private solana: PhantomProvider | null = null;
+  private web3: typeof SolanaStubs | null = null;
 
   private isBrowser(): boolean {
     return typeof window !== 'undefined' && typeof document !== 'undefined';
@@ -25,17 +36,13 @@ class SolanaWalletService {
 
   async init(): Promise<boolean> {
     if (!this.isBrowser()) return false;
-    if ((window as any).solana && (window as any).solana.isPhantom) {
-      this.solana = (window as any).solana;
+    const w = window as unknown as { solana?: PhantomProvider };
+    if (w.solana && w.solana.isPhantom) {
+      this.solana = w.solana;
     }
-    // Lazy import libs only when needed
-    const libs = await walletLoader.loadWalletLibrary('phantom');
-    this.web3 = libs?.web3;
-    try {
-      this.splToken = (await import('@solana/spl-token'));
-    } catch (_) {
-      // optional until used
-    }
+    // STUB: Use stubs instead of real Solana libs (disabled for hackathon)
+    this.web3 = SolanaStubs;
+    console.warn('[SolanaWalletService] Using stubs - Solana is disabled for hackathon');
     return true;
   }
 
@@ -43,19 +50,29 @@ class SolanaWalletService {
     if (!this.isBrowser()) return null;
     if (!this.solana) {
       await this.init();
-      this.solana = (window as any).solana;
+      this.solana = (window as unknown as { solana?: PhantomProvider }).solana || null;
     }
     if (!this.solana?.isPhantom) {
       throw new Error('Phantom wallet not found');
     }
+    if (!this.solana.connect) {
+      throw new Error('Phantom wallet connect method not available');
+    }
     const resp = await this.solana.connect({ onlyIfTrusted: false });
-    const pk = resp?.publicKey?.toString?.() || resp?.publicKey || null;
+    let pk: string | null = null;
+    if (resp?.publicKey) {
+      if (typeof resp.publicKey === 'string') {
+        pk = resp.publicKey;
+      } else if (resp.publicKey.toString) {
+        pk = resp.publicKey.toString();
+      }
+    }
     this.state = { connected: !!pk, publicKey: pk };
     return pk;
   }
 
   async disconnect(): Promise<void> {
-    try { await this.solana?.disconnect?.(); } catch(_) {}
+    try { await this.solana?.disconnect?.(); } catch { }
     this.state = { connected: false, publicKey: null };
   }
 
@@ -71,6 +88,9 @@ class SolanaWalletService {
   async getUsdcBalance(rpcUrl: string, usdcMint: string): Promise<string> {
     if (!this.state.publicKey) return '0';
     if (!this.web3) await this.init();
+    if (!this.web3) {
+      throw new Error('Failed to initialize Solana web3 library');
+    }
     const { Connection, PublicKey } = this.web3;
     const connection = new Connection(rpcUrl, 'confirmed');
 
@@ -78,12 +98,9 @@ class SolanaWalletService {
     const owner = new PublicKey(this.state.publicKey);
     const mint = new PublicKey(usdcMint);
 
-    // spl-token not required for balance summation; use token program filter
-    const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
     const accounts = await connection.getTokenAccountsByOwner(owner, { mint });
     let total = 0n;
-    for (const { account } of accounts.value) {
-      const data = account.data;
+    for (const account of accounts.value) {
       // Account layout parsing is heavy; call getTokenAccountBalance for each (RPC helps parse)
       const info = await connection.getTokenAccountBalance(account.pubkey);
       const ui = info?.value?.amount || '0';

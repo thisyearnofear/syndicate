@@ -29,8 +29,8 @@ const MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
 export function savePendingBridge(bridge: PendingBridge): void {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(bridge));
-    } catch (e) {
-        console.warn('Failed to save pending bridge:', e);
+    } catch {
+        console.warn('Failed to save pending bridge');
     }
 }
 
@@ -40,8 +40,8 @@ export function savePendingBridge(bridge: PendingBridge): void {
 export function saveBalanceBeforeBridge(balance: string): void {
     try {
         localStorage.setItem(BALANCE_BEFORE_KEY, balance);
-    } catch (e) {
-        console.warn('Failed to save balance:', e);
+    } catch {
+        console.warn('Failed to save balance');
     }
 }
 
@@ -63,8 +63,8 @@ export function getPendingBridge(): PendingBridge | null {
         }
 
         return bridge;
-    } catch (e) {
-        console.warn('Failed to get pending bridge:', e);
+    } catch {
+        console.warn('Failed to get pending bridge');
         return null;
     }
 }
@@ -75,7 +75,7 @@ export function getPendingBridge(): PendingBridge | null {
 export function getBalanceBeforeBridge(): string | null {
     try {
         return localStorage.getItem(BALANCE_BEFORE_KEY);
-    } catch (e) {
+    } catch {
         return null;
     }
 }
@@ -87,8 +87,8 @@ export function clearPendingBridge(): void {
     try {
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem(BALANCE_BEFORE_KEY);
-    } catch (e) {
-        console.warn('Failed to clear pending bridge:', e);
+    } catch {
+        console.warn('Failed to clear pending bridge');
     }
 }
 
