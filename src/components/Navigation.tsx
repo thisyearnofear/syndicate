@@ -16,8 +16,8 @@ import { usePathname } from 'next/navigation';
 import { Button } from '@/shared/components/ui/Button';
 import { CompactFlex } from '@/shared/components/premium/CompactLayout';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
-
-import { useUnifiedWallet, WalletType } from '@/domains/wallet/services/unifiedWalletService';
+import { useUnifiedWallet } from '@/domains/wallet/services/unifiedWalletService';
+import { WalletType } from '@/domains/wallet/types';
 import WalletInfo from './wallet/WalletInfo';
 import { Home, Ticket, Users, TrendingUp, Menu, X, Loader, ArrowLeftRight } from 'lucide-react';
 import { useRef, useEffect } from 'react';
@@ -46,6 +46,11 @@ export default function Navigation({ className = '' }: NavigationProps) {
         } catch (error) {
             console.error("Connection failed:", error);
         }
+    };
+
+    const onSocialLoginClick = () => {
+        // Placeholder for social login functionality
+        console.log("Social login clicked");
     };
 
     // Determine if Bridge should be emphasized in nav
@@ -237,7 +242,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                                             onClick={() => setIsMobileMenuOpen(false)}
                                         >
                                             <button
-                                                {...(item.label === 'Bridge' ? { 'aria-label': 'Bridge USDC to Base to buy tickets' } as any : {})}
+                                                aria-label={item.label === 'Bridge' ? 'Bridge USDC to Base to buy tickets' : undefined}
                                                 className={`
                                 w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-left
                                 ${item.active
@@ -305,10 +310,6 @@ export default function Navigation({ className = '' }: NavigationProps) {
                 >
                     <WalletConnectionOptions
                         onWalletConnect={handleWalletConnect}
-                        onSocialLoginClick={() => {
-                            // Social login placeholder (removed for now)
-                            console.log("Social login clicked");
-                        }}
                     />
                 </UnifiedModal>
             </Suspense>

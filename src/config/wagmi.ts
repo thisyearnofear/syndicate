@@ -3,12 +3,13 @@ import { base, baseSepolia } from 'wagmi/chains';
 
 let cachedConfig: ReturnType<typeof getDefaultConfig> | null = null;
 let isConfigInitialized = false;
-let initAttempted = false;
 
 // Prevent SSR initialization
 const isBrowser = typeof window !== 'undefined';
 
-export function getConfig() {
+type RainbowConfigExt = ReturnType<typeof getDefaultConfig> & { autoConnect?: boolean };
+
+export function getConfig(): ReturnType<typeof getDefaultConfig> | null {
   // Only initialize on client side
   if (!isBrowser) {
     // Return a dummy config on server that won't be used
@@ -21,9 +22,9 @@ export function getConfig() {
           chains: [base, baseSepolia],
           ssr: false,
         });
-      } catch (e) {
+      } catch {
         // Silently fail on server - this config won't be used anyway
-        return null as any;
+        return null;
       }
     }
     return cachedConfig;
@@ -52,7 +53,7 @@ export function getConfig() {
       ],
       ssr: false, // Disable SSR to prevent indexedDB access on server
     });
-    (cachedConfig as any).autoConnect = false;
+    (cachedConfig as RainbowConfigExt).autoConnect = false;
     isConfigInitialized = true;
     return cachedConfig;
   }
@@ -68,7 +69,7 @@ export function getConfig() {
     ],
     ssr: false, // Set to false to prevent server-side indexedDB access
   });
-  (cachedConfig as any).autoConnect = false;
+  (cachedConfig as RainbowConfigExt).autoConnect = false;
   isConfigInitialized = true;
   return cachedConfig;
 }

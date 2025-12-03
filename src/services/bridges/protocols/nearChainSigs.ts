@@ -21,7 +21,7 @@ import type {
     ChainIdentifier,
 } from '../types';
 import { BridgeError, BridgeErrorCode } from '../types';
-import { NEAR, CONTRACTS, CHAINS, LOTTERY } from '@/config';
+import { NEAR, CONTRACTS, CHAINS } from '@/config';
 import { DERIVATION_PATHS } from '@/config/nearConfig';
 import {
     fetchNonceAndFees,
@@ -71,6 +71,7 @@ export class NearChainSigsProtocol implements BridgeProtocol {
     }
 
     async estimate(params: BridgeParams) {
+        void params;
         // NEAR Chain Signatures cost:
         // 1. NEAR gas for MPC request (~300 TGas)
         // 2. Base gas for transaction execution
@@ -85,14 +86,22 @@ export class NearChainSigsProtocol implements BridgeProtocol {
 
     async bridge(params: BridgeParams): Promise<BridgeResult> {
         const startTime = Date.now();
-        const { sourceChain, destinationChain, amount, destinationAddress, onStatus, wallet } = params;
+        const { destinationChain, amount, destinationAddress, onStatus, wallet } = params;
 
         try {
             // 1. Validate Wallet
-            if (!wallet || !wallet.selector || !wallet.accountId) {
+            if (!wallet || typeof wallet !== 'object') {
                 throw new BridgeError(
                     BridgeErrorCode.WALLET_REJECTED,
                     'NEAR wallet not connected',
+                    'near'
+                );
+            }
+            const walletObj = wallet as Record<string, unknown>;
+            if (!walletObj.selector || !walletObj.accountId) {
+                throw new BridgeError(
+                    BridgeErrorCode.WALLET_REJECTED,
+                    'NEAR wallet not properly initialized',
                     'near'
                 );
             }
@@ -135,7 +144,7 @@ export class NearChainSigsProtocol implements BridgeProtocol {
 
             if (isMegapotPurchase) {
                 // Specific logic for ticket purchase
-                const ticketCount = parseInt(amount); // Amount is ticket count in this context? Or USDC?
+                // const ticketCount = parseInt(amount);
                 // BridgeParams says amount is "Decimal string".
                 // If we are bridging USDC, we need to call `purchaseTickets`.
                 // But wait, we need USDC on Base first.
@@ -152,9 +161,10 @@ export class NearChainSigsProtocol implements BridgeProtocol {
 
                 if (params.details?.contractCall) {
                     // Use provided call data
-                    data = params.details.contractCall.data;
-                    value = params.details.contractCall.value || 0n;
-                    to = params.details.contractCall.to;
+                    const contractCall = params.details.contractCall as { data?: string; value?: bigint; to?: string };
+                    data = contractCall.data || '0x';
+                    value = contractCall.value || 0n;
+                    to = contractCall.to || destinationAddress;
                 } else {
                     // Default: Transfer Native (ETH)
                     // Amount is in decimal (e.g. "0.1" ETH)
@@ -278,10 +288,11 @@ export class NearChainSigsProtocol implements BridgeProtocol {
     // ============================================================================
 
     private async getDerivedEvmAddress(accountId: string, chain: 'base' | 'ethereum'): Promise<string | null> {
+        void chain;
         try {
             const path = DERIVATION_PATHS.ethereum;
             const args = { path, key_version: this.DEFAULT_KEY_VERSION };
-            const res: any = await this.nearProvider.query({
+            const res: unknown = await this.nearProvider.query({
                 request_type: 'call_function',
                 account_id: this.signerContractId,
                 method_name: 'public_key_for',
@@ -289,8 +300,13 @@ export class NearChainSigsProtocol implements BridgeProtocol {
                 finality: 'final',
             });
 
-            if (res.result) {
-                const decoded = this.decodeResult(res.result);
+            const r = res as { result?: unknown };
+            if (r.result) {
+                // Result should be array-like data from NEAR RPC
+                const resultData = r.result instanceof Uint8Array || r.result instanceof ArrayBuffer || ArrayBuffer.isView(r.result)
+                    ? r.result as Uint8Array | ArrayBuffer | ArrayLike<number>
+                    : new Uint8Array(0); // Fallback to empty array
+                const decoded = this.decodeResult(resultData);
                 const resp = typeof decoded === 'string' ? decoded : String(decoded);
                 const [scheme, base64Pub] = resp.split(':');
                 if (scheme !== 'secp256k1' || !base64Pub) return null;
@@ -342,7 +358,10 @@ export class NearChainSigsProtocol implements BridgeProtocol {
                 }],
             } as any);
 
-            return (outcome as any)?.transaction_outcome?.id || (outcome as any)?.transaction?.hash || null;
+            const oc = outcome as unknown as Record<string, unknown>;
+            const txo = oc.transaction_outcome as { id?: string } | undefined;
+            const tx = oc.transaction as { hash?: string } | undefined;
+            return txo?.id || tx?.hash || null;
         } catch (e) {
             console.warn('[NEAR] Sign request failed:', e);
             return null;
@@ -353,16 +372,20 @@ export class NearChainSigsProtocol implements BridgeProtocol {
         const start = Date.now();
         while (Date.now() - start < timeoutMs) {
             try {
-                const res: any = await this.nearProvider.query({
+                const res: unknown = await this.nearProvider.query({
                     request_type: 'call_function',
                     account_id: this.signerContractId,
                     method_name: 'get_signature_result',
                     args_base64: this.toBase64({ request_id: requestId }),
                     finality: 'final',
                 });
-
-                if (res.result) {
-                    const decoded = this.decodeResult(res.result);
+                const r = res as { result?: unknown };
+                if (r.result) {
+                    // Result should be array-like data from NEAR RPC
+                    const resultData = r.result instanceof Uint8Array || r.result instanceof ArrayBuffer || ArrayBuffer.isView(r.result)
+                        ? r.result as Uint8Array | ArrayBuffer | ArrayLike<number>
+                        : new Uint8Array(0); // Fallback to empty array
+                    const decoded = this.decodeResult(resultData);
                     const parsed = JSON.parse(decoded);
                     if (parsed?.status === 'COMPLETE' || parsed?.status === 'FAILED') {
                         return parsed;
@@ -386,7 +409,7 @@ export class NearChainSigsProtocol implements BridgeProtocol {
         }
     }
 
-    private toBase64(obj: any): string {
+    private toBase64(obj: Record<string, unknown>): string {
         const json = JSON.stringify(obj);
         if (typeof window !== 'undefined' && typeof btoa === 'function') {
             return btoa(unescape(encodeURIComponent(json)));
@@ -402,7 +425,7 @@ export class NearChainSigsProtocol implements BridgeProtocol {
         return Uint8Array.from(Buffer.from(b64, 'base64'));
     }
 
-    private decodeResult(result: Uint8Array | any): string {
+    private decodeResult(result: Uint8Array | ArrayBuffer | ArrayLike<number>): string {
         try {
             const uint = result instanceof Uint8Array ? result : new Uint8Array(result);
             if (typeof window !== 'undefined') return new TextDecoder().decode(uint);

@@ -22,7 +22,7 @@ export class Web3AuthErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  componentDidCatch(error: Error) {
     // Skip logging indexedDB errors as they're handled at console level
     if (
       !error.message.includes("indexedDB is not defined") &&

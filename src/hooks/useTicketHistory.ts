@@ -83,7 +83,15 @@ export function useTicketHistory(): TicketHistoryState & TicketHistoryActions {
             const purchases = await response.json();
 
             // Fetch cross-chain purchases for this wallet
-            let crossChainPurchases: any[] = [];
+            let crossChainPurchases: Array<{
+                id: string;
+                ticketCount: number;
+                ticketPurchaseTx: string;
+                timestamp: string | null;
+                sourceChain?: string;
+                sourceWallet?: string;
+                bridgeTxHash?: string;
+            }> = [];
             try {
                 const crossChainResponse = await fetch(`/api/cross-chain-purchases?wallet=${address}`);
                 if (crossChainResponse.ok) {
@@ -94,7 +102,7 @@ export function useTicketHistory(): TicketHistoryState & TicketHistoryActions {
             }
 
             // Map API response to our interface structure, preserving transformed fields
-            const mappedPurchases: TicketPurchaseHistory[] = purchases.map((purchase: any): TicketPurchaseHistory => {
+            const mappedPurchases: TicketPurchaseHistory[] = (purchases as ApiPurchase[]).map((purchase): TicketPurchaseHistory => {
                 // Fallbacks for older API shapes
                 const rangeCount =
                     typeof purchase.startTicket === 'number' && typeof purchase.endTicket === 'number'
@@ -117,7 +125,7 @@ export function useTicketHistory(): TicketHistoryState & TicketHistoryActions {
                     totalCost,
                     txHash: purchase.txHash || purchase.transactionHashes?.[0] || '',
                     timestamp: purchase.timestamp ?? null,
-                    status: purchase.status || 'active',
+                    status: (purchase.status as TicketPurchaseHistory['status']) || 'active',
                     jackpotRoundId: purchase.jackpotRoundId,
                     startTicket: purchase.startTicket,
                     endTicket: purchase.endTicket,
@@ -204,3 +212,22 @@ export function useTicketHistory(): TicketHistoryState & TicketHistoryActions {
         clearError,
     };
 }
+type ApiPurchase = {
+    id?: string;
+    ticketCount?: number;
+    ticketsPurchased?: number;
+    startTicket?: number;
+    endTicket?: number;
+    totalCost?: string;
+    transactionHashes?: string[];
+    txHash?: string;
+    timestamp?: string | null;
+    status?: TicketPurchaseHistory['status'] | string;
+    jackpotRoundId?: number;
+    recipient?: string;
+    referrer?: string;
+    buyer?: string;
+    sourceChain?: string;
+    sourceWallet?: string;
+    bridgeTransactionHash?: string;
+};

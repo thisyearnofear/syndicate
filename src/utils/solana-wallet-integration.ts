@@ -1,4 +1,6 @@
-import { Connection, PublicKey } from '@solana/web3.js';
+// STUB: Using stubs while Solana deps are disabled for hackathon
+// TO RE-ENABLE: Replace with '@solana/web3.js'
+import { Connection, PublicKey } from '@/stubs/solana';
 
 // Secure implementation for Solana/Phantom wallet integration
 class SolanaWalletIntegration {
@@ -15,7 +17,7 @@ class SolanaWalletIntegration {
 
   // Check if Phantom wallet is available
   isPhantomInstalled(): boolean {
-    return typeof window !== 'undefined' && (window as any).phantom?.solana?.isPhantom;
+    return typeof window !== 'undefined' && !!(window as unknown as { phantom?: { solana?: { isPhantom?: boolean } } }).phantom?.solana?.isPhantom;
   }
 
   // Connect to Phantom wallet
@@ -25,7 +27,8 @@ class SolanaWalletIntegration {
     }
 
     try {
-      const provider = (window as any).phantom.solana;
+      const provider = (window as unknown as { phantom?: { solana?: { connect: () => Promise<{ publicKey: { toString: () => string } }> } } }).phantom?.solana;
+      if (!provider) throw new Error('Phantom provider not available');
       const response = await provider.connect();
       return response.publicKey.toString();
     } catch (error) {

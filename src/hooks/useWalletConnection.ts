@@ -22,7 +22,7 @@ export function useWalletConnection() {
   const { state } = useWalletContext();
   const { connect, disconnect, switchChain, clearError } = useUnifiedWallet();
   const { address: evmAddress, isConnected: evmConnected } = useAccount();
-  
+
   return {
     // Solana/Non-EVM wallet from context
     ...state,
@@ -37,12 +37,15 @@ export function useWalletConnection() {
 }
 
 // CLEAN: Re-export types for backward compatibility
-export type { 
-  WalletType 
-} from '@/domains/wallet/services/unifiedWalletService';
+export type {
+  WalletType
+} from '@/domains/wallet/types';
 
-export { 
-  WalletTypes, 
+export {
+  WalletTypes
+} from '@/domains/wallet/types';
+
+export {
   getWalletStatus,
-  getAvailableWallets 
+  getAvailableWallets
 } from '@/domains/wallet/services/unifiedWalletService';

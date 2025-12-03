@@ -38,10 +38,23 @@ A multi-chain lottery platform built on top of [Megapot](https://megapot.io), en
 | ----------- | -------------- | --------------- |
 | Base        | ✅ Primary     | Native          |
 | Ethereum    | ✅ Working     | CCTP, CCIP      |
-| Solana      | ⚠️ In Progress | CCTP            |
+| Solana      | ✅ Working     | CCTP            |
 | Polygon     | ✅ Working     | CCIP            |
 | Avalanche   | ✅ Working     | CCIP            |
 | Bitcoin/ICP | 🔜 Planned     | ICP Canisters   |
+
+## 📊 Feature Status
+
+### ✅ Fully Operational
+- **Multi-wallet support** (MetaMask, Phantom, Web3Auth)
+- **Cross-chain bridges** (CCTP, CCIP, Wormhole)
+- **Lottery ticket purchases** via Megapot
+- **Transaction history** and balance tracking
+
+### 🚧 In Development (UI Complete, Smart Contracts Coming Q1 2025)
+- **Yield Strategies**: Aave, Morpho, Spark integration
+- **Syndicates**: Community pooling with governance models
+- Visible in dev mode with status banners when `NEXT_PUBLIC_SHOW_FEATURE_BANNERS=true`
 
 ## 🚀 Quick Start
 
@@ -67,12 +80,21 @@ Visit `http://localhost:3000` to try the platform.
 | [Development](./docs/DEVELOPMENT.md) | Setup, testing, deployment                        |
 | [Bitcoin/ICP](./docs/BTC_ICP.md)     | ICP canister and Bitcoin integration              |
 
+## 🔐 Privacy & Security
+
+- No user database or KYC required
+- Direct wallet connections for maximum user control
+- Multi-chain support for enhanced privacy
+- Planned: Zero-knowledge proofs + Zcash integration (Q2 2025)
+- Planned: Private transaction relayers for bridge anonymity
+
 ### Progress Update (Dec 2025)
 
 - CCTP Solana→Base aligned with V2 programs and consolidated attestation fetch
 - Manual Base mint available from UI when automatic redemption isn't possible
 - Wormhole fallback updated to SDK v4 with EVM signer adapters and VAA redemption
 - Protocol selection uses `estimateAllRoutes` with lazy module loading
+- Feature status banners for transparent development visibility
 
 ## 🔧 Configuration
 

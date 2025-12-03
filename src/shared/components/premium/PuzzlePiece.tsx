@@ -9,7 +9,6 @@
  */
 
 import React from 'react';
-import { premiumDesign } from '@/config/design';
 
 interface PuzzlePieceProps {
   children: React.ReactNode;

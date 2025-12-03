@@ -16,7 +16,7 @@ import {
   CompactStack,
   CompactFlex,
 } from "@/shared/components/premium/CompactLayout";
-import { WalletType } from "@/domains/wallet/services/unifiedWalletService";
+import { WalletType } from "@/domains/wallet/types";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { walletLoader } from "@/lib/walletLoader";
 import { AlertCircle } from "lucide-react";
@@ -54,11 +54,12 @@ export function WalletConnectionCard({
         // Load wallet library conditionally
         await walletLoader.loadWalletLibrary(walletType);
         await onConnect?.(walletType);
-      } catch (err: any) {
+      } catch (err) {
+        const error = err as Error;
         // Don't show error for WalletConnect since RainbowKit handles its own UI
         if (walletType !== 'metamask') {
           const errorMessage =
-            err?.message ||
+            error?.message ||
             `Failed to connect to ${walletType}. Please try again.`;
           setError(errorMessage);
         }

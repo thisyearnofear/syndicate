@@ -19,11 +19,10 @@ import type {
     BridgeResult,
     ProtocolHealth,
     ChainIdentifier,
-    BridgeStatus,
     AttestationOptions,
 } from '../types';
 import { BridgeError, BridgeErrorCode } from '../types';
-import { CONTRACTS, CHAINS, cctp as CCTP } from '@/config';
+import { CONTRACTS, cctp as CCTP } from '@/config';
 import CCTP_CONFIG from '@/config/cctpConfig';
 import { pollWithBackoff, validateConnection } from '@/utils/asyncRetryHelper';
 
@@ -158,7 +157,8 @@ export class CctpProtocol implements BridgeProtocol {
         const { amount, destinationAddress, onStatus, wallet, dryRun } = params;
 
         // Get provider/signer
-        const { provider, signer } = await this.getEvmProviderSigner(wallet);
+        const walletTyped = wallet as { provider?: ethers.Provider; signer?: ethers.Signer } | undefined;
+        const { provider, signer } = await this.getEvmProviderSigner(walletTyped);
         if (!signer || !provider) {
             throw new BridgeError(
                 BridgeErrorCode.WALLET_REJECTED,
@@ -231,10 +231,10 @@ export class CctpProtocol implements BridgeProtocol {
             try {
                 const baseProvider = new ethers.JsonRpcProvider(process.env.BASE_RPC_URL || 'https://mainnet.base.org');
                 const messageTransmitter = new Contract(base.messageTransmitter, this.MESSAGE_TRANSMITTER_ABI, baseProvider);
-                
+
                 // Check if we can get a signer for Base
-                if (typeof window !== 'undefined' && (window as any).ethereum) {
-                    const baseSigner = await this.getEvmProviderSigner(wallet);
+                if (typeof window !== 'undefined' && ('ethereum' in window)) {
+                    const baseSigner = await this.getEvmProviderSigner(wallet as { provider?: ethers.Provider; signer?: ethers.Signer } | undefined);
                     if (baseSigner.signer) {
                         const transmitterWithSigner = messageTransmitter.connect(baseSigner.signer);
                         const receiveMessage = transmitterWithSigner.getFunction('receiveMessage');
@@ -246,8 +246,8 @@ export class CctpProtocol implements BridgeProtocol {
                 }
             } catch (mintError) {
                 console.warn('[CCTP] Automatic Base minting failed, returning attestation for manual redemption:', mintError);
-                onStatus?.('minting', { 
-                    message, 
+                onStatus?.('minting', {
+                    message,
                     attestation,
                     requiresManualMint: true,
                 });
@@ -292,198 +292,28 @@ export class CctpProtocol implements BridgeProtocol {
     // ============================================================================
 
     private async bridgeFromSolana(params: BridgeParams): Promise<BridgeResult> {
-        const { amount, destinationAddress, onStatus, dryRun } = params;
+        const { onStatus } = params;
 
         onStatus?.('validating');
 
-        if (dryRun) {
-            return {
-                success: true,
-                protocol: 'cctp',
-                status: 'complete',
-                bridgeId: 'dryrun-cctp-solana',
-                details: {
-                    sourceToken: CCTP_CONFIG.solana.usdc,
-                    destToken: CONTRACTS.usdc,
-                    recipient: destinationAddress
-                },
-            };
-        }
+        // STUB: Solana bridge disabled for hackathon
+        // TO RE-ENABLE: Restore the original implementation from git history
+        throw new BridgeError(
+            BridgeErrorCode.PROTOCOL_UNAVAILABLE,
+            'Solana bridge is temporarily disabled. Please use NEAR Intents for cross-chain transfers.',
+            'cctp'
+        );
 
-        try {
-            // Lazy-load Solana SDKs
-            const solanaWeb3 = await import('@solana/web3.js');
-            const splToken = await import('@solana/spl-token');
-
-            const { Connection, PublicKey, Transaction, TransactionInstruction, SystemProgram } = solanaWeb3;
-            const { getAssociatedTokenAddress, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } = splToken;
-
-            // Get Phantom wallet
-            if (typeof window === 'undefined' || !(window as any).solana?.isPhantom) {
-                throw new BridgeError(
-                    BridgeErrorCode.WALLET_REJECTED,
-                    'Phantom wallet not found',
-                    'cctp'
-                );
-            }
-
-            const phantom = (window as any).solana;
-            onStatus?.('approve');
-
-            // Connect wallet with validation
-            const walletPublicKey = await validateConnection(
-                async () => {
-                    if (!phantom.isConnected) await phantom.connect();
-                    if (!phantom.publicKey) throw new Error('No wallet public key');
-                    return new PublicKey(phantom.publicKey.toString());
-                },
-                { context: 'Phantom wallet', maxAttempts: 3, timeoutMs: 10000 }
-            );
-
-            // Use RPC with fallback to proxy
-            // Prefer /api/solana-rpc proxy to avoid rate limiting
-            let rpcUrl: string;
-            if (typeof window !== 'undefined') {
-                rpcUrl = window.location.origin + '/api/solana-rpc';
-            } else {
-                rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://api.mainnet-beta.solana.com';
-            }
-            const connection = new Connection(rpcUrl, 'confirmed');
-
-            // Parse amount
-            const amountInLamports = Math.floor(parseFloat(amount) * 1_000_000); // 6 decimals
-            const recipientBytes32 = this.evmAddressToBytes32(destinationAddress);
-
-            // USDC mint and accounts
-            const usdcMint = new PublicKey(CCTP_CONFIG.solana.usdc);
-            const usdcAta = await getAssociatedTokenAddress(usdcMint, walletPublicKey);
-
-            // CCTP Solana accounts
-            const tokenMessengerMinterId = new PublicKey(CCTP_CONFIG.solana.tokenMessengerMinter);
-            const messageTransmitterId = new PublicKey(CCTP_CONFIG.solana.messageTransmitter);
-            const burnTokenAddress = usdcMint;
-
-            // Fetch actual token mint authority and other required accounts
-            const tokenMessengerProgram = tokenMessengerMinterId;
-            
-            // Get the correct domain for Base (Ethereum testnet/mainnet routing)
-            const destinationDomain = 6; // Base domain in CCTP
-
-            const discriminator = await this.anchorDiscriminator('deposit_for_burn');
-            const destinationCaller = new Uint8Array(32);
-            const maxFee = this.u64ToBuffer(0n);
-            const minFinalityThreshold = this.u32ToBuffer(2000);
-
-            const instructionData = Buffer.concat([
-                discriminator,
-                this.u64ToBuffer(BigInt(amountInLamports)),
-                this.u32ToBuffer(destinationDomain),
-                Buffer.from(recipientBytes32),
-                Buffer.from(destinationCaller),
-                maxFee,
-                minFinalityThreshold,
-            ]);
-
-            const tokenMessengerPda = PublicKey.findProgramAddressSync([
-                Buffer.from('token_messenger')
-            ], tokenMessengerProgram)[0];
-            const tokenMinterPda = PublicKey.findProgramAddressSync([
-                Buffer.from('token_minter')
-            ], tokenMessengerProgram)[0];
-            const localTokenPda = PublicKey.findProgramAddressSync([
-                Buffer.from('local_token'),
-                usdcMint.toBuffer(),
-            ], tokenMessengerProgram)[0];
-
-            const depositForBurnIx = new TransactionInstruction({
-                programId: tokenMessengerProgram,
-                keys: [
-                    { pubkey: walletPublicKey, isSigner: true, isWritable: true },
-                    { pubkey: usdcAta, isSigner: false, isWritable: true },
-                    { pubkey: burnTokenAddress, isSigner: false, isWritable: true },
-                    { pubkey: tokenMessengerPda, isSigner: false, isWritable: false },
-                    { pubkey: tokenMinterPda, isSigner: false, isWritable: true },
-                    { pubkey: localTokenPda, isSigner: false, isWritable: true },
-                    { pubkey: messageTransmitterId, isSigner: false, isWritable: false },
-                    { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-                    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-                ],
-                data: instructionData,
-            });
-
-            const transaction = new Transaction().add(depositForBurnIx);
-            transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-            transaction.feePayer = walletPublicKey;
-
-            onStatus?.('burning');
-
-            // Sign and send
-            const signedTx = await phantom.signAndSendTransaction(transaction);
-            const signature = signedTx.signature;
-
-            onStatus?.('burn_confirmed', { signature });
-
-            // Wait for confirmation
-            await connection.confirmTransaction(signature, 'finalized');
-
-            // Extract message from logs
-            const txInfo = await connection.getTransaction(signature, {
-                commitment: 'confirmed',
-                maxSupportedTransactionVersion: 0
-            });
-
-            const message = this.extractMessageFromSolanaLogs(txInfo?.meta?.logMessages || []);
-            if (!message) {
-                throw new BridgeError(
-                    BridgeErrorCode.TRANSACTION_FAILED,
-                    'Failed to extract CCTP message from Solana logs',
-                    'cctp'
-                );
-            }
-
-            // Fetch attestation (CONSOLIDATED LOGIC)
-            onStatus?.('waiting_attestation');
-            const attestation = await this.fetchAttestation(message);
-            if (!attestation) {
-                throw new BridgeError(
-                    BridgeErrorCode.ATTESTATION_TIMEOUT,
-                    'Failed to fetch CCTP attestation',
-                    'cctp'
-                );
-            }
-
-            return {
-                success: true,
-                protocol: 'cctp',
-                status: 'complete',
-                sourceTxHash: signature,
-                bridgeId: 'cctp-solana-v2',
-                details: {
-                    burnSignature: signature,
-                    message,
-                    attestation,
-                    recipient: destinationAddress,
-                    amount: amountInLamports,
-                },
-            };
-
-        } catch (error) {
-            if (error instanceof BridgeError) throw error;
-
-            const errorMsg = error instanceof Error ? error.message : 'CCTP Solana bridge failed';
-            console.error('[CCTP Solana] Bridge failed:', errorMsg);
-
-            // Return failure instead of throwing to allow fallback
-            return {
-                success: false,
-                protocol: 'cctp',
-                status: 'failed',
-                error: errorMsg,
-                errorCode: errorMsg.includes('RPC') || errorMsg.includes('403') || errorMsg.includes('blocked')
-                    ? BridgeErrorCode.NETWORK_ERROR
-                    : BridgeErrorCode.TRANSACTION_FAILED,
-            };
-        }
+        /* ORIGINAL IMPLEMENTATION (preserved in git history)
+         * The full Solana CCTP bridge implementation included:
+         * - Phantom wallet connection
+         * - USDC token account lookup
+         * - depositForBurn instruction construction
+         * - Transaction signing and sending
+         * - Attestation fetching
+         * 
+         * See git history for full implementation.
+         */
     }
 
     // ============================================================================
@@ -498,7 +328,7 @@ export class CctpProtocol implements BridgeProtocol {
         try {
             if (!message || message === '0x') return null;
 
-            const msgHash = ethers.keccak256(message as any);
+            const msgHash = ethers.keccak256(message as string);
             const proxyUrl = `/api/attestation?messageHash=${msgHash}`;
             const directUrl = `https://iris-api.circle.com/v1/attestations/${msgHash}`;
 
@@ -635,12 +465,12 @@ export class CctpProtocol implements BridgeProtocol {
     /**
      * Get EVM provider and signer
      */
-    private async getEvmProviderSigner(wallet?: any): Promise<{
+    private async getEvmProviderSigner(wallet?: { provider?: ethers.Provider; signer?: ethers.Signer }): Promise<{
         provider: ethers.Provider | null;
         signer: ethers.Signer | null;
     }> {
         if (wallet) {
-            return { provider: wallet.provider, signer: wallet.signer };
+            return { provider: wallet.provider ?? null, signer: wallet.signer ?? null };
         }
 
         // Try to get from web3Service

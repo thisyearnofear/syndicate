@@ -8,10 +8,14 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { web3Service, type TicketPurchaseResult, type UserBalance, type UserTicketInfo, type OddsInfo } from '@/services/web3Service';
 import { useWalletConnection } from './useWalletConnection';
-import { WalletTypes } from '@/domains/wallet/services/unifiedWalletService';
-import type { SyndicateInfo, PurchaseOptions, SyndicateImpact, PurchaseResult } from '@/domains/lottery/types';
+import { WalletTypes } from '@/domains/wallet/types';
+import type { SyndicateInfo, PurchaseOptions, SyndicateImpact } from '@/domains/lottery/types';
+import type { YieldConversionResult } from '@/services/yieldToTicketsService';
 import { octantVaultService } from '@/services/octantVaultService';
 import { yieldToTicketsService, type YieldToTicketsConfig } from '@/services/yieldToTicketsService';
+import { nearWalletSelectorService } from '@/domains/wallet/services/nearWalletSelectorService';
+import { nearIntentsService } from '@/services/nearIntentsService';
+import { CHAINS, CONTRACTS } from '@/config';
 
 export interface TicketPurchaseState {
   // Loading states
@@ -45,11 +49,11 @@ export interface TicketPurchaseState {
   // ENHANCEMENT: Syndicate state
   lastPurchaseMode: 'individual' | 'syndicate' | 'yield' | null;
   lastSyndicateImpact: SyndicateImpact | null;
-  
+
   // NEW: Yield strategy state
   isSettingUpYieldStrategy: boolean;
   yieldStrategyActive: boolean;
-  lastYieldConversion: any; // YieldConversionResult
+  lastYieldConversion: YieldConversionResult | null;
 
   // NEAR path status (optional)
   nearStages: string[];
@@ -58,6 +62,8 @@ export interface TicketPurchaseState {
   nearEthBalance?: string | null;
   nearEstimatedFeeEth?: string | null;
   nearHasEnoughGas?: boolean;
+  nearIntentTxHash?: string | null;
+  nearDestinationTxHash?: string | null;
 }
 
 export interface TicketPurchaseActions {
@@ -76,7 +82,11 @@ export interface TicketPurchaseActions {
   // NEW: Yield strategy actions
   setupYieldStrategy: (config: YieldToTicketsConfig) => Promise<boolean>;
   processYieldConversion: () => Promise<void>;
-  previewYieldConversion: (vaultAddress: string, ticketsAllocation: number, causesAllocation: number) => Promise<any>;
+  previewYieldConversion: (
+    vaultAddress: string,
+    ticketsAllocation: number,
+    causesAllocation: number
+  ) => Promise<{ yieldAmount: string; ticketsAmount: string; ticketCount: number; causesAmount: string } | null>;
   // NEW: Solana bridge actions
   needsBridgeGuidance: (totalCost: string) => boolean;
   refreshBalance: () => Promise<void>;
@@ -91,7 +101,7 @@ export interface TicketPurchaseActions {
 
 export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions {
   const { isConnected, walletType, address } = useWalletConnection();
-  
+
   // Debouncing refs for balance refresh
   const lastBalanceRefreshRef = useRef<number>(0);
   const balanceRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -126,6 +136,8 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     nearEthBalance: null,
     nearEstimatedFeeEth: null,
     nearHasEnoughGas: undefined,
+    nearIntentTxHash: null,
+    nearDestinationTxHash: null,
   });
 
   /**
@@ -203,7 +215,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       }));
       return false;
     }
-  }, [isConnected, walletType, address]);
+  }, [isConnected, walletType]);
 
   /**
    * Refresh user balance - with debouncing to avoid excessive requests
@@ -220,12 +232,12 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       if (balanceRefreshTimeoutRef.current) {
         clearTimeout(balanceRefreshTimeoutRef.current);
       }
-      
+
       const delay = minRefreshInterval - timeSinceLastRefresh;
       balanceRefreshTimeoutRef.current = setTimeout(async () => {
         await refreshBalance(); // Recursive call after debounce
       }, delay);
-      
+
       return;
     }
 
@@ -322,8 +334,6 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
    * ENHANCEMENT: Get syndicate impact preview for UI display
    */
   const getSyndicateImpactPreview = useCallback((ticketCount: number, syndicate: SyndicateInfo): SyndicateImpact => {
-    const ticketPrice = parseFloat(state.ticketPrice);
-    const totalCost = ticketCount * ticketPrice;
     const potentialWinnings = parseFloat(state.currentJackpot);
     const potentialCauseAmount = (potentialWinnings * syndicate.causePercentage) / 100;
 
@@ -334,7 +344,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       potentialCauseAmount: potentialCauseAmount,
       membershipStatus: 'new', // TODO: Determine if user is existing member
     };
-  }, [state.ticketPrice, state.currentJackpot]);
+  }, [state.currentJackpot]);
 
   /**
    * NEW: Handle yield strategy purchase (deposit to vault instead of direct ticket purchase)
@@ -349,10 +359,10 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       // Calculate deposit amount needed (ticketCount * ticketPrice)
       const ticketPrice = parseFloat(state.ticketPrice);
       const depositAmount = (ticketCount * ticketPrice).toString();
-      
+
       // TODO: Get actual Octant vault address for the strategy
       const vaultAddress = '0x1234...'; // Placeholder
-      
+
       // Deposit to Octant vault
       const depositResult = await octantVaultService.deposit(
         vaultAddress,
@@ -403,7 +413,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
 
     try {
       const success = await yieldToTicketsService.setupAutoYieldStrategy(address, config);
-      
+
       setState(prev => ({
         ...prev,
         isSettingUpYieldStrategy: false,
@@ -478,12 +488,12 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
   const needsBridgeGuidance = useCallback((totalCost: string): boolean => {
     if (walletType !== WalletTypes.PHANTOM) return false;
     if (!state.userBalance || !state.solanaBalance) return false;
-    
+
     // Check if user has insufficient Base USDC but sufficient Solana USDC
     const baseUSDC = parseFloat(state.userBalance.usdc || '0');
     const solanaUSDC = parseFloat(state.solanaBalance || '0');
     const requiredAmount = parseFloat(totalCost || '0');
-    
+
     return baseUSDC < requiredAmount && solanaUSDC >= requiredAmount;
   }, [walletType, state.userBalance, state.solanaBalance]);
 
@@ -508,10 +518,10 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     try {
       // ENHANCEMENT: Handle individual, syndicate, and yield strategy purchases
       let result: TicketPurchaseResult;
-      const purchaseMode: 'individual' | 'syndicate' | 'yield' = 
-        vaultStrategy ? 'yield' : 
-        syndicateId ? 'syndicate' : 
-        'individual';
+      const purchaseMode: 'individual' | 'syndicate' | 'yield' =
+        vaultStrategy ? 'yield' :
+          syndicateId ? 'syndicate' :
+            'individual';
 
       // NEW: Handle yield strategy purchases
       if (purchaseMode === 'yield' && vaultStrategy) {
@@ -523,11 +533,95 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
           yieldToCausesPercentage || 20
         );
       } else if (walletType === WalletTypes.NEAR) {
-        // NEAR wallet flow - to be implemented with bridge manager
-        result = {
-          success: false,
-          error: 'NEAR wallet purchases coming soon. Please use an EVM wallet for now.',
-        };
+        try {
+          setState(prev => ({ ...prev, isApproving: true, nearStages: ['initializing'] }));
+          const ok = await nearWalletSelectorService.init();
+          if (!ok) {
+            result = { success: false, error: 'NEAR wallet not ready' };
+          } else {
+            const selector = nearWalletSelectorService.getSelector();
+            const accountId = nearWalletSelectorService.getAccountId();
+            if (!selector || !accountId) {
+              result = { success: false, error: 'NEAR wallet not connected' };
+            } else {
+              const sdkReady = await nearIntentsService.init(selector, accountId);
+              if (!sdkReady) {
+                result = { success: false, error: 'Failed to initialize NEAR intents' };
+              } else {
+                const ticketPrice = parseFloat(state.ticketPrice);
+                const totalCost = (ticketCount * ticketPrice).toFixed(2);
+                setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'quote_requested'] }));
+                const destinationAddress = await nearIntentsService.deriveEvmAddress(accountId);
+                setState(prev => ({ ...prev, nearRecipient: destinationAddress || null }));
+                if (!destinationAddress) {
+                  result = { success: false, error: 'Failed to derive Base address from NEAR' };
+                } else {
+                  const amountUnits = BigInt(Math.floor(parseFloat(totalCost) * 1_000_000));
+                  setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'intent_submitted'] }));
+                  const intentRes = await nearIntentsService.purchaseViaIntent({
+                    sourceAsset: 'nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near',
+                    sourceAmount: amountUnits.toString(),
+                    destinationAddress,
+                    megapotAmount: amountUnits.toString(),
+                  });
+                  if (!intentRes.success || !intentRes.intentHash) {
+                    result = { success: false, error: intentRes.error || 'Intent execution failed' };
+                  } else {
+                    setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'waiting_execution'], nearRequestId: String(intentRes.intentHash), nearIntentTxHash: intentRes.txHash || null }));
+                    (async () => {
+                      try {
+                        let m = 0;
+                        while (m < 60) {
+                          m++;
+                          const st = await nearIntentsService.getIntentStatus(String(intentRes.intentHash));
+                          if (st.destinationTx) {
+                            setState(prev => ({ ...prev, nearDestinationTxHash: String(st.destinationTx) }));
+                          }
+                          if (st.status === 'processing') setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'solver_processing'] }));
+                          if (st.status === 'completed') { setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'solver_completed'] })); break; }
+                          if (st.status === 'failed') { setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'solver_failed'] })); break; }
+                          await new Promise(r => setTimeout(r, 5000));
+                        }
+                      } catch { }
+                    })();
+                    const provider = new (await import('ethers')).ethers.JsonRpcProvider(CHAINS.base.rpcUrl);
+                    let attempts = 0;
+                    while (attempts < 24) {
+                      attempts++;
+                      const usdcBal = await new (await import('ethers')).ethers.Contract(
+                        CONTRACTS.usdc,
+                        ["function balanceOf(address owner) external view returns (uint256)", "function decimals() external view returns (uint8)"],
+                        provider
+                      ).balanceOf(destinationAddress);
+                      const usdc = Number((await import('ethers')).ethers.formatUnits(usdcBal, 6));
+                      if (usdc >= parseFloat(totalCost)) break;
+                      await new Promise(r => setTimeout(r, 5000));
+                    }
+                    setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'funds_bridged'] }));
+                    const okInit = web3Service.isReady() ? true : await web3Service.initialize();
+                    if (!okInit) {
+                      result = { success: false, error: 'Base wallet not ready for purchase' };
+                    } else {
+                      try {
+                        const eth = await provider.getBalance(destinationAddress);
+                        const have = Number((await import('ethers')).ethers.formatEther(eth));
+                        const need = 0.0005;
+                        if (have < need) setState(prev => ({ ...prev, nearEstimatedFeeEth: String(need), nearEthBalance: String(have) }));
+                      } catch { }
+                      const p = await web3Service.purchaseTickets(ticketCount);
+                      result = p;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        } catch (e: unknown) {
+          const message = (e as { message?: string })?.message || 'NEAR intents flow failed';
+          result = { success: false, error: message };
+        } finally {
+          setState(prev => ({ ...prev, isApproving: false }));
+        }
       } else if (walletType === WalletTypes.PHANTOM) {
         result = {
           success: false,
@@ -538,8 +632,8 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
           try {
             const syndicateResponse = await fetch('/api/syndicates');
             if (syndicateResponse.ok) {
-              const syndicates = await syndicateResponse.json();
-              const syndicate = syndicates.find((s: any) => s.id === syndicateId);
+              const syndicates = await syndicateResponse.json() as SyndicateInfo[];
+              const syndicate = syndicates.find((s) => s.id === syndicateId);
               const recipientOverride = syndicate?.poolAddress;
               result = await web3Service.purchaseTickets(ticketCount, recipientOverride);
             } else {
@@ -554,15 +648,15 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       }
 
       // Purchase mode was determined earlier in the function
-      let syndicateImpact: SyndicateImpact | null = null;
+      let syndicateImpact: SyndicateImpact | undefined;
 
       if (syndicateId && result.success) {
         // Fetch syndicate info for impact calculation
         try {
           const syndicateResponse = await fetch('/api/syndicates');
           if (syndicateResponse.ok) {
-            const syndicates = await syndicateResponse.json();
-            const syndicate = syndicates.find((s: any) => s.id === syndicateId);
+            const syndicates = await syndicateResponse.json() as SyndicateInfo[];
+            const syndicate = syndicates.find((s) => s.id === syndicateId);
             if (syndicate) {
               syndicateImpact = getSyndicateImpactPreview(ticketCount, syndicate);
             }
@@ -581,7 +675,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
           lastTxHash: result.txHash || null,
           // ENHANCEMENT: Store syndicate context
           lastPurchaseMode: purchaseMode,
-          lastSyndicateImpact: syndicateImpact,
+          lastSyndicateImpact: syndicateImpact ?? null,
         }));
 
         // Refresh balance after successful purchase
@@ -598,18 +692,12 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       }
 
       // ENHANCEMENT: Return enhanced result with syndicate context and yield strategy info
-      const enhancedResult: any = {
+      const enhancedResult: TicketPurchaseResult = {
         ...result,
-        mode: purchaseMode,
-        syndicateId: syndicateId,
-        syndicateImpact: syndicateImpact,
+        mode: syndicateId ? 'syndicate' : 'individual',
+        syndicateId,
+        syndicateImpact,
       };
-
-      // Add optional yield strategy fields
-      if (vaultStrategy) enhancedResult.vaultStrategy = vaultStrategy;
-      if (yieldToTicketsPercentage !== undefined) enhancedResult.yieldToTicketsPercentage = yieldToTicketsPercentage;
-      if (yieldToCausesPercentage !== undefined) enhancedResult.yieldToCausesPercentage = yieldToCausesPercentage;
-
       return enhancedResult;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Purchase failed';
@@ -619,21 +707,16 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
         error: errorMessage
       }));
 
-      const enhancedResult: any = {
+      const enhancedResult: TicketPurchaseResult = {
         success: false,
         error: errorMessage,
         mode: syndicateId ? 'syndicate' : 'individual',
-        syndicateId: syndicateId,
+        syndicateId,
       };
-
-      // Add optional yield strategy fields
-      if (vaultStrategy) enhancedResult.vaultStrategy = vaultStrategy;
-      if (yieldToTicketsPercentage !== undefined) enhancedResult.yieldToTicketsPercentage = yieldToTicketsPercentage;
-      if (yieldToCausesPercentage !== undefined) enhancedResult.yieldToCausesPercentage = yieldToCausesPercentage;
 
       return enhancedResult;
     }
-  }, [refreshBalance, refreshJackpot, walletType]);
+  }, [refreshBalance, walletType, getSyndicateImpactPreview, handleYieldStrategyPurchase, state.ticketPrice]);
 
   /**
    * Clear error state
@@ -683,6 +766,8 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       nearEthBalance: null,
       nearEstimatedFeeEth: null,
       nearHasEnoughGas: undefined,
+      nearIntentTxHash: null,
+      nearDestinationTxHash: null,
     });
   }, []);
 
@@ -701,7 +786,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
         nearStages: [...prev.nearStages, 'balance_refreshed'],
       }));
     } catch { }
-  }, [state.nearRecipient, state.nearEstimatedFeeEth]);
+  }, [state.nearRecipient]);
 
   /**
    * Auto-initialize when wallet connects
@@ -763,13 +848,13 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       // Refresh user ticket info after claiming
       await getCurrentTicketInfo();
       return txHash;
-    } catch (error: any) {
+    } catch (error: unknown) {
       setState(prev => ({
         ...prev,
         isClaimingWinnings: false,
-        error: error.message || 'Failed to claim winnings'
+        error: (error as { message?: string }).message || 'Failed to claim winnings'
       }));
-      throw error;
+      throw error as Error;
     }
   }, [getCurrentTicketInfo]);
 

@@ -136,7 +136,7 @@ export function isPositiveNumber(value: string | number): boolean {
 /**
  * PERFORMANT: Debounce function calls
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -151,7 +151,7 @@ export function debounce<T extends (...args: any[]) => any>(
 /**
  * PERFORMANT: Throttle function calls
  */
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,
   limit: number
 ): (...args: Parameters<T>) => void {
@@ -274,9 +274,9 @@ export function chunk<T>(array: T[], size: number): T[][] {
 export function createError(
   code: string,
   message: string,
-  details?: any
-): Error & { code: string; details?: any } {
-  const error = new Error(message) as Error & { code: string; details?: any };
+  details?: unknown
+): Error & { code: string; details?: unknown } {
+  const error = new Error(message) as Error & { code: string; details?: unknown };
   error.code = code;
   if (details) error.details = details;
   return error;

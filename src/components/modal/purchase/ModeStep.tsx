@@ -128,7 +128,7 @@ export function ModeStep({
         <CompactStack spacing="md">
           <div className="text-center">
             <h4 className="font-semibold text-white mb-2">Choose a Pool</h4>
-            <p className="text-sm text-gray-400">Select which cause you'd like to support</p>
+            <p className="text-sm text-gray-400">Select which cause you&#39;d like to support</p>
           </div>
 
           <CompactStack spacing="sm">

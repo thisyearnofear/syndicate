@@ -14,7 +14,6 @@ import { ArrowDown, Clock, ExternalLink } from 'lucide-react';
 export interface BridgeGuidanceCardProps {
     sourceChain: 'solana' | 'ethereum';
     sourceBalance: string;
-    targetChain: 'base';
     targetBalance: string;
     requiredAmount: string;
     onBridge: (amount: string, protocol?: 'cctp' | 'wormhole') => void;
@@ -28,7 +27,6 @@ export interface BridgeGuidanceCardProps {
 export function BridgeGuidanceCard({
     sourceChain,
     sourceBalance,
-    targetChain,
     targetBalance,
     requiredAmount,
     onBridge,
@@ -39,7 +37,6 @@ export function BridgeGuidanceCard({
     evmAddress
 }: BridgeGuidanceCardProps) {
     const sourceIcon = sourceChain === 'solana' ? '🟣' : '⟠';
-    const sourceName = sourceChain === 'solana' ? 'Solana' : 'Ethereum';
     const [amountInput, setAmountInput] = React.useState<string>(requiredAmount);
     const [selectedProtocol, setSelectedProtocol] = React.useState<'wormhole' | 'cctp'>(preselectedProtocol);
 
@@ -63,7 +60,7 @@ export function BridgeGuidanceCard({
                     <div className="flex items-center gap-3">
                         <span className="text-3xl">{sourceIcon}</span>
                         <div>
-                            <p className="text-white font-medium">{sourceName}</p>
+                            <p className="text-white font-medium">{sourceChain === 'solana' ? 'Solana' : 'Ethereum'}</p>
                             <p className="text-gray-400 text-sm">Available</p>
                         </div>
                     </div>

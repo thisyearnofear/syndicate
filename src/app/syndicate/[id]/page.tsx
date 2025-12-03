@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
 import { 
   Users, 
@@ -15,8 +15,8 @@ import {
 } from "lucide-react";
 import type { SyndicateInfo } from "@/domains/lottery/types";
 
-export default async function SyndicateDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default function SyndicateDetailPage() {
+  const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [syndicate, setSyndicate] = useState<SyndicateInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -81,7 +81,7 @@ export default async function SyndicateDetailPage({ params }: { params: Promise<
         const data = await res.json();
         setSnapshotInfo({ createdAt: data.createdAt, participants: (data.participants || []).length });
       }
-    } catch (_) {
+    } catch {
     } finally {
       setSnapshotLoading(false);
     }

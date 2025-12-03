@@ -1,9 +1,10 @@
-import { PublicKey } from '@solana/web3.js';
-import { getAssociatedTokenAddress } from '@solana/spl-token';
+// STUB: Using stubs while Solana deps are disabled for hackathon
+// TO RE-ENABLE: Replace with '@solana/web3.js' and '@solana/spl-token'
+import { PublicKey, getAssociatedTokenAddress } from '@/stubs/solana';
 
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 
-let cache: Record<string, { ts: number; balance: string }> = {};
+const cache: Record<string, { ts: number; balance: string }> = {};
 
 function selectRpcUrls(): string[] {
   const primary = process.env.NEXT_PUBLIC_SOLANA_RPC || '/api/solana-rpc';
@@ -38,7 +39,7 @@ export async function getSolanaUSDCBalance(walletAddress: string): Promise<strin
     const urls = selectRpcUrls();
     let lastBalance = '0';
 
-    const post = async (u: string, body: any) => {
+    const post = async (u: string, body: Record<string, unknown>) => {
       const resp = await fetch(u, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
       if (!resp.ok) throw new Error('rpc_failed');
       const json = await resp.json();
@@ -52,8 +53,8 @@ export async function getSolanaUSDCBalance(walletAddress: string): Promise<strin
         lastBalance = ui;
         cache[walletAddress] = { ts: now, balance: lastBalance };
         return lastBalance;
-      } catch (e: any) {
-        const msg = e?.message || String(e);
+      } catch (e: unknown) {
+        const msg = (e as { message?: string })?.message || String(e);
         if (msg.includes('403')) continue;
         continue;
       }
@@ -61,7 +62,7 @@ export async function getSolanaUSDCBalance(walletAddress: string): Promise<strin
 
     cache[walletAddress] = { ts: now, balance: lastBalance };
     return lastBalance;
-  } catch (_) {
+  } catch {
     return '0';
   }
 }

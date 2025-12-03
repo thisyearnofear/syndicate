@@ -85,16 +85,16 @@ export interface BridgeParams {
     deadline?: number;            // Unix timestamp
 
     // Wallet/Signer
-    wallet?: any;                 // Wallet instance (type varies by chain)
+    wallet?: unknown;                 // Wallet instance (type varies by chain)
 
     // Callbacks
-    onStatus?: (status: BridgeStatus, data?: any) => void;
+    onStatus?: (status: BridgeStatus, data?: unknown) => void;
     onProgress?: (percent: number) => void;
 
     // Flags
     dryRun?: boolean;             // Simulate without executing
     allowFallback?: boolean;      // Allow fallback to other protocols
-    details?: Record<string, any>; // Protocol-specific extra data
+    details?: Record<string, unknown>; // Protocol-specific extra data
 }
 
 /**
@@ -122,7 +122,7 @@ export interface BridgeResult {
     bridgeFee?: string;
 
     // Details
-    details?: Record<string, any>;
+    details?: Record<string, unknown>;
 }
 
 // ============================================================================
@@ -302,7 +302,7 @@ export class BridgeError extends Error {
         public code: BridgeErrorCode,
         message: string,
         public protocol?: BridgeProtocolType,
-        public details?: Record<string, any>
+        public details?: Record<string, unknown>
     ) {
         super(message);
         this.name = 'BridgeError';

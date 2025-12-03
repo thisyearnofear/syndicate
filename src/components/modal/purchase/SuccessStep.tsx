@@ -40,7 +40,7 @@ export function SuccessStep({
               Supporting {selectedSyndicate.cause.name}
             </p>
             <p className="text-xs text-gray-400 mt-1">
-              You're member #{selectedSyndicate.membersCount + 1}!
+              You&#39;re member #{selectedSyndicate.membersCount + 1}!
             </p>
           </div>
         ) : (

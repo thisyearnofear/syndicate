@@ -4,7 +4,7 @@
 //   useSolanaWallet,
 //   useSolanaWalletConnection,
 // } from "@/providers/SolanaWalletProvider";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 // import { useAddressDisplay } from "@/hooks/useSNS";
 // import { useSolanaProviderReady } from "@/hooks/useProviderReady";
 
@@ -13,16 +13,14 @@ export default function SolanaWalletConnection() {
   // const { isConnected, publicKey, connect, disconnect, isLoading } =
   //   useSolanaWalletConnection();
   // const { connection } = useSolanaWallet();
-  const [isInitializing, setIsInitializing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   // const { displayName, isLoading: isLoadingDomain } = useAddressDisplay(
   //   publicKey,
   //   connection
   // );
   const isProviderReady = true;
   const isConnected = false;
-  const publicKey = null;
-  const isLoading = false;
-  const displayName = null;
+  const displayName: string | null = null;
   const isLoadingDomain = false;
 
   // Only render the component if provider is ready
@@ -160,8 +158,7 @@ export function SolanaWalletStatus() {
   // );
   const isProviderReady = true;
   const isConnected = false;
-  const publicKey = null;
-  const displayName = null;
+  const displayName: string | null = null;
   const isLoadingDomain = false;
 
   // Only render the component if provider is ready

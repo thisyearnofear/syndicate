@@ -12,7 +12,6 @@ import { useEffect, useState } from 'react';
 import {
     getPendingBridge,
     clearPendingBridge,
-    getBalanceBeforeBridge,
     hasBridgeCompleted,
     getEstimatedCompletionTime,
     formatTimeRemaining,

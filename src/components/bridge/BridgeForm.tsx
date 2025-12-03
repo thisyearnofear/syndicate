@@ -6,15 +6,15 @@ import { ethers, Contract } from 'ethers';
 import { cctp as CCTP } from '@/config';
 import { Button } from '@/shared/components/ui/Button';
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner';
-import type { ChainIdentifier } from '@/services/bridges/types';
+import type { ChainIdentifier, BridgeResult } from '@/services/bridges/types';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 
-export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void }) {
+export function BridgeForm({ onComplete }: { onComplete?: (result: BridgeResult) => void }) {
   const { address: sourceAddress } = useWalletConnection();
   const [sourceChain, setSourceChain] = useState<ChainIdentifier>('solana');
   const [amount, setAmount] = useState('10.00');
   const [recipient, setRecipient] = useState('');
-  const [logs, setLogs] = useState<Array<{ stage: string; info?: any }>>([]);
+  const [logs, setLogs] = useState<Array<{ stage: string; info?: Record<string, unknown> }>>([]);
   const [error, setError] = useState<string | null>(null);
   const [mintTx, setMintTx] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,7 +43,7 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void 
         sourceAddress, // Actual wallet address
         destinationAddress: recipient, // Destination address
         sourceToken: 'USDC',
-        onStatus: (stage, info) => setLogs((prev) => [...prev, { stage, info }])
+        onStatus: (stage, info) => setLogs((prev) => [...prev, { stage, info: info && typeof info === 'object' ? (info as Record<string, unknown>) : undefined }])
       });
 
       if (!res.success) {
@@ -60,23 +60,25 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void 
 
       // Check protocol and chain to determine if manual minting is needed
       if (sourceChain === 'solana' && res.protocol === 'cctp' && message && attestation) {
-        setCctpMessage(message);
-        setCctpAttestation(attestation);
+        setCctpMessage(String(message));
+        setCctpAttestation(String(attestation));
         setLogs((prev) => [...prev, { stage: 'ready_to_mint_on_base' }]);
       }
 
-      onComplete?.({ result: res });
+      onComplete?.(res);
       setIsSubmitting(false);
-    } catch (e: any) {
-      setError(e?.message || 'Bridge failed');
+    } catch (e: unknown) {
+      const error = e as Error;
+      setError(error?.message || 'Bridge failed');
       setIsSubmitting(false);
     }
-  }, [sourceChain, amount, recipient, onComplete]);
+  }, [sourceChain, amount, recipient, onComplete, sourceAddress]);
 
   const handleMintOnBase = useCallback(async () => {
     try {
       setError(null);
       setLogs((prev) => [...prev, { stage: 'minting_on_base' }]);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const provider = new ethers.BrowserProvider((window as any).ethereum);
       const signer = await provider.getSigner();
       const transmitter = new Contract(CCTP.base.messageTransmitter, [
@@ -95,8 +97,9 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void 
       const rc = await tx.wait();
       setMintTx(rc.hash);
       setLogs((prev) => [...prev, { stage: 'mint_complete', info: { txHash: rc.hash } }]);
-    } catch (e: any) {
-      setError(e?.message || 'Mint on Base failed');
+    } catch (e: unknown) {
+      const error = e as Error;
+      setError(error?.message || 'Mint on Base failed');
     }
   }, [cctpMessage, cctpAttestation]);
 
@@ -109,7 +112,7 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: any) => void 
           <select
             className="w-full glass-premium p-4 rounded-xl border border-white/20 text-white bg-white/5 backdrop-blur-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 appearance-none cursor-pointer"
             value={sourceChain}
-            onChange={(e) => setSourceChain(e.target.value as any)}
+            onChange={(e) => setSourceChain(e.target.value as ChainIdentifier)}
           >
             <option value="solana" className="bg-slate-800 text-white">🟣 Solana</option>
             <option value="ethereum" className="bg-slate-800 text-white">🔷 Ethereum</option>

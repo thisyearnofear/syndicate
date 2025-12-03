@@ -4,7 +4,7 @@ import { Button } from "@/shared/components/ui/Button";
 import { CompactStack, CompactFlex } from "@/shared/components/premium/CompactLayout";
 import { AlertCircle } from 'lucide-react';
 import type { SyndicateInfo } from "@/domains/lottery/types";
-import { WalletTypes } from '@/domains/wallet/services/unifiedWalletService';
+import { WalletTypes } from '@/domains/wallet/types';
 
 interface SelectStepProps {
   setStep: (step: 'mode') => void;
@@ -32,6 +32,15 @@ interface SelectStepProps {
   onStartBridge?: () => void;
   isBridging?: boolean;
   showBridgeGuidance?: boolean;
+  nearQuote?: {
+    solverName?: string;
+    estimatedFee: string;
+    estimatedFeePercent: number;
+    destinationAmount: string;
+    timeLimit?: number;
+  } | null;
+  onGetNearQuote?: () => void;
+  onConfirmIntent?: () => void;
 }
 
 export function SelectStep({
@@ -58,6 +67,9 @@ export function SelectStep({
   onStartBridge,
   isBridging,
   showBridgeGuidance,
+  nearQuote,
+  onGetNearQuote,
+  onConfirmIntent,
 }: SelectStepProps) {
   const canBridgeAndBuy = Boolean(
     isConnected &&
@@ -226,6 +238,47 @@ export function SelectStep({
                 20% of winnings → {selectedSyndicate.cause.name}
               </span>
             </div>
+          </div>
+        )}
+
+        {/* NEAR Intents Quote */}
+        {walletType === WalletTypes.NEAR && (
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <p className="text-white/80 text-sm mb-2">NEAR Intents Quote</p>
+            {!nearQuote ? (
+              <div className="flex items-center justify-between">
+                <p className="text-gray-400 text-xs">Get a solver quote for executing purchase via NEAR Intents</p>
+                <Button size="sm" variant="outline" onClick={onGetNearQuote}>
+                  Get Quote
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2 text-xs text-white/70">
+                <div className="flex items-center justify-between">
+                  <span>Solver</span>
+                  <span className="font-mono">{nearQuote.solverName || 'default'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Estimated Fee</span>
+                  <span className="font-mono">{nearQuote.estimatedFee} ({nearQuote.estimatedFeePercent}%)</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Destination Amount</span>
+                  <span className="font-mono">{nearQuote.destinationAmount} USDC</span>
+                </div>
+                {nearQuote.timeLimit && (
+                  <div className="flex items-center justify-between">
+                    <span>Time Limit</span>
+                    <span className="font-mono">{Math.ceil(nearQuote.timeLimit / 60)} min</span>
+                  </div>
+                )}
+                <div className="pt-2">
+                  <Button size="sm" className="w-full bg-gradient-to-r from-blue-600 to-purple-600" onClick={onConfirmIntent}>
+                    Confirm Intent & Execute
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

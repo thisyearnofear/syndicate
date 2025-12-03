@@ -29,14 +29,19 @@ export interface DistributionResult {
  *
  * For now, this service computes off-chain allocation and returns a mock tx.
  */
-import { ethers, Contract } from 'ethers';
+import { ethers } from 'ethers';
 import { CONTRACTS } from '@/config';
+
+type SplitsClientLike = {
+  createSplit(params: { accounts: string[]; percentAllocations: number[]; distributorFee: number }): Promise<{ address: string }>;
+  distributeERC20(params: { splitAddress: string; tokenAddress: string; distributorAddress: string }): Promise<{ hash: string; wait?: () => Promise<{ hash: string }> }>;
+};
 
 class SplitsService {
   private snapshots: Map<string, Snapshot> = new Map();
   private provider: ethers.Provider | null = null;
   private signer: ethers.Signer | null = null;
-  private splitsClient: any | null = null; // Lazy-loaded @0xsplits/splits-sdk client
+  private splitsClient: SplitsClientLike | null = null; // Lazy-loaded @0xsplits/splits-sdk client
 
   /**
    * Runtime-only loader to avoid TypeScript module resolution errors when SDK isn't installed.
@@ -45,11 +50,11 @@ class SplitsService {
     if (this.splitsClient) return;
     try {
       // Use Function+dynamic import to avoid static resolution
-      const importer: () => Promise<any> = Function('return import("@0xsplits/splits-sdk")') as any;
+      const importer: () => Promise<unknown> = Function('return import("@0xsplits/splits-sdk")') as unknown as () => Promise<unknown>;
       const mod = await importer();
-      // @ts-ignore runtime-only client; types may be missing depending on install
-      this.splitsClient = new mod.SplitsClient({ chainId: 8453, provider, signer });
-    } catch (_) {
+      const ClientCtor = (mod as { SplitsClient: new (args: { chainId: number; provider: ethers.Provider; signer?: ethers.Signer }) => SplitsClientLike }).SplitsClient;
+      this.splitsClient = new ClientCtor({ chainId: 8453, provider, signer });
+    } catch {
       this.splitsClient = null;
     }
   }
@@ -110,9 +115,9 @@ class SplitsService {
     // Ensure provider/signer are available by auto-initializing from web3Service
     if (!this.provider || !this.signer) {
       try {
-        const { web3Service } = require('@/services/web3Service');
-        const provider = web3Service.getProvider();
-        const signer = web3Service.getSigner();
+        const mod = await import('@/services/web3Service');
+        const provider = mod.web3Service.getProvider();
+        const signer = provider ? await mod.web3Service.getFreshSigner().catch(() => null) : null;
         if (provider) {
           this.provider = provider;
           this.signer = signer || null;
@@ -121,13 +126,12 @@ class SplitsService {
             await this.loadSplitsClient(provider, this.signer || undefined);
           }
         }
-      } catch (_) {}
+      } catch {}
     }
 
     // If SDK is available, distribute ERC20 on Base via Splits
     if (this.splitsClient && this.signer) {
       try {
-        const totalWei = ethers.parseUnits(total, 6); // USDC decimals
         // Create percentages from weights (already computed proportions in computeDistribution)
         const accounts = result.allocations.map(a => a.address);
         const percents = result.allocations.map(a => Number(a.amount) / Number(total));
@@ -145,8 +149,9 @@ class SplitsService {
         });
         const rc = await tx.wait?.();
         return { success: true, txHash: rc?.hash || tx.hash };
-      } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : 'Splits distribution failed' };
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : 'Splits distribution failed';
+        return { success: false, error: msg };
       }
     }
 

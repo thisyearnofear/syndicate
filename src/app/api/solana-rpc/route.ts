@@ -12,7 +12,7 @@ export async function POST(request: Request): Promise<Response> {
     });
     const text = await resp.text();
     return new Response(text, { status: resp.status, headers: { 'content-type': 'application/json' } });
-  } catch (e) {
+  } catch {
     return Response.json({ error: 'Proxy request failed' }, { status: 502 });
   }
 }
@@ -31,7 +31,7 @@ export async function GET(): Promise<Response> {
     });
     const json = await resp.json();
     return Response.json(json, { status: resp.status });
-  } catch (e) {
+  } catch {
     return Response.json({ error: 'Proxy health check failed' }, { status: 502 });
   }
 }

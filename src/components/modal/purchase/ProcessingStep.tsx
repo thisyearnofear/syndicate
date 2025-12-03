@@ -9,38 +9,65 @@ interface ProcessingStepProps {
   nearEthBalance?: string | null;
   nearEstimatedFeeEth?: string | null;
   onRetryAfterFunding?: () => void;
+  nearRequestId?: string | null;
+  nearIntentTxHash?: string | null;
+  nearDestinationTxHash?: string | null;
 }
 
 const STAGE_LABELS: Record<string, string> = {
-  deriving_address: 'Deriving Base address',
-  building_tx: 'Preparing transaction',
-  tx_ready: 'Transaction ready',
-  computing_digest: 'Preparing signature',
-  requesting_signature: 'Requesting signature in NEAR wallet',
-  signature_requested: 'Signature requested',
-  polling_signature: 'Waiting for signature',
-  signature_complete: 'Signature complete',
-  serializing_tx: 'Finalizing transaction',
-  broadcasting_tx: 'Broadcasting to Base',
-  complete: 'Purchase submitted'
+  deriving_address: "Deriving Base address",
+  building_tx: "Preparing transaction",
+  tx_ready: "Transaction ready",
+  computing_digest: "Preparing signature",
+  requesting_signature: "Requesting signature in NEAR wallet",
+  signature_requested: "Signature requested",
+  polling_signature: "Waiting for signature",
+  signature_complete: "Signature complete",
+  serializing_tx: "Finalizing transaction",
+  broadcasting_tx: "Broadcasting to Base",
+  complete: "Purchase submitted",
+  solver_processing: "Solver is processing intent",
+  solver_completed: "Solver completed execution",
+  solver_failed: "Solver failed to execute",
+  funds_bridged: "Funds bridged to Base",
+  balance_refreshed: "Base balance refreshed",
 };
 
-export function ProcessingStep({ isApproving, nearStages, nearRecipient, nearEthBalance, nearEstimatedFeeEth, onRetryAfterFunding }: ProcessingStepProps) {
-  const currentStage = nearStages && nearStages.length > 0 ? nearStages[nearStages.length - 1] : undefined;
+export function ProcessingStep({
+  isApproving,
+  nearStages,
+  nearRecipient,
+  nearEthBalance,
+  nearEstimatedFeeEth,
+  onRetryAfterFunding,
+  nearRequestId,
+  nearIntentTxHash,
+  nearDestinationTxHash,
+}: ProcessingStepProps) {
+  const currentStage =
+    nearStages && nearStages.length > 0
+      ? nearStages[nearStages.length - 1]
+      : undefined;
   return (
     <CompactStack spacing="lg" align="center">
       <div className="w-20 h-20 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
-      <h2 className="font-bold text-xl md:text-4xl lg:text-5xl leading-tight tracking-tight text-white">Processing Purchase...</h2>
+      <h2 className="font-bold text-xl md:text-4xl lg:text-5xl leading-tight tracking-tight text-white">
+        Processing Purchase...
+      </h2>
       <p className="text-gray-400 text-center leading-relaxed">
-        {isApproving ? 'Approving USDC spending...' : 'Purchasing your tickets...'}
+        {isApproving
+          ? "Approving USDC spending..."
+          : "Purchasing your tickets..."}
       </p>
       <p className="text-sm text-white/50 text-center">
-        {currentStage === 'requesting_signature' ? 'Approve in your NEAR wallet' : 'Please confirm the transaction in your wallet'}
+        {currentStage === "requesting_signature"
+          ? "Approve in your NEAR wallet"
+          : "Please confirm the transaction in your wallet"}
       </p>
 
       {nearStages && nearStages.length > 0 && (
         <div className="mt-4 w-full bg-white/5 rounded-lg p-4">
-          <p className="text-white/70 text-sm mb-2">NEAR Chain Signatures Status</p>
+          <p className="text-white/70 text-sm mb-2">NEAR Intents Status</p>
           <ul className="text-xs text-white/60 space-y-1">
             {nearStages.map((s, i) => (
               <li key={`${s}-${i}`} className="flex items-center gap-2">
@@ -49,14 +76,16 @@ export function ProcessingStep({ isApproving, nearStages, nearRecipient, nearEth
                 ) : (
                   <span className="inline-block w-4 h-4 rounded-full border-2 border-blue-400 animate-pulse" />
                 )}
-                <span>{STAGE_LABELS[s] || s.replace(/_/g, ' ')}</span>
+                <span>{STAGE_LABELS[s] || s.replace(/_/g, " ")}</span>
               </li>
             ))}
           </ul>
           {nearRecipient && (
             <div className="mt-3 text-xs text-white/60">
               <p>Derived Base address:</p>
-              <p className="font-mono break-all text-white/70">{nearRecipient}</p>
+              <p className="font-mono break-all text-white/70">
+                {nearRecipient}
+              </p>
               <div className="mt-2 flex items-center gap-2">
                 <button
                   className="px-2 py-1 bg-white/10 hover:bg-white/20 rounded text-white/80 text-xs"
@@ -74,14 +103,23 @@ export function ProcessingStep({ isApproving, nearStages, nearRecipient, nearEth
                 </a>
               </div>
               <div className="mt-3 text-white/70">
-                <p className="text-xs">Balance: <span className="font-mono">{nearEthBalance} ETH</span></p>
+                <p className="text-xs">
+                  Balance:{" "}
+                  <span className="font-mono">{nearEthBalance} ETH</span>
+                </p>
                 {nearEstimatedFeeEth && (
-                  <p className="text-xs">Estimated network fee: <span className="font-mono">{nearEstimatedFeeEth} ETH</span></p>
+                  <p className="text-xs">
+                    Estimated network fee:{" "}
+                    <span className="font-mono">{nearEstimatedFeeEth} ETH</span>
+                  </p>
                 )}
               </div>
-              {nearEthBalance === '0' || (nearEstimatedFeeEth && Number(nearEthBalance || '0') < Number(nearEstimatedFeeEth)) ? (
+              {nearEthBalance === "0" ||
+              (nearEstimatedFeeEth &&
+                Number(nearEthBalance || "0") < Number(nearEstimatedFeeEth)) ? (
                 <div className="mt-2 text-yellow-300">
-                  Insufficient gas on Base. Add ETH to this address to cover estimated fees.
+                  Insufficient gas on Base. Add ETH to this address to cover
+                  estimated fees.
                   {onRetryAfterFunding && (
                     <div className="mt-2">
                       <button
@@ -94,6 +132,50 @@ export function ProcessingStep({ isApproving, nearStages, nearRecipient, nearEth
                   )}
                 </div>
               ) : null}
+              {nearRequestId && (
+                <div className="mt-3 text-white/70">
+                  <p className="text-xs">Intent Hash:</p>
+                  <p className="font-mono break-all text-white/70">
+                    {nearRequestId}
+                  </p>
+                </div>
+              )}
+              {nearIntentTxHash && (
+                <div className="mt-3 text-white/70">
+                  <p className="text-xs">NEAR Transaction:</p>
+                  <p className="font-mono break-all text-white/70">
+                    {nearIntentTxHash}
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <a
+                      href={`https://nearblocks.io/txns/${nearIntentTxHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-300 hover:text-blue-200 text-xs"
+                    >
+                      View on NEAR Explorer
+                    </a>
+                  </div>
+                </div>
+              )}
+              {nearDestinationTxHash && (
+                <div className="mt-3 text-white/70">
+                  <p className="text-xs">Base Transaction:</p>
+                  <p className="font-mono break-all text-white/70">
+                    {nearDestinationTxHash}
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <a
+                      href={`https://basescan.org/tx/${nearDestinationTxHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-300 hover:text-blue-200 text-xs"
+                    >
+                      View on Basescan
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -5,8 +5,9 @@
 // - Initializes @near-wallet-selector/core once and exposes a tiny API
 // - Keeps NEAR concerns separate from EVM WalletContext
 
-import type { WalletSelector, AccountState, Account } from '@near-wallet-selector/core';
+import type { WalletSelector } from '@near-wallet-selector/core';
 import { setupWalletSelector } from '@near-wallet-selector/core';
+import type { WalletModuleFactory } from '@near-wallet-selector/core';
 import { getConfig } from '@/config/nearConfig';
 
 // Optional wallets (already present in package.json)
@@ -41,13 +42,13 @@ class NearWalletSelectorService {
     const wallets = [
       setupMyNearWallet(),
       setupBitteWallet(),
-    ];
+    ] as WalletModuleFactory[];
 
     const selector = await setupWalletSelector({
-      network: cfg.networkId as any,
+      network: cfg.networkId as 'mainnet' | 'testnet',
       // Contract IDs can be provided for app-level sign-in if needed
       // Here we don't enforce a contractId to keep it generic for Chain Signatures flow
-      modules: wallets as any,
+      modules: wallets,
     });
 
     this.state.selector = selector;
@@ -61,7 +62,7 @@ class NearWalletSelectorService {
       const wallet = await selector.wallet();
       const accounts = await wallet.getAccounts();
       return accounts[0]?.accountId || null;
-    } catch (_) {
+    } catch {
       return null;
     }
   }
@@ -97,7 +98,7 @@ class NearWalletSelectorService {
 
       // Otherwise, request sign in (no contractId to keep generic)
       // Some wallets require a contractId; for Chain Signatures usage, we keep this minimal
-      const signedIn = await wallet.signIn({} as any);
+      await wallet.signIn({} as never);
       const refreshed = await wallet.getAccounts();
       this.state.accountId = refreshed[0]?.accountId || null;
       return this.state.accountId;

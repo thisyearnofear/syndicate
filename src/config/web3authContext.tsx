@@ -1,7 +1,12 @@
-import { type Web3AuthContextConfig } from "@web3auth/modal/react";
-import { WEB3AUTH_NETWORK, type Web3AuthOptions } from "@web3auth/modal";
-import { CHAIN_NAMESPACES } from "@web3auth/base";
-import { SolanaPrivateKeyProvider } from "@web3auth/solana-provider";
+// STUB: Using stubs while Web3Auth deps are disabled for hackathon
+// TO RE-ENABLE: Replace with '@web3auth/*' imports
+import {
+  type Web3AuthContextConfig,
+  type Web3AuthOptions,
+  WEB3AUTH_NETWORK,
+  CHAIN_NAMESPACES,
+  SolanaPrivateKeyProvider,
+} from '@/stubs/web3auth';
 
 // ENHANCEMENT: Solana devnet configuration for development
 export const solanaChainConfig = {

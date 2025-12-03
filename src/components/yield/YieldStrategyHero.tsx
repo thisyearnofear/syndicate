@@ -3,9 +3,7 @@ import { CompactSection, CompactContainer, CompactStack } from '@/shared/compone
 import { PuzzlePiece, PuzzleGrid } from '@/shared/components/premium/PuzzlePiece';
 import { Button } from '@/shared/components/ui/Button';
 import { TrendingUp, Heart, Trophy, Shield, Zap } from 'lucide-react';
-import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { ImprovedYieldStrategySelector } from '@/components/yield/ImprovedYieldStrategySelector';
-import { YieldAllocationControl } from '@/components/yield/YieldAllocationControl';
 
 interface YieldStrategyHeroProps {
   onExploreStrategies?: () => void;

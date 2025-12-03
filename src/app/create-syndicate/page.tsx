@@ -11,8 +11,8 @@ import {
 } from "lucide-react";
 import { CompactCard, CompactStack, CompactContainer, CompactSection } from '@/shared/components/premium/CompactLayout';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
+import { ComingSoonBanner } from '@/components/ui/ComingSoonBanner';
 import { ImprovedYieldStrategySelector } from '@/components/yield/ImprovedYieldStrategySelector';
-import { YieldAllocationControl } from '@/components/yield/YieldAllocationControl';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import type { SyndicateInfo } from "@/domains/lottery/types";
 
@@ -337,6 +337,12 @@ export default function CreateSyndicatePage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
       <CompactContainer maxWidth="2xl">
         <CompactSection spacing="lg">
+          <ComingSoonBanner 
+            title="Syndicate Creation Coming Soon"
+            description="Governance models (Leader-Guided, DAO, Hybrid) and smart contract integration are under development. You can view and join syndicates once they're published."
+            variant="info"
+          />
+
           <div className="mb-6">
             <Button 
               variant="ghost" 

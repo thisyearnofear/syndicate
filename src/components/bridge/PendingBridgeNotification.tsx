@@ -23,7 +23,7 @@ export function PendingBridgeNotification({
     currentBalance,
     onBridgeComplete
 }: PendingBridgeNotificationProps) {
-    const { hasPending, signature, protocol, amount, timeRemaining, explorerLink, isOverdue, dismissPending } = usePendingBridge(currentBalance);
+    const { hasPending, protocol, amount, timeRemaining, explorerLink, isOverdue, dismissPending } = usePendingBridge(currentBalance);
     const [isVisible, setIsVisible] = React.useState(false);
 
     useEffect(() => {

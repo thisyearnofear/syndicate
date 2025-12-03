@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { CompactCard } from '@/shared/components/premium/CompactLayout';
-import { Button } from '@/shared/components/ui/Button';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
 import type { SyndicateInfo } from '@/domains/lottery/types';
 import { octantVaultService, type OctantVaultInfo } from '@/services/octantVaultService';
@@ -63,22 +61,18 @@ export function YieldStrategySelector({
   userAddress 
 }: YieldStrategySelectorProps) {
   const [octantVaults, setOctantVaults] = useState<OctantVaultInfo[]>([]);
-  const [loadingVaults, setLoadingVaults] = useState(false);
   
   // Load Octant vault data when component mounts
   useEffect(() => {
     async function loadOctantVaults() {
       if (!userAddress) return;
       
-      setLoadingVaults(true);
       try {
         // TODO: Get chainId from wallet context
         const vaults = await octantVaultService.getAvailableVaults(8453); // Base chainId
         setOctantVaults(vaults);
       } catch (error) {
         console.error('Failed to load Octant vaults:', error);
-      } finally {
-        setLoadingVaults(false);
       }
     }
     

@@ -22,17 +22,17 @@ import {
   CompactStack,
   CompactSection,
 } from "@/shared/components/premium/CompactLayout";
-import type { BridgeResult } from "@/services/bridges/types";
 
 export default function BridgePage() {
   // Get both Solana and EVM wallet state from unified hook
-  const { address, isConnected, evmAddress, evmConnected } =
+  const { isConnected, evmAddress, evmConnected } =
     useWalletConnection();
   const [isBridging, setIsBridging] = useState(false);
   const [bridgeAmount, setBridgeAmount] = useState("10");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [sourceChain, setSourceChain] = useState<"solana" | "near">("solana");
 
-  const handleBridgeComplete = (result: BridgeResult) => {
+  const handleBridgeComplete = () => {
     setShowSuccess(true);
     setIsBridging(false);
     setTimeout(() => {
@@ -137,20 +137,49 @@ export default function BridgePage() {
                         />
                       </div>
 
-                      <Button
-                        onClick={() => setIsBridging(true)}
-                        disabled={
-                          !bridgeAmount || parseFloat(bridgeAmount) <= 0
-                        }
-                        className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <span className="text-lg mr-2">🌉</span>
-                        Bridge to Base
-                      </Button>
+                      <div className="flex items-center justify-between mt-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-white/70 text-sm">
+                            Source Chain:
+                          </span>
+                          <div className="glass flex rounded-full overflow-hidden border border-white/10">
+                            <button
+                              className={`px-4 py-2 text-sm ${
+                                sourceChain === "solana"
+                                  ? "bg-white/10 text-white"
+                                  : "text-white/60"
+                              }`}
+                              onClick={() => setSourceChain("solana")}
+                            >
+                              Solana
+                            </button>
+                            <button
+                              className={`px-4 py-2 text-sm ${
+                                sourceChain === "near"
+                                  ? "bg-white/10 text-white"
+                                  : "text-white/60"
+                              }`}
+                              onClick={() => setSourceChain("near")}
+                            >
+                              NEAR
+                            </button>
+                          </div>
+                        </div>
+                        <Button
+                          onClick={() => setIsBridging(true)}
+                          disabled={
+                            !bridgeAmount || parseFloat(bridgeAmount) <= 0
+                          }
+                          className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <span className="text-lg mr-2">🌉</span>
+                          Bridge to Base
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <FocusedBridgeFlow
-                      sourceChain="solana"
+                      sourceChain={sourceChain}
                       destinationChain="base"
                       amount={bridgeAmount}
                       recipient={evmAddress || ""}
@@ -175,7 +204,7 @@ export default function BridgePage() {
                   Fast Transfers
                 </h3>
                 <p className="text-gray-400 text-sm">
-                  Bridge assets quickly with Circle's CCTP protocol
+                  Bridge assets quickly with Circle&apos;s CCTP protocol
                 </p>
               </div>
 

@@ -49,9 +49,9 @@ export function CommunityInsightsPiece({ userIdentity }: { userIdentity: UserIde
 
         // Add insights based on verification status (when available)
         const verifiedPlatforms = [
-          (userIdentity.farcaster as any)?.verified,
-          (userIdentity.twitter as any)?.verified
-        ].filter(Boolean).length;
+          userIdentity.farcaster?.verified,
+          userIdentity.twitter?.verified,
+        ].filter((platform): platform is boolean => Boolean(platform)).length;
         if (verifiedPlatforms > 0) {
           userInsights.push({
             icon: "✅",

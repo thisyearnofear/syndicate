@@ -13,6 +13,7 @@ import {
 import { CompactCard, CompactStack, CompactContainer, CompactSection } from '@/shared/components/premium/CompactLayout';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import WalletConnectionManager from '@/components/wallet/WalletConnectionManager';
+import { ComingSoonBanner } from '@/components/ui/ComingSoonBanner';
 
 import { ImprovedYieldStrategySelector } from '@/components/yield/ImprovedYieldStrategySelector';
 import { YieldAllocationControl } from '@/components/yield/YieldAllocationControl';
@@ -92,6 +93,13 @@ export default function YieldStrategiesPage() {
               Allocation
             </Button>
           </div>
+
+          {/* Feature Status */}
+          <ComingSoonBanner 
+            title="Vault Integration in Progress"
+            description="Yield strategies are under development. Smart contract integration with Aave, Morpho, and other protocols is being finalized."
+            variant="info"
+          />
 
           {/* Tab Content */}
           <div className="w-full">

@@ -24,10 +24,12 @@ interface UserIdentity {
   farcaster?: {
     username: string;
     followerCount?: number;
+    verified?: boolean;
   };
   twitter?: {
     username: string;
     followerCount?: number;
+    verified?: boolean;
   };
 }
 

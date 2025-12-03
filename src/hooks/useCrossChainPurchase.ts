@@ -3,7 +3,7 @@
 import { useCallback, useState } from 'react';
 import { bridgeManager } from '@/services/bridges';
 import { web3Service } from '@/services/web3Service';
-import { CHAINS, cctp as CCTP } from '@/config';
+import { cctp as CCTP } from '@/config';
 import { ethers, Contract } from 'ethers';
 import type { ChainIdentifier } from '@/services/bridges/types';
 
@@ -30,9 +30,6 @@ export function useCrossChainPurchase() {
       const amount = (ticketPriceUSD * params.ticketCount).toFixed(2);
 
       // Step 1: Bridge if needed
-      let bridgeTx: string | undefined;
-      let message: string | undefined;
-      let attestation: string | undefined;
 
       // Use Unified Bridge Manager
       // Note: bridgeManager handles protocol selection (CCTP, Wormhole, etc.)
@@ -52,9 +49,9 @@ export function useCrossChainPurchase() {
         throw new Error(bridgeResult.error || 'Bridge failed');
       }
 
-      bridgeTx = bridgeResult.sourceTxHash;
-      message = bridgeResult.details?.message;
-      attestation = bridgeResult.details?.attestation;
+      const bridgeTx = bridgeResult.sourceTxHash;
+      const message = bridgeResult.details?.message;
+      const attestation = bridgeResult.details?.attestation;
 
       setState((s) => ({ ...s, bridgeTx }));
 
@@ -69,7 +66,7 @@ export function useCrossChainPurchase() {
           await web3Service.initialize();
         }
 
-        const provider = new ethers.BrowserProvider((window as any).ethereum);
+        const provider = new ethers.BrowserProvider(window.ethereum!);
         const signer = await provider.getSigner();
 
         // Switch to Base if needed (web3Service.initialize does this, but double check)
@@ -115,7 +112,7 @@ export function useCrossChainPurchase() {
             ticketCount: params.ticketCount,
           })
         });
-      } catch (_) { }
+      } catch { }
 
       return {
         success: true,
@@ -123,10 +120,11 @@ export function useCrossChainPurchase() {
         mintTx: state.mintTx,
         purchaseTx: purchase.txHash,
       };
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Cross-chain purchase error:', e);
-      setState({ status: 'error', error: e?.message || 'Cross-chain purchase failed' });
-      return { success: false, error: e?.message };
+      const message = (e as { message?: string }).message || 'Cross-chain purchase failed';
+      setState({ status: 'error', error: message });
+      return { success: false, error: message };
     }
   }, [state.mintTx]);
 

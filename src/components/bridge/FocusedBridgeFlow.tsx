@@ -11,18 +11,22 @@ import React, { useState, useEffect } from "react";
 import { design } from "@/config";
 import { Loader, CircleCheck, AlertCircle, ExternalLink } from "lucide-react";
 import { bridgeManager } from "@/services/bridges";
+import { nearWalletSelectorService } from "@/domains/wallet/services/nearWalletSelectorService";
+import { nearIntentsService } from "@/services/nearIntentsService";
+import { CONTRACTS, CHAINS } from "@/config";
+import { ethers } from "ethers";
 import type { BridgeResult } from "@/services/bridges/types";
 import { Button } from "@/shared/components/ui/Button";
 import { ProtocolSelector, ProtocolOption } from "./ProtocolSelector";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 
 export interface FocusedBridgeFlowProps {
-  sourceChain: "solana" | "ethereum";
+  sourceChain: "solana" | "ethereum" | "near";
   destinationChain: "base";
   amount: string;
   recipient: string; // Destination EVM address
   onComplete: (result: BridgeResult) => void;
-  onStatus?: (status: string, data?: any) => void;
+  onStatus?: (status: string, data?: Record<string, unknown>) => void;
   onError: (error: string) => void;
   onCancel: () => void;
   preselectedProtocol?: "cctp" | "wormhole";
@@ -50,9 +54,13 @@ export function FocusedBridgeFlow({
   const [currentStatus, setCurrentStatus] = useState<string>("idle");
   const [progress, setProgress] = useState(0);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [baseEthHint, setBaseEthHint] = useState<{
+    have: string;
+    need: string;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [events, setEvents] = useState<
-    Array<{ status: string; info?: any; ts: number }>
+    Array<{ status: string; info?: Record<string, unknown>; ts: number }>
   >([]);
   const [amountInput, setAmountInput] = useState<string>(amount);
 
@@ -60,9 +68,14 @@ export function FocusedBridgeFlow({
     setAmountInput(amount);
   }, [amount]);
 
-  // If protocol is preselected, set it and auto-start bridge
+  // If protocol is preselected, set it and auto-start bridge (Solana/EVM paths)
   useEffect(() => {
-    if (preselectedProtocol && stage === "bridging" && !selectedProtocol) {
+    if (
+      preselectedProtocol &&
+      stage === "bridging" &&
+      !selectedProtocol &&
+      sourceChain !== "near"
+    ) {
       const protocol = preselectedProtocol === "wormhole" ? "wormhole" : "cctp";
       const protocolOption: ProtocolOption = {
         protocol: protocol,
@@ -71,24 +84,20 @@ export function FocusedBridgeFlow({
         icon: protocol === "wormhole" ? "⚡" : "🔵",
         estimatedFee: "0.01", // Placeholder
         etaMinutes: protocol === "wormhole" ? 10 : 20,
-        description: protocol === "wormhole" ? "Fast cross-chain bridge" : "Native USDC bridge"
+        description:
+          protocol === "wormhole"
+            ? "Fast cross-chain bridge"
+            : "Native USDC bridge",
       };
       setSelectedProtocol(protocolOption);
     }
-  }, [preselectedProtocol, stage, selectedProtocol]);
+  }, [preselectedProtocol, stage, selectedProtocol, sourceChain]);
 
   const handleProtocolSelect = (protocol: ProtocolOption) => {
     setSelectedProtocol(protocol);
   };
 
-  // Auto-start bridge when protocol is set
-  useEffect(() => {
-    if (selectedProtocol && stage === "bridging" && preselectedProtocol) {
-      startBridge();
-    }
-  }, [selectedProtocol, preselectedProtocol]);
-
-  const startBridge = async () => {
+  const startBridge = React.useCallback(async () => {
     if (!selectedProtocol) return;
 
     setStage("bridging");
@@ -98,75 +107,233 @@ export function FocusedBridgeFlow({
 
     try {
       if (!sourceAddress) {
-        throw new Error('Source wallet not connected');
+        throw new Error("Source wallet not connected");
       }
 
-      const result = await bridgeManager.bridge({
-        sourceChain,
-        destinationChain: 'base',
-        amount: amountInput,
-        sourceAddress, // Actual wallet address
-        destinationAddress: recipient, // Destination EVM address
-        sourceToken: 'USDC',
-        protocol: selectedProtocol.protocol,
-        onStatus: (status, data) => {
-          setCurrentStatus(status);
-          onStatus?.(status, data);
+      if (sourceChain === "near") {
+        // NEAR Intents path
+        setEvents((prev) =>
+          [...prev, { status: "initializing", ts: Date.now() }].slice(-3)
+        );
+        setCurrentStatus("initializing");
+        setProgress(10);
 
-          setEvents((prev) => {
-            const next = [...prev, { status, info: data, ts: Date.now() }];
-            return next.slice(-3); // Show only last 3 events
-          });
-
-          // Extract transaction hash
-          if (data?.txHash) setTxHash(data.txHash);
-          if (data?.signature) setTxHash(data.signature);
-
-          // Update progress based on status
-          const progressMap: Record<string, number> = {
-            "initializing": 10,
-            "validating": 15,
-            "approving": 20,
-            "sending": 30,
-            "sent": 50,
-            "confirmed": 70,
-            "waiting_attestation": 80,
-            "attestation_fetched": 90,
-            "minting": 95,
-            "complete": 100,
-
-            // Legacy/Specific mappings
-            "solana_cctp:init": 10,
-            "solana_cctp:prepare": 20,
-            "solana_cctp:signing": 30,
-            "solana_cctp:sent": 50,
-            "solana_cctp:confirmed": 70,
-            "solana_cctp:message_extracted": 80,
-            "solana_cctp:attestation_fetched": 95,
-          };
-
-          const newProgress = progressMap[status];
-          if (newProgress) setProgress(newProgress);
+        const ok = await nearWalletSelectorService.init();
+        if (!ok) throw new Error("NEAR wallet not ready");
+        const selector = nearWalletSelectorService.getSelector();
+        let accountId = nearWalletSelectorService.getAccountId();
+        if (!accountId) {
+          accountId = await nearWalletSelectorService.connect();
         }
-      });
+        if (!selector || !accountId)
+          throw new Error("NEAR wallet not connected");
 
-      if (result.success) {
-        setProgress(100);
+        const ready = await nearIntentsService.init(selector, accountId);
+        if (!ready) throw new Error("Failed to initialize NEAR intents");
+
+        setEvents((prev) =>
+          [...prev, { status: "quote_requested", ts: Date.now() }].slice(-3)
+        );
+        setCurrentStatus("quote_requested");
+        setProgress(20);
+
+        const amountUnits = BigInt(
+          Math.floor(parseFloat(amountInput) * 1_000_000)
+        ).toString();
+        await nearIntentsService.getQuote({
+          sourceAsset:
+            "nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near",
+          sourceAmount: amountUnits,
+          destinationAddress: recipient,
+          destinationChain: "base",
+        });
+
+        setEvents((prev) =>
+          [...prev, { status: "intent_submitted", ts: Date.now() }].slice(-3)
+        );
+        setCurrentStatus("intent_submitted");
+        setProgress(40);
+
+        const res = await nearIntentsService.purchaseViaIntent({
+          sourceAsset:
+            "nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near",
+          sourceAmount: amountUnits,
+          destinationAddress: recipient,
+          megapotAmount: amountUnits,
+        });
+
+        if (!res.success || !res.intentHash) {
+          throw new Error(res.error || "Intent execution failed");
+        }
+
+        setTxHash(String(res.intentHash));
+        setEvents((prev) =>
+          [
+            ...prev,
+            {
+              status: "waiting_execution",
+              info: { intentHash: res.intentHash },
+              ts: Date.now(),
+            },
+          ].slice(-3)
+        );
+        setCurrentStatus("waiting_execution");
+        setProgress(60);
+
+        // Poll solver status in parallel
+        (async () => {
+          try {
+            let n = 0;
+            let finalStatus: "pending" | "processing" | "completed" | "failed" = "pending";
+            while (n < 60) {
+              n++;
+              const st = await nearIntentsService.getIntentStatus(
+                String(res.intentHash)
+              );
+              finalStatus = st.status;
+              if (st.status === "completed" || st.status === "failed") break;
+              await new Promise((r) => setTimeout(r, 5000));
+            }
+            setEvents((prev) =>
+              [
+                ...prev,
+                {
+                  status:
+                    finalStatus === "completed"
+                      ? "solver_completed"
+                      : "solver_pending",
+                  ts: Date.now(),
+                },
+              ].slice(-3)
+            );
+          } catch {}
+        })();
+
+        // Poll Base USDC balance until bridged
+        const provider = new ethers.JsonRpcProvider(CHAINS.base.rpcUrl);
+        const usdc = new ethers.Contract(
+          CONTRACTS.usdc,
+          ["function balanceOf(address owner) external view returns (uint256)"],
+          provider
+        );
+        const target = parseFloat(amountInput);
+        let attempts = 0;
+        while (attempts < 30) {
+          attempts++;
+          const bal = await usdc.balanceOf(recipient);
+          const amt = Number(ethers.formatUnits(bal, 6));
+          if (amt >= target) break;
+          await new Promise((r) => setTimeout(r, 5000));
+        }
+
+        setEvents((prev) =>
+          [...prev, { status: "funds_bridged", ts: Date.now() }].slice(-3)
+        );
         setCurrentStatus("complete");
+        setProgress(100);
         setStage("complete");
-        onComplete(result);
+
+        // Gas hint
+        try {
+          const provider = new ethers.JsonRpcProvider(CHAINS.base.rpcUrl);
+          const bal = await provider.getBalance(recipient);
+          const have = Number(ethers.formatEther(bal));
+          const need = 0.0005;
+          if (have < need)
+            setBaseEthHint({ have: have.toFixed(6), need: need.toFixed(6) });
+        } catch {}
+
+        onComplete({ success: true } as BridgeResult);
       } else {
-        setError(result.error || "Bridge failed");
-        setStage("error");
-        onError(result.error || "Bridge failed");
+        const result = await bridgeManager.bridge({
+          sourceChain,
+          destinationChain: "base",
+          amount: amountInput,
+          sourceAddress, // Actual wallet address
+          destinationAddress: recipient, // Destination EVM address
+          sourceToken: "USDC",
+          protocol: selectedProtocol.protocol,
+          onStatus: (status, data) => {
+            setCurrentStatus(status);
+            const dataObj = data && typeof data === 'object' && !Array.isArray(data) && data !== null ? data as Record<string, unknown> : undefined;
+            onStatus?.(status, dataObj);
+
+            setEvents((prev) => {
+              const next = [...prev, { status, info: dataObj, ts: Date.now() }];
+              return next.slice(-3); // Show only last 3 events
+            });
+
+            if (dataObj?.txHash) setTxHash(String(dataObj.txHash));
+            if (dataObj?.signature) setTxHash(String(dataObj.signature));
+
+            const progressMap: Record<string, number> = {
+              initializing: 10,
+              validating: 15,
+              approving: 20,
+              sending: 30,
+              sent: 50,
+              confirmed: 70,
+              waiting_attestation: 80,
+              attestation_fetched: 90,
+              minting: 95,
+              complete: 100,
+              "solana_cctp:init": 10,
+              "solana_cctp:prepare": 20,
+              "solana_cctp:signing": 30,
+              "solana_cctp:sent": 50,
+              "solana_cctp:confirmed": 70,
+              "solana_cctp:message_extracted": 80,
+              "solana_cctp:attestation_fetched": 95,
+            };
+
+            const newProgress = progressMap[status];
+            if (newProgress) setProgress(newProgress);
+          },
+        });
+
+        if (result.success) {
+          setProgress(100);
+          setCurrentStatus("complete");
+          setStage("complete");
+          onComplete(result);
+        } else {
+          setError(result.error || "Bridge failed");
+          setStage("error");
+          onError(result.error || "Bridge failed");
+        }
       }
-    } catch (err: any) {
-      const errorMessage = err.message || "Bridge failed";
+    } catch (err) {
+      const error = err as Error;
+      const errorMessage = error.message || "Bridge failed";
       setError(errorMessage);
       setStage("error");
       onError(errorMessage);
     }
-  };
+  }, [
+    selectedProtocol,
+    sourceChain,
+    sourceAddress,
+    amountInput,
+    recipient,
+    preselectedProtocol,
+    onStatus,
+    onComplete,
+    onError,
+    setStage,
+    setError,
+    setCurrentStatus,
+    setProgress,
+    setTxHash,
+    setEvents,
+    setBaseEthHint,
+  ]);
+
+  // Auto-start bridge when protocol is set
+  useEffect(() => {
+    if (selectedProtocol && stage === "bridging" && preselectedProtocol) {
+      startBridge();
+    }
+  }, [selectedProtocol, preselectedProtocol, stage, startBridge]);
 
   const getStatusIcon = () => {
     if (error) return <AlertCircle className="w-6 h-6 text-red-400" />;
@@ -223,7 +390,8 @@ export function FocusedBridgeFlow({
       approving: "Please approve the transaction in your wallet",
       sending: "Please confirm the transfer in your wallet",
       sent: "Waiting for network confirmation",
-      waiting_attestation: "Waiting for Circle to verify the transfer (can take ~15 mins)",
+      waiting_attestation:
+        "Waiting for Circle to verify the transfer (can take ~15 mins)",
       attestation_fetched: "Ready to mint on Base",
 
       // Legacy
@@ -314,11 +482,17 @@ export function FocusedBridgeFlow({
     return (
       <div className="space-y-6 animate-fade-in">
         {/* Protocol Badge */}
-        {selectedProtocol && (
+        {(selectedProtocol || sourceChain === "near") && (
           <div className="flex justify-center">
             <div className="glass-premium px-4 py-2 rounded-full border border-white/20">
               <span className="text-white text-sm font-medium">
-                {selectedProtocol.icon} {selectedProtocol.name}
+                {sourceChain === "near" ? (
+                  "🤝 NEAR Intents"
+                ) : selectedProtocol ? (
+                  <>
+                    {selectedProtocol.icon} {selectedProtocol.name}
+                  </>
+                ) : null}
               </span>
             </div>
           </div>
@@ -414,8 +588,9 @@ export function FocusedBridgeFlow({
             <div className="flex items-start gap-3">
               <span className="text-xl flex-shrink-0">💡</span>
               <p className="text-blue-300 text-sm leading-relaxed">
-                Your bridge is in progress. You can close this modal and we'll
-                continue in the background. We'll notify you when it's complete.
+                Your bridge is in progress. You can close this modal and
+                we&apos;ll continue in the background. We&apos;ll notify you
+                when it&apos;s complete.
               </p>
             </div>
           </div>
@@ -455,9 +630,18 @@ export function FocusedBridgeFlow({
           </div>
         </div>
 
+        {baseEthHint && (
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+            <p className="text-yellow-300 text-sm">
+              Low Base ETH detected. Have {baseEthHint.have} ETH, suggested{" "}
+              {baseEthHint.need} ETH for approvals.
+            </p>
+          </div>
+        )}
+
         <div className="pt-4">
           <Button
-            onClick={() => onComplete({} as BridgeResult)}
+            onClick={() => onComplete({ success: true } as BridgeResult)}
             className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold"
           >
             Continue to Ticket Purchase

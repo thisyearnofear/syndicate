@@ -10,7 +10,7 @@ export async function GET(request: Request): Promise<Response> {
     const resp = await fetch(target);
     const text = await resp.text();
     return new Response(text, { status: resp.status, headers: { 'content-type': 'application/json' } });
-  } catch (e) {
+  } catch {
     return Response.json({ error: 'Attestation proxy failed' }, { status: 502 });
   }
 }

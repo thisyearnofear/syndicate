@@ -1,9 +1,8 @@
-// Test to verify the Solana wallet integration implementation
-const { SolanaWalletIntegration } = require('./index');
+import { SolanaWalletIntegration } from './index';
 
 // Simple test to verify the class can be instantiated
 try {
-  const walletIntegration = new SolanaWalletIntegration();
+  new SolanaWalletIntegration();
   console.log('✓ SolanaWalletIntegration class instantiated successfully');
   
   // Verify properties are set correctly

@@ -14,9 +14,8 @@ import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   CompactStack,
-  CompactFlex,
 } from "@/shared/components/premium/CompactLayout";
-import { WalletType } from "@/domains/wallet/services/unifiedWalletService";
+import { WalletType } from "@/domains/wallet/types";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useWalletContext } from "@/context/WalletContext";
 
@@ -45,10 +44,11 @@ export default function ConnectWallet({
       try {
         await onConnect?.(walletType);
         console.log(`Connected to ${walletType}`);
-      } catch (err: any) {
-        console.error(`Failed to connect to ${walletType}:`, err);
+      } catch (err) {
+        const error = err as Error;
+        console.error(`Failed to connect to ${walletType}:`, error);
         const errorMessage =
-          err?.message ||
+          error?.message ||
           `Failed to connect to ${walletType}. Please try again.`;
         setError(errorMessage);
       } finally {
@@ -148,7 +148,7 @@ export default function ConnectWallet({
         )}
       </div>
 
-      
+
     </CompactStack>
   );
 }

@@ -61,6 +61,31 @@ export interface SocialDiscoveryResult {
   relevance: 'high' | 'medium' | 'low'; // Based on lottery/web3 activity
 }
 
+type TwitterUser = {
+  username: string;
+  displayName?: string;
+  description?: string;
+  followerCount?: number;
+  followingCount?: number;
+  verified?: boolean;
+};
+
+type TwitterFollowingResponse = {
+  following?: TwitterUser[];
+};
+
+type FarcasterUser = {
+  username: string;
+  profile?: { displayName?: string; bio?: { text?: string } };
+  followerCount?: number;
+  followingCount?: number;
+  verified?: boolean;
+};
+
+type FarcasterFollowingResponse = {
+  following?: FarcasterUser[];
+};
+
 class SocialService {
   private readonly neynarApiUrl = 'https://api.neynar.com/v2';
   private readonly neynarApiKey = process.env.NEXT_PUBLIC_NEYNAR_API_KEY;
@@ -160,16 +185,16 @@ class SocialService {
         });
 
         if (response.ok) {
-          const data = await response.json();
+          const data: TwitterFollowingResponse = await response.json();
           // Filter for web3/lottery related accounts (simplified logic)
-          const relevantConnections = data.following?.filter((user: any) => {
+          const relevantConnections = (data.following || []).filter((user) => {
             const bio = user.description?.toLowerCase() || '';
             const hasWeb3Keywords = bio.includes('web3') || bio.includes('crypto') || bio.includes('blockchain') || bio.includes('nft');
             const hasLotteryKeywords = bio.includes('lottery') || bio.includes('lotto') || bio.includes('jackpot');
             return hasWeb3Keywords || hasLotteryKeywords;
-          }) || [];
+          });
 
-          relevantConnections.slice(0, 5).forEach((user: any) => {
+          relevantConnections.slice(0, 5).forEach((user) => {
             results.push({
               platform: 'twitter',
               username: user.username,
@@ -177,7 +202,7 @@ class SocialService {
               followerCount: user.followerCount || 0,
               followingCount: user.followingCount || 0,
               verified: user.verified || false,
-              relevance: user.followerCount > 1000 ? 'high' : user.followerCount > 100 ? 'medium' : 'low',
+              relevance: (user.followerCount ?? 0) > 1000 ? 'high' : (user.followerCount ?? 0) > 100 ? 'medium' : 'low',
             });
           });
         }
@@ -197,16 +222,16 @@ class SocialService {
         });
 
         if (response.ok) {
-          const data = await response.json();
+          const data: FarcasterFollowingResponse = await response.json();
           // Filter for web3/lottery related accounts
-          const relevantConnections = data.following?.filter((user: any) => {
+          const relevantConnections = (data.following || []).filter((user) => {
             const bio = user.profile?.bio?.text?.toLowerCase() || '';
             const hasWeb3Keywords = bio.includes('web3') || bio.includes('crypto') || bio.includes('blockchain') || bio.includes('nft');
             const hasLotteryKeywords = bio.includes('lottery') || bio.includes('lotto') || bio.includes('jackpot');
             return hasWeb3Keywords || hasLotteryKeywords;
-          }) || [];
+          });
 
-          relevantConnections.slice(0, 5).forEach((user: any) => {
+          relevantConnections.slice(0, 5).forEach((user) => {
             results.push({
               platform: 'farcaster',
               username: user.username,
@@ -214,7 +239,7 @@ class SocialService {
               followerCount: user.followerCount || 0,
               followingCount: user.followingCount || 0,
               verified: user.verified || false,
-              relevance: user.followerCount > 500 ? 'high' : user.followerCount > 50 ? 'medium' : 'low',
+              relevance: (user.followerCount ?? 0) > 500 ? 'high' : (user.followerCount ?? 0) > 50 ? 'medium' : 'low',
             });
           });
         }

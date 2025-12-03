@@ -5,12 +5,18 @@ import { CompactStack, CompactFlex } from '@/shared/components/premium/CompactLa
 import { CountUpText } from '@/shared/components/ui/CountUpText';
 import { Button } from '@/shared/components/ui/Button';
 
+interface UserTicketInfo {
+  ticketsPurchased?: number;
+  winningsClaimable?: number | string;
+  hasWon?: boolean;
+}
+
 /**
   * MODULAR: User Ticket Information Piece
   */
 export function UserTicketPiece({ userTicketInfo, claimWinnings, isClaimingWinnings }: {
-  userTicketInfo: any;
-  claimWinnings: () => Promise<string>;
+  userTicketInfo: UserTicketInfo | null;
+  claimWinnings: () => Promise<void | string>;
   isClaimingWinnings: boolean;
 }) {
   if (!userTicketInfo) {
@@ -26,11 +32,9 @@ export function UserTicketPiece({ userTicketInfo, claimWinnings, isClaimingWinni
 
   const handleClaimWinnings = async () => {
     try {
-      const txHash = await claimWinnings();
-      // Could show a success message here
-      console.log('Winnings claimed:', txHash);
+      await claimWinnings();
     } catch (error) {
-      console.error('Failed to claim winnings:', error);
+      console.error('Failed to claim winnings:', error instanceof Error ? error.message : 'Unknown error');
     }
   };
 
@@ -46,14 +50,14 @@ export function UserTicketPiece({ userTicketInfo, claimWinnings, isClaimingWinni
           <div className="grid grid-cols-2 gap-4 text-center">
             <div className="hover-lift transition-all duration-300">
               <CountUpText
-                value={userTicketInfo.ticketsPurchased}
+                value={userTicketInfo.ticketsPurchased ?? 0}
                 className="text-2xl font-black text-blue-400 drop-shadow-[0_0_20px_rgba(59,130,246,0.6)]"
               />
               <p className="text-xs text-gray-400 leading-relaxed mt-1">Tickets Owned</p>
             </div>
             <div className="hover-lift transition-all duration-300">
               <CountUpText
-                value={parseFloat(userTicketInfo.winningsClaimable)}
+                value={parseFloat(String(userTicketInfo.winningsClaimable ?? '0'))}
                 prefix="$"
                 className="text-2xl font-black text-green-400 drop-shadow-[0_0_20px_rgba(34,197,94,0.6)]"
               />
@@ -69,7 +73,7 @@ export function UserTicketPiece({ userTicketInfo, claimWinnings, isClaimingWinni
               <p className="text-sm font-bold text-yellow-400 text-center leading-relaxed drop-shadow-[0_0_20px_rgba(250,204,21,0.6)]">
                 Congratulations! You won!
               </p>
-              {parseFloat(userTicketInfo.winningsClaimable) > 0 && (
+              {parseFloat(String(userTicketInfo.winningsClaimable ?? '0')) > 0 && (
                 <Button
                   variant="default"
                   size="sm"
