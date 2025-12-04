@@ -279,34 +279,80 @@ export function useUnifiedWallet(): {
               description: 'Connect your NEAR wallet to participate in cross-chain lotteries',
             });
 
-            // Show modal and wait for user to sign in
-            modal.show();
-
-            // Poll for account selection with longer timeout (30 seconds)
+            console.log('NEAR modal created, showing...');
+            
+            // Show modal and wait for user to sign in using proper subscription
             const accountId = await new Promise<string | null>((resolve) => {
-              let attempts = 0;
-              const maxAttempts = 300; // 30 seconds at 100ms intervals
-              const interval = setInterval(() => {
-                try {
-                  const state = selector.store.getState() as { accounts?: AccountState[] };
-                  const accounts = state.accounts || [];
-                  const active = accounts.find((a) => a.active);
-                  if (active?.accountId) {
-                    clearInterval(interval);
-                    modal.hide();
-                    resolve(active.accountId);
-                  } else if (++attempts > maxAttempts) {
-                    clearInterval(interval);
-                    modal.hide();
-                    resolve(null);
-                  }
-                } catch (err) {
-                  console.error('Error polling NEAR wallet state:', err);
-                  clearInterval(interval);
+              let resolved = false;
+              let timeoutId: NodeJS.Timeout;
+              let unsubscribe: (() => void) | null = null;
+
+              // Set timeout to 30 seconds
+              timeoutId = setTimeout(() => {
+                if (!resolved) {
+                  resolved = true;
+                  if (unsubscribe) unsubscribe();
                   modal.hide();
+                  console.warn('NEAR connection timed out');
                   resolve(null);
                 }
-              }, 100);
+              }, 30000);
+
+              // Subscribe to account changes (more reliable than polling)
+              try {
+                unsubscribe = selector.on('accountsChanged', async (accounts: AccountState[]) => {
+                  if (!resolved && accounts && accounts.length > 0) {
+                    const active = accounts.find((a) => a.active);
+                    if (active?.accountId) {
+                      resolved = true;
+                      clearTimeout(timeoutId);
+                      if (unsubscribe) unsubscribe();
+                      modal.hide();
+                      console.log('NEAR account selected:', active.accountId);
+                      resolve(active.accountId);
+                    }
+                  }
+                });
+              } catch (err) {
+                console.warn('Failed to subscribe to account changes, falling back to polling:', err);
+                // Fallback to polling if subscription fails
+                let attempts = 0;
+                const maxAttempts = 300; // 30 seconds at 100ms intervals
+                const interval = setInterval(() => {
+                  try {
+                    if (!resolved) {
+                      const state = selector.store.getState() as { accounts?: AccountState[] };
+                      const accounts = state.accounts || [];
+                      const active = accounts.find((a) => a.active);
+                      if (active?.accountId) {
+                        resolved = true;
+                        clearInterval(interval);
+                        clearTimeout(timeoutId);
+                        modal.hide();
+                        resolve(active.accountId);
+                      } else if (++attempts > maxAttempts) {
+                        resolved = true;
+                        clearInterval(interval);
+                        clearTimeout(timeoutId);
+                        modal.hide();
+                        resolve(null);
+                      }
+                    }
+                  } catch (err) {
+                    console.error('Error polling NEAR wallet state:', err);
+                    if (!resolved) {
+                      resolved = true;
+                      clearInterval(interval);
+                      clearTimeout(timeoutId);
+                      modal.hide();
+                      resolve(null);
+                    }
+                  }
+                }, 100);
+              }
+
+              // Show modal after setting up listeners
+              modal.show();
             });
 
             if (!accountId) {

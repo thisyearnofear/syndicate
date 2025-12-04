@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "@rainbow-me/rainbowkit/styles.css";
+import "@near-wallet-selector/modal-ui/styles.css";
 import { ToastProvider } from "@/shared/components/ui/Toast";
 import ClientProviders from "@/components/ClientProviders";
 import DynamicNavigationHeader from "@/components/DynamicNavigationHeader";
