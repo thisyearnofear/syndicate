@@ -65,6 +65,8 @@ export interface TicketPurchaseState {
   nearHasEnoughGas?: boolean;
   nearIntentTxHash?: string | null;
   nearDestinationTxHash?: string | null;
+  nearDepositAddress?: string | null;
+  nearUsdcTransferTxHash?: string | null;
 
   // NEAR winnings withdrawal state
   nearWithdrawalWaitingForDeposit?: boolean; // Waiting for user to send winnings to bridge deposit
@@ -151,6 +153,8 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     nearHasEnoughGas: undefined,
     nearIntentTxHash: null,
     nearDestinationTxHash: null,
+    nearDepositAddress: null,
+    nearUsdcTransferTxHash: null,
     nearWithdrawalWaitingForDeposit: false,
     nearWithdrawalDepositAddress: null,
     nearWithdrawalDepositAmount: null,
@@ -611,86 +615,82 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
                   if (!intentRes.success || !intentRes.intentHash) {
                     result = { success: false, error: intentRes.error || 'Intent execution failed' };
                   } else {
-                    // Intent submitted - 1Click SDK will handle bridging automatically
+                    // Intent submitted - now transfer USDC to deposit address
                     setState(prev => ({ 
                       ...prev, 
-                      nearStages: [...prev.nearStages, 'intent_submitted', 'waiting_bridge'],
+                      nearStages: [...prev.nearStages, 'intent_submitted'],
                       nearRequestId: String(intentRes.intentHash), 
                       nearIntentTxHash: intentRes.txHash || null,
+                      nearDepositAddress: String(intentRes.depositAddress),
                     }));
-                    (async () => {
-                      try {
-                        let m = 0;
-                        while (m < 60) {
-                          m++;
-                          const st = await nearIntentsService.getIntentStatus(String(intentRes.intentHash));
-                          if (st.destinationTx) {
-                            setState(prev => ({ ...prev, nearDestinationTxHash: String(st.destinationTx) }));
-                          }
-                          if (st.status === 'processing') setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'solver_processing'] }));
-                          if (st.status === 'completed') { setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'solver_completed'] })); break; }
-                          if (st.status === 'failed') { setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'solver_failed'] })); break; }
-                          await new Promise(r => setTimeout(r, 5000));
-                        }
-                      } catch { }
-                    })();
-                    const provider = new (await import('ethers')).ethers.JsonRpcProvider(CHAINS.base.rpcUrl);
-                    let attempts = 0;
-                    while (attempts < 24) {
-                      attempts++;
-                      const usdcBal = await new (await import('ethers')).ethers.Contract(
-                        CONTRACTS.usdc,
-                        ["function balanceOf(address owner) external view returns (uint256)", "function decimals() external view returns (uint8)"],
-                        provider
-                      ).balanceOf(destinationAddress);
-                      const usdc = Number((await import('ethers')).ethers.formatUnits(usdcBal, 6));
-                      if (usdc >= parseFloat(totalCost)) break;
-                      await new Promise(r => setTimeout(r, 5000));
-                    }
-                    setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'funds_bridged'] }));
                     
-                    // NEAR Intents: Use Chain Signatures to execute the final Megapot purchase
-                    // This combines waiting for bridged funds + executing the purchase
-                    const purchaseResult = await executeNearIntentsFullFlow({
+                    // Step 2: Transfer USDC from NEAR to the deposit address
+                    setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'waiting_deposit'] }));
+                    const transferResult = await nearIntentsService.transferUsdcToDepositAddress({
                       selector,
                       accountId,
-                      ticketCount,
-                      recipientAddress: destinationAddress,
                       depositAddress: String(intentRes.depositAddress),
-                      expectedAmount: totalCost,
-                      maxWaitMs: 120000, // 2 minutes to wait for funds
-                      onStatus: (status: string, details?: Record<string, unknown>) => {
-                        console.log('Purchase Flow Status:', status, details);
-                        
-                        // Map service statuses to UI stages
-                        if (status === 'waiting_bridge') {
-                          setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'waiting_bridge'] }));
-                        } else if (status === 'funds_received') {
-                          setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'funds_received'] }));
-                        } else if (status === 'bridge_complete') {
-                          setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'bridge_complete'] }));
-                        } else if (status === 'signing') {
-                          setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'signing'] }));
-                        } else if (status === 'approving') {
-                          setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'chain_sig_approving'] }));
-                        } else if (status === 'minting') {
-                          setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'broadcasting_purchase'] }));
-                        }
-                      },
+                      amountUsdc: totalCost,
                     });
 
-                    if (purchaseResult.success) {
-                      setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'purchase_completed'] }));
-                      result = {
-                        success: true,
-                        txHash: purchaseResult.txHash,
-                        ticketCount,
+                    if (!transferResult.success) {
+                      result = { 
+                        success: false, 
+                        error: transferResult.error || 'Failed to transfer USDC to deposit address' 
                       };
                     } else {
-                      result = {
-                        success: false,
-                        error: purchaseResult.error || 'Purchase execution failed',
-                      };
+                      setState(prev => ({ 
+                        ...prev, 
+                        nearStages: [...prev.nearStages, 'usdc_transfer_complete'],
+                        nearUsdcTransferTxHash: transferResult.txHash || null,
+                      }));
+
+                      // Step 3: Now wait for 1Click to bridge and execute the purchase
+                      // executeNearIntentsFullFlow handles:
+                      // 1. Waiting for 1Click to bridge USDC from NEAR to Base
+                      // 2. Polling for funds to arrive on recipient address
+                      // 3. Executing the ticket purchase via Chain Signatures
+                      const purchaseResult = await executeNearIntentsFullFlow({
+                        selector,
+                        accountId,
+                        ticketCount,
+                        recipientAddress: destinationAddress,
+                        depositAddress: String(intentRes.depositAddress),
+                        expectedAmount: totalCost,
+                        maxWaitMs: 300000, // 5 minutes to wait for bridge completion
+                        onStatus: (status: string, details?: Record<string, unknown>) => {
+                          console.log('Purchase Flow Status:', status, details);
+                          
+                          // Map service statuses to UI stages
+                          if (status === 'waiting_bridge') {
+                            setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'waiting_bridge'] }));
+                          } else if (status === 'funds_received') {
+                            setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'funds_received'] }));
+                          } else if (status === 'bridge_complete') {
+                            setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'bridge_complete'] }));
+                          } else if (status === 'signing') {
+                            setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'signing'] }));
+                          } else if (status === 'approving') {
+                            setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'chain_sig_approving'] }));
+                          } else if (status === 'minting') {
+                            setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'broadcasting_purchase'] }));
+                          }
+                        },
+                      });
+
+                      if (purchaseResult.success) {
+                        setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'purchase_completed'] }));
+                        result = {
+                          success: true,
+                          txHash: purchaseResult.txHash,
+                          ticketCount,
+                        };
+                      } else {
+                        result = {
+                          success: false,
+                          error: purchaseResult.error || 'Purchase execution failed',
+                        };
+                      }
                     }
                   }
                 }
@@ -849,6 +849,8 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       nearHasEnoughGas: undefined,
       nearIntentTxHash: null,
       nearDestinationTxHash: null,
+      nearDepositAddress: null,
+      nearUsdcTransferTxHash: null,
       isServiceReady: false,
     });
   }, []);

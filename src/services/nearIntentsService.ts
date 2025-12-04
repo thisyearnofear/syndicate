@@ -365,6 +365,70 @@ class NearIntentsService {
     }
   }
 
+  /**
+   * Transfer USDC from NEAR account to 1Click deposit address
+   * This is the manual step required before the solver can execute
+   */
+  async transferUsdcToDepositAddress(params: {
+    selector: any; // WalletSelector type
+    accountId: string;
+    depositAddress: string;
+    amountUsdc: string; // Amount in USDC (e.g., "100")
+  }): Promise<{
+    success: boolean;
+    txHash?: string;
+    error?: string;
+  }> {
+    try {
+      const { selector, accountId, depositAddress, amountUsdc } = params;
+
+      // Get the wallet instance
+      const wallet = await selector.wallet();
+
+      // Convert USDC to smallest units (6 decimals)
+      const amountUnits = String(Math.floor(parseFloat(amountUsdc) * 1_000_000));
+
+      // Transfer USDC.e on NEAR to the deposit address
+      // Using ft_transfer on the USDC contract
+      const txHash = await wallet.signAndSendTransaction({
+        signerId: accountId,
+        receiverId: 'base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near', // USDC.e contract
+        actions: [
+          {
+            type: 'FunctionCall',
+            params: {
+              methodName: 'ft_transfer',
+              args: {
+                receiver_id: depositAddress,
+                amount: amountUnits,
+              },
+              gas: '50000000000000', // 50 Tgas
+              deposit: '1', // 1 yoctoNEAR for state
+            },
+          },
+        ],
+      });
+
+      console.log('USDC transfer to deposit address successful:', {
+        txHash,
+        to: depositAddress,
+        amount: amountUsdc,
+      });
+
+      return {
+        success: true,
+        txHash,
+      };
+    } catch (error: unknown) {
+      console.error('Failed to transfer USDC to deposit address:', error);
+      const errorMessage = this.parseTransferError(error);
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+  }
+
 
 
   /**

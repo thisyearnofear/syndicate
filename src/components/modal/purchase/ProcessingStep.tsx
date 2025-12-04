@@ -12,12 +12,14 @@ interface ProcessingStepProps {
   nearRequestId?: string | null;
   nearIntentTxHash?: string | null;
   nearDestinationTxHash?: string | null;
+  nearDepositAddress?: string | null;
+  nearUsdcTransferTxHash?: string | null;
 }
 
 const STAGE_LABELS: Record<string, string> = {
   initializing: "Initializing...",
   quote_requested: "Getting quote from 1Click API",
-  intent_submitted: "Intent created - awaiting USDC deposit",
+  intent_submitted: "Intent submitted - executing purchase...",
   waiting_deposit: "Waiting for you to send USDC to deposit address",
   waiting_execution: "Waiting for solver to execute",
   deriving_address: "Deriving Base address",
@@ -56,6 +58,8 @@ export function ProcessingStep({
   nearRequestId,
   nearIntentTxHash,
   nearDestinationTxHash,
+  nearDepositAddress,
+  nearUsdcTransferTxHash,
 }: ProcessingStepProps) {
   const currentStage =
     nearStages && nearStages.length > 0
@@ -93,6 +97,63 @@ export function ProcessingStep({
               </li>
             ))}
           </ul>
+
+          {/* Fund Flow Visualization */}
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <p className="text-white/70 text-xs mb-3 font-semibold">Fund Flow Tracking</p>
+            <div className="space-y-3 text-xs">
+              {nearUsdcTransferTxHash && (
+                <div className="bg-green-500/10 border border-green-500/30 rounded p-2">
+                  <p className="text-green-300 mb-1">✓ USDC Sent from NEAR</p>
+                  <p className="text-white/60 break-all font-mono text-xs mb-1">
+                    {nearUsdcTransferTxHash.slice(0, 20)}...
+                  </p>
+                  <a
+                    href={`https://nearblocks.io/txns/${nearUsdcTransferTxHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-300 hover:text-blue-200 text-xs"
+                  >
+                    View transfer →
+                  </a>
+                </div>
+              )}
+
+              {nearDepositAddress && (
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded p-2">
+                  <p className="text-blue-300 mb-1">Bridge Deposit Address</p>
+                  <p className="text-white/60 break-all font-mono text-xs">
+                    {nearDepositAddress}
+                  </p>
+                  <button
+                    className="mt-1 text-blue-300 hover:text-blue-200 text-xs"
+                    onClick={() => navigator.clipboard.writeText(nearDepositAddress)}
+                  >
+                    Copy address
+                  </button>
+                </div>
+              )}
+
+              {(nearStages.includes('funds_received') || nearStages.includes('bridge_complete')) && nearRecipient && (
+                <div className="bg-green-500/10 border border-green-500/30 rounded p-2">
+                  <p className="text-green-300 mb-1">✓ USDC Received on Base</p>
+                  <p className="text-white/60 text-xs">Destination address:</p>
+                  <p className="text-white/60 break-all font-mono text-xs mt-1">
+                    {nearRecipient}
+                  </p>
+                  <a
+                    href={`https://basescan.org/address/${nearRecipient}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-300 hover:text-blue-200 text-xs mt-1 inline-block"
+                  >
+                    View on Basescan →
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+
           {nearRecipient && (
             <div className="mt-3 text-xs text-white/60">
               <p>Derived Base address:</p>
