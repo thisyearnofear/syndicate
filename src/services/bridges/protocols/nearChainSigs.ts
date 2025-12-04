@@ -193,14 +193,15 @@ export class NearChainSigsProtocol implements BridgeProtocol {
             // 5. Request Signature
             onStatus?.('approving', { step: 'Requesting MPC signature' });
             const digestBytes = computeUnsignedDigest(unsignedParams);
-            // FIX: Pass payload as number array [u8; 32] instead of base64 string
-            // This avoids potential validation issues in near-api-js or the contract
-            const payloadArray = Array.from(digestBytes);
-
+            // FIX: Ensure the nonce is a 32-byte Buffer as expected by NEAR contract
+            // The NEAR contract expects a 32-byte Buffer for the nonce parameter
+            const nonceBuffer = Buffer.alloc(32);
+            digestBytes.copy(nonceBuffer, 0, 0, Math.min(32, digestBytes.length));
+      
             const requestId = await this.requestChainSignatureChangeCall(
                 nearWallet,
                 DERIVATION_PATHS.ethereum,
-                payloadArray
+                Array.from(nonceBuffer)
             );
 
             if (!requestId) {
