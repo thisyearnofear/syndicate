@@ -236,20 +236,28 @@ class NearIntentsService {
     void _accountId;
     try {
       const args = { path: 'ethereum-1', key_version: 1 };
+      // Convert args to base64 using TextEncoder/TextDecoder for browser compatibility
+      const argsString = JSON.stringify(args);
+      const argsBuffer = new TextEncoder().encode(argsString);
+      const argsBase64 = Array.from(argsBuffer)
+        .map(byte => String.fromCharCode(byte))
+        .join('');
+      const argsBase64Encoded = btoa(argsBase64);
+
       const res: unknown = await this.nearProvider.query({
         request_type: 'call_function',
         account_id: NEAR.mpcContract,
         method_name: 'public_key_for',
-        args_base64: Buffer.from(JSON.stringify(args)).toString('base64'),
+        args_base64: argsBase64Encoded,
         finality: 'final',
       });
       const r = res as { result?: unknown };
       if (!r.result) return null;
       const uint = r.result instanceof Uint8Array ? r.result : new Uint8Array(r.result as ArrayBuffer | ArrayLike<number>);
-      const decoded = typeof window !== 'undefined' ? new TextDecoder().decode(uint) : Buffer.from(uint).toString();
+      const decoded = new TextDecoder().decode(uint);
       const parts = String(decoded).split(':');
       if (parts[0] !== 'secp256k1' || !parts[1]) return null;
-      const bytes = typeof window !== 'undefined' ? Uint8Array.from(atob(parts[1]), c => c.charCodeAt(0)) : Uint8Array.from(Buffer.from(parts[1], 'base64'));
+      const bytes = Uint8Array.from(atob(parts[1]), c => c.charCodeAt(0));
       let pubHex: string | null = null;
       if (bytes.length === 64) {
         pubHex = ethers.hexlify(new Uint8Array([4, ...Array.from(bytes)]));
