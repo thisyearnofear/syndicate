@@ -28,7 +28,6 @@ import {
     buildUnsignedParams,
     computeUnsignedDigest,
     serializeSignedEip1559,
-    bytesToBase64,
     type Eip1559Params
 } from '@/services/evmTxBuilder';
 
@@ -195,9 +194,9 @@ export class NearChainSigsProtocol implements BridgeProtocol {
             const digestBytes = computeUnsignedDigest(unsignedParams);
             // FIX: Ensure the nonce is a 32-byte Buffer as expected by NEAR contract
             // The NEAR contract expects a 32-byte Buffer for the nonce parameter
-            const nonceBuffer = Buffer.alloc(32);
-            digestBytes.copy(nonceBuffer, 0, 0, Math.min(32, digestBytes.length));
-      
+            const nonceBuffer = new Uint8Array(32);
+            nonceBuffer.set(digestBytes.slice(0, 32), 0);
+
             const requestId = await this.requestChainSignatureChangeCall(
                 nearWallet,
                 DERIVATION_PATHS.ethereum,
