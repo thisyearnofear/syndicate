@@ -146,19 +146,8 @@ export const CONTRACT_ABIS = {
 
 // Environment-specific overrides
 export const getConfig = () => {
-  const isProduction = process.env.NODE_ENV === 'production';
-  
   return {
     ...NEAR_CONFIG,
-    
-    // Override for development
-    ...(isProduction ? {} : {
-      networkId: 'testnet',
-      nodeUrl: 'https://rpc.testnet.near.org',
-      walletUrl: 'https://wallet.testnet.near.org',
-      helperUrl: 'https://helper.testnet.near.org',
-      explorerUrl: 'https://testnet.nearblocks.io',
-    }),
     
     // Contract addresses from environment
     contracts: {
