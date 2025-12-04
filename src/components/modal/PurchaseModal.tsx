@@ -103,6 +103,8 @@ export default function PurchaseModal({
     nearDepositAddress,
     nearDepositAmount,
     nearWaitingForDeposit,
+    nearIsTransferringUsdc,
+    nearUsdcTransferTxHash,
     // Actions
     purchaseTickets,
     refreshBalance,
@@ -110,6 +112,7 @@ export default function PurchaseModal({
     clearError,
     reset,
     needsBridgeGuidance,
+    transferUsdcToDeposit,
   } = useTicketPurchase();
 
   const [ticketCount, setTicketCount] = useState(1);
@@ -658,6 +661,8 @@ export default function PurchaseModal({
             depositAddress={nearDepositAddress || ""}
             amount={nearDepositAmount || "0"}
             amountUSD={nearDepositAmount ? (parseFloat(nearDepositAmount) * 1).toFixed(2) : undefined}
+            isTransferring={nearIsTransferringUsdc}
+            onTransferClick={transferUsdcToDeposit}
           />
         );
       case "success":

@@ -7,12 +7,16 @@ interface DepositAddressStepProps {
   depositAddress: string;
   amount: string;
   amountUSD?: string;
+  isTransferring?: boolean;
+  onTransferClick?: () => void;
 }
 
 export function DepositAddressStep({
   depositAddress,
   amount,
   amountUSD,
+  isTransferring = false,
+  onTransferClick,
 }: DepositAddressStepProps) {
   const [copied, setCopied] = useState(false);
 
@@ -78,22 +82,46 @@ export function DepositAddressStep({
 
       {/* Action Buttons */}
       <div className="w-full space-y-3">
+        {/* Primary: Auto-transfer USDC */}
+        <button
+          onClick={onTransferClick}
+          disabled={isTransferring}
+          className={`w-full py-3 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
+            isTransferring
+              ? "bg-green-500/30 text-green-300 border border-green-500/50 cursor-wait"
+              : "bg-green-500/20 text-green-300 border border-green-500/50 hover:bg-green-500/30"
+          }`}
+        >
+          {isTransferring ? (
+            <>
+              <div className="w-4 h-4 border-2 border-green-300/30 border-t-green-300 rounded-full animate-spin" />
+              <span>Sending USDC...</span>
+            </>
+          ) : (
+            <span>Send USDC Now</span>
+          )}
+        </button>
+
+        {/* Secondary: Copy address */}
         <button
           onClick={copyAddress}
+          disabled={isTransferring}
           className={`w-full py-3 rounded-lg font-semibold text-sm transition-all ${
             copied
-              ? "bg-green-500/30 text-green-300 border border-green-500/50"
-              : "bg-blue-500/20 text-blue-300 border border-blue-500/50 hover:bg-blue-500/30"
+              ? "bg-blue-500/30 text-blue-300 border border-blue-500/50"
+              : "bg-white/10 text-white/70 border border-white/20 hover:bg-white/20 disabled:opacity-50"
           }`}
         >
           {copied ? "✓ Address Copied" : "Copy Address"}
         </button>
 
+        {/* Tertiary: Manual via NEAR wallet */}
         <button
           onClick={openNearWallet}
-          className="w-full py-3 bg-amber-500/20 text-amber-300 border border-amber-500/50 rounded-lg font-semibold text-sm hover:bg-amber-500/30 transition-all"
+          disabled={isTransferring}
+          className="w-full py-3 bg-white/5 text-white/60 border border-white/10 rounded-lg font-semibold text-sm hover:bg-white/10 disabled:opacity-50 transition-all"
         >
-          Open NEAR Wallet
+          Or Open NEAR Wallet
         </button>
       </div>
 
