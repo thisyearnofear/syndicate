@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { NEAR } from '@/config/nearConfig';
+import { NEAR } from '@/config';
 
 // Define types
 interface DeriveAddressRequest {
@@ -17,56 +17,92 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Dynamically import ethers to use JsonRpcProvider in server-side API route
+    // Dynamically import ethers for address computation
     const { ethers } = await import('ethers');
-    const nearProvider = new ethers.JsonRpcProvider({ url: NEAR.nodeUrl });
 
-    // Call NEAR contract to get public key
-    const args = { path: 'ethereum-1', key_version: 1 };
+    // Call NEAR RPC directly using fetch (ethers.JsonRpcProvider doesn't support NEAR)
+    const args = { path: 'ethereum-1', key_version: 0 };
     const argsString = JSON.stringify(args);
     const argsBuffer = new TextEncoder().encode(argsString);
-    const argsBase64 = Array.from(argsBuffer)
-      .map(byte => String.fromCharCode(byte))
-      .join('');
-    const argsBase64Encoded = btoa(argsBase64);
+    const argsBase64Encoded = Buffer.from(argsBuffer).toString('base64');
 
-    const res: unknown = await nearProvider.query({
-      request_type: 'call_function',
-      account_id: NEAR.mpcContract,
-      method_name: 'public_key_for',
-      args_base64: argsBase64Encoded,
-      finality: 'final',
+    // Use NEAR JSON-RPC directly
+    const rpcResponse = await fetch(NEAR.nodeUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 'derive-evm-address',
+        method: 'query',
+        params: {
+          request_type: 'call_function',
+          account_id: NEAR.mpcContract,
+          method_name: 'public_key_for',
+          args_base64: argsBase64Encoded,
+          finality: 'final',
+        },
+      }),
     });
 
-    const r = res as { result?: unknown };
-    if (!r.result) {
+    if (!rpcResponse.ok) {
+      console.error('NEAR RPC response not ok:', rpcResponse.status, rpcResponse.statusText);
+      return Response.json(
+        { error: 'NEAR RPC request failed' },
+        { status: 500 }
+      );
+    }
+
+    const rpcData = await rpcResponse.json();
+
+    if (rpcData.error) {
+      console.error('NEAR RPC error:', rpcData.error);
+      return Response.json(
+        { error: `NEAR RPC error: ${rpcData.error.message || JSON.stringify(rpcData.error)}` },
+        { status: 500 }
+      );
+    }
+
+    const result = rpcData.result?.result;
+    if (!result) {
+      console.error('No result from NEAR contract. Full response:', JSON.stringify(rpcData));
       return Response.json(
         { error: 'Failed to retrieve public key from NEAR contract' },
         { status: 500 }
       );
     }
 
-    const uint = r.result instanceof Uint8Array ? r.result : new Uint8Array(r.result as ArrayBuffer | ArrayLike<number>);
+    // Result is an array of byte values, convert to Uint8Array
+    const uint = new Uint8Array(result);
     const decoded = new TextDecoder().decode(uint);
+
+    // Expected format: "secp256k1:<base64-encoded-public-key>"
     const parts = String(decoded).split(':');
-    
+
     if (parts[0] !== 'secp256k1' || !parts[1]) {
+      console.error('Invalid public key format. Decoded:', decoded);
       return Response.json(
         { error: 'Invalid public key format from NEAR contract' },
         { status: 500 }
       );
     }
 
-    const bytes = Uint8Array.from(atob(parts[1]), c => c.charCodeAt(0));
+    // Decode the base64 public key
+    const bytes = Uint8Array.from(Buffer.from(parts[1], 'base64'));
     let pubHex: string | null = null;
 
+    // Handle uncompressed public key (64 bytes without prefix, or 65 bytes with 0x04 prefix)
     if (bytes.length === 64) {
+      // Add the 0x04 prefix for uncompressed public key
       pubHex = ethers.hexlify(new Uint8Array([4, ...Array.from(bytes)]));
     } else if (bytes.length === 65 && bytes[0] === 4) {
+      // Already has the prefix
       pubHex = ethers.hexlify(bytes);
     }
 
     if (!pubHex) {
+      console.error('Failed to process public key. Bytes length:', bytes.length);
       return Response.json(
         { error: 'Failed to process public key' },
         { status: 500 }
