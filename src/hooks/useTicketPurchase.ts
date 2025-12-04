@@ -282,39 +282,18 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
         try {
           const accountId = nearWalletSelectorService.getAccountId();
           if (accountId) {
-            const { providers } = await import('near-api-js');
-            const { NEAR } = await import('@/config');
-            const provider = new providers.JsonRpcProvider({ url: NEAR.nodeUrl });
-            const tokenContract = 'base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near';
+            const usdc = await nearIntentsService.getNearBalance(accountId);
 
-            // Encode args for view call
-            const args = JSON.stringify({ account_id: accountId });
-            const argsBase64 = Buffer.from(args).toString('base64');
-
-            const res = await provider.query({
-              request_type: 'call_function',
-              account_id: tokenContract,
-              method_name: 'ft_balance_of',
-              args_base64: argsBase64,
-              finality: 'final',
-            }) as unknown as { result: number[] };
-
-            if (res && res.result) {
-              const balanceStr = Buffer.from(res.result).toString();
-              // USDC has 6 decimals
-              const usdc = (Number(JSON.parse(balanceStr)) / 1_000_000).toString();
-
-              setState(prev => ({
-                ...prev,
-                userBalance: {
-                  usdc,
-                  eth: '0',
-                  hasEnoughUsdc: Number(usdc) >= 1,
-                  hasEnoughEth: true
-                },
-                isCheckingBalance: false
-              }));
-            }
+            setState(prev => ({
+              ...prev,
+              userBalance: {
+                usdc,
+                eth: '0',
+                hasEnoughUsdc: Number(usdc) >= 1,
+                hasEnoughEth: true
+              },
+              isCheckingBalance: false
+            }));
           } else {
             setState(prev => ({ ...prev, isCheckingBalance: false }));
           }
