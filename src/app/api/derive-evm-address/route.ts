@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server';
-import { JsonRpcProvider } from 'ethers';
 import { NEAR } from '@/config/nearConfig';
 
 // Define types
