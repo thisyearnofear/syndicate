@@ -60,9 +60,6 @@ export async function POST(request: NextRequest) {
     const bytes = Uint8Array.from(atob(parts[1]), c => c.charCodeAt(0));
     let pubHex: string | null = null;
 
-    // Dynamically import ethers to use in server-side API route
-    const { ethers } = await import('ethers');
-
     if (bytes.length === 64) {
       pubHex = ethers.hexlify(new Uint8Array([4, ...Array.from(bytes)]));
     } else if (bytes.length === 65 && bytes[0] === 4) {
