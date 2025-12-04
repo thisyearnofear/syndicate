@@ -15,6 +15,11 @@ interface ProcessingStepProps {
 }
 
 const STAGE_LABELS: Record<string, string> = {
+  initializing: "Initializing...",
+  quote_requested: "Getting quote from 1Click API",
+  intent_submitted: "Intent created - awaiting USDC deposit",
+  waiting_deposit: "Waiting for you to send USDC to deposit address",
+  waiting_execution: "Waiting for solver to execute",
   deriving_address: "Deriving Base address",
   building_tx: "Preparing transaction",
   tx_ready: "Transaction ready",
@@ -31,6 +36,13 @@ const STAGE_LABELS: Record<string, string> = {
   solver_failed: "Solver failed to execute",
   funds_bridged: "Funds bridged to Base",
   balance_refreshed: "Base balance refreshed",
+  waiting_bridge: "Waiting for bridge to complete",
+  funds_received: "Funds received on Base",
+  bridge_complete: "Bridge complete - ready to purchase",
+  signing: "Signing with Chain Signatures",
+  chain_sig_approving: "Approving with Chain Signatures",
+  broadcasting_purchase: "Broadcasting ticket purchase",
+  purchase_completed: "Purchase completed successfully",
 };
 
 export function ProcessingStep({

@@ -51,6 +51,11 @@ const YieldStrategyStep = lazy(() =>
     default: mod.YieldStrategyStep,
   }))
 );
+const DepositAddressStep = lazy(() =>
+  import("./purchase/DepositAddressStep").then((mod) => ({
+    default: mod.DepositAddressStep,
+  }))
+);
 import { ShareModal } from "./ShareModal";
 
 export interface PurchaseModalProps {
@@ -95,6 +100,9 @@ export default function PurchaseModal({
     nearEstimatedFeeEth,
     nearIntentTxHash,
     nearDestinationTxHash,
+    nearDepositAddress,
+    nearDepositAmount,
+    nearWaitingForDeposit,
     // Actions
     purchaseTickets,
     refreshBalance,
@@ -106,7 +114,7 @@ export default function PurchaseModal({
 
   const [ticketCount, setTicketCount] = useState(1);
   const [step, setStep] = useState<
-    "mode" | "yield" | "select" | "confirm" | "processing" | "success" | "share"
+    "mode" | "yield" | "select" | "confirm" | "processing" | "deposit" | "success" | "share"
   >("mode");
   const [purchaseMode, setPurchaseMode] = useState<
     "individual" | "syndicate" | "yield"
@@ -560,6 +568,15 @@ export default function PurchaseModal({
     needsBridgeGuidance,
   ]);
 
+  /**
+   * Auto-navigate to deposit step when waiting for NEAR deposit
+   */
+  useEffect(() => {
+    if (nearWaitingForDeposit && nearDepositAddress && step === "processing") {
+      setStep("deposit");
+    }
+  }, [nearWaitingForDeposit, nearDepositAddress, step]);
+
   const renderStep = () => {
     switch (step) {
       case "mode":
@@ -633,6 +650,14 @@ export default function PurchaseModal({
             nearIntentTxHash={nearIntentTxHash}
             nearDestinationTxHash={nearDestinationTxHash}
             onRetryAfterFunding={retryAfterFunding}
+          />
+        );
+      case "deposit":
+        return (
+          <DepositAddressStep
+            depositAddress={nearDepositAddress || ""}
+            amount={nearDepositAmount || "0"}
+            amountUSD={nearDepositAmount ? (parseFloat(nearDepositAmount) * 1).toFixed(2) : undefined}
           />
         );
       case "success":

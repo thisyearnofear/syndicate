@@ -65,6 +65,9 @@ export interface TicketPurchaseState {
   nearHasEnoughGas?: boolean;
   nearIntentTxHash?: string | null;
   nearDestinationTxHash?: string | null;
+  nearDepositAddress?: string | null; // The address user needs to send USDC to
+  nearDepositAmount?: string | null; // Amount in USDC the user needs to send
+  nearWaitingForDeposit?: boolean; // Whether we're waiting for user to send funds
 
   // Initialization state
   isServiceReady: boolean;
@@ -142,6 +145,9 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     nearHasEnoughGas: undefined,
     nearIntentTxHash: null,
     nearDestinationTxHash: null,
+    nearDepositAddress: null,
+    nearDepositAmount: null,
+    nearWaitingForDeposit: false,
     isServiceReady: false,
   });
 
@@ -597,7 +603,16 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
                   if (!intentRes.success || !intentRes.intentHash) {
                     result = { success: false, error: intentRes.error || 'Intent execution failed' };
                   } else {
-                    setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'waiting_execution'], nearRequestId: String(intentRes.intentHash), nearIntentTxHash: intentRes.txHash || null }));
+                    // Store deposit address and amount for display to user
+                    setState(prev => ({ 
+                      ...prev, 
+                      nearStages: [...prev.nearStages, 'intent_submitted', 'waiting_deposit'],
+                      nearRequestId: String(intentRes.intentHash), 
+                      nearIntentTxHash: intentRes.txHash || null,
+                      nearDepositAddress: intentRes.depositAddress || null,
+                      nearDepositAmount: totalCost,
+                      nearWaitingForDeposit: true,
+                    }));
                     (async () => {
                       try {
                         let m = 0;
@@ -829,6 +844,9 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       nearHasEnoughGas: undefined,
       nearIntentTxHash: null,
       nearDestinationTxHash: null,
+      nearDepositAddress: null,
+      nearDepositAmount: null,
+      nearWaitingForDeposit: false,
       isServiceReady: false,
     });
   }, []);
