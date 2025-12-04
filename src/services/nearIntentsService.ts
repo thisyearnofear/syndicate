@@ -64,8 +64,12 @@ class NearIntentsService {
 
       const signer = createIntentSignerNEP413({
         async signMessage(nep413Payload) {
+          // Ensure nonce is a Buffer (SDK might provide Uint8Array)
+          const nonce = Buffer.from(nep413Payload.nonce);
+
           const response = await wallet.signMessage({
             ...nep413Payload,
+            nonce,
             callbackUrl: typeof window !== 'undefined' ? window.location.href : '',
           } as any);
           // Return the response with proper type assertion
