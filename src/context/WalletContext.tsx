@@ -314,28 +314,63 @@ export function WalletProvider({ children }: WalletProviderProps) {
     }
   }, [state]);
 
-  // ANTI-SPAM FIX: Disable auto-restoration from localStorage to prevent automatic connection attempts
-  // This prevents the app from trying to reconnect on page load
+  // ANTI-SPAM FIX & NEAR PERSISTENCE
+  // 1. Disable auto-restoration for EVM wallets to prevent MetaMask spam
+  // 2. Allow restoration for NEAR wallets to ensure cross-page consistency
   useEffect(() => {
-    console.log(
-      "WalletContext: Auto-restoration disabled to prevent connection spam on page load"
-    );
+    const restoreState = async () => {
+      try {
+        if (
+          typeof window !== "undefined" &&
+          typeof localStorage !== "undefined"
+        ) {
+          const savedStateStr = localStorage.getItem("wallet_state");
+          if (savedStateStr) {
+            const savedState = JSON.parse(savedStateStr) as WalletState;
 
-    // Clear any saved wallet state to prevent future auto-connections
-    try {
-      if (
-        typeof window !== "undefined" &&
-        typeof localStorage !== "undefined"
-      ) {
-        const savedState = localStorage.getItem("wallet_state");
-        if (savedState) {
-          console.log("Clearing saved wallet state to prevent auto-connection");
-          localStorage.removeItem("wallet_state");
+            // Handle NEAR Persistence
+            if (savedState.walletType === "near") {
+              console.log(
+                "WalletContext: Attempting to restore NEAR session..."
+              );
+              const { nearWalletSelectorService } = await import(
+                "@/domains/wallet/services/nearWalletSelectorService"
+              );
+
+              // Initialize service to check for active session
+              const initialized = await nearWalletSelectorService.init();
+              const activeAccount = nearWalletSelectorService.getAccountId();
+
+              if (initialized && activeAccount) {
+                console.log(
+                  "WalletContext: Restoring NEAR session",
+                  activeAccount
+                );
+                dispatch({
+                  type: "RESTORE_STATE",
+                  payload: {
+                    ...savedState,
+                    address: activeAccount,
+                    isConnected: true,
+                  },
+                });
+                return; // Successfully restored
+              }
+            }
+
+            // For EVM/Others: Clear state to prevent spam
+            console.log(
+              "WalletContext: Clearing saved wallet state to prevent auto-connection spam"
+            );
+            localStorage.removeItem("wallet_state");
+          }
         }
+      } catch (error) {
+        console.warn("Failed to restore/clear wallet state:", error);
       }
-    } catch (error) {
-      console.warn("Failed to clear wallet state:", error);
-    }
+    };
+
+    restoreState();
   }, []);
 
   return (
