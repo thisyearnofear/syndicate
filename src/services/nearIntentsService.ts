@@ -13,6 +13,7 @@
 import {
   IntentsSDK,
   createIntentSignerNEP413,
+  Chains,
 } from '@defuse-protocol/intents-sdk';
 import type { WalletSelector } from '@near-wallet-selector/core';
 import { NEAR } from '@/config';
@@ -100,6 +101,12 @@ class NearIntentsService {
       this.sdk = new IntentsSDK({
         intentSigner: signer,
         referral: process.env.NEXT_PUBLIC_NEAR_INTENTS_REFERRAL || '',
+        // Explicitly configure RPC endpoints for mainnet
+        rpc: {
+          [Chains.Near]: [NEAR.nodeUrl],
+          [Chains.Base]: ['https://mainnet.base.org'],
+          [Chains.Ethereum]: ['https://eth.drpc.org'],
+        },
       });
 
       console.log('NEAR Intents SDK initialized for account:', accountId);
