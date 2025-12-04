@@ -11,7 +11,7 @@
 import { useCallback } from 'react';
 import { createError } from '@/shared/utils';
 import { useWalletContext } from '@/context/WalletContext';
-import type { AccountState } from '@near-wallet-selector/core';
+import type { AccountState, WalletModuleFactory } from '@near-wallet-selector/core';
 import { WalletType, WalletTypes } from '../types';
 
 // =============================================================================
@@ -233,29 +233,50 @@ export function useUnifiedWallet(): {
               throw createError('ENV_ERROR', 'NEAR wallet is only available in browser environments');
             }
 
-            const [{ setupWalletSelector }, { setupMyNearWallet }, { setupModal }] = await Promise.all([
+            // Universal approach: Load core wallet selector and modal
+            // The selector will automatically detect available NEAR wallets
+            const [{ setupWalletSelector }, { setupModal }] = await Promise.all([
               import('@near-wallet-selector/core'),
-              import('@near-wallet-selector/my-near-wallet'),
               import('@near-wallet-selector/modal-ui'),
             ]);
+
+            // Dynamically import available wallet modules
+            // These are optional - the selector will use whatever is available
+            const walletModules = await Promise.allSettled([
+              import('@near-wallet-selector/my-near-wallet').then(m => m.setupMyNearWallet()),
+              import('@near-wallet-selector/meteor-wallet').then(m => m.setupMeteorWallet()),
+              import('@near-wallet-selector/here-wallet').then(m => m.setupHereWallet()),
+              import('@near-wallet-selector/sender').then(m => m.setupSender()),
+            ]);
+
+            // Filter out failed imports and extract successful wallet modules
+            const modules = walletModules
+              .filter((result) => result.status === 'fulfilled')
+              .map((result) => (result as PromiseFulfilledResult<WalletModuleFactory>).value);
+
+            if (modules.length === 0) {
+              throw createError('WALLET_NOT_AVAILABLE', 'No NEAR wallet modules could be loaded. Please ensure you have a NEAR wallet installed.');
+            }
 
             const { NEAR } = await import('@/config');
 
             const selector = await setupWalletSelector({
               network: (NEAR.networkId as 'mainnet' | 'testnet'),
-              modules: [setupMyNearWallet()],
+              modules: modules as never[],
             });
 
             const modal = setupModal(selector, {
               contractId: NEAR.mpcContract,
+              description: 'Connect your NEAR wallet to participate in cross-chain lotteries',
             });
 
             // Show modal and wait for user to sign in
             modal.show();
 
-            // Poll for account selection for up to ~15 seconds
+            // Poll for account selection with longer timeout (30 seconds)
             const accountId = await new Promise<string | null>((resolve) => {
               let attempts = 0;
+              const maxAttempts = 300; // 30 seconds at 100ms intervals
               const interval = setInterval(() => {
                 try {
                   const state = selector.store.getState() as { accounts?: AccountState[] };
@@ -263,20 +284,24 @@ export function useUnifiedWallet(): {
                   const active = accounts.find((a) => a.active);
                   if (active?.accountId) {
                     clearInterval(interval);
+                    modal.hide();
                     resolve(active.accountId);
-                  } else if (++attempts > 150) { // ~15s at 100ms
+                  } else if (++attempts > maxAttempts) {
                     clearInterval(interval);
+                    modal.hide();
                     resolve(null);
                   }
-                } catch {
+                } catch (err) {
+                  console.error('Error polling NEAR wallet state:', err);
                   clearInterval(interval);
+                  modal.hide();
                   resolve(null);
                 }
               }, 100);
             });
 
             if (!accountId) {
-              throw createError('CONNECTION_FAILED', 'Failed to connect NEAR wallet');
+              throw createError('CONNECTION_TIMEOUT', 'NEAR wallet connection timed out. Please try again and complete the wallet selection.');
             }
 
             address = accountId; // Store NEAR accountId in address field
@@ -284,13 +309,22 @@ export function useUnifiedWallet(): {
 
             // NEAR wallet connected successfully
             // Bridge manager will handle NEAR operations when needed
+            console.log('NEAR wallet connected:', accountId);
           } catch (error: unknown) {
             const code = (error as { code?: number }).code;
             const message = (error as { message?: string }).message || '';
+            console.error('NEAR connection error:', error);
+
             if (code === 4001) {
-              throw createError('CONNECTION_REJECTED', 'Connection rejected by user');
+              throw createError('CONNECTION_REJECTED', 'NEAR wallet connection rejected by user');
             }
-            throw createError('CONNECTION_FAILED', `Failed to connect NEAR: ${message}`);
+
+            // Provide more specific error message
+            if (message.includes('timeout') || message.includes('timed out')) {
+              throw createError('CONNECTION_TIMEOUT', 'NEAR wallet connection timed out. Please try again.');
+            }
+
+            throw createError('CONNECTION_FAILED', `Failed to connect NEAR wallet: ${message || 'Unknown error'}`);
           }
           break;
 
