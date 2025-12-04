@@ -56,6 +56,16 @@ const DepositAddressStep = lazy(() =>
     default: mod.DepositAddressStep,
   }))
 );
+const TransferSuccessStep = lazy(() =>
+  import("./purchase/TransferSuccessStep").then((mod) => ({
+    default: mod.TransferSuccessStep,
+  }))
+);
+const TransferErrorStep = lazy(() =>
+  import("./purchase/TransferErrorStep").then((mod) => ({
+    default: mod.TransferErrorStep,
+  }))
+);
 import { ShareModal } from "./ShareModal";
 
 export interface PurchaseModalProps {
@@ -117,7 +127,7 @@ export default function PurchaseModal({
 
   const [ticketCount, setTicketCount] = useState(1);
   const [step, setStep] = useState<
-    "mode" | "yield" | "select" | "confirm" | "processing" | "deposit" | "success" | "share"
+    "mode" | "yield" | "select" | "confirm" | "processing" | "deposit" | "transfer-success" | "transfer-error" | "success" | "share"
   >("mode");
   const [purchaseMode, setPurchaseMode] = useState<
     "individual" | "syndicate" | "yield"
@@ -580,6 +590,20 @@ export default function PurchaseModal({
     }
   }, [nearWaitingForDeposit, nearDepositAddress, step]);
 
+  /**
+   * Auto-navigate to transfer-success when transfer completes
+   */
+  useEffect(() => {
+    if (nearUsdcTransferTxHash && step === "deposit" && !nearIsTransferringUsdc) {
+      // Check if there's an error (transfer failed)
+      if (error) {
+        setStep("transfer-error");
+      } else {
+        setStep("transfer-success");
+      }
+    }
+  }, [nearUsdcTransferTxHash, nearIsTransferringUsdc, step, error]);
+
   const renderStep = () => {
     switch (step) {
       case "mode":
@@ -663,6 +687,27 @@ export default function PurchaseModal({
             amountUSD={nearDepositAmount ? (parseFloat(nearDepositAmount) * 1).toFixed(2) : undefined}
             isTransferring={nearIsTransferringUsdc}
             onTransferClick={transferUsdcToDeposit}
+          />
+        );
+      case "transfer-success":
+        return (
+          <TransferSuccessStep
+            txHash={nearUsdcTransferTxHash || ""}
+            amount={nearDepositAmount || "0"}
+            depositAddress={nearDepositAddress || ""}
+            isBridging={true}
+            bridgeProgress={45}
+          />
+        );
+      case "transfer-error":
+        return (
+          <TransferErrorStep
+            error={error || "Transfer failed"}
+            depositAddress={nearDepositAddress || ""}
+            amount={nearDepositAmount || "0"}
+            onRetry={transferUsdcToDeposit}
+            onManualTransfer={() => setStep("deposit")}
+            isRetrying={nearIsTransferringUsdc}
           />
         );
       case "success":
