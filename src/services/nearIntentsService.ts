@@ -232,40 +232,25 @@ class NearIntentsService {
     };
   }
 
-  async deriveEvmAddress(_accountId: string): Promise<string | null> {
-    void _accountId;
+  async deriveEvmAddress(accountId: string): Promise<string | null> {
     try {
-      const args = { path: 'ethereum-1', key_version: 1 };
-      // Convert args to base64 using TextEncoder/TextDecoder for browser compatibility
-      const argsString = JSON.stringify(args);
-      const argsBuffer = new TextEncoder().encode(argsString);
-      const argsBase64 = Array.from(argsBuffer)
-        .map(byte => String.fromCharCode(byte))
-        .join('');
-      const argsBase64Encoded = btoa(argsBase64);
-
-      const res: unknown = await this.nearProvider.query({
-        request_type: 'call_function',
-        account_id: NEAR.mpcContract,
-        method_name: 'public_key_for',
-        args_base64: argsBase64Encoded,
-        finality: 'final',
+      const response = await fetch('/api/derive-evm-address', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ accountId }),
       });
-      const r = res as { result?: unknown };
-      if (!r.result) return null;
-      const uint = r.result instanceof Uint8Array ? r.result : new Uint8Array(r.result as ArrayBuffer | ArrayLike<number>);
-      const decoded = new TextDecoder().decode(uint);
-      const parts = String(decoded).split(':');
-      if (parts[0] !== 'secp256k1' || !parts[1]) return null;
-      const bytes = Uint8Array.from(atob(parts[1]), c => c.charCodeAt(0));
-      let pubHex: string | null = null;
-      if (bytes.length === 64) {
-        pubHex = ethers.hexlify(new Uint8Array([4, ...Array.from(bytes)]));
-      } else if (bytes.length === 65 && bytes[0] === 4) {
-        pubHex = ethers.hexlify(bytes);
+
+      if (!response.ok) {
+        console.error('Failed to derive EVM address:', response.status);
+        return null;
       }
-      return pubHex ? ethers.computeAddress(pubHex) : null;
-    } catch {
+
+      const { evmAddress } = await response.json();
+      return evmAddress || null;
+    } catch (error) {
+      console.error('Error deriving EVM address:', error);
       return null;
     }
   }
