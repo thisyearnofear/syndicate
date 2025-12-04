@@ -27,11 +27,11 @@ export interface WalletState {
 }
 
 export type WalletAction =
-  | { type: "CONNECT_START" }
+  | { type: "CONNECT_START"; payload?: { walletType: WalletType } }
   | {
-    type: "CONNECT_SUCCESS";
-    payload: { address: string; walletType: WalletType; chainId: number };
-  }
+      type: "CONNECT_SUCCESS";
+      payload: { address: string; walletType: WalletType; chainId: number };
+    }
   | { type: "CONNECT_FAILURE"; payload: { error: string } }
   | { type: "DISCONNECT" }
   | { type: "CLEAR_ERROR" }
@@ -80,6 +80,7 @@ export const walletReducer = (
         ...state,
         isConnecting: true,
         error: null,
+        walletType: action.payload?.walletType || state.walletType,
       };
 
     case "CONNECT_SUCCESS":
@@ -128,15 +129,15 @@ export const walletReducer = (
       return isRecent
         ? { ...action.payload, isModalOpen: false }
         : {
-          isConnected: false,
-          address: null,
-          walletType: null,
-          chainId: null,
-          isConnecting: false,
-          error: null,
-          lastConnectedAt: null,
-          isModalOpen: false,
-        };
+            isConnected: false,
+            address: null,
+            walletType: null,
+            chainId: null,
+            isConnecting: false,
+            error: null,
+            lastConnectedAt: null,
+            isModalOpen: false,
+          };
 
     case "NETWORK_CHANGED":
       return {
@@ -174,26 +175,32 @@ interface WalletProviderProps {
 export function WalletProvider({ children }: WalletProviderProps) {
   const [state, dispatch] = useReducer(walletReducer, defaultWalletState);
 
-  const { address, isConnected: wagmiConnected, chainId: wagmiChainId, connector } = useAccount();
+  const {
+    address,
+    isConnected: wagmiConnected,
+    chainId: wagmiChainId,
+    connector,
+  } = useAccount();
   const { disconnect: wagmiDisconnect } = useDisconnect();
 
   // Manual wagmi sync function (called only when user explicitly connects)
   const syncWithWagmi = useCallback(() => {
-    const isNonEvmWallet = state.walletType === 'phantom' || state.walletType === 'near';
+    const isNonEvmWallet =
+      state.walletType === "phantom" || state.walletType === "near";
 
     if (wagmiConnected && address && !isNonEvmWallet) {
-      let walletType: WalletType = 'metamask';
+      let walletType: WalletType = "metamask";
 
-      if (connector?.id === 'metaMask') {
-        walletType = 'metamask';
-      } else if (connector?.id === 'walletConnect') {
-        walletType = 'metamask';
+      if (connector?.id === "metaMask") {
+        walletType = "metamask";
+      } else if (connector?.id === "walletConnect") {
+        walletType = "metamask";
       } else {
-        walletType = 'metamask';
+        walletType = "metamask";
       }
 
       dispatch({
-        type: 'CONNECT_SUCCESS',
+        type: "CONNECT_SUCCESS",
         payload: {
           address,
           walletType,
@@ -201,7 +208,14 @@ export function WalletProvider({ children }: WalletProviderProps) {
         },
       });
     }
-  }, [wagmiConnected, address, wagmiChainId, connector, dispatch, state.walletType]);
+  }, [
+    wagmiConnected,
+    address,
+    wagmiChainId,
+    connector,
+    dispatch,
+    state.walletType,
+  ]);
 
   // FIXED: Only sync with wagmi when user explicitly connects via RainbowKit
   // Do NOT auto-sync to prevent automatic MetaMask connection on page load
@@ -211,55 +225,74 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
     // Sync when wagmi connects AND user initiated the connection
     if (isUserInitiated) {
-      console.log('WalletContext: User connected via RainbowKit, syncing...');
+      console.log("WalletContext: User connected via RainbowKit, syncing...");
       syncWithWagmi();
     }
     // Only disconnect when wagmi is disconnected but our internal state still shows connected EVM wallet
-    else if (!wagmiConnected && state.isConnected && (state.walletType === 'metamask' || !state.walletType) && state.address) {
-      console.log('WalletContext: Wagmi disconnected, updating internal state');
-      dispatch({ type: 'DISCONNECT' });
+    else if (
+      !wagmiConnected &&
+      state.isConnected &&
+      (state.walletType === "metamask" || !state.walletType) &&
+      state.address
+    ) {
+      console.log("WalletContext: Wagmi disconnected, updating internal state");
+      dispatch({ type: "DISCONNECT" });
     }
-  }, [wagmiConnected, address, syncWithWagmi, state.isConnected, state.isConnecting, state.walletType, state.address]);
+  }, [
+    wagmiConnected,
+    address,
+    syncWithWagmi,
+    state.isConnected,
+    state.isConnecting,
+    state.walletType,
+    state.address,
+  ]);
 
   // Enhanced disconnect function that handles all wallet types
   const disconnectWallet = useCallback(async () => {
     try {
       // First disconnect from wagmi (MetaMask, WalletConnect, etc.)
-      if (wagmiConnected && (state.walletType === 'metamask' || !state.walletType)) {
+      if (
+        wagmiConnected &&
+        (state.walletType === "metamask" || !state.walletType)
+      ) {
         await wagmiDisconnect();
       }
 
       // Handle Phantom (Solana) disconnection
-      if (state.walletType === 'phantom' && typeof window !== 'undefined') {
-        const solanaWindow = window as Window & typeof globalThis & { solana?: { disconnect: () => Promise<void> } };
+      if (state.walletType === "phantom" && typeof window !== "undefined") {
+        const solanaWindow = window as Window &
+          typeof globalThis & { solana?: { disconnect: () => Promise<void> } };
         if (solanaWindow.solana) {
           try {
             await solanaWindow.solana.disconnect();
           } catch (phantomError) {
-            console.warn('Phantom disconnect failed:', phantomError);
+            console.warn("Phantom disconnect failed:", phantomError);
           }
         }
       }
 
       // Handle NEAR disconnection
-      if (state.walletType === 'near') {
+      if (state.walletType === "near") {
         try {
-          const { nearWalletSelectorService } = await import('@/domains/wallet/services/nearWalletSelectorService');
+          const { nearWalletSelectorService } = await import(
+            "@/domains/wallet/services/nearWalletSelectorService"
+          );
           await nearWalletSelectorService.disconnect();
-          console.log('NEAR wallet disconnected');
+          console.log("NEAR wallet disconnected");
         } catch (nearError) {
-          console.warn('NEAR disconnect failed:', nearError);
+          console.warn("NEAR disconnect failed:", nearError);
         }
       }
 
       // Always clear our internal state
-      dispatch({ type: 'DISCONNECT' });
+      dispatch({ type: "DISCONNECT" });
 
-      console.log('Wallet disconnected successfully');
+      console.log("Wallet disconnected successfully");
     } catch (error) {
-      console.error('Failed to disconnect wallet:', error);
+      console.error("Failed to disconnect wallet:", error);
       // Still clear our state even if underlying wallet disconnect fails
-      dispatch({ type: 'DISCONNECT' });
+      dispatch({ type: "DISCONNECT" });
     }
   }, [wagmiConnected, wagmiDisconnect, state.walletType]);
 
@@ -284,14 +317,19 @@ export function WalletProvider({ children }: WalletProviderProps) {
   // ANTI-SPAM FIX: Disable auto-restoration from localStorage to prevent automatic connection attempts
   // This prevents the app from trying to reconnect on page load
   useEffect(() => {
-    console.log('WalletContext: Auto-restoration disabled to prevent connection spam on page load');
+    console.log(
+      "WalletContext: Auto-restoration disabled to prevent connection spam on page load"
+    );
 
     // Clear any saved wallet state to prevent future auto-connections
     try {
-      if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+      if (
+        typeof window !== "undefined" &&
+        typeof localStorage !== "undefined"
+      ) {
         const savedState = localStorage.getItem("wallet_state");
         if (savedState) {
-          console.log('Clearing saved wallet state to prevent auto-connection');
+          console.log("Clearing saved wallet state to prevent auto-connection");
           localStorage.removeItem("wallet_state");
         }
       }

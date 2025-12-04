@@ -8,11 +8,13 @@
 import type { WalletSelector } from '@near-wallet-selector/core';
 import { setupWalletSelector } from '@near-wallet-selector/core';
 import type { WalletModuleFactory } from '@near-wallet-selector/core';
+import { setupModal, type WalletSelectorModal } from "@near-wallet-selector/modal-ui";
 import { getConfig } from '@/config/nearConfig';
 
 export type NearSelectorState = {
   ready: boolean;
   selector: WalletSelector | null;
+  modal: WalletSelectorModal | null;
   accountId: string | null;
 };
 
@@ -20,6 +22,7 @@ class NearWalletSelectorService {
   private state: NearSelectorState = {
     ready: false,
     selector: null,
+    modal: null,
     accountId: null,
   };
 
@@ -59,7 +62,13 @@ class NearWalletSelectorService {
       modules: wallets,
     });
 
+    // Initialize modal-ui
+    const modal = setupModal(selector, {
+      contractId: "", // Optional
+    });
+
     this.state.selector = selector;
+    this.state.modal = modal;
     this.state.accountId = await this.resolveActiveAccountId(selector);
     this.state.ready = true;
     return true;
@@ -97,27 +106,33 @@ class NearWalletSelectorService {
 
     try {
       // If a wallet is already available, prefer it
-      const wallet = await this.state.selector!.wallet();
-      const accounts = await wallet.getAccounts();
-      if (accounts.length > 0) {
-        this.state.accountId = accounts[0].accountId;
-        return accounts[0].accountId;
+      if (this.state.selector!.isSignedIn()) {
+        const wallet = await this.state.selector!.wallet();
+        const accounts = await wallet.getAccounts();
+        if (accounts.length > 0) {
+          this.state.accountId = accounts[0].accountId;
+          return accounts[0].accountId;
+        }
       }
 
-      // Otherwise, request sign in (no contractId to keep generic)
-      // Some wallets require a contractId; for Chain Signatures usage, we keep this minimal
+      // Show modal using modal-ui
       console.log('Showing NEAR wallet selection modal...');
-      await wallet.signIn({} as never);
-      const refreshed = await wallet.getAccounts();
-      this.state.accountId = refreshed[0]?.accountId || null;
-      
-      if (!this.state.accountId) {
-        console.warn('No account selected after sign in');
-        return null;
+      if (this.state.modal) {
+        this.state.modal.show();
       }
-      
-      console.log('NEAR account connected:', this.state.accountId);
-      return this.state.accountId;
+
+      // Wait for connection
+      return new Promise<string | null>((resolve) => {
+        // Subscribe to account changes
+        const subscription = this.state.selector!.store.observable.subscribe((state) => {
+          if (state.accounts.length > 0) {
+            subscription.unsubscribe();
+            this.state.accountId = state.accounts[0].accountId;
+            console.log('NEAR account connected:', this.state.accountId);
+            resolve(this.state.accountId);
+          }
+        });
+      });
     } catch (e) {
       console.error('NEAR connect failed:', e);
       return null;

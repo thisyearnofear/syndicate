@@ -117,7 +117,7 @@ export function useUnifiedWallet(): {
       throw error;
     }
 
-    dispatch({ type: 'CONNECT_START' });
+    dispatch({ type: 'CONNECT_START', payload: { walletType } });
 
     try {
       // CLEANUP: If user is switching wallets, disconnect the old one first
