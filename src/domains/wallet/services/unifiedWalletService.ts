@@ -289,18 +289,18 @@ export function useUnifiedWallet(): {
             });
 
             console.log('NEAR modal created, showing...');
-            
+
             // Show modal and wait for user to sign in using proper subscription
             const accountId = await new Promise<string | null>((resolve) => {
               let resolved = false;
               let timeoutId: NodeJS.Timeout;
-              let unsubscribe: (() => void) | null = null;
+              let subscription: { remove: () => void } | null = null;
 
               // Set timeout to 30 seconds
               timeoutId = setTimeout(() => {
                 if (!resolved) {
                   resolved = true;
-                  if (unsubscribe) unsubscribe();
+                  if (subscription) subscription.remove();
                   modal.hide();
                   // Restore MetaMask after timeout
                   if (originalEthereum) {
@@ -319,13 +319,18 @@ export function useUnifiedWallet(): {
 
               // Subscribe to account changes (more reliable than polling)
               try {
-                unsubscribe = selector.on('accountsChanged', async (accounts: AccountState[]) => {
+                subscription = selector.on('accountsChanged', (event) => {
+                  // The event payload contains { accounts: Account[] }
+                  // We need to check the store to get the full AccountState with 'active' flag
+                  const state = selector.store.getState();
+                  const accounts = state.accounts;
+
                   if (!resolved && accounts && accounts.length > 0) {
                     const active = accounts.find((a) => a.active);
                     if (active?.accountId) {
                       resolved = true;
                       clearTimeout(timeoutId);
-                      if (unsubscribe) unsubscribe();
+                      if (subscription) subscription.remove();
                       modal.hide();
                       // Restore MetaMask after successful connection
                       if (originalEthereum) {
