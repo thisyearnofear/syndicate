@@ -71,6 +71,13 @@ export interface TicketPurchaseState {
   nearIsTransferringUsdc?: boolean; // Whether we're currently transferring USDC
   nearUsdcTransferTxHash?: string | null; // Transaction hash of USDC transfer
 
+  // NEAR winnings withdrawal state
+  nearWithdrawalWaitingForDeposit?: boolean; // Waiting for user to send winnings to bridge deposit
+  nearWithdrawalDepositAddress?: string | null; // Reverse bridge deposit address for winnings
+  nearWithdrawalDepositAmount?: string | null; // Amount of winnings to withdraw
+  nearWithdrawalTxHash?: string | null; // Transaction hash of winnings transfer to deposit
+  isWithdrawingWinningsToNear?: boolean; // Currently processing winnings withdrawal
+
   // Initialization state
   isServiceReady: boolean;
 }
@@ -103,6 +110,8 @@ export interface TicketPurchaseActions {
   getCurrentTicketInfo: () => Promise<void>;
   getOddsInfo: () => Promise<void>;
   claimWinnings: () => Promise<string>;
+  // NEW: Cross-chain winnings withdrawal (NEAR)
+  claimAndWithdrawWinningsToNear: (nearAccountId: string) => Promise<string>;
   clearError: () => void;
   reset: () => void;
   retryAfterFunding: () => Promise<void>;
@@ -152,6 +161,11 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     nearWaitingForDeposit: false,
     nearIsTransferringUsdc: false,
     nearUsdcTransferTxHash: null,
+    nearWithdrawalWaitingForDeposit: false,
+    nearWithdrawalDepositAddress: null,
+    nearWithdrawalDepositAmount: null,
+    nearWithdrawalTxHash: null,
+    isWithdrawingWinningsToNear: false,
     isServiceReady: false,
   });
 
@@ -1001,6 +1015,134 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     }
   }, [getCurrentTicketInfo]);
 
+  /**
+   * Claim winnings on Base and automatically withdraw to NEAR wallet
+   * This handles the complete reverse flow: claim on Base → bridge to NEAR
+   */
+  const claimAndWithdrawWinningsToNear = useCallback(async (nearAccountId: string): Promise<string> => {
+    setState(prev => ({ ...prev, isWithdrawingWinningsToNear: true, error: null }));
+
+    try {
+      // Step 1: Claim winnings on Base to get the amount
+      console.log('Claiming winnings on Base...');
+      const claimTxHash = await web3Service.claimWinnings();
+      console.log('Winnings claimed:', claimTxHash);
+
+      // Step 2: Get updated user info to find out how much was claimed
+      await getCurrentTicketInfo();
+      const currentInfo = state.userTicketInfo;
+      
+      if (!currentInfo || parseFloat(currentInfo.winningsClaimable) <= 0) {
+        throw new Error('No winnings to withdraw');
+      }
+
+      const winningsAmount = currentInfo.winningsClaimable;
+      console.log('Winnings amount to withdraw:', winningsAmount);
+
+      // Step 3: Initialize NEAR intents service
+      const ok = await nearIntentsService.init(
+        nearWalletSelectorService.getSelector()!,
+        nearAccountId
+      );
+      if (!ok) {
+        throw new Error('Failed to initialize NEAR Intents');
+      }
+
+      // Step 4: Get quote for reverse bridge (Base → NEAR)
+      const derivedEvmAddress = await nearIntentsService.deriveEvmAddress(nearAccountId);
+      if (!derivedEvmAddress) {
+        throw new Error('Failed to derive EVM address');
+      }
+
+      const reverseQuote = await nearIntentsService.withdrawWinningsToNear({
+        evmAddress: derivedEvmAddress,
+        nearAccountId,
+        amountUsdc: winningsAmount,
+      });
+
+      if (!reverseQuote.success || !reverseQuote.depositAddress) {
+        throw new Error(reverseQuote.error || 'Failed to get reverse bridge quote');
+      }
+
+      console.log('Reverse bridge deposit address:', reverseQuote.depositAddress);
+
+      // Step 5: Update state with deposit info and wait for user to confirm
+      setState(prev => ({
+        ...prev,
+        nearWithdrawalDepositAddress: reverseQuote.depositAddress,
+        nearWithdrawalDepositAmount: winningsAmount,
+        nearWithdrawalWaitingForDeposit: true,
+        isWithdrawingWinningsToNear: false,
+      }));
+
+      return claimTxHash;
+    } catch (error: unknown) {
+      const errorMsg = (error as { message?: string }).message || 'Failed to claim and withdraw winnings';
+      console.error('Error in claimAndWithdrawWinningsToNear:', error);
+      setState(prev => ({
+        ...prev,
+        isWithdrawingWinningsToNear: false,
+        error: errorMsg,
+      }));
+      throw error as Error;
+    }
+  }, [getCurrentTicketInfo, state.userTicketInfo]);
+
+  /**
+   * Transfer claimed winnings from Base to reverse bridge deposit address
+   * User calls this after confirming withdrawal
+   */
+  const transferWinningsToReverseDeposit = useCallback(async (nearAccountId: string) => {
+    const depositAddress = state.nearWithdrawalDepositAddress;
+    const amount = state.nearWithdrawalDepositAmount;
+
+    if (!depositAddress || !amount) {
+      setState(prev => ({ ...prev, error: 'Missing withdrawal details' }));
+      return;
+    }
+
+    setState(prev => ({ ...prev, isWithdrawingWinningsToNear: true, error: null }));
+
+    try {
+      const provider = new (await import('ethers')).BrowserProvider(window.ethereum!);
+      const derivedEvmAddress = await nearIntentsService.deriveEvmAddress(nearAccountId);
+      
+      if (!derivedEvmAddress) {
+        throw new Error('Failed to derive EVM address');
+      }
+
+      const transferResult = await nearIntentsService.transferWinningsFromBaseToDeposit({
+        evmProvider: provider,
+        baseUsdcAddress: CONTRACTS.usdc,
+        evmWallet: derivedEvmAddress,
+        depositAddress,
+        amountUsdc: amount,
+      });
+
+      if (!transferResult.success) {
+        throw new Error(transferResult.error || 'Failed to transfer winnings');
+      }
+
+      setState(prev => ({
+        ...prev,
+        nearWithdrawalTxHash: transferResult.txHash,
+        nearWithdrawalWaitingForDeposit: false,
+        isWithdrawingWinningsToNear: false,
+      }));
+
+      console.log('Winnings transferred to reverse bridge deposit:', transferResult.txHash);
+    } catch (error: unknown) {
+      const errorMsg = (error as { message?: string }).message || 'Failed to transfer winnings';
+      console.error('Error transferring winnings:', error);
+      setState(prev => ({
+        ...prev,
+        isWithdrawingWinningsToNear: false,
+        error: errorMsg,
+      }));
+      throw error as Error;
+    }
+  }, [state.nearWithdrawalDepositAddress, state.nearWithdrawalDepositAmount]);
+
   return {
     ...state,
     initializeWeb3,
@@ -1019,9 +1161,11 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     getCurrentTicketInfo,
     getOddsInfo,
     claimWinnings,
+    // NEW: NEAR winnings withdrawal
+    claimAndWithdrawWinningsToNear,
     clearError,
     reset,
     retryAfterFunding,
     transferUsdcToDeposit,
   };
-}
+  }

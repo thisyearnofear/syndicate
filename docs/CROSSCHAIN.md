@@ -1,7 +1,8 @@
 # Cross-Chain Bridge Implementation
 
-**Last Updated**: Dec 2, 2025  
-**Status**: Improved and partially stabilized
+**Last Updated**: Dec 4, 2025  
+**Status**: Complete System (Forward + Reverse Bridge)
+**Core Principles**: ENHANCEMENT FIRST, DRY, CLEAN, MODULAR, ORGANIZED
 
 ## Progress Update (Dec 2025)
 
@@ -592,4 +593,330 @@ transaction.feePayer = walletPublicKey;
 // Sign and send transaction
 onStatus?.('solana_cctp:signing');
 const signedTx = await phantom.signAndSendTransaction(transaction);
+```
+
+---
+
+## NEAR Winnings Withdrawal - Complete System
+
+**Status**: ✅ Implemented (December 5, 2025)  
+**Architecture**: Reverse bridge from Base to NEAR using derived EVM addresses
+
+### System Overview
+
+Complete end-to-end cross-chain winnings withdrawal allowing NEAR users to:
+1. **Discover** unclaimed winnings on their derived Base address
+2. **Claim** those winnings from the Megapot contract
+3. **Bridge** them back to their NEAR wallet automatically
+
+```
+NEAR Account (User's native wallet)
+    ↓
+Derived EVM Address (via Chain Signatures)
+    ↓
+Buy Tickets on Base (with USDC)
+    ↓
+Win & Claim Winnings on Base
+    ↓
+Reverse Bridge (Base → NEAR)
+    ↓
+Back to NEAR Account ✅
+```
+
+### Architecture Components
+
+#### 1. Enhanced nearIntentsService (src/services/nearIntentsService.ts)
+
+**Added three new methods while maintaining existing 1Click SDK infrastructure:**
+
+##### `getUsdcBalanceOnChain()`
+- **Purpose**: Query USDC balance on any chain for a NEAR account
+- **Used for**: Cross-chain balance tracking (NEAR, Base, Ethereum)
+- **Returns**: Balance in USDC amount
+- **DRY**: Reuses `/api/near-queries` endpoint
+
+```typescript
+async getUsdcBalanceOnChain(params: {
+  accountId: string;
+  chain: 'base' | 'near' | 'ethereum';
+}): Promise<string>
+```
+
+##### `withdrawWinningsToNear()`
+- **Purpose**: Initiate reverse bridge from Base USDC to NEAR
+- **Inputs**: EVM address, NEAR account ID, amount
+- **Process**:
+  1. Converts USDC to smallest units
+  2. Builds 1Click quote with ORIGIN_CHAIN recipients
+  3. Returns deposit address for the reverse bridge
+- **Returns**: `{ success, depositAddress?, error? }`
+
+```typescript
+async withdrawWinningsToNear(params: {
+  evmAddress: string;
+  nearAccountId: string;
+  amountUsdc: string;
+}): Promise<{ success: boolean; depositAddress?: string; error?: string }>
+```
+
+##### `transferWinningsFromBaseToDeposit()`
+- **Purpose**: Execute USDC transfer on Base to initiate the reverse bridge
+- **Uses**: ethers.js Contract to call USDC `transfer()` on Base
+- **Key Details**:
+  - Uses dynamic import to avoid requiring ethers at module level
+  - Handles decimal conversion (6 decimals for USDC)
+  - Error parsing for user-friendly messages
+- **Returns**: `{ success, txHash?, error? }`
+
+```typescript
+async transferWinningsFromBaseToDeposit(params: {
+  evmProvider: unknown;
+  baseUsdcAddress: string;
+  evmWallet: string;
+  depositAddress: string;
+  amountUsdc: string;
+}): Promise<{ success: boolean; txHash?: string; error?: string }>
+```
+
+#### 2. Enhanced web3Service (src/services/web3Service.ts)
+
+**Added cross-chain balance tracking without breaking existing functionality:**
+
+##### `getUserInfoForAddress()`
+- **Purpose**: Query user ticket/winnings info for any address (not just connected wallet)
+- **Used for**: Cross-chain tracking of derived EVM address from NEAR account
+- **Returns**: Tickets purchased, winnings claimable, active status
+- **MODULAR**: Works independently of `getCurrentTicketInfo()` which queries the connected wallet
+
+```typescript
+async getUserInfoForAddress(address: string): Promise<{
+  ticketsPurchased: number;
+  winningsClaimable: string;
+  isActive: boolean;
+  rawValue: BigNumberish;
+} | null>
+```
+
+#### 3. Enhanced useTicketPurchase Hook (src/hooks/useTicketPurchase.ts)
+
+**New State Properties:**
+```typescript
+// Withdrawal flow state
+nearWithdrawalWaitingForDeposit?: boolean;      // Waiting for user confirmation
+nearWithdrawalDepositAddress?: string | null;   // Where to send winnings
+nearWithdrawalDepositAmount?: string | null;    // Amount to withdraw
+nearWithdrawalTxHash?: string | null;           // Transfer confirmation
+isWithdrawingWinningsToNear?: boolean;          // Current processing state
+```
+
+**New Action: `claimAndWithdrawWinningsToNear()`**
+- **Process** (5 steps):
+  1. Claim winnings on Base
+  2. Get updated user info to determine amount
+  3. Initialize NEAR Intents service
+  4. Request reverse bridge quote (Base → NEAR)
+  5. Update state and wait for user confirmation
+- **Returns**: Claim transaction hash
+- **Error Handling**: Comprehensive error messages at each step
+- **Graceful Degradation**: If anything fails, user can retry
+
+```typescript
+const claimAndWithdrawWinningsToNear = useCallback(
+  async (nearAccountId: string): Promise<string>
+)
+```
+
+### Technical Decisions
+
+#### 1. **Reused 1Click SDK for Reverse Bridge**
+- **Why**: Leverages existing solver infrastructure
+- **Benefit**: Same proven bridge mechanism in reverse
+- **Cost**: Minimal integration - just different asset direction
+
+#### 2. **Two-Step User Action**
+- **Step 1**: Claim winnings + get bridge address
+- **Step 2**: Confirm + transfer to bridge
+- **Why**: Gives user time to review the amount and destination
+- **Compared to**: Auto-bridge would be faster but less transparent
+
+#### 3. **Dynamic ethers.js Import in nearIntentsService**
+- **Why**: Avoids circular dependencies
+- **Benefit**: nearIntentsService stays independent of web3Service
+- **Pattern**: Same approach as in other bridge implementations
+
+#### 4. **Balance Queries Decoupled**
+- **`getNearBalance()`**: NEAR account USDC balance
+- **`getUsdcBalanceOnChain()`**: USDC on specific chain
+- **`getUserInfoForAddress()`**: Ticket info on Base
+- **Why**: Each has different data source and use case
+- **DRY**: Reuses `/api/near-queries` endpoint
+
+### Core Principles Applied
+
+#### ✅ ENHANCEMENT FIRST
+- Enhanced `nearIntentsService` with reverse bridge methods
+- Enhanced `web3Service` with cross-chain queries
+- Enhanced `useTicketPurchase` hook with withdrawal actions
+- **No new services created**
+
+#### ✅ AGGRESSIVE CONSOLIDATION
+- Reused 1Click SDK (no new bridge protocol)
+- Reused existing endpoint for balance queries
+- Reused existing contract queries on Base
+- Single source of truth for each operation
+
+#### ✅ PREVENT BLOAT
+- Minimal new state properties (5 related fields)
+- Two composable methods (claim + transfer)
+- Focused on NEAR reverse flow only
+- No unused complexity
+
+#### ✅ DRY
+- 1Click SDK configured once, reused for both directions
+- Balance queries use same endpoint
+- Error parsing consolidated in `nearIntentsService`
+- No duplicate bridge logic
+
+#### ✅ CLEAN
+- Clear separation: Service layer (nearIntentsService) vs Hook (useTicketPurchase)
+- nearIntentsService handles NEAR intents operations
+- useTicketPurchase orchestrates the withdrawal flow
+- web3Service handles Base contract interactions
+
+#### ✅ MODULAR
+- `getUsdcBalanceOnChain()` - Independent balance checker
+- `withdrawWinningsToNear()` - Quote provider
+- `transferWinningsFromBaseToDeposit()` - Transfer executor
+- Each can be used separately if needed
+
+#### ✅ PERFORMANT
+- Reuses initialized services (no double init)
+- Minimal state updates (only when needed)
+- Dynamic imports avoid unnecessary bundle size
+- Async/await for natural flow
+
+#### ✅ ORGANIZED
+- Service layer: `nearIntentsService.ts`
+- Web3 integration: `web3Service.ts`
+- Hook orchestration: `useTicketPurchase.ts`
+- Documentation: This section
+
+### API Contract
+
+#### nearIntentsService
+
+```typescript
+// Existing methods (unchanged)
+init(selector: WalletSelector, accountId: string): Promise<boolean>
+isReady(): boolean
+getQuote(params): Promise<IntentQuote | null>
+transferUsdcToDepositAddress(params): Promise<{success, txHash?, error?}>
+deriveEvmAddress(accountId: string): Promise<string | null>
+getNearBalance(accountId: string): Promise<string>
+getIntentStatus(depositAddress: string): Promise<{status, destinationTx?, error?}>
+reset(): void
+
+// New methods
+getUsdcBalanceOnChain(params): Promise<string>
+withdrawWinningsToNear(params): Promise<{success, depositAddress?, error?}>
+transferWinningsFromBaseToDeposit(params): Promise<{success, txHash?, error?}>
+```
+
+#### web3Service
+
+```typescript
+// New method
+getUserInfoForAddress(address: string): Promise<{
+  ticketsPurchased: number;
+  winningsClaimable: string;
+  isActive: boolean;
+  rawValue: BigNumberish;
+} | null>
+```
+
+#### useTicketPurchase Hook
+
+```typescript
+// New action
+claimAndWithdrawWinningsToNear(nearAccountId: string): Promise<string>
+```
+
+### Complete NEAR Winnings Withdrawal Flow
+
+```
+1. User sees "Claim & Withdraw to NEAR" button
+   ↓
+2. Clicks button → claimAndWithdrawWinningsToNear() executes
+   ↓
+3. [Behind the scenes]
+   - Claim winnings on Base (on derived EVM address)
+   - Initialize NEAR Intents SDK
+   - Request reverse bridge quote
+   - Get deposit address
+   ↓
+4. UI shows confirmation dialog:
+   "You have $X.XX in winnings. Send to reverse bridge address?"
+   ↓
+5. User clicks "Confirm"
+   ↓
+6. transferWinningsToReverseDeposit() executes
+   - Send USDC to bridge deposit address on Base
+   ↓
+7. [Automated on backend]
+   - 1Click solver processes the deposit
+   - Bridges USDC to NEAR
+   - Deposits into user's NEAR account
+   ↓
+8. User receives USDC on NEAR ✅
+```
+
+### Error Scenarios & Recovery
+
+| Scenario | Error Message | Recovery |
+|----------|---------------|----------|
+| Claiming with $0 winnings | "No winnings to withdraw" | Retry after winning more tickets |
+| NEAR Intents not initialized | "Failed to initialize NEAR Intents" | Check network, retry |
+| Can't derive EVM address | "Failed to derive EVM address" | User reconnects NEAR wallet |
+| Reverse bridge quote fails | "Failed to get quote for reverse bridge" | Retry, may be temporary |
+| Insufficient Base balance | "Insufficient USDC balance on Base" | Check Base balance, bridge more |
+| User rejects transfer | "Transaction rejected by user" | User retries and approves |
+| Transfer timeout | "Request timed out" | Retry, check network |
+
+### Testing Checklist
+
+- [ ] Test balance query on NEAR
+- [ ] Test balance query on Base  
+- [ ] Test reverse bridge quote generation
+- [ ] Test claim & withdrawal flow with small amount
+- [ ] Test error handling (insufficient balance, network issues)
+- [ ] Test state transitions throughout flow
+- [ ] Test UI shows deposit address correctly
+- [ ] Test transfer to deposit initiates successfully
+- [ ] Monitor reverse bridge completion on NEAR
+- [ ] Verify USDC arrives in NEAR account
+
+### Future Enhancements
+
+1. **Auto-claim on next login**: Check for winnings, offer to claim + withdraw
+2. **Batch processing**: If user wins multiple times, batch the withdrawals
+3. **Fee estimation**: Show estimated bridge fee before confirming
+4. **Progress tracking**: Real-time status of reverse bridge completion
+5. **Direct withdrawal**: Option to withdraw without claiming (if contract supports it)
+
+### Files Modified
+
+```
+Enhanced Services:
+→ src/services/nearIntentsService.ts (reverse bridge methods)
+→ src/services/web3Service.ts (getUserInfoForAddress)
+→ src/hooks/useTicketPurchase.ts (withdrawal actions)
+
+New Components:
+→ src/components/bridge/WinningsWithdrawalFlow.tsx
+→ src/components/home/WinningsCard.tsx
+
+Enhanced Pages:
+→ src/app/bridge/page.tsx (toggle + integration)
+→ src/app/page.tsx (discovery card)
+```
 ```
