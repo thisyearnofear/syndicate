@@ -242,6 +242,15 @@ export function useUnifiedWallet(): {
               throw createError('ENV_ERROR', 'NEAR wallet is only available in browser environments');
             }
 
+            // Suppress MetaMask auto-connection while showing NEAR modal
+            // This prevents wagmi from interfering with NEAR wallet selection
+            const originalEthereum = window.ethereum;
+            try {
+              (window as any).ethereum = undefined;
+            } catch (e) {
+              console.warn('Could not suppress MetaMask temporarily:', e);
+            }
+
             // Universal approach: Load core wallet selector and modal
             // The selector will automatically detect available NEAR wallets
             const [{ setupWalletSelector }, { setupModal }] = await Promise.all([
@@ -293,6 +302,16 @@ export function useUnifiedWallet(): {
                   resolved = true;
                   if (unsubscribe) unsubscribe();
                   modal.hide();
+                  // Restore MetaMask after timeout
+                  if (originalEthereum) {
+                    setTimeout(() => {
+                      try {
+                        (window as any).ethereum = originalEthereum;
+                      } catch (e) {
+                        console.warn('Could not restore MetaMask:', e);
+                      }
+                    }, 500);
+                  }
                   console.warn('NEAR connection timed out');
                   resolve(null);
                 }
@@ -308,6 +327,16 @@ export function useUnifiedWallet(): {
                       clearTimeout(timeoutId);
                       if (unsubscribe) unsubscribe();
                       modal.hide();
+                      // Restore MetaMask after successful connection
+                      if (originalEthereum) {
+                        setTimeout(() => {
+                          try {
+                            (window as any).ethereum = originalEthereum;
+                          } catch (e) {
+                            console.warn('Could not restore MetaMask:', e);
+                          }
+                        }, 500);
+                      }
                       console.log('NEAR account selected:', active.accountId);
                       resolve(active.accountId);
                     }
@@ -329,12 +358,32 @@ export function useUnifiedWallet(): {
                         clearInterval(interval);
                         clearTimeout(timeoutId);
                         modal.hide();
+                        // Restore MetaMask after successful connection
+                        if (originalEthereum) {
+                          setTimeout(() => {
+                            try {
+                              (window as any).ethereum = originalEthereum;
+                            } catch (e) {
+                              console.warn('Could not restore MetaMask:', e);
+                            }
+                          }, 500);
+                        }
                         resolve(active.accountId);
                       } else if (++attempts > maxAttempts) {
                         resolved = true;
                         clearInterval(interval);
                         clearTimeout(timeoutId);
                         modal.hide();
+                        // Restore MetaMask after timeout
+                        if (originalEthereum) {
+                          setTimeout(() => {
+                            try {
+                              (window as any).ethereum = originalEthereum;
+                            } catch (e) {
+                              console.warn('Could not restore MetaMask:', e);
+                            }
+                          }, 500);
+                        }
                         resolve(null);
                       }
                     }
@@ -345,6 +394,16 @@ export function useUnifiedWallet(): {
                       clearInterval(interval);
                       clearTimeout(timeoutId);
                       modal.hide();
+                      // Restore MetaMask after error
+                      if (originalEthereum) {
+                        setTimeout(() => {
+                          try {
+                            (window as any).ethereum = originalEthereum;
+                          } catch (e) {
+                            console.warn('Could not restore MetaMask:', e);
+                          }
+                        }, 500);
+                      }
                       resolve(null);
                     }
                   }

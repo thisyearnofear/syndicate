@@ -177,9 +177,8 @@ export function WalletConnectionCard({
                   </div>
                 </CompactFlex>
                 <div className="flex items-center">
-                  {state.walletType !== 'phantom' && (
-                    <ConnectButton showBalance={false} chainStatus="none" />
-                  )}
+                  {/* Only show RainbowKit ConnectButton for WalletConnect option */}
+                  <ConnectButton showBalance={false} chainStatus="none" />
                 </div>
               </CompactFlex>
             </div>
