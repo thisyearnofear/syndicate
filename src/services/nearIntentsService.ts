@@ -62,6 +62,15 @@ class NearIntentsService {
         return false;
       }
 
+      // Get account access keys to ensure we have a valid signing key
+      const accessKeys = await this.getAccountAccessKeys(accountId);
+      if (accessKeys.length === 0) {
+        console.warn(`No access keys found for ${accountId}. Intents may fail.`);
+      } else {
+        console.log(`Account ${accountId} has ${accessKeys.length} access keys:`, 
+          accessKeys.map(k => k.public_key).join(', '));
+      }
+
       const signer = createIntentSignerNEP413({
         async signMessage(nep413Payload) {
           // Ensure nonce is a Buffer (SDK might provide Uint8Array)
@@ -71,6 +80,17 @@ class NearIntentsService {
             ...nep413Payload,
             nonce,
           } as any);
+          
+          // Log the key being used for debugging
+          console.log('Intent signed with public key:', response.publicKey);
+          
+          // Verify the key exists on the account
+          const keyExists = accessKeys.some(k => k.public_key === response.publicKey);
+          if (!keyExists && accessKeys.length > 0) {
+            console.warn(`Warning: Signing key ${response.publicKey} not found in account's registered keys.`);
+            console.warn('Registered keys:', accessKeys.map(k => k.public_key));
+          }
+          
           // Return the response with proper type assertion
           return response as { publicKey: string; signature: string };
         },
@@ -87,6 +107,24 @@ class NearIntentsService {
     } catch (error) {
       console.error('Failed to initialize NEAR Intents SDK:', error);
       return false;
+    }
+  }
+
+  /**
+   * Get all access keys for an account
+   */
+  private async getAccountAccessKeys(accountId: string): Promise<Array<{ public_key: string; access_key: any }>> {
+    try {
+      const response = await this.nearProvider.query({
+        request_type: 'view_access_key_list',
+        account_id: accountId,
+        finality: 'final',
+      }) as any;
+
+      return response.keys || [];
+    } catch (error) {
+      console.warn('Failed to fetch access keys:', error);
+      return [];
     }
   }
 
@@ -244,10 +282,13 @@ class NearIntentsService {
     
     // Extract specific error messages
     if (errorStr.includes("doesn't exist for account")) {
-      // Parse the account name from the error
+      // Parse the account name and key from the error
       const accountMatch = errorStr.match(/account '([^']+)'/);
+      const keyMatch = errorStr.match(/key '([^']+)'/);
       const accountId = accountMatch ? accountMatch[1] : 'your account';
-      return `Your wallet's signing key is not registered with ${accountId}. Please ensure you've set up your account recovery key in your NEAR wallet.`;
+      const publicKey = keyMatch ? keyMatch[1] : 'the signing';
+      
+      return `The signing key (${publicKey}) is not accessible to the intents contract. This is a common issue with key rotation. Try: (1) Disconnect and reconnect your wallet, (2) Use a different NEAR wallet like Nightly or Meteor, (3) Ensure you have a full-access key registered on your account.`;
     }
     
     if (errorStr.includes('HostError') || errorStr.includes('GuestPanic')) {
