@@ -64,6 +64,9 @@ export interface TicketPurchaseState {
   nearHasEnoughGas?: boolean;
   nearIntentTxHash?: string | null;
   nearDestinationTxHash?: string | null;
+  
+  // Initialization state
+  isServiceReady: boolean;
 }
 
 export interface TicketPurchaseActions {
@@ -138,6 +141,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     nearHasEnoughGas: undefined,
     nearIntentTxHash: null,
     nearDestinationTxHash: null,
+    isServiceReady: false,
   });
 
   /**
@@ -202,6 +206,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       setState(prev => ({
         ...prev,
         isInitializing: false,
+        isServiceReady: success,
         error: success ? null : 'Failed to initialize Web3 service'
       }));
 
@@ -211,6 +216,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       setState(prev => ({
         ...prev,
         isInitializing: false,
+        isServiceReady: false,
         error: error instanceof Error ? error.message : 'Initialization failed'
       }));
       return false;
@@ -768,6 +774,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       nearHasEnoughGas: undefined,
       nearIntentTxHash: null,
       nearDestinationTxHash: null,
+      isServiceReady: false,
     });
   }, []);
 
@@ -792,10 +799,16 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
    * Auto-initialize when wallet connects
    */
   useEffect(() => {
-    if (isConnected && walletType && !state.isInitializing && !web3Service.isReady()) {
+    if (isConnected && walletType && !state.isInitializing && !state.isServiceReady) {
+      // For EVM, we also check if service is ready
+      const isEvm = walletType !== WalletTypes.NEAR && walletType !== WalletTypes.PHANTOM;
+      if (isEvm && web3Service.isReady()) {
+         // Already ready (e.g. from previous session)
+         return;
+      }
       initializeWeb3();
     }
-  }, [isConnected, walletType, initializeWeb3, state.isInitializing]);
+  }, [isConnected, walletType, initializeWeb3, state.isInitializing, state.isServiceReady]);
 
   /**
    * Reset when wallet disconnects
