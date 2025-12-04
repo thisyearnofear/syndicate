@@ -562,6 +562,43 @@ class Web3Service {
   }
 
   /**
+  * Get user ticket and winning info for a specific address (not just connected wallet)
+  * Used for cross-chain tracking when checking derived EVM address
+  */
+  async getUserInfoForAddress(address: string): Promise<{
+    ticketsPurchased: number;
+    winningsClaimable: string;
+    isActive: boolean;
+    rawValue: BigNumberish;
+  } | null> {
+    try {
+      if (!this.megapotContract) {
+        console.warn('Megapot contract not initialized');
+        return null;
+      }
+
+      const userInfo = await this.megapotContract.usersInfo(address);
+      const ticketsRaw = userInfo.ticketsPurchasedTotalBps || userInfo[0];
+      const winningsRaw = userInfo.winningsClaimable || userInfo[1];
+      const activeRaw = userInfo.active || userInfo[2];
+
+      const ticketsNum = Number(ticketsRaw);
+      const winningsStr = ethers.formatUnits(winningsRaw, 6); // USDC has 6 decimals
+      const isActive = Boolean(activeRaw);
+
+      return {
+        ticketsPurchased: ticketsNum,
+        winningsClaimable: winningsStr,
+        isActive,
+        rawValue: ticketsRaw,
+      };
+    } catch (error) {
+      console.error('Failed to get user info for address:', error);
+      return null;
+    }
+  }
+
+  /**
   * Claim winnings if user has won
   */
   async claimWinnings(): Promise<string> {

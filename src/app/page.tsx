@@ -47,6 +47,7 @@ import { CommunityInsightsPiece } from "@/components/home/CommunityInsightsPiece
 import { SyndicatesPiece } from "@/components/home/SyndicatesPiece";
 import { UserTicketPiece } from "@/components/home/UserTicketPiece";
 import { StatsPieces } from "@/components/home/StatsPieces";
+import { WinningsCard } from "@/components/home/WinningsCard";
 
 // =============================================================================
 // MAIN COMPONENT
@@ -266,11 +267,12 @@ export default function PremiumHome() {
                   <SocialFeed className="w-full max-w-2xl" />
                 </Suspense>
                 <UserTicketPiece
-                  userTicketInfo={userTicketInfo}
-                  claimWinnings={claimWinnings}
-                  isClaimingWinnings={isClaimingWinnings}
-                />
-                {isMounted && userIdentity && <CommunityInsightsPiece userIdentity={userIdentity} />}
+                   userTicketInfo={userTicketInfo}
+                   claimWinnings={claimWinnings}
+                   isClaimingWinnings={isClaimingWinnings}
+                 />
+                 {isMounted && <WinningsCard />}
+                 {isMounted && userIdentity && <CommunityInsightsPiece userIdentity={userIdentity} />}
                 <SyndicatesPiece />
               </CompactStack>
 

@@ -12,9 +12,11 @@
  * - PREVENT BLOAT: Streamlined UX with no repetition
  */
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { FocusedBridgeFlow } from "@/components/bridge/FocusedBridgeFlow";
+import { WinningsWithdrawalFlow } from "@/components/bridge/WinningsWithdrawalFlow";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
+import { WalletTypes } from "@/domains/wallet/types";
 import { Button } from "@/shared/components/ui/Button";
 import { WalletConnectionCard } from "@/components/wallet/WalletConnectionCard";
 import {
@@ -22,6 +24,8 @@ import {
   CompactStack,
   CompactSection,
 } from "@/shared/components/premium/CompactLayout";
+import { nearIntentsService } from "@/services/nearIntentsService";
+import { nearWalletSelectorService } from "@/domains/wallet/services/nearWalletSelectorService";
 
 type SourceChain = "solana" | "near" | "ethereum";
 
@@ -41,6 +45,42 @@ export default function BridgePage() {
   const [bridgeAmount, setBridgeAmount] = useState("10");
   const [showSuccess, setShowSuccess] = useState(false);
   const [sourceChain, setSourceChain] = useState<SourceChain>("solana");
+  const [showWithdrawal, setShowWithdrawal] = useState(false);
+  const [nearDerivedAddress, setNearDerivedAddress] = useState<string | undefined>();
+  const [nearAccountId, setNearAccountId] = useState<string | undefined>();
+
+  // Derive EVM address for NEAR users
+  useEffect(() => {
+    const deriveDerivedAddress = async () => {
+      if (walletType !== WalletTypes.NEAR || !isConnected) {
+        setNearDerivedAddress(undefined);
+        return;
+      }
+
+      try {
+        const accountId = nearWalletSelectorService.getAccountId();
+        setNearAccountId(accountId || undefined);
+
+        if (!accountId) {
+          return;
+        }
+
+        // Initialize intents service if needed
+        const selector = nearWalletSelectorService.getSelector();
+        if (selector && !nearIntentsService.isReady()) {
+          await nearIntentsService.init(selector, accountId);
+        }
+
+        const evmAddr = await nearIntentsService.deriveEvmAddress(accountId);
+        setNearDerivedAddress(evmAddr || undefined);
+      } catch (error) {
+        console.error('Failed to derive EVM address:', error);
+        setNearDerivedAddress(undefined);
+      }
+    };
+
+    deriveDerivedAddress();
+  }, [walletType, isConnected]);
 
   // Chain configurations with equal prominence
   const chainOptions: ChainOption[] = useMemo(() => [
@@ -136,10 +176,43 @@ export default function BridgePage() {
             </div>
           </div>
 
+          {/* Toggle for NEAR users */}
+          {walletType === WalletTypes.NEAR && isConnected && (
+            <div className="flex justify-center gap-3 max-w-2xl mx-auto">
+              <button
+                onClick={() => setShowWithdrawal(false)}
+                className={`px-6 py-2 rounded-lg font-semibold transition-all ${
+                  !showWithdrawal
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                }`}
+              >
+                💰 Send USDC
+              </button>
+              <button
+                onClick={() => setShowWithdrawal(true)}
+                className={`px-6 py-2 rounded-lg font-semibold transition-all ${
+                  showWithdrawal
+                    ? 'bg-green-500 text-white'
+                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                }`}
+              >
+                ✨ Withdraw Winnings
+              </button>
+            </div>
+          )}
+
           {/* Main Bridge Section */}
           <CompactSection spacing="lg">
             <div className="max-w-3xl mx-auto">
-              {showSuccess ? (
+              {showWithdrawal ? (
+                // Withdrawal flow for NEAR users
+                <WinningsWithdrawalFlow
+                  nearAccountId={nearAccountId}
+                  derivedEvmAddress={nearDerivedAddress}
+                  onSuccess={() => setShowWithdrawal(false)}
+                />
+              ) : showSuccess ? (
                 <div className="glass-premium p-8 rounded-3xl border border-green-500/30 backdrop-blur-xl animate-fade-in">
                   <div className="text-center space-y-4">
                     <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center mx-auto">

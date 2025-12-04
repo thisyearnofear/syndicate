@@ -407,10 +407,10 @@ class NearIntentsService {
         actions: [
           actionCreators.functionCall(
             'ft_transfer',
-            {
+            JSON.stringify({
               receiver_id: depositAddress,
               amount: amountYocto,
-            },
+            }),
             '30000000000000', // 30 TGas (standard for ft_transfer)
             '1' // 1 yoctoNEAR (required for security)
           ),
@@ -462,6 +462,200 @@ class NearIntentsService {
     }
 
     return 'Failed to transfer USDC. Please try again or contact support.';
+  }
+
+  /**
+   * Get balance of USDC on specific chain for NEAR account
+   * Used for cross-chain balance tracking
+   */
+  async getUsdcBalanceOnChain(params: {
+    accountId: string;
+    chain: 'base' | 'near' | 'ethereum';
+  }): Promise<string> {
+    try {
+      const response = await fetch('/api/near-queries', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          operation: 'balanceOfOnChain',
+          accountId: params.accountId,
+          chain: params.chain,
+          tokenContract: 'base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near',
+        }),
+      });
+
+      if (!response.ok) {
+        return '0';
+      }
+
+      const data = await response.json();
+      return data.balance || '0';
+    } catch (error) {
+      console.error(`Failed to get USDC balance on ${params.chain}:`, error);
+      return '0';
+    }
+  }
+
+  /**
+   * Bridge USDC from Base back to NEAR (reverse flow for withdrawn winnings)
+   * Reuses 1Click SDK infrastructure with reverse direction
+   */
+  async withdrawWinningsToNear(params: {
+    evmAddress: string; // Derived EVM address (holds winnings)
+    nearAccountId: string;
+    amountUsdc: string; // Amount in USDC (e.g., "100" for 100 USDC)
+  }): Promise<{
+    success: boolean;
+    depositAddress?: string; // NEAR address to receive on
+    error?: string;
+  }> {
+    try {
+      if (!this.isInitialized) {
+        throw new Error('NEAR 1Click SDK not initialized');
+      }
+
+      // Convert USDC amount to smallest units (6 decimals for USDC)
+      const amountUnits = BigInt(
+        Math.floor(parseFloat(params.amountUsdc) * 1_000_000)
+      ).toString();
+
+      // Build reverse intent: Base USDC → NEAR USDC
+      const quoteRequest: QuoteRequest = {
+        dry: false, // Execute the reverse bridge
+        swapType: QuoteRequest.swapType.EXACT_INPUT,
+        slippageTolerance: 100, // 1%
+        originAsset: 'nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near',
+        depositType: QuoteRequest.depositType.ORIGIN_CHAIN,
+        destinationAsset: 'nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near',
+        amount: amountUnits,
+        refundTo: params.nearAccountId,
+        refundType: QuoteRequest.refundType.ORIGIN_CHAIN,
+        recipient: params.nearAccountId,
+        recipientType: QuoteRequest.recipientType.ORIGIN_CHAIN,
+        deadline: new Date(Date.now() + 3600000).toISOString(),
+      };
+
+      const quote = await OneClickService.getQuote(quoteRequest);
+
+      if (!quote) {
+        return {
+          success: false,
+          error: 'Failed to get quote for reverse bridge',
+        };
+      }
+
+      const quoteTyped = quote as Record<string, unknown>;
+      const quoteObj = quoteTyped.quote as Record<string, unknown> | undefined;
+      
+      let depositAddress: string | undefined;
+      if (quoteObj?.depositAddress) {
+        depositAddress = quoteObj.depositAddress as string;
+      }
+
+      if (!depositAddress) {
+        depositAddress = (
+          quoteTyped.depositAddress ||
+          quoteTyped.deposit_address
+        ) as string | undefined;
+      }
+
+      if (!depositAddress) {
+        console.error('Quote response missing deposit address:', quoteTyped);
+        return {
+          success: false,
+          error: 'Invalid quote response - missing deposit address',
+        };
+      }
+
+      console.log('Reverse bridge quote received:', {
+        depositAddress,
+        amountUnits,
+        nearAccountId: params.nearAccountId,
+      });
+
+      return {
+        success: true,
+        depositAddress,
+      };
+    } catch (error: unknown) {
+      console.error('Failed to initiate reverse bridge:', error);
+      const errorMessage = this.parseIntentError(error);
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+  }
+
+  /**
+   * Transfer USDC from EVM (Base) to deposit address for reverse bridge
+   * Called after claiming winnings, to initiate the flow back to NEAR
+   */
+  async transferWinningsFromBaseToDeposit(params: {
+    evmProvider: unknown; // ethers.BrowserProvider or similar
+    baseUsdcAddress: string;
+    evmWallet: string; // The derived EVM wallet that holds winnings
+    depositAddress: string; // Where to send for the reverse bridge
+    amountUsdc: string; // Amount in USDC
+  }): Promise<{
+    success: boolean;
+    txHash?: string;
+    error?: string;
+  }> {
+    try {
+      // Dynamic import to avoid requiring ethers at module level
+      const { Contract } = await import('ethers');
+      const provider = params.evmProvider as any;
+
+      const USDC_ABI = [
+        'function transfer(address to, uint256 amount) external returns (bool)',
+        'function decimals() external view returns (uint8)',
+      ];
+
+      const signer = await provider.getSigner(params.evmWallet);
+      const usdcContract = new Contract(
+        params.baseUsdcAddress,
+        USDC_ABI,
+        signer
+      );
+
+      // Convert to smallest units (6 decimals)
+      const amountUnits = BigInt(
+        Math.floor(parseFloat(params.amountUsdc) * 1_000_000)
+      ).toString();
+
+      console.log('Transferring winnings to reverse bridge deposit:', {
+        from: params.evmWallet,
+        to: params.depositAddress,
+        amount: params.amountUsdc,
+        amountUnits,
+      });
+
+      const tx = await usdcContract.transfer(params.depositAddress, amountUnits);
+      const receipt = await tx.wait();
+
+      return {
+        success: true,
+        txHash: receipt.hash,
+      };
+    } catch (error: unknown) {
+      console.error('Failed to transfer winnings to deposit:', error);
+      const errorStr = String(error);
+      
+      let errorMessage = 'Failed to transfer winnings';
+      if (errorStr.includes('insufficient')) {
+        errorMessage = 'Insufficient USDC balance on Base';
+      } else if (errorStr.includes('rejected')) {
+        errorMessage = 'Transaction rejected by user';
+      }
+
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
   }
 
   /**
