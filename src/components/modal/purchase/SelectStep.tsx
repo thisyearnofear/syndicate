@@ -1,13 +1,16 @@
 "use client";
 
 import { Button } from "@/shared/components/ui/Button";
-import { CompactStack, CompactFlex } from "@/shared/components/premium/CompactLayout";
-import { AlertCircle } from 'lucide-react';
+import {
+  CompactStack,
+  CompactFlex,
+} from "@/shared/components/premium/CompactLayout";
+import { AlertCircle } from "lucide-react";
 import type { SyndicateInfo } from "@/domains/lottery/types";
-import { WalletTypes } from '@/domains/wallet/types';
+import { WalletTypes } from "@/domains/wallet/types";
 
 interface SelectStepProps {
-  setStep: (step: 'mode') => void;
+  setStep: (step: "mode") => void;
   selectedSyndicate: SyndicateInfo | null;
   prizeAmount: number | undefined;
   jackpotLoading: boolean;
@@ -26,7 +29,7 @@ interface SelectStepProps {
   handlePurchase: () => void;
   isPurchasing: boolean;
   isInitializing: boolean;
-  purchaseMode: 'individual' | 'syndicate' | 'yield';
+  purchaseMode: "individual" | "syndicate" | "yield";
   walletType?: string | null;
   solanaBalance?: string | null;
   onStartBridge?: () => void;
@@ -40,6 +43,7 @@ interface SelectStepProps {
     timeLimit?: number;
   } | null;
   onGetNearQuote?: () => void;
+  isGettingQuote?: boolean;
   onConfirmIntent?: () => void;
 }
 
@@ -69,13 +73,14 @@ export function SelectStep({
   showBridgeGuidance,
   nearQuote,
   onGetNearQuote,
+  isGettingQuote,
   onConfirmIntent,
 }: SelectStepProps) {
   const canBridgeAndBuy = Boolean(
     isConnected &&
-    walletType === WalletTypes.PHANTOM &&
-    hasInsufficientBalance &&
-    parseFloat(solanaBalance || '0') >= parseFloat(totalCost || '0')
+      walletType === WalletTypes.PHANTOM &&
+      hasInsufficientBalance &&
+      parseFloat(solanaBalance || "0") >= parseFloat(totalCost || "0")
   );
   // Hide ticket buying content when bridge is needed or in progress to reduce cognitive load
   if (showBridgeGuidance || isBridging) {
@@ -97,25 +102,30 @@ export function SelectStep({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setStep('mode')}
+          onClick={() => setStep("mode")}
           className="text-gray-400 hover:text-white"
         >
           ← Back to Options
         </Button>
         {selectedSyndicate && (
-          <div className="text-xs text-gray-400">
-            Pool Mode
-          </div>
+          <div className="text-xs text-gray-400">Pool Mode</div>
         )}
       </div>
 
       {/* Current Jackpot */}
       <div className="text-center mb-4">
         <p className="text-white/70">
-          Current Jackpot: <span className="text-yellow-400 font-bold">${prizeAmount?.toLocaleString() || '0'} USDC</span>
+          Current Jackpot:{" "}
+          <span className="text-yellow-400 font-bold">
+            ${prizeAmount?.toLocaleString() || "0"} USDC
+          </span>
         </p>
-        {jackpotLoading && <p className="text-xs text-gray-400">Loading jackpot...</p>}
-        {jackpotError && <p className="text-xs text-red-400">Error loading jackpot data</p>}
+        {jackpotLoading && (
+          <p className="text-xs text-gray-400">Loading jackpot...</p>
+        )}
+        {jackpotError && (
+          <p className="text-xs text-red-400">Error loading jackpot data</p>
+        )}
         {ticketPrice && (
           <p className="text-white/60 text-sm mt-1">
             Ticket Price: ${ticketPrice} USDC
@@ -125,9 +135,7 @@ export function SelectStep({
 
       {/* Quick amount selection */}
       <div>
-        <p className="mb-3 text-sm font-medium">
-          Quick Select
-        </p>
+        <p className="mb-3 text-sm font-medium">Quick Select</p>
         <CompactFlex gap="sm" className="flex-wrap">
           {quickAmounts.map((amount) => (
             <Button
@@ -135,9 +143,13 @@ export function SelectStep({
               variant={ticketCount === amount ? "default" : "ghost"}
               size="sm"
               onClick={() => setTicketCount(amount)}
-              className={ticketCount === amount ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl border border-blue-500/20" : ""}
+              className={
+                ticketCount === amount
+                  ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl border border-blue-500/20"
+                  : ""
+              }
             >
-              {amount} ticket{amount > 1 ? 's' : ''}
+              {amount} ticket{amount > 1 ? "s" : ""}
             </Button>
           ))}
         </CompactFlex>
@@ -145,9 +157,7 @@ export function SelectStep({
 
       {/* Custom amount */}
       <div>
-        <p className="mb-3 text-sm font-medium">
-          Custom Amount
-        </p>
+        <p className="mb-3 text-sm font-medium">Custom Amount</p>
         <CompactFlex align="center" gap="md" justify="center">
           <Button
             variant="ghost"
@@ -164,7 +174,7 @@ export function SelectStep({
               {ticketCount}
             </div>
             <p className="text-xs text-gray-400 leading-relaxed">
-              ticket{ticketCount > 1 ? 's' : ''}
+              ticket{ticketCount > 1 ? "s" : ""}
             </p>
           </div>
 
@@ -182,7 +192,9 @@ export function SelectStep({
       {/* Price display */}
       <div className="glass p-6 rounded-2xl">
         <CompactFlex align="center" justify="between" className="mb-4">
-          <p className="font-medium text-gray-300 leading-relaxed">Total Cost:</p>
+          <p className="font-medium text-gray-300 leading-relaxed">
+            Total Cost:
+          </p>
           <div className="text-3xl font-black text-green-400">
             ${totalCost} USDC
           </div>
@@ -192,29 +204,43 @@ export function SelectStep({
         {oddsInfo && (
           <div className="mb-4 p-4 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 rounded-xl border border-yellow-500/20">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-yellow-400 font-semibold text-sm">Your Winning Odds:</p>
+              <p className="text-yellow-400 font-semibold text-sm">
+                Your Winning Odds:
+              </p>
               <span className="text-2xl font-black text-yellow-400">
                 {oddsInfo.oddsFormatted(ticketCount)}
               </span>
             </div>
             {ticketCount > 1 && (
               <p className="text-yellow-300 text-xs">
-                🎯 {ticketCount} tickets = {oddsInfo.oddsFormatted(ticketCount)} chance to win!
+                🎯 {ticketCount} tickets = {oddsInfo.oddsFormatted(ticketCount)}{" "}
+                chance to win!
               </p>
             )}
           </div>
         )}
 
-        <CompactFlex align="center" justify="between" gap="sm" className="text-sm">
+        <CompactFlex
+          align="center"
+          justify="between"
+          gap="sm"
+          className="text-sm"
+        >
           <p className="text-sm text-gray-400 leading-relaxed">
-            {ticketCount} ticket{ticketCount !== 1 ? 's' : ''}
+            {ticketCount} ticket{ticketCount !== 1 ? "s" : ""}
           </p>
           {selectedSyndicate ? (
             <span className="inline-flex items-center font-semibold rounded-full shadow-lg backdrop-blur-sm transform hover:scale-105 transition-transform duration-200 bg-gradient-to-r from-purple-500 to-blue-600 text-white px-2 py-1 text-xs">
-              {selectedSyndicate.cause.name === 'Ocean Cleanup' ? '🌊' :
-                selectedSyndicate.cause.name === 'Education Access' ? '📚' :
-                  selectedSyndicate.cause.name === 'Climate Action' ? '🌍' :
-                    selectedSyndicate.cause.name === 'Food Security' ? '🌾' : '✨'} {selectedSyndicate.cause.name}
+              {selectedSyndicate.cause.name === "Ocean Cleanup"
+                ? "🌊"
+                : selectedSyndicate.cause.name === "Education Access"
+                ? "📚"
+                : selectedSyndicate.cause.name === "Climate Action"
+                ? "🌍"
+                : selectedSyndicate.cause.name === "Food Security"
+                ? "🌾"
+                : "✨"}{" "}
+              {selectedSyndicate.cause.name}
             </span>
           ) : (
             <span className="inline-flex items-center font-semibold rounded-full shadow-lg backdrop-blur-sm transform hover:scale-105 transition-transform duration-200 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-2 py-1 text-xs">
@@ -229,7 +255,8 @@ export function SelectStep({
             <div className="flex items-center justify-between text-xs">
               <span className="text-gray-400">Pool Impact:</span>
               <span className="text-purple-400 font-semibold">
-                Joining {selectedSyndicate.membersCount.toLocaleString()} members
+                Joining {selectedSyndicate.membersCount.toLocaleString()}{" "}
+                members
               </span>
             </div>
             <div className="flex items-center justify-between text-xs mt-1">
@@ -247,33 +274,59 @@ export function SelectStep({
             <p className="text-white/80 text-sm mb-2">NEAR Intents Quote</p>
             {!nearQuote ? (
               <div className="flex items-center justify-between">
-                <p className="text-gray-400 text-xs">Get a solver quote for executing purchase via NEAR Intents</p>
-                <Button size="sm" variant="outline" onClick={onGetNearQuote}>
-                  Get Quote
+                <p className="text-gray-400 text-xs">
+                  Get a solver quote for executing purchase via NEAR Intents
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onGetNearQuote}
+                  disabled={isGettingQuote}
+                >
+                  {isGettingQuote ? (
+                    <>
+                      <span className="animate-spin mr-2">⏳</span>
+                      Quoting...
+                    </>
+                  ) : (
+                    "Get Quote"
+                  )}
                 </Button>
               </div>
             ) : (
               <div className="space-y-2 text-xs text-white/70">
                 <div className="flex items-center justify-between">
                   <span>Solver</span>
-                  <span className="font-mono">{nearQuote.solverName || 'default'}</span>
+                  <span className="font-mono">
+                    {nearQuote.solverName || "default"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Estimated Fee</span>
-                  <span className="font-mono">{nearQuote.estimatedFee} ({nearQuote.estimatedFeePercent}%)</span>
+                  <span className="font-mono">
+                    {nearQuote.estimatedFee} ({nearQuote.estimatedFeePercent}%)
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Destination Amount</span>
-                  <span className="font-mono">{nearQuote.destinationAmount} USDC</span>
+                  <span className="font-mono">
+                    {nearQuote.destinationAmount} USDC
+                  </span>
                 </div>
                 {nearQuote.timeLimit && (
                   <div className="flex items-center justify-between">
                     <span>Time Limit</span>
-                    <span className="font-mono">{Math.ceil(nearQuote.timeLimit / 60)} min</span>
+                    <span className="font-mono">
+                      {Math.ceil(nearQuote.timeLimit / 60)} min
+                    </span>
                   </div>
                 )}
                 <div className="pt-2">
-                  <Button size="sm" className="w-full bg-gradient-to-r from-blue-600 to-purple-600" onClick={onConfirmIntent}>
+                  <Button
+                    size="sm"
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
+                    onClick={onConfirmIntent}
+                  >
                     Confirm Intent & Execute
                   </Button>
                 </div>
@@ -300,8 +353,8 @@ export function SelectStep({
       )}
 
       {/* Purchase button - only show when connected */}
-      {isConnected && (
-        canBridgeAndBuy ? (
+      {isConnected &&
+        (canBridgeAndBuy ? (
           <Button
             variant="default"
             size="lg"
@@ -316,26 +369,30 @@ export function SelectStep({
             size="lg"
             className="w-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white shadow-2xl hover:shadow-yellow-500/30 border border-yellow-400/30 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handlePurchase}
-            disabled={isPurchasing || isInitializing || !!hasInsufficientBalance}
+            disabled={
+              isPurchasing || isInitializing || !!hasInsufficientBalance
+            }
           >
             {isInitializing ? (
               <>⏳ Initializing...</>
             ) : isPurchasing ? (
               <>⚡ Processing...</>
             ) : hasInsufficientBalance ? (
-              'Insufficient Balance'
+              "Insufficient Balance"
             ) : selectedSyndicate ? (
               `🌊 Join ${selectedSyndicate.name} - $${totalCost}`
             ) : (
-              `⚡ Purchase ${ticketCount} Ticket${ticketCount > 1 ? 's' : ''} - $${totalCost}`
+              `⚡ Purchase ${ticketCount} Ticket${
+                ticketCount > 1 ? "s" : ""
+              } - $${totalCost}`
             )}
           </Button>
-        )
-      )}
+        ))}
 
       {/* Terms */}
       <p className="text-xs text-gray-500 text-center leading-relaxed">
-        By purchasing, you agree to our terms{purchaseMode === 'syndicate' ? ' and support the selected cause' : ''}
+        By purchasing, you agree to our terms
+        {purchaseMode === "syndicate" ? " and support the selected cause" : ""}
       </p>
     </CompactStack>
   );

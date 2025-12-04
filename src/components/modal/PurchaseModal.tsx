@@ -138,6 +138,7 @@ export default function PurchaseModal({
   } | null>(null);
   const [bridgeAmount, setBridgeAmount] = useState<string | null>(null);
   const [nearQuote, setNearQuote] = useState<IntentQuote | null>(null);
+  const [isGettingQuote, setIsGettingQuote] = useState(false);
 
   // Handle modal close with proper cleanup
   const handleClose = () => {
@@ -173,15 +174,15 @@ export default function PurchaseModal({
     setIsBridging(false);
     try {
       if (
-        typeof result === 'object' &&
+        typeof result === "object" &&
         result !== null &&
-        'protocol' in result &&
+        "protocol" in result &&
         result.protocol === "cctp" &&
-        'details' in result &&
-        typeof result.details === 'object' &&
+        "details" in result &&
+        typeof result.details === "object" &&
         result.details !== null &&
-        'message' in result.details &&
-        'attestation' in result.details
+        "message" in result.details &&
+        "attestation" in result.details
       ) {
         const resultAny = result as {
           protocol: string;
@@ -291,23 +292,41 @@ export default function PurchaseModal({
   const handleGetNearQuote = async () => {
     try {
       if (walletType !== WalletTypes.NEAR) return;
+      setIsGettingQuote(true);
+
       const ok = await nearWalletSelectorService.init();
-      if (!ok) return;
+      if (!ok) {
+        throw new Error("Failed to initialize NEAR wallet");
+      }
+
       const selector = nearWalletSelectorService.getSelector();
       let accountId = nearWalletSelectorService.getAccountId();
+
       if (!accountId) {
         accountId = await nearWalletSelectorService.connect();
       }
-      if (!selector || !accountId) return;
+
+      if (!selector || !accountId) {
+        throw new Error("Please connect your NEAR wallet");
+      }
+
       const ready = await nearIntentsService.init(selector, accountId);
-      if (!ready) return;
+      if (!ready) {
+        throw new Error("Failed to initialize NEAR Intents");
+      }
+
       const destinationAddress = await nearIntentsService.deriveEvmAddress(
         accountId
       );
-      if (!destinationAddress) return;
+
+      if (!destinationAddress) {
+        throw new Error("Failed to derive EVM address");
+      }
+
       const amountUnits = BigInt(
         Math.floor(parseFloat(totalCost) * 1_000_000)
       ).toString();
+
       const quote = await nearIntentsService.getQuote({
         sourceAsset:
           "nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near",
@@ -315,9 +334,20 @@ export default function PurchaseModal({
         destinationAddress,
         destinationChain: "base",
       });
-      if (quote) setNearQuote(quote);
+
+      if (quote) {
+        setNearQuote(quote);
+      } else {
+        throw new Error("Failed to get quote");
+      }
     } catch (err) {
       console.error("Error getting NEAR quote:", err);
+      errorToast(
+        "Quote Failed",
+        err instanceof Error ? err.message : "Failed to get NEAR quote"
+      );
+    } finally {
+      setIsGettingQuote(false);
     }
   };
 
@@ -334,8 +364,8 @@ export default function PurchaseModal({
         ? Number(jackpotStats.oddsPerTicket)
         : typeof jackpotStats.ticketsSoldCount === "number" &&
           jackpotStats.ticketsSoldCount > 0
-          ? Number(jackpotStats.ticketsSoldCount)
-          : null;
+        ? Number(jackpotStats.ticketsSoldCount)
+        : null;
 
     if (!baseOddsRaw || baseOddsRaw <= 0) {
       return null;
@@ -406,7 +436,8 @@ export default function PurchaseModal({
       // Show success toast
       successToast(
         "Tickets Purchased!",
-        `${purchasedTicketCount} ticket${purchasedTicketCount > 1 ? "s" : ""
+        `${purchasedTicketCount} ticket${
+          purchasedTicketCount > 1 ? "s" : ""
         } successfully purchased`,
         {
           label: "View My Tickets",
@@ -419,8 +450,8 @@ export default function PurchaseModal({
           walletType === WalletTypes.PHANTOM
             ? "solana"
             : walletType === WalletTypes.NEAR
-              ? "near"
-              : "ethereum";
+            ? "near"
+            : "ethereum";
         const body = {
           sourceChain,
           sourceWallet:
@@ -586,6 +617,7 @@ export default function PurchaseModal({
             showBridgeGuidance={showBridgeGuidance}
             nearQuote={nearQuote}
             onGetNearQuote={handleGetNearQuote}
+            isGettingQuote={isGettingQuote}
             onConfirmIntent={handlePurchase}
           />
         );
@@ -638,12 +670,12 @@ export default function PurchaseModal({
               {step === "success"
                 ? "🎉 Success!"
                 : step === "mode"
-                  ? "🎫 Buy Tickets"
-                  : step === "yield"
-                    ? "💰 Yield Strategy"
-                    : selectedSyndicate
-                      ? `🌊 ${selectedSyndicate.name}`
-                      : "🎫 Buy Tickets"}
+                ? "🎫 Buy Tickets"
+                : step === "yield"
+                ? "💰 Yield Strategy"
+                : selectedSyndicate
+                ? `🌊 ${selectedSyndicate.name}`
+                : "🎫 Buy Tickets"}
             </h2>
             {selectedSyndicate && step !== "mode" && step !== "yield" && (
               <p className="text-sm text-gray-400 mt-1">
@@ -706,7 +738,8 @@ export default function PurchaseModal({
         {isConnected && userBalance && step === "select" && (
           <div className="space-y-3 mb-6">
             {/* Info message for cross-chain users */}
-            {(walletType === WalletTypes.PHANTOM || walletType === WalletTypes.NEAR) && (
+            {(walletType === WalletTypes.PHANTOM ||
+              walletType === WalletTypes.NEAR) && (
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
                 <p className="text-blue-300 text-sm">
                   💡 USDC lives on Solana, NEAR, and Base.
@@ -769,10 +802,11 @@ export default function PurchaseModal({
 
             {/* Base Balance */}
             <div
-              className={`rounded-lg p-4 ${walletType === WalletTypes.PHANTOM
-                ? "bg-white/5 border border-blue-500/20"
-                : "bg-white/5"
-                }`}
+              className={`rounded-lg p-4 ${
+                walletType === WalletTypes.PHANTOM
+                  ? "bg-white/5 border border-blue-500/20"
+                  : "bg-white/5"
+              }`}
             >
               <div className="flex justify-between items-center">
                 <span className="text-white/70">🔵 Your USDC on Base:</span>
