@@ -96,6 +96,8 @@ export default function PurchaseModal({
     nearEstimatedFeeEth,
     nearIntentTxHash,
     nearDestinationTxHash,
+    nearDepositAddress,
+    nearUsdcTransferTxHash,
     // Actions
     purchaseTickets,
     refreshBalance,
@@ -625,19 +627,21 @@ export default function PurchaseModal({
           />
         );
       case "processing":
-        return (
-          <ProcessingStep
-            isApproving={isApproving}
-            nearStages={nearStages}
-            nearRecipient={nearRecipient}
-            nearRequestId={nearRequestId}
-            nearEthBalance={nearEthBalance}
-            nearEstimatedFeeEth={nearEstimatedFeeEth}
-            nearIntentTxHash={nearIntentTxHash}
-            nearDestinationTxHash={nearDestinationTxHash}
-            onRetryAfterFunding={retryAfterFunding}
-          />
-        );
+         return (
+           <ProcessingStep
+             isApproving={isApproving}
+             nearStages={nearStages}
+             nearRecipient={nearRecipient}
+             nearRequestId={nearRequestId}
+             nearEthBalance={nearEthBalance}
+             nearEstimatedFeeEth={nearEstimatedFeeEth}
+             nearIntentTxHash={nearIntentTxHash}
+             nearDestinationTxHash={nearDestinationTxHash}
+             nearDepositAddress={nearDepositAddress}
+             nearUsdcTransferTxHash={nearUsdcTransferTxHash}
+             onRetryAfterFunding={retryAfterFunding}
+           />
+         );
 
       case "success":
         return (
