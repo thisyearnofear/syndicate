@@ -193,12 +193,14 @@ export class NearChainSigsProtocol implements BridgeProtocol {
             // 5. Request Signature
             onStatus?.('approving', { step: 'Requesting MPC signature' });
             const digestBytes = computeUnsignedDigest(unsignedParams);
-            const payloadB64 = bytesToBase64(digestBytes);
+            // FIX: Pass payload as number array [u8; 32] instead of base64 string
+            // This avoids potential validation issues in near-api-js or the contract
+            const payloadArray = Array.from(digestBytes);
 
             const requestId = await this.requestChainSignatureChangeCall(
                 nearWallet,
                 DERIVATION_PATHS.ethereum,
-                payloadB64
+                payloadArray
             );
 
             if (!requestId) {
@@ -333,7 +335,7 @@ export class NearChainSigsProtocol implements BridgeProtocol {
     private async requestChainSignatureChangeCall(
         wallet: NearWalletContext,
         path: string,
-        payload: string
+        payload: number[] | string
     ): Promise<string | null> {
         try {
             const w = await wallet.selector.wallet();

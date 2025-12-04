@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
+import { JsonRpcProvider } from '@near-js/providers';
 
 const SOLANA_RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://api.mainnet-beta.solana.com';
 const BASE_RPC_URL = process.env.BASE_RPC_URL || 'https://mainnet.base.org';
+const NEAR_RPC_URL = process.env.NEXT_PUBLIC_NEAR_RPC_URL || 'https://rpc.mainnet.near.org';
 
 // USDC contract addresses
 const SOLANA_USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const BASE_USDC_ADDRESS = process.env.NEXT_PUBLIC_BASE_USDC_ADDRESS || '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+const NEAR_USDC_ID = '17208628f84f5d6ad33f0558bac3802d3bbdd174726366e1.factory.bridge.near';
 
 /**
  * Internal function to handle balance fetching
@@ -22,17 +25,20 @@ async function handleBalanceRequest(address: string, chainId?: number) {
   // Detect wallet type from address format
   const isEvmAddress = /^0x[a-fA-F0-9]{40}$/.test(address);
   const isSolanaAddress = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address); // More flexible Solana address detection
+  const isNearAddress = address.endsWith('.near') || /^[0-9a-f]{64}$/.test(address);
 
-  if (!isEvmAddress && !isSolanaAddress) {
+  if (!isEvmAddress && !isSolanaAddress && !isNearAddress) {
     return NextResponse.json(
-      { error: 'Invalid address format - must be EVM (0x...) or Solana address' },
+      { error: 'Invalid address format - must be EVM (0x...), Solana, or NEAR address' },
       { status: 400 }
     );
   }
 
-  // Route based on address type, ignore chainId for Solana
+  // Route based on address type
   if (isSolanaAddress) {
     return await getSolanaBalance(address);
+  } else if (isNearAddress) {
+    return await getNearBalance(address);
   } else {
     // For EVM, use provided chainId or default to Base
     const targetChainId = chainId || 8453;
@@ -162,6 +168,58 @@ async function getEvmBalance(walletAddress: string, chainId: number): Promise<Ne
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error('Failed to fetch EVM balance:', error);
+    return NextResponse.json(
+      { usdc: '0', balance: '0', error: msg },
+      { status: 200 }
+    );
+  }
+}
+
+async function getNearBalance(accountId: string): Promise<NextResponse> {
+  try {
+    const provider = new JsonRpcProvider({ url: NEAR_RPC_URL });
+    
+    // Get native NEAR balance
+    // Note: We handle type any here because near-api-js types can be tricky in Next.js edge/server environment
+    const account = await provider.query<any>({
+      request_type: 'view_account',
+      finality: 'final',
+      account_id: accountId,
+    });
+    const nearBalance = ethers.formatUnits(account.amount, 24); // NEAR has 24 decimals
+
+    // Get USDC balance (view call)
+    let usdcBalance = '0';
+    try {
+      const res = await provider.query<any>({
+        request_type: 'call_function',
+        account_id: NEAR_USDC_ID,
+        method_name: 'ft_balance_of',
+        args_base64: Buffer.from(JSON.stringify({ account_id: accountId })).toString('base64'),
+        finality: 'final',
+      });
+      // Result is an array of bytes (ASCII digits string for balance)
+      const resultBuffer = Buffer.from(res.result);
+      const resultStr = resultBuffer.toString();
+      // ft_balance_of returns a string (wrapped in quotes in JSON usually, but here it's raw bytes of the JSON string)
+      // Actually, near view call returns JSON-serialized result as bytes.
+      // If it returns "1000", bytes are [34, 49, 48, 48, 48, 34]
+      const parsed = JSON.parse(resultStr); 
+      usdcBalance = ethers.formatUnits(parsed, 6); // USDC has 6 decimals
+    } catch (e) {
+      console.warn('Failed to fetch NEAR USDC balance:', e);
+    }
+
+    return NextResponse.json({
+      usdc: usdcBalance,
+      balance: usdcBalance,
+      native: nearBalance,
+      wallet: accountId,
+      chain: 'near'
+    });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('Failed to fetch NEAR balance:', error);
     return NextResponse.json(
       { usdc: '0', balance: '0', error: msg },
       { status: 200 }
