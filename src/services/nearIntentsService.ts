@@ -114,7 +114,7 @@ class NearIntentsService {
       let best: unknown | null = null;
       try {
         const moduleName: string = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_DEFUSE_ONE_CLICK_SDK) || '';
-        const mod: unknown = moduleName ? await import(moduleName) : null;
+        const mod: unknown = moduleName ? await import(/* webpackIgnore: true */ moduleName) : null;
         const modTyped = mod as { default?: unknown } | null;
         const api = modTyped?.default || mod;
         const apiTyped = api as Record<string, unknown> | null;
@@ -270,7 +270,7 @@ class NearIntentsService {
       let status: unknown = null;
       try {
         const moduleName: string = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_DEFUSE_ONE_CLICK_SDK) || '';
-        const mod: unknown = moduleName ? await import(moduleName) : null;
+        const mod: unknown = moduleName ? await import(/* webpackIgnore: true */ moduleName) : null;
         const modTyped = mod as { default?: unknown } | null;
         const api = modTyped?.default || mod;
         const apiTyped = api as Record<string, unknown> | null;
