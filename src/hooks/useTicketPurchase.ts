@@ -15,6 +15,7 @@ import { octantVaultService } from '@/services/octantVaultService';
 import { yieldToTicketsService, type YieldToTicketsConfig } from '@/services/yieldToTicketsService';
 import { nearWalletSelectorService } from '@/domains/wallet/services/nearWalletSelectorService';
 import { nearIntentsService } from '@/services/nearIntentsService';
+import { executeNearIntentsFullFlow } from '@/services/nearIntentsPurchaseService';
 import { CHAINS, CONTRACTS } from '@/config';
 
 export interface TicketPurchaseState {
@@ -627,18 +628,49 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
                       await new Promise(r => setTimeout(r, 5000));
                     }
                     setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'funds_bridged'] }));
-                    const okInit = web3Service.isReady() ? true : await web3Service.initialize();
-                    if (!okInit) {
-                      result = { success: false, error: 'Base wallet not ready for purchase' };
+                    
+                    // NEAR Intents: Use Chain Signatures to execute the final Megapot purchase
+                    // This combines waiting for bridged funds + executing the purchase
+                    const purchaseResult = await executeNearIntentsFullFlow({
+                      selector,
+                      accountId,
+                      ticketCount,
+                      recipientAddress: destinationAddress,
+                      depositAddress: String(intentRes.depositAddress),
+                      expectedAmount: totalCost,
+                      maxWaitMs: 120000, // 2 minutes to wait for funds
+                      onStatus: (status: string, details?: Record<string, unknown>) => {
+                        console.log('Purchase Flow Status:', status, details);
+                        
+                        // Map service statuses to UI stages
+                        if (status === 'waiting_bridge') {
+                          setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'waiting_bridge'] }));
+                        } else if (status === 'funds_received') {
+                          setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'funds_received'] }));
+                        } else if (status === 'bridge_complete') {
+                          setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'bridge_complete'] }));
+                        } else if (status === 'signing') {
+                          setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'signing'] }));
+                        } else if (status === 'approving') {
+                          setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'chain_sig_approving'] }));
+                        } else if (status === 'minting') {
+                          setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'broadcasting_purchase'] }));
+                        }
+                      },
+                    });
+
+                    if (purchaseResult.success) {
+                      setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'purchase_completed'] }));
+                      result = {
+                        success: true,
+                        txHash: purchaseResult.txHash,
+                        ticketCount,
+                      };
                     } else {
-                      try {
-                        const eth = await provider.getBalance(destinationAddress);
-                        const have = Number((await import('ethers')).ethers.formatEther(eth));
-                        const need = 0.0005;
-                        if (have < need) setState(prev => ({ ...prev, nearEstimatedFeeEth: String(need), nearEthBalance: String(have) }));
-                      } catch { }
-                      const p = await web3Service.purchaseTickets(ticketCount);
-                      result = p;
+                      result = {
+                        success: false,
+                        error: purchaseResult.error || 'Purchase execution failed',
+                      };
                     }
                   }
                 }

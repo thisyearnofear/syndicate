@@ -57,10 +57,10 @@ export default function BridgePage() {
       id: "near",
       name: "NEAR",
       icon: "🌌",
-      description: "NEAR Protocol with Chain Signatures",
+      description: "NEAR Protocol - Bridge USDC via Intents",
       gradient: "from-blue-500 to-cyan-500",
-      walletTypes: ["MyNearWallet", "Bitte Wallet"],
-      features: ["Chain Signatures", "Intent-based", "~10-15 min"],
+      walletTypes: ["Nightly", "MyNearWallet"],
+      features: ["NEAR Intents", "1Click SDK", "~10-15 min"],
     },
     {
       id: "ethereum",
@@ -122,11 +122,18 @@ export default function BridgePage() {
               </div>
             </div>
             <h1 className="font-black text-4xl md:text-6xl bg-gradient-to-r from-blue-400 via-purple-500 to-pink-400 bg-clip-text text-transparent mb-4">
-              Cross-Chain Bridge
+              Bridge USDC to Base
             </h1>
             <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Bridge USDC from Solana, NEAR, or Ethereum to Base Network
+              Move USDC from Solana, NEAR, or Ethereum to Base Network
             </p>
+            <div className="mt-8 max-w-2xl mx-auto">
+              <div className="glass-premium p-4 rounded-xl border border-blue-500/30 bg-blue-500/5">
+                <p className="text-sm text-blue-200">
+                  💡 <strong>Tip:</strong> To purchase lottery tickets directly from NEAR, use the main purchase flow which combines bridging + automatic ticket purchase via Chain Signatures.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Main Bridge Section */}
@@ -224,17 +231,20 @@ export default function BridgePage() {
                         )}
 
                         {/* Destination Wallet Connection */}
-                        {needsEvmWallet && (
-                          <div className="glass-premium rounded-xl p-5 border border-blue-500/30 bg-blue-500/5">
-                            <div className="flex items-start gap-3 mb-4">
-                              <span className="text-2xl flex-shrink-0">🎯</span>
-                              <div className="flex-1">
-                                <h4 className="text-white font-semibold mb-1">
-                                  Connect Base Wallet (Destination)
-                                </h4>
-                                <p className="text-gray-300 text-sm mb-3">
-                                  Required to receive USDC on Base Network
-                                </p>
+                         {needsEvmWallet && (
+                           <div className="glass-premium rounded-xl p-5 border border-blue-500/30 bg-blue-500/5">
+                             <div className="flex items-start gap-3 mb-4">
+                               <span className="text-2xl flex-shrink-0">🎯</span>
+                               <div className="flex-1">
+                                 <h4 className="text-white font-semibold mb-1">
+                                   Connect Base Wallet (Destination)
+                                 </h4>
+                                 <p className="text-gray-300 text-sm mb-3">
+                                   {sourceChain === 'near' 
+                                     ? 'Your NEAR account has a deterministically derived Base address. You can provide it here, or connect any Base wallet to receive the bridged USDC.'
+                                     : 'Required to receive USDC on Base Network'
+                                   }
+                                 </p>
                                 <div className="flex flex-wrap gap-2 text-xs text-gray-400">
                                   <span>Supported wallets:</span>
                                   <span className="px-2 py-1 rounded bg-white/10 text-white">MetaMask</span>

@@ -9,9 +9,12 @@
 |-----------|--------|-------|
 | **EVM Wallet (MetaMask)** | ✅ Working | Connects reliably |
 | **Solana Wallet (Phantom)** | ✅ Working | Detects, balance queries sometimes slow |
+| **NEAR Wallet + Derived Addresses** | ✅ Working | Deterministic MPC-derived Base addresses, no storage needed |
+| **NEAR → Base via 1Click Intents** | ✅ Working | Nested quote response fixed, bridge transfers USDC to derived address |
 | **EVM → Base Bridge (CCTP)** | ✅ Improved | Consolidated attestation, better redemption |
 | **Solana → Base Bridge (CCTP)** | ⚠️ Operational (manual mint) | Burn + attestation stable; UI mint fallback |
 | **Wormhole Fallback (EVM)** | ✅ Working | SDK v4 transfer/redeem; EVM signer adapter |
+| **Claim Winnings (NEAR)** | 🔄 Planned | Via NEAR Intents intent, bridges back to NEAR wallet |
 | **Yield Strategies (Aave/Morpho)** | ❌ Not Working | UI built but vault integration untested |
 | **Syndicates (Pooling)** | ❌ Not Working | Components exist, governance/distribution not implemented |
 | **Cause Funding** | ❌ Removed | Deprioritized (was Octant-specific) |

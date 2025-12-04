@@ -90,6 +90,11 @@ Visit `http://localhost:3000` to try the platform.
 
 ### Progress Update (Dec 2025)
 
+- **NEAR Intents + Chain Signatures**: Complete end-to-end NEAR → Base ticket purchase
+  - Deterministic address derivation (no storage needed)
+  - 1Click SDK bridges USDC from NEAR to Base
+  - NEAR Chain Signatures executes Megapot purchase (MPC signing)
+  - No wallet switching required - seamless UX
 - CCTP Solana→Base aligned with V2 programs and consolidated attestation fetch
 - Manual Base mint available from UI when automatic redemption isn't possible
 - Wormhole fallback updated to SDK v4 with EVM signer adapters and VAA redemption

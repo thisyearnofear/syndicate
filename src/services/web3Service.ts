@@ -94,18 +94,20 @@ function isBrowser(): boolean {
 }
 
 class Web3Service {
-  private provider: ethers.BrowserProvider | null = null;
+  private provider: ethers.BrowserProvider | ethers.JsonRpcProvider | null = null;
   private megapotContractAddress: string = CONTRACTS.megapot;
   private usdcContractAddress: string = CONTRACTS.usdc;
   private isInitialized: boolean = false;
   private megapotContract: ethers.Contract | null = null;
   private usdcContract: ethers.Contract | null = null;
   private signer: ethers.Signer | null = null;
+  private isReadOnly: boolean = false; // NEW: Track if initialized in read-only mode
 
   /**
    * Initialize Web3 service with user's wallet
+   * @param readOnlyRpcUrl Optional: If provided, initializes in read-only mode without wallet
    */
-  async initialize(): Promise<boolean> {
+  async initialize(readOnlyRpcUrl?: string): Promise<boolean> {
     try {
       // Check if we're in a browser environment
       if (!isBrowser()) {
@@ -113,8 +115,15 @@ class Web3Service {
         return false;
       }
 
+      // NEW: Try read-only mode if requested or if no wallet is available
+      if (readOnlyRpcUrl) {
+        return this.initializeReadOnly(readOnlyRpcUrl);
+      }
+
       if (!('ethereum' in window) || !window.ethereum) {
-        throw new Error('No wallet found. Please install MetaMask or another Web3 wallet.');
+        // NEW: Fall back to read-only mode using public RPC
+        console.warn('No wallet found, initializing in read-only mode');
+        return this.initializeReadOnly();
       }
 
       this.provider = new ethers.BrowserProvider(window.ethereum);
@@ -134,11 +143,47 @@ class Web3Service {
         this.provider
       );
 
+      this.isReadOnly = false;
       this.isInitialized = true;
       console.log('Web3 service initialized successfully');
       return true;
     } catch (error) {
       console.error('Failed to initialize Web3 service:', error);
+      this.isInitialized = false;
+      return false;
+    }
+  }
+
+  /**
+   * NEW: Initialize in read-only mode using JSON-RPC provider
+   * Useful for NEAR Intents cross-chain purchases where wallet connection isn't available
+   */
+  private async initializeReadOnly(rpcUrl?: string): Promise<boolean> {
+    try {
+      const { CHAINS } = await import('@/config');
+      const url = rpcUrl || CHAINS.base.rpcUrl;
+      
+      // Use JsonRpcProvider for read-only access
+      this.provider = new ethers.JsonRpcProvider(url);
+
+      // Create contracts with read-only provider (no signer)
+      this.megapotContract = new ethers.Contract(
+        this.megapotContractAddress,
+        MEGAPOT_ABI,
+        this.provider
+      );
+      this.usdcContract = new ethers.Contract(
+        this.usdcContractAddress,
+        USDC_ABI,
+        this.provider
+      );
+
+      this.isReadOnly = true;
+      this.isInitialized = true;
+      console.log('Web3 service initialized in read-only mode');
+      return true;
+    } catch (error) {
+      console.error('Failed to initialize read-only Web3 service:', error);
       this.isInitialized = false;
       return false;
     }
@@ -328,6 +373,7 @@ class Web3Service {
 
   /**
    * Purchase lottery tickets with improved error handling
+   * For NEAR Intents: pass recipientOverride to buy tickets for the derived address without signing
    */
   async purchaseTickets(ticketCount: number, recipientOverride?: string): Promise<TicketPurchaseResult> {
     try {
@@ -336,6 +382,15 @@ class Web3Service {
       }
       if (!isBrowser()) {
         throw new Error('Web3 service can only be used in browser environments');
+      }
+
+      // NEW: For NEAR Intents, if in read-only mode and recipient is provided,
+      // return error indicating that Chain Signatures or another method is needed
+      if (this.isReadOnly && recipientOverride) {
+        return {
+          success: false,
+          error: 'Purchase requires NEAR Chain Signatures or manual transaction. Please use the Intents flow.',
+        };
       }
 
       // Check balance
@@ -589,6 +644,10 @@ class Web3Service {
     this.isInitialized = false;
   }
 
+  /**
+   * Build purchase transaction calls without requiring a signer
+   * Useful for NEAR Chain Signatures cross-chain purchases
+   */
   async getAdHocBatchPurchaseCalls(ticketCount: number, recipientOverride?: string): Promise<Array<{ to: string; data: string; value: string }>> {
     if (!this.megapotContract || !this.usdcContract) {
       throw new Error('Contracts not initialized');
@@ -605,6 +664,26 @@ class Web3Service {
       { to: CONTRACTS.usdc, data: approveData, value: '0' },
       { to: CONTRACTS.megapot, data: purchaseData, value: '0' },
     ];
+  }
+
+  /**
+   * NEW: Build a single purchase transaction call for NEAR Chain Signatures
+   * Combines USDC approval and ticket purchase into a single transaction
+   */
+  async buildPurchaseTransaction(ticketCount: number, recipient: string): Promise<{ to: string; data: string; value: string }> {
+    if (!this.megapotContract || !this.usdcContract) {
+      throw new Error('Contracts not initialized');
+    }
+    const ticketPrice = await this.megapotContract.ticketPrice();
+    const usdcAmount = ticketPrice * BigInt(ticketCount);
+    const referrer = ethers.ZeroAddress;
+    const megapotIface = new ethers.Interface(MEGAPOT_ABI);
+    const purchaseData = megapotIface.encodeFunctionData('purchaseTickets', [referrer, usdcAmount, recipient]);
+    return {
+      to: CONTRACTS.megapot,
+      data: purchaseData,
+      value: '0',
+    };
   }
 }
 

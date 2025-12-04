@@ -1,7 +1,7 @@
 # Development Setup and Deployment
 
 **Last Updated**: Dec 4, 2025  
-**Status**: Active Development (Zcash Hackathon Focus)
+**Status**: Active Development (NEAR Intents + Zcash)
 
 ---
 
@@ -27,6 +27,216 @@ Each stub file contains instructions. Generally:
 - Reduced `node_modules` from ~4.2GB to ~2GB
 - Faster build times (was hanging, now completes)
 - Focus on NEAR + Zcash integration for hackathon
+
+---
+
+## NEAR Intents Integration (Deterministic Derived Addresses + Chain Signatures)
+
+**Status**: ✅ Fully Implemented  
+**Files**: 
+- `src/services/nearIntentsService.ts` - 1Click SDK wrapper for bridging
+- `src/services/nearIntentsPurchaseService.ts` - Chain Signatures purchase execution
+- `src/app/api/derive-evm-address/route.ts` - EVM address derivation
+- `src/hooks/useTicketPurchase.ts` - Full flow orchestration
+- `src/app/bridge/page.tsx` - Bridge utility for raw USDC transfers
+- `src/components/bridge/FocusedBridgeFlow.tsx` - Bridge execution (1Click only)
+
+**Core Principle**: Two distinct flows with different purposes
+- **Bridge Flow** (`/bridge`): Pure USDC bridging via 1Click Intents
+- **Ticket Purchase Flow** (main): Bridge + automatic purchase via Chain Signatures
+
+### Architecture Overview
+
+```
+NEAR Account (papajams.near)
+    ↓
+[1] Derive EVM Address (deterministic, no storage)
+    └→ 0x3a8a07e7219049deeee00e2280d584f50527d607
+    ↓
+[2] NEAR Intents: Bridge USDC (defuse solver)
+    ├→ Send USDC to unique depositAddress
+    ├→ Solver bridges to derived address on Base
+    └→ Funds arrive at 0x3a8a07e7...
+    ↓
+[3] NEAR Chain Signatures: Sign & Execute Purchase
+    ├→ Build Megapot.purchaseTickets() tx data
+    ├→ Request MPC signature from v1.signer
+    ├→ Broadcast signed tx to Base
+    └→ Tickets credited to derived address
+    ↓
+[4] Winnings Auto-Managed
+    └→ User can always re-derive address to check winnings
+```
+
+### How It Works
+
+NEAR accounts have **deterministically derived EVM addresses** on Base using NEAR Chain Signatures MPC:
+
+```typescript
+derived_public_key = root_mpc_public_key + sha256(accountId || "ethereum-1" || 0) * G
+evm_address = last_20_bytes(keccak256(derived_public_key))
+```
+
+**Key Insight**: For the same NEAR account ID, this **always** produces the same Base address. No storage needed.
+
+### Complete Ticket Purchase Flow
+
+1. **User connects NEAR wallet** → Get their `accountId`
+2. **Derive their Base address** → Call `deriveEvmAddress(accountId)`
+3. **Request 1Click quote** → Near Intents returns unique `depositAddress`
+4. **User sends USDC** → To the `depositAddress` from NEAR
+5. **1Click solver bridges** → USDC arrives at derived Base address (5-10 minutes)
+6. **Poll for funds arrival** → Verify balance on Base
+7. **Build purchase transaction** → Encode `Megapot.purchaseTickets(referrer, amount, recipient)`
+8. **Request MPC signature** → Send to NEAR Chain Signatures contract
+9. **Sign & broadcast** → MPC signs the tx, relay broadcasts to Base
+10. **Tickets credited** → Tickets owned by derived address on Base
+11. **Winnings managed** → User can later claim without re-storing address
+
+### Two Flows: Bridge vs Ticket Purchase
+
+#### Flow 1: `/bridge` - Raw USDC Bridging (1Click Only)
+**Use case**: User wants to move USDC from NEAR to Base without buying tickets
+
+**Technology**: NEAR Intents 1Click SDK
+- User sends USDC to `depositAddress` from NEAR
+- Defuse solver bridges to recipient address on Base
+- Complete in ~10-15 minutes
+- No wallet switching required
+
+**Files**:
+- `src/app/bridge/page.tsx` - Bridge page UI
+- `src/components/bridge/FocusedBridgeFlow.tsx` - Bridge execution
+
+#### Flow 2: Main Purchase - Bridge + Buy Tickets (1Click + Chain Signatures)
+**Use case**: User wants to buy Megapot tickets directly from NEAR
+
+**Technology**: NEAR Intents (1Click) + NEAR Chain Signatures (MPC)
+1. Bridge USDC to derived address (1Click)
+2. Build Megapot purchase tx
+3. Sign with MPC (v1.signer contract)
+4. Broadcast to Base
+5. Tickets automatically credited
+
+**Files**:
+- `src/hooks/useTicketPurchase.ts` - Main ticket purchase hook
+- `src/services/nearIntentsPurchaseService.ts` - Orchestration
+
+### Services Breakdown
+
+#### NearIntentsService (Bridge Infrastructure)
+- **`init(selector, accountId)`** - Initialize 1Click SDK
+- **`deriveEvmAddress(accountId)`** - Get deterministic Base address
+- **`getQuote(params)`** - Get swap quote and deposit address
+- **`purchaseViaIntent(params)`** - Submit intent (bridges USDC)
+- **`getIntentStatus(depositAddress)`** - Poll bridge status
+- Used by both flows (bridge page + ticket purchase)
+
+#### NearIntentsPurchaseService (Ticket Purchase Only)
+- **`executePurchaseViaChainSignatures(params)`** - Execute purchase via MPC
+- **`executeNearIntentsFullFlow(params)`** - Orchestrate bridge + purchase
+- Only used by main ticket purchase flow
+- Requires Chain Signatures to be available
+
+#### Web3Service (Read-Only Mode - NEW)
+- **`initialize(readOnlyRpcUrl?)`** - Now supports read-only JSON-RPC mode
+- **`buildPurchaseTransaction(ticketCount, recipient)`** - Build unsigned tx data
+- Used by Chain Signatures to get contract call data
+
+#### NearChainSigsProtocol (Signing)
+- Existing bridge protocol extended to support `details.contractCall`
+- Handles MPC signature request and broadcast
+- Works for any Base transaction (not just transfers)
+- Only used by ticket purchase flow
+
+### Claiming Winnings (Future)
+
+**No need to store derived addresses** - can always re-derive:
+
+```typescript
+// On claim, user connects NEAR wallet again
+const accountId = walletSelector.getAccountId();
+const derivedAddress = await nearIntentsService.deriveEvmAddress(accountId);
+
+// This is the SAME address where funds arrived
+// Look up winning tickets from this address
+// Claim via NEAR Intents intent (bridges winnings back to NEAR)
+```
+
+### Why This Approach
+
+✅ **Deterministic** - Math is source of truth, not database  
+✅ **Decentralized** - No platform dependency or wallet switching  
+✅ **DRY** - Single derivation function used everywhere  
+✅ **Scalable** - No address mapping table needed  
+✅ **Auditable** - Anyone can verify the derivation  
+✅ **Complete** - Bridges + buys in one seamless flow  
+✅ **Feasible** - Uses existing NEAR infrastructure (MPC + 1Click)
+
+### Implementation Details
+
+**Derivation Endpoint** (`src/app/api/derive-evm-address/route.ts`):
+- Fetches MPC root public key from `v1.signer` contract
+- Computes sha256 hash with account ID + derivation path + key version
+- Performs secp256k1 elliptic curve point addition
+- Returns EVM address (20 bytes of keccak256 hash)
+
+**NearIntentsService** (`src/services/nearIntentsService.ts`):
+- Initializes 1Click SDK with optional JWT (reduces fees)
+- Derives addresses via `/api/derive-evm-address`
+- Gets quotes and returns deposit addresses
+- Polls bridge status
+
+**NearIntentsPurchaseService** (`src/services/nearIntentsPurchaseService.ts`):
+- Builds purchase transaction via Web3Service
+- Instantiates NearChainSigsProtocol
+- Passes `details.contractCall` with Megapot data
+- Orchestrates wait-for-funds + sign-and-execute
+
+**Flow Integration** (`src/hooks/useTicketPurchase.ts`):
+- Detects NEAR wallet connection
+- Initializes 1Click SDK
+- Derives recipient address
+- Submits intent and waits for quote
+- Calls `executeNearIntentsFullFlow` with all params
+- Maps status updates to UI stages
+
+### Testing Checklist
+
+- [ ] NEAR wallet connects (Nightly, NEAR Wallet)
+- [ ] Derive EVM address (call endpoint directly)
+- [ ] Address is valid EVM format (0x..., 42 chars)
+- [ ] Same address returned for same account ID (deterministic)
+- [ ] 1Click intent submitted (check deposit address)
+- [ ] Funds bridged to derived address (5-10 min)
+- [ ] MPC signature requested (check /near-queries)
+- [ ] Purchase transaction signed and broadcast
+- [ ] Tickets appear in account (check Megapot contract)
+- [ ] Can view tickets without re-storing address
+
+### Troubleshooting
+
+**"Base wallet not ready for purchase"**
+- ✅ Fixed: Web3Service now supports read-only mode
+- ✅ No wallet injection required on Base
+
+**"Funds didn't arrive"**
+- Check defuse status: https://defuse.fi
+- Verify deposit address in intent
+- Wait up to 10 minutes (CCTP can be slow)
+- Check Base explorer for USDC transfers
+
+**"Chain Signature failed"**
+- Ensure NEAR wallet is still connected
+- Check gas is available for broadcast
+- Verify recipient address is correct
+- Check MPC contract (v1.signer) is responsive
+
+**"Purchase was signed but didn't execute"**
+- Check Basescan for pending tx
+- Verify USDC balance is sufficient
+- Check if allowance is needed
+- Contact defuse relay team
 
 ---
 
