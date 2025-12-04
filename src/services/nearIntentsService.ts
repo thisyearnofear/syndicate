@@ -1,8 +1,8 @@
 /**
- * NEAR INTENTS SERVICE
+ * NEAR INTENTS SERVICE (1Click SDK)
  * 
- * Wrapper around @defuse-protocol/intents-sdk for cross-chain ticket purchases.
- * Enables NEAR users to purchase Megapot tickets on Base with optimal solver selection.
+ * Wrapper around @defuse-protocol/one-click-sdk-typescript for cross-chain ticket purchases.
+ * Uses the stable, production-ready 1Click API instead of the unstable intents-sdk.
  * 
  * Core Principles:
  * - CLEAN: Single responsibility - intent operations only
@@ -10,15 +10,9 @@
  * - MODULAR: Export individual functions for composability
  */
 
-import {
-  IntentsSDK,
-  createIntentSignerNEP413,
-  Chains,
-} from '@defuse-protocol/intents-sdk';
+import { OpenAPI, QuoteRequest, OneClickService } from '@defuse-protocol/one-click-sdk-typescript';
 import type { WalletSelector } from '@near-wallet-selector/core';
 import { NEAR } from '@/config';
-import { JsonRpcProvider } from '@near-js/providers';
-import { ethers } from 'ethers';
 
 export interface IntentQuote {
   intentHash: string;
@@ -27,6 +21,7 @@ export interface IntentQuote {
   destinationAmount: string;
   solverName?: string;
   timeLimit?: number;
+  depositAddress?: string;
 }
 
 export interface IntentResult {
@@ -35,103 +30,42 @@ export interface IntentResult {
   txHash?: string;
   error?: string;
   destinationTx?: unknown;
+  depositAddress?: string;
 }
 
 class NearIntentsService {
-  private sdk: IntentsSDK | null = null;
   private accountId: string | null = null;
-  private nearProvider = new JsonRpcProvider({ url: NEAR.nodeUrl });
+  private isInitialized = false;
 
   /**
-   * Initialize the intents SDK with NEAR wallet selector
+   * Initialize the 1Click SDK
+   * Note: Requires NEXT_PUBLIC_NEAR_INTENTS_JWT environment variable
    */
   async init(selector: WalletSelector, accountId: string): Promise<boolean> {
     try {
-      if (this.sdk && this.accountId === accountId) {
-        return true; // Already initialized for this account
+      if (this.isInitialized && this.accountId === accountId) {
+        return true;
       }
 
       this.accountId = accountId;
 
-      // Create signer from wallet selector
-      // Note: The selector must be connected before calling this
-      const wallet = await selector.wallet();
-      const accounts = await wallet.getAccounts();
-
-      if (!accounts.length) {
-        console.error('No NEAR accounts found in wallet');
+      // Configure the 1Click API
+      const jwtToken = process.env.NEXT_PUBLIC_NEAR_INTENTS_JWT;
+      if (!jwtToken) {
+        console.warn('NEXT_PUBLIC_NEAR_INTENTS_JWT not configured. NEAR Intents will not work.');
+        console.warn('Request a JWT token from Defuse Labs: https://docs.google.com/forms/...');
         return false;
       }
 
-      // Get account access keys to ensure we have a valid signing key
-      const accessKeys = await this.getAccountAccessKeys(accountId);
-      if (accessKeys.length === 0) {
-        console.warn(`No access keys found for ${accountId}. Intents may fail.`);
-      } else {
-        console.log(`Account ${accountId} has ${accessKeys.length} access keys:`, 
-          accessKeys.map(k => k.public_key).join(', '));
-      }
+      OpenAPI.BASE = 'https://1click.chaindefuser.com';
+      OpenAPI.TOKEN = jwtToken;
 
-      const signer = createIntentSignerNEP413({
-        async signMessage(nep413Payload) {
-          // Ensure nonce is a Buffer (SDK might provide Uint8Array)
-          const nonce = Buffer.from(nep413Payload.nonce);
-
-          const response = await wallet.signMessage({
-            ...nep413Payload,
-            nonce,
-          } as any);
-          
-          // Log the key being used for debugging
-          console.log('Intent signed with public key:', response.publicKey);
-          
-          // Verify the key exists on the account
-          const keyExists = accessKeys.some(k => k.public_key === response.publicKey);
-          if (!keyExists && accessKeys.length > 0) {
-            console.warn(`Warning: Signing key ${response.publicKey} not found in account's registered keys.`);
-            console.warn('Registered keys:', accessKeys.map(k => k.public_key));
-          }
-          
-          // Return the response with proper type assertion
-          return response as { publicKey: string; signature: string };
-        },
-        accountId,
-      });
-
-      this.sdk = new IntentsSDK({
-        intentSigner: signer,
-        referral: process.env.NEXT_PUBLIC_NEAR_INTENTS_REFERRAL || '',
-        // Explicitly configure RPC endpoints for mainnet
-        rpc: {
-          [Chains.Near]: [NEAR.nodeUrl],
-          [Chains.Base]: ['https://mainnet.base.org'],
-          [Chains.Ethereum]: ['https://eth.drpc.org'],
-        },
-      });
-
-      console.log('NEAR Intents SDK initialized for account:', accountId);
+      this.isInitialized = true;
+      console.log('NEAR 1Click SDK initialized for account:', accountId);
       return true;
     } catch (error) {
-      console.error('Failed to initialize NEAR Intents SDK:', error);
+      console.error('Failed to initialize NEAR 1Click SDK:', error);
       return false;
-    }
-  }
-
-  /**
-   * Get all access keys for an account
-   */
-  private async getAccountAccessKeys(accountId: string): Promise<Array<{ public_key: string; access_key: any }>> {
-    try {
-      const response = await this.nearProvider.query({
-        request_type: 'view_access_key_list',
-        account_id: accountId,
-        finality: 'final',
-      }) as any;
-
-      return response.keys || [];
-    } catch (error) {
-      console.warn('Failed to fetch access keys:', error);
-      return [];
     }
   }
 
@@ -139,85 +73,63 @@ class NearIntentsService {
    * Check if SDK is ready
    */
   isReady(): boolean {
-    return !!this.sdk;
+    return this.isInitialized;
   }
 
   /**
    * Get estimated quote for cross-chain ticket purchase
-   * This queries solvers for the best execution path
    */
   async getQuote(params: {
-    sourceAsset: string; // e.g., "nep141:wrap.near" for NEAR
-    sourceAmount: string; // Amount in smallest units (yoctoNEAR for NEAR)
+    sourceAsset: string; // e.g., "nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near"
+    sourceAmount: string; // Amount in smallest units
     destinationAddress: string; // EVM address on Base
     destinationChain: 'base' | 'ethereum';
   }): Promise<IntentQuote | null> {
     try {
-      // Note: We don't strictly require this.sdk to be initialized for quoting
-      // as we can use the public API or fallbacks.
+      const destinationAsset = params.destinationChain === 'base' 
+        ? 'nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near'
+        : 'nep141:ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.omft.near';
 
-      let best: unknown | null = null;
-      try {
-        const moduleName: string = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_DEFUSE_ONE_CLICK_SDK) || '';
-        const mod: unknown = moduleName ? await import(/* webpackIgnore: true */ moduleName) : null;
-        const modTyped = mod as { default?: unknown } | null;
-        const api = modTyped?.default || mod;
-        const apiTyped = api as Record<string, unknown> | null;
-        if (apiTyped) {
-          if (typeof apiTyped.getQuote === 'function') {
-            const getQuote = apiTyped.getQuote as (params: unknown) => Promise<unknown>;
-            best = await getQuote({
-              sourceAsset: params.sourceAsset,
-              sourceAmount: params.sourceAmount,
-              destinationChain: params.destinationChain,
-              destinationAddress: params.destinationAddress,
-            });
-          } else if (typeof apiTyped.getBestQuote === 'function') {
-            const getBestQuote = apiTyped.getBestQuote as (params: unknown) => Promise<unknown>;
-            best = await getBestQuote({
-              sourceAsset: params.sourceAsset,
-              sourceAmount: params.sourceAmount,
-              destinationChain: params.destinationChain,
-              destinationAddress: params.destinationAddress,
-            });
-          } else if (typeof apiTyped.getBestRoute === 'function') {
-            const getBestRoute = apiTyped.getBestRoute as (params: unknown) => Promise<unknown>;
-            const route = await getBestRoute({
-              sourceAsset: params.sourceAsset,
-              sourceAmount: params.sourceAmount,
-              destinationChain: params.destinationChain,
-              destinationAddress: params.destinationAddress,
-            });
-            const routeTyped = route as Record<string, unknown> | null;
-            best = routeTyped?.quote || route;
-          }
-        }
-      } catch {
-        best = null;
-      }
+      const quoteRequest: QuoteRequest = {
+        dry: true, // Dry run to get quote without executing
+        swapType: QuoteRequest.swapType.EXACT_INPUT,
+        slippageTolerance: 100, // 1%
+        originAsset: params.sourceAsset,
+        depositType: QuoteRequest.depositType.ORIGIN_CHAIN,
+        destinationAsset,
+        amount: params.sourceAmount,
+        refundTo: params.destinationAddress,
+        refundType: QuoteRequest.refundType.ORIGIN_CHAIN,
+        recipient: params.destinationAddress,
+        recipientType: QuoteRequest.recipientType.DESTINATION_CHAIN,
+        deadline: new Date(Date.now() + 3600000).toISOString(), // 1 hour from now
+      };
 
-      if (best) {
-        const b = best as Record<string, unknown>;
-        const fee = String((b.feeAmount as unknown) || (b.estimatedFee as unknown) || '0');
-        const destAmt = String((b.destinationAmount as unknown) || (b.receiveAmount as unknown) || params.sourceAmount);
-        const percent = Number((b.feePercent as unknown) || (Number(fee) / Math.max(Number(destAmt), 1)) * 100);
+      const quote = await OneClickService.getQuote(quoteRequest);
+      
+      if (!quote) {
         return {
           intentHash: '',
-          estimatedFee: fee,
-          estimatedFeePercent: isFinite(percent) ? percent : 0,
-          destinationAmount: destAmt,
-          solverName: (b.solverName as string) || (b.solver as string) || 'default',
-          timeLimit: (b.timeLimit as number) || (b.etaSeconds as number) || 300,
+          estimatedFee: '0.5',
+          estimatedFeePercent: 0.5,
+          destinationAmount: params.sourceAmount,
+          solverName: 'defuse-default',
+          timeLimit: 300,
         };
       }
 
+      const quoteTyped = quote as Record<string, unknown>;
+      const fee = String((quoteTyped.feeAmount as unknown) || (quoteTyped.estimatedFee as unknown) || '0');
+      const destAmt = String((quoteTyped.destinationAmount as unknown) || (quoteTyped.receiveAmount as unknown) || params.sourceAmount);
+      const percent = Number((quoteTyped.feePercent as unknown) || (Number(fee) / Math.max(Number(destAmt), 1)) * 100);
+
       return {
-        intentHash: '',
-        estimatedFee: '0.5',
-        estimatedFeePercent: 0.5,
-        destinationAmount: params.sourceAmount,
-        solverName: 'defuse-default',
-        timeLimit: 300,
+        intentHash: (quoteTyped.quoteId as string) || '',
+        estimatedFee: fee,
+        estimatedFeePercent: isFinite(percent) ? percent : 0,
+        destinationAmount: destAmt,
+        solverName: (quoteTyped.solverName as string) || 'defuse-solver',
+        timeLimit: (quoteTyped.timeLimit as number) || 300,
       };
     } catch (error) {
       console.error('Failed to get quote:', error);
@@ -227,49 +139,65 @@ class NearIntentsService {
 
   /**
    * Execute a cross-chain ticket purchase via intents
-   * Requires prior approval of the quote
    */
   async purchaseViaIntent(params: {
     sourceAsset: string;
     sourceAmount: string;
     destinationAddress: string;
-    megapotAmount: string; // Amount to use for Megapot tickets
+    megapotAmount: string;
     referrer?: string;
   }): Promise<IntentResult> {
     try {
-      if (!this.sdk) {
-        throw new Error('NEAR Intents SDK not initialized');
+      if (!this.isInitialized) {
+        throw new Error('NEAR 1Click SDK not initialized');
       }
 
-      // For production, use the one-click SDK for proper quote + execution
-      // This is a placeholder showing the structure
+      const destinationAsset = 'nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near';
 
-      const withdrawalResult = await this.sdk.processWithdrawal({
-        withdrawalParams: {
-          assetId: 'nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near',
-          amount: BigInt(params.sourceAmount),
-          destinationAddress: params.destinationAddress, // EVM address
-          feeInclusive: false,
-        },
-      });
+      const quoteRequest: QuoteRequest = {
+        dry: false, // Execute (not dry run)
+        swapType: QuoteRequest.swapType.EXACT_INPUT,
+        slippageTolerance: 100,
+        originAsset: params.sourceAsset,
+        depositType: QuoteRequest.depositType.ORIGIN_CHAIN,
+        destinationAsset,
+        amount: params.sourceAmount,
+        refundTo: params.destinationAddress,
+        refundType: QuoteRequest.refundType.ORIGIN_CHAIN,
+        recipient: params.destinationAddress,
+        recipientType: QuoteRequest.recipientType.DESTINATION_CHAIN,
+        deadline: new Date(Date.now() + 3600000).toISOString(),
+      };
 
-      if (!withdrawalResult) {
+      const quote = await OneClickService.getQuote(quoteRequest);
+
+      if (!quote) {
         return {
           success: false,
-          error: 'Withdrawal intent failed',
+          error: 'Failed to get quote from 1Click API',
         };
       }
 
-      const wr = withdrawalResult as unknown as Record<string, unknown>;
-      const intentHash = wr.intentHash as string | undefined;
-      const intentTxHash = (wr.intentTx as { hash?: string } | undefined)?.hash || (wr.txHash as string | undefined);
-      const destinationTx = wr.destinationTx as unknown;
+      const quoteTyped = quote as Record<string, unknown>;
+      const depositAddress = quoteTyped.depositAddress as string | undefined;
+      const quoteId = quoteTyped.quoteId as string | undefined;
 
+      if (!depositAddress || !quoteId) {
+        return {
+          success: false,
+          error: 'Invalid quote response - missing deposit address or quote ID',
+        };
+      }
+
+      console.log('Got deposit address:', depositAddress);
+      console.log('Quote ID:', quoteId);
+
+      // Return the deposit address so the user/wallet can send funds
       return {
         success: true,
-        intentHash,
-        txHash: intentTxHash,
-        destinationTx,
+        intentHash: quoteId,
+        depositAddress,
+        error: undefined,
       };
     } catch (error: unknown) {
       console.error('Failed to execute intent:', error);
@@ -278,7 +206,7 @@ class NearIntentsService {
         success: false,
         error: errorMessage,
       };
-    };
+    }
   }
 
   /**
@@ -286,32 +214,25 @@ class NearIntentsService {
    */
   private parseIntentError(error: unknown): string {
     const errorStr = String(error);
-    
-    // Extract specific error messages
-    if (errorStr.includes("doesn't exist for account")) {
-      // Parse the account name and key from the error
-      const accountMatch = errorStr.match(/account '([^']+)'/);
-      const keyMatch = errorStr.match(/key '([^']+)'/);
-      const accountId = accountMatch ? accountMatch[1] : 'your account';
-      const publicKey = keyMatch ? keyMatch[1] : 'the signing';
-      
-      return `The signing key (${publicKey}) is not accessible to the intents contract. This is a common issue with key rotation. Try: (1) Disconnect and reconnect your wallet, (2) Use a different NEAR wallet like Nightly or Meteor, (3) Ensure you have a full-access key registered on your account.`;
+
+    if (errorStr.includes('JWT')) {
+      return 'NEAR Intents is not configured. Contact the development team to enable this feature.';
     }
-    
-    if (errorStr.includes('HostError') || errorStr.includes('GuestPanic')) {
-      return 'Transaction simulation failed. Please check your account balance and try again.';
+
+    if (errorStr.includes('API') || errorStr.includes('api')) {
+      return 'Failed to connect to NEAR Intents service. Please try again.';
     }
-    
-    if (errorStr.includes('insufficient balance') || errorStr.includes('not enough')) {
+
+    if (errorStr.includes('quote') || errorStr.includes('Quote')) {
+      return 'Could not get a quote for your swap. The amount may be too small or the pair is not supported.';
+    }
+
+    if (errorStr.includes('insufficient') || errorStr.includes('balance')) {
       return 'Insufficient balance to complete this transaction.';
     }
-    
-    if (errorStr.includes('signature') || errorStr.includes('sign')) {
-      return 'Failed to sign transaction. Please try signing in again.';
-    }
-    
+
     if (errorStr.includes('timeout') || errorStr.includes('Timeout')) {
-      return 'Transaction timed out. Please try again.';
+      return 'Request timed out. Please try again.';
     }
 
     const rawMessage = (error as { message?: string }).message;
@@ -319,7 +240,7 @@ class NearIntentsService {
       return rawMessage;
     }
 
-    return 'Intent execution failed. Please try again or contact support if the problem persists.';
+    return 'Intent execution failed. Please try again or contact support.';
   }
 
   async deriveEvmAddress(accountId: string): Promise<string | null> {
@@ -350,27 +271,24 @@ class NearIntentsService {
    */
   async getNearBalance(accountId: string): Promise<string> {
     try {
-      const tokenContract = 'base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near';
+      const response = await fetch('/api/near-queries', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          operation: 'balanceOf',
+          accountId,
+          tokenContract: 'base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near',
+        }),
+      });
 
-      // Encode args for view call
-      const args = JSON.stringify({ account_id: accountId });
-      const argsBase64 = Buffer.from(args).toString('base64');
-
-      const res = await this.nearProvider.query({
-        request_type: 'call_function',
-        account_id: tokenContract,
-        method_name: 'ft_balance_of',
-        args_base64: argsBase64,
-        finality: 'final',
-      }) as unknown as { result: number[] };
-
-      if (res && res.result) {
-        const balanceStr = Buffer.from(res.result).toString();
-        // USDC has 6 decimals
-        const usdc = (Number(JSON.parse(balanceStr)) / 1_000_000).toString();
-        return usdc;
+      if (!response.ok) {
+        return '0';
       }
-      return '0';
+
+      const data = await response.json();
+      return data.balance || '0';
     } catch (error) {
       console.error('Failed to get NEAR balance:', error);
       return '0';
@@ -378,37 +296,27 @@ class NearIntentsService {
   }
 
   /**
-   * Monitor intent status
+   * Monitor intent status via 1Click API
    */
-  async getIntentStatus(intentHash: string): Promise<{
+  async getIntentStatus(depositAddress: string): Promise<{
     status: 'pending' | 'processing' | 'completed' | 'failed';
     destinationTx?: string;
     error?: string;
   }> {
     try {
-      let status: unknown = null;
-      try {
-        const moduleName: string = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_DEFUSE_ONE_CLICK_SDK) || '';
-        const mod: unknown = moduleName ? await import(/* webpackIgnore: true */ moduleName) : null;
-        const modTyped = mod as { default?: unknown } | null;
-        const api = modTyped?.default || mod;
-        const apiTyped = api as Record<string, unknown> | null;
-        if (apiTyped && typeof apiTyped.getIntentStatus === 'function') {
-          const getIntentStatus = apiTyped.getIntentStatus as (hash: string) => Promise<unknown>;
-          status = await getIntentStatus(intentHash);
-        }
-      } catch {
-        status = null;
+      const status = await OneClickService.getExecutionStatus(depositAddress);
+
+      if (!status) {
+        return { status: 'pending' };
       }
-      if (status) {
-        const st = status as Record<string, unknown>;
-        const s = String((st.status as unknown) || 'pending').toLowerCase();
-        return {
-          status: s.includes('complete') ? 'completed' : s.includes('fail') ? 'failed' : s.includes('process') ? 'processing' : 'pending',
-          destinationTx: (st.destinationTx as string) || (st.txHash as string),
-        };
-      }
-      return { status: 'pending' };
+
+      const st = status as Record<string, unknown>;
+      const s = String((st.status as unknown) || 'pending').toLowerCase();
+
+      return {
+        status: s.includes('complete') ? 'completed' : s.includes('fail') ? 'failed' : s.includes('process') ? 'processing' : 'pending',
+        destinationTx: (st.destinationTx as string) || (st.txHash as string),
+      };
     } catch (error) {
       console.error('Failed to get intent status:', error);
       return {
@@ -422,8 +330,8 @@ class NearIntentsService {
    * Cleanup
    */
   reset(): void {
-    this.sdk = null;
     this.accountId = null;
+    this.isInitialized = false;
   }
 }
 
