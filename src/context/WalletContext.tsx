@@ -203,19 +203,23 @@ export function WalletProvider({ children }: WalletProviderProps) {
     }
   }, [wagmiConnected, address, wagmiChainId, connector, dispatch, state.walletType]);
 
-  // Properly sync with wagmi state for all EVM wallets (including WalletConnect)
+  // FIXED: Only sync with wagmi when user explicitly connects via RainbowKit
+  // Do NOT auto-sync to prevent automatic MetaMask connection on page load
   useEffect(() => {
-    // Sync when wagmi is connected but our internal state is not
-    if (wagmiConnected && address && !state.isConnected) {
-      console.log('WalletContext: Syncing with wagmi connection');
+    // Track if this is a user-initiated connection (not auto-connect on page load)
+    const isUserInitiated = wagmiConnected && address && state.isConnecting;
+
+    // Sync when wagmi connects AND user initiated the connection
+    if (isUserInitiated) {
+      console.log('WalletContext: User connected via RainbowKit, syncing...');
       syncWithWagmi();
     }
-    // Disconnect when wagmi is disconnected but our internal state still shows connected EVM wallet
+    // Only disconnect when wagmi is disconnected but our internal state still shows connected EVM wallet
     else if (!wagmiConnected && state.isConnected && (state.walletType === 'metamask' || !state.walletType) && state.address) {
       console.log('WalletContext: Wagmi disconnected, updating internal state');
       dispatch({ type: 'DISCONNECT' });
     }
-  }, [wagmiConnected, address, syncWithWagmi, state.isConnected, state.walletType, state.address]);
+  }, [wagmiConnected, address, syncWithWagmi, state.isConnected, state.isConnecting, state.walletType, state.address]);
 
   // Enhanced disconnect function that handles all wallet types
   const disconnectWallet = useCallback(async () => {
@@ -239,8 +243,13 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
       // Handle NEAR disconnection
       if (state.walletType === 'near') {
-        // NEAR disconnect logic would go here
-        console.log('NEAR disconnect - implement if needed');
+        try {
+          const { nearWalletSelectorService } = await import('@/domains/wallet/services/nearWalletSelectorService');
+          await nearWalletSelectorService.disconnect();
+          console.log('NEAR wallet disconnected');
+        } catch (nearError) {
+          console.warn('NEAR disconnect failed:', nearError);
+        }
       }
 
       // Always clear our internal state
