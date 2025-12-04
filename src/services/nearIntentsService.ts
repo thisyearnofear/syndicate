@@ -388,20 +388,28 @@ class NearIntentsService {
       // Convert USDC to smallest units (6 decimals)
       const amountUnits = String(Math.floor(parseFloat(amountUsdc) * 1_000_000));
 
+      // Build the args for ft_transfer - JSON stringified and encoded to base64
+      const argsJson = JSON.stringify({
+        receiver_id: depositAddress,
+        amount: amountUnits,
+      });
+      // Use native btoa for browser environment
+      const argsBase64 = typeof window !== 'undefined' 
+        ? btoa(argsJson)
+        : Buffer.from(argsJson).toString('base64');
+
       // Transfer USDC.e on NEAR to the deposit address
       // Using ft_transfer on the USDC contract
+      // Proper action format for near-wallet-selector
       const txHash = await wallet.signAndSendTransaction({
         signerId: accountId,
         receiverId: 'base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near', // USDC.e contract
         actions: [
           {
             type: 'FunctionCall',
-            params: {
+            functionCall: {
               methodName: 'ft_transfer',
-              args: {
-                receiver_id: depositAddress,
-                amount: amountUnits,
-              },
+              args: argsBase64,
               gas: '50000000000000', // 50 Tgas
               deposit: '1', // 1 yoctoNEAR for state
             },
