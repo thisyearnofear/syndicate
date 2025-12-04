@@ -3,6 +3,7 @@ import { NEAR } from '@/config';
 import { createHash } from 'crypto';
 import { SigningKey, keccak256, getBytes } from 'ethers';
 import { ec as EC } from 'elliptic';
+import bs58 from 'bs58';
 
 // Define types
 interface DeriveAddressRequest {
@@ -63,19 +64,19 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Failed to get MPC public key' }, { status: 500 });
     }
 
-    // Decode the result - it's a JSON string like "secp256k1:<base64>"
+    // Decode the result - it's a JSON string like "secp256k1:<base58>"
     const bytes = new Uint8Array(rpcData.result.result);
     const decoded = new TextDecoder().decode(bytes);
     const cleanDecoded = decoded.replace(/^"|"$/g, ''); // Remove JSON quotes
 
-    const [keyType, keyBase64] = cleanDecoded.split(':');
-    if (keyType !== 'secp256k1' || !keyBase64) {
+    const [keyType, keyBase58] = cleanDecoded.split(':');
+    if (keyType !== 'secp256k1' || !keyBase58) {
       console.error('Invalid public key format:', cleanDecoded);
       return Response.json({ error: 'Invalid MPC public key format' }, { status: 500 });
     }
 
-    // Decode the base64 public key
-    const rootPubKeyBytes = Buffer.from(keyBase64, 'base64');
+    // Decode the base58 public key (NEAR uses base58, not base64)
+    const rootPubKeyBytes = bs58.decode(keyBase58);
 
     // Step 2: Compute the additive tweak
     // The epsilon format for NEAR chain signatures
@@ -96,16 +97,18 @@ export async function POST(request: NextRequest) {
 
     // Parse root public key - handle different formats
     let rootPubKeyHex: string;
-    if (rootPubKeyBytes.length === 33) {
+    const rootPubKeyBuffer = Buffer.from(rootPubKeyBytes);
+
+    if (rootPubKeyBuffer.length === 33) {
       // Compressed format
-      rootPubKeyHex = '0x' + rootPubKeyBytes.toString('hex');
-    } else if (rootPubKeyBytes.length === 64) {
+      rootPubKeyHex = '0x' + rootPubKeyBuffer.toString('hex');
+    } else if (rootPubKeyBuffer.length === 64) {
       // Uncompressed without prefix
-      rootPubKeyHex = '0x04' + rootPubKeyBytes.toString('hex');
-    } else if (rootPubKeyBytes.length === 65 && rootPubKeyBytes[0] === 0x04) {
-      rootPubKeyHex = '0x' + rootPubKeyBytes.toString('hex');
+      rootPubKeyHex = '0x04' + rootPubKeyBuffer.toString('hex');
+    } else if (rootPubKeyBuffer.length === 65 && rootPubKeyBuffer[0] === 0x04) {
+      rootPubKeyHex = '0x' + rootPubKeyBuffer.toString('hex');
     } else {
-      console.error('Unexpected public key length:', rootPubKeyBytes.length);
+      console.error('Unexpected public key length:', rootPubKeyBuffer.length);
       return Response.json({ error: 'Failed to parse MPC public key' }, { status: 500 });
     }
 
