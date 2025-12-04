@@ -43,6 +43,7 @@ const STAGE_LABELS: Record<string, string> = {
   chain_sig_approving: "Approving with Chain Signatures",
   broadcasting_purchase: "Broadcasting ticket purchase",
   purchase_completed: "Purchase completed successfully",
+  usdc_transfer_complete: "USDC transfer confirmed - bridging now",
 };
 
 export function ProcessingStep({
