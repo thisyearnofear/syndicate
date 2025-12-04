@@ -88,6 +88,12 @@ export function ProtocolSelector({
                   "Control EVM accounts directly from NEAR using MPC.";
                 icon = "∞";
                 break;
+              case "near-intents":
+                name = "NEAR Intents";
+                description =
+                  "Fast, solver-based bridging via Defuse Protocol.";
+                icon = "⚡";
+                break;
               default:
                 name = estimate.protocol;
                 description = `Bridging via ${estimate.protocol}`;
