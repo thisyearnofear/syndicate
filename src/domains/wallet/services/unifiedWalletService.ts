@@ -120,6 +120,15 @@ export function useUnifiedWallet(): {
     dispatch({ type: 'CONNECT_START' });
 
     try {
+      // CLEANUP: If user is switching wallets, disconnect the old one first
+      if (state.isConnected && state.walletType && state.walletType !== walletType) {
+        console.log(`Switching from ${state.walletType} to ${walletType}, disconnecting old wallet...`);
+        dispatch({ type: 'DISCONNECT' });
+
+        // Give a brief moment for cleanup
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
       const walletStatus = getWalletStatus(walletType);
 
       if (!walletStatus.isAvailable) {
