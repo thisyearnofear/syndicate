@@ -290,42 +290,29 @@ export class NearChainSigsProtocol implements BridgeProtocol {
     // ============================================================================
 
     private async getDerivedEvmAddress(accountId: string, chain: 'base' | 'ethereum'): Promise<string | null> {
+        void accountId; // Not used in this implementation anymore
         void chain;
         try {
             const path = DERIVATION_PATHS.ethereum;
-            const args = { path, key_version: this.DEFAULT_KEY_VERSION };
-            const res: unknown = await this.nearProvider.query({
-                request_type: 'call_function',
-                account_id: this.signerContractId,
-                method_name: 'public_key_for',
-                args_base64: this.toBase64(args),
-                finality: 'final',
+            const response = await fetch('/api/near-queries', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    operation: 'getPublicKey',
+                    path,
+                    key_version: this.DEFAULT_KEY_VERSION
+                }),
             });
 
-            const r = res as { result?: unknown };
-            if (r.result) {
-                // Result should be array-like data from NEAR RPC
-                const resultData = r.result instanceof Uint8Array || r.result instanceof ArrayBuffer || ArrayBuffer.isView(r.result)
-                    ? r.result as Uint8Array | ArrayBuffer | ArrayLike<number>
-                    : new Uint8Array(0); // Fallback to empty array
-                const decoded = this.decodeResult(resultData);
-                const resp = typeof decoded === 'string' ? decoded : String(decoded);
-                const [scheme, base64Pub] = resp.split(':');
-                if (scheme !== 'secp256k1' || !base64Pub) return null;
-
-                // Compute address from public key
-                const bytes = this.fromBase64(base64Pub);
-                let pubHex: string | null = null;
-                if (bytes.length === 64) {
-                    pubHex = ethers.hexlify(new Uint8Array([4, ...Array.from(bytes)]));
-                } else if (bytes.length === 65 && bytes[0] === 4) {
-                    pubHex = ethers.hexlify(bytes);
-                } else {
-                    return null;
-                }
-                return ethers.computeAddress(pubHex);
+            if (!response.ok) {
+                console.error('Failed to get public key from NEAR query API:', response.status);
+                return null;
             }
-            return null;
+
+            const { evmAddress } = await response.json();
+            return evmAddress || null;
         } catch (e) {
             console.warn('[NEAR] Address derivation failed:', e);
             return null;
@@ -379,23 +366,21 @@ export class NearChainSigsProtocol implements BridgeProtocol {
         const start = Date.now();
         while (Date.now() - start < timeoutMs) {
             try {
-                const res: unknown = await this.nearProvider.query({
-                    request_type: 'call_function',
-                    account_id: this.signerContractId,
-                    method_name: 'get_signature_result',
-                    args_base64: this.toBase64({ request_id: requestId }),
-                    finality: 'final',
+                const response = await fetch('/api/near-queries', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        operation: 'getSignatureResult',
+                        request_id: requestId
+                    }),
                 });
-                const r = res as { result?: unknown };
-                if (r.result) {
-                    // Result should be array-like data from NEAR RPC
-                    const resultData = r.result instanceof Uint8Array || r.result instanceof ArrayBuffer || ArrayBuffer.isView(r.result)
-                        ? r.result as Uint8Array | ArrayBuffer | ArrayLike<number>
-                        : new Uint8Array(0); // Fallback to empty array
-                    const decoded = this.decodeResult(resultData);
-                    const parsed = JSON.parse(decoded);
-                    if (parsed?.status === 'COMPLETE' || parsed?.status === 'FAILED') {
-                        return parsed;
+
+                if (response.ok) {
+                    const { result } = await response.json();
+                    if (result?.status === 'COMPLETE' || result?.status === 'FAILED') {
+                        return result;
                     }
                 }
             } catch { }
