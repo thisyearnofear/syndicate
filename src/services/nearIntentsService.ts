@@ -22,6 +22,7 @@ export interface IntentQuote {
   solverName?: string;
   timeLimit?: number;
   depositAddress?: string;
+  rawQuoteResponse?: Record<string, unknown>; // Store raw response for debugging
 }
 
 export interface IntentResult {
@@ -121,6 +122,8 @@ class NearIntentsService {
       }
 
       const quoteTyped = quote as Record<string, unknown>;
+      console.debug('1Click Quote Response (dry):', quoteTyped);
+      
       const fee = String((quoteTyped.feeAmount as unknown) || (quoteTyped.estimatedFee as unknown) || '0');
       const destAmt = String((quoteTyped.destinationAmount as unknown) || (quoteTyped.receiveAmount as unknown) || params.sourceAmount);
       const percent = Number((quoteTyped.feePercent as unknown) || (Number(fee) / Math.max(Number(destAmt), 1)) * 100);
@@ -132,6 +135,7 @@ class NearIntentsService {
         destinationAmount: destAmt,
         solverName: (quoteTyped.solverName as string) || 'defuse-solver',
         timeLimit: (quoteTyped.timeLimit as number) || 300,
+        rawQuoteResponse: quoteTyped, // Store for debugging
       };
     } catch (error) {
       console.error('Failed to get quote:', error);
@@ -181,18 +185,50 @@ class NearIntentsService {
       }
 
       const quoteTyped = quote as Record<string, unknown>;
-      const depositAddress = quoteTyped.depositAddress as string | undefined;
-      const quoteId = quoteTyped.quoteId as string | undefined;
+      console.debug('1Click Quote Response (executing):', quoteTyped);
+      
+      // Extract from nested structure: response.quote.depositAddress
+      // The 1Click API returns: { timestamp, signature, quoteRequest, quote: { depositAddress, ... } }
+      let depositAddress: string | undefined;
+      let quoteId: string | undefined;
+      
+      // Try nested quote object first (correct structure)
+      const quoteObj = quoteTyped.quote as Record<string, unknown> | undefined;
+      if (quoteObj?.depositAddress) {
+        depositAddress = quoteObj.depositAddress as string;
+      }
+      
+      // Fallback: check root level
+      if (!depositAddress) {
+        depositAddress = (
+          quoteTyped.depositAddress ||
+          quoteTyped.deposit_address ||
+          quoteTyped.txHash ||
+          quoteTyped.tx_hash
+        ) as string | undefined;
+      }
+      
+      // Use depositAddress as the quote ID (it's the unique identifier)
+      if (depositAddress) {
+        quoteId = depositAddress;
+      }
 
       if (!depositAddress || !quoteId) {
+        // Log the actual response for debugging
+        console.error('Quote response missing required fields:', {
+          depositAddress,
+          quoteId,
+          quoteObjKeys: quoteObj ? Object.keys(quoteObj) : 'quote object not found',
+          rootKeys: Object.keys(quoteTyped),
+          fullResponse: quoteTyped,
+        });
         return {
           success: false,
-          error: 'Invalid quote response - missing deposit address or quote ID',
+          error: 'Invalid quote response - missing deposit address',
         };
       }
 
       console.log('Got deposit address:', depositAddress);
-      console.log('Quote ID:', quoteId);
 
       // Return the deposit address so the user/wallet can send funds
       return {
