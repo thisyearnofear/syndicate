@@ -416,7 +416,11 @@ export default function PurchaseModal({
 
       try {
         const sourceChain =
-          walletType === WalletTypes.PHANTOM ? "solana" : "ethereum";
+          walletType === WalletTypes.PHANTOM
+            ? "solana"
+            : walletType === WalletTypes.NEAR
+              ? "near"
+              : "ethereum";
         const body = {
           sourceChain,
           sourceWallet:
@@ -667,6 +671,28 @@ export default function PurchaseModal({
         {/* Wallet Connection */}
         {!isConnected && (
           <div className="mb-6">
+            {/* Multi-Chain Support Banner */}
+            <div className="glass-premium rounded-xl p-5 border border-blue-500/30 bg-blue-500/5 mb-4">
+              <div className="text-center mb-3">
+                <h4 className="text-white font-semibold mb-2">
+                  Multi-Chain Support
+                </h4>
+                <p className="text-gray-300 text-sm mb-3">
+                  Purchase tickets from Solana, NEAR, or Ethereum
+                </p>
+                <div className="flex justify-center gap-2 flex-wrap">
+                  <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-medium">
+                    ⚡ Solana
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-medium">
+                    🌌 NEAR (Chain Signatures)
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-medium">
+                    💎 Ethereum
+                  </span>
+                </div>
+              </div>
+            </div>
             <WalletConnectionCard
               onConnect={connect}
               title="Connect Wallet to Purchase"
@@ -679,11 +705,11 @@ export default function PurchaseModal({
         {/* Balance Display - show after mode selection for compact first view */}
         {isConnected && userBalance && step === "select" && (
           <div className="space-y-3 mb-6">
-            {/* Info message for Phantom users */}
-            {walletType === WalletTypes.PHANTOM && (
+            {/* Info message for cross-chain users */}
+            {(walletType === WalletTypes.PHANTOM || walletType === WalletTypes.NEAR) && (
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
                 <p className="text-blue-300 text-sm">
-                  💡 USDC lives on Solana and Base.
+                  💡 USDC lives on Solana, NEAR, and Base.
                 </p>
                 <div className="text-blue-200 text-xs mt-1">
                   {(() => {
@@ -700,6 +726,21 @@ export default function PurchaseModal({
                     )}) • $${solUSDC.toFixed(2)} on Solana`;
                   })()}
                 </div>
+              </div>
+            )}
+
+            {/* NEAR Balance */}
+            {walletType === WalletTypes.NEAR && (
+              <div className="bg-white/5 rounded-lg p-4 border border-blue-500/20">
+                <div className="flex justify-between items-center">
+                  <span className="text-white/70">🌌 Your USDC on NEAR:</span>
+                  <span className="text-white font-semibold">
+                    ${solanaBalance || "0"}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
+                  Using NEAR Chain Signatures for cross-chain execution
+                </p>
               </div>
             )}
 
