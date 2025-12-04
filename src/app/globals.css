@@ -10,8 +10,32 @@
    ============================================================================= */
 
 /* =============================================================================
-   PRODUCTION BUTTON CLICK FIXES
-   ============================================================================= */
+    NEAR WALLET SELECTOR MODAL STYLING
+    ============================================================================= */
+
+/* Apply dark theme to NEAR wallet selector modal */
+#near-wallet-selector-modal {
+  --backdrop-bg: rgba(0, 0, 0, 0.7) !important;
+  --heading-color: #FFFFFF !important;
+  --text-color: #E5E7EB !important;
+  --sidebar-border-color: #374151 !important;
+  --selected-wallet-bg: #3B82F6 !important;
+  --selected-wallet-bg-hover: #1E40AF !important;
+  --wallet-option-border-color: #4B5563 !important;
+  --wallet-option-bg-hover: #2D3748 !important;
+  --wallet-option-outline-color: #60A5FA !important;
+  --content-bg: #111827 !important;
+  --change-path-bg: #1F2937 !important;
+  --home-button-bg: #374151 !important;
+  --confirm-button-bg: #3B82F6 !important;
+  --confirm-button-bg-hover: #2563EB !important;
+  --error: #EF4444 !important;
+  --close-button-bg-color: #374151 !important;
+  --close-button-fill-icon-color: #D1D5DB !important;
+  --spinner-color: #9CA3AF !important;
+  --bottom-section: #1F2937 !important;
+  --mobile-text: #F3F4F6 !important;
+}
 
 /* Ensure modal has highest z-index and proper event handling */
 .modal-overlay {
@@ -23,6 +47,18 @@
   z-index: 10000 !important;
   position: relative;
   pointer-events: auto !important;
+}
+
+/* NEAR Wallet Selector modal container styles */
+#near-wallet-selector-modal .dark-theme,
+#near-wallet-selector-modal {
+  z-index: 50000 !important;
+  visibility: visible !important;
+  display: flex !important;
+}
+
+#near-wallet-selector-modal > div {
+  z-index: 50000 !important;
 }
 
 /* Ensure buttons in modals are clickable */
