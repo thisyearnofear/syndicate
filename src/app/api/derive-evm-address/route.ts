@@ -1,10 +1,26 @@
 import { NextRequest } from 'next/server';
 import { NEAR } from '@/config';
+import { createHash } from 'crypto';
+import { SigningKey, keccak256, getBytes } from 'ethers';
+import { ec as EC } from 'elliptic';
 
 // Define types
 interface DeriveAddressRequest {
   accountId: string;
 }
+
+/**
+ * NEAR Chain Signatures - Additive Key Derivation
+ * 
+ * The MPC contract (v1.signer) has a root public key. To derive an EVM address
+ * for a specific NEAR account, we use additive key derivation:
+ * 
+ * derived_public_key = root_public_key + tweak * G
+ * 
+ * where:
+ * - tweak = sha256(accountId || derivation_path || key_version)
+ * - G is the secp256k1 generator point
+ */
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,99 +33,106 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Dynamically import ethers for address computation
-    const { ethers } = await import('ethers');
-
-    // Call NEAR RPC directly using fetch (ethers.JsonRpcProvider doesn't support NEAR)
-    const args = { path: 'ethereum-1', key_version: 0 };
-    const argsString = JSON.stringify(args);
-    const argsBuffer = new TextEncoder().encode(argsString);
-    const argsBase64Encoded = Buffer.from(argsBuffer).toString('base64');
-
-    // Use NEAR JSON-RPC directly
+    // Step 1: Get MPC root public key from v1.signer contract
     const rpcResponse = await fetch(NEAR.nodeUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         jsonrpc: '2.0',
-        id: 'derive-evm-address',
+        id: 'get-public-key',
         method: 'query',
         params: {
           request_type: 'call_function',
           account_id: NEAR.mpcContract,
-          method_name: 'public_key_for',
-          args_base64: argsBase64Encoded,
+          method_name: 'public_key',
+          args_base64: 'e30=', // {} empty args
           finality: 'final',
         },
       }),
     });
 
     if (!rpcResponse.ok) {
-      console.error('NEAR RPC response not ok:', rpcResponse.status, rpcResponse.statusText);
-      return Response.json(
-        { error: 'NEAR RPC request failed' },
-        { status: 500 }
-      );
+      console.error('NEAR RPC response not ok:', rpcResponse.status);
+      return Response.json({ error: 'NEAR RPC request failed' }, { status: 500 });
     }
 
     const rpcData = await rpcResponse.json();
 
-    if (rpcData.error) {
-      console.error('NEAR RPC error:', rpcData.error);
-      return Response.json(
-        { error: `NEAR RPC error: ${rpcData.error.message || JSON.stringify(rpcData.error)}` },
-        { status: 500 }
-      );
+    if (rpcData.error || !rpcData.result?.result) {
+      console.error('NEAR RPC error or no result:', rpcData.error || 'No result');
+      return Response.json({ error: 'Failed to get MPC public key' }, { status: 500 });
     }
 
-    const result = rpcData.result?.result;
-    if (!result) {
-      console.error('No result from NEAR contract. Full response:', JSON.stringify(rpcData));
-      return Response.json(
-        { error: 'Failed to retrieve public key from NEAR contract' },
-        { status: 500 }
-      );
-    }
+    // Decode the result - it's a JSON string like "secp256k1:<base64>"
+    const bytes = new Uint8Array(rpcData.result.result);
+    const decoded = new TextDecoder().decode(bytes);
+    const cleanDecoded = decoded.replace(/^"|"$/g, ''); // Remove JSON quotes
 
-    // Result is an array of byte values, convert to Uint8Array
-    const uint = new Uint8Array(result);
-    const decoded = new TextDecoder().decode(uint);
-
-    // Expected format: "secp256k1:<base64-encoded-public-key>"
-    const parts = String(decoded).split(':');
-
-    if (parts[0] !== 'secp256k1' || !parts[1]) {
-      console.error('Invalid public key format. Decoded:', decoded);
-      return Response.json(
-        { error: 'Invalid public key format from NEAR contract' },
-        { status: 500 }
-      );
+    const [keyType, keyBase64] = cleanDecoded.split(':');
+    if (keyType !== 'secp256k1' || !keyBase64) {
+      console.error('Invalid public key format:', cleanDecoded);
+      return Response.json({ error: 'Invalid MPC public key format' }, { status: 500 });
     }
 
     // Decode the base64 public key
-    const bytes = Uint8Array.from(Buffer.from(parts[1], 'base64'));
-    let pubHex: string | null = null;
+    const rootPubKeyBytes = Buffer.from(keyBase64, 'base64');
 
-    // Handle uncompressed public key (64 bytes without prefix, or 65 bytes with 0x04 prefix)
-    if (bytes.length === 64) {
-      // Add the 0x04 prefix for uncompressed public key
-      pubHex = ethers.hexlify(new Uint8Array([4, ...Array.from(bytes)]));
-    } else if (bytes.length === 65 && bytes[0] === 4) {
-      // Already has the prefix
-      pubHex = ethers.hexlify(bytes);
+    // Step 2: Compute the additive tweak
+    // The epsilon format for NEAR chain signatures
+    const derivationPath = 'ethereum-1';
+    const keyVersion = 0;
+
+    // Create the epsilon/tweak input string
+    const epsilonInput = `${accountId},${derivationPath},${keyVersion}`;
+    const epsilonHash = createHash('sha256').update(epsilonInput).digest();
+
+    // Step 3: Perform additive key derivation using ethers SigningKey
+    // Create a SigningKey from the epsilon to get the corresponding public key point (epsilon * G)
+    const epsilonHex = '0x' + epsilonHash.toString('hex');
+
+    // Use SigningKey to compute epsilon * G
+    const epsilonKey = new SigningKey(epsilonHex);
+    const epsilonPubKey = epsilonKey.publicKey; // This is epsilon * G in uncompressed form
+
+    // Parse root public key - handle different formats
+    let rootPubKeyHex: string;
+    if (rootPubKeyBytes.length === 33) {
+      // Compressed format
+      rootPubKeyHex = '0x' + rootPubKeyBytes.toString('hex');
+    } else if (rootPubKeyBytes.length === 64) {
+      // Uncompressed without prefix
+      rootPubKeyHex = '0x04' + rootPubKeyBytes.toString('hex');
+    } else if (rootPubKeyBytes.length === 65 && rootPubKeyBytes[0] === 0x04) {
+      rootPubKeyHex = '0x' + rootPubKeyBytes.toString('hex');
+    } else {
+      console.error('Unexpected public key length:', rootPubKeyBytes.length);
+      return Response.json({ error: 'Failed to parse MPC public key' }, { status: 500 });
     }
 
-    if (!pubHex) {
-      console.error('Failed to process public key. Bytes length:', bytes.length);
-      return Response.json(
-        { error: 'Failed to process public key' },
-        { status: 500 }
-      );
-    }
+    // Step 4: Perform elliptic curve point addition
+    const ec = new EC('secp256k1');
 
-    const evmAddress = ethers.computeAddress(pubHex);
+    // Parse the root public key point
+    const rootBytes = getBytes(rootPubKeyHex);
+    const rootPoint = ec.keyFromPublic(Buffer.from(rootBytes)).getPublic();
+
+    // Parse epsilon * G
+    const epsilonPubBytes = getBytes(epsilonPubKey);
+    const epsilonPoint = ec.keyFromPublic(Buffer.from(epsilonPubBytes)).getPublic();
+
+    // Add the points: derived = root + epsilon*G
+    const derivedPoint = rootPoint.add(epsilonPoint);
+
+    // Get the uncompressed public key (without 04 prefix for address computation)
+    const derivedX = derivedPoint.getX().toArray('be', 32);
+    const derivedY = derivedPoint.getY().toArray('be', 32);
+    const derivedPubKeyNoPrefix = Buffer.concat([Buffer.from(derivedX), Buffer.from(derivedY)]);
+
+    // Step 5: Compute EVM address: last 20 bytes of keccak256(pubkey)
+    const addressHash = keccak256(derivedPubKeyNoPrefix);
+    const evmAddress = '0x' + addressHash.slice(-40);
+
+    console.log('Derived EVM address for ' + accountId + ': ' + evmAddress);
 
     return Response.json({ evmAddress });
 
