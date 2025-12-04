@@ -365,74 +365,7 @@ class NearIntentsService {
     }
   }
 
-  /**
-   * Transfer USDC from user's NEAR account to deposit address
-   * Uses the connected wallet selector to trigger the transaction
-   */
-  async transferUsdcToDepositAddress(params: {
-    selector: WalletSelector;
-    accountId: string;
-    depositAddress: string;
-    amountUsdc: string; // Amount in USDC (e.g., "10" for 10 USDC)
-  }): Promise<{
-    success: boolean;
-    txHash?: string;
-    error?: string;
-  }> {
-    try {
-      const { selector, accountId, depositAddress, amountUsdc } = params;
 
-      // Get the wallet instance
-      const wallet = await selector.wallet();
-      if (!wallet) {
-        throw new Error('Wallet not available');
-      }
-
-      // Convert USDC amount to smallest units (6 decimals)
-      const amountYocto = BigInt(Math.floor(parseFloat(amountUsdc) * 1_000_000)).toString();
-
-      console.log('Transferring USDC:', {
-        accountId,
-        depositAddress,
-        amountUsdc,
-        amountYocto,
-      });
-
-      // Call ft_transfer on USDC contract
-      // Using actionCreators for clean transaction building
-      const { actionCreators } = await import('@near-js/transactions');
-      
-      const result = await wallet.signAndSendTransaction({
-        receiverId: NEAR_TOKENS.usdcContract,
-        actions: [
-          actionCreators.functionCall(
-            'ft_transfer',
-            JSON.stringify({
-              receiver_id: depositAddress,
-              amount: amountYocto,
-            }),
-            '30000000000000', // 30 TGas (standard for ft_transfer)
-            '1' // 1 yoctoNEAR (required for security)
-          ),
-        ],
-      });
-
-      const txHash = (result as unknown as { transaction?: { hash?: string } }).transaction?.hash;
-      
-      console.log('USDC transfer successful:', txHash);
-      return {
-        success: true,
-        txHash,
-      };
-    } catch (error: unknown) {
-      console.error('USDC transfer failed:', error);
-      const errorMessage = this.parseTransferError(error);
-      return {
-        success: false,
-        error: errorMessage,
-      };
-    }
-  }
 
   /**
    * Parse transfer error messages
