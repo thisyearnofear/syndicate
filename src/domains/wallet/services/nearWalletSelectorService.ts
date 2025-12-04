@@ -10,11 +10,6 @@ import { setupWalletSelector } from '@near-wallet-selector/core';
 import type { WalletModuleFactory } from '@near-wallet-selector/core';
 import { getConfig } from '@/config/nearConfig';
 
-// Optional wallets (already present in package.json)
-// Keep initial set minimal to prevent bloat
-import { setupMyNearWallet } from '@near-wallet-selector/my-near-wallet';
-import { setupBitteWallet } from '@near-wallet-selector/bitte-wallet';
-
 export type NearSelectorState = {
   ready: boolean;
   selector: WalletSelector | null;
@@ -38,11 +33,24 @@ class NearWalletSelectorService {
 
     const cfg = getConfig();
 
-    // Build wallets list conservatively
-    const wallets = [
-      setupMyNearWallet(),
-      setupBitteWallet(),
-    ] as WalletModuleFactory[];
+    // Universal approach: Dynamically load available wallet modules
+    // These are optional - gracefully handle if some aren't available
+    const walletModules = await Promise.allSettled([
+      import('@near-wallet-selector/my-near-wallet').then(m => m.setupMyNearWallet()),
+      import('@near-wallet-selector/meteor-wallet').then(m => m.setupMeteorWallet()),
+      import('@near-wallet-selector/here-wallet').then(m => m.setupHereWallet()),
+      import('@near-wallet-selector/sender').then(m => m.setupSender()),
+    ]);
+
+    // Filter out failed imports and extract successful wallet modules
+    const wallets = walletModules
+      .filter((result) => result.status === 'fulfilled')
+      .map((result) => (result as PromiseFulfilledResult<WalletModuleFactory>).value);
+
+    if (wallets.length === 0) {
+      console.error('No NEAR wallet modules could be loaded');
+      return false;
+    }
 
     const selector = await setupWalletSelector({
       network: cfg.networkId as 'mainnet' | 'testnet',
