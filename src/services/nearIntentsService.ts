@@ -228,11 +228,50 @@ class NearIntentsService {
       };
     } catch (error: unknown) {
       console.error('Failed to execute intent:', error);
+      const errorMessage = this.parseIntentError(error);
       return {
         success: false,
-        error: (error as { message?: string }).message || 'Intent execution failed',
+        error: errorMessage,
       };
     };
+  }
+
+  /**
+   * Parse intent error messages to provide user-friendly feedback
+   */
+  private parseIntentError(error: unknown): string {
+    const errorStr = String(error);
+    
+    // Extract specific error messages
+    if (errorStr.includes("doesn't exist for account")) {
+      // Parse the account name from the error
+      const accountMatch = errorStr.match(/account '([^']+)'/);
+      const accountId = accountMatch ? accountMatch[1] : 'your account';
+      return `Your wallet's signing key is not registered with ${accountId}. Please ensure you've set up your account recovery key in your NEAR wallet.`;
+    }
+    
+    if (errorStr.includes('HostError') || errorStr.includes('GuestPanic')) {
+      return 'Transaction simulation failed. Please check your account balance and try again.';
+    }
+    
+    if (errorStr.includes('insufficient balance') || errorStr.includes('not enough')) {
+      return 'Insufficient balance to complete this transaction.';
+    }
+    
+    if (errorStr.includes('signature') || errorStr.includes('sign')) {
+      return 'Failed to sign transaction. Please try signing in again.';
+    }
+    
+    if (errorStr.includes('timeout') || errorStr.includes('Timeout')) {
+      return 'Transaction timed out. Please try again.';
+    }
+
+    const rawMessage = (error as { message?: string }).message;
+    if (rawMessage && rawMessage.length < 200) {
+      return rawMessage;
+    }
+
+    return 'Intent execution failed. Please try again or contact support if the problem persists.';
   }
 
   async deriveEvmAddress(accountId: string): Promise<string | null> {

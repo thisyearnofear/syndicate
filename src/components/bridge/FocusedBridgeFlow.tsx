@@ -303,11 +303,19 @@ export function FocusedBridgeFlow({
         }
       }
     } catch (err) {
-      const error = err as Error;
-      const errorMessage = error.message || "Bridge failed";
-      setError(errorMessage);
-      setStage("error");
-      onError(errorMessage);
+     const error = err as Error;
+     let errorMessage = error.message || "Bridge failed";
+     
+     // Clean up error messages - remove JSON dumps and technical details
+     if (errorMessage.includes('{')) {
+       // Extract just the user-friendly part before JSON
+       const parts = errorMessage.split(/(Code:|Publish params:|Details:)/);
+       errorMessage = parts[0].trim() || "Bridge transaction failed";
+     }
+     
+     setError(errorMessage);
+     setStage("error");
+     onError(errorMessage);
     }
   }, [
     selectedProtocol,
@@ -653,23 +661,64 @@ export function FocusedBridgeFlow({
 
   // Render error stage
   if (stage === "error") {
+    const getErrorIcon = () => {
+      if (error?.includes('key')) return '🔑';
+      if (error?.includes('balance')) return '💰';
+      if (error?.includes('timeout')) return '⏱️';
+      if (error?.includes('sign')) return '✍️';
+      return '⚠️';
+    };
+
+    const getSuggestedActions = () => {
+      if (error?.includes('key') || error?.includes('registered')) {
+        return [
+          'Ensure your wallet has the correct keys configured',
+          'Try disconnecting and reconnecting your wallet',
+          'Check that your account recovery key is set up',
+        ];
+      }
+      if (error?.includes('balance')) {
+        return [
+          'Check your NEAR token balance',
+          'Ensure you have enough funds for this transaction',
+        ];
+      }
+      if (error?.includes('timeout')) {
+        return [
+          'The network may be congested',
+          'Try again in a few moments',
+        ];
+      }
+      return [
+        'Check your wallet connection',
+        'Ensure you have sufficient balance',
+        'Try using a different network endpoint',
+      ];
+    };
+
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="text-center">
           <div className="flex justify-center mb-4">
             <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center">
-              <AlertCircle className="w-8 h-8 text-red-400" />
+              <span className="text-3xl">{getErrorIcon()}</span>
             </div>
           </div>
 
           <h3 className="text-white font-bold text-xl mb-2">Bridge Failed</h3>
-          <p className="text-gray-400">{error}</p>
+          <p className="text-gray-400 text-sm leading-relaxed max-w-md mx-auto">{error}</p>
         </div>
 
-        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
-          <p className="text-red-300 text-sm">
-            <strong>Unable to complete bridge:</strong> {error}
-          </p>
+        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+          <p className="text-yellow-300 text-sm font-semibold mb-2">What to try:</p>
+          <ul className="text-yellow-200/80 text-xs space-y-1">
+            {getSuggestedActions().map((action, idx) => (
+              <li key={idx} className="flex items-start gap-2">
+                <span className="flex-shrink-0 mt-0.5">•</span>
+                <span>{action}</span>
+              </li>
+            ))}
+          </ul>
         </div>
 
         <div className="flex gap-3">
@@ -685,7 +734,7 @@ export function FocusedBridgeFlow({
               setStage("select");
               setError(null);
             }}
-            className="flex-1 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-semibold"
+            className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold"
           >
             Try Again
           </Button>
