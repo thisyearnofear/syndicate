@@ -105,9 +105,8 @@ class NearIntentsService {
     destinationChain: 'base' | 'ethereum';
   }): Promise<IntentQuote | null> {
     try {
-      if (!this.sdk) {
-        throw new Error('NEAR Intents SDK not initialized');
-      }
+      // Note: We don't strictly require this.sdk to be initialized for quoting
+      // as we can use the public API or fallbacks.
 
       let best: unknown | null = null;
       try {
