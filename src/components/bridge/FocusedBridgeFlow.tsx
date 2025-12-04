@@ -111,12 +111,14 @@ export function FocusedBridgeFlow({
       }
 
       if (sourceChain === "near") {
-        // NEAR Intents path
-        setEvents((prev) =>
-          [...prev, { status: "initializing", ts: Date.now() }].slice(-3)
-        );
-        setCurrentStatus("initializing");
-        setProgress(10);
+         // NEAR Intents bridge path (1Click SDK only)
+         // This bridges USDC from NEAR to Base at the recipient address
+         // For automatic ticket purchase with Chain Signatures, use the main purchase flow
+         setEvents((prev) =>
+           [...prev, { status: "initializing", ts: Date.now() }].slice(-3)
+         );
+         setCurrentStatus("initializing");
+         setProgress(10);
 
         const ok = await nearWalletSelectorService.init();
         if (!ok) throw new Error("NEAR wallet not ready");
@@ -227,23 +229,21 @@ export function FocusedBridgeFlow({
         }
 
         setEvents((prev) =>
-          [...prev, { status: "funds_bridged", ts: Date.now() }].slice(-3)
-        );
-        setCurrentStatus("complete");
-        setProgress(100);
-        setStage("complete");
+           [...prev, { status: "bridge_complete", ts: Date.now() }].slice(-3)
+         );
+         setCurrentStatus("complete");
+         setProgress(100);
+         setStage("complete");
 
-        // Gas hint
-        try {
-          const provider = new ethers.JsonRpcProvider(CHAINS.base.rpcUrl);
-          const bal = await provider.getBalance(recipient);
-          const have = Number(ethers.formatEther(bal));
-          const need = 0.0005;
-          if (have < need)
-            setBaseEthHint({ have: have.toFixed(6), need: need.toFixed(6) });
-        } catch {}
+         // Provide info about derived address and ticket purchase
+         if (recipient) {
+           setBaseEthHint({ 
+             have: recipient, 
+             need: "💡 USDC is now on Base. To buy tickets automatically, use the main purchase flow which uses Chain Signatures." 
+           });
+         }
 
-        onComplete({ success: true } as BridgeResult);
+         onComplete({ success: true } as BridgeResult);
       } else {
         const result = await bridgeManager.bridge({
           sourceChain,
@@ -639,13 +639,23 @@ export function FocusedBridgeFlow({
         </div>
 
         {baseEthHint && (
-          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
-            <p className="text-yellow-300 text-sm">
-              Low Base ETH detected. Have {baseEthHint.have} ETH, suggested{" "}
-              {baseEthHint.need} ETH for approvals.
-            </p>
-          </div>
-        )}
+           <div className={`border rounded-lg p-4 ${
+             baseEthHint.have.startsWith('0x') 
+               ? 'bg-blue-500/10 border-blue-500/30' 
+               : 'bg-yellow-500/10 border-yellow-500/30'
+           }`}>
+             <p className={`text-sm ${
+               baseEthHint.have.startsWith('0x') 
+                 ? 'text-blue-300' 
+                 : 'text-yellow-300'
+             }`}>
+               {baseEthHint.have.startsWith('0x') 
+                 ? baseEthHint.need
+                 : `Low Base ETH detected. Have ${baseEthHint.have} ETH, suggested ${baseEthHint.need} ETH for approvals.`
+               }
+             </p>
+           </div>
+         )}
 
         <div className="pt-4">
           <Button
