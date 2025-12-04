@@ -65,11 +65,6 @@ export interface TicketPurchaseState {
   nearHasEnoughGas?: boolean;
   nearIntentTxHash?: string | null;
   nearDestinationTxHash?: string | null;
-  nearDepositAddress?: string | null; // The address user needs to send USDC to
-  nearDepositAmount?: string | null; // Amount in USDC the user needs to send
-  nearWaitingForDeposit?: boolean; // Whether we're waiting for user to send funds
-  nearIsTransferringUsdc?: boolean; // Whether we're currently transferring USDC
-  nearUsdcTransferTxHash?: string | null; // Transaction hash of USDC transfer
 
   // NEAR winnings withdrawal state
   nearWithdrawalWaitingForDeposit?: boolean; // Waiting for user to send winnings to bridge deposit
@@ -156,11 +151,6 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     nearHasEnoughGas: undefined,
     nearIntentTxHash: null,
     nearDestinationTxHash: null,
-    nearDepositAddress: null,
-    nearDepositAmount: null,
-    nearWaitingForDeposit: false,
-    nearIsTransferringUsdc: false,
-    nearUsdcTransferTxHash: null,
     nearWithdrawalWaitingForDeposit: false,
     nearWithdrawalDepositAddress: null,
     nearWithdrawalDepositAmount: null,
@@ -621,15 +611,12 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
                   if (!intentRes.success || !intentRes.intentHash) {
                     result = { success: false, error: intentRes.error || 'Intent execution failed' };
                   } else {
-                    // Store deposit address and amount for display to user
+                    // Intent submitted - 1Click SDK will handle bridging automatically
                     setState(prev => ({ 
                       ...prev, 
-                      nearStages: [...prev.nearStages, 'intent_submitted', 'waiting_deposit'],
+                      nearStages: [...prev.nearStages, 'intent_submitted', 'waiting_bridge'],
                       nearRequestId: String(intentRes.intentHash), 
                       nearIntentTxHash: intentRes.txHash || null,
-                      nearDepositAddress: intentRes.depositAddress || null,
-                      nearDepositAmount: totalCost,
-                      nearWaitingForDeposit: true,
                     }));
                     (async () => {
                       try {
@@ -862,11 +849,6 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       nearHasEnoughGas: undefined,
       nearIntentTxHash: null,
       nearDestinationTxHash: null,
-      nearDepositAddress: null,
-      nearDepositAmount: null,
-      nearWaitingForDeposit: false,
-      nearIsTransferringUsdc: false,
-      nearUsdcTransferTxHash: null,
       isServiceReady: false,
     });
   }, []);
@@ -888,56 +870,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     } catch { }
   }, [state.nearRecipient]);
 
-  /**
-   * Transfer USDC from user's NEAR account to the deposit address
-   * This enables auto-transfer without requiring manual wallet navigation
-   */
-  const transferUsdcToDeposit = useCallback(async () => {
-    if (!state.nearDepositAddress || !state.nearDepositAmount) {
-      setState(prev => ({ ...prev, error: 'Missing deposit details' }));
-      return;
-    }
 
-    setState(prev => ({ ...prev, nearIsTransferringUsdc: true, error: null }));
-
-    try {
-      const selector = nearWalletSelectorService.getSelector();
-      const accountId = nearWalletSelectorService.getAccountId();
-
-      if (!selector || !accountId) {
-        throw new Error('NEAR wallet not connected');
-      }
-
-      const result = await nearIntentsService.transferUsdcToDepositAddress({
-        selector,
-        accountId,
-        depositAddress: state.nearDepositAddress,
-        amountUsdc: state.nearDepositAmount,
-      });
-
-      if (result.success) {
-        setState(prev => ({
-          ...prev,
-          nearIsTransferringUsdc: false,
-          nearUsdcTransferTxHash: result.txHash || null,
-          nearStages: [...prev.nearStages, 'usdc_transfer_complete'],
-        }));
-      } else {
-        setState(prev => ({
-          ...prev,
-          nearIsTransferringUsdc: false,
-          error: result.error || 'Failed to transfer USDC',
-        }));
-      }
-    } catch (error) {
-      console.error('USDC transfer error:', error);
-      setState(prev => ({
-        ...prev,
-        nearIsTransferringUsdc: false,
-        error: error instanceof Error ? error.message : 'Failed to transfer USDC',
-      }));
-    }
-  }, [state.nearDepositAddress, state.nearDepositAmount]);
 
   /**
    * Auto-initialize when wallet connects
@@ -1166,6 +1099,5 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     clearError,
     reset,
     retryAfterFunding,
-    transferUsdcToDeposit,
   };
   }

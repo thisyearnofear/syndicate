@@ -597,6 +597,92 @@ const signedTx = await phantom.signAndSendTransaction(transaction);
 
 ---
 
+## NEAR Transfer Bug - Fixed & Cleaned (Dec 5, 2025)
+
+### Issue Summary
+
+The NEAR purchase intent flow had a fundamental incompatibility: attempting to manually transfer USDC from NEAR to an Ethereum address using `ft_transfer`.
+
+**Error on-chain:**
+```
+Smart contract panicked: Failed to deserialize input from JSON
+```
+
+**Root Cause:**
+The code tried to call `ft_transfer` with:
+- `receiver_id`: An EVM address (e.g., `0x955544deD8042fFCc38D5C2a27BA925f55e06a96`)
+- **Invalid**: NEAR's `ft_transfer` expects a NEAR account ID, not an EVM address
+
+### Architecture Problem
+
+The `depositAddress` returned from the 1Click SDK is:
+- An Ethereum address on the **destination chain (Base)**
+- For 1Click solver settlement and routing
+- **NOT** a NEAR account to transfer to
+
+Attempting to transfer to it was fundamentally flawed.
+
+### Aggressive Cleanup Applied
+
+Following **AGGRESSIVE CONSOLIDATION** principles, we deleted all broken code rather than deprecating:
+
+**Deleted Functions:**
+- `transferUsdcToDepositAddress()` from `nearIntentsService.ts`
+- `transferUsdcToDeposit()` callback from `useTicketPurchase.ts`
+
+**Deleted Components:**
+- `src/components/modal/purchase/DepositAddressStep.tsx`
+- `src/components/modal/purchase/TransferErrorStep.tsx`
+- `src/components/modal/purchase/TransferSuccessStep.tsx`
+
+**Deleted UI Steps:**
+- "deposit" step from PurchaseModal
+- "transfer-success" step 
+- "transfer-error" step
+
+**Deleted State Properties:**
+- `nearDepositAddress`
+- `nearDepositAmount`
+- `nearWaitingForDeposit`
+- `nearIsTransferringUsdc`
+- `nearUsdcTransferTxHash`
+
+All references removed from hooks and components.
+
+### The Correct Flow (Already Implemented)
+
+The 1Click SDK handles everything automatically:
+```
+1. purchaseViaIntent() → Submits intent to solvers
+2. 1Click SDK routes funds (no manual action needed)
+3. Solvers bridge USDC from NEAR → Base
+4. executeNearIntentsFullFlow() waits for funds
+5. Purchase executes automatically
+```
+
+### Files Modified
+
+**Deletions:**
+- Removed `transferUsdcToDepositAddress()` from `src/services/nearIntentsService.ts`
+- Removed `transferUsdcToDeposit()` from `src/hooks/useTicketPurchase.ts`
+- Removed deposit-related state properties
+- Removed lazy-loaded components from `src/components/modal/PurchaseModal.tsx`
+- Removed step routing logic for broken steps
+
+**Files Deleted:**
+- `src/components/modal/purchase/DepositAddressStep.tsx`
+- `src/components/modal/purchase/TransferErrorStep.tsx`
+- `src/components/modal/purchase/TransferSuccessStep.tsx`
+
+### Result
+
+**Before:** Broken manual transfer attempted, causing on-chain errors  
+**After:** Clean, automated 1Click SDK flow works as intended
+
+No dead code, no confusion for future developers.
+
+---
+
 ## NEAR Winnings Withdrawal - Complete System
 
 **Status**: ✅ Implemented (December 5, 2025)  
