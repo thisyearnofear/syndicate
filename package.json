@@ -16,7 +16,8 @@
     "perf": "npm run build && npm run analyze",
     "perf:monitor": "NEXT_PUBLIC_ENABLE_ANALYTICS=true npm run dev",
     "clean": "rm -rf .next out dist",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "postinstall": "bash patch-viem.sh"
   },
   "dependencies": {
     "@coordinationlabs/megapot-ui-kit": "^0.0.49",
