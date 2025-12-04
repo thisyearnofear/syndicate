@@ -20,6 +20,9 @@ importers:
       '@defuse-protocol/intents-sdk':
         specifier: 0.33.0
         version: 0.33.0(5bc162447698dee18e0a551e22fdde24)
+      '@defuse-protocol/one-click-sdk-typescript':
+        specifier: 0.1.14
+        version: 0.1.14
       '@metamask/delegation-toolkit':
         specifier: ^0.11.0
         version: 0.11.0(viem@2.41.2(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.13))
@@ -394,6 +397,10 @@ packages:
 
   '@defuse-protocol/internal-utils@0.19.1':
     resolution: {integrity: sha512-Zlkmo1WXb4zG2iSA1fNf00JZPTX5Ru5yRss0pJYoDo4r2bxfM+m97W1pfAuLrpiFLBrNbOc9b8ABIMb+YQhY8g==}
+
+  '@defuse-protocol/one-click-sdk-typescript@0.1.14':
+    resolution: {integrity: sha512-ZUzHDCx66D3+/pie34yf/yeCMhtjghAlw56/I19WIJtROC1yyoLdzuTKMkJXCxiyGnxD3aDrYIwWmlocgzQW2Q==}
+    engines: {node: '>=16', pnpm: '>=8'}
 
   '@discoveryjs/json-ext@0.5.7':
     resolution: {integrity: sha512-dBVuXR082gk3jsFp7Rd/JI4kytwGHecnCoTtXFb7DB6CNHp4rg5k1bhg0nWdLGLnOV71lmDzGQaLMy8iPLY0pw==}
@@ -6503,6 +6510,13 @@ snapshots:
       - typescript
       - utf-8-validate
       - zod
+
+  '@defuse-protocol/one-click-sdk-typescript@0.1.14':
+    dependencies:
+      axios: 1.13.2
+      form-data: 4.0.5
+    transitivePeerDependencies:
+      - debug
 
   '@discoveryjs/json-ext@0.5.7': {}
 
