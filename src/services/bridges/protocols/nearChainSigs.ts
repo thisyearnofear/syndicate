@@ -344,24 +344,29 @@ export class NearChainSigsProtocol implements BridgeProtocol {
                 key_version: this.DEFAULT_KEY_VERSION,
             };
 
-            const outcome = await w.signAndSendTransaction({
-                signerId: wallet.accountId,
-                receiverId: this.signerContractId,
-                actions: [{
-                    type: 'FunctionCall',
-                    params: {
-                        methodName: 'sign',
-                        args,
-                        gas: '300000000000000', // 300 TGas
-                        deposit: this.ONE_NEAR_YOCTO,
-                    },
-                }],
-            } as any);
+            try {
+                const outcome = await w.signAndSendTransaction({
+                    signerId: wallet.accountId,
+                    receiverId: this.signerContractId,
+                    actions: [{
+                        type: 'FunctionCall',
+                        params: {
+                            methodName: 'sign',
+                            args,
+                            gas: '300000000000000', // 300 TGas
+                            deposit: this.ONE_NEAR_YOCTO,
+                        },
+                    }],
+                } as any);
 
-            const oc = outcome as unknown as Record<string, unknown>;
-            const txo = oc.transaction_outcome as { id?: string } | undefined;
-            const tx = oc.transaction as { hash?: string } | undefined;
-            return txo?.id || tx?.hash || null;
+                const oc = outcome as unknown as Record<string, unknown>;
+                const txo = oc.transaction_outcome as { id?: string } | undefined;
+                const tx = oc.transaction as { hash?: string } | undefined;
+                return txo?.id || tx?.hash || null;
+            } catch (innerError) {
+                console.error('[NEAR] Wallet signAndSendTransaction failed:', innerError);
+                throw innerError; // Re-throw to be caught by outer catch
+            }
         } catch (e) {
             console.warn('[NEAR] Sign request failed:', e);
             return null;

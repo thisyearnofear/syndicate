@@ -399,6 +399,11 @@ export class UnifiedBridgeManager {
                     this.registerProtocol(nearProtocol);
                     return nearProtocol;
                 }
+                case 'near-intents': {
+                    const { nearIntentsProtocol } = await import('./protocols/nearIntents');
+                    this.registerProtocol(nearIntentsProtocol);
+                    return nearIntentsProtocol;
+                }
                 case 'zcash': {
                     const { zcashProtocol } = await import('./protocols/zcash');
                     this.registerProtocol(zcashProtocol);
@@ -423,6 +428,7 @@ export class UnifiedBridgeManager {
             'ccip',
             'wormhole',
             'near',
+            'near-intents',
             'zcash',
         ].map(async (name) => {
             try {

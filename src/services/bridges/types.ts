@@ -28,7 +28,8 @@ export type BridgeProtocolType =
     | 'cctp'      // Circle CCTP (EVM + Solana)
     | 'ccip'      // Chainlink CCIP (EVM only)
     | 'wormhole'  // Wormhole (multi-chain)
-    | 'near'      // NEAR Chain Signatures + Intents
+    | 'near'      // NEAR Chain Signatures
+    | 'near-intents' // NEAR Intents (Solver-based)
     | 'zcash'     // Zcash-specific (uses NEAR as orchestrator)
     | 'auto';     // Automatic selection
 
@@ -291,6 +292,8 @@ export enum BridgeErrorCode {
     NETWORK_ERROR = 'NETWORK_ERROR',
     SLIPPAGE_EXCEEDED = 'SLIPPAGE_EXCEEDED',
     DEADLINE_PASSED = 'DEADLINE_PASSED',
+    ESTIMATION_FAILED = 'ESTIMATION_FAILED',
+    INITIALIZATION_FAILED = 'INITIALIZATION_FAILED',
     UNKNOWN = 'UNKNOWN',
 }
 
