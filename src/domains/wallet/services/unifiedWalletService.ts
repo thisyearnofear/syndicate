@@ -11,7 +11,7 @@
 import { useCallback } from 'react';
 import { createError } from '@/shared/utils';
 import { useWalletContext } from '@/context/WalletContext';
-import type { AccountState, WalletModuleFactory } from '@near-wallet-selector/core';
+import type { WalletModuleFactory } from '@near-wallet-selector/core';
 import { WalletType, WalletTypes } from '../types';
 
 // =============================================================================
@@ -237,210 +237,29 @@ export function useUnifiedWallet(): {
 
         case WalletTypes.NEAR:
           try {
-            // Dynamically load NEAR Wallet Selector in browser
-            if (!isBrowser()) {
-              throw createError('ENV_ERROR', 'NEAR wallet is only available in browser environments');
-            }
-
-            // Suppress MetaMask auto-connection while showing NEAR modal
-            // This prevents wagmi from interfering with NEAR wallet selection
-            const originalEthereum = window.ethereum;
-            try {
-              (window as any).ethereum = undefined;
-            } catch (e) {
-              console.warn('Could not suppress MetaMask temporarily:', e);
-            }
-
-            // Universal approach: Load core wallet selector and modal
-            // The selector will automatically detect available NEAR wallets
-            const [{ setupWalletSelector }, { setupModal }] = await Promise.all([
-              import('@near-wallet-selector/core'),
-              import('@near-wallet-selector/modal-ui'),
-            ]);
-
-            // Dynamically import available wallet modules
-            // These are optional - the selector will use whatever is available
-            const walletModules = await Promise.allSettled([
-              import('@near-wallet-selector/my-near-wallet').then(m => m.setupMyNearWallet()),
-              import('@near-wallet-selector/meteor-wallet').then(m => m.setupMeteorWallet()),
-              import('@near-wallet-selector/here-wallet').then(m => m.setupHereWallet()),
-              import('@near-wallet-selector/sender').then(m => m.setupSender()),
-            ]);
-
-            // Filter out failed imports and extract successful wallet modules
-            const modules = walletModules
-              .filter((result) => result.status === 'fulfilled')
-              .map((result) => (result as PromiseFulfilledResult<WalletModuleFactory>).value);
-
-            if (modules.length === 0) {
-              throw createError('WALLET_NOT_AVAILABLE', 'No NEAR wallet modules could be loaded. Please ensure you have a NEAR wallet installed.');
-            }
-
-            const { NEAR } = await import('@/config');
-
-            const selector = await setupWalletSelector({
-              network: (NEAR.networkId as 'mainnet' | 'testnet'),
-              modules: modules as never[],
-            });
-
-            const modal = setupModal(selector, {
-              contractId: NEAR.mpcContract,
-              description: 'Connect your NEAR wallet to participate in cross-chain lotteries',
-            });
-
-            console.log('NEAR modal created, showing...');
-
-            // Show modal and wait for user to sign in using proper subscription
-            const accountId = await new Promise<string | null>((resolve) => {
-              let resolved = false;
-              let timeoutId: NodeJS.Timeout;
-              let subscription: { remove: () => void } | null = null;
-
-              // Set timeout to 30 seconds
-              timeoutId = setTimeout(() => {
-                if (!resolved) {
-                  resolved = true;
-                  if (subscription) subscription.remove();
-                  modal.hide();
-                  // Restore MetaMask after timeout
-                  if (originalEthereum) {
-                    setTimeout(() => {
-                      try {
-                        (window as any).ethereum = originalEthereum;
-                      } catch (e) {
-                        console.warn('Could not restore MetaMask:', e);
-                      }
-                    }, 500);
-                  }
-                  console.warn('NEAR connection timed out');
-                  resolve(null);
-                }
-              }, 30000);
-
-              // Subscribe to account changes (more reliable than polling)
-              try {
-                subscription = selector.on('accountsChanged', (event) => {
-                  // The event payload contains { accounts: Account[] }
-                  // We need to check the store to get the full AccountState with 'active' flag
-                  const state = selector.store.getState();
-                  const accounts = state.accounts;
-
-                  if (!resolved && accounts && accounts.length > 0) {
-                    const active = accounts.find((a) => a.active);
-                    if (active?.accountId) {
-                      resolved = true;
-                      clearTimeout(timeoutId);
-                      if (subscription) subscription.remove();
-                      modal.hide();
-                      // Restore MetaMask after successful connection
-                      if (originalEthereum) {
-                        setTimeout(() => {
-                          try {
-                            (window as any).ethereum = originalEthereum;
-                          } catch (e) {
-                            console.warn('Could not restore MetaMask:', e);
-                          }
-                        }, 500);
-                      }
-                      console.log('NEAR account selected:', active.accountId);
-                      resolve(active.accountId);
-                    }
-                  }
-                });
-              } catch (err) {
-                console.warn('Failed to subscribe to account changes, falling back to polling:', err);
-                // Fallback to polling if subscription fails
-                let attempts = 0;
-                const maxAttempts = 300; // 30 seconds at 100ms intervals
-                const interval = setInterval(() => {
-                  try {
-                    if (!resolved) {
-                      const state = selector.store.getState() as { accounts?: AccountState[] };
-                      const accounts = state.accounts || [];
-                      const active = accounts.find((a) => a.active);
-                      if (active?.accountId) {
-                        resolved = true;
-                        clearInterval(interval);
-                        clearTimeout(timeoutId);
-                        modal.hide();
-                        // Restore MetaMask after successful connection
-                        if (originalEthereum) {
-                          setTimeout(() => {
-                            try {
-                              (window as any).ethereum = originalEthereum;
-                            } catch (e) {
-                              console.warn('Could not restore MetaMask:', e);
-                            }
-                          }, 500);
-                        }
-                        resolve(active.accountId);
-                      } else if (++attempts > maxAttempts) {
-                        resolved = true;
-                        clearInterval(interval);
-                        clearTimeout(timeoutId);
-                        modal.hide();
-                        // Restore MetaMask after timeout
-                        if (originalEthereum) {
-                          setTimeout(() => {
-                            try {
-                              (window as any).ethereum = originalEthereum;
-                            } catch (e) {
-                              console.warn('Could not restore MetaMask:', e);
-                            }
-                          }, 500);
-                        }
-                        resolve(null);
-                      }
-                    }
-                  } catch (err) {
-                    console.error('Error polling NEAR wallet state:', err);
-                    if (!resolved) {
-                      resolved = true;
-                      clearInterval(interval);
-                      clearTimeout(timeoutId);
-                      modal.hide();
-                      // Restore MetaMask after error
-                      if (originalEthereum) {
-                        setTimeout(() => {
-                          try {
-                            (window as any).ethereum = originalEthereum;
-                          } catch (e) {
-                            console.warn('Could not restore MetaMask:', e);
-                          }
-                        }, 500);
-                      }
-                      resolve(null);
-                    }
-                  }
-                }, 100);
-              }
-
-              // Show modal after setting up listeners
-              modal.show();
-            });
+            // Use the centralized NEAR wallet service which handles modal display
+            const { nearWalletSelectorService } = await import('@/domains/wallet/services/nearWalletSelectorService');
+            const accountId = await nearWalletSelectorService.connect();
 
             if (!accountId) {
-              throw createError('CONNECTION_TIMEOUT', 'NEAR wallet connection timed out. Please try again and complete the wallet selection.');
+              throw createError('CONNECTION_REJECTED', 'NEAR wallet connection was cancelled or timed out');
             }
 
             address = accountId; // Store NEAR accountId in address field
             chainId = 0; // Sentinel for NEAR (non-EVM)
 
-            // NEAR wallet connected successfully
-            // Bridge manager will handle NEAR operations when needed
             console.log('NEAR wallet connected:', accountId);
           } catch (error: unknown) {
-            const code = (error as { code?: number }).code;
             const message = (error as { message?: string }).message || '';
             console.error('NEAR connection error:', error);
-
-            if (code === 4001) {
-              throw createError('CONNECTION_REJECTED', 'NEAR wallet connection rejected by user');
-            }
 
             // Provide more specific error message
             if (message.includes('timeout') || message.includes('timed out')) {
               throw createError('CONNECTION_TIMEOUT', 'NEAR wallet connection timed out. Please try again.');
+            }
+
+            if (message.includes('cancelled') || message.includes('rejected')) {
+              throw createError('CONNECTION_REJECTED', 'NEAR wallet connection was cancelled.');
             }
 
             throw createError('CONNECTION_FAILED', `Failed to connect NEAR wallet: ${message || 'Unknown error'}`);
@@ -461,7 +280,7 @@ export function useUnifiedWallet(): {
       dispatch({ type: 'CONNECT_FAILURE', payload: { error: errorMessage } });
       throw error;
     }
-  }, [dispatch]);
+  }, [dispatch, state.isConnected, state.walletType]);
 
   /**
    * CLEAN: Disconnect wallet

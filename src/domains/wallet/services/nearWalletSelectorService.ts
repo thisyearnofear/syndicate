@@ -106,12 +106,20 @@ class NearWalletSelectorService {
 
       // Otherwise, request sign in (no contractId to keep generic)
       // Some wallets require a contractId; for Chain Signatures usage, we keep this minimal
+      console.log('Showing NEAR wallet selection modal...');
       await wallet.signIn({} as never);
       const refreshed = await wallet.getAccounts();
       this.state.accountId = refreshed[0]?.accountId || null;
+      
+      if (!this.state.accountId) {
+        console.warn('No account selected after sign in');
+        return null;
+      }
+      
+      console.log('NEAR account connected:', this.state.accountId);
       return this.state.accountId;
     } catch (e) {
-      console.warn('NEAR connect failed:', e);
+      console.error('NEAR connect failed:', e);
       return null;
     }
   }
