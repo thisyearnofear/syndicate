@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { NEAR } from '@/config/nearConfig';
+import { NEAR } from '@/config';
 
 // Define types
 interface NearQueryRequest {
@@ -20,9 +20,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Dynamically import ethers for server-side API route
+    // Dynamically import ethers for address computation later
     const { ethers } = await import('ethers');
-    const nearProvider = new ethers.JsonRpcProvider({ url: NEAR.nodeUrl });
 
     let methodName: string;
     let args: Record<string, unknown>;
@@ -38,7 +37,7 @@ export async function POST(request: NextRequest) {
         methodName = 'public_key_for';
         args = { path, key_version: key_version || 1 };
         break;
-      
+
       case 'getSignatureResult':
         if (!request_id) {
           return Response.json(
@@ -49,7 +48,7 @@ export async function POST(request: NextRequest) {
         methodName = 'get_signature_result';
         args = { request_id };
         break;
-      
+
       default:
         return Response.json(
           { error: 'Invalid operation' },
@@ -65,13 +64,29 @@ export async function POST(request: NextRequest) {
       .join('');
     const argsBase64Encoded = btoa(argsBase64);
 
-    const res: unknown = await nearProvider.query({
-      request_type: 'call_function',
-      account_id: NEAR.mpcContract, // Use the same contract as in the original code
-      method_name: methodName,
-      args_base64: argsBase64Encoded,
-      finality: 'final',
+    // Use fetch for NEAR RPC call (ethers is for EVM)
+    const response = await fetch(NEAR.nodeUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 'near-query',
+        method: 'query',
+        params: {
+          request_type: 'call_function',
+          account_id: NEAR.mpcContract,
+          method_name: methodName,
+          args_base64: argsBase64Encoded,
+          finality: 'final',
+        },
+      }),
     });
+
+    if (!response.ok) {
+      throw new Error(`NEAR RPC failed with status ${response.status}`);
+    }
+
+    const res = await response.json();
 
     const r = res as { result?: unknown };
     if (!r.result) {
@@ -85,7 +100,7 @@ export async function POST(request: NextRequest) {
     const resultData = r.result instanceof Uint8Array || r.result instanceof ArrayBuffer || ArrayBuffer.isView(r.result)
       ? r.result as Uint8Array | ArrayBuffer | ArrayLike<number>
       : new Uint8Array(0); // Fallback to empty array
-      
+
     const uint = resultData instanceof Uint8Array ? resultData : new Uint8Array(resultData);
     const decoded = new TextDecoder().decode(uint);
 

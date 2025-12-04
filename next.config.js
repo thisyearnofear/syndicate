@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const path = require('path');
+
 const nextConfig = {
   // Basic optimizations for better performance
   reactStrictMode: true,
@@ -11,7 +13,7 @@ const nextConfig = {
     'noble-hashes',
     '@metamask/delegation-abis',
   ],
-  
+
   // Optimize images
   images: {
     remotePatterns: [
@@ -75,10 +77,87 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 
-  // Add turbopack configuration to resolve build error
-  turbopack: {},
-};
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        'worker_threads': false,
+      };
+    }
+    config.externals.push('pino-pretty', 'lokijs', 'encoding');
+    
+    // Mark problematic viem test modules as external
+    if (!Array.isArray(config.externals)) {
+      config.externals = [config.externals];
+    }
+    config.externals.push({
+      'viem/_esm/clients/decorators/test': 'empty',
+      'viem/_cjs/clients/decorators/test': 'empty',
+      'viem/_esm/actions/test': 'empty',
+      'viem/_cjs/actions/test': 'empty',
+    });
 
-module.exports = nextConfig;
+    // Add warnings to ignore EISDIR errors from problematic imports
+    config.ignoreWarnings = config.ignoreWarnings || [];
+    config.ignoreWarnings.push({
+      module: /viem/,
+      message: /EISDIR/,
+    });
+    config.ignoreWarnings.push({
+      module: /@base-org|@coinbase|@wagmi/,
+      message: /EISDIR/,
+    });
+
+    // Alias problematic modules and test directories to the empty module
+    config.resolve = {
+      ...config.resolve,
+      alias: {
+        ...config.resolve.alias,
+        // Explicitly ignore test files that may be imported
+        'thread-stream/test': path.resolve(__dirname, 'empty-module/index.js'),
+        'thread-stream/test/': path.resolve(__dirname, 'empty-module/index.js'),
+        // Viem test decorators
+        'viem/_esm/clients/decorators/test.js': path.resolve(__dirname, 'empty-module/index.js'),
+        'viem/_cjs/clients/decorators/test.js': path.resolve(__dirname, 'empty-module/index.js'),
+        'viem/_esm/actions/test': path.resolve(__dirname, 'empty-module/index.js'),
+        'viem/_cjs/actions/test': path.resolve(__dirname, 'empty-module/index.js'),
+      },
+    };
+
+    // Add rules to ignore test files and problematic directories during webpack compilation
+    config.module.rules = config.module.rules || [];
+    config.module.rules.push(
+      {
+        test: /\.test\.(js|ts)$/,
+        use: {
+          loader: require.resolve('null-loader'),
+        },
+      },
+      {
+        test: /\.spec\.(js|ts)$/,
+        use: {
+          loader: require.resolve('null-loader'),
+        },
+      },
+      {
+        test: /node_modules\/.*\/test\/.*\.(js|ts)$/,
+        use: {
+          loader: require.resolve('null-loader'),
+        },
+      },
+      {
+        test: /node_modules\/(tap|tape|desm|fastbench|pino-elasticsearch|why-is-node-running|thread-stream)/,
+        use: {
+          loader: require.resolve('null-loader'),
+        },
+      }
+    );
+
+    return config;
+  },
+};
 
 module.exports = nextConfig;

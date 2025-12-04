@@ -259,6 +259,38 @@ class NearIntentsService {
   }
 
   /**
+   * Get NEAR USDC balance
+   */
+  async getNearBalance(accountId: string): Promise<string> {
+    try {
+      const tokenContract = 'base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near';
+
+      // Encode args for view call
+      const args = JSON.stringify({ account_id: accountId });
+      const argsBase64 = Buffer.from(args).toString('base64');
+
+      const res = await this.nearProvider.query({
+        request_type: 'call_function',
+        account_id: tokenContract,
+        method_name: 'ft_balance_of',
+        args_base64: argsBase64,
+        finality: 'final',
+      }) as unknown as { result: number[] };
+
+      if (res && res.result) {
+        const balanceStr = Buffer.from(res.result).toString();
+        // USDC has 6 decimals
+        const usdc = (Number(JSON.parse(balanceStr)) / 1_000_000).toString();
+        return usdc;
+      }
+      return '0';
+    } catch (error) {
+      console.error('Failed to get NEAR balance:', error);
+      return '0';
+    }
+  }
+
+  /**
    * Monitor intent status
    */
   async getIntentStatus(intentHash: string): Promise<{
