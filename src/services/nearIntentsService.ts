@@ -70,7 +70,6 @@ class NearIntentsService {
           const response = await wallet.signMessage({
             ...nep413Payload,
             nonce,
-            callbackUrl: typeof window !== 'undefined' ? window.location.href : '',
           } as any);
           // Return the response with proper type assertion
           return response as { publicKey: string; signature: string };
