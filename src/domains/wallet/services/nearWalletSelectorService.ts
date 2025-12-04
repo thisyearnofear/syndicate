@@ -43,6 +43,7 @@ class NearWalletSelectorService {
       import('@near-wallet-selector/meteor-wallet').then(m => m.setupMeteorWallet()),
       import('@near-wallet-selector/here-wallet').then(m => m.setupHereWallet()),
       import('@near-wallet-selector/sender').then(m => m.setupSender()),
+      import('@near-wallet-selector/nightly').then(m => m.setupNightly()),
     ]);
 
     // Filter out failed imports and extract successful wallet modules
