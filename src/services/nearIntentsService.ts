@@ -39,7 +39,8 @@ class NearIntentsService {
 
   /**
    * Initialize the 1Click SDK
-   * Note: Requires NEXT_PUBLIC_NEAR_INTENTS_JWT environment variable
+   * Optional: JWT token via NEXT_PUBLIC_NEAR_INTENTS_JWT (avoids 0.1% fee)
+   * Without JWT: Works but incurs 0.1% fee on swaps
    */
   async init(selector: WalletSelector, accountId: string): Promise<boolean> {
     try {
@@ -50,18 +51,19 @@ class NearIntentsService {
       this.accountId = accountId;
 
       // Configure the 1Click API
+      OpenAPI.BASE = 'https://1click.chaindefuser.com';
+      
+      // Optional JWT token for reduced fees
       const jwtToken = process.env.NEXT_PUBLIC_NEAR_INTENTS_JWT;
-      if (!jwtToken) {
-        console.warn('NEXT_PUBLIC_NEAR_INTENTS_JWT not configured. NEAR Intents will not work.');
-        console.warn('Request a JWT token from Defuse Labs: https://docs.google.com/forms/...');
-        return false;
+      if (jwtToken) {
+        OpenAPI.TOKEN = jwtToken;
+        console.log('NEAR 1Click SDK initialized with JWT token');
+      } else {
+        console.warn('NEAR 1Click SDK initialized without JWT (0.1% fee applies to swaps)');
       }
 
-      OpenAPI.BASE = 'https://1click.chaindefuser.com';
-      OpenAPI.TOKEN = jwtToken;
-
       this.isInitialized = true;
-      console.log('NEAR 1Click SDK initialized for account:', accountId);
+      console.log('NEAR 1Click SDK ready for account:', accountId);
       return true;
     } catch (error) {
       console.error('Failed to initialize NEAR 1Click SDK:', error);
