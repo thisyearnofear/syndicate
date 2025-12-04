@@ -64,7 +64,7 @@ export interface TicketPurchaseState {
   nearHasEnoughGas?: boolean;
   nearIntentTxHash?: string | null;
   nearDestinationTxHash?: string | null;
-  
+
   // Initialization state
   isServiceReady: boolean;
 }
@@ -277,6 +277,50 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
           }
         } else {
           setState(prev => ({ ...prev, isCheckingSolanaBalance: false }));
+        }
+      } else if (walletType === WalletTypes.NEAR) {
+        try {
+          const accountId = nearWalletSelectorService.getAccountId();
+          if (accountId) {
+            const { providers } = await import('near-api-js');
+            const { NEAR } = await import('@/config');
+            const provider = new providers.JsonRpcProvider({ url: NEAR.nodeUrl });
+            const tokenContract = 'base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near';
+
+            // Encode args for view call
+            const args = JSON.stringify({ account_id: accountId });
+            const argsBase64 = Buffer.from(args).toString('base64');
+
+            const res = await provider.query({
+              request_type: 'call_function',
+              account_id: tokenContract,
+              method_name: 'ft_balance_of',
+              args_base64: argsBase64,
+              finality: 'final',
+            }) as unknown as { result: number[] };
+
+            if (res && res.result) {
+              const balanceStr = Buffer.from(res.result).toString();
+              // USDC has 6 decimals
+              const usdc = (Number(JSON.parse(balanceStr)) / 1_000_000).toString();
+
+              setState(prev => ({
+                ...prev,
+                userBalance: {
+                  usdc,
+                  eth: '0',
+                  hasEnoughUsdc: Number(usdc) >= 1,
+                  hasEnoughEth: true
+                },
+                isCheckingBalance: false
+              }));
+            }
+          } else {
+            setState(prev => ({ ...prev, isCheckingBalance: false }));
+          }
+        } catch (e) {
+          console.error('Failed to fetch NEAR balance:', e);
+          setState(prev => ({ ...prev, isCheckingBalance: false }));
         }
       } else {
         const balance = await web3Service.getUserBalance();
@@ -803,8 +847,8 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       // For EVM, we also check if service is ready
       const isEvm = walletType !== WalletTypes.NEAR && walletType !== WalletTypes.PHANTOM;
       if (isEvm && web3Service.isReady()) {
-         // Already ready (e.g. from previous session)
-         return;
+        // Already ready (e.g. from previous session)
+        return;
       }
       initializeWeb3();
     }
