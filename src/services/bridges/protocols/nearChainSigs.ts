@@ -21,8 +21,7 @@ import type {
     ChainIdentifier,
 } from '../types';
 import { BridgeError, BridgeErrorCode } from '../types';
-import { NEAR, CONTRACTS, CHAINS } from '@/config';
-import { DERIVATION_PATHS } from '@/config/nearConfig';
+import { NEAR, CONTRACTS, CHAINS, DERIVATION_PATHS } from '@/config';
 import {
     fetchNonceAndFees,
     buildUnsignedParams,

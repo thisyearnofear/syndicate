@@ -4,6 +4,8 @@
  * Wrapper around @defuse-protocol/one-click-sdk-typescript for cross-chain ticket purchases.
  * Uses the stable, production-ready 1Click API instead of the unstable intents-sdk.
  * 
+ * Official 1Click API Documentation: https://docs.near-intents.org/near-intents/integration/distribution-channels/1click-api
+ * 
  * Core Principles:
  * - CLEAN: Single responsibility - intent operations only
  * - DRY: Reuse SDK where possible
@@ -12,8 +14,8 @@
 
 import { OpenAPI, QuoteRequest, OneClickService } from '@defuse-protocol/one-click-sdk-typescript';
 import type { WalletSelector } from '@near-wallet-selector/core';
-import { NEAR } from '@/config';
-import { NEAR_TOKENS } from '@/config/nearConfig';
+import { NEAR, NEAR_TOKENS } from '@/config';
+import type { ProtocolHealth } from './bridges/types';
 
 export interface IntentQuote {
   intentHash: string;
@@ -38,6 +40,12 @@ export interface IntentResult {
 class NearIntentsService {
   private accountId: string | null = null;
   private isInitialized = false;
+
+  // Health tracking
+  private successCount = 0;
+  private failureCount = 0;
+  private totalTimeMs = 0;
+  private lastFailure?: Date;
 
   /**
    * Initialize the 1Click SDK
@@ -154,6 +162,7 @@ class NearIntentsService {
     megapotAmount: string;
     referrer?: string;
   }): Promise<IntentResult> {
+    const startTime = Date.now();
     try {
       if (!this.isInitialized) {
         throw new Error('NEAR 1Click SDK not initialized');
@@ -179,6 +188,8 @@ class NearIntentsService {
       const quote = await OneClickService.getQuote(quoteRequest);
 
       if (!quote) {
+        this.failureCount++;
+        this.lastFailure = new Date();
         return {
           success: false,
           error: 'Failed to get quote from 1Click API',
@@ -215,6 +226,8 @@ class NearIntentsService {
       }
 
       if (!depositAddress || !quoteId) {
+        this.failureCount++;
+        this.lastFailure = new Date();
         // Log the actual response for debugging
         console.error('Quote response missing required fields:', {
           depositAddress,
@@ -231,6 +244,9 @@ class NearIntentsService {
 
       console.log('Got deposit address:', depositAddress);
 
+      this.successCount++;
+      this.totalTimeMs += Date.now() - startTime;
+
       // Return the deposit address so the user/wallet can send funds
       return {
         success: true,
@@ -239,6 +255,8 @@ class NearIntentsService {
         error: undefined,
       };
     } catch (error: unknown) {
+      this.failureCount++;
+      this.lastFailure = new Date();
       console.error('Failed to execute intent:', error);
       const errorMessage = this.parseIntentError(error);
       return {
@@ -246,6 +264,32 @@ class NearIntentsService {
         error: errorMessage,
       };
     }
+  }
+
+  async getHealth(): Promise<ProtocolHealth> {
+    const total = this.successCount + this.failureCount;
+    const successRate = total > 0 ? this.successCount / total : 0.95; // Assume 95% if no data
+    const averageTimeMs = this.successCount > 0 ? this.totalTimeMs / this.successCount : 120_000; // 2 min default
+
+    // More conservative health check - mark unhealthy sooner if recent failures
+    const recentFailures = this.failureCount > 3;
+    const lowSuccessRate = successRate < 0.6;
+    const isHealthy = !recentFailures && !lowSuccessRate && this.failureCount < 5;
+
+    return {
+        protocol: 'near-intents',
+        isHealthy,
+        successRate,
+        averageTimeMs,
+        lastFailure: this.lastFailure,
+        consecutiveFailures: this.failureCount,
+        // Add more detailed status information
+        statusDetails: {
+            recentFailures,
+            lowSuccessRate,
+            lastSuccessTime: this.successCount > 0 ? new Date() : null,
+        }
+    };
   }
 
   /**
@@ -379,6 +423,7 @@ class NearIntentsService {
     txHash?: string;
     error?: string;
   }> {
+    const startTime = Date.now();
     try {
       const { selector, accountId, depositAddress, amountUsdc } = params;
 
@@ -423,11 +468,16 @@ class NearIntentsService {
         amount: amountUsdc,
       });
 
+      this.successCount++;
+      this.totalTimeMs += Date.now() - startTime;
+
       return {
         success: true,
         txHash,
       };
     } catch (error: unknown) {
+      this.failureCount++;
+      this.lastFailure = new Date();
       console.error('Failed to transfer USDC to deposit address:', error);
       const errorMessage = this.parseTransferError(error);
       return {

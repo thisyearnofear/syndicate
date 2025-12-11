@@ -105,198 +105,376 @@ export const CONTRACT_EVENTS = {
 } as const;
 
 // =============================================================================
+
 // LOTTERY CONFIGURATION
+
 // =============================================================================
+
+
 
 export const LOTTERY = {
-  ticketPriceUsd: 1, // $1 per ticket
+
+  ticketPriceUsd: 1, // 
+ per ticket
+
   ticketPriceWei: BigInt(1 * 10 ** 6), // 1 USDC in wei (6 decimals)
+
   referrerAddress: process.env.NEXT_PUBLIC_REFERRER_ADDRESS || "0x0000000000000000000000000000000000000000",
+
 } as const;
 
-// =============================================================================
-// NEAR CONFIGURATION (for chain signatures)
-// =============================================================================
 
-export const NEAR = {
-  networkId: process.env.NEXT_PUBLIC_NEAR_NETWORK_ID || "mainnet",
-  nodeUrl: process.env.NEXT_PUBLIC_NEAR_NODE_URL || "https://rpc.mainnet.near.org",
-  walletUrl: process.env.NEXT_PUBLIC_NEAR_WALLET_URL || "https://wallet.mainnet.near.org",
-  helperUrl: process.env.NEXT_PUBLIC_NEAR_HELPER_URL || "https://helper.mainnet.near.org",
-  mpcContract: "v1.signer", // Real NEAR Chain Signatures contract
-} as const;
 
 // =============================================================================
+
 // API CONFIGURATION
+
 // =============================================================================
+
+
 
 export const API = {
+
   megapot: {
+
     baseUrl: "https://api.megapot.io/api/v1",
+
     apiKey: process.env.NEXT_PUBLIC_MEGAPOT_API_KEY,
+
     endpoints: {
+
       jackpotStats: "/jackpot-round-stats/active",
+
       ticketPurchases: "/ticket-purchases",
+
       dailyGiveaway: "/giveaways/daily-giveaway-winners",
+
     },
+
   },
+
 } as const;
 
+
+
 // =============================================================================
+
 // DESIGN SYSTEM
+
 // =============================================================================
+
+
 
 export const DESIGN = {
+
   colors: {
+
     primary: "#4F46E5", // indigo-600
+
     secondary: "#10B981", // emerald-500
+
     background: "#111827", // gray-900
+
     surface: "#1F2937", // gray-800
+
     textPrimary: "#F9FAFB", // gray-50
+
     textSecondary: "#D1D5DB", // gray-300
+
     error: "#EF4444", // red-500
+
     warning: "#F59E0B", // amber-500
+
     success: "#10B981", // emerald-500
+
     accent: "#8B5CF6", // purple-500
+
   },
+
   spacing: {
+
     xs: "4px",
+
     sm: "8px",
+
     md: "16px",
+
     lg: "24px",
+
     xl: "32px",
+
   },
+
   borderRadius: {
+
     sm: "4px",
+
     md: "8px",
+
     lg: "12px",
+
     full: "9999px",
+
   },
+
   fontSize: {
+
     xs: "0.75rem",
+
     sm: "0.875rem",
+
     base: "1rem",
+
     lg: "1.125rem",
+
     xl: "1.25rem",
+
     "2xl": "1.5rem",
+
     "3xl": "1.875rem",
+
   },
+
   animation: {
+
     duration: 0.3, // Duration in seconds for micro-animations
+
   },
+
 } as const;
 
+
+
 // =============================================================================
+
 // PERFORMANCE & BRIDGE CONFIGURATION
+
 // =============================================================================
+
+
 
 export const PERFORMANCE = {
+
   // Cache durations in milliseconds
+
   cache: {
+
     jackpotData: 300000, // 5 minutes
+
     activityFeed: 60000, // 1 minute
+
     syndicateData: 300000, // 5 minutes
+
   },
+
   // Request timeouts
+
   timeouts: {
+
     api: 30000, // 30 seconds
+
     blockchain: 60000, // 1 minute
+
   },
+
   // Pagination limits
+
   pagination: {
+
     activityFeed: 20,
+
     syndicates: 50,
+
     transactions: 100,
+
   },
+
 } as const;
 
+
+
 // =============================================================================
+
 // BRIDGE CONFIGURATION (Solana → Base)
+
 // =============================================================================
+
+
 
 export const BRIDGE = {
+
   // RPC Configuration
+
   rpc: {
+
     primaryUrl: process.env.NEXT_PUBLIC_SOLANA_RPC || "https://api.mainnet-beta.solana.com",
+
     fallbackUrls: (process.env.NEXT_PUBLIC_SOLANA_RPC_FALLBACKS || "")
+
       .split(",")
+
       .map((url) => url.trim())
+
       .filter(Boolean),
+
   },
+
+
 
   // Connection timeouts & retries
+
   connection: {
+
     timeoutMs: parseInt(process.env.NEXT_PUBLIC_BRIDGE_CONNECTION_TIMEOUT_MS || "5000"),
+
     maxAttempts: 3,
+
     backoffMultiplier: 1.5,
+
   },
+
+
 
   // Transaction confirmation
+
   confirmation: {
+
     timeoutMs: parseInt(process.env.NEXT_PUBLIC_BRIDGE_CONFIRM_TIMEOUT_MS || "180000"), // 3 minutes
+
     initialDelayMs: 1500,
+
     maxDelayMs: 5000,
+
   },
+
+
 
   // Attestation polling (Circle CCTP)
+
   attestation: {
+
     timeoutMs: parseInt(process.env.NEXT_PUBLIC_BRIDGE_ATTESTATION_TIMEOUT_MS || "120000"), // 2 minutes
+
     initialDelayMs: 2000,
+
     maxDelayMs: 10000,
+
     backoffMultiplier: 1.5,
+
   },
+
+
 
   // RPC health checking
+
   health: {
+
     checkIntervalMs: 60000, // Check RPC health every 60 seconds
+
     failureThreshold: 3, // Open circuit after 3 failures
+
     resetTimeMs: 60000, // Reset circuit after 60 seconds of no failures
+
   },
+
+
 
   // Protocol selection
+
   protocols: {
+
     primary: "cctp" as const, // CCTP for native USDC
+
     fallback: "wormhole" as const, // Wormhole fallback (not yet implemented)
+
   },
+
 } as const;
 
+
+
 // =============================================================================
+
 // FEATURE FLAGS
+
 // =============================================================================
+
+
 
 export const FEATURES = {
+
   enableRealTimeUpdates: process.env.NEXT_PUBLIC_ENABLE_REALTIME === "true",
+
   enableAnalytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true",
+
   enableDebugMode: process.env.NODE_ENV === "development",
+
   enableMockData: process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true",
+
 } as const;
 
+
+
 // =============================================================================
+
 // EXPORTS FOR BACKWARD COMPATIBILITY
+
 // =============================================================================
+
+
+
+import { getNearConfig } from './nearConfig';
+
+
 
 // Legacy exports - will be removed in future versions
+
 export const SUPPORTED_CHAINS = CHAINS;
+
 export const config = {
+
   chain: DEFAULT_CHAIN,
+
   ethScanerUrl: DEFAULT_CHAIN.explorerUrl,
+
   contracts: CONTRACTS,
-  near: NEAR,
+
+  near: getNearConfig(),
+
 };
 
+
+
 // Modern exports
+
 export { CHAINS as chains };
+
 export { CONTRACTS as contracts };
+
 export { LOTTERY as lottery };
+
 export { DESIGN as design };
+
 export { API as api };
+
 export { PERFORMANCE as performance };
+
 export { BRIDGE as bridge };
+
 export { FEATURES as features };
+
 export { CCTP as cctp };
+
 export { CCIP as ccip };
 
+export * from './nearConfig';
+
+
+
 // Type exports
+
 export type ChainConfig = typeof CHAINS[keyof typeof CHAINS];
+
 export type ChainId = typeof CHAIN_IDS[keyof typeof CHAIN_IDS];
+
 export type ContractAddress = typeof CONTRACTS[keyof typeof CONTRACTS];
