@@ -73,12 +73,13 @@ Visit `http://localhost:3000` to try the platform.
 
 ## 📚 Documentation
 
-| Document                             | Description                                       |
-| ------------------------------------ | ------------------------------------------------- |
-| [Roadmap](./docs/ROADMAP.md)         | Current status and phased roadmap                 |
-| [Cross-Chain](./docs/CROSSCHAIN.md)  | Bridge protocols (CCTP, CCIP, Wormhole) and flows |
-| [Development](./docs/DEVELOPMENT.md) | Setup, testing, deployment                        |
-| [Bitcoin/ICP](./docs/BTC_ICP.md)     | ICP canister and Bitcoin integration              |
+| Document                                    | Description                                              |
+| ------------------------------------------- | -------------------------------------------------------- |
+| [Development Guide](./docs/DEVELOPMENT.md)  | Setup, testing, deployment, and troubleshooting         |
+| [Implementation](./docs/IMPLEMENTATION.md)  | Technical architecture and system enhancements          |
+| [Roadmap & Project](./docs/ROADMAP_PROJECT.md) | Project planning, timeline, and hackathon strategy     |
+| [Cross-Chain Technical](./docs/CROSSCHAIN_TECHNICAL.md) | Bridge protocols, NEAR Intents, and technical flows |
+| [Testing Strategy](./docs/TESTING.md)       | Test coverage, manual testing plan, and analysis        |
 
 ## 🔐 Privacy & Security
 

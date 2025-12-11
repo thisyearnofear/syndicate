@@ -23,11 +23,11 @@ const customJestConfig = {
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   
   // Test match patterns
-  testMatch: ['**/__tests__/**/*.[jt]s?(x)', '**/?(*.)+(spec|test).[tj]s?(x)'],
+  testMatch: ['**/tests/**/*.[jt]s?(x)', '**/?(*.)+(spec|test).[tj]s?(x)'],
   
   // Transform files with ts-jest
   transform: {
-    '^.+\.(ts|tsx)$': ['ts-jest', {
+    '^.+\\.(ts|tsx)$': ['ts-jest', {
       tsconfig: 'tsconfig.json',
     }],
   },
@@ -35,8 +35,8 @@ const customJestConfig = {
   // Module name mapper for CSS and image imports
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
-    '\.(css|less|scss|sass)$': 'identity-obj-proxy',
-    '\.(jpg|jpeg|png|gif|webp|svg)$': '<rootDir>/__mocks__/fileMock.js',
+    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+    '\\.(jpg|jpeg|png|gif|webp|svg)$': '<rootDir>/tests/mocks/__mocks__/fileMock.js',
   },
   
   // Coverage configuration
