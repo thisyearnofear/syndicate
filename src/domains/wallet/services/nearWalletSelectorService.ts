@@ -9,7 +9,7 @@ import type { WalletSelector } from '@near-wallet-selector/core';
 import { setupWalletSelector } from '@near-wallet-selector/core';
 import type { WalletModuleFactory } from '@near-wallet-selector/core';
 import { setupModal, type WalletSelectorModal } from "@near-wallet-selector/modal-ui";
-import { getConfig } from '@/config/nearConfig';
+import { getNearConfig } from '@/config';
 
 export type NearSelectorState = {
   ready: boolean;
@@ -34,7 +34,7 @@ class NearWalletSelectorService {
     if (!this.isBrowser()) return false;
     if (this.state.ready && this.state.selector) return true;
 
-    const cfg = getConfig();
+    const cfg = getNearConfig();
 
     // Universal approach: Dynamically load available wallet modules
     // These are optional - gracefully handle if some aren't available
