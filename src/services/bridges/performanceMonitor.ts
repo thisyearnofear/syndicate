@@ -124,6 +124,135 @@ export class BridgePerformanceMonitor {
                 console.warn(`[PerformanceMonitor] ⚠️  Protocol ${protocol.protocol} is unhealthy`);
             }
         });
+
+        // Check for anomalies using anomaly detection
+        this.checkForAnomalies(metrics);
+    }
+
+    /**
+     * Check for anomalies in performance metrics
+     * Follows CLEAN principle - separate anomaly detection logic
+     */
+    private checkForAnomalies(metrics: BridgePerformanceMetrics): void {
+        const anomalies = this.detectAnomalies(metrics);
+        
+        if (anomalies.length > 0) {
+            console.warn('[PerformanceMonitor] 🔍 Anomalies detected:');
+            anomalies.forEach(anomaly => console.warn(`   • ${anomaly}`));
+            
+            // Trigger anomaly alert
+            this.triggerAnomalyAlert(metrics, anomalies);
+        }
+    }
+
+    /**
+     * Detect anomalies in performance metrics
+     */
+    private detectAnomalies(metrics: BridgePerformanceMetrics): string[] {
+        const anomalies: string[] = [];
+
+        // 1. Sudden failure spike detection
+        if (this.hasSuddenFailureSpike(metrics)) {
+            anomalies.push('Sudden increase in bridge failures detected');
+        }
+
+        // 2. Performance degradation detection
+        if (this.hasPerformanceDegradation(metrics)) {
+            anomalies.push('Significant performance degradation detected');
+        }
+
+        // 3. Success rate anomaly detection
+        if (this.hasSuccessRateAnomaly(metrics)) {
+            anomalies.push('Unusual success rate fluctuation detected');
+        }
+
+        // 4. Protocol health anomaly detection
+        const protocolAnomalies = this.detectProtocolAnomalies(metrics);
+        anomalies.push(...protocolAnomalies);
+
+        return anomalies;
+    }
+
+    /**
+     * Detect sudden failure spikes
+     */
+    private hasSuddenFailureSpike(metrics: BridgePerformanceMetrics): boolean {
+        // In a real implementation, we would compare with historical data
+        // For now, we'll use a simple threshold-based approach
+        return metrics.totalFailures > 5 && metrics.overallSuccessRate < 0.8;
+    }
+
+    /**
+     * Detect performance degradation
+     */
+    private hasPerformanceDegradation(metrics: BridgePerformanceMetrics): boolean {
+        // Performance is considered degraded if average bridge time exceeds threshold
+        const thresholdMs = 1800000; // 30 minutes
+        return metrics.averageBridgeTimeMs > thresholdMs;
+    }
+
+    /**
+     * Detect success rate anomalies
+     */
+    private hasSuccessRateAnomaly(metrics: BridgePerformanceMetrics): boolean {
+        // Success rate is anomalous if it's unexpectedly low
+        return metrics.overallSuccessRate < 0.7;
+    }
+
+    /**
+     * Detect protocol-specific anomalies
+     */
+    private detectProtocolAnomalies(metrics: BridgePerformanceMetrics): string[] {
+        const anomalies: string[] = [];
+
+        metrics.protocols.forEach(protocol => {
+            // Check for protocols with unexpected behavior
+            if (protocol.successRate < 0.7 && protocol.consecutiveFailures > 3) {
+                anomalies.push(`Protocol ${protocol.protocol} showing unexpected failure pattern`);
+            }
+
+            // Check for protocols that are much slower than average
+            if (protocol.averageTimeMs > metrics.averageBridgeTimeMs * 2) {
+                anomalies.push(`Protocol ${protocol.protocol} is significantly slower than average`);
+            }
+        });
+
+        return anomalies;
+    }
+
+    /**
+     * Trigger anomaly alert
+     */
+    private triggerAnomalyAlert(metrics: BridgePerformanceMetrics, anomalies: string[]): void {
+        console.warn('[PerformanceMonitor] 🔍 ANOMALY ALERT TRIGGERED');
+        console.warn('Detected anomalies:');
+        anomalies.forEach(anomaly => console.warn(`  • ${anomaly}`));
+
+        // In production, this would:
+        // - Send notifications to operations team
+        // - Log detailed anomaly information
+        // - Potentially trigger automatic remediation
+        
+        // For now, we'll add to recommendations
+        const newRecommendations = anomalies.map(anomaly => {
+            if (anomaly.includes('failure pattern')) {
+                return 'Investigate protocols with unexpected failure patterns';
+            } else if (anomaly.includes('slower than average')) {
+                return 'Review slow protocol performance';
+            } else if (anomaly.includes('Sudden increase')) {
+                return 'Analyze recent failures for root cause';
+            } else if (anomaly.includes('performance degradation')) {
+                return 'Monitor bridge performance closely';
+            }
+            return 'Review system for potential issues';
+        });
+
+        // Add to existing recommendations (avoid duplicates)
+        newRecommendations.forEach(rec => {
+            if (!metrics.recommendations.includes(rec)) {
+                metrics.recommendations.push(rec);
+            }
+        });
     }
 
     /**

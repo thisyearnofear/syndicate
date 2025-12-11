@@ -19,7 +19,179 @@ import type {
 } from '../types';
 import { bridgeManager } from '../index';
 
+// Strategy Registration
 // ============================================================================
+
+// Register built-in strategies
+BridgeStrategyFactory.registerStrategy(new DefaultBridgeStrategy());
+BridgeStrategyFactory.registerStrategy(new PerformanceOptimizedStrategy());
+BridgeStrategyFactory.registerStrategy(new ReliabilityOptimizedStrategy());
+BridgeStrategyFactory.registerStrategy(new CostOptimizedStrategy());
+BridgeStrategyFactory.registerStrategy(new SecurityOptimizedStrategy());
+=======
+/**
+ * Security-Optimized Strategy: Choose most secure protocol for high-value transactions
+ */
+export class SecurityOptimizedStrategy extends BaseBridgeStrategy {
+    
+    getName(): string {
+        return 'security-optimized';
+    }
+    
+    getPriority(): number {
+        return 250; // High priority for security-critical transactions
+    }
+    
+    isApplicable(params: BridgeParams): boolean {
+        // For high-value transactions where security is paramount
+        const amount = params.amount ? parseFloat(params.amount) : 0;
+        return amount > 10000; // Very large amounts (> $10,000)
+    }
+    
+    async execute(params: BridgeParams): Promise<BridgeResult> {
+        // Get all routes and choose most secure protocol
+        const routes = await bridgeManager.estimateAllRoutes(params);
+        
+        if (routes.length === 0) {
+            return bridgeManager.bridge(params);
+        }
+        
+        // Filter for protocols with highest security guarantees
+        const secureRoutes = routes.filter(route => {
+            // Consider protocol secure if:
+            // 1. High success rate (>95%)
+            // 2. Low failure rate (<2 consecutive failures)
+            // 3. Native token support (not wrapped assets)
+            return route.successRate > 0.95 && 
+                   (route.consecutiveFailures || 0) < 2 &&
+                   this.isNativeTokenRoute(route, params);
+        });
+        
+        if (secureRoutes.length === 0) {
+            // Fallback to most reliable if no highly secure options
+            routes.sort((a, b) => b.successRate - a.successRate);
+            const mostReliableProtocol = routes[0].protocol;
+            
+            console.log(`[SecurityStrategy] No highly secure protocols, using most reliable: ${mostReliableProtocol}`);
+            
+            return bridgeManager.bridge({
+                ...params,
+                protocol: mostReliableProtocol
+            });
+        }
+        
+        // Choose most secure protocol (highest success rate among secure options)
+        secureRoutes.sort((a, b) => b.successRate - a.successRate);
+        const mostSecureProtocol = secureRoutes[0].protocol;
+        
+        console.log(`[SecurityStrategy] Selected most secure protocol: ${mostSecureProtocol}`);
+        
+        // Execute with additional security validations
+        return this.executeWithSecurityValidations(params, mostSecureProtocol);
+    }
+    
+    /**
+     * Check if route uses native tokens (more secure than wrapped)
+     */
+    private isNativeTokenRoute(route: BridgeRoute, params: BridgeParams): boolean {
+        // CCTP uses native USDC, which is more secure than wrapped versions
+        if (route.protocol === 'cctp') return true;
+        
+        // NEAR Intents uses native token bridging
+        if (route.protocol === 'near-intents') return true;
+        
+        // Other protocols may use wrapped tokens
+        return false;
+    }
+    
+    /**
+     * Execute bridge with additional security validations
+     */
+    private async executeWithSecurityValidations(params: BridgeParams, protocol: BridgeProtocolType): Promise<BridgeResult> {
+        // Add security-related validations
+        const validation = await this.validateSecurityParameters(params);
+        
+        if (!validation.valid) {
+            throw new BridgeError(
+                BridgeErrorCode.INVALID_ADDRESS,
+                `Security validation failed: ${validation.error}`,
+                protocol
+            );
+        }
+        
+        // Execute with selected protocol
+        return bridgeManager.bridge({
+            ...params,
+            protocol,
+            options: {
+                ...params.options,
+                securityValidated: true
+            }
+        });
+    }
+    
+    /**
+     * Validate security-critical parameters
+     */
+    private async validateSecurityParameters(params: BridgeParams): Promise<{ valid: boolean; error?: string }> {
+        // Validate destination address format
+        if (params.destinationChain === 'base' && (!params.destinationAddress || !params.destinationAddress.startsWith('0x'))) {
+            return { valid: false, error: 'Invalid Base destination address for security-critical transaction' };
+        }
+        
+        // Validate amount is reasonable for security strategy
+        const amount = parseFloat(params.amount);
+        if (isNaN(amount) || amount <= 0) {
+            return { valid: false, error: 'Invalid amount for security-critical transaction' };
+        }
+        
+        // Additional security validations could include:
+        // - Address reputation checks
+        // - Transaction history analysis
+        // - Compliance checks
+        
+        return { valid: true };
+    }
+    
+    /**
+     * Adjust strategy based on system health for security
+     */
+    protected onSystemHealthUpdate(metrics: BridgePerformanceMetrics): void {
+        if (metrics.systemStatus === 'degraded' || metrics.systemStatus === 'critical') {
+            console.warn('[SecurityStrategy] System health degraded, being extra cautious with protocol selection');
+            // Could adjust to be even more conservative in protocol selection
+        }
+    }
+}
+
+// ============================================================================
+// Strategy Registration
+// ============================================================================
+
+// Register built-in strategies
+BridgeStrategyFactory.registerStrategy(new DefaultBridgeStrategy());
+BridgeStrategyFactory.registerStrategy(new PerformanceOptimizedStrategy());
+BridgeStrategyFactory.registerStrategy(new ReliabilityOptimizedStrategy());
+BridgeStrategyFactory.registerStrategy(new CostOptimizedStrategy());
+BridgeStrategyFactory.registerStrategy(new SecurityOptimizedStrategy());Strategy Registration
+// ============================================================================
+
+// Register built-in strategies
+BridgeStrategyFactory.registerStrategy(new DefaultBridgeStrategy());
+BridgeStrategyFactory.registerStrategy(new PerformanceOptimizedStrategy());
+BridgeStrategyFactory.registerStrategy(new ReliabilityOptimizedStrategy());
+BridgeStrategyFactory.registerStrategy(new CostOptimizedStrategy());
+=======
+// ============================================================================
+// Strategy Registration
+// ============================================================================
+
+// Register built-in strategies
+BridgeStrategyFactory.registerStrategy(new DefaultBridgeStrategy());
+BridgeStrategyFactory.registerStrategy(new PerformanceOptimizedStrategy());
+BridgeStrategyFactory.registerStrategy(new ReliabilityOptimizedStrategy());
+BridgeStrategyFactory.registerStrategy(new CostOptimizedStrategy());
+BridgeStrategyFactory.registerStrategy(new SecurityOptimizedStrategy());============================================================================
 // Base Bridge Strategy
 // ============================================================================
 
@@ -348,5 +520,6 @@ export {
     DefaultBridgeStrategy,
     PerformanceOptimizedStrategy,
     ReliabilityOptimizedStrategy,
-    CostOptimizedStrategy
+    CostOptimizedStrategy,
+    SecurityOptimizedStrategy
 };
