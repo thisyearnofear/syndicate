@@ -3,6 +3,11 @@
  * 
  * Single source of truth for all bridge-related types across protocols.
  * Follows DRY principle - shared types prevent duplication.
+ * 
+ * Core Principles Applied:
+ * - DRY: Single source of truth for all types
+ * - CLEAN: Clear type organization by domain
+ * - AGGRESSIVE CONSOLIDATION: No duplicate types
  */
 
 // ============================================================================
@@ -50,56 +55,82 @@ export type BridgeStatus =
     | 'failed';
 
 /**
- * Address types across different chains
+ * Address types for different chains
  */
 export type AddressType = {
-    evm: string;        // 0x... format (42 chars)
-    solana: string;     // base58 format
-    zcash: string;      // z-address (shielded) or t-address (transparent)
-    near: string;       // account.near format
+    evm?: string;      // 0x... format
+    solana?: string;  // Base58 format
+    near?: string;    // NEAR account format
+    zcash?: string;   // Zcash address format
 };
 
-// ============================================================================
-// Bridge Request/Response
-// ============================================================================
-
 /**
- * Unified bridge parameters - works for ALL protocols
+ * Bridge protocol interface - must be implemented by all protocols
  */
-export interface BridgeParams {
-    // Source
-    sourceChain: ChainIdentifier;
-    sourceAddress: string;
-    sourceToken: string;          // Token address or identifier
-
-    // Destination
-    destinationChain: ChainIdentifier;
-    destinationAddress: string;
-    destinationToken?: string;    // Optional: different token on dest
-
-    // Amount
-    amount: string;               // Decimal string (e.g. "100.5")
-
-    // Options
-    protocol?: BridgeProtocolType;
-    slippage?: number;            // Max slippage tolerance (basis points)
-    deadline?: number;            // Unix timestamp
-
-    // Wallet/Signer
-    wallet?: unknown;                 // Wallet instance (type varies by chain)
-
-    // Callbacks
-    onStatus?: (status: BridgeStatus, data?: unknown) => void;
-    onProgress?: (percent: number) => void;
-
-    // Flags
-    dryRun?: boolean;             // Simulate without executing
-    allowFallback?: boolean;      // Allow fallback to other protocols
-    details?: Record<string, unknown>; // Protocol-specific extra data
+export interface BridgeProtocol {
+    readonly name: BridgeProtocolType;
+    
+    /**
+     * Check if this protocol supports the given route
+     */
+    supports(sourceChain: ChainIdentifier, destinationChain: ChainIdentifier): boolean;
+    
+    /**
+     * Estimate bridge cost and time
+     */
+    estimate(params: BridgeParams): Promise<BridgeEstimate>;
+    
+    /**
+     * Execute the bridge
+     */
+    bridge(params: BridgeParams): Promise<BridgeResult>;
+    
+    /**
+     * Get current protocol health
+     */
+    getHealth(): Promise<ProtocolHealth>;
+    
+    /**
+     * Validate bridge parameters
+     */
+    validate(params: BridgeParams): Promise<{ valid: boolean; error?: string }>;
 }
 
 /**
- * Unified bridge result - consistent across all protocols
+ * Bridge parameters
+ */
+export interface BridgeParams {
+    sourceChain: ChainIdentifier;
+    destinationChain: ChainIdentifier;
+    sourceAddress: string;
+    destinationAddress: string;
+    amount: string; // Amount to bridge (in base units or token decimals)
+    token?: string;  // Token address/symbol
+    
+    // Optional parameters
+    wallet?: any;    // Wallet/signer instance
+    protocol?: BridgeProtocolType | 'auto'; // Specific protocol or auto-select
+    allowFallback?: boolean; // Allow fallback to other protocols if primary fails
+    dryRun?: boolean; // Test without executing
+    
+    // Status callbacks
+    onStatus?: (status: BridgeStatus, data?: Record<string, unknown>) => void;
+    
+    // Additional protocol-specific options
+    options?: Record<string, unknown>;
+}
+
+/**
+ * Bridge estimate
+ */
+export interface BridgeEstimate {
+    fee: string; // Estimated fee in USD
+    timeMs: number; // Estimated time in milliseconds
+    gasEstimate?: string; // Estimated gas cost
+}
+
+/**
+ * Bridge result
  */
 export interface BridgeResult {
     success: boolean;
@@ -116,6 +147,10 @@ export interface BridgeResult {
     error?: string;
     errorCode?: string;
 
+    // Fallback suggestions (for failed bridges)
+    suggestFallback?: boolean;    // Whether protocol suggests trying fallback
+    fallbackReason?: string;      // Human-readable reason for suggesting fallback
+
     // Timing & Cost
     estimatedTimeMs?: number;
     actualTimeMs?: number;
@@ -124,23 +159,9 @@ export interface BridgeResult {
 
     // Details
     details?: Record<string, unknown>;
-}
 
-// ============================================================================
-// Protocol Health & Monitoring
-// ============================================================================
-
-/**
- * Protocol health status
- */
-export interface ProtocolHealth {
-    protocol: BridgeProtocolType;
-    isHealthy: boolean;
-    successRate: number;          // 0-1 (e.g. 0.95 = 95%)
-    averageTimeMs: number;
-    lastFailure?: Date;
-    consecutiveFailures: number;
-    estimatedFee?: string;
+    // Raw error for debugging
+    rawError?: string;
 }
 
 /**
@@ -153,147 +174,72 @@ export interface BridgeRoute {
     successRate: number;
     isRecommended: boolean;
     reason?: string;              // Why recommended/not recommended
+    score?: number;              // Overall score (0-100)
 }
 
 // ============================================================================
-// Protocol Interface
+// Protocol Health & Monitoring
 // ============================================================================
 
-/**
- * All bridge protocols must implement this interface
- * Ensures consistency and composability
- */
-export interface BridgeProtocol {
-    /**
-     * Protocol identifier
-     */
-    readonly name: BridgeProtocolType;
+export interface ProtocolHealth {
+    protocol: BridgeProtocolType;
+    isHealthy: boolean;
+    successRate: number;          // 0-1 (e.g. 0.95 = 95%)
+    averageTimeMs: number;
+    lastFailure?: Date;
+    consecutiveFailures: number;
+    estimatedFee?: string;
 
-    /**
-     * Check if protocol supports this route
-     */
-    supports(sourceChain: ChainIdentifier, destinationChain: ChainIdentifier): boolean;
-
-    /**
-     * Estimate bridge cost and time
-     */
-    estimate(params: BridgeParams): Promise<{
-        fee: string;
-        timeMs: number;
-        gasEstimate?: string;
-    }>;
-
-    /**
-     * Execute bridge transaction
-     */
-    bridge(params: BridgeParams): Promise<BridgeResult>;
-
-    /**
-     * Get current health status
-     */
-    getHealth(): Promise<ProtocolHealth>;
-
-    /**
-     * Validate parameters before execution
-     */
-    validate(params: BridgeParams): Promise<{ valid: boolean; error?: string }>;
-}
-
-// ============================================================================
-// Zcash-Specific Types
-// ============================================================================
-
-/**
- * Zcash address types
- */
-export type ZcashAddressType =
-    | 'shielded'      // z-address (private)
-    | 'transparent';  // t-address (public)
-
-/**
- * Zcash transaction parameters
- */
-export interface ZcashTxParams {
-    from: string;                 // z-address or t-address
-    to: string;
-    amount: string;
-    memo?: string;                // Encrypted memo (shielded only)
-    addressType: ZcashAddressType;
-}
-
-/**
- * Zcash shielded balance (only visible with viewing key)
- */
-export interface ZcashShieldedBalance {
-    address: string;              // z-address
-    balance: string;
-    verified: boolean;            // Verified with viewing key
-    viewingKey?: string;          // Optional: for client-side verification
-}
-
-/**
- * NEAR Intent for Zcash → Base bridge
- */
-export interface ZcashBridgeIntent {
-    sourceAddress: string;        // Zcash z-address
-    destinationAddress: string;   // Base EVM address
-    amount: string;
-    intermediateSteps: {
-        zcashToNear?: {
-            nearAccount: string;
-            wrappedToken: string;
-        };
-        nearToBase?: {
-            bridgeContract: string;
-            destinationToken: string;
-        };
+    // Additional status details for better monitoring
+    statusDetails?: {
+        recentFailures?: boolean;
+        lowSuccessRate?: boolean;
+        lastSuccessTime?: Date | null;
+        currentLoad?: 'low' | 'medium' | 'high';
     };
 }
 
 // ============================================================================
-// Attestation Types (for CCTP, etc.)
+// Bridge Performance Metrics
 // ============================================================================
 
-/**
- * Attestation status
- */
-export interface AttestationStatus {
-    available: boolean;
-    attestation?: string;         // Hex-encoded attestation
-    retries: number;
-    nextRetryMs?: number;
-}
-
-/**
- * Attestation fetch options
- */
-export interface AttestationOptions {
-    maxRetries?: number;
-    retryDelayMs?: number;
-    timeoutMs?: number;
-    exponentialBackoff?: boolean;
+export interface BridgePerformanceMetrics {
+    systemStatus: 'optimal' | 'good' | 'degraded' | 'critical';
+    overallSuccessRate: number;
+    totalFailures: number;
+    averageBridgeTimeMs: number;
+    protocols: Array<{
+        protocol: BridgeProtocolType;
+        isHealthy: boolean;
+        successRate: number;
+        averageTimeMs: number;
+        consecutiveFailures: number;
+    }>;
+    bestPerformingProtocol: BridgeProtocolType;
+    recommendations: string[];
 }
 
 // ============================================================================
-// Error Types
+// Error Handling
 // ============================================================================
 
-/**
- * Bridge error codes
- */
 export enum BridgeErrorCode {
     INSUFFICIENT_BALANCE = 'INSUFFICIENT_BALANCE',
+    INSUFFICIENT_FUNDS = 'INSUFFICIENT_FUNDS',
     INVALID_ADDRESS = 'INVALID_ADDRESS',
     UNSUPPORTED_ROUTE = 'UNSUPPORTED_ROUTE',
     PROTOCOL_UNAVAILABLE = 'PROTOCOL_UNAVAILABLE',
     ATTESTATION_TIMEOUT = 'ATTESTATION_TIMEOUT',
+    ATTESTATION_FAILED = 'ATTESTATION_FAILED',
     TRANSACTION_FAILED = 'TRANSACTION_FAILED',
+    TRANSACTION_TIMEOUT = 'TRANSACTION_TIMEOUT',
     WALLET_REJECTED = 'WALLET_REJECTED',
     NETWORK_ERROR = 'NETWORK_ERROR',
     SLIPPAGE_EXCEEDED = 'SLIPPAGE_EXCEEDED',
     DEADLINE_PASSED = 'DEADLINE_PASSED',
     ESTIMATION_FAILED = 'ESTIMATION_FAILED',
     INITIALIZATION_FAILED = 'INITIALIZATION_FAILED',
+    NONCE_ERROR = 'NONCE_ERROR',
     UNKNOWN = 'UNKNOWN',
 }
 
@@ -313,70 +259,30 @@ export class BridgeError extends Error {
 }
 
 // ============================================================================
-// Type Guards
+// Strategy Pattern Types
 // ============================================================================
 
-/**
- * Check if address is EVM format
- */
-export function isEvmAddress(address: string): boolean {
-    return /^0x[a-fA-F0-9]{40}$/.test(address);
-}
-
-/**
- * Check if address is Solana format
- */
-export function isSolanaAddress(address: string): boolean {
-    // Base58 format, 32-44 characters
-    return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address);
-}
-
-/**
- * Check if address is Zcash shielded (z-address)
- */
-export function isZcashShieldedAddress(address: string): boolean {
-    return address.startsWith('z') && address.length === 78;
-}
-
-/**
- * Check if address is Zcash transparent (t-address)
- */
-export function isZcashTransparentAddress(address: string): boolean {
-    return address.startsWith('t') && address.length === 35;
-}
-
-/**
- * Check if address is NEAR account
- */
-export function isNearAddress(address: string): boolean {
-    return /^[a-z0-9_-]+\.near$/.test(address) || /^[a-f0-9]{64}$/.test(address);
+export interface BridgeStrategy {
+    getName(): string;
+    getPriority(): number;
+    isApplicable(params: BridgeParams): boolean;
+    execute(params: BridgeParams): Promise<BridgeResult>;
+    adjustForSystemHealth?(metrics: BridgePerformanceMetrics): void;
 }
 
 // ============================================================================
-// Utility Types
+// Export for backward compatibility
 // ============================================================================
 
-/**
- * Map chain to native token symbol
- */
-export const NATIVE_TOKENS: Record<ChainIdentifier, string> = {
-    ethereum: 'ETH',
-    base: 'ETH',
-    polygon: 'MATIC',
-    avalanche: 'AVAX',
-    solana: 'SOL',
-    zcash: 'ZEC',
-    near: 'NEAR',
-};
-
-/**
- * Map chain to USDC token address/mint
- */
-export const USDC_ADDRESSES: Partial<Record<ChainIdentifier, string>> = {
-    ethereum: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-    base: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-    polygon: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
-    avalanche: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E',
-    solana: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-    // Zcash: No native USDC (bridges via NEAR)
+export type {
+    ChainIdentifier as ChainId,
+    BridgeProtocolType as ProtocolType,
+    BridgeStatus as Status,
+    BridgeParams as Params,
+    BridgeResult as Result,
+    BridgeRoute as Route,
+    ProtocolHealth as Health,
+    BridgePerformanceMetrics as Metrics,
+    BridgeErrorCode as ErrorCode,
+    BridgeError as Error
 };
