@@ -59,9 +59,9 @@ export class CctpProtocol implements BridgeProtocol {
     // ============================================================================
 
     supports(sourceChain: ChainIdentifier, destinationChain: ChainIdentifier): boolean {
-        // CCTP supports: Ethereum → Base, Solana → Base
+        // CCTP supports: Ethereum → Base only (Solana handled by NEAR Intents)
         if (destinationChain !== 'base') return false;
-        return sourceChain === 'ethereum' || sourceChain === 'solana';
+        return sourceChain === 'ethereum'; // Solana removed for consolidation
     }
 
     async estimate(params: BridgeParams) {
@@ -117,14 +117,25 @@ export class CctpProtocol implements BridgeProtocol {
         const successRate = total > 0 ? this.successCount / total : 0.95; // Assume 95% if no data
         const averageTimeMs = this.successCount > 0 ? this.totalTimeMs / this.successCount : 900_000; // 15 min default
 
+        // More conservative health check - mark unhealthy sooner if recent failures
+        const recentFailures = this.failureCount > 3;
+        const lowSuccessRate = successRate < 0.6;
+        const isHealthy = !recentFailures && !lowSuccessRate && this.failureCount < 5;
+
         return {
             protocol: 'cctp',
-            isHealthy: successRate > 0.7 && this.failureCount < 5,
+            isHealthy,
             successRate,
             averageTimeMs,
             lastFailure: this.lastFailure,
             consecutiveFailures: this.failureCount,
             estimatedFee: '0.01',
+            // Add more detailed status information
+            statusDetails: {
+                recentFailures,
+                lowSuccessRate,
+                lastSuccessTime: this.successCount > 0 ? new Date() : null,
+            }
         };
     }
 
@@ -271,18 +282,63 @@ export class CctpProtocol implements BridgeProtocol {
             };
 
         } catch (error) {
-            if (error instanceof BridgeError) throw error;
+            this.failureCount++;
+            this.lastFailure = new Date();
+
+            if (error instanceof BridgeError) {
+                // For attestation timeouts, suggest fallback
+                if (error.code === BridgeErrorCode.ATTESTATION_TIMEOUT) {
+                    return {
+                        success: false,
+                        protocol: 'cctp',
+                        status: 'failed',
+                        error: error.message,
+                        errorCode: error.code,
+                        suggestFallback: true,
+                        fallbackReason: 'CCTP attestation delays - Wormhole may be faster'
+                    };
+                }
+                throw error; // Re-throw other bridge errors
+            }
 
             const errorMsg = error instanceof Error ? error.message : 'CCTP EVM bridge failed';
             console.error('[CCTP EVM] Bridge failed:', errorMsg);
+
+            // Enhanced error classification
+            let classifiedError = BridgeErrorCode.TRANSACTION_FAILED;
+            let userMessage = errorMsg;
+            let suggestFallback = false;
+            let fallbackReason = '';
+
+            // Classify common errors
+            if (errorMsg.includes('timeout') || errorMsg.includes('Time-out')) {
+                classifiedError = BridgeErrorCode.TRANSACTION_TIMEOUT;
+                userMessage = 'Transaction timed out. Network may be congested.';
+                suggestFallback = true;
+                fallbackReason = 'Network congestion - alternative protocol may work better';
+            } else if (errorMsg.includes('insufficient funds') || errorMsg.includes('not enough')) {
+                classifiedError = BridgeErrorCode.INSUFFICIENT_FUNDS;
+                userMessage = 'Insufficient funds for gas fees.';
+            } else if (errorMsg.includes('user rejected') || errorMsg.includes('denied')) {
+                classifiedError = BridgeErrorCode.WALLET_REJECTED;
+                userMessage = 'Transaction was rejected by user.';
+            } else if (errorMsg.includes('nonce') || errorMsg.includes('replacement')) {
+                classifiedError = BridgeErrorCode.NONCE_ERROR;
+                userMessage = 'Nonce error - please check your wallet transaction queue.';
+                suggestFallback = true;
+                fallbackReason = 'Wallet transaction queue issue';
+            }
 
             // Return failure instead of throwing to allow fallback
             return {
                 success: false,
                 protocol: 'cctp',
                 status: 'failed',
-                error: errorMsg,
-                errorCode: BridgeErrorCode.TRANSACTION_FAILED,
+                error: userMessage,
+                errorCode: classifiedError,
+                suggestFallback,
+                fallbackReason,
+                rawError: errorMsg // Keep original for debugging
             };
         }
     }
@@ -292,28 +348,14 @@ export class CctpProtocol implements BridgeProtocol {
     // ============================================================================
 
     private async bridgeFromSolana(params: BridgeParams): Promise<BridgeResult> {
-        const { onStatus } = params;
-
-        onStatus?.('validating');
-
-        // STUB: Solana bridge disabled for hackathon
-        // TO RE-ENABLE: Restore the original implementation from git history
+        // AGGRESSIVE CONSOLIDATION: Solana bridge removed
+        // Solana cross-chain transfers are handled by NEAR Intents
+        // This prevents code duplication and follows single responsibility principle
         throw new BridgeError(
             BridgeErrorCode.PROTOCOL_UNAVAILABLE,
-            'Solana bridge is temporarily disabled. Please use NEAR Intents for cross-chain transfers.',
+            'Solana bridge is not available. Use NEAR Intents for Solana cross-chain transfers.',
             'cctp'
         );
-
-        /* ORIGINAL IMPLEMENTATION (preserved in git history)
-         * The full Solana CCTP bridge implementation included:
-         * - Phantom wallet connection
-         * - USDC token account lookup
-         * - depositForBurn instruction construction
-         * - Transaction signing and sending
-         * - Attestation fetching
-         * 
-         * See git history for full implementation.
-         */
     }
 
     // ============================================================================
@@ -331,51 +373,114 @@ export class CctpProtocol implements BridgeProtocol {
             const msgHash = ethers.keccak256(message as string);
             const proxyUrl = `/api/attestation?messageHash=${msgHash}`;
             const directUrl = `https://iris-api.circle.com/v1/attestations/${msgHash}`;
-
+            
+            // Enhanced polling with multiple fallback strategies
             const attestation = await pollWithBackoff(
                 async () => {
                     let resp: Response | null = null;
+                    let json: any = null;
 
-                    // Try proxy first (avoids CORS)
+                    // Strategy 1: Try proxy first (avoids CORS)
                     try {
-                        resp = await fetch(proxyUrl, { signal: AbortSignal.timeout(5000) });
-                    } catch {
-                        resp = null;
+                        resp = await fetch(proxyUrl, { 
+                            signal: AbortSignal.timeout(8000), 
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        
+                        if (resp.ok) {
+                            json = await resp.json().catch(() => null);
+                        }
+                    } catch (proxyError) {
+                        console.debug('[CCTP] Proxy fetch failed, trying direct:', proxyError.message);
                     }
 
-                    // Fallback to direct
-                    if (!resp?.ok) {
+                    // Strategy 2: Fallback to direct Circle API
+                    if (!json?.attestation) {
                         try {
-                            resp = await fetch(directUrl, { signal: AbortSignal.timeout(5000) });
-                        } catch {
-                            resp = null;
+                            resp = await fetch(directUrl, { 
+                                signal: AbortSignal.timeout(8000),
+                                headers: { 'Accept': 'application/json' }
+                            });
+                            
+                            if (resp.ok) {
+                                json = await resp.json().catch(() => null);
+                            }
+                        } catch (directError) {
+                            console.debug('[CCTP] Direct fetch failed:', directError.message);
                         }
                     }
 
-                    if (!resp?.ok) return null;
+                    // Strategy 3: Alternative Circle endpoint (if available)
+                    if (!json?.attestation && process.env.NEXT_PUBLIC_CCTP_FALLBACK_API) {
+                        try {
+                            const fallbackUrl = `${process.env.NEXT_PUBLIC_CCTP_FALLBACK_API}/attestations/${msgHash}`;
+                            resp = await fetch(fallbackUrl, { 
+                                signal: AbortSignal.timeout(8000),
+                                headers: { 'Accept': 'application/json' }
+                            });
+                            
+                            if (resp.ok) {
+                                json = await resp.json().catch(() => null);
+                            }
+                        } catch (fallbackError) {
+                            console.debug('[CCTP] Fallback API failed:', fallbackError.message);
+                        }
+                    }
 
-                    const json = await resp.json().catch(() => null);
+                    if (!json) return null;
+
                     const status = json?.status;
                     const att = json?.attestation;
 
+                    // Check for complete attestation
                     if (status === 'complete' && typeof att === 'string' && att.startsWith('0x')) {
+                        console.log('[CCTP] Attestation received successfully');
                         return att;
                     }
 
+                    // Check for error states
+                    if (status === 'failed' || json?.error) {
+                        console.error('[CCTP] Attestation failed:', json?.error || 'Unknown error');
+                        throw new BridgeError(
+                            BridgeErrorCode.ATTESTATION_FAILED,
+                            `CCTP attestation failed: ${json?.error || 'Unknown error'}`,
+                            'cctp'
+                        );
+                    }
+
+                    // Continue polling if still pending
+                    console.debug('[CCTP] Attestation still pending, will retry...');
                     return null; // Keep polling
                 },
                 {
-                    maxWaitMs: options?.timeoutMs || 600_000, // 10 minutes default
-                    initialDelayMs: options?.retryDelayMs || 3000,
-                    maxDelayMs: options?.retryDelayMs || 10000,
-                    backoffMultiplier: 1.2,
+                    maxWaitMs: options?.timeoutMs || 900_000, // 15 minutes default (increased from 10)
+                    initialDelayMs: options?.retryDelayMs || 2000, // Start faster
+                    maxDelayMs: options?.retryDelayMs || 15000, // Longer max delay
+                    backoffMultiplier: 1.3, // Slightly more aggressive backoff
                     context: 'Circle CCTP attestation',
+                    onRetry: (attempt, delay) => {
+                        console.log(`[CCTP] Attestation attempt ${attempt}, retrying in ${delay}ms...`);
+                    }
                 }
             );
 
             return attestation;
         } catch (error) {
             console.error('[CCTP] Attestation fetch failed:', error);
+            
+            if (error instanceof BridgeError) {
+                throw error; // Re-throw known bridge errors
+            }
+            
+            // Provide more context for timeout errors
+            if (error?.name === 'TimeoutError' || error?.message?.includes('timeout')) {
+                throw new BridgeError(
+                    BridgeErrorCode.ATTESTATION_TIMEOUT,
+                    'CCTP attestation timed out. Circle may be experiencing delays. Consider using an alternative bridge protocol.',
+                    'cctp'
+                );
+            }
+            
             return null;
         }
     }
