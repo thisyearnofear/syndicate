@@ -21,7 +21,8 @@ import type {
     ChainIdentifier,
 } from '../types';
 import { BridgeError, BridgeErrorCode } from '../types';
-import { NEAR, CONTRACTS, CHAINS, DERIVATION_PATHS } from '@/config';
+import { CONTRACTS, CHAINS, DERIVATION_PATHS } from '@/config';
+import { getNearConfig } from '@/config/nearConfig';
 import {
     fetchNonceAndFees,
     buildUnsignedParams,
@@ -44,7 +45,7 @@ export class NearChainSigsProtocol implements BridgeProtocol {
     readonly name = 'near' as const;
 
     private nearProvider: JsonRpcProvider;
-    private readonly signerContractId = NEAR.mpcContract;
+    private readonly signerContractId = getNearConfig().contracts.mpc;
     private readonly ONE_NEAR_YOCTO = "1000000000000000000000000";
     private readonly DEFAULT_KEY_VERSION = 1;
     private readonly DOMAIN_ID_SECP256K1 = 0;
@@ -56,7 +57,8 @@ export class NearChainSigsProtocol implements BridgeProtocol {
     private lastFailure?: Date;
 
     constructor() {
-        this.nearProvider = new JsonRpcProvider({ url: NEAR.nodeUrl });
+        const nearConfig = getNearConfig();
+        this.nearProvider = new JsonRpcProvider({ url: nearConfig.nodeUrl });
     }
 
     // ============================================================================
@@ -157,9 +159,22 @@ export class NearChainSigsProtocol implements BridgeProtocol {
                 // We'll generalize it slightly: if `details.contractCall` is present, use it.
                 // Otherwise, transfer native value.
 
-                if (params.details?.contractCall) {
+                // Extend BridgeParams interface locally to include details
+                interface BridgeParamsWithDetails extends BridgeParams {
+                    details?: {
+                        contractCall?: {
+                            data?: string;
+                            value?: bigint;
+                            to?: string;
+                        };
+                    };
+                }
+
+                const paramsWithDetails = params as BridgeParamsWithDetails;
+
+                if (paramsWithDetails.details?.contractCall) {
                     // Use provided call data
-                    const contractCall = params.details.contractCall as { data?: string; value?: bigint; to?: string };
+                    const contractCall = paramsWithDetails.details.contractCall;
                     data = contractCall.data || '0x';
                     value = contractCall.value || 0n;
                     to = contractCall.to || destinationAddress;
@@ -256,15 +271,15 @@ export class NearChainSigsProtocol implements BridgeProtocol {
             if (error instanceof BridgeError) throw error;
             throw new BridgeError(
                 BridgeErrorCode.TRANSACTION_FAILED,
-                error instanceof Error ? error.message : 'NEAR bridge failed',
+                error instanceof Error ? error.message : String(error),
                 'near'
             );
         }
     }
 
     async getHealth(): Promise<ProtocolHealth> {
-        // Check if MPC contract is available (simple check)
-        const isHealthy = NEAR.mpcContract === 'v1.signer';
+        const nearConfig = getNearConfig();
+        const isHealthy = nearConfig.contracts.mpc === 'v1.signer';
         const total = this.successCount + this.failureCount;
 
         return {

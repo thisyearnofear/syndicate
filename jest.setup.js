@@ -34,14 +34,14 @@ global.IntersectionObserver = class IntersectionObserver {
 
 // Mock localStorage
 const localStorageMock = (() => {
-  let store: Record<string, string> = {};
+  let store = {};
   
   return {
-    getItem: (key: string) => store[key] || null,
-    setItem: (key: string, value: string) => {
+    getItem: (key) => store[key] || null,
+    setItem: (key, value) => {
       store[key] = value.toString();
     },
-    removeItem: (key: string) => {
+    removeItem: (key) => {
       delete store[key];
     },
     clear: () => {

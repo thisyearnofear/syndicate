@@ -103,18 +103,18 @@ class WalletFactory {
     try {
       const { setupWalletSelector } = await import('@near-wallet-selector/core');
       const { setupMyNearWallet } = await import('@near-wallet-selector/my-near-wallet');
-      const { setupBitteWallet } = await import('@near-wallet-selector/bitte-wallet');
+      
       const { setupModal } = await import('@near-wallet-selector/modal-ui');
-      const { getConfig } = await import('@/config/nearConfig');
+      const { getNearConfig } = await import('@/config/nearConfig');
 
-      const config = getConfig();
+      const nearConfig = getNearConfig();
       const selector = await setupWalletSelector({
-        network: config.networkId as "mainnet" | "testnet",
-        modules: [setupMyNearWallet(), setupBitteWallet()] as any[],
+        network: nearConfig.networkId as "mainnet" | "testnet",
+        modules: [setupMyNearWallet()] as any[],
       });
 
       const modal = setupModal(selector, {
-        contractId: config.contracts.mpc,
+        contractId: nearConfig.contracts.mpc,
       });
 
       return {
@@ -170,7 +170,7 @@ class WalletFactory {
         icon: '🔥',
         connected: false,
         connecting: false,
-        connection,
+        connection: connection as any,
         connect: async () => {
           // Implementation would go here
         },

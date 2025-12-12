@@ -12,7 +12,7 @@ import { useCallback } from 'react';
 import { createError } from '@/shared/utils';
 import { useWalletContext } from '@/context/WalletContext';
 import type { WalletModuleFactory } from '@near-wallet-selector/core';
-import { WalletType, WalletTypes } from '../types';
+import { WalletType, WalletTypes, STACKS_WALLETS, type StacksWalletType } from '../types';
 
 // =============================================================================
 // WALLET DETECTION
@@ -29,6 +29,22 @@ export function getAvailableWallets(): WalletType[] {
   // Check for Phantom
   if (typeof window !== 'undefined' && window.solana?.isPhantom) {
     available.push(WalletTypes.PHANTOM);
+  }
+
+  // Check for Stacks wallets
+  if (typeof window !== 'undefined') {
+    if (window.LeatherProvider) {
+      available.push(WalletTypes.LEATHER);
+    }
+    if (window.XverseProviders?.StacksProvider) {
+      available.push(WalletTypes.XVERSE);
+    }
+    if (window.AsignaProvider) {
+      available.push(WalletTypes.ASIGNA);
+    }
+    if (window.FordefiProvider) {
+      available.push(WalletTypes.FORDEFI);
+    }
   }
 
   // WalletConnect is handled separately by WalletConnectManager component
@@ -70,6 +86,35 @@ export function getWalletStatus(walletType: WalletType): {
       return {
         isAvailable: true,
         isInstalled: true,
+      };
+
+    // Stacks ecosystem wallets
+    case WalletTypes.LEATHER:
+      return {
+        isAvailable: typeof window !== 'undefined' && !!window.LeatherProvider,
+        isInstalled: typeof window !== 'undefined' && !!window.LeatherProvider,
+        downloadUrl: 'https://leather.io/',
+      };
+
+    case WalletTypes.XVERSE:
+      return {
+        isAvailable: typeof window !== 'undefined' && !!window.XverseProviders,
+        isInstalled: typeof window !== 'undefined' && !!window.XverseProviders,
+        downloadUrl: 'https://xverse.app/',
+      };
+
+    case WalletTypes.ASIGNA:
+      return {
+        isAvailable: typeof window !== 'undefined' && !!window.AsignaProvider,
+        isInstalled: typeof window !== 'undefined' && !!window.AsignaProvider,
+        downloadUrl: 'https://asigna.io/',
+      };
+
+    case WalletTypes.FORDEFI:
+      return {
+        isAvailable: typeof window !== 'undefined' && !!window.FordefiProvider,
+        isInstalled: typeof window !== 'undefined' && !!window.FordefiProvider,
+        downloadUrl: 'https://www.fordefi.com/',
       };
 
     default:
@@ -266,6 +311,33 @@ export function useUnifiedWallet(): {
           }
           break;
 
+        // Stacks ecosystem wallets
+        case WalletTypes.LEATHER:
+        case WalletTypes.XVERSE:
+        case WalletTypes.ASIGNA:
+        case WalletTypes.FORDEFI:
+          try {
+            const stacksWallet = await connectStacksWallet(walletType as StacksWalletType);
+            address = stacksWallet.address;
+            chainId = 12345; // Stacks mainnet chain ID
+
+            console.log(`${walletType} wallet connected:`, address);
+          } catch (error: unknown) {
+            const message = (error as { message?: string }).message || '';
+            console.error(`${walletType} connection error:`, error);
+
+            if (message.includes('timeout') || message.includes('timed out')) {
+              throw createError('CONNECTION_TIMEOUT', `${walletType} wallet connection timed out. Please try again.`);
+            }
+
+            if (message.includes('cancelled') || message.includes('rejected')) {
+              throw createError('CONNECTION_REJECTED', `${walletType} wallet connection was cancelled.`);
+            }
+
+            throw createError('CONNECTION_FAILED', `Failed to connect ${walletType} wallet: ${message || 'Unknown error'}`);
+          }
+          break;
+
         default:
           throw createError('UNSUPPORTED_WALLET', `Wallet type ${walletType} is not supported`);
       }
@@ -338,4 +410,110 @@ export function useUnifiedWallet(): {
     switchChain,
     clearError,
   };
+}
+
+// =============================================================================
+// STACKS WALLET CONNECTION HELPERS
+// =============================================================================
+
+/**
+ * Connect to a Stacks wallet
+ */
+async function connectStacksWallet(walletType: StacksWalletType): Promise<{ address: string; publicKey: string }> {
+  switch (walletType) {
+    case WalletTypes.LEATHER:
+      return connectLeatherWallet();
+
+    case WalletTypes.XVERSE:
+      return connectXverseWallet();
+
+    case WalletTypes.ASIGNA:
+      return connectAsignaWallet();
+
+    case WalletTypes.FORDEFI:
+      return connectFordefiWallet();
+
+    default:
+      throw new Error(`Unsupported Stacks wallet: ${walletType}`);
+  }
+}
+
+/**
+ * Connect to Leather wallet
+ */
+async function connectLeatherWallet(): Promise<{ address: string; publicKey: string }> {
+  const provider = window.LeatherProvider;
+  if (!provider) {
+    throw new Error('Leather wallet is not installed. Please install it from leather.io');
+  }
+
+  try {
+    const result = await provider.connect();
+    return {
+      address: result.address,
+      publicKey: result.publicKey,
+    };
+  } catch (error) {
+    throw new Error(`Failed to connect to Leather wallet: ${error}`);
+  }
+}
+
+/**
+ * Connect to Xverse wallet
+ */
+async function connectXverseWallet(): Promise<{ address: string; publicKey: string }> {
+  const provider = window.XverseProviders?.StacksProvider;
+  if (!provider) {
+    throw new Error('Xverse wallet is not installed. Please install it from xverse.app');
+  }
+
+  try {
+    const result = await provider.connect();
+    return {
+      address: result.address,
+      publicKey: result.publicKey,
+    };
+  } catch (error) {
+    throw new Error(`Failed to connect to Xverse wallet: ${error}`);
+  }
+}
+
+/**
+ * Connect to Asigna wallet
+ */
+async function connectAsignaWallet(): Promise<{ address: string; publicKey: string }> {
+  const provider = window.AsignaProvider;
+  if (!provider) {
+    throw new Error('Asigna wallet is not installed. Please install it from asigna.io');
+  }
+
+  try {
+    const result = await provider.connect();
+    return {
+      address: result.address,
+      publicKey: result.publicKey,
+    };
+  } catch (error) {
+    throw new Error(`Failed to connect to Asigna wallet: ${error}`);
+  }
+}
+
+/**
+ * Connect to Fordefi wallet
+ */
+async function connectFordefiWallet(): Promise<{ address: string; publicKey: string }> {
+  const provider = window.FordefiProvider;
+  if (!provider) {
+    throw new Error('Fordefi wallet is not installed. Please install it from fordefi.com');
+  }
+
+  try {
+    const result = await provider.connect();
+    return {
+      address: result.address,
+      publicKey: result.publicKey,
+    };
+  } catch (error) {
+    throw new Error(`Failed to connect to Fordefi wallet: ${error}`);
+  }
 }

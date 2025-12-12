@@ -22,7 +22,7 @@ async function testUsdcBalanceForWallet() {
     const usdcMint = new PublicKey(USDC_MINT_ADDRESS);
 
     // Get all token accounts for the wallet
-    const tokenAccounts = await connection.getTokenAccountsByOwner(walletPublicKey, {
+    const tokenAccounts = await (connection as any).getTokenAccountsByOwner(walletPublicKey, {
       mint: usdcMint,
     });
 
@@ -34,7 +34,7 @@ async function testUsdcBalanceForWallet() {
         tokenAccounts.value[0].pubkey
       );
       console.log('USDC Balance:', balance.value.uiAmount);
-      console.log('Raw Balance:', balance.value.amount);
+      console.log('Raw Balance:', balance.value.uiAmount);
       return balance.value.uiAmount;
     } else {
       console.log('No USDC account found for this wallet');

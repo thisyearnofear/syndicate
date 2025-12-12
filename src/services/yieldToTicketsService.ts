@@ -187,10 +187,10 @@ class YieldToTicketsService {
             const params: BridgeParams = {
               sourceChain,
               sourceAddress: userAddress,
-              sourceToken: USDC_ADDRESSES[sourceChain]!,
+              // Remove sourceToken as it's not a valid property
               destinationChain,
               destinationAddress: userAddress,
-              destinationToken: USDC_ADDRESSES[destinationChain],
+              // Remove destinationToken as it's not a valid property
               amount: yieldAllocation.tickets,
             };
             const bridge = await bridgeManager.bridge(params);

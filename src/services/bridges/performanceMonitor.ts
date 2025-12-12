@@ -23,7 +23,7 @@ export class BridgePerformanceMonitor {
     private isMonitoring = false;
     private readonly DEFAULT_INTERVAL_MS = 60000; // 1 minute
 
-    constructor(private readonly intervalMs: number = DEFAULT_INTERVAL_MS) {}
+    constructor(private readonly intervalMs: number = 60000) {}
 
     /**
      * Start continuous performance monitoring

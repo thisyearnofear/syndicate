@@ -6,6 +6,7 @@ import { web3Service } from '@/services/web3Service';
 import { cctp as CCTP } from '@/config';
 import { ethers, Contract } from 'ethers';
 import type { ChainIdentifier } from '@/services/bridges/types';
+import type { SourceChain } from '@/config/chains';
 
 export type CrossChainPurchaseState = {
   status: 'idle' | 'bridging' | 'awaiting_mint' | 'minting' | 'purchasing' | 'success' | 'error';
@@ -19,7 +20,7 @@ export function useCrossChainPurchase() {
   const [state, setState] = useState<CrossChainPurchaseState>({ status: 'idle' });
 
   const buyTickets = useCallback(async (params: {
-    sourceChain: ChainIdentifier;
+    sourceChain: ChainIdentifier | SourceChain;
     ticketCount: number;
     recipientBase: string; // base EVM address that will own tickets
   }) => {
@@ -30,30 +31,54 @@ export function useCrossChainPurchase() {
       const amount = (ticketPriceUSD * params.ticketCount).toFixed(2);
 
       // Step 1: Bridge if needed
+      let bridgeTx: string | undefined;
+      let message: string | undefined;
+      let attestation: string | undefined;
+      let bridgeResult: any;
 
-      // Use Unified Bridge Manager
-      // Note: bridgeManager handles protocol selection (CCTP, Wormhole, etc.)
-      const bridgeResult = await bridgeManager.bridge({
-        sourceChain: params.sourceChain,
-        destinationChain: 'base',
-        amount,
-        destinationAddress: params.recipientBase,
-        sourceAddress: params.recipientBase, // Placeholder, protocol will derive/ask
-        sourceToken: 'USDC', // Default
-        onStatus: (status, data) => {
-          console.debug('[CrossChain] Status:', status, data);
+      // Handle Stacks-specific bridge flow
+      if (params.sourceChain === 'stacks') {
+        setState((s) => ({ ...s, status: 'bridging' }));
+
+        // Stacks -> Base bridge via sBTC
+        bridgeResult = await bridgeFromStacks({
+          walletAddress: params.recipientBase,
+          ticketCount: params.ticketCount,
+          amount,
+          onStatus: (status, data) => {
+            console.debug('[Stacks Bridge] Status:', status, data);
+          }
+        });
+
+        if (!bridgeResult.success) {
+          throw new Error(bridgeResult.error || 'Stacks bridge failed');
         }
-      });
 
-      if (!bridgeResult.success) {
-        throw new Error(bridgeResult.error || 'Bridge failed');
+        bridgeTx = bridgeResult.sourceTxHash;
+        setState((s) => ({ ...s, bridgeTx }));
+      } else {
+        // Existing bridge logic for other chains
+        bridgeResult = await bridgeManager.bridge({
+          sourceChain: params.sourceChain,
+          destinationChain: 'base',
+          amount,
+          destinationAddress: params.recipientBase,
+          sourceAddress: params.recipientBase, // Placeholder, protocol will derive/ask
+          token: 'USDC', // Default
+          onStatus: (status, data) => {
+            console.debug('[CrossChain] Status:', status, data);
+          }
+        });
+
+        if (!bridgeResult.success) {
+          throw new Error(bridgeResult.error || 'Bridge failed');
+        }
+
+        bridgeTx = bridgeResult.sourceTxHash;
+        message = bridgeResult.details?.message;
+        attestation = bridgeResult.details?.attestation;
+        setState((s) => ({ ...s, bridgeTx }));
       }
-
-      const bridgeTx = bridgeResult.sourceTxHash;
-      const message = bridgeResult.details?.message;
-      const attestation = bridgeResult.details?.attestation;
-
-      setState((s) => ({ ...s, bridgeTx }));
 
       // Step 2: Mint on Base (if CCTP and attestation provided)
       // This is required because the bridge source was likely a different chain (Solana/Eth)
@@ -129,4 +154,39 @@ export function useCrossChainPurchase() {
   }, [state.mintTx]);
 
   return { ...state, buyTickets };
+}
+
+// =============================================================================
+// STACKS BRIDGE HELPER
+// =============================================================================
+
+/**
+ * Bridge sBTC from Stacks to Base for lottery participation
+ */
+async function bridgeFromStacks(params: {
+  walletAddress: string;
+  ticketCount: number;
+  amount: string;
+  onStatus: (status: string, data: unknown) => void;
+}): Promise<{ success: boolean; sourceTxHash?: string; error?: string }> {
+  try {
+    // Use the Stacks lottery service for bridging
+    const { stacksLotteryService } = await import('@/domains/lottery/services/stacksLotteryService');
+
+    const result = await stacksLotteryService.bridgeToBase(
+      params.walletAddress,
+      parseFloat(params.amount)
+    );
+
+    return {
+      success: true,
+      sourceTxHash: result.txHash,
+    };
+  } catch (error) {
+    console.error('Stacks bridge error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown bridge error',
+    };
+  }
 }

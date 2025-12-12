@@ -21,66 +21,9 @@ import type {
 } from './types';
 import { BridgeError, BridgeErrorCode } from './types';
 
-=======Singleton Export
 // ============================================================================
-
-export const bridgeManager = new UnifiedBridgeManager();
-
-// Default export for convenience
-export default bridgeManager;
-=======
+// UnifiedBridgeManager Class
 // ============================================================================
-// Singleton Export
-// ============================================================================
-
-export const bridgeManager = new UnifiedBridgeManager();
-
-// Default export for convenience
-export default bridgeManager;
-
-// Export performance monitor (separate module for CLEAN separation)
-export { performanceMonitor, formatPerformanceMetrics, hasCriticalProtocols } from './performanceMonitor';
-
-// Export strategy executor (MODULAR pattern for composable bridge strategies)
-export { 
-    strategyExecutor,
-    BaseBridgeStrategy,
-    BridgeStrategyFactory,
-    DefaultBridgeStrategy,
-    PerformanceOptimizedStrategy,
-    ReliabilityOptimizedStrategy,
-    CostOptimizedStrategy,
-    SecurityOptimizedStrategy
-} from './strategies/bridgeStrategy';
-
-// Export performance optimization methods
-export function preloadBridgeProtocols(protocols: BridgeProtocolType[]): Promise<void> {
-    return bridgeManager.preloadProtocols(protocols);
-}
-
-export function clearBridgeProtocolCache(): void {
-    bridgeManager.clearProtocolLoadCache();
-}
-
-// Export error recovery methods
-export function getRecoverySuggestions(errorCode: BridgeErrorCode): string[] {
-    return bridgeManager.getRecoverySuggestions(errorCode);
-}
-
-// Export cache management methods
-export function initializeMultiLevelCache(): void {
-    bridgeManager.initializeMultiLevelCache();
-}
-
-export function getCacheStatistics(): CacheStatistics {
-    return bridgeManager.getCacheStatistics();
-}
-
-export function clearAllCaches(): void {
-    bridgeManager.clearAllCaches();
-}Performance Metrics Interface
-// ============================================================================
-
 
 export class UnifiedBridgeManager {
     private protocols: Map<BridgeProtocolType, BridgeProtocol> = new Map();
@@ -161,7 +104,7 @@ export class UnifiedBridgeManager {
                 protocol: params.protocol || 'auto',
                 status: 'failed',
                 error: error instanceof Error ? error.message : 'Unknown error',
-                errorCode: error instanceof BridgeError ? error.code : BridgeErrorCode.UNKNOWN,
+                errorCode: error instanceof BridgeError ? error.code : ('UNKNOWN' as BridgeErrorCode),
             };
         }
     }
@@ -173,13 +116,12 @@ export class UnifiedBridgeManager {
         primaryProtocol: BridgeProtocol,
         params: BridgeParams
     ): Promise<BridgeResult> {
-
         // Add automatic recovery for common errors before attempting fallback
         const recoveryResult = await this.attemptAutomaticRecovery(primaryProtocol, params);
         if (recoveryResult) {
             return recoveryResult;
         }
-=======
+
         try {
             // Try primary protocol
             params.onStatus?.('validating', {
@@ -197,8 +139,8 @@ export class UnifiedBridgeManager {
             }
 
             // Enhanced fallback logic - check if protocol suggests fallback
-            const shouldFallback = result.suggestFallback || 
-                (result.errorCode && this.shouldTriggerFallback(result.errorCode));
+            const shouldFallback = result.suggestFallback ||
+                (result.errorCode && this.shouldTriggerFallback(result.errorCode as BridgeErrorCode));
 
             if (shouldFallback) {
                 console.log(`[BridgeManager] ${primaryProtocol.name} suggests fallback: ${result.fallbackReason || result.error}`);
@@ -247,7 +189,7 @@ export class UnifiedBridgeManager {
         });
 
         console.log(`[BridgeManager] Trying fallback: ${fallbackProtocol.name}`);
-        
+
         try {
             const fallbackResult = await fallbackProtocol.bridge(params);
             if (fallbackResult.success) {
@@ -282,7 +224,7 @@ export class UnifiedBridgeManager {
             BridgeErrorCode.NETWORK_ERROR,
             BridgeErrorCode.PROTOCOL_UNAVAILABLE
         ];
-        
+
         return fallbackTriggers.includes(errorCode);
     }
 
@@ -311,7 +253,7 @@ export class UnifiedBridgeManager {
         const best = scoredRoutes[0];
         console.log(`[BridgeManager] Selected protocol: ${best.protocol} ` +
                    `(score: ${best.score.toFixed(2)}, reason: ${best.reason})`);
-        
+
         return best.protocol;
     }
 
@@ -343,7 +285,7 @@ export class UnifiedBridgeManager {
         score += costScore;
 
         // 4. Historical performance (10% weight) - recent success
-        const historicalScore = 10 * (health.consecutiveFailures < 2 ? 1 : 0.5);
+        const historicalScore = 10 * (((health as { consecutiveFailures?: number }).consecutiveFailures ?? 0) < 2 ? 1 : 0.5);
         score += historicalScore;
 
         // 5. Amount-based adjustment - for larger amounts, prefer more reliable protocols
@@ -459,7 +401,13 @@ export class UnifiedBridgeManager {
         }
 
         const health = await protocol.getHealth();
-        this.healthCache.set(name, health);
+        // Ensure consecutiveFailures is always a number
+        const consecutiveFailures = typeof health.consecutiveFailures === 'number' ? health.consecutiveFailures : 0;
+        
+        this.healthCache.set(name, {
+            ...health,
+            consecutiveFailures
+        });
         this.lastHealthCheck.set(name, now);
 
         return health;
@@ -481,7 +429,7 @@ export class UnifiedBridgeManager {
         this.healthCache.set(name, {
             ...cached,
             successRate: newSuccessRate,
-            consecutiveFailures: success ? 0 : cached.consecutiveFailures + 1,
+            consecutiveFailures: success ? 0 : (cached.consecutiveFailures ?? 0) + 1,
             lastFailure: success ? cached.lastFailure : new Date(),
         });
     }
@@ -532,31 +480,20 @@ export class UnifiedBridgeManager {
             timestamp: number;
             ttl: number;
         }>(),
-        // In a real implementation, we would add disk cache here
-        // For this environment, we'll focus on memory cache with different TTLs
-        
-        // Short-term cache (5 minutes) for frequently used protocols
         shortTerm: new Map<BridgeProtocolType, {
             protocol: BridgeProtocol;
             timestamp: number;
         }>(),
-        
-        // Long-term cache (30 minutes) for less frequently used protocols
         longTerm: new Map<BridgeProtocolType, {
             protocol: BridgeProtocol;
             timestamp: number;
         }>(),
-        
-        // Protocol usage tracking for cache optimization
         usageTracking: new Map<BridgeProtocolType, {
             lastUsed: number;
             usageCount: number;
         }>()
     };
 
-    /**
-     * Cache configuration
-     */
     private cacheConfig = {
         memoryTTL: 5 * 60 * 1000, // 5 minutes
         shortTermTTL: 5 * 60 * 1000, // 5 minutes
@@ -565,11 +502,8 @@ export class UnifiedBridgeManager {
         cleanupInterval: 15 * 60 * 1000 // 15 minutes
     };
 
-    /**
-     * Cache cleanup interval
-     */
     private cacheCleanupInterval: NodeJS.Timeout | null = null;
-=======
+
 
     /**
      * Dynamically load protocol module with caching and performance optimization
@@ -595,14 +529,14 @@ export class UnifiedBridgeManager {
                 console.warn(`[BridgeManager] Protocol ${name} failed to load recently, skipping retry`);
                 return null;
             }
-            
+
             // Return existing promise to avoid duplicate loads
             return cachedLoad.promise;
         }
 
         // Create new load promise
         const loadPromise = this.performProtocolLoad(name);
-        
+
         // Cache the promise
         this.protocolLoadCache.set(name, {
             promise: loadPromise,
@@ -612,14 +546,14 @@ export class UnifiedBridgeManager {
 
         try {
             const protocol = await loadPromise;
-            
+
             // Clean up cache on success
             if (protocol) {
                 this.protocolLoadCache.delete(name);
                 // Store in multi-level cache for future use
                 this.storeInMultiLevelCache(protocol, name);
             }
-            
+
             return protocol;
         } catch (error) {
             // Update cache with failure
@@ -628,7 +562,7 @@ export class UnifiedBridgeManager {
                 cacheEntry.attempts++;
                 cacheEntry.timestamp = Date.now();
             }
-            
+
             throw error;
         }
     }
@@ -688,13 +622,13 @@ export class UnifiedBridgeManager {
      */
     async preloadProtocols(protocols: BridgeProtocolType[]): Promise<void> {
         console.log(`[BridgeManager] Preloading protocols: ${protocols.join(', ')}`);
-        
-        await Promise.all(protocols.map(protocol => 
+
+        await Promise.all(protocols.map(protocol =>
             this.loadProtocol(protocol).catch(error => {
                 console.warn(`[BridgeManager] Failed to preload ${protocol}:`, error);
             })
         ));
-        
+
         console.log('[BridgeManager] Protocol preloading complete');
     }
 
@@ -879,36 +813,15 @@ export class UnifiedBridgeManager {
         this.multiLevelCache.shortTerm.clear();
         this.multiLevelCache.longTerm.clear();
         this.multiLevelCache.usageTracking.clear();
-        
+
         if (this.cacheCleanupInterval) {
             clearInterval(this.cacheCleanupInterval);
             this.cacheCleanupInterval = null;
         }
-        
+
         console.log('[BridgeManager] All caches cleared');
     }
-}
 
-// ============================================================================
-// Cache Statistics Interface
-// ============================================================================
-
-interface CacheStatistics {
-    memoryCache: {
-        size: number;
-        maxSize: number;
-    };
-    shortTermCache: {
-        size: number;
-    };
-    longTermCache: {
-        size: number;
-    };
-    usageTracking: {
-        trackedProtocols: number;
-    };
-}
-=======
 
     /**
      * Estimate fees across all available protocols
@@ -952,7 +865,7 @@ interface CacheStatistics {
 
         // Calculate overall system health
         const totalSuccessRate = protocols.reduce((sum, p) => sum + p.successRate, 0) / protocols.length;
-        const totalFailures = protocols.reduce((sum, p) => sum + p.consecutiveFailures, 0);
+        const totalFailures = protocols.reduce((sum, p) => sum + (p.consecutiveFailures ?? 0), 0);
         const avgTimeMs = protocols.reduce((sum, p) => sum + p.averageTimeMs, 0) / protocols.length;
 
         // Determine system status
@@ -966,7 +879,7 @@ interface CacheStatistics {
         }
 
         // Find best performing protocol
-        const bestProtocol = protocols.reduce((best, current) => 
+        const bestProtocol = protocols.reduce((best, current) =>
             current.successRate > best.successRate ? current : best
         );
 
@@ -977,7 +890,10 @@ interface CacheStatistics {
             averageBridgeTimeMs: avgTimeMs,
             protocols: Array.from(health.entries()).map(([name, health]) => ({
                 protocol: name,
-                ...health
+                isHealthy: health.isHealthy,
+                successRate: health.successRate,
+                averageTimeMs: health.averageTimeMs,
+                consecutiveFailures: health.consecutiveFailures ?? 0,
             })),
             bestPerformingProtocol: bestProtocol.protocol,
             recommendations: this.generatePerformanceRecommendations(protocols)
@@ -1016,11 +932,6 @@ interface CacheStatistics {
         return recommendations;
     }
 
-
-// ============================================================================
-// Singleton Export
-// ============================================================================
-=======
     /**
      * Clear health cache (useful for testing)
      */
@@ -1037,49 +948,32 @@ interface CacheStatistics {
         primaryProtocol: BridgeProtocol,
         params: BridgeParams
     ): Promise<BridgeResult | null> {
-        // This method would be called when primary protocol fails
-        // For now, we'll implement a simple version that can be expanded
-        
-        // Note: In a real implementation, we would have access to the specific error
-        // that caused the failure. For this demonstration, we'll show the pattern.
-        
-        // Common errors that can be automatically recovered:
-        const recoverableErrors = [
-            BridgeErrorCode.ATTESTATION_TIMEOUT,
-            BridgeErrorCode.TRANSACTION_TIMEOUT,
-            BridgeErrorCode.NONCE_ERROR,
-            BridgeErrorCode.NETWORK_ERROR
-        ];
-        
-        // In a real scenario, we would check the specific error type
-        // For this pattern demonstration, we'll assume we can attempt recovery
-        
         console.log(`[BridgeManager] Attempting automatic recovery for ${primaryProtocol.name}`);
-        
+
         try {
             // Strategy 1: Retry with same protocol (for transient errors)
             if (this.canRetryWithSameProtocol(primaryProtocol)) {
                 console.log(`[BridgeManager] Retrying with same protocol: ${primaryProtocol.name}`);
                 return await primaryProtocol.bridge(params);
             }
-            
+
             // Strategy 2: Try alternative approach for specific protocols
             if (primaryProtocol.name === 'cctp') {
                 return await this.retryCctpWithFallbackAttestation(params);
             }
-            
+
             // Strategy 3: Adjust parameters and retry
             const adjustedParams = this.adjustParametersForRecovery(params);
             if (adjustedParams) {
                 console.log('[BridgeManager] Retrying with adjusted parameters');
                 return await primaryProtocol.bridge(adjustedParams);
             }
-            
+
         } catch (recoveryError) {
-            console.warn(`[BridgeManager] Automatic recovery failed: ${recoveryError.message}`);
+            console.warn(`[BridgeManager] Automatic recovery failed: ${(recoveryError as Error).message}`);
             // Continue with normal fallback process
         }
-        
+
         return null; // No automatic recovery possible, continue with fallback
     }
 
@@ -1097,14 +991,6 @@ interface CacheStatistics {
      */
     private async retryCctpWithFallbackAttestation(params: BridgeParams): Promise<BridgeResult> {
         console.log('[BridgeManager] Attempting CCTP recovery with fallback attestation');
-        
-        // In a real implementation, this would:
-        // 1. Try alternative attestation sources
-        // 2. Use cached attestations if available
-        // 3. Attempt manual attestation construction
-        
-        // For now, we'll simulate this by trying the same protocol again
-        // with a flag indicating it's a recovery attempt
         return bridgeManager.bridge({
             ...params,
             options: {
@@ -1119,23 +1005,13 @@ interface CacheStatistics {
      * Adjust parameters for recovery attempt
      */
     private adjustParametersForRecovery(params: BridgeParams): BridgeParams | null {
-        // For some errors, adjusting parameters can help
-        // Example: Increase gas for stuck transactions
-        // Example: Adjust slippage for failed swaps
-        
-        // For bridge operations, we might:
-        // - Increase timeout
-        // - Adjust fee estimates
-        // - Try different RPC endpoints
-        
         console.log('[BridgeManager] Adjusting parameters for recovery');
-        
+
         return {
             ...params,
             options: {
                 ...params.options,
                 recoveryMode: true,
-                // Could add specific adjustments here
             }
         };
     }
@@ -1145,45 +1021,60 @@ interface CacheStatistics {
      */
     public getRecoverySuggestions(errorCode: BridgeErrorCode): string[] {
         const suggestions: string[] = [];
-        
+
         switch (errorCode) {
             case BridgeErrorCode.ATTESTATION_TIMEOUT:
                 suggestions.push('Try alternative attestation source');
                 suggestions.push('Increase attestation timeout');
                 suggestions.push('Use manual attestation construction');
                 break;
-                
+
             case BridgeErrorCode.TRANSACTION_TIMEOUT:
                 suggestions.push('Increase gas price for faster inclusion');
                 suggestions.push('Try during less congested network times');
                 suggestions.push('Use faster RPC endpoints');
                 break;
-                
+
             case BridgeErrorCode.NONCE_ERROR:
                 suggestions.push('Check wallet transaction queue');
                 suggestions.push('Clear pending transactions');
                 suggestions.push('Reset nonce sequence');
                 break;
-                
+
             case BridgeErrorCode.NETWORK_ERROR:
                 suggestions.push('Switch to backup RPC endpoints');
                 suggestions.push('Check network connectivity');
                 suggestions.push('Retry with exponential backoff');
                 break;
-                
+
             default:
                 suggestions.push('Check error details for specific guidance');
         }
-        
+
         return suggestions;
     }
 }
 
 // ============================================================================
-
+// Cache Statistics Interface
 // ============================================================================
-// Singleton Export
-// ========================================================================================================================================================
+
+interface CacheStatistics {
+    memoryCache: {
+        size: number;
+        maxSize: number;
+    };
+    shortTermCache: {
+        size: number;
+    };
+    longTermCache: {
+        size: number;
+    };
+    usageTracking: {
+        trackedProtocols: number;
+    };
+}
+
 
 // ============================================================================
 // Singleton Export

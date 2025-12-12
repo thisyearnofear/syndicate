@@ -6,6 +6,7 @@
  */
 
 import { ethers } from 'ethers';
+import type { BigNumberish } from 'ethers';
 import { CONTRACTS } from '@/config';
 import type { SyndicateImpact } from '@/domains/lottery/types';
 
@@ -192,7 +193,7 @@ class Web3Service {
   /**
    * Get the current provider (BrowserProvider) if initialized
    */
-  getProvider(): ethers.BrowserProvider | null {
+  getProvider(): ethers.BrowserProvider | ethers.JsonRpcProvider | null {
     return this.provider;
   }
 

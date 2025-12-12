@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
-import { NEAR } from '@/config';
+import { config } from '@/config';
+const NEAR = config.near;
 import { createHash } from 'crypto';
 import { SigningKey, keccak256, getBytes } from 'ethers';
 import { ec as EC } from 'elliptic';
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
         method: 'query',
         params: {
           request_type: 'call_function',
-          account_id: NEAR.mpcContract,
+          account_id: NEAR.contracts.mpc,
           method_name: 'public_key',
           args_base64: 'e30=', // {} empty args
           finality: 'final',

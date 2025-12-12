@@ -67,27 +67,38 @@ export async function executePurchaseViaChainSignatures(
 
     onStatus?.('signing', { step: 'Requesting NEAR Chain Signature' });
 
-    const result = await chainSigsProtocol.bridge({
-      sourceChain: 'near',
-      destinationChain: 'base',
-      amount: '0', // No ETH transfer, just contract call
-      destinationAddress: recipientAddress,
-      wallet: {
-        selector,
-        accountId,
-      },
-      // Pass the contract call details
-      details: {
-        contractCall: {
-          to: purchaseTx.to,
-          data: purchaseTx.data,
-          value: 0n, // purchaseTickets doesn't need ETH value
+    const bridgeParams = {
+        sourceChain: 'near',
+        destinationChain: 'base',
+        sourceAddress: '', // Required but not used in this context
+        destinationAddress: recipientAddress,
+        amount: '0', // No ETH transfer, just contract call
+        wallet: {
+          selector,
+          accountId,
         },
-      },
-      onStatus: (status: string, details?: Record<string, unknown>) => {
-        onStatus?.(status, details);
-      },
-    });
+        // Pass the contract call details
+        details: {
+          contractCall: {
+            to: purchaseTx.to,
+            data: purchaseTx.data,
+            value: 0n, // purchaseTickets doesn't need ETH value
+          },
+        },
+        onStatus: (status: string, details?: Record<string, unknown>) => {
+          onStatus?.(status, details);
+        },
+      } as import('./bridges/types').BridgeParams & { 
+        details?: {
+          contractCall?: {
+            to?: string;
+            data?: string;
+            value?: bigint;
+          };
+        }
+      };
+
+      const result = await chainSigsProtocol.bridge(bridgeParams);
 
     if (result.success) {
       console.log('Purchase executed successfully via Chain Signatures:', {
@@ -100,7 +111,7 @@ export async function executePurchaseViaChainSignatures(
         txHash: result.destinationTxHash,
       };
     } else {
-      const errorMsg = result.error?.message || 'Unknown error';
+      const errorMsg = result.error || 'Unknown error';
       console.error('Chain Signatures purchase failed:', errorMsg);
       
       return {

@@ -30,23 +30,6 @@ const web3AuthOptions: Web3AuthOptions = {
   // Align the network with the project configuration (devnet)
   web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
   // Removed unsupported chainConfig property – Solana chain is provided via solanaProvider
-  uiConfig: {
-    appName: "Syndicate",
-    // Use the current origin when running locally to avoid metadata URL mismatch
-    appUrl:
-      typeof window !== "undefined"
-        ? window.location.origin
-        : "https://syndicate.app",
-    theme: {
-      primary: "#7c3aed",
-    },
-    mode: "dark",
-    logoLight: "https://syndicate.app/logo-light.png",
-    logoDark: "https://syndicate.app/logo-dark.png",
-    defaultLanguage: "en",
-    loginGridCol: 3,
-    primaryButton: "externalLogin",
-  },
 };
 
 // ENHANCEMENT: Create Solana provider for Web3Auth

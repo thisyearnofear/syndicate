@@ -52,8 +52,7 @@ export function ProtocolSelector({
           destinationChain,
           sourceAddress: "0x0000000000000000000000000000000000000000",
           destinationAddress: "0x0000000000000000000000000000000000000000",
-          sourceToken: USDC_ADDRESSES[sourceChain] || "",
-          destinationToken: USDC_ADDRESSES[destinationChain] || "",
+          token: USDC_ADDRESSES[sourceChain] || "",
           amount,
         });
 

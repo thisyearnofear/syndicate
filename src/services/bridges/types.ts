@@ -177,6 +177,16 @@ export interface BridgeRoute {
     score?: number;              // Overall score (0-100)
 }
 
+export const USDC_ADDRESSES: Record<ChainIdentifier, string | undefined> = {
+    ethereum: '0xA0b86991c631e50B4f4b4e8A3c02c5d0C2f10d5D',
+    base: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    polygon: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
+    avalanche: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E',
+    solana: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyB7bF',
+    zcash: undefined,
+    near: 'a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.factory.bridge.near',
+};
+
 // ============================================================================
 // Protocol Health & Monitoring
 // ============================================================================

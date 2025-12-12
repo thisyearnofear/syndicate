@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
-import { NEAR } from '@/config';
+import { config } from '@/config';
+const NEAR = config.near;
 
 // Define types
 interface NearQueryRequest {
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
         method: 'query',
         params: {
           request_type: 'call_function',
-          account_id: NEAR.mpcContract,
+          account_id: NEAR.contracts.mpc,
           method_name: methodName,
           args_base64: argsBase64Encoded,
           finality: 'final',
