@@ -5,6 +5,7 @@ export const NEAR_CONFIG = {
   walletUrl: 'https://wallet.mainnet.near.org',
   helperUrl: 'https://helper.mainnet.near.org',
   explorerUrl: 'https://nearblocks.io',
+  apiBaseUrl: 'https://1click.chaindefuser.com',
 };
 
 // Environment-specific overrides

@@ -481,7 +481,6 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
         </div>
       </div>
 
-      {/* @ts-expect-error: JSX style tag requires ignore for TypeScript */}
       <style jsx>{`
         @keyframes scale-in {
           from { transform: scale(0.9); opacity: 0; }

@@ -56,7 +56,7 @@ class SolanaWalletIntegration {
       const usdcMint = new PublicKey(this.USDC_MINT_ADDRESS);
 
       // Get all token accounts for the wallet
-      const tokenAccounts = await connection.getTokenAccountsByOwner(publicKey, {
+      const tokenAccounts = await (connection as any).getTokenAccountsByOwner(publicKey, {
         mint: usdcMint,
       });
 

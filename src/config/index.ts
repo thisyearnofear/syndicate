@@ -57,6 +57,15 @@ export const CHAINS = {
     explorerUrl: "https://sepolia.basescan.org",
     rpcUrl: process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org",
   },
+  stacks: {
+    id: 12345,
+    name: "Stacks",
+    network: "stacks-mainnet",
+    nativeCurrency: { name: "Stacks", symbol: "STX", decimals: 6 },
+    rpcUrl: process.env.NEXT_PUBLIC_STACKS_RPC_URL || "https://api.stacks.co",
+    explorerUrl: "https://explorer.stacks.co",
+    pimlicoRpcUrl: process.env.NEXT_PUBLIC_PIMLICO_STACKS_RPC || "https://api.pimlico.io/v2/12345/rpc",
+  },
 } as const;
 
 export const CHAIN_IDS = {
@@ -65,6 +74,7 @@ export const CHAIN_IDS = {
   AVALANCHE: 43114,
   ETHEREUM: 1,
   SEPOLIA: 11155111,
+  STACKS: 12345,
 } as const;
 
 // Default chain for development
@@ -77,13 +87,13 @@ export const DEFAULT_CHAIN = CHAINS.base;
 export const CONTRACTS = {
   // Megapot lottery contract on Base
   megapot: process.env.NEXT_PUBLIC_MEGAPOT_CONTRACT || "0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95",
-  
+
   // Syndicate coordination contract
   syndicate: process.env.NEXT_PUBLIC_SYNDICATE_CONTRACT || "0x0000000000000000000000000000000000000000",
-  
+
   // Cause-based distribution contract
   causeFund: process.env.NEXT_PUBLIC_CAUSE_FUND_CONTRACT || "0x0000000000000000000000000000000000000000",
-  
+
   // Vault strategy contracts
   vaultStrategies: {
     spark: process.env.NEXT_PUBLIC_SPARK_VAULT || "0x0000000000000000000000000000000000000000",
@@ -92,7 +102,7 @@ export const CONTRACTS = {
     uniswap: process.env.NEXT_PUBLIC_UNISWAP_VAULT || "0x0000000000000000000000000000000000000000",
     octant: process.env.NEXT_PUBLIC_OCTANT_VAULT || "0x0000000000000000000000000000000000000000",
   },
-  
+
   // USDC token on Base
   usdc: process.env.NEXT_PUBLIC_USDC_TOKEN_ADDRESS || "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
 } as const;
@@ -113,14 +123,9 @@ export const CONTRACT_EVENTS = {
 
 
 export const LOTTERY = {
-
-  ticketPriceUsd: 1, // 
- per ticket
-
+  ticketPriceUsd: 1, // $1 per ticket
   ticketPriceWei: BigInt(1 * 10 ** 6), // 1 USDC in wei (6 decimals)
-
   referrerAddress: process.env.NEXT_PUBLIC_REFERRER_ADDRESS || "0x0000000000000000000000000000000000000000",
-
 } as const;
 
 
@@ -134,25 +139,24 @@ export const LOTTERY = {
 
 
 export const API = {
-
   megapot: {
-
     baseUrl: "https://api.megapot.io/api/v1",
-
     apiKey: process.env.NEXT_PUBLIC_MEGAPOT_API_KEY,
-
     endpoints: {
-
       jackpotStats: "/jackpot-round-stats/active",
-
       ticketPurchases: "/ticket-purchases",
-
       dailyGiveaway: "/giveaways/daily-giveaway-winners",
-
     },
-
   },
-
+  stacks: {
+    baseUrl: process.env.NEXT_PUBLIC_STACKS_API_URL || "https://api.stacks.co/v2",
+    apiKey: process.env.NEXT_PUBLIC_STACKS_API_KEY,
+    endpoints: {
+      jackpotStats: "/lottery/jackpot-round-stats/active",
+      ticketPurchases: "/lottery/ticket-purchases",
+      dailyGiveaway: "/lottery/daily-giveaway-winners",
+    },
+  },
 } as const;
 
 

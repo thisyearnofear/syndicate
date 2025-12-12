@@ -42,7 +42,7 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: BridgeResult)
         amount,
         sourceAddress, // Actual wallet address
         destinationAddress: recipient, // Destination address
-        sourceToken: 'USDC',
+        token: 'USDC',
         onStatus: (stage, info) => setLogs((prev) => [...prev, { stage, info: info && typeof info === 'object' ? (info as Record<string, unknown>) : undefined }])
       });
 

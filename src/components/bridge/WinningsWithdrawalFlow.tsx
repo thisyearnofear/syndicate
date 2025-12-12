@@ -14,7 +14,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Loader, AlertCircle, CheckCircle } from 'lucide-react';
+import { Loader, AlertCircle, CircleCheckBig as CheckCircle } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 import { useTicketPurchase } from '@/hooks/useTicketPurchase';
 import { useWalletConnection } from '@/hooks/useWalletConnection';

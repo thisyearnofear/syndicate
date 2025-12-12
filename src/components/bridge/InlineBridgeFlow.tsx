@@ -69,7 +69,7 @@ export function InlineBridgeFlow({
                 amount,
                 sourceAddress, // Actual wallet address
                 destinationAddress: recipient, // Destination address
-                sourceToken: 'USDC',
+                token: 'USDC',
                 protocol: initialProtocol,
                 onStatus: (status, data) => {
                     setCurrentStatus(status);

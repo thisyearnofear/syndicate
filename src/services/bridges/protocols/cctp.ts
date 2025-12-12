@@ -19,7 +19,6 @@ import type {
     BridgeResult,
     ProtocolHealth,
     ChainIdentifier,
-    AttestationOptions,
 } from '../types';
 import { BridgeError, BridgeErrorCode } from '../types';
 import { CONTRACTS, cctp as CCTP } from '@/config';
@@ -301,7 +300,7 @@ export class CctpProtocol implements BridgeProtocol {
                 throw error; // Re-throw other bridge errors
             }
 
-            const errorMsg = error instanceof Error ? error.message : 'CCTP EVM bridge failed';
+            const errorMsg = (error as { message?: string })?.message || String(error);
             console.error('[CCTP EVM] Bridge failed:', errorMsg);
 
             // Enhanced error classification
@@ -366,7 +365,7 @@ export class CctpProtocol implements BridgeProtocol {
      * Fetch CCTP attestation from Circle Iris API
      * CONSOLIDATED from both bridgeService.ts and solanaBridgeService.ts
      */
-    private async fetchAttestation(message: string, options?: AttestationOptions): Promise<string | null> {
+    private async fetchAttestation(message: string, options?: { timeoutMs?: number; retryDelayMs?: number }): Promise<string | null> {
         try {
             if (!message || message === '0x') return null;
 
@@ -390,8 +389,8 @@ export class CctpProtocol implements BridgeProtocol {
                         if (resp.ok) {
                             json = await resp.json().catch(() => null);
                         }
-                    } catch (proxyError) {
-                        console.debug('[CCTP] Proxy fetch failed, trying direct:', proxyError.message);
+                    } catch (proxyError: unknown) {
+                        console.debug('[CCTP] Proxy fetch failed, trying direct:', (proxyError as { message?: string })?.message || String(proxyError));
                     }
 
                     // Strategy 2: Fallback to direct Circle API
@@ -405,8 +404,8 @@ export class CctpProtocol implements BridgeProtocol {
                             if (resp.ok) {
                                 json = await resp.json().catch(() => null);
                             }
-                        } catch (directError) {
-                            console.debug('[CCTP] Direct fetch failed:', directError.message);
+                        } catch (directError: unknown) {
+                            console.debug('[CCTP] Direct fetch failed:', (directError as { message?: string })?.message || String(directError));
                         }
                     }
 
@@ -422,8 +421,8 @@ export class CctpProtocol implements BridgeProtocol {
                             if (resp.ok) {
                                 json = await resp.json().catch(() => null);
                             }
-                        } catch (fallbackError) {
-                            console.debug('[CCTP] Fallback API failed:', fallbackError.message);
+                        } catch (fallbackError: unknown) {
+                            console.debug('[CCTP] Fallback API failed:', (fallbackError as { message?: string })?.message || String(fallbackError));
                         }
                     }
 
@@ -458,9 +457,6 @@ export class CctpProtocol implements BridgeProtocol {
                     maxDelayMs: options?.retryDelayMs || 15000, // Longer max delay
                     backoffMultiplier: 1.3, // Slightly more aggressive backoff
                     context: 'Circle CCTP attestation',
-                    onRetry: (attempt, delay) => {
-                        console.log(`[CCTP] Attestation attempt ${attempt}, retrying in ${delay}ms...`);
-                    }
                 }
             );
 
@@ -473,7 +469,8 @@ export class CctpProtocol implements BridgeProtocol {
             }
             
             // Provide more context for timeout errors
-            if (error?.name === 'TimeoutError' || error?.message?.includes('timeout')) {
+            const errorMsg = (error as { message?: string })?.message || String(error);
+            if ((error as { name?: string })?.name === 'TimeoutError' || errorMsg.includes('timeout')) {
                 throw new BridgeError(
                     BridgeErrorCode.ATTESTATION_TIMEOUT,
                     'CCTP attestation timed out. Circle may be experiencing delays. Consider using an alternative bridge protocol.',

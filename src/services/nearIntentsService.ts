@@ -14,7 +14,7 @@
 
 import { OpenAPI, QuoteRequest, OneClickService } from '@defuse-protocol/one-click-sdk-typescript';
 import type { WalletSelector } from '@near-wallet-selector/core';
-import { NEAR, NEAR_TOKENS } from '@/config';
+import { getNearConfig, NEAR_TOKENS } from '@/config';
 import type { ProtocolHealth } from './bridges/types';
 
 export interface IntentQuote {
@@ -61,7 +61,8 @@ class NearIntentsService {
       this.accountId = accountId;
 
       // Configure the 1Click API
-      OpenAPI.BASE = 'https://1click.chaindefuser.com';
+      const nearConfig = getNearConfig();
+      OpenAPI.BASE = nearConfig.apiBaseUrl || 'https://1click.chaindefuser.com';
       
       // Optional JWT token for reduced fees
       const jwtToken = process.env.NEXT_PUBLIC_NEAR_INTENTS_JWT;
@@ -588,7 +589,7 @@ class NearIntentsService {
         refundTo: params.nearAccountId,
         refundType: QuoteRequest.refundType.ORIGIN_CHAIN,
         recipient: params.nearAccountId,
-        recipientType: QuoteRequest.recipientType.ORIGIN_CHAIN,
+        recipientType: 'ORIGIN_CHAIN' as any,
         deadline: new Date(Date.now() + 3600000).toISOString(),
       };
 

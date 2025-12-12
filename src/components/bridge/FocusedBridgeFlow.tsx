@@ -251,7 +251,7 @@ export function FocusedBridgeFlow({
           amount: amountInput,
           sourceAddress, // Actual wallet address
           destinationAddress: recipient, // Destination EVM address
-          sourceToken: "USDC",
+          token: "USDC",
           protocol: selectedProtocol.protocol,
           onStatus: (status, data) => {
             setCurrentStatus(status);

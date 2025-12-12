@@ -98,13 +98,13 @@ class SolanaWalletService {
     const owner = new PublicKey(this.state.publicKey);
     const mint = new PublicKey(usdcMint);
 
-    const accounts = await connection.getTokenAccountsByOwner(owner, { mint });
+    const accounts = await (connection as any).getTokenAccountsByOwner(owner, { mint });
     let total = 0n;
     for (const account of accounts.value) {
       // Account layout parsing is heavy; call getTokenAccountBalance for each (RPC helps parse)
       const info = await connection.getTokenAccountBalance(account.pubkey);
-      const ui = info?.value?.amount || '0';
-      total += BigInt(ui);
+      const ui = info?.value?.uiAmount || 0;
+      total += BigInt(Math.floor(ui * 1000000)); // Convert to smallest unit (6 decimals)
     }
     // USDC has 6 decimals
     const integer = total / 1000000n;
