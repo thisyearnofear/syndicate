@@ -27,11 +27,21 @@ npm run dev
 
 ## Core Architecture
 
-### Multi-Chain Wallet Support
-**Status**: ✅ Working
-- **EVM Wallet (MetaMask)**: Connects reliably, network switching works
-- **Solana Wallet (Phantom)**: Detects correctly, balance queries sometimes slow
-- **NEAR Wallet**: Deterministic MPC-derived Base addresses, no storage needed
+### Single Wallet, Any Chain Origin (User Value Prop)
+**Status**: ✅ Fully Implemented  
+**Design Pattern**: Single active wallet connection at a time, but system automatically routes based on wallet type
+
+**How It Works:**
+- User connects ONE native wallet (Leather/Stacks, Phantom/Solana, NEAR, or MetaMask/EVM)
+- System detects wallet type and automatically determines bridge/routing
+- User clicks "Buy Ticket" once → system handles bridge + purchase behind the scenes
+- No manual wallet switching needed for cross-chain purchases
+
+**Supported Wallet Origins:**
+- **Leather/Stacks Wallets** (Leather, Xverse, Asigna, Fordefi): Route via sBTC → CCTP bridge to Base
+- **Solana Wallet (Phantom)**: Route via CCTP bridge to Base
+- **NEAR Wallet**: Route via NEAR Intents + Chain Signatures (deterministic MPC-derived Base address, no storage)
+- **EVM Wallets (MetaMask/WalletConnect)**: Direct Base or bridge from any EVM chain via CCIP/CCTP
 
 ### Bridge System (Unified Architecture)
 **Status**: ✅ Complete System
@@ -68,13 +78,14 @@ npm run dev
    - Monitor bridge status
    - Verify ticket purchase
 
-3. **Stacks Purchase Flow**
-   - Connect Stacks wallet (any of 4 supported)
-   - Also connect EVM wallet (MetaMask/WalletConnect) as recipient
-   - Enter ticket count
-   - Execute purchase (triggers STX → sBTC → USDC → Base bridge)
-   - Monitor transaction via CrossChainTracker
-   - Verify tickets received on Base
+3. **Stacks Purchase Flow** (Single Wallet, Seamless)
+    - Connect Stacks wallet only (Leather, Xverse, Asigna, or Fordefi)
+    - System automatically derives Base address
+    - Enter ticket count
+    - Click "Buy Ticket"
+    - System executes: sBTC → CCTP bridge → Megapot purchase on Base (behind scenes)
+    - Verify tickets received on your Base address (no account creation needed)
+    - No wallet switching required
 
 4. **Bridge Operations**
    - Navigate to /bridge
@@ -189,12 +200,36 @@ delete localStorage.debug
 - **Base**: https://basescan.org/
 - **Solana**: https://explorer.solana.com/
 
+## Wallet Architecture Details
+
+### Single Wallet, Any Chain Origin
+**Component**: `src/components/wallet/WalletConnectionCard.tsx`  
+**Service**: `src/domains/wallet/services/unifiedWalletService.ts`
+
+**Flow for Each Wallet Type:**
+
+| Wallet Type | Origin Chain | Auto-Route | Bridge Protocol | Destination |
+|---|---|---|---|---|
+| MetaMask/WalletConnect | EVM (any) | Via CCIP/CCTP | Auto-selected | Base |
+| Phantom | Solana | Via CCTP | Circle Bridge | Base |
+| Leather/Xverse/Asigna/Fordefi | Stacks | Via sBTC → CCTP | Custom | Base |
+| NEAR Wallet | NEAR | Via Chain Signatures | 1Click SDK | Derived Base Address |
+
+**Key Principle**: System detects wallet type → automatically picks best bridge → user clicks once to purchase.
+
+### Error Handling & User Messaging
+- **Not Installed**: Provide download link to wallet
+- **Connection Rejected**: User rejected in wallet UI, ask to retry
+- **No Address Found**: Explain account setup needed in wallet
+- **Bridge Failed**: Show which protocol failed, suggest retry or manual bridge
+
 ## Production Readiness
 
 ### Current Status: 🔄 Active Development
 - ✅ Core wallet connections working
-- ✅ Bridge architecture implemented
+- ✅ Bridge architecture implemented  
 - ✅ NEAR Intents fully integrated
+- ✅ Stacks wallet integration (Leather, Xverse, Asigna, Fordefi)
 - ⚠️ Testing coverage needs expansion
 - ⚠️ Error monitoring setup needed
 

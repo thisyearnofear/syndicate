@@ -93,7 +93,7 @@ export function getWalletStatus(walletType: WalletType): {
       return {
         isAvailable: typeof window !== 'undefined' && !!window.LeatherProvider,
         isInstalled: typeof window !== 'undefined' && !!window.LeatherProvider,
-        downloadUrl: 'https://leather.io/',
+        downloadUrl: 'https://leather.io/install',
       };
 
     case WalletTypes.XVERSE:
@@ -445,7 +445,11 @@ async function connectStacksWallet(walletType: StacksWalletType): Promise<{ addr
 async function connectLeatherWallet(): Promise<{ address: string; publicKey: string }> {
   const provider = window.LeatherProvider;
   if (!provider) {
-    throw new Error('Leather wallet is not installed. Please install it from leather.io');
+    throw createError(
+      'WALLET_NOT_INSTALLED',
+      'Leather wallet is not installed. Please install it from leather.io/install',
+      { downloadUrl: 'https://leather.io/install' }
+    );
   }
 
   try {
@@ -456,7 +460,10 @@ async function connectLeatherWallet(): Promise<{ address: string; publicKey: str
     };
     
     if (!result?.stacks?.address) {
-      throw new Error('Failed to get Stacks address from Leather wallet');
+      throw createError(
+        'NO_STACKS_ADDRESS',
+        'No Stacks address found. Please make sure you have a Stacks account in Leather wallet.'
+      );
     }
 
     return {
@@ -464,8 +471,13 @@ async function connectLeatherWallet(): Promise<{ address: string; publicKey: str
       publicKey: result.stacks.publicKey || '',
     };
   } catch (error) {
+    const isUserRejected = (error as { message?: string }).message?.includes('rejected');
+    if (isUserRejected) {
+      throw createError('CONNECTION_REJECTED', 'Connection was rejected. Please try again.');
+    }
+    
     const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to connect to Leather wallet: ${errorMessage}`);
+    throw createError('CONNECTION_FAILED', `Failed to connect Leather wallet: ${errorMessage}`);
   }
 }
 
