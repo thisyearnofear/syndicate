@@ -7,48 +7,36 @@
 declare global {
     interface Window {
         LeatherProvider?: {
-            connect: () => Promise<{ address: string; publicKey: string }>;
-            disconnect: () => Promise<void>;
-            signTransaction: (transaction: string) => Promise<{ signature: string }>;
-            getAddresses: () => Promise<{ address: string; publicKey: string }[]>;
+            request: (method: string, params?: unknown) => Promise<unknown>;
+            disconnect?: () => Promise<void>;
+            signTransaction?: (transaction: string) => Promise<{ signature: string }>;
         };
     }
 }
 
-// Xverse Wallet
+// Xverse Wallet (uses Sats Connect standard .request() API)
 declare global {
     interface Window {
         XverseProviders?: {
-            StacksProvider?: {
-                connect: () => Promise<{ address: string; publicKey: string }>;
-                disconnect: () => Promise<void>;
-                signTransaction: (transaction: string) => Promise<{ signature: string }>;
-                getAddresses: () => Promise<{ address: string; publicKey: string }[]>;
-            };
+            request: (method: string, params?: unknown) => Promise<unknown>;
         };
     }
 }
 
-// Asigna Wallet
+// Asigna Wallet (uses Sats Connect standard .request() API)
 declare global {
     interface Window {
         AsignaProvider?: {
-            connect: () => Promise<{ address: string; publicKey: string }>;
-            disconnect: () => Promise<void>;
-            signTransaction: (transaction: string) => Promise<{ signature: string }>;
-            getAddresses: () => Promise<{ address: string; publicKey: string }[]>;
+            request: (method: string, params?: unknown) => Promise<unknown>;
         };
     }
 }
 
-// Fordefi Wallet
+// Fordefi Wallet (uses Sats Connect standard .request() API)
 declare global {
     interface Window {
         FordefiProvider?: {
-            connect: () => Promise<{ address: string; publicKey: string }>;
-            disconnect: () => Promise<void>;
-            signTransaction: (transaction: string) => Promise<{ signature: string }>;
-            getAddresses: () => Promise<{ address: string; publicKey: string }[]>;
+            request: (method: string, params?: unknown) => Promise<unknown>;
         };
     }
 }
