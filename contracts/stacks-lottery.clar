@@ -5,11 +5,15 @@
 ;; Contract owner
 (define-constant CONTRACT_OWNER tx-sender)
 
+;; Bridge Address for cross-chain to Base
+(define-constant BRIDGE_ADDRESS 'SP2Z1W1R4B48Z466C2891F5BD53A277H8A4956T0)
+
 ;; Error codes
 (define-constant ERR_NOT_ENOUGH_SBTC (err u1001))
 (define-constant ERR_NOT_CONTRACT_OWNER (err u1002))
 (define-constant ERR_INVALID_TICKET_COUNT (err u1003))
 (define-constant ERR_LOTTERY_CLOSED (err u1004))
+(define-constant ERR_INVALID_BASE_ADDRESS (err u1005))
 
 ;; Lottery state
 (define-data-var lottery-open bool true)
@@ -44,7 +48,7 @@
   )
 )
 
-;; Purchase tickets with sBTC
+;; Purchase tickets with sBTC (for native Stacks lottery)
 (define-public (purchase-tickets (ticket-count uint))
   (let (
     (total-cost (* ticket-count (var-get ticket-price)))
@@ -95,6 +99,32 @@
     })
     
     (ok new-ticket-id)
+  )
+)
+
+;; Bridge sBTC to Base and purchase Megapot tickets
+(define-public (bridge-and-purchase-tickets (ticket-count uint) (base-address (string-ascii 42)))
+  (let (
+    (total-cost (* ticket-count (var-get ticket-price)))
+  )
+    (asserts! (> ticket-count u0) ERR_INVALID_TICKET_COUNT)
+    (asserts! (var-get lottery-open) ERR_LOTTERY_CLOSED)
+    (asserts! (is-eq (len base-address) 42) ERR_INVALID_BASE_ADDRESS)
+    
+    ;; Transfer sBTC from buyer to the bridge address
+    (try! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token
+      transfer total-cost tx-sender BRIDGE_ADDRESS none))
+      
+    ;; Emit event for the relayer
+    (print {
+      event: "bridge-to-base-initiated",
+      buyer: tx-sender,
+      base-address: base-address,
+      ticket-count: ticket-count,
+      sbtc-amount: total-cost
+    })
+    
+    (ok true)
   )
 )
 
