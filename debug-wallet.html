@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leather Wallet Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .log {
+            background-color: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            height: 300px;
+            overflow-y: auto;
+            margin: 20px 0;
+            white-space: pre-wrap;
+        }
+        .error {
+            color: #ff4444;
+        }
+        .success {
+            color: #44ff44;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Leather Wallet Connection Debugger</h1>
+        
+        <div>
+            <button id="checkProviders">Check Wallet Providers</button>
+            <button id="connectWallet">Connect to Leather Wallet</button>
+            <button id="clearLog">Clear Log</button>
+        </div>
+        
+        <div id="log" class="log">Click buttons above to see debug information...</div>
+        
+        <div>
+            <h3>Troubleshooting Steps:</h3>
+            <ol>
+                <li>Click "Check Wallet Providers" to see what wallets are detected</li>
+                <li>If Leather isn't detected, check browser extensions</li>
+                <li>Try "Connect to Leather Wallet" button</li>
+                <li>Check the log for detailed error information</li>
+            </ol>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import the debugging functions
+        import { getWalletStatus, connectToLeatherWallet } from './wallet-connection.js';
+        
+        const logElement = document.getElementById('log');
+        
+        function log(message, type = '') {
+            const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+            const formattedMessage = `[${timestamp}] ${message}`;
+            logElement.innerHTML += `<div class="${type}">${formattedMessage}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function clearLog() {
+            logElement.innerHTML = '';
+        }
+        
+        // Check wallet providers
+        document.getElementById('checkProviders').addEventListener('click', async () => {
+            log('Checking wallet providers...');
+            try {
+                const status = getWalletStatus();
+                log(`Providers detected: ${JSON.stringify(status, null, 2)}`, 'success');
+                
+                if (!status.hasProviders) {
+                    log('ERROR: No wallet providers detected!', 'error');
+                    log('Please make sure Leather wallet extension is installed and enabled.', 'error');
+                } else {
+                    if (status.providers.leather) {
+                        log('SUCCESS: Leather wallet detected!', 'success');
+                    } else {
+                        log('WARNING: Leather wallet not detected. Looking for alternatives...', 'error');
+                        if (status.providers.stacks) {
+                            log('INFO: Generic Stacks provider detected', 'success');
+                        }
+                        if (status.providers.hiro) {
+                            log('INFO: Hiro wallet detected', 'success');
+                        }
+                    }
+                }
+            } catch (error) {
+                log(`Error checking providers: ${error.message}`, 'error');
+            }
+        });
+        
+        // Connect to wallet
+        document.getElementById('connectWallet').addEventListener('click', async () => {
+            log('Attempting to connect to Leather wallet...');
+            try {
+                const result = await connectToLeatherWallet();
+                log(`Connection result: ${JSON.stringify(result, null, 2)}`);
+                
+                if (result.authenticated) {
+                    log('SUCCESS: Connected to Leather wallet!', 'success');
+                } else {
+                    log(`Connection failed: ${result.error}`, 'error');
+                    if (result.troubleshooting) {
+                        log('Troubleshooting steps:');
+                        result.troubleshooting.forEach(step => log(`  ${step}`));
+                    }
+                }
+            } catch (error) {
+                log(`Exception during connection: ${error.message}`, 'error');
+            }
+        });
+        
+        // Clear log
+        document.getElementById('clearLog').addEventListener('click', clearLog);
+        
+        // Auto-check providers on page load
+        window.addEventListener('load', () => {
+            log('Page loaded. Ready to debug Leather wallet connection.');
+            log('Click "Check Wallet Providers" to begin.');
+        });
+    </script>
+</body>
+</html>
