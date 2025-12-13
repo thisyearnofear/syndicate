@@ -181,7 +181,11 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       if (walletType === WalletTypes.NEAR) {
         // NEAR uses bridge manager directly, no separate initialization needed
         success = true;
-      } else if (walletType === WalletTypes.PHANTOM) {
+      } else if (walletType === WalletTypes.SOLANA) {
+        // Solana uses cross-chain bridge, no direct Web3 initialization needed
+        success = true;
+      } else if (walletType === WalletTypes.STACKS) {
+        // Stacks uses cross-chain bridge, no direct Web3 initialization needed
         success = true;
       } else {
         // Default: EVM Base purchase path
@@ -195,43 +199,50 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
         // Only load user-specific data - jackpot is already available from API via useLottery hook
         try {
           // Only load EVM-specific data when using EVM wallet
-          if (walletType !== WalletTypes.NEAR) {
+          if (walletType === WalletTypes.EVM) {
             await Promise.allSettled([
               refreshBalance(),
               // Removed: refreshJackpot() - jackpot data comes from Megapot API, not blockchain
               loadTicketPrice(),
             ]);
-          }
 
-          // Load user ticket info and odds info
-          try {
-            const ticketInfo = await web3Service.getCurrentTicketInfo();
-            setState(prev => ({ ...prev, userTicketInfo: ticketInfo }));
-          } catch (ticketError) {
-            console.warn('Failed to load user ticket info:', ticketError);
-          }
+            // Load user ticket info and odds info for EVM wallets
+            try {
+              const ticketInfo = await web3Service.getCurrentTicketInfo();
+              setState(prev => ({ ...prev, userTicketInfo: ticketInfo }));
+            } catch (ticketError) {
+              console.warn('Failed to load user ticket info:', ticketError);
+            }
 
-          try {
-            const oddsInfo = await web3Service.getOddsInfo();
-            setState(prev => ({ ...prev, oddsInfo }));
-          } catch (oddsError) {
-            console.warn('Failed to load odds info:', oddsError);
+            try {
+              const oddsInfo = await web3Service.getOddsInfo();
+              setState(prev => ({ ...prev, oddsInfo }));
+            } catch (oddsError) {
+              console.warn('Failed to load odds info:', oddsError);
+            }
+          } else {
+            console.log(`Skipping EVM-specific data loading for ${walletType} wallet`);
           }
         } catch (dataError) {
           console.warn('Some data failed to load, but initialization succeeded:', dataError);
         }
       }
 
+      const errorMessage = walletType === WalletTypes.EVM 
+        ? 'Failed to initialize Web3 service'
+        : 'Failed to initialize purchase service';
+      
       setState(prev => ({
         ...prev,
         isInitializing: false,
         isServiceReady: success,
-        error: success ? null : 'Failed to initialize Web3 service'
+        error: success ? null : errorMessage
       }));
 
       return success;
     } catch (error) {
-      console.error('Web3 initialization failed:', error);
+      const serviceName = walletType === WalletTypes.EVM ? 'Web3' : 'Purchase';
+      console.error(`${serviceName} initialization failed:`, error);
       setState(prev => ({
         ...prev,
         isInitializing: false,
