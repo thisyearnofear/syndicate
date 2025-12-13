@@ -11,7 +11,7 @@ import { CONTRACTS } from '@/config';
 import type { SyndicateImpact } from '@/domains/lottery/types';
 
 // Megapot contract ABI (minimal required functions)
-const MEGAPOT_ABI = [
+export const MEGAPOT_ABI = [
 // Purchase tickets function - 3 parameters: referrer, value, recipient
 "function purchaseTickets(address referrer, uint256 value, address recipient) external",
 
@@ -189,6 +189,16 @@ class Web3Service {
       return false;
     }
   }
+
+  // --- Public Getters for Constants ---
+  getMegapotContractAddress(): `0x${string}` {
+    return this.megapotContractAddress as `0x${string}`;
+  }
+
+  getMegapotAbi() {
+    return MEGAPOT_ABI;
+  }
+
 
   /**
    * Get the current provider (BrowserProvider) if initialized

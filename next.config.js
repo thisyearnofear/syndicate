@@ -116,6 +116,8 @@ const nextConfig = {
       ...config.resolve,
       alias: {
         ...config.resolve.alias,
+        // Fix for MetaMask SDK trying to import react-native module
+        '@react-native-async-storage/async-storage': path.resolve(__dirname, 'empty-module/index.js'),
         // Explicitly ignore test files that may be imported
         'thread-stream/test': path.resolve(__dirname, 'empty-module/index.js'),
         'thread-stream/test/': path.resolve(__dirname, 'empty-module/index.js'),
@@ -161,3 +163,4 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
+

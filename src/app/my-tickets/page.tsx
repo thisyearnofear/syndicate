@@ -4,10 +4,9 @@
  * MY TICKETS PAGE
  * 
  * Core Principles Applied:
- * - ENHANCEMENT FIRST: Built on existing components and patterns
- * - MODULAR: Reuses existing UI components
- * - CLEAN: Clear ticket history display
- * - PERFORMANT: Efficient data loading and caching
+ * - ENHANCEMENT FIRST: Enhanced to guide Stacks users through the winnings claim flow.
+ * - MODULAR: Reuses existing UI components and incorporates the new WinningsGuide component.
+ * - CLEAN: Clear separation of concerns between history display, stats, and the new guided flow.
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -17,15 +16,11 @@ import { useTicketHistory } from "@/hooks/useTicketHistory";
 import { Button } from "@/shared/components/ui/Button";
 import { LoadingSpinner } from "@/shared/components/LoadingSpinner";
 import WalletConnectionManager from "@/components/wallet/WalletConnectionManager";
-import {
-    CompactContainer,
-    CompactStack,
-    CompactFlex,
-    CompactSection,
-} from "@/shared/components/premium/CompactLayout";
+import { CompactContainer, CompactStack, CompactFlex, CompactSection } from "@/shared/components/premium/CompactLayout";
 import { PuzzlePiece } from "@/shared/components/premium/PuzzlePiece";
 import { ExternalLink, ArrowLeft, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { WinningsGuide } from "@/components/wallet/WinningsGuide"; // Import the new component
 
 import type { UserTicketInfo } from "@/services/web3Service";
 import type { TicketPurchaseHistory } from "@/hooks/useTicketHistory";
@@ -286,6 +281,9 @@ const loadTicketData = useCallback(async () => {
                         </div>
                     </div>
 
+                    {/* Winnings Guide for Stacks Users */}
+                    <WinningsGuide />
+
                     {/* Stats Section */}
                     <TicketStats
                         userTicketInfo={userTicketInfo}
@@ -316,6 +314,7 @@ const loadTicketData = useCallback(async () => {
                                 <p className="text-gray-400 mb-6">
                                     Purchase your first tickets to start playing!
                                 </p>
+
                                 <Link href="/">
                                     <Button
                                         variant="default"

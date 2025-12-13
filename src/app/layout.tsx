@@ -4,10 +4,17 @@ import { Inter } from "next/font/google";
 import "@rainbow-me/rainbowkit/styles.css";
 import "@near-wallet-selector/modal-ui/styles.css";
 import { ToastProvider } from "@/shared/components/ui/Toast";
-import ClientProviders from "@/components/ClientProviders";
+import dynamic from "next/dynamic";
 import DynamicNavigationHeader from "@/components/DynamicNavigationHeader";
 
 const inter = Inter({ subsets: ["latin"] });
+
+// Dynamically import client-side providers to prevent SSR issues
+const ClientProviders = dynamic(
+  () => import("@/components/ClientProviders"),
+  { ssr: false }
+);
+
 
 export const metadata: Metadata = {
   title: "Syndicate - Cross-Chain Lottery Platform",
