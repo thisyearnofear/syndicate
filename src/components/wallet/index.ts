@@ -5,7 +5,7 @@
  * - CLEAN: Single source of truth for wallet selection
  * - MODULAR: Composable wallet components
  * - ENHANCEMENT FIRST: Consolidated duplicate components
- * - AGGRESSIVE CONSOLIDATION: Merged ConnectWallet into WalletConnectionCard
+ * - AGGRESSIVE CONSOLIDATION: Deleted ConnectWallet.tsx, WalletInfoContainer.tsx, SolanaWalletConnection.tsx
  * 
  * Architecture: Single Active Wallet (any chain origin)
  * - User connects ONE wallet from their native chain
@@ -18,12 +18,10 @@ export { WalletConnectionCard } from './WalletConnectionCard';
 
 // Wallet state & display
 export { default as WalletInfo } from './WalletInfo';
-export { default as WalletInfoContainer } from './WalletInfoContainer';
 
 // Wallet connection management
 export { default as WalletConnectionManager } from './WalletConnectionManager';
 export { default as WalletConnectionOptions } from './WalletConnectionOptions';
 
-// Specialized components
-export { default as SolanaWalletConnection } from './SolanaWalletConnection';
+// Error handling
 export { Web3AuthErrorBoundary } from './Web3AuthErrorBoundary';
