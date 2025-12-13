@@ -441,6 +441,9 @@ async function connectStacksWallet(walletType: StacksWalletType): Promise<{ addr
 /**
  * Connect to Leather wallet
  * Uses Leather's .request() API method (Modern Wallet APIs standard)
+ * 
+ * Leather returns: { jsonrpc: "2.0", id: "...", result: { addresses: [...] } }
+ * where addresses is an array of { symbol, address, publicKey?, derivationPath, type?, ... }
  */
 async function connectLeatherWallet(): Promise<{ address: string; publicKey: string }> {
   const provider = window.LeatherProvider;
@@ -461,24 +464,34 @@ async function connectLeatherWallet(): Promise<{ address: string; publicKey: str
     });
 
     // Leather API uses .request() method with "getAddresses" to get Stacks address
-    // Response format: { result: { addresses: [...] } } or { addresses: [...] }
-    const requestPromise = provider.request('getAddresses');
+    // Response format: { jsonrpc: "2.0", id: "...", result: { addresses: [...] } }
+    const requestPromise = provider.request('getAddresses') as Promise<any>;
 
     // Race against timeout
     const response = await Promise.race([requestPromise, timeoutPromise]);
 
-    console.log('Leather wallet response received:', response);
+    console.log('Leather wallet response received');
 
-    const result = (response as any).result || response;
-    const addresses = result?.addresses;
+    // Extract addresses array from response
+    // Leather returns { result: { addresses: [...] } }
+    let addresses: any[] | undefined;
+    
+    if (response?.result?.addresses) {
+      addresses = response.result.addresses;
+    } else if (Array.isArray(response?.addresses)) {
+      addresses = response.addresses;
+    } else if (Array.isArray(response)) {
+      addresses = response;
+    }
 
-    if (!Array.isArray(addresses)) {
-      console.error('Leather getAddresses returned unexpected format:', response);
+    if (!Array.isArray(addresses) || addresses.length === 0) {
+      console.error('Leather getAddresses returned unexpected format');
       throw new Error('Invalid response format from Leather wallet');
     }
 
     // Find Stacks (STX) address in the list
-    const stxAccount = addresses.find((a: any) => a.symbol === 'STX');
+    // Safe iteration - don't use index, use find()
+    const stxAccount = addresses.find((a: any) => a?.symbol === 'STX' && a?.address);
 
     if (!stxAccount?.address) {
       throw createError(
@@ -487,19 +500,21 @@ async function connectLeatherWallet(): Promise<{ address: string; publicKey: str
       );
     }
 
+    // Return only serializable data (no function references, no circular references)
     return {
-      address: stxAccount.address,
-      publicKey: stxAccount.publicKey || '',
+      address: String(stxAccount.address),
+      publicKey: stxAccount.publicKey ? String(stxAccount.publicKey) : '',
     };
   } catch (error) {
-    console.error('Leather connection internal error:', error);
+    console.error('Leather connection error:', error);
 
-    const isUserRejected = (error as { message?: string }).message?.includes('rejected');
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const isUserRejected = errorMessage?.includes('rejected');
+    
     if (isUserRejected) {
       throw createError('CONNECTION_REJECTED', 'Connection was rejected. Please try again.');
     }
 
-    const errorMessage = error instanceof Error ? error.message : String(error);
     throw createError('CONNECTION_FAILED', `Failed to connect Leather wallet: ${errorMessage}`);
   }
 }
@@ -511,27 +526,35 @@ async function connectLeatherWallet(): Promise<{ address: string; publicKey: str
 async function connectXverseWallet(): Promise<{ address: string; publicKey: string }> {
   const provider = window.XverseProviders;
   if (!provider) {
-    throw new Error('Xverse wallet is not installed. Please install it from xverse.app');
+    throw createError(
+      'WALLET_NOT_INSTALLED',
+      'Xverse wallet is not installed. Please install it from xverse.app',
+      { downloadUrl: 'https://xverse.app' }
+    );
   }
 
   try {
     // Xverse uses Sats Connect standard API with stx_getAccounts for Stacks addresses
-    const result = await provider.request('stx_getAccounts') as {
-      stxAddress?: string;
-      publicKey?: string;
-    };
+    const result = await provider.request('stx_getAccounts') as any;
 
     if (!result?.stxAddress) {
       throw new Error('Failed to get Stacks address from Xverse wallet');
     }
 
+    // Return only serializable data
     return {
-      address: result.stxAddress,
-      publicKey: result.publicKey || '',
+      address: String(result.stxAddress),
+      publicKey: result.publicKey ? String(result.publicKey) : '',
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to connect to Xverse wallet: ${errorMessage}`);
+    const isUserRejected = errorMessage?.includes('rejected');
+    
+    if (isUserRejected) {
+      throw createError('CONNECTION_REJECTED', 'Connection was rejected. Please try again.');
+    }
+
+    throw createError('CONNECTION_FAILED', `Failed to connect to Xverse wallet: ${errorMessage}`);
   }
 }
 
@@ -542,27 +565,35 @@ async function connectXverseWallet(): Promise<{ address: string; publicKey: stri
 async function connectAsignaWallet(): Promise<{ address: string; publicKey: string }> {
   const provider = window.AsignaProvider;
   if (!provider) {
-    throw new Error('Asigna wallet is not installed. Please install it from asigna.io');
+    throw createError(
+      'WALLET_NOT_INSTALLED',
+      'Asigna wallet is not installed. Please install it from asigna.io',
+      { downloadUrl: 'https://asigna.io' }
+    );
   }
 
   try {
     // Asigna uses Sats Connect standard API with stx_getAccounts for Stacks addresses
-    const result = await provider.request('stx_getAccounts') as {
-      stxAddress?: string;
-      publicKey?: string;
-    };
+    const result = await provider.request('stx_getAccounts') as any;
 
     if (!result?.stxAddress) {
       throw new Error('Failed to get Stacks address from Asigna wallet');
     }
 
+    // Return only serializable data
     return {
-      address: result.stxAddress,
-      publicKey: result.publicKey || '',
+      address: String(result.stxAddress),
+      publicKey: result.publicKey ? String(result.publicKey) : '',
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to connect to Asigna wallet: ${errorMessage}`);
+    const isUserRejected = errorMessage?.includes('rejected');
+    
+    if (isUserRejected) {
+      throw createError('CONNECTION_REJECTED', 'Connection was rejected. Please try again.');
+    }
+
+    throw createError('CONNECTION_FAILED', `Failed to connect to Asigna wallet: ${errorMessage}`);
   }
 }
 
@@ -573,26 +604,34 @@ async function connectAsignaWallet(): Promise<{ address: string; publicKey: stri
 async function connectFordefiWallet(): Promise<{ address: string; publicKey: string }> {
   const provider = window.FordefiProvider;
   if (!provider) {
-    throw new Error('Fordefi wallet is not installed. Please install it from fordefi.com');
+    throw createError(
+      'WALLET_NOT_INSTALLED',
+      'Fordefi wallet is not installed. Please install it from fordefi.com',
+      { downloadUrl: 'https://fordefi.com' }
+    );
   }
 
   try {
     // Fordefi uses Sats Connect standard API with stx_getAccounts for Stacks addresses
-    const result = await provider.request('stx_getAccounts') as {
-      stxAddress?: string;
-      publicKey?: string;
-    };
+    const result = await provider.request('stx_getAccounts') as any;
 
     if (!result?.stxAddress) {
       throw new Error('Failed to get Stacks address from Fordefi wallet');
     }
 
+    // Return only serializable data
     return {
-      address: result.stxAddress,
-      publicKey: result.publicKey || '',
+      address: String(result.stxAddress),
+      publicKey: result.publicKey ? String(result.publicKey) : '',
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to connect to Fordefi wallet: ${errorMessage}`);
+    const isUserRejected = errorMessage?.includes('rejected');
+    
+    if (isUserRejected) {
+      throw createError('CONNECTION_REJECTED', 'Connection was rejected. Please try again.');
+    }
+
+    throw createError('CONNECTION_FAILED', `Failed to connect to Fordefi wallet: ${errorMessage}`);
   }
 }
