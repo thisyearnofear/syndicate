@@ -73,7 +73,7 @@ const WALLET_SECTIONS: WalletSection[] = [
         name: "Stacks",
         type: "stacks" as WalletType,
         icon: "₿",
-        description: "Leather, Xverse, Asigna, Fordefi & other Stacks wallets",
+        description: "BTC L2 wallets",
         gradient: "from-amber-600 to-orange-600",
         bgColor: "bg-amber-600/10 border-amber-600/20",
       },
