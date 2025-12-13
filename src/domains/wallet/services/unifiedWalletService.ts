@@ -440,6 +440,7 @@ async function connectStacksWallet(walletType: StacksWalletType): Promise<{ addr
 
 /**
  * Connect to Leather wallet
+ * Uses Leather's .request() API method (Modern Wallet APIs standard)
  */
 async function connectLeatherWallet(): Promise<{ address: string; publicKey: string }> {
   const provider = window.LeatherProvider;
@@ -448,38 +449,60 @@ async function connectLeatherWallet(): Promise<{ address: string; publicKey: str
   }
 
   try {
-    const result = await provider.connect();
+    // Leather API uses .request() method with "getAddresses" to get Stacks address
+    const result = await provider.request('getAddresses') as {
+      stacks: { address: string; publicKey: string } | undefined;
+      bitcoin: unknown;
+    };
+    
+    if (!result?.stacks?.address) {
+      throw new Error('Failed to get Stacks address from Leather wallet');
+    }
+
     return {
-      address: result.address,
-      publicKey: result.publicKey,
+      address: result.stacks.address,
+      publicKey: result.stacks.publicKey || '',
     };
   } catch (error) {
-    throw new Error(`Failed to connect to Leather wallet: ${error}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to connect to Leather wallet: ${errorMessage}`);
   }
 }
 
 /**
  * Connect to Xverse wallet
+ * Uses Sats Connect standard .request() API method with stx_getAccounts
  */
 async function connectXverseWallet(): Promise<{ address: string; publicKey: string }> {
-  const provider = window.XverseProviders?.StacksProvider;
+  const provider = window.XverseProviders;
   if (!provider) {
     throw new Error('Xverse wallet is not installed. Please install it from xverse.app');
   }
 
   try {
-    const result = await provider.connect();
+    // Xverse uses Sats Connect standard API with stx_getAccounts for Stacks addresses
+    const result = await provider.request('stx_getAccounts') as {
+      stxAddress?: string;
+      publicKey?: string;
+    };
+    
+    if (!result?.stxAddress) {
+      throw new Error('Failed to get Stacks address from Xverse wallet');
+    }
+
     return {
-      address: result.address,
-      publicKey: result.publicKey,
+      address: result.stxAddress,
+      publicKey: result.publicKey || '',
     };
   } catch (error) {
-    throw new Error(`Failed to connect to Xverse wallet: ${error}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to connect to Xverse wallet: ${errorMessage}`);
   }
 }
 
 /**
  * Connect to Asigna wallet
+ * Uses Sats Connect standard .request() API method with stx_getAccounts
  */
 async function connectAsignaWallet(): Promise<{ address: string; publicKey: string }> {
   const provider = window.AsignaProvider;
@@ -488,18 +511,29 @@ async function connectAsignaWallet(): Promise<{ address: string; publicKey: stri
   }
 
   try {
-    const result = await provider.connect();
+    // Asigna uses Sats Connect standard API with stx_getAccounts for Stacks addresses
+    const result = await provider.request('stx_getAccounts') as {
+      stxAddress?: string;
+      publicKey?: string;
+    };
+    
+    if (!result?.stxAddress) {
+      throw new Error('Failed to get Stacks address from Asigna wallet');
+    }
+
     return {
-      address: result.address,
-      publicKey: result.publicKey,
+      address: result.stxAddress,
+      publicKey: result.publicKey || '',
     };
   } catch (error) {
-    throw new Error(`Failed to connect to Asigna wallet: ${error}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to connect to Asigna wallet: ${errorMessage}`);
   }
 }
 
 /**
  * Connect to Fordefi wallet
+ * Uses Sats Connect standard .request() API method with stx_getAccounts
  */
 async function connectFordefiWallet(): Promise<{ address: string; publicKey: string }> {
   const provider = window.FordefiProvider;
@@ -508,12 +542,22 @@ async function connectFordefiWallet(): Promise<{ address: string; publicKey: str
   }
 
   try {
-    const result = await provider.connect();
+    // Fordefi uses Sats Connect standard API with stx_getAccounts for Stacks addresses
+    const result = await provider.request('stx_getAccounts') as {
+      stxAddress?: string;
+      publicKey?: string;
+    };
+    
+    if (!result?.stxAddress) {
+      throw new Error('Failed to get Stacks address from Fordefi wallet');
+    }
+
     return {
-      address: result.address,
-      publicKey: result.publicKey,
+      address: result.stxAddress,
+      publicKey: result.publicKey || '',
     };
   } catch (error) {
-    throw new Error(`Failed to connect to Fordefi wallet: ${error}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to connect to Fordefi wallet: ${errorMessage}`);
   }
 }
