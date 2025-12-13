@@ -11,6 +11,7 @@
 - MetaMask wallet (for EVM testing)
 - Phantom wallet (optional, for Solana testing)
 - NEAR wallet (optional)
+- Stacks wallet (optional, for Bitcoin L2 testing): Leather, Xverse, Asigna, or Fordefi
 
 ### Setup
 ```bash
@@ -58,6 +59,7 @@ npm run dev
    - Connect MetaMask → Verify address displayed
    - Connect Phantom → Check balance queries
    - Connect NEAR → Test address derivation
+   - Connect Stacks wallet (Leather/Xverse/Asigna/Fordefi) → Verify Bitcoin symbol (₿) shows, address displays
 
 2. **Ticket Purchase (EVM → Base)**
    - Connect MetaMask on Ethereum
@@ -66,12 +68,20 @@ npm run dev
    - Monitor bridge status
    - Verify ticket purchase
 
-3. **Bridge Operations**
+3. **Stacks Purchase Flow**
+   - Connect Stacks wallet (any of 4 supported)
+   - Also connect EVM wallet (MetaMask/WalletConnect) as recipient
+   - Enter ticket count
+   - Execute purchase (triggers STX → sBTC → USDC → Base bridge)
+   - Monitor transaction via CrossChainTracker
+   - Verify tickets received on Base
+
+4. **Bridge Operations**
    - Navigate to /bridge
-   - Select CCTP protocol
+   - Select Stacks in source chain dropdown
    - Enter test amount
-   - Monitor attestation (15-20 minutes)
-   - Test Wormhole fallback (5-10 minutes)
+   - Monitor sBTC bridge status
+   - Test fallback if needed
 
 ### Known Issues
 - **CCTP Timeouts**: 15-20 minutes, may need manual fallback

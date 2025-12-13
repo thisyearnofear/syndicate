@@ -16,11 +16,97 @@ import {
   CompactStack,
   CompactFlex,
 } from "@/shared/components/premium/CompactLayout";
-import { WalletType } from "@/domains/wallet/types";
+import { WalletType, STACKS_WALLETS } from "@/domains/wallet/types";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { walletLoader } from "@/lib/walletLoader";
 import { AlertCircle } from "lucide-react";
 import { useWalletContext } from "@/context/WalletContext";
+
+// Data-driven wallet configuration (ENHANCEMENT FIRST + DRY)
+interface WalletConfig {
+  name: string;
+  type: WalletType;
+  icon: string;
+  description: string;
+  gradient: string;
+  bgColor: string;
+  isWalletConnect?: boolean;
+}
+
+interface WalletSection {
+  title: string;
+  wallets: WalletConfig[];
+}
+
+const WALLET_SECTIONS: WalletSection[] = [
+  {
+    title: "Multi-Chain",
+    wallets: [
+      {
+        name: "WalletConnect",
+        type: "metamask" as WalletType,
+        icon: "🔗",
+        description: "Connect via WalletConnect (300+ wallets including MetaMask)",
+        gradient: "from-blue-500 to-purple-500",
+        bgColor: "bg-blue-500/10 border-blue-500/20",
+        isWalletConnect: true,
+      },
+      {
+        name: "Phantom",
+        type: "phantom" as WalletType,
+        icon: "👻",
+        description: "Solana & multi-chain wallet",
+        gradient: "from-purple-500 to-pink-500",
+        bgColor: "bg-purple-500/10 border-purple-500/20",
+      },
+      {
+        name: "NEAR",
+        type: "near" as WalletType,
+        icon: "🌌",
+        description: "NEAR account via Wallet Selector",
+        gradient: "from-blue-500 to-cyan-500",
+        bgColor: "bg-blue-500/10 border-blue-500/20",
+      },
+    ],
+  },
+  {
+    title: "Stacks (Bitcoin L2)",
+    wallets: [
+      {
+        name: "Leather",
+        type: "leather" as WalletType,
+        icon: "🧱",
+        description: "Bitcoin wallet by Trust Machines",
+        gradient: "from-amber-600 to-orange-600",
+        bgColor: "bg-amber-600/10 border-amber-600/20",
+      },
+      {
+        name: "Xverse",
+        type: "xverse" as WalletType,
+        icon: "⚡",
+        description: "Bitcoin wallet with Ledger support",
+        gradient: "from-blue-600 to-cyan-600",
+        bgColor: "bg-blue-600/10 border-blue-600/20",
+      },
+      {
+        name: "Asigna",
+        type: "asigna" as WalletType,
+        icon: "🔐",
+        description: "Bitcoin multisig wallet",
+        gradient: "from-purple-600 to-pink-600",
+        bgColor: "bg-purple-600/10 border-purple-600/20",
+      },
+      {
+        name: "Fordefi",
+        type: "fordefi" as WalletType,
+        icon: "🏦",
+        description: "Institutional Bitcoin wallet",
+        gradient: "from-indigo-600 to-blue-600",
+        bgColor: "bg-indigo-600/10 border-indigo-600/20",
+      },
+    ],
+  },
+];
 
 interface WalletConnectionCardProps {
   onConnect?: (walletType: WalletType) => void;
@@ -93,36 +179,64 @@ export function WalletConnectionCard({
     return null; // Don't render on server
   }
 
-  const wallets = [
-    {
-      name: "WalletConnect",
-      type: "metamask" as WalletType, // WalletConnect uses same connection logic
-      icon: "🔗",
-      variant: "primary" as const,
-      description: "Connect via WalletConnect (300+ wallets including MetaMask)",
-      gradient: "from-blue-500 to-purple-500",
-      bgColor: "bg-blue-500/10 border-blue-500/20",
-      isWalletConnect: true,
-    },
-    {
-      name: "Phantom",
-      type: "phantom" as WalletType,
-      icon: "👻",
-      variant: "secondary" as const,
-      description: "Solana & multi-chain wallet",
-      gradient: "from-purple-500 to-pink-500",
-      bgColor: "bg-purple-500/10 border-purple-500/20",
-    },
-    {
-      name: "NEAR",
-      type: "near" as WalletType,
-      icon: "🌌",
-      variant: "secondary" as const,
-      description: "NEAR account via Wallet Selector",
-      gradient: "from-blue-500 to-cyan-500",
-      bgColor: "bg-blue-500/10 border-blue-500/20",
-    },
-  ];
+  // Helper: Render individual wallet button (DRY)
+  const renderWalletButton = (wallet: WalletConfig) => {
+    if (wallet.isWalletConnect) {
+      return (
+        <div
+          key={wallet.name}
+          className={`${wallet.bgColor} hover:bg-opacity-20 border rounded-lg p-4 w-full transition-all duration-200 hover:scale-[1.02]`}
+        >
+          <CompactFlex justify="between" className="w-full">
+            <CompactFlex gap="md" align="center">
+              <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${wallet.gradient} flex items-center justify-center text-lg shadow-sm`}>
+                {wallet.icon}
+              </div>
+              <div className="text-left">
+                <div className="text-white font-medium">{wallet.name}</div>
+                <div className="text-gray-400 text-xs">Supports 300+ wallets</div>
+              </div>
+            </CompactFlex>
+            <div className="flex items-center">
+              <ConnectButton showBalance={false} chainStatus="none" />
+            </div>
+          </CompactFlex>
+        </div>
+      );
+    }
+
+    return (
+      <Button
+        key={wallet.name}
+        variant="ghost"
+        size="lg"
+        onClick={() => handleConnect(wallet.type)}
+        disabled={isConnecting}
+        className={`${wallet.bgColor} hover:bg-opacity-20 border w-full justify-start transition-all duration-200 hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100`}
+      >
+        <CompactFlex justify="between" className="w-full">
+          <CompactFlex gap="md" align="center">
+            <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${wallet.gradient} flex items-center justify-center text-lg shadow-sm`}>
+              {wallet.icon}
+            </div>
+            <div className="text-left">
+              <div className="text-white font-medium">
+                {isConnecting && connectingWallet === wallet.type ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2 inline-block" />
+                    Connecting...
+                  </>
+                ) : (
+                  wallet.name
+                )}
+              </div>
+              <div className="text-gray-400 text-xs">{wallet.description}</div>
+            </div>
+          </CompactFlex>
+        </CompactFlex>
+      </Button>
+    );
+  };
 
   return (
     <div className="text-center space-y-6">
@@ -154,69 +268,23 @@ export function WalletConnectionCard({
         </div>
       )}
 
-      {/* Wallet Options */}
-      <CompactStack spacing="sm" className="max-w-sm mx-auto">
-        {wallets.map((wallet) => (
-          wallet.isWalletConnect ? (
-            <div
-              key={wallet.name}
-              className={`${wallet.bgColor} hover:bg-opacity-20 border rounded-lg p-4 w-full transition-all duration-200 hover:scale-[1.02]`}
-            >
-              <CompactFlex justify="between" className="w-full">
-                <CompactFlex gap="md" align="center">
-                  <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${wallet.gradient} flex items-center justify-center text-lg shadow-sm`}>
-                    {wallet.icon}
-                  </div>
-                  <div className="text-left">
-                    <div className="text-white font-medium">
-                      {wallet.name}
-                    </div>
-                    <div className="text-gray-400 text-xs">
-                      {wallet.isWalletConnect ? "Supports 300+ wallets" : wallet.description}
-                    </div>
-                  </div>
-                </CompactFlex>
-                <div className="flex items-center">
-                  {/* Only show RainbowKit ConnectButton for WalletConnect option */}
-                  <ConnectButton showBalance={false} chainStatus="none" />
-                </div>
-              </CompactFlex>
+      {/* Wallet Sections */}
+      <div className="space-y-4 max-w-sm mx-auto">
+        {WALLET_SECTIONS.map((section) => (
+          <div key={section.title}>
+            {/* Section Header */}
+            <div className="flex items-center gap-2 mb-3 px-1">
+              <div className="text-lg">{section.title === "Stacks (Bitcoin L2)" ? "₿" : "🔗"}</div>
+              <h4 className="text-sm font-semibold text-gray-300">{section.title}</h4>
             </div>
-          ) : (
-            <Button
-              key={wallet.name}
-              variant="ghost"
-              size="lg"
-              onClick={() => handleConnect(wallet.type)}
-              disabled={isConnecting}
-              className={`${wallet.bgColor} hover:bg-opacity-20 border w-full justify-start transition-all duration-200 hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100`}
-            >
-              <CompactFlex justify="between" className="w-full">
-                <CompactFlex gap="md" align="center">
-                  <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${wallet.gradient} flex items-center justify-center text-lg shadow-sm`}>
-                    {wallet.icon}
-                  </div>
-                  <div className="text-left">
-                    <div className="text-white font-medium">
-                      {isConnecting && connectingWallet === wallet.type ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2 inline-block" />
-                          Connecting...
-                        </>
-                      ) : (
-                        wallet.name
-                      )}
-                    </div>
-                    <div className="text-gray-400 text-xs">
-                      {wallet.description}
-                    </div>
-                  </div>
-                </CompactFlex>
-              </CompactFlex>
-            </Button>
-          )
+
+            {/* Section Wallets */}
+            <CompactStack spacing="sm">
+              {section.wallets.map((wallet) => renderWalletButton(wallet))}
+            </CompactStack>
+          </div>
         ))}
-      </CompactStack>
+      </div>
 
 
 

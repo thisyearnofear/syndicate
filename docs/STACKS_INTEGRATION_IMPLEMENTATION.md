@@ -236,22 +236,69 @@ Stacks Wallet → Stacks Lottery Service → API Proxy → Stacks Bridge → Bas
 3. **Clear Separation**: Stacks logic isolated but integrated
 4. **Documentation**: Comprehensive TypeScript types and comments
 
-## 📋 Remaining Tasks (Optional Enhancements)
+## 🎯 Remaining Tasks: Frontend UI Integration
 
-### **Phase 1: UI Integration (1-2 days)**
-- Add Stacks wallet options to existing wallet connection UI
-- Display Stacks-specific lottery stats in dashboard
-- Add Stacks bridge status indicators
+### **Current Gap**
+Backend fully supports Stacks (detection, connection, bridge, cross-chain purchase) but **frontend does not expose these options to users**. Wallet connection UI only shows WalletConnect, Phantom, NEAR. Users with Stacks wallets cannot discover or connect them.
 
-### **Phase 2: Testing (2-3 days)**
-- Unit tests for Stacks lottery service
-- Integration tests for cross-chain bridge
-- End-to-end testing with real Stacks wallets
+### **Phase 1: Enhance WalletConnectionCard (ENHANCEMENT FIRST) - 1-2 days**
+**File**: `src/components/wallet/WalletConnectionCard.tsx`
+- **Current**: Lines 96-125 define only 3 wallets (WalletConnect, Phantom, NEAR)
+- **Change**: Add Stacks section to wallets array:
+  ```typescript
+  // After existing wallets, add:
+  {
+    section: "Stacks (Bitcoin L2)",
+    wallets: [
+      { name: "Leather", type: "leather", icon: "🧱", description: "Bitcoin wallet by Trust Machines" },
+      { name: "Xverse", type: "xverse", icon: "⚡", description: "Bitcoin wallet with Ledger support" },
+      { name: "Asigna", type: "asigna", icon: "🔐", description: "Bitcoin multisig wallet" },
+      { name: "Fordefi", type: "fordefi", icon: "🏦", description: "Institutional Bitcoin wallet" }
+    ]
+  }
+  ```
+- **Render**: Add section headers; consolidate wallet rendering logic for DRY principle
+- **Auto-detect**: Leverage existing detection in `unifiedWalletService.ts` (already checks for window providers)
 
-### **Phase 3: Polish (1-2 days)**
-- Error message localization for Stacks-specific errors
-- Performance optimization for Stacks API calls
-- Documentation updates
+### **Phase 2: Enhance BridgeForm + SelectStep (ENHANCEMENT FIRST) - 1-2 days**
+**Files**: 
+- `src/components/bridge/BridgeForm.tsx` 
+- `src/components/modal/purchase/SelectStep.tsx`
+- **Current**: Chain dropdown doesn't include Stacks
+- **Change**: 
+  - Add `'stacks'` to chain options in dropdown
+  - Show STX balance when Stacks selected (already handled in `useCrossChainPurchase`)
+  - Enhance bridge status display to show Stacks → Base flow
+
+### **Phase 3: Enhance Navigation + WalletInfo (ENHANCEMENT FIRST) - 1 day**
+**Files**:
+- `src/components/Navigation.tsx` (line 35)
+- `src/components/wallet/WalletInfo.tsx`
+- **Current**: No special handling for Stacks wallets
+- **Change**: 
+  - Display Bitcoin symbol (₿) prefix for Stacks addresses
+  - Show STX balance fetched from `stacksLotteryService.getWalletBalance()`
+  - Use existing `useWalletConnection()` hook with `STACKS_WALLETS` constant (already exported from `useWalletConnection.ts` line 46)
+
+### **Phase 4: Complete PurchaseModal Stacks Flow (ENHANCEMENT FIRST) - 1 day**
+**File**: `src/components/modal/PurchaseModal.tsx`
+- **Current**: Stacks flow exists (line 68 `buyTicketsWithStacks`) but UI doesn't reflect it
+- **Change**: 
+  - Enhance `SelectStep` to show Stacks-specific purchase UI when wallet is Stacks type (already checks `isStacksWallet` at line 52)
+  - Consolidate bridge explanation UI to show STX → sBTC → USDC flow
+  - Reuse existing `CrossChainTracker` component for status (works with `stacksTxId` at line 303)
+
+### **Phase 5: Update Documentation (ENHANCEMENT FIRST) - 0.5 day**
+**Files**:
+- `README.md` - Add Stacks section (similar structure to Layer 1-3)
+- `DEVELOPMENT.md` - Add Stacks wallet testing instructions
+- **No new doc**: Integrate into existing docs
+
+### **Phase 6: Testing - 1-2 days**
+- Manual: All 4 Stacks wallets (Leather, Xverse, Asigna, Fordefi)
+- Connection → Display → Purchase flow
+- Mobile responsiveness
+- Bridge status tracking
 
 ## 🚀 Deployment Readiness
 
