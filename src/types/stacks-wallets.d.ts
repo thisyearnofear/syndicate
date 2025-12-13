@@ -19,6 +19,7 @@ declare global {
     interface Window {
         XverseProviders?: {
             request: (method: string, params?: unknown) => Promise<unknown>;
+            StacksProvider?: unknown;
         };
     }
 }

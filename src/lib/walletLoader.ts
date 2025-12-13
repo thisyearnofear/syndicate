@@ -44,6 +44,15 @@ class WalletLoader {
         libraryPromise = this.loadNearWallet();
         break;
 
+      case 'leather':
+      case 'xverse':
+      case 'asigna':
+      case 'fordefi':
+        // Stacks wallets use injected providers (window.LeatherProvider, etc.)
+        // No heavy external libraries to load
+        libraryPromise = Promise.resolve({});
+        break;
+
       default:
         // For unknown wallet types, don't throw an error but return a resolved promise
         console.warn(`Unknown wallet type: ${walletType}, skipping library load`);
