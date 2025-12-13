@@ -20,7 +20,7 @@
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "postinstall": "bash patch-viem.sh"
+    "postinstall": "bash scripts/patch-viem.sh"
   },
   "dependencies": {
     "@coordinationlabs/megapot-ui-kit": "^0.0.49",
