@@ -3,17 +3,9 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
-import { 
-  Users, 
-  Heart, 
-  TrendingUp, 
-  Share2, 
-  Trophy, 
-  Gift, 
-  Award,
-  ArrowLeft
-} from "lucide-react";
+import { Users, Heart, TrendingUp, Share2, Trophy, Gift, Award, ArrowLeft } from "lucide-react";
 import type { SyndicateInfo } from "@/domains/lottery/types";
+import PurchaseModal from "@/components/modal/PurchaseModal"; // Import the modal
 
 export default function SyndicateDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +16,7 @@ export default function SyndicateDetailPage() {
   const [isSharing, setIsSharing] = useState(false);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [snapshotInfo, setSnapshotInfo] = useState<null | { createdAt: string; participants: number }>(null);
+  const [isPurchaseModalOpen, setPurchaseModalOpen] = useState(false); // State for modal
 
   useEffect(() => {
     const fetchSyndicate = async () => {
@@ -48,7 +41,6 @@ export default function SyndicateDetailPage() {
 
   const handleShare = async () => {
     setIsSharing(true);
-    
     try {
       if (navigator.share) {
         await navigator.share({
@@ -58,7 +50,6 @@ export default function SyndicateDetailPage() {
         });
       } else {
         await navigator.clipboard.writeText(`${window.location.origin}/syndicate/${id}`);
-        // You could show a toast notification here
       }
     } catch (error) {
       console.error('Error sharing:', error);
@@ -81,8 +72,7 @@ export default function SyndicateDetailPage() {
         const data = await res.json();
         setSnapshotInfo({ createdAt: data.createdAt, participants: (data.participants || []).length });
       }
-    } catch {
-    } finally {
+    } catch {} finally {
       setSnapshotLoading(false);
     }
   };
@@ -117,33 +107,23 @@ export default function SyndicateDetailPage() {
           <div className="text-5xl mb-4">⚠️</div>
           <h1 className="text-2xl font-bold text-white mb-2">Error Loading Syndicate</h1>
           <p className="text-gray-400 mb-6">{error || 'Syndicate not found'}</p>
-          <Button onClick={() => router.back()}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Go Back
-          </Button>
+          <Button onClick={() => router.back()}><ArrowLeft className="w-4 h-4 mr-2" />Go Back</Button>
         </div>
       </div>
     );
   }
 
-  // Calculate impact metrics
   const impactPerMember = syndicate.totalImpact / Math.max(syndicate.membersCount, 1);
   const ticketsPerMember = syndicate.ticketsPooled / Math.max(syndicate.membersCount, 1);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
       <div className="max-w-4xl mx-auto pt-8">
-        {/* Back button */}
-        <Button 
-          variant="ghost" 
-          className="mb-6 text-gray-400 hover:text-white"
-          onClick={() => router.back()}
-        >
+        <Button variant="ghost" className="mb-6 text-gray-400 hover:text-white" onClick={() => router.back()}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Syndicates
         </Button>
 
-        {/* Header */}
         <div className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 rounded-2xl p-6 mb-6 border border-white/10 backdrop-blur-sm">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-start gap-4">
@@ -153,11 +133,7 @@ export default function SyndicateDetailPage() {
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <h1 className="text-2xl md:text-3xl font-bold text-white">{syndicate.name}</h1>
-                  {syndicate.isTrending && (
-                    <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full">
-                      Trending
-                    </span>
-                  )}
+                  {syndicate.isTrending && <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full">Trending</span>}
                 </div>
                 <p className="text-blue-300 font-medium">{syndicate.cause.name}</p>
                 <p className="text-gray-400 mt-2 max-w-2xl">{syndicate.description}</p>
@@ -165,12 +141,7 @@ export default function SyndicateDetailPage() {
             </div>
             
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Button 
-                variant="outline" 
-                className="border-purple-500/50 text-purple-300 hover:bg-purple-500/10"
-                onClick={handleShare} 
-                disabled={isSharing}
-              >
+              <Button variant="outline" className="border-purple-500/50 text-purple-300 hover:bg-purple-500/10" onClick={handleShare} disabled={isSharing}>
                 <Share2 className="w-4 h-4 mr-2" />
                 {isSharing ? 'Sharing...' : 'Share'}
               </Button>
@@ -178,55 +149,34 @@ export default function SyndicateDetailPage() {
                 <Award className="w-4 h-4 mr-2" />
                 {snapshotLoading ? 'Snapshotting...' : 'Snapshot Weights'}
               </Button>
-              <Button variant="default" className="flex-1">
+              <Button variant="default" className="flex-1" onClick={() => setPurchaseModalOpen(true)}>
                 Join Syndicate
               </Button>
             </div>
           </div>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="glass-premium p-4 rounded-xl border border-white/20">
-            <div className="flex items-center gap-2 mb-2">
-              <Users className="w-5 h-5 text-blue-400" />
-              <span className="text-sm text-gray-400">Members</span>
-            </div>
+            <div className="flex items-center gap-2 mb-2"><Users className="w-5 h-5 text-blue-400" /><span className="text-sm text-gray-400">Members</span></div>
             <p className="text-2xl font-bold text-white">{syndicate.membersCount.toLocaleString()}</p>
           </div>
-          
           <div className="glass-premium p-4 rounded-xl border border-white/20">
-            <div className="flex items-center gap-2 mb-2">
-              <Trophy className="w-5 h-5 text-yellow-400" />
-              <span className="text-sm text-gray-400">Tickets</span>
-            </div>
+            <div className="flex items-center gap-2 mb-2"><Trophy className="w-5 h-5 text-yellow-400" /><span className="text-sm text-gray-400">Tickets</span></div>
             <p className="text-2xl font-bold text-white">{syndicate.ticketsPooled.toLocaleString()}</p>
           </div>
-          
           <div className="glass-premium p-4 rounded-xl border border-white/20">
-            <div className="flex items-center gap-2 mb-2">
-              <Heart className="w-5 h-5 text-red-400" />
-              <span className="text-sm text-gray-400">Total Impact</span>
-            </div>
+            <div className="flex items-center gap-2 mb-2"><Heart className="w-5 h-5 text-red-400" /><span className="text-sm text-gray-400">Total Impact</span></div>
             <p className="text-2xl font-bold text-white">${(syndicate.totalImpact / 1000).toFixed(1)}k</p>
           </div>
-          
           <div className="glass-premium p-4 rounded-xl border border-white/20">
-            <div className="flex items-center gap-2 mb-2">
-              <Gift className="w-5 h-5 text-green-400" />
-              <span className="text-sm text-gray-400">Per Member</span>
-            </div>
+            <div className="flex items-center gap-2 mb-2"><Gift className="w-5 h-5 text-green-400" /><span className="text-sm text-gray-400">Per Member</span></div>
             <p className="text-2xl font-bold text-white">${impactPerMember.toFixed(0)}</p>
           </div>
         </div>
 
-        {/* Recent Activity */}
         <div className="glass-premium rounded-2xl p-6 mb-6 border border-white/20">
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-purple-400" />
-            Recent Activity
-          </h2>
-          
+          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-purple-400" />Recent Activity</h2>
           <div className="space-y-4">
             {syndicate.recentActivity.map((activity, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
@@ -235,137 +185,69 @@ export default function SyndicateDetailPage() {
                   {activity.type === 'tickets' && <Trophy className="w-5 h-5 text-yellow-400" />}
                   {activity.type === 'win' && <Award className="w-5 h-5 text-green-400" />}
                   {activity.type === 'donation' && <Heart className="w-5 h-5 text-red-400" />}
-                  
                   <div>
-                    <p className="text-white font-medium">
-                      {activity.count} {activity.type}{activity.count !== 1 ? 's' : ''} 
-                      {activity.amount && ` worth $${activity.amount.toLocaleString()}`}
-                    </p>
+                    <p className="text-white font-medium">{activity.count} {activity.type}{activity.count !== 1 ? 's' : ''} {activity.amount && ` worth $${activity.amount.toLocaleString()}`}</p>
                     <p className="text-gray-400 text-sm">{activity.timeframe}</p>
                   </div>
                 </div>
-                
-                <div className="text-right">
-                  <p className="text-white text-sm">
-                    {activity.type === 'win' && '🏆 Win'}
-                    {activity.type === 'donation' && '💝 Donation'}
-                    {activity.type === 'join' && '👥 New members'}
-                    {activity.type === 'tickets' && '🎟️ Tickets'}
-                  </p>
-                </div>
+                <div className="text-right"><p className="text-white text-sm">{activity.type === 'win' && '🏆 Win'}{activity.type === 'donation' && '💝 Donation'}{activity.type === 'join' && '👥 New members'}{activity.type === 'tickets' && '🎟️ Tickets'}</p></div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Yield Strategy Information */}
         <div className="glass-premium rounded-2xl p-6 border border-white/20">
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-blue-400" />
-            Yield Strategy
-          </h2>
-          
+          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-blue-400" />Yield Strategy</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h3 className="font-semibold text-gray-300 mb-3">Capital Preservation & Impact</h3>
               <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Vault Strategy</span>
-                  <span className="text-white font-medium">{syndicate.vaultStrategy?.toUpperCase() || 'Standard'}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Tickets Allocation</span>
-                  <span className="text-yellow-400 font-medium">{syndicate.yieldToTicketsPercentage || 85}%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Causes Allocation</span>
-                  <span className="text-red-400 font-medium">{syndicate.yieldToCausesPercentage || 15}%</span>
-                </div>
+                <div className="flex justify-between items-center"><span className="text-gray-400">Vault Strategy</span><span className="text-white font-medium">{syndicate.vaultStrategy?.toUpperCase() || 'Standard'}</span></div>
+                <div className="flex justify-between items-center"><span className="text-gray-400">Tickets Allocation</span><span className="text-yellow-400 font-medium">{syndicate.yieldToTicketsPercentage || 85}%</span></div>
+                <div className="flex justify-between items-center"><span className="text-gray-400">Causes Allocation</span><span className="text-red-400 font-medium">{syndicate.yieldToCausesPercentage || 15}%</span></div>
               </div>
             </div>
-            
             <div>
               <h3 className="font-semibold text-gray-300 mb-3">Yield Impact</h3>
               <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Your Tickets → Winnings</span>
-                  <span className="text-green-400 font-medium">Amplified</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Yield → Causes</span>
-                  <span className="text-red-400 font-medium">Consistent</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Capital Security</span>
-                  <span className="text-white font-medium">Preserved</span>
-                </div>
+                <div className="flex justify-between items-center"><span className="text-gray-400">Your Tickets → Winnings</span><span className="text-green-400 font-medium">Amplified</span></div>
+                <div className="flex justify-between items-center"><span className="text-gray-400">Yield → Causes</span><span className="text-red-400 font-medium">Consistent</span></div>
+                <div className="flex justify-between items-center"><span className="text-gray-400">Capital Security</span><span className="text-white font-medium">Preserved</span></div>
               </div>
             </div>
           </div>
         </div>
         
-        {/* Impact Breakdown */}
         <div className="glass-premium rounded-2xl p-6 border border-white/20">
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <Heart className="w-5 h-5 text-red-400" />
-            Impact Breakdown
-          </h2>
-          
+          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2"><Heart className="w-5 h-5 text-red-400" />Impact Breakdown</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h3 className="font-semibold text-gray-300 mb-3">How Your Tickets Make a Difference</h3>
               <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Ticket Price</span>
-                  <span className="text-white font-medium">$1.00</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Cause Allocation</span>
-                  <span className="text-white font-medium">{syndicate.causePercentage}%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Per Ticket Impact</span>
-                  <span className="text-white font-medium">${(syndicate.causePercentage / 100).toFixed(2)}</span>
-                </div>
-                <div className="pt-2 border-t border-white/10">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-300 font-medium">Your Impact (10 tickets)</span>
-                    <span className="text-green-400 font-bold">${(10 * syndicate.causePercentage / 100).toFixed(2)}</span>
-                  </div>
-                </div>
+                <div className="flex justify-between items-center"><span className="text-gray-400">Ticket Price</span><span className="text-white font-medium">$1.00</span></div>
+                <div className="flex justify-between items-center"><span className="text-gray-400">Cause Allocation</span><span className="text-white font-medium">{syndicate.causePercentage}%</span></div>
+                <div className="flex justify-between items-center"><span className="text-gray-400">Per Ticket Impact</span><span className="text-white font-medium">${(syndicate.causePercentage / 100).toFixed(2)}</span></div>
+                <div className="pt-2 border-t border-white/10"><div className="flex justify-between items-center"><span className="text-gray-300 font-medium">Your Impact (10 tickets)</span><span className="text-green-400 font-bold">${(10 * syndicate.causePercentage / 100).toFixed(2)}</span></div></div>
               </div>
             </div>
-            
             <div>
               <h3 className="font-semibold text-gray-300 mb-3">Syndicate Growth</h3>
               <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Avg. Tickets per Member</span>
-                  <span className="text-white font-medium">{ticketsPerMember.toFixed(1)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Weekly Growth</span>
-                  <span className="text-green-400 font-medium">+12%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Monthly Impact</span>
-                  <span className="text-white font-medium">${(syndicate.totalImpact / 1000).toFixed(1)}k</span>
-                </div>
+                <div className="flex justify-between items-center"><span className="text-gray-400">Avg. Tickets per Member</span><span className="text-white font-medium">{ticketsPerMember.toFixed(1)}</span></div>
+                <div className="flex justify-between items-center"><span className="text-gray-400">Weekly Growth</span><span className="text-green-400 font-medium">+12%</span></div>
+                <div className="flex justify-between items-center"><span className="text-gray-400">Monthly Impact</span><span className="text-white font-medium">${(syndicate.totalImpact / 1000).toFixed(1)}k</span></div>
               </div>
-              
-              <Button className="w-full mt-4" variant="default">
+              <Button className="w-full mt-4" variant="default" onClick={() => setPurchaseModalOpen(true)}>
                 <Trophy className="w-4 h-4 mr-2" />
                 Join to Make an Impact
               </Button>
-              {snapshotInfo && (
-                <div className="mt-3 text-xs text-gray-400">
-                  Snapshot created {new Date(snapshotInfo.createdAt).toLocaleString()} • {snapshotInfo.participants} participant(s)
-                </div>
-              )}
+              {snapshotInfo && <div className="mt-3 text-xs text-gray-400">Snapshot created {new Date(snapshotInfo.createdAt).toLocaleString()} • {snapshotInfo.participants} participant(s)</div>}
             </div>
           </div>
         </div>
       </div>
+
+      <PurchaseModal isOpen={isPurchaseModalOpen} onClose={() => setPurchaseModalOpen(false)} />
 
       <style>{`
         .glass-premium {

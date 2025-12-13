@@ -42,7 +42,8 @@ export type {
 } from '@/domains/wallet/types';
 
 export {
-  WalletTypes
+  WalletTypes,
+  STACKS_WALLETS
 } from '@/domains/wallet/types';
 
 export {
