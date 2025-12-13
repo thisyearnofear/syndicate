@@ -418,14 +418,48 @@ async function connectStacksWallet(walletType: StacksWalletType): Promise<{ addr
  * 
  * Uses @stacks/connect to auto-detect and communicate with available Stacks wallets.
  * Handles Leather, Xverse, Asigna, Fordefi, etc. automatically.
+ * 
+ * NOTE: Some Stacks wallet extensions (particularly Leather) have a known bug where
+ * they may fail to serialize the response properly, causing "setImmedia... is not valid JSON" errors.
+ * We wrap the call to ensure clean serialization of the result.
  */
 async function connectStacksWalletWithConnect(): Promise<{ address: string; publicKey: string }> {
   try {
     console.log('Initiating Stacks wallet connection with @stacks/connect...');
 
+    // Check if any Stacks wallet provider is available
+    const hasStacksWallet = typeof window !== 'undefined' && (
+      !!(window as any).LeatherProvider ||
+      !!(window as any).XverseProviders ||
+      !!(window as any).AsignaProvider ||
+      !!(window as any).FordefiProvider
+    );
+
+    if (!hasStacksWallet) {
+      throw createError(
+        'WALLET_NOT_INSTALLED',
+        'No Stacks wallet detected. Please install Leather, Xverse, or another Stacks-compatible wallet.',
+        { downloadUrl: 'https://leather.io/install' }
+      );
+    }
+
     // @stacks/connect.request() uses pattern: request(method, params)
     // For stx_getAddresses, no params are needed
-    const response = await request('stx_getAddresses');
+    // Wrap the call to ensure proper JSON serialization
+    const response = await (async () => {
+      try {
+        const res = await request('stx_getAddresses');
+        // Force re-serialization to clean any non-serializable properties
+        return JSON.parse(JSON.stringify(res));
+      } catch (e) {
+        // If serialization fails, try to extract just the data we need
+        const res = await request('stx_getAddresses');
+        if (res?.addresses && Array.isArray(res.addresses)) {
+          return { addresses: res.addresses };
+        }
+        throw e;
+      }
+    })();
 
     console.log('Stacks wallet connection successful');
 
@@ -466,6 +500,15 @@ async function connectStacksWalletWithConnect(): Promise<{ address: string; publ
         'WALLET_NOT_INSTALLED',
         'No Stacks wallet detected. Please install Leather, Xverse, or another Stacks-compatible wallet.',
         { downloadUrl: 'https://leather.io/install' }
+      );
+    }
+
+    // Check for signMultipleTransactions error (wallet provider not properly initialized)
+    if (errorMessage?.includes('signMultipleTransactions') || errorMessage?.includes('undefined')) {
+      throw createError(
+        'WALLET_INITIALIZATION_FAILED',
+        'Stacks wallet provider is not properly initialized. Please refresh the page and try again.',
+        { troubleshooting: 'Make sure your wallet extension is running and unlocked.' }
       );
     }
 
