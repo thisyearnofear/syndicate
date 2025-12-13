@@ -454,12 +454,20 @@ async function connectLeatherWallet(): Promise<{ address: string; publicKey: str
 
   try {
     // Leather API uses .request() method with "getAddresses" to get Stacks address
-    const result = await provider.request('getAddresses') as {
-      stacks: { address: string; publicKey: string } | undefined;
-      bitcoin: unknown;
-    };
+    // Response format: { result: { addresses: [...] } } or { addresses: [...] }
+    const response = await provider.request('getAddresses');
+    const result = (response as any).result || response;
+    const addresses = result?.addresses;
     
-    if (!result?.stacks?.address) {
+    if (!Array.isArray(addresses)) {
+      console.error('Leather getAddresses returned unexpected format:', response);
+      throw new Error('Invalid response format from Leather wallet');
+    }
+
+    // Find Stacks (STX) address in the list
+    const stxAccount = addresses.find((a: any) => a.symbol === 'STX');
+
+    if (!stxAccount?.address) {
       throw createError(
         'NO_STACKS_ADDRESS',
         'No Stacks address found. Please make sure you have a Stacks account in Leather wallet.'
@@ -467,8 +475,8 @@ async function connectLeatherWallet(): Promise<{ address: string; publicKey: str
     }
 
     return {
-      address: result.stacks.address,
-      publicKey: result.stacks.publicKey || '',
+      address: stxAccount.address,
+      publicKey: stxAccount.publicKey || '',
     };
   } catch (error) {
     const isUserRejected = (error as { message?: string }).message?.includes('rejected');
