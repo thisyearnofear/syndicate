@@ -1,13 +1,15 @@
 "use client";
 
 /**
- * PREMIUM WALLET CONNECTION CARD
+ * UNIFIED WALLET CONNECTION CARD
  *
  * Core Principles Applied:
- * - ENHANCEMENT FIRST: Premium glass morphism design
- * - MODULAR: Reusable wallet connection component
- * - CLEAN: Centered, consistent design
- * - PERFORMANT: Optimized interactions
+ * - ENHANCEMENT FIRST: Consolidated into single source of truth for wallet selection
+ * - AGGRESSIVE CONSOLIDATION: Merged ConnectWallet.tsx functionality here
+ * - MODULAR: Reusable wallet connection component for any context
+ * - CLEAN: Single wallet at a time, any chain origin
+ * - DRY: Single error handling and chain routing
+ * - PERFORMANT: Optimized interactions, lazy library loading
  */
 
 import { useState, useCallback, useEffect } from "react";
@@ -251,6 +253,9 @@ export function WalletConnectionCard({
           </h3>
           <p className="text-gray-400 text-sm max-w-sm mx-auto leading-relaxed">
             {subtitle}
+          </p>
+          <p className="text-gray-500 text-xs max-w-sm mx-auto italic">
+            Connect your native wallet from any chain. We'll automatically bridge your assets to Base for ticket purchases.
           </p>
         </div>
       )}

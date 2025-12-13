@@ -6,12 +6,16 @@ A multi-chain lottery platform built on top of [Megapot](https://megapot.io), en
 
 ### Layer 1: Direct Ticket Purchases
 
-**Simple, cross-chain lottery participation**
+**Simple, cross-chain lottery participation from your native wallet**
 
-- Buy Megapot lottery tickets from multiple chains (Base, Ethereum, Solana, Polygon, Avalanche)
-- Native bridging via CCTP and CCIP for seamless cross-chain purchases
-- Track purchases and claim winnings from any supported wallet
-- Supports MetaMask, Phantom, WalletConnect, and more
+- **One Wallet, Any Chain**: Connect your native wallet from Stacks, Solana, NEAR, or EVM
+- **Seamless Bridging**: System automatically bridges assets to Base and buys tickets (no manual steps)
+- **No Account Creation**: Deterministic address derivation for NEAR and Stacks—your ticket lives on Base
+- **Supported Wallets**: 
+  - Stacks: Leather, Xverse, Asigna, Fordefi
+  - Solana: Phantom
+  - NEAR: NEAR Wallet
+  - EVM: MetaMask, WalletConnect (300+ wallets)
 
 ### Layer 2: Syndicates
 
