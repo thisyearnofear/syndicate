@@ -69,11 +69,6 @@ const WALLET_SECTIONS: WalletSection[] = [
         gradient: "from-blue-500 to-cyan-500",
         bgColor: "bg-blue-500/10 border-blue-500/20",
       },
-    ],
-  },
-  {
-    title: "Stacks (Bitcoin L2)",
-    wallets: [
       {
         name: "Stacks",
         type: "stacks" as WalletType,

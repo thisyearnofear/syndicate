@@ -416,19 +416,18 @@ async function connectStacksWallet(walletType: StacksWalletType): Promise<{ addr
 /**
  * Connect to any Stacks wallet using @stacks/connect
  * 
- * @stacks/connect is the standard way to connect to Stacks wallets.
- * It provides:
- * - Proper JSON RPC 2.0 protocol handling
- * - Compatibility layer for different wallets (Leather, Xverse, Asigna, Fordefi, etc.)
- * - No need to handle wallet-specific quirks or serialization issues
+ * Uses proper JSON-RPC 2.0 request format to communicate with injected Stacks wallet providers.
+ * Handles auto-detection of available wallets (Leather, Xverse, Asigna, Fordefi, etc.)
  */
 async function connectStacksWalletWithConnect(): Promise<{ address: string; publicKey: string }> {
   try {
     console.log('Initiating Stacks wallet connection with @stacks/connect...');
 
-    // @stacks/connect.request() automatically detects available wallets and handles the connection
-    // It returns addresses in a standardized format regardless of which wallet is used
-    const response = await request('stx_getAddresses');
+    // Use proper JSON-RPC 2.0 format for @stacks/connect
+    // The request function expects a method name and params
+    const response = await request({
+      method: 'stx_getAddresses',
+    } as any);
 
     console.log('Stacks wallet connection successful');
 
