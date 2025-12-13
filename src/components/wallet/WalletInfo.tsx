@@ -3,7 +3,8 @@
 import { useWalletContext } from "@/context/WalletContext";
 import { CHAIN_IDS } from "@/config";
 import { Button } from "@/shared/components/ui/Button";
-import { STACKS_WALLETS } from "@/domains/wallet/types";
+import { STACKS_WALLETS, getWalletRouting } from "@/domains/wallet/types";
+import { WalletRoutingInfo } from "./WalletRoutingInfo";
 
 interface WalletInfoProps {
   className?: string;
@@ -132,6 +133,8 @@ export default function WalletInfo({
     disconnectWallet();
   };
 
+  const routing = state.walletType ? getWalletRouting(state.walletType) : null;
+
   return (
     <div
       className={`bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700 ${className}`}
@@ -163,6 +166,14 @@ export default function WalletInfo({
             )}
           </div>
         </div>
+
+        {/* Wallet routing info - shows auto bridge routing */}
+        {routing && (
+          <WalletRoutingInfo
+            walletType={state.walletType || 'metamask'}
+            compact={false}
+          />
+        )}
 
         {/* Address */}
         <div className="flex items-center justify-between">
