@@ -5,12 +5,14 @@
  * Prevents loading heavy Web3 libraries for users who don't need them
  */
 
+import type { WalletType } from '@/domains/wallet/types';
+
 interface WalletLibraries {
-  metamask: unknown;
-  walletconnect: unknown;
-  phantom: unknown;
+  evm: unknown;
   solana: unknown;
+  stacks: unknown;
   near: unknown;
+  social: unknown;
 }
 
 class WalletLoader {
@@ -20,7 +22,7 @@ class WalletLoader {
   /**
    * Load only the wallet library needed for the selected wallet type
    */
-  async loadWalletLibrary(walletType: string): Promise<unknown> {
+  async loadWalletLibrary(walletType: string | WalletType): Promise<unknown> {
     if (this.loadedLibraries.has(walletType)) {
       return this.libraryPromises.get(walletType);
     }
@@ -28,13 +30,12 @@ class WalletLoader {
     let libraryPromise: Promise<unknown>;
 
     switch (walletType) {
-      case 'metamask':
-      case 'walletconnect':
-        // Load basic Web3 libraries
+      case 'evm':
+        // Load basic Web3 libraries for EVM chains
         libraryPromise = this.loadBasicWeb3();
         break;
 
-      case 'phantom':
+      case 'solana':
         // Load Solana libraries only when needed
         libraryPromise = this.loadSolanaWallet();
         break;
@@ -44,12 +45,14 @@ class WalletLoader {
         libraryPromise = this.loadNearWallet();
         break;
 
-      case 'leather':
-      case 'xverse':
-      case 'asigna':
-      case 'fordefi':
+      case 'stacks':
         // Stacks wallets use injected providers (window.LeatherProvider, etc.)
         // No heavy external libraries to load
+        libraryPromise = Promise.resolve({});
+        break;
+
+      case 'social':
+        // Social login - load when needed
         libraryPromise = Promise.resolve({});
         break;
 
@@ -110,7 +113,7 @@ class WalletLoader {
    */
   async preloadCommonWallets(): Promise<void> {
     // Only preload basic Web3 libraries that are most commonly used
-    await this.loadWalletLibrary('metamask');
+    await this.loadWalletLibrary('evm');
   }
 
   /**

@@ -6,11 +6,9 @@
  * - DRY: Single source of truth for wallet logic
  * - MODULAR: Composable wallet components
  * - CLEAN: Clear separation of wallet concerns
+ * - AGGRESSIVE CONSOLIDATION: Removed unused hooks and components
  */
 
 // Re-export all wallet functionality from a single entry point
 export * from './services/unifiedWalletService';
-// export * from './hooks/useWallet';
-// export * from './components/WalletConnect';
-// export * from './types';
-// export * from './utils';
+export * from './types';
