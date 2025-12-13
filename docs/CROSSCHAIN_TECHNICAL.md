@@ -301,4 +301,146 @@ src/hooks/
 
 ---
 
+## Stacks Integration (Bitcoin L2)
+
+### Technical Compatibility
+Stacks represents a Bitcoin L2 solution that has been successfully integrated into the cross-chain architecture. The integration follows the same patterns as other chains in the system.
+
+#### Key Features:
+- **Bitcoin Foundation**: Stacks L2 on Bitcoin aligns with the Bitcoin-first strategy
+- **sBTC Token**: 1:1 Bitcoin-backed token compatible with USDC-based system
+- **Smart Contracts**: Clarity language provides deterministic lottery logic
+- **Wallet Ecosystem**: Professional wallets (Leather, Xverse, Asigna, Fordefi) with modern UX
+- **Development Tools**: Clarinet CLI and comprehensive documentation
+
+### Implementation Architecture
+
+#### Stacks Wallet Integration
+**Enhanced Files:**
+- `src/domains/wallet/types.ts` - Added Stacks wallet types
+- `src/domains/wallet/services/unifiedWalletService.ts` - Extended wallet detection and connection
+- `src/types/stacks-wallets.d.ts` - TypeScript declarations
+
+**Supported Wallets:**
+- Leather - Bitcoin wallet by Trust Machines
+- Xverse - Bitcoin wallet with Ledger support
+- Asigna - Bitcoin multisig wallet
+- Fordefi - Institutional Bitcoin wallet
+
+#### Bridge Architecture: sBTC to Base
+The Stacks integration uses an sBTC → Base bridge pattern:
+
+```
+Stacks Wallet (STX/sBTC) → sBTC Bridge → USDC on Base → Megapot Lottery
+      ↓                           ↓                  ↓              ↓
+   Leather/Xverse/           sBTC → USDC        Cross-chain    Lottery
+   Asigna/Fordefi            bridging            purchase       participation
+```
+
+#### Stacks-Specific Services
+- `src/domains/lottery/services/stacksLotteryService.ts` - Stacks-specific functionality
+- `src/app/api/stacks-lottery/route.ts` - API proxy for Stacks endpoints
+- `contracts/stacks-lottery.clar` - Clarity smart contract
+
+### Protocol Implementation
+
+#### 1. sBTC Bridge Protocol
+- **Supports**: Stacks → Base (via sBTC mechanism)
+- **Features**: BTC-backed token bridging, Stacks-specific transaction handling
+- **Time**: Variable (depends on Bitcoin confirmations)
+- **Integration**: Works with existing cross-chain purchase hook
+
+#### 2. API Endpoints
+```typescript
+// Stacks-specific endpoints added to existing structure
+export const API = {
+  megapot: {
+    baseUrl: "https://api.megapot.io/api/v1",
+    endpoints: {
+      jackpotStats: "/jackpot-round-stats/active",
+      ticketPurchases: "/ticket-purchases",
+      dailyGiveaway: "/giveaways/daily-giveaway-winners",
+      // Stacks-specific endpoints
+      stacksJackpotStats: "/stacks/jackpot-round-stats/active",
+      stacksTicketPurchases: "/stacks/ticket-purchases"
+    }
+  }
+}
+```
+
+### Technical Integration Details
+
+#### Cross-Chain Purchase Hook Enhancement
+**File**: `src/hooks/useCrossChainPurchase.ts`
+```typescript
+// Enhanced existing hook to support Stacks
+if (params.sourceChain === 'stacks') {
+  // Stacks -> Base bridge via sBTC
+  const bridgeResult = await bridgeFromStacks({
+    walletAddress: params.recipientBase,
+    ticketCount: params.ticketCount,
+    amount,
+    onStatus: (status, data) => {
+      console.debug('[Stacks Bridge] Status:', status, data);
+    }
+  });
+} else {
+  // Existing bridge logic for other chains
+  // ... unchanged
+}
+```
+
+#### Chain Configuration
+**File**: `src/config/chains.ts`
+```typescript
+export const SUPPORTED_CHAINS = {
+  // ... existing chains
+  stacks: {
+    name: 'Stacks',
+    native: false,
+    supported: true,
+    icon: '🧱',
+    method: 'Cross-chain via NEAR Chain Signatures',
+    purchaseMethod: 'cross-chain' as const,
+    sourceChain: 'stacks' as const,
+    description: 'Buy Base tickets from Stacks Bitcoin L2'
+  }
+}
+```
+
+### Implementation Benefits
+
+#### **Immediate Benefits**
+1. **Zero Breaking Changes**: All existing functionality preserved
+2. **Consistent API**: Stacks follows same patterns as other chains
+3. **Type Safety**: Full TypeScript support for Stacks wallets
+4. **Error Handling**: Consistent error patterns across all chains
+5. **Caching**: Reused performance optimizations
+
+#### **User Experience**
+1. **Seamless Integration**: Users can connect Stacks wallets alongside existing options
+2. **Cross-Chain Purchases**: Stacks users can buy Base lottery tickets
+3. **Unified Interface**: Same UI components work for all supported chains
+4. **Real-Time Data**: Stacks lottery stats integrate with existing dashboard
+
+### Development Timeline & Feasibility
+**Status**: ✅ **CORE IMPLEMENTATION COMPLETE**
+
+The Stacks integration was completed following the project's core principles:
+- **ENHANCEMENT FIRST**: Extended existing components rather than creating new ones
+- **AGGRESSIVE CONSOLIDATION**: Reused patterns and eliminated duplication
+- **DRY**: Single source of truth maintained across all configurations
+- **CLEAN**: Clear separation of concerns with explicit dependencies
+- **MODULAR**: Composable, testable, independent modules
+- **PERFORMANT**: Adaptive loading, caching, and resource optimization
+- **ORGANIZED**: Predictable file structure with domain-driven design
+
+**Market Opportunity**:
+- **Active Builders**: 1000+ participating in Stacks Builder Challenges
+- **Bitcoin L2 Adoption**: Rapidly growing with recent Clarity 4 upgrade
+- **Developer Incentives**: 22,500 $STX rewards driving ecosystem growth
+- **Competition**: Minimal - first major lottery platform on Stacks
+
+---
+
 **Status**: Production-ready cross-chain bridge system with comprehensive error handling, performance optimization, and user experience improvements.

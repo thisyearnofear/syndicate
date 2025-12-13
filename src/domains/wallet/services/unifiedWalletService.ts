@@ -453,12 +453,25 @@ async function connectLeatherWallet(): Promise<{ address: string; publicKey: str
   }
 
   try {
+    console.log('Initiating Leather wallet connection...');
+
+    // Create a timeout promise
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Leather wallet connection timed out')), 30000);
+    });
+
     // Leather API uses .request() method with "getAddresses" to get Stacks address
     // Response format: { result: { addresses: [...] } } or { addresses: [...] }
-    const response = await provider.request('getAddresses');
+    const requestPromise = provider.request('getAddresses');
+
+    // Race against timeout
+    const response = await Promise.race([requestPromise, timeoutPromise]);
+
+    console.log('Leather wallet response received:', response);
+
     const result = (response as any).result || response;
     const addresses = result?.addresses;
-    
+
     if (!Array.isArray(addresses)) {
       console.error('Leather getAddresses returned unexpected format:', response);
       throw new Error('Invalid response format from Leather wallet');
@@ -479,11 +492,13 @@ async function connectLeatherWallet(): Promise<{ address: string; publicKey: str
       publicKey: stxAccount.publicKey || '',
     };
   } catch (error) {
+    console.error('Leather connection internal error:', error);
+
     const isUserRejected = (error as { message?: string }).message?.includes('rejected');
     if (isUserRejected) {
       throw createError('CONNECTION_REJECTED', 'Connection was rejected. Please try again.');
     }
-    
+
     const errorMessage = error instanceof Error ? error.message : String(error);
     throw createError('CONNECTION_FAILED', `Failed to connect Leather wallet: ${errorMessage}`);
   }
@@ -505,7 +520,7 @@ async function connectXverseWallet(): Promise<{ address: string; publicKey: stri
       stxAddress?: string;
       publicKey?: string;
     };
-    
+
     if (!result?.stxAddress) {
       throw new Error('Failed to get Stacks address from Xverse wallet');
     }
@@ -536,7 +551,7 @@ async function connectAsignaWallet(): Promise<{ address: string; publicKey: stri
       stxAddress?: string;
       publicKey?: string;
     };
-    
+
     if (!result?.stxAddress) {
       throw new Error('Failed to get Stacks address from Asigna wallet');
     }
@@ -567,7 +582,7 @@ async function connectFordefiWallet(): Promise<{ address: string; publicKey: str
       stxAddress?: string;
       publicKey?: string;
     };
-    
+
     if (!result?.stxAddress) {
       throw new Error('Failed to get Stacks address from Fordefi wallet');
     }

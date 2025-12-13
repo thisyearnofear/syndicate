@@ -29,6 +29,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (!window.setImmediate) {
+                window.setImmediate = function(callback, ...args) {
+                  return window.setTimeout(callback, 0, ...args);
+                };
+                window.clearImmediate = window.clearTimeout;
+              }
+            `,
+          }}
+        />
         <ToastProvider>
           <ClientProviders>
             <DynamicNavigationHeader />
