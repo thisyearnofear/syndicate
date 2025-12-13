@@ -3,6 +3,7 @@
 import { useWalletContext } from "@/context/WalletContext";
 import { CHAIN_IDS } from "@/config";
 import { Button } from "@/shared/components/ui/Button";
+import { STACKS_WALLETS } from "@/domains/wallet/types";
 
 interface WalletInfoProps {
   className?: string;
@@ -34,8 +35,11 @@ export default function WalletInfo({
       case CHAIN_IDS.AVALANCHE:
         return "Avalanche";
       case 0:
-        // Check wallet type to distinguish between Solana and NEAR
+        // Check wallet type to distinguish between Solana, NEAR, and Stacks
+        if (STACKS_WALLETS.includes(state.walletType as any)) return "Stacks";
         return state.walletType === 'phantom' ? "Solana" : "NEAR";
+      case 12345:
+        return "Stacks";
       default:
         return `Network (${chainId})`;
     }
@@ -54,8 +58,11 @@ export default function WalletInfo({
       case CHAIN_IDS.AVALANCHE:
         return "red";
       case 0:
-        // Different colors for Solana vs NEAR
+        // Different colors for Solana, NEAR, and Stacks
+        if (STACKS_WALLETS.includes(state.walletType as any)) return "orange";
         return state.walletType === 'phantom' ? "purple" : "green";
+      case 12345:
+        return "orange";
       default:
         return "gray";
     }
@@ -75,6 +82,14 @@ export default function WalletInfo({
         return "Social Login";
       case "near":
         return "NEAR Wallet";
+      case "leather":
+        return "Leather";
+      case "xverse":
+        return "Xverse";
+      case "asigna":
+        return "Asigna";
+      case "fordefi":
+        return "Fordefi";
       default:
         return walletType;
     }
@@ -94,6 +109,14 @@ export default function WalletInfo({
         return "🔐";
       case "near":
         return "🌌";
+      case "leather":
+        return "🧱";
+      case "xverse":
+        return "⚡";
+      case "asigna":
+        return "🔐";
+      case "fordefi":
+        return "🏦";
       default:
         return "💼";
     }

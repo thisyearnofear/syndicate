@@ -34,14 +34,15 @@ A multi-chain lottery platform built on top of [Megapot](https://megapot.io), en
 
 ## 🌐 Supported Chains
 
-| Chain       | Status         | Bridge Protocol |
-| ----------- | -------------- | --------------- |
-| Base        | ✅ Primary     | Native          |
-| Ethereum    | ✅ Working     | CCTP, CCIP      |
-| Solana      | ✅ Working     | CCTP            |
-| Polygon     | ✅ Working     | CCIP            |
-| Avalanche   | ✅ Working     | CCIP            |
-| Bitcoin/ICP | 🔜 Planned     | ICP Canisters   |
+| Chain           | Status         | Bridge Protocol | Wallets                      |
+| --------------- | -------------- | --------------- | ---------------------------- |
+| Base            | ✅ Primary     | Native          | MetaMask, WalletConnect      |
+| Ethereum        | ✅ Working     | CCTP, CCIP      | MetaMask, WalletConnect      |
+| Solana          | ✅ Working     | CCTP            | Phantom                      |
+| Polygon         | ✅ Working     | CCIP            | MetaMask, WalletConnect      |
+| Avalanche       | ✅ Working     | CCIP            | MetaMask, WalletConnect      |
+| Stacks (Bitcoin)| ✅ Working     | sBTC → CCTP     | Leather, Xverse, Asigna, Fordefi |
+| Bitcoin/ICP     | 🔜 Planned     | ICP Canisters   | -                            |
 
 ## 📊 Feature Status
 

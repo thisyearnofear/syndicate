@@ -119,9 +119,9 @@ export function SelectStep({
       {hasInsufficientBalance && !isStacksWallet && <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4"><div className="flex items-center gap-2 text-yellow-400"><AlertCircle className="w-5 h-5" /><span>Insufficient USDC balance</span></div><button onClick={refreshBalance} className="text-yellow-300 hover:text-yellow-200 text-sm mt-2 underline">Refresh Balance</button></div>}
       
       {isStacksWallet && !evmAddress && (
-        <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4 text-center">
-            <div className="flex items-center gap-2 text-yellow-400 justify-center"><AlertCircle className="w-5 h-5" /><span>EVM Wallet Required</span></div>
-            <p className="text-yellow-300 text-sm mt-2">Please connect an EVM wallet (e.g., MetaMask) to receive your tickets on the Base network.</p>
+        <div className="bg-blue-500/20 border border-blue-500/30 rounded-lg p-4 text-center space-y-2">
+            <div className="flex items-center gap-2 text-blue-400 justify-center"><AlertCircle className="w-5 h-5" /><span className="font-semibold">Connect EVM Wallet for Ticket Receipt</span></div>
+            <p className="text-blue-300 text-xs">Your Stacks wallet will bridge STX → sBTC → USDC on Base. Connect an EVM wallet (MetaMask, WalletConnect) below to receive your tickets.</p>
             <div className="mt-3 flex justify-center">
               <ConnectButton showBalance={false} chainStatus="none" />
             </div>
