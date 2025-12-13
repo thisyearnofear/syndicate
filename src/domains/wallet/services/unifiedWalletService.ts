@@ -9,6 +9,7 @@
  */
 
 import { useCallback } from 'react';
+import { request } from '@stacks/connect';
 import { createError } from '@/shared/utils';
 import { useWalletContext } from '@/context/WalletContext';
 import type { WalletModuleFactory } from '@near-wallet-selector/core';
@@ -418,237 +419,81 @@ export function useUnifiedWallet(): {
 
 /**
  * Connect to a Stacks wallet
+ * 
+ * Uses @stacks/connect for all Stacks wallets, which provides:
+ * - Automatic wallet detection
+ * - JSON RPC 2.0 protocol handling
+ * - Compatibility layer for different wallet providers
+ * 
+ * Note: The walletType parameter is kept for backward compatibility but @stacks/connect
+ * will automatically detect the available wallet and show a selection UI if multiple are present.
  */
 async function connectStacksWallet(walletType: StacksWalletType): Promise<{ address: string; publicKey: string }> {
-  switch (walletType) {
-    case WalletTypes.LEATHER:
-      return connectLeatherWallet();
-
-    case WalletTypes.XVERSE:
-      return connectXverseWallet();
-
-    case WalletTypes.ASIGNA:
-      return connectAsignaWallet();
-
-    case WalletTypes.FORDEFI:
-      return connectFordefiWallet();
-
-    default:
-      throw new Error(`Unsupported Stacks wallet: ${walletType}`);
-  }
+  // All Stacks wallets use the same @stacks/connect interface now
+  // The walletType parameter is for logging/tracking purposes only
+  console.log(`Connecting with Stacks wallet type: ${walletType}`);
+  return connectStacksWalletWithConnect();
 }
 
 /**
- * Connect to Leather wallet
- * Uses Leather's .request() API method (Modern Wallet APIs standard)
+ * Connect to any Stacks wallet using @stacks/connect
  * 
- * Leather returns: { jsonrpc: "2.0", id: "...", result: { addresses: [...] } }
- * where addresses is an array of { symbol, address, publicKey?, derivationPath, type?, ... }
- * 
- * NOTE: Leather extension has a bug where it may fail to serialize the response properly.
- * We wrap the call to ensure clean serialization of the result.
+ * @stacks/connect is the standard way to connect to Stacks wallets.
+ * It provides:
+ * - Proper JSON RPC 2.0 protocol handling
+ * - Compatibility layer for different wallets (Leather, Xverse, Asigna, Fordefi, etc.)
+ * - No need to handle wallet-specific quirks or serialization issues
  */
-async function connectLeatherWallet(): Promise<{ address: string; publicKey: string }> {
-  const provider = window.LeatherProvider;
-  if (!provider) {
-    throw createError(
-      'WALLET_NOT_INSTALLED',
-      'Leather wallet is not installed. Please install it from leather.io/install',
-      { downloadUrl: 'https://leather.io/install' }
-    );
-  }
-
+async function connectStacksWalletWithConnect(): Promise<{ address: string; publicKey: string }> {
   try {
-    console.log('Initiating Leather wallet connection...');
+    console.log('Initiating Stacks wallet connection with @stacks/connect...');
 
-    // Create a timeout promise
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Leather wallet connection timed out')), 30000);
-    });
+    // @stacks/connect.request() automatically detects available wallets and handles the connection
+    // It returns addresses in a standardized format regardless of which wallet is used
+    const response = await request('stx_getAddresses');
 
-    // Leather API uses .request() method with "getAddresses" to get Stacks address
-    // Response format: { jsonrpc: "2.0", id: "...", result: { addresses: [...] } }
-    // Wrap the call to ensure proper JSON serialization
-    const requestPromise = (async () => {
-      try {
-        const res = await provider.request('getAddresses');
-        // Force re-serialization to clean any non-serializable properties
-        return JSON.parse(JSON.stringify(res));
-      } catch (e) {
-        // If serialization fails, try to extract just the data we need
-        const res = await provider.request('getAddresses');
-        if (res?.result?.addresses && Array.isArray(res.result.addresses)) {
-          return { result: { addresses: res.result.addresses } };
-        }
-        throw e;
-      }
-    })();
+    console.log('Stacks wallet connection successful');
 
-    // Race against timeout
-    const response = await Promise.race([requestPromise, timeoutPromise]);
-
-    console.log('Leather wallet response received');
-
-    // Extract addresses array from response
-    // Leather returns { result: { addresses: [...] } }
-    let addresses: any[] | undefined;
-    
-    if (response?.result?.addresses) {
-      addresses = response.result.addresses;
-    } else if (Array.isArray(response?.addresses)) {
-      addresses = response.addresses;
-    } else if (Array.isArray(response)) {
-      addresses = response;
+    // Response format from @stacks/connect:
+    // { addresses: [{ address: string, publicKey: string, ... }, ...] }
+    if (!response?.addresses || !Array.isArray(response.addresses) || response.addresses.length === 0) {
+      throw new Error('No Stacks addresses found in wallet response');
     }
 
-    if (!Array.isArray(addresses) || addresses.length === 0) {
-      console.error('Leather getAddresses returned unexpected format');
-      throw new Error('Invalid response format from Leather wallet');
-    }
+    // Get the first address (primary account)
+    const primaryAddress = response.addresses[0];
 
-    // Find Stacks (STX) address in the list
-    // Safe iteration - don't use index, use find()
-    const stxAccount = addresses.find((a: any) => a?.symbol === 'STX' && a?.address);
-
-    if (!stxAccount?.address) {
+    if (!primaryAddress?.address) {
       throw createError(
         'NO_STACKS_ADDRESS',
-        'No Stacks address found. Please make sure you have a Stacks account in Leather wallet.'
+        'No Stacks address found. Please make sure you have a Stacks account in your wallet.'
       );
     }
 
     // Return only serializable data (no function references, no circular references)
     return {
-      address: String(stxAccount.address),
-      publicKey: stxAccount.publicKey ? String(stxAccount.publicKey) : '',
+      address: String(primaryAddress.address),
+      publicKey: primaryAddress.publicKey ? String(primaryAddress.publicKey) : '',
     };
   } catch (error) {
-    console.error('Leather connection error:', error);
+    console.error('Stacks wallet connection error:', error);
 
     const errorMessage = error instanceof Error ? error.message : String(error);
-    const isUserRejected = errorMessage?.includes('rejected');
     
-    if (isUserRejected) {
+    // Check for user rejection
+    if (errorMessage?.includes('rejected') || errorMessage?.includes('cancelled')) {
       throw createError('CONNECTION_REJECTED', 'Connection was rejected. Please try again.');
     }
 
-    throw createError('CONNECTION_FAILED', `Failed to connect Leather wallet: ${errorMessage}`);
-  }
-}
-
-/**
- * Connect to Xverse wallet
- * Uses Sats Connect standard .request() API method with stx_getAccounts
- */
-async function connectXverseWallet(): Promise<{ address: string; publicKey: string }> {
-  const provider = window.XverseProviders;
-  if (!provider) {
-    throw createError(
-      'WALLET_NOT_INSTALLED',
-      'Xverse wallet is not installed. Please install it from xverse.app',
-      { downloadUrl: 'https://xverse.app' }
-    );
-  }
-
-  try {
-    // Xverse uses Sats Connect standard API with stx_getAccounts for Stacks addresses
-    const result = await provider.request('stx_getAccounts') as any;
-
-    if (!result?.stxAddress) {
-      throw new Error('Failed to get Stacks address from Xverse wallet');
+    // Check if no wallet is detected
+    if (errorMessage?.includes('No matching provider') || errorMessage?.includes('not installed')) {
+      throw createError(
+        'WALLET_NOT_INSTALLED',
+        'No Stacks wallet detected. Please install Leather, Xverse, or another Stacks-compatible wallet.',
+        { downloadUrl: 'https://leather.io/install' }
+      );
     }
 
-    // Return only serializable data
-    return {
-      address: String(result.stxAddress),
-      publicKey: result.publicKey ? String(result.publicKey) : '',
-    };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const isUserRejected = errorMessage?.includes('rejected');
-    
-    if (isUserRejected) {
-      throw createError('CONNECTION_REJECTED', 'Connection was rejected. Please try again.');
-    }
-
-    throw createError('CONNECTION_FAILED', `Failed to connect to Xverse wallet: ${errorMessage}`);
-  }
-}
-
-/**
- * Connect to Asigna wallet
- * Uses Sats Connect standard .request() API method with stx_getAccounts
- */
-async function connectAsignaWallet(): Promise<{ address: string; publicKey: string }> {
-  const provider = window.AsignaProvider;
-  if (!provider) {
-    throw createError(
-      'WALLET_NOT_INSTALLED',
-      'Asigna wallet is not installed. Please install it from asigna.io',
-      { downloadUrl: 'https://asigna.io' }
-    );
-  }
-
-  try {
-    // Asigna uses Sats Connect standard API with stx_getAccounts for Stacks addresses
-    const result = await provider.request('stx_getAccounts') as any;
-
-    if (!result?.stxAddress) {
-      throw new Error('Failed to get Stacks address from Asigna wallet');
-    }
-
-    // Return only serializable data
-    return {
-      address: String(result.stxAddress),
-      publicKey: result.publicKey ? String(result.publicKey) : '',
-    };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const isUserRejected = errorMessage?.includes('rejected');
-    
-    if (isUserRejected) {
-      throw createError('CONNECTION_REJECTED', 'Connection was rejected. Please try again.');
-    }
-
-    throw createError('CONNECTION_FAILED', `Failed to connect to Asigna wallet: ${errorMessage}`);
-  }
-}
-
-/**
- * Connect to Fordefi wallet
- * Uses Sats Connect standard .request() API method with stx_getAccounts
- */
-async function connectFordefiWallet(): Promise<{ address: string; publicKey: string }> {
-  const provider = window.FordefiProvider;
-  if (!provider) {
-    throw createError(
-      'WALLET_NOT_INSTALLED',
-      'Fordefi wallet is not installed. Please install it from fordefi.com',
-      { downloadUrl: 'https://fordefi.com' }
-    );
-  }
-
-  try {
-    // Fordefi uses Sats Connect standard API with stx_getAccounts for Stacks addresses
-    const result = await provider.request('stx_getAccounts') as any;
-
-    if (!result?.stxAddress) {
-      throw new Error('Failed to get Stacks address from Fordefi wallet');
-    }
-
-    // Return only serializable data
-    return {
-      address: String(result.stxAddress),
-      publicKey: result.publicKey ? String(result.publicKey) : '',
-    };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const isUserRejected = errorMessage?.includes('rejected');
-    
-    if (isUserRejected) {
-      throw createError('CONNECTION_REJECTED', 'Connection was rejected. Please try again.');
-    }
-
-    throw createError('CONNECTION_FAILED', `Failed to connect to Fordefi wallet: ${errorMessage}`);
+    throw createError('CONNECTION_FAILED', `Failed to connect Stacks wallet: ${errorMessage}`);
   }
 }
