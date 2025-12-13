@@ -18,6 +18,7 @@ export { WalletConnectionCard } from './WalletConnectionCard';
 
 // Wallet state & display
 export { default as WalletInfo } from './WalletInfo';
+export { WalletRoutingInfo } from './WalletRoutingInfo';
 
 // Wallet connection management
 export { default as WalletConnectionManager } from './WalletConnectionManager';
