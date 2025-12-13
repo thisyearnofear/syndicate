@@ -444,6 +444,9 @@ async function connectStacksWallet(walletType: StacksWalletType): Promise<{ addr
  * 
  * Leather returns: { jsonrpc: "2.0", id: "...", result: { addresses: [...] } }
  * where addresses is an array of { symbol, address, publicKey?, derivationPath, type?, ... }
+ * 
+ * NOTE: Leather extension has a bug where it may fail to serialize the response properly.
+ * We wrap the call to ensure clean serialization of the result.
  */
 async function connectLeatherWallet(): Promise<{ address: string; publicKey: string }> {
   const provider = window.LeatherProvider;
@@ -465,7 +468,21 @@ async function connectLeatherWallet(): Promise<{ address: string; publicKey: str
 
     // Leather API uses .request() method with "getAddresses" to get Stacks address
     // Response format: { jsonrpc: "2.0", id: "...", result: { addresses: [...] } }
-    const requestPromise = provider.request('getAddresses') as Promise<any>;
+    // Wrap the call to ensure proper JSON serialization
+    const requestPromise = (async () => {
+      try {
+        const res = await provider.request('getAddresses');
+        // Force re-serialization to clean any non-serializable properties
+        return JSON.parse(JSON.stringify(res));
+      } catch (e) {
+        // If serialization fails, try to extract just the data we need
+        const res = await provider.request('getAddresses');
+        if (res?.result?.addresses && Array.isArray(res.result.addresses)) {
+          return { result: { addresses: res.result.addresses } };
+        }
+        throw e;
+      }
+    })();
 
     // Race against timeout
     const response = await Promise.race([requestPromise, timeoutPromise]);
