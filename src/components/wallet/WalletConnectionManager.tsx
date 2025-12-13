@@ -33,26 +33,26 @@ export default function WalletConnectionManager({
 
 
   const handleWalletConnect = useCallback(
-    async (walletType: WalletType) => {
-      try {
-        await connect(walletType);
-        // Don't automatically close modal for WalletConnect since RainbowKit handles its own UI flow
-        if (walletType !== 'metamask') {
-          dispatch({ type: "CLOSE_MODAL" });
-        }
-      } catch (error) {
-        const err = error as Error;
-        console.error("Wallet connection failed:", err);
-        // Don't show error for WalletConnect method since RainbowKit handles its own UI
-        if (walletType !== 'metamask') {
-          const errorMessage =
-            err?.message || "Failed to connect wallet. Please try again.";
-          dispatch({ type: "CONNECT_FAILURE", payload: { error: errorMessage } });
-        }
-      }
-    },
-    [connect, dispatch]
-  );
+     async (walletType: WalletType) => {
+       try {
+         await connect(walletType);
+         // Don't automatically close modal for EVM wallet since RainbowKit handles its own UI flow
+         if (walletType !== 'evm') {
+           dispatch({ type: "CLOSE_MODAL" });
+         }
+       } catch (error) {
+         const err = error as Error;
+         console.error("Wallet connection failed:", err);
+         // Don't show error for EVM wallet since RainbowKit handles its own UI
+         if (walletType !== 'evm') {
+           const errorMessage =
+             err?.message || "Failed to connect wallet. Please try again.";
+           dispatch({ type: "CONNECT_FAILURE", payload: { error: errorMessage } });
+         }
+       }
+     },
+     [connect, dispatch]
+   );
 
   const onSocialLoginClick = () => {
     // Placeholder for social login functionality

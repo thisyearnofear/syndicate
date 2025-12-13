@@ -24,104 +24,88 @@ export default function WalletInfo({
   }
 
   const getChainName = (chainId: number | null) => {
-    if (chainId === null || chainId === undefined) return "Unknown Network";
+     if (chainId === null || chainId === undefined) return "Unknown Network";
 
-    switch (chainId) {
-      case CHAIN_IDS.BASE:
-        return "Base";
-      case CHAIN_IDS.BASE_SEPOLIA:
-        return "Base Sepolia";
-      case CHAIN_IDS.ETHEREUM:
-        return "Ethereum";
-      case CHAIN_IDS.AVALANCHE:
-        return "Avalanche";
-      case 0:
-        // Check wallet type to distinguish between Solana, NEAR, and Stacks
-        if (STACKS_WALLETS.includes(state.walletType as any)) return "Stacks";
-        return state.walletType === 'phantom' ? "Solana" : "NEAR";
-      case 12345:
-        return "Stacks";
-      default:
-        return `Network (${chainId})`;
-    }
-  };
+     switch (chainId) {
+       case CHAIN_IDS.BASE:
+         return "Base";
+       case CHAIN_IDS.BASE_SEPOLIA:
+         return "Base Sepolia";
+       case CHAIN_IDS.ETHEREUM:
+         return "Ethereum";
+       case CHAIN_IDS.AVALANCHE:
+         return "Avalanche";
+       case 0:
+         // Check wallet type to distinguish between Solana, NEAR, and Stacks
+         if (state.walletType === 'stacks') return "Stacks";
+         return state.walletType === 'solana' ? "Solana" : "NEAR";
+       case 12345:
+         return "Stacks";
+       default:
+         return `Network (${chainId})`;
+     }
+   };
 
-  const getChainColor = (chainId: number | null) => {
-    if (chainId === null || chainId === undefined) return "gray";
+   const getChainColor = (chainId: number | null) => {
+     if (chainId === null || chainId === undefined) return "gray";
 
-    switch (chainId) {
-      case CHAIN_IDS.BASE:
-        return "blue";
-      case CHAIN_IDS.BASE_SEPOLIA:
-        return "purple";
-      case CHAIN_IDS.ETHEREUM:
-        return "gray";
-      case CHAIN_IDS.AVALANCHE:
-        return "red";
-      case 0:
-        // Different colors for Solana, NEAR, and Stacks
-        if (STACKS_WALLETS.includes(state.walletType as any)) return "orange";
-        return state.walletType === 'phantom' ? "purple" : "green";
-      case 12345:
-        return "orange";
-      default:
-        return "gray";
-    }
-  };
+     switch (chainId) {
+       case CHAIN_IDS.BASE:
+         return "blue";
+       case CHAIN_IDS.BASE_SEPOLIA:
+         return "purple";
+       case CHAIN_IDS.ETHEREUM:
+         return "gray";
+       case CHAIN_IDS.AVALANCHE:
+         return "red";
+       case 0:
+         // Different colors for Solana, NEAR, and Stacks
+         if (state.walletType === 'stacks') return "orange";
+         return state.walletType === 'solana' ? "purple" : "green";
+       case 12345:
+         return "orange";
+       default:
+         return "gray";
+     }
+   };
 
   const getWalletDisplayName = (walletType: string | null) => {
-    if (!walletType) return "Wallet";
+     if (!walletType) return "Wallet";
 
-    switch (walletType) {
-      case "metamask":
-        return "MetaMask";
-      case "phantom":
-        return "Phantom";
-      case "walletconnect":
-        return "WalletConnect";
-      case "social":
-        return "Social Login";
-      case "near":
-        return "NEAR Wallet";
-      case "leather":
-        return "Leather";
-      case "xverse":
-        return "Xverse";
-      case "asigna":
-        return "Asigna";
-      case "fordefi":
-        return "Fordefi";
-      default:
-        return walletType;
-    }
-  };
+     switch (walletType) {
+       case "evm":
+         return "EVM Wallet";
+       case "solana":
+         return "Phantom";
+       case "social":
+         return "Social Login";
+       case "near":
+         return "NEAR Wallet";
+       case "stacks":
+         return "Stacks";
+       default:
+         return walletType;
+     }
+   };
 
-  const getWalletIcon = (walletType: string | null) => {
-    if (!walletType) return "💼";
+   const getWalletIcon = (walletType: string | null) => {
+     if (!walletType) return "💼";
 
-    switch (walletType) {
-      case "metamask":
-        return "🦊";
-      case "phantom":
-        return "👻";
-      case "walletconnect":
-        return "🔗";
-      case "social":
-        return "🔐";
-      case "near":
-        return "🌌";
-      case "leather":
-        return "🧱";
-      case "xverse":
-        return "⚡";
-      case "asigna":
-        return "🔐";
-      case "fordefi":
-        return "🏦";
-      default:
-        return "💼";
-    }
-  };
+     switch (walletType) {
+       case "evm":
+         return "🔗";
+       case "solana":
+         return "👻";
+       case "social":
+         return "🔐";
+       case "near":
+         return "🌌";
+       case "stacks":
+         return "₿";
+       default:
+         return "💼";
+     }
+   };
 
   const formatAddress = (address: string | null) => {
     if (!address) return "";
@@ -170,7 +154,7 @@ export default function WalletInfo({
         {/* Wallet routing info - shows auto bridge routing */}
         {routing && (
           <WalletRoutingInfo
-            walletType={state.walletType || 'metamask'}
+            walletType={state.walletType || 'evm'}
             compact={false}
           />
         )}

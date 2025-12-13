@@ -184,20 +184,20 @@ export function WalletProvider({ children }: WalletProviderProps) {
   const { disconnect: wagmiDisconnect } = useDisconnect();
 
   // Manual wagmi sync function (called only when user explicitly connects)
-  const syncWithWagmi = useCallback(() => {
-    const isNonEvmWallet =
-      state.walletType === "phantom" || state.walletType === "near";
+   const syncWithWagmi = useCallback(() => {
+     const isNonEvmWallet =
+       state.walletType === "solana" || state.walletType === "near";
 
-    if (wagmiConnected && address && !isNonEvmWallet) {
-      let walletType: WalletType = "metamask";
+     if (wagmiConnected && address && !isNonEvmWallet) {
+       let walletType: WalletType = "evm";
 
-      if (connector?.id === "metaMask") {
-        walletType = "metamask";
-      } else if (connector?.id === "walletConnect") {
-        walletType = "metamask";
-      } else {
-        walletType = "metamask";
-      }
+       if (connector?.id === "metaMask") {
+         walletType = "evm";
+       } else if (connector?.id === "walletConnect") {
+         walletType = "evm";
+       } else {
+         walletType = "evm";
+       }
 
       dispatch({
         type: "CONNECT_SUCCESS",
@@ -232,7 +232,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
     else if (
       !wagmiConnected &&
       state.isConnected &&
-      (state.walletType === "metamask" || !state.walletType) &&
+      (state.walletType === "evm" || !state.walletType) &&
       state.address
     ) {
       console.log("WalletContext: Wagmi disconnected, updating internal state");
@@ -251,23 +251,23 @@ export function WalletProvider({ children }: WalletProviderProps) {
   // Enhanced disconnect function that handles all wallet types
   const disconnectWallet = useCallback(async () => {
     try {
-      // First disconnect from wagmi (MetaMask, WalletConnect, etc.)
+      // First disconnect from wagmi (EVM wallets, WalletConnect, etc.)
       if (
         wagmiConnected &&
-        (state.walletType === "metamask" || !state.walletType)
+        (state.walletType === "evm" || !state.walletType)
       ) {
         await wagmiDisconnect();
       }
 
-      // Handle Phantom (Solana) disconnection
-      if (state.walletType === "phantom" && typeof window !== "undefined") {
+      // Handle Solana (Phantom) disconnection
+      if (state.walletType === "solana" && typeof window !== "undefined") {
         const solanaWindow = window as Window &
           typeof globalThis & { solana?: { disconnect: () => Promise<void> } };
         if (solanaWindow.solana) {
           try {
             await solanaWindow.solana.disconnect();
-          } catch (phantomError) {
-            console.warn("Phantom disconnect failed:", phantomError);
+          } catch (solanaError) {
+            console.warn("Solana wallet disconnect failed:", solanaError);
           }
         }
       }

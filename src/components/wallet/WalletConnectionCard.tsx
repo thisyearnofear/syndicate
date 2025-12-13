@@ -46,7 +46,7 @@ const WALLET_SECTIONS: WalletSection[] = [
     wallets: [
       {
         name: "WalletConnect",
-        type: "metamask" as WalletType,
+        type: "evm" as WalletType,
         icon: "🔗",
         description: "Connect via WalletConnect (300+ wallets including MetaMask)",
         gradient: "from-blue-500 to-purple-500",
@@ -55,7 +55,7 @@ const WALLET_SECTIONS: WalletSection[] = [
       },
       {
         name: "Phantom",
-        type: "phantom" as WalletType,
+        type: "solana" as WalletType,
         icon: "👻",
         description: "Solana & multi-chain wallet",
         gradient: "from-purple-500 to-pink-500",
@@ -75,36 +75,12 @@ const WALLET_SECTIONS: WalletSection[] = [
     title: "Stacks (Bitcoin L2)",
     wallets: [
       {
-        name: "Leather",
-        type: "leather" as WalletType,
-        icon: "🧱",
-        description: "Bitcoin wallet by Trust Machines",
+        name: "Stacks",
+        type: "stacks" as WalletType,
+        icon: "₿",
+        description: "Leather, Xverse, Asigna, Fordefi & other Stacks wallets",
         gradient: "from-amber-600 to-orange-600",
         bgColor: "bg-amber-600/10 border-amber-600/20",
-      },
-      {
-        name: "Xverse",
-        type: "xverse" as WalletType,
-        icon: "⚡",
-        description: "Bitcoin wallet with Ledger support",
-        gradient: "from-blue-600 to-cyan-600",
-        bgColor: "bg-blue-600/10 border-blue-600/20",
-      },
-      {
-        name: "Asigna",
-        type: "asigna" as WalletType,
-        icon: "🔐",
-        description: "Bitcoin multisig wallet",
-        gradient: "from-purple-600 to-pink-600",
-        bgColor: "bg-purple-600/10 border-purple-600/20",
-      },
-      {
-        name: "Fordefi",
-        type: "fordefi" as WalletType,
-        icon: "🏦",
-        description: "Institutional Bitcoin wallet",
-        gradient: "from-indigo-600 to-blue-600",
-        bgColor: "bg-indigo-600/10 border-indigo-600/20",
       },
     ],
   },
@@ -139,25 +115,25 @@ export function WalletConnectionCard({
       setError(null);
 
       try {
-        // Load wallet library conditionally
-        await walletLoader.loadWalletLibrary(walletType);
-        await onConnect?.(walletType);
-      } catch (err) {
-        const error = err as Error;
-        // Don't show error for WalletConnect since RainbowKit handles its own UI
-        if (walletType !== 'metamask') {
-          const errorMessage =
-            error?.message ||
-            `Failed to connect to ${walletType}. Please try again.`;
-          setError(errorMessage);
-        }
-      } finally {
-        // Don't reset connecting state for WalletConnect since RainbowKit handles its own UI
-        if (walletType !== 'metamask') {
-          setIsConnecting(false);
-          setConnectingWallet(null);
-        }
-      }
+         // Load wallet library conditionally
+         await walletLoader.loadWalletLibrary(walletType);
+         await onConnect?.(walletType);
+       } catch (err) {
+         const error = err as Error;
+         // Don't show error for EVM/WalletConnect since RainbowKit handles its own UI
+         if (walletType !== 'evm') {
+           const errorMessage =
+             error?.message ||
+             `Failed to connect to ${walletType}. Please try again.`;
+           setError(errorMessage);
+         }
+       } finally {
+         // Don't reset connecting state for EVM/WalletConnect since RainbowKit handles its own UI
+         if (walletType !== 'evm') {
+           setIsConnecting(false);
+           setConnectingWallet(null);
+         }
+       }
     },
     [onConnect, isConnecting]
   );

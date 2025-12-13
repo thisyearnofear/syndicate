@@ -2,41 +2,34 @@
  * WALLET TYPES & ROUTING
  * 
  * Architecture: Single Wallet, Any Chain Origin
- * - User connects ONE native wallet
+ * - User connects ONE native wallet per ecosystem
  * - System auto-routes bridge based on wallet type
  * - No manual wallet switching needed
+ * - One button per ecosystem: EVM, SOL, NEAR, Stacks, Social
  * 
  * Routing Table:
- * - MetaMask/WalletConnect: EVM chains → CCIP/CCTP → Base
- * - Phantom: Solana → CCTP → Base
- * - Leather/Xverse/Asigna/Fordefi: Stacks → sBTC → CCTP → Base
+ * - EVM (MetaMask/WalletConnect): EVM chains → CCIP/CCTP → Base
+ * - SOL (Phantom): Solana → CCTP → Base
+ * - STACKS (Leather/Xverse/Asigna/Fordefi): Stacks → sBTC → CCTP → Base
  * - NEAR: NEAR → Chain Signatures (MPC) → Derived Base Address
- * - Social: Coming soon
+ * - SOCIAL: Coming soon
  */
 
-export type WalletType = 'metamask' | 'phantom' | 'social' | 'near' | 'leather' | 'xverse' | 'asigna' | 'fordefi';
+export type WalletType = 'evm' | 'solana' | 'social' | 'near' | 'stacks';
 
 export const WalletTypes = {
-    METAMASK: 'metamask' as const,
-    PHANTOM: 'phantom' as const,
+    EVM: 'evm' as const,           // MetaMask, WalletConnect, etc.
+    SOLANA: 'solana' as const,      // Phantom, etc.
     SOCIAL: 'social' as const,
     NEAR: 'near' as const,
-    LEATHER: 'leather' as const,
-    XVERSE: 'xverse' as const,
-    ASIGNA: 'asigna' as const,
-    FORDEFI: 'fordefi' as const,
+    STACKS: 'stacks' as const,      // Leather, Xverse, Asigna, Fordefi, etc.
 };
 
 /**
- * Stacks ecosystem wallets (Bitcoin Layer 2)
- * All route through sBTC → CCTP → Base
+ * All Stacks ecosystem wallets use the same connection interface
+ * @stacks/connect auto-detects available wallet and handles connection
  */
-export const STACKS_WALLETS = [
-    WalletTypes.LEATHER,
-    WalletTypes.XVERSE,
-    WalletTypes.ASIGNA,
-    WalletTypes.FORDEFI
-] as const;
+export const STACKS_WALLETS = [WalletTypes.STACKS] as const;
 
 export type StacksWalletType = typeof STACKS_WALLETS[number];
 
@@ -51,24 +44,21 @@ export function getWalletRouting(walletType: WalletType): {
     description: string;
 } {
     switch (walletType) {
-        case WalletTypes.METAMASK:
+        case WalletTypes.EVM:
             return {
                 nativeChain: 'EVM (any)',
                 bridgeProtocol: 'CCIP/CCTP',
                 destination: 'Base',
                 description: 'Auto-selected based on origin chain'
             };
-        case WalletTypes.PHANTOM:
+        case WalletTypes.SOLANA:
             return {
                 nativeChain: 'Solana',
                 bridgeProtocol: 'CCTP',
                 destination: 'Base',
                 description: 'Circle Cross-Chain Transfer Protocol'
             };
-        case WalletTypes.LEATHER:
-        case WalletTypes.XVERSE:
-        case WalletTypes.ASIGNA:
-        case WalletTypes.FORDEFI:
+        case WalletTypes.STACKS:
             return {
                 nativeChain: 'Stacks (Bitcoin L2)',
                 bridgeProtocol: 'sBTC → CCTP',

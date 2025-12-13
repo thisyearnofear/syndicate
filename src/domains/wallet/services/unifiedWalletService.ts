@@ -21,34 +21,31 @@ import { WalletType, WalletTypes, STACKS_WALLETS, type StacksWalletType } from '
 
 /**
  * CLEAN: Detect available wallets
- * Note: MetaMask is handled by wagmi/RainbowKit to avoid conflicts
+ * Note: MetaMask/WalletConnect is handled by wagmi/RainbowKit to avoid conflicts
  */
 export function getAvailableWallets(): WalletType[] {
   const available: WalletType[] = [];
 
-  // MetaMask is handled by wagmi/RainbowKit - skip here to avoid conflicts
-  // Check for Phantom
+  // EVM wallets (MetaMask, WalletConnect) handled by wagmi/RainbowKit
+
+  // Check for Phantom (Solana)
   if (typeof window !== 'undefined' && window.solana?.isPhantom) {
-    available.push(WalletTypes.PHANTOM);
+    available.push(WalletTypes.SOLANA);
   }
 
-  // Check for Stacks wallets
+  // Check for any Stacks wallet (Leather, Xverse, Asigna, Fordefi)
+  // @stacks/connect auto-detects which one is available
   if (typeof window !== 'undefined') {
-    if (window.LeatherProvider) {
-      available.push(WalletTypes.LEATHER);
-    }
-    if (window.XverseProviders?.StacksProvider) {
-      available.push(WalletTypes.XVERSE);
-    }
-    if (window.AsignaProvider) {
-      available.push(WalletTypes.ASIGNA);
-    }
-    if (window.FordefiProvider) {
-      available.push(WalletTypes.FORDEFI);
+    const hasStacksWallet = 
+      (window as any).LeatherProvider ||
+      (window as any).XverseProviders ||
+      (window as any).AsignaProvider ||
+      (window as any).FordefiProvider;
+    
+    if (hasStacksWallet) {
+      available.push(WalletTypes.STACKS);
     }
   }
-
-  // WalletConnect is handled separately by WalletConnectManager component
 
   // Social login is always available
   available.push(WalletTypes.SOCIAL);
@@ -68,18 +65,32 @@ export function getWalletStatus(walletType: WalletType): {
   downloadUrl?: string;
 } {
   switch (walletType) {
-    case WalletTypes.METAMASK:
+    case WalletTypes.EVM:
       return {
-        isAvailable: typeof window !== 'undefined' && !!window.ethereum?.isMetaMask,
-        isInstalled: typeof window !== 'undefined' && !!window.ethereum?.isMetaMask,
+        isAvailable: typeof window !== 'undefined' && !!window.ethereum,
+        isInstalled: typeof window !== 'undefined' && !!window.ethereum,
         downloadUrl: 'https://metamask.io/download/',
       };
 
-    case WalletTypes.PHANTOM:
+    case WalletTypes.SOLANA:
       return {
         isAvailable: typeof window !== 'undefined' && !!window.solana?.isPhantom,
         isInstalled: typeof window !== 'undefined' && !!window.solana?.isPhantom,
         downloadUrl: 'https://phantom.app/',
+      };
+
+    case WalletTypes.STACKS:
+      // Check if any Stacks wallet is available
+      const hasStacksWallet = typeof window !== 'undefined' && (
+        !!(window as any).LeatherProvider ||
+        !!(window as any).XverseProviders ||
+        !!(window as any).AsignaProvider ||
+        !!(window as any).FordefiProvider
+      );
+      return {
+        isAvailable: hasStacksWallet,
+        isInstalled: hasStacksWallet,
+        downloadUrl: 'https://leather.io/install',
       };
 
     case WalletTypes.SOCIAL:
@@ -87,35 +98,6 @@ export function getWalletStatus(walletType: WalletType): {
       return {
         isAvailable: true,
         isInstalled: true,
-      };
-
-    // Stacks ecosystem wallets
-    case WalletTypes.LEATHER:
-      return {
-        isAvailable: typeof window !== 'undefined' && !!window.LeatherProvider,
-        isInstalled: typeof window !== 'undefined' && !!window.LeatherProvider,
-        downloadUrl: 'https://leather.io/install',
-      };
-
-    case WalletTypes.XVERSE:
-      return {
-        isAvailable: typeof window !== 'undefined' && !!window.XverseProviders,
-        isInstalled: typeof window !== 'undefined' && !!window.XverseProviders,
-        downloadUrl: 'https://xverse.app/',
-      };
-
-    case WalletTypes.ASIGNA:
-      return {
-        isAvailable: typeof window !== 'undefined' && !!window.AsignaProvider,
-        isInstalled: typeof window !== 'undefined' && !!window.AsignaProvider,
-        downloadUrl: 'https://asigna.io/',
-      };
-
-    case WalletTypes.FORDEFI:
-      return {
-        isAvailable: typeof window !== 'undefined' && !!window.FordefiProvider,
-        isInstalled: typeof window !== 'undefined' && !!window.FordefiProvider,
-        downloadUrl: 'https://www.fordefi.com/',
       };
 
     default:
@@ -185,20 +167,20 @@ export function useUnifiedWallet(): {
         );
       }
 
-      // Initialize variables - MetaMask case throws error so won't get here
-      let address: string = '';
-      let chainId: number = 0;
+      // Initialize variables - EVM case throws error so won't get here
+       let address: string = '';
+       let chainId: number = 0;
 
-      switch (walletType) {
-        case WalletTypes.METAMASK:
-          // For MetaMask, prefer wagmi/RainbowKit connection to avoid conflicts
-          // wagmi will handle the connection and our WalletContext will sync with it
-          // We don't need to do anything here as RainbowKit handles the connection flow
-          console.log('MetaMask connection handled by RainbowKit');
-          return;
-          break;
+       switch (walletType) {
+         case WalletTypes.EVM:
+           // For EVM wallets, prefer wagmi/RainbowKit connection to avoid conflicts
+           // wagmi will handle the connection and our WalletContext will sync with it
+           // We don't need to do anything here as RainbowKit handles the connection flow
+           console.log('EVM wallet connection handled by RainbowKit');
+           return;
+           break;
 
-        case WalletTypes.PHANTOM:
+         case WalletTypes.SOLANA:
           // SOLANA-FIRST APPROACH: Always connect via Solana interface first
           // This ensures we get Phantom specifically (not MetaMask via window.ethereum)
           const hasPhantomSolana = window.solana?.isPhantom;
@@ -312,30 +294,26 @@ export function useUnifiedWallet(): {
           }
           break;
 
-        // Stacks ecosystem wallets
-        case WalletTypes.LEATHER:
-        case WalletTypes.XVERSE:
-        case WalletTypes.ASIGNA:
-        case WalletTypes.FORDEFI:
+        case WalletTypes.STACKS:
           try {
-            const stacksWallet = await connectStacksWallet(walletType as StacksWalletType);
+            const stacksWallet = await connectStacksWallet(WalletTypes.STACKS as StacksWalletType);
             address = stacksWallet.address;
             chainId = 12345; // Stacks mainnet chain ID
 
-            console.log(`${walletType} wallet connected:`, address);
+            console.log('Stacks wallet connected:', address);
           } catch (error: unknown) {
             const message = (error as { message?: string }).message || '';
-            console.error(`${walletType} connection error:`, error);
+            console.error('Stacks wallet connection error:', error);
 
             if (message.includes('timeout') || message.includes('timed out')) {
-              throw createError('CONNECTION_TIMEOUT', `${walletType} wallet connection timed out. Please try again.`);
+              throw createError('CONNECTION_TIMEOUT', 'Stacks wallet connection timed out. Please try again.');
             }
 
             if (message.includes('cancelled') || message.includes('rejected')) {
-              throw createError('CONNECTION_REJECTED', `${walletType} wallet connection was cancelled.`);
+              throw createError('CONNECTION_REJECTED', 'Stacks wallet connection was cancelled.');
             }
 
-            throw createError('CONNECTION_FAILED', `Failed to connect ${walletType} wallet: ${message || 'Unknown error'}`);
+            throw createError('CONNECTION_FAILED', `Failed to connect Stacks wallet: ${message || 'Unknown error'}`);
           }
           break;
 
@@ -378,19 +356,19 @@ export function useUnifiedWallet(): {
     }
 
     try {
-      if (state.walletType === WalletTypes.METAMASK && window.ethereum) {
-        await window.ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: `0x${targetChainId.toString(16)}` }],
-        });
+       if (state.walletType === WalletTypes.EVM && window.ethereum) {
+         await window.ethereum.request({
+           method: 'wallet_switchEthereumChain',
+           params: [{ chainId: `0x${targetChainId.toString(16)}` }],
+         });
 
-        dispatch({ type: 'NETWORK_CHANGED', payload: { chainId: targetChainId } });
-      } else if (state.walletType === WalletTypes.PHANTOM) {
-        // Phantom connected via Solana - chain switching happens through cross-chain bridge
-        throw createError('UNSUPPORTED_OPERATION', 'Phantom is connected via Solana. Use cross-chain bridge for EVM operations.');
-      } else {
-        throw createError('UNSUPPORTED_OPERATION', 'Chain switching not supported for this wallet');
-      }
+         dispatch({ type: 'NETWORK_CHANGED', payload: { chainId: targetChainId } });
+       } else if (state.walletType === WalletTypes.SOLANA) {
+         // Solana wallet connected via Phantom - chain switching happens through cross-chain bridge
+         throw createError('UNSUPPORTED_OPERATION', 'Solana wallet is connected via Phantom. Use cross-chain bridge for EVM operations.');
+       } else {
+         throw createError('UNSUPPORTED_OPERATION', 'Chain switching not supported for this wallet');
+       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to switch chain';
       dispatch({ type: 'CONNECT_FAILURE', payload: { error: errorMessage } });

@@ -119,15 +119,15 @@ export default function BridgePage() {
   );
 
   // Determine wallet connection status based on selected chain
-  const needsWalletConnection = useMemo(() => {
-    if (sourceChain === "solana") {
-      return !isConnected || walletType !== "phantom";
-    } else if (sourceChain === "near") {
-      return !isConnected || walletType !== "near";
-    } else if (sourceChain === "ethereum") {
-      return !evmConnected;
-    }
-    return true;
+   const needsWalletConnection = useMemo(() => {
+     if (sourceChain === "solana") {
+       return !isConnected || walletType !== "solana";
+     } else if (sourceChain === "near") {
+       return !isConnected || walletType !== "near";
+     } else if (sourceChain === "ethereum") {
+       return !evmConnected;
+     }
+     return true;
   }, [sourceChain, isConnected, evmConnected, walletType]);
 
   // Determine if EVM wallet is needed for destination
