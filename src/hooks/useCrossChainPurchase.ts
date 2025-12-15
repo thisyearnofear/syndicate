@@ -10,6 +10,11 @@ import type { SourceChain } from '@/config/chains';
 import { TrackerStatus } from '@/components/bridge/CrossChainTracker';
 
 // --- Constants ---
+// NOTE: For the contract to be recognized as valid by Stacks wallets:
+// 1. The contract must be deployed on the Stacks mainnet
+// 2. The contract address must be in the correct STX format (starting with 'ST')
+// 3. The wallet must be able to verify the contract (may require ABI in some cases)
+// 4. If testing locally, use Stacks testnet and update the network constant
 const STACKS_NETWORK = new stacksNetwork.StacksMainnet();
 const LOTTERY_CONTRACT_ADDRESS = 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM';
 const LOTTERY_CONTRACT_NAME = 'stacks-lottery';
@@ -128,25 +133,59 @@ async function bridgeFromStacks(params: {
   ticketCount: number;
   onStatus: (status: string, data: any) => void;
 }): Promise<{ success: boolean; sourceTxHash?: string; error?: string }> {
-  return new Promise((resolve) => {
-    openContractCall({
-      contractAddress: LOTTERY_CONTRACT_ADDRESS,
-      contractName: LOTTERY_CONTRACT_NAME,
-      functionName: 'bridge-and-purchase-tickets',
-      functionArgs: [
-        uintCV(params.ticketCount),
-        stringAsciiCV(params.baseAddress),
-      ],
-      network: STACKS_NETWORK,
-      appName: 'Syndicate',
-      onFinish: (data) => {
-        params.onStatus('broadcasted', data);
-        resolve({ success: true, sourceTxHash: data.txId });
-      },
-      onCancel: () => {
-        params.onStatus('user_rejected', {});
-        resolve({ success: false, error: 'User rejected the transaction' });
-      },
+  try {
+    // Validate contract address format
+    if (!LOTTERY_CONTRACT_ADDRESS || !LOTTERY_CONTRACT_ADDRESS.startsWith('ST')) {
+      throw new Error('Invalid Stacks contract address format');
+    }
+
+    // Validate function arguments
+    if (params.ticketCount <= 0) {
+      throw new Error('Ticket count must be greater than 0');
+    }
+
+    if (!params.baseAddress || params.baseAddress.length !== 42) {
+      throw new Error('Invalid Base address format');
+    }
+
+    return new Promise((resolve) => {
+      openContractCall({
+        contractAddress: LOTTERY_CONTRACT_ADDRESS,
+        contractName: LOTTERY_CONTRACT_NAME,
+        functionName: 'bridge-and-purchase-tickets',
+        functionArgs: [
+          uintCV(params.ticketCount),
+          stringAsciiCV(params.baseAddress),
+        ],
+        network: STACKS_NETWORK,
+        appName: 'Syndicate',
+        // Add error handler for contract validation issues
+        onError: (error) => {
+          console.error('Stacks contract call failed:', error);
+          let errorMessage = 'Failed to execute contract call';
+          
+          if (error.message && error.message.includes('not a valid contract')) {
+            errorMessage = 'Contract validation failed. The lottery contract may not be deployed or your wallet cannot verify it.';
+          } else if (error.message && error.message.includes('rejected')) {
+            errorMessage = 'Transaction was rejected by user or wallet';
+          }
+          
+          params.onStatus('error', { error: errorMessage });
+          resolve({ success: false, error: errorMessage });
+        },
+        onFinish: (data) => {
+          params.onStatus('broadcasted', data);
+          resolve({ success: true, sourceTxHash: data.txId });
+        },
+        onCancel: () => {
+          params.onStatus('user_rejected', {});
+          resolve({ success: false, error: 'User rejected the transaction' });
+        },
+      });
     });
-  });
+  } catch (validationError) {
+    console.error('Stacks contract validation error:', validationError);
+    params.onStatus('error', { error: validationError.message });
+    return { success: false, error: validationError.message };
+  }
 }
