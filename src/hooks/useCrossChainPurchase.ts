@@ -16,7 +16,8 @@ import { TrackerStatus } from '@/components/bridge/CrossChainTracker';
 // 3. The wallet must be able to verify the contract (may require ABI in some cases)
 // 4. If testing locally, use Stacks testnet and update the network constant
 const STACKS_NETWORK = new stacksNetwork.StacksMainnet();
-const LOTTERY_CONTRACT_ADDRESS = 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM';
+// IMPORTANT: Update this with your deployed contract address from .env
+const LOTTERY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_STACKS_LOTTERY_CONTRACT || 'SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery';
 const LOTTERY_CONTRACT_NAME = 'stacks-lottery';
 const POLLING_INTERVAL = 5000; // 5 seconds
 
