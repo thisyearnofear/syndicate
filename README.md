@@ -45,7 +45,7 @@ A multi-chain lottery platform built on top of [Megapot](https://megapot.io), en
 | Solana          | ✅ Working     | CCTP            | Phantom                      |
 | Polygon         | ✅ Working     | CCIP            | MetaMask, WalletConnect      |
 | Avalanche       | ✅ Working     | CCIP            | MetaMask, WalletConnect      |
-| Stacks (Bitcoin)| ✅ Working     | sBTC → CCTP     | Leather, Xverse, Asigna, Fordefi |
+| Stacks (Bitcoin)| ✅ **Deployed** | Custom Bridge   | Leather, Xverse, Asigna, Fordefi |
 | Bitcoin/ICP     | 🔜 Planned     | ICP Canisters   | -                            |
 
 ## 📊 Feature Status
@@ -82,6 +82,7 @@ Visit `http://localhost:3000` to try the platform.
 | ------------------------------------------- | -------------------------------------------------------- |
 | [Development Guide](./docs/DEVELOPMENT.md)  | Setup, testing, deployment, and troubleshooting         |
 | [Implementation](./docs/IMPLEMENTATION.md)  | Technical architecture and system enhancements          |
+| [**Stacks Bridge**](./docs/STACKS_BRIDGE.md) | **Stacks bridge operator setup & deployment guide**     |
 | [Roadmap & Project](./docs/ROADMAP_PROJECT.md) | Project planning, timeline, and hackathon strategy     |
 | [Cross-Chain Technical](./docs/CROSSCHAIN_TECHNICAL.md) | Bridge protocols, NEAR Intents, and technical flows |
 | [Testing Strategy](./docs/TESTING.md)       | Test coverage, manual testing plan, and analysis        |
@@ -95,6 +96,13 @@ Visit `http://localhost:3000` to try the platform.
 - Planned: Private transaction relayers for bridge anonymity
 
 ### Progress Update (Dec 2025)
+
+- **Stacks Bridge Deployed**: Complete sBTC → Base bridge with operator service
+  - Contract: `SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery`
+  - Production-ready operator service with retry logic & monitoring
+  - Pre-funded USDC liquidity strategy
+  - Earns 10% Megapot referral fees
+  - See [Stacks Bridge Guide](./docs/STACKS_BRIDGE.md)
 
 - **NEAR Intents + Chain Signatures**: Complete end-to-end NEAR → Base ticket purchase
   - Deterministic address derivation (no storage needed)

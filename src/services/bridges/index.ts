@@ -606,6 +606,11 @@ export class UnifiedBridgeManager {
                     this.registerProtocol(zcashProtocol);
                     return zcashProtocol;
                 }
+                case 'stacks': {
+                    const { stacksProtocol } = await import('./protocols/stacks');
+                    this.registerProtocol(stacksProtocol);
+                    return stacksProtocol;
+                }
                 default:
                     console.warn(`[BridgeManager] Unknown protocol: ${name}`);
                     return null;

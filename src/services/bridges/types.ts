@@ -23,6 +23,7 @@ export type ChainIdentifier =
     | 'polygon'
     | 'avalanche'
     | 'solana'
+    | 'stacks'   // Stacks Bitcoin L2
     | 'zcash'    // NEW - Zcash support
     | 'near';    // NEAR as orchestration layer
 
@@ -35,6 +36,7 @@ export type BridgeProtocolType =
     | 'wormhole'  // Wormhole (multi-chain)
     | 'near'      // NEAR Chain Signatures
     | 'near-intents' // NEAR Intents (Solver-based)
+    | 'stacks'    // Stacks → Base bridge (sBTC → USDC)
     | 'zcash'     // Zcash-specific (uses NEAR as orchestrator)
     | 'auto';     // Automatic selection
 
@@ -183,6 +185,7 @@ export const USDC_ADDRESSES: Record<ChainIdentifier, string | undefined> = {
     polygon: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
     avalanche: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E',
     solana: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyB7bF',
+    stacks: undefined, // sBTC, not USDC
     zcash: undefined,
     near: 'a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.factory.bridge.near',
 };
