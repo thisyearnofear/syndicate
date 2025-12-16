@@ -388,4 +388,22 @@ state.bridgeDepositAddress: string | null   // Where to send USDC (deBridge)
 - `src/components/modal/purchase/ProcessingStep.tsx` - Added Solana support
 - `src/components/modal/PurchaseModal.tsx` - Wired bridge state
 
-See **PHASE_3_SUMMARY.md** for detailed documentation.
+### UI Enhancements Detail
+**ProcessingStep Component**:
+- Added Solana bridge stage metadata to STAGE_INFO (validating, approve, approved, burning, burn_confirmed, waiting_attestation, minting, waiting_deposit)
+- Each stage has: label, description, estimatedSeconds, tip, celebrate flag
+- Transparent flow detection: `const isSolanaBridge = !!bridgeStages`
+- Conditional deposit address display for deBridge with copy-to-clipboard
+- Stage progress with visual indicators (✓ completed, 🔵 active, ◯ pending)
+- Time estimates: "⏱️ Usually takes 2-5 minutes" for attestation, etc.
+- User guidance: "📋 Send USDC to this address" with monospace font display
+
+**User Experience Flow**:
+1. Phantom → Purchase flow triggered
+2. "🌉 Solana Bridge Status" header appears (vs "🔄 NEAR Intents Status")
+3. Stages progress: validating → approve → approved (deposit address shown)
+4. User copies address and sends USDC from Solana wallet
+5. Bridge continues: burning → waiting_attestation → minting → complete
+6. SuccessStep displays upon completion
+
+**Code Quality**: Zero breaking changes, NEAR flow unaffected, transparent switching based on data presence
