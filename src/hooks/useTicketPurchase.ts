@@ -114,6 +114,14 @@ async function executeSolanaBridgePurchase(
     }
 
     // Bridge succeeded - USDC arrived on Base
+    // Initialize Web3 for Base purchase if not already done (required for Solana bridge flow)
+    if (!web3Service.isReady()) {
+      const initialized = await web3Service.initialize();
+      if (!initialized) {
+        throw new Error('Failed to initialize Web3 service for Base ticket purchase');
+      }
+    }
+    
     // Now purchase tickets on Base
     const purchaseResult = await web3Service.purchaseTickets(ticketCount);
 
