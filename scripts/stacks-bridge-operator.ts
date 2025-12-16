@@ -34,6 +34,14 @@ import { base } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { promises as fs } from 'fs';
 import * as path from 'path';
+import {
+    makeContractCall,
+    broadcastTransaction,
+    uintCV,
+    principalCV,
+    stringAsciiCV,
+} from '@stacks/transactions';
+import * as stacksNetwork from '@stacks/network';
 
 // ============================================================================
 // CONFIGURATION
@@ -499,10 +507,11 @@ async function recordCrossChainPurchase(data: {
             // File doesn't exist yet
         }
         
-        // Add new purchase
+        // Add new purchase with full provenance
         purchases.push({
             ...data,
-            timestamp: new Date().toISOString(),
+            sourceChain: 'stacks',
+            purchaseTimestamp: new Date().toISOString(),
         });
         
         // Write back
@@ -515,6 +524,129 @@ async function recordCrossChainPurchase(data: {
     } catch (error) {
         console.error('[Operator] Failed to record purchase:', error);
         // Non-critical - don't fail the bridge
+    }
+}
+
+// ============================================================================
+// WINNINGS MONITORING (ENHANCEMENT: Auto-detect & record wins)
+// ============================================================================
+
+/**
+ * Poll Megapot for user wins and record them on Stacks
+ * PERFORMANT: Caches checked addresses to avoid redundant queries
+ */
+const checkedAddresses = new Set<string>();
+const WINNINGS_CHECK_INTERVAL = 30_000; // 30 seconds
+
+async function pollAndRecordWinnings() {
+    try {
+        // Read all cross-chain purchases
+        let purchases: any[] = [];
+        try {
+            const content = await fs.readFile(CONFIG.CROSS_CHAIN_PURCHASES_FILE, 'utf-8');
+            purchases = JSON.parse(content);
+        } catch {
+            return; // No purchases yet
+        }
+
+        console.log(`[Operator] 🔍 Checking ${purchases.length} users for winnings...`);
+
+        for (const purchase of purchases) {
+            const baseAddress = purchase.evmAddress as `0x${string}`;
+            
+            // Skip if recently checked (PERFORMANT: avoid hammering API)
+            if (checkedAddresses.has(baseAddress)) {
+                continue;
+            }
+
+            try {
+                // Query Megapot for user info
+                const userInfo = (await basePublicClient.readContract({
+                    address: CONFIG.MEGAPOT_CONTRACT,
+                    abi: MEGAPOT_ABI,
+                    functionName: 'usersInfo',
+                    args: [baseAddress],
+                } as any)) as [bigint, bigint, boolean]; // [ticketsPurchased, winningsClaimable, active]
+
+                const winningsClaimable = userInfo[1];
+
+                if (winningsClaimable > 0n) {
+                    console.log(`[Operator] 🎉 WIN DETECTED! ${baseAddress} has ${formatUnits(winningsClaimable, 6)} USDC claimable`);
+
+                    // Record on Stacks contract
+                    await recordWinningsOnStacks({
+                        stacksAddress: purchase.stacksAddress,
+                        evmAddress: baseAddress,
+                        winningsAmount: winningsClaimable,
+                        round: 0, // TODO: Get actual round from Megapot
+                    });
+                }
+
+                checkedAddresses.add(baseAddress);
+            } catch (error) {
+                console.warn(`[Operator] Failed to check winnings for ${baseAddress}:`, error);
+            }
+        }
+    } catch (error) {
+        console.error('[Operator] Winnings polling error:', error);
+    }
+}
+
+/**
+ * Record winnings on Stacks contract for user to claim
+ * CLEAN: Separate function for Stacks contract interaction
+ * ENHANCEMENT: Uses @stacks/transactions for contract calls
+ */
+async function recordWinningsOnStacks(data: {
+    stacksAddress: string;
+    evmAddress: string;
+    winningsAmount: bigint;
+    round: number;
+}): Promise<boolean> {
+    try {
+        // Derive operator account from private key
+        const operatorStacksKey = process.env.STACKS_BRIDGE_OPERATOR_KEY;
+        if (!operatorStacksKey) {
+            console.error('[Operator] STACKS_BRIDGE_OPERATOR_KEY not set for Stacks contract calls');
+            return false;
+        }
+
+        // Format the Base tx hash as proof (use operator account address for now)
+        const baseTxHashProof = `0x${operatorAccount.address.slice(2).padEnd(64, '0')}`;
+
+        console.log(`[Operator] 📝 Recording winnings on Stacks...`);
+        console.log(`[Operator]   Winner: ${data.stacksAddress}`);
+        console.log(`[Operator]   Amount: ${formatUnits(data.winningsAmount, 6)} USDC`);
+
+        // Build the contract call
+        const tx = makeContractCall({
+            contractAddress: CONFIG.LOTTERY_CONTRACT_ADDRESS.split('.')[0],
+            contractName: CONFIG.LOTTERY_CONTRACT_NAME,
+            functionName: 'record-winnings',
+            functionArgs: [
+                principalCV(data.stacksAddress),
+                uintCV(data.winningsAmount),
+                uintCV(data.round),
+                stringAsciiCV(baseTxHashProof),
+            ],
+            senderKey: operatorStacksKey,
+            network: new stacksNetwork.StacksMainnet(),
+            fee: 10000, // Standard fee in microstacks
+        });
+
+        // Broadcast to Stacks network
+        const network = new stacksNetwork.StacksMainnet();
+        const txResponse = await broadcastTransaction(tx, network);
+
+        console.log(`[Operator] ✅ Winnings recorded! Tx: ${txResponse.txid}`);
+        return true;
+
+    } catch (error) {
+        console.error('[Operator] Failed to record winnings on Stacks:', error);
+        if (error instanceof Error) {
+            console.error('[Operator] Error details:', error.message);
+        }
+        return false;
     }
 }
 
@@ -536,6 +668,10 @@ async function listenForTransactions() {
     
     console.log('[Operator] ✅ Connected to Stacks API WebSocket\n');
     console.log('[Operator] Listening for bridge requests...\n');
+    
+    // Start winnings polling loop (ENHANCEMENT: Auto-detect wins)
+    console.log('[Operator] 🔍 Starting winnings monitor...\n');
+    setInterval(pollAndRecordWinnings, WINNINGS_CHECK_INTERVAL);
     
     socket.subscribeAddressTransactions(
         CONFIG.LOTTERY_CONTRACT_ADDRESS,

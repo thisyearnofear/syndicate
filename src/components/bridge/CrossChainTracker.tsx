@@ -17,6 +17,11 @@ interface CrossChainTrackerProps {
   stacksTxId?: string;
   baseTxId?: string;
   error?: string | null;
+  receipt?: {
+    stacksExplorer?: string;
+    baseExplorer?: string | null;
+    megapotApp?: string | null;
+  };
 }
 
 const steps = [
@@ -26,7 +31,7 @@ const steps = [
   { id: 'complete', title: 'Success!', icon: PartyPopper, description: 'Your tickets are in your wallet!' },
 ];
 
-export function CrossChainTracker({ status, stacksTxId, baseTxId, error }: CrossChainTrackerProps) {
+export function CrossChainTracker({ status, stacksTxId, baseTxId, error, receipt }: CrossChainTrackerProps) {
   const getStepStatus = (stepId: string): 'complete' | 'in_progress' | 'pending' => {
     const stepIndex = steps.findIndex(s => s.id === stepId);
     const currentStatusIndex = steps.findIndex(s => s.id === status)
@@ -91,8 +96,13 @@ export function CrossChainTracker({ status, stacksTxId, baseTxId, error }: Cross
                                 stepStatus === 'complete' ? "text-green-300" : stepStatus === 'in_progress' ? "text-blue-300" : "text-gray-500"
                             )}>{step.description}</p>
                             {step.id === 'confirmed_stacks' && stacksTxId && (
-                                <a href={StacksExplorerLink} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline mt-1 block">
+                                <a href={receipt?.stacksExplorer || StacksExplorerLink} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline mt-1 block">
                                     View on Stacks Explorer
+                                </a>
+                            )}
+                            {step.id === 'purchasing' && baseTxId && (
+                                <a href={receipt?.baseExplorer || undefined} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline mt-1 block">
+                                    View on Base Explorer
                                 </a>
                             )}
                         </div>
@@ -109,13 +119,30 @@ export function CrossChainTracker({ status, stacksTxId, baseTxId, error }: Cross
         )}
 
         {status === 'complete' && (
-            <div className="mt-6 text-center">
-                 <button className="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3 px-6 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/50 border border-green-400/30">
-                    🎟️ View My Tickets
-                </button>
-                <div className="mt-4">
-                    <p className="text-green-400 text-sm font-medium">🎉 Your tickets are ready!</p>
-                    <p className="text-green-300 text-xs mt-1">Check your wallet to see your new lottery tickets</p>
+            <div className="mt-6 space-y-4">
+                <div className="text-center">
+                    <p className="text-green-400 text-sm font-medium mb-3">🎉 Your tickets are ready!</p>
+                    <a 
+                        href={receipt?.megapotApp || '#'} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-block bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3 px-6 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/50 border border-green-400/30"
+                    >
+                        🎟️ View on Megapot
+                    </a>
+                </div>
+                <div className="bg-black/20 rounded-lg p-3 space-y-2 text-left">
+                    <p className="text-xs text-gray-400 font-semibold uppercase">Transaction Links</p>
+                    {receipt?.stacksExplorer && (
+                        <a href={receipt.stacksExplorer} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline block truncate">
+                            📋 Stacks Receipt
+                        </a>
+                    )}
+                    {receipt?.baseExplorer && (
+                        <a href={receipt.baseExplorer} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline block truncate">
+                            📋 Base Receipt
+                        </a>
+                    )}
                 </div>
             </div>
         )}

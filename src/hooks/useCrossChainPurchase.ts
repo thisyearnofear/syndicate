@@ -26,6 +26,11 @@ export interface CrossChainPurchaseState {
   error?: string | null;
   stacksTxId?: string;
   baseTxId?: string;
+  receipt?: {
+    stacksExplorer?: string;
+    baseExplorer?: string | null;
+    megapotApp?: string | null;
+  };
 }
 
 export function useCrossChainPurchase() {
@@ -45,7 +50,14 @@ export function useCrossChainPurchase() {
           if (response.ok) {
             const data = await response.json();
             if (data.status !== state.status) {
-              setState(s => ({ ...s, status: data.status, baseTxId: data.baseTxId, error: data.error }));
+              // ENHANCEMENT: Include receipt data for full provenance
+              setState(s => ({ 
+                ...s, 
+                status: data.status, 
+                baseTxId: data.baseTxId, 
+                error: data.error,
+                receipt: data.receipt
+              }));
             }
           }
         } catch (error) {
@@ -183,7 +195,7 @@ async function bridgeFromStacks(params: {
       openContractCall({
         contractAddress: LOTTERY_CONTRACT_ADDRESS,
         contractName: LOTTERY_CONTRACT_NAME,
-        functionName: 'bridge-and-purchase-tickets',
+        functionName: 'bridge-and-purchase',
         functionArgs: [
           uintCV(params.ticketCount),
           stringAsciiCV(params.baseAddress),
