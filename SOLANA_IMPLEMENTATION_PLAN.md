@@ -351,4 +351,41 @@ state.bridgeDepositAddress: string | null   // Where to send USDC (deBridge)
 - **Test Coverage Ready**: Protocol interfaces fully typed, ready for unit tests
 - **Zero Breaking Changes**: All enhancements backward-compatible
 
-**Status**: Phase 2 Complete. Ready for Phase 3 UI work ✅
+**Status**: Phase 3 Complete. Ready for Phase 4 Production Work ✅
+
+---
+
+## Phase 3 Summary (Complete)
+
+**Duration**: 1 session  
+**Lines Added**: ~130 (ProcessingStep + PurchaseModal)
+
+### What Was Done
+1. **UI Component Updates**
+   - Added Solana bridge stage metadata to ProcessingStep
+   - Implemented stage display with progress tracking
+   - Added deposit address section for deBridge flow with copy button
+   - Differentiated headers (🌉 Solana Bridge Status vs 🔄 NEAR Intents Status)
+
+2. **State Wiring**
+   - Updated PurchaseModal to pass bridge state to ProcessingStep
+   - Added bridgeStatus, bridgeStages, bridgeDepositAddress props
+   - Transparent flow detection (Solana vs NEAR)
+
+3. **User Experience**
+   - Clear stage progression with estimated times
+   - Contextual tips (e.g., "Send USDC to this address")
+   - Copy button for deposit address
+   - Visual stage indicators (completed ✓, active 🔵, pending ◯)
+
+4. **Code Quality**
+   - Zero breaking changes
+   - All existing NEAR flow continues to work
+   - Comprehensive stage metadata with descriptions and time estimates
+   - No new components (enhancement-only approach)
+
+### Files Modified
+- `src/components/modal/purchase/ProcessingStep.tsx` - Added Solana support
+- `src/components/modal/PurchaseModal.tsx` - Wired bridge state
+
+See **PHASE_3_SUMMARY.md** for detailed documentation.
