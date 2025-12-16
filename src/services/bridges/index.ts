@@ -585,13 +585,23 @@ export class UnifiedBridgeManager {
                     return ccipProtocol;
                 }
                 case 'wormhole': {
-                    // Wormhole protocol has been removed (AGGRESSIVE CONSOLIDATION)
-                    // It was disabled and not being used, so we removed it entirely
-                    // to prevent bloat. If needed, it can be restored from git history.
-                    console.warn('[BridgeManager] Wormhole protocol is not available. It has been removed.');
-                    return null;
-                }
-                case 'near': {
+                     // Wormhole protocol has been removed (AGGRESSIVE CONSOLIDATION)
+                     // It was disabled and not being used, so we removed it entirely
+                     // to prevent bloat. If needed, it can be restored from git history.
+                     console.warn('[BridgeManager] Wormhole protocol is not available. It has been removed.');
+                     return null;
+                 }
+                 case 'base-solana-bridge': {
+                     const { baseSolanaBridge } = await import('./protocols/baseSolanaBridge');
+                     this.registerProtocol(baseSolanaBridge);
+                     return baseSolanaBridge;
+                 }
+                 case 'debridge': {
+                     const { deBridgeProtocol } = await import('./protocols/deBridge');
+                     this.registerProtocol(deBridgeProtocol);
+                     return deBridgeProtocol;
+                 }
+                 case 'near': {
                     const { nearProtocol } = await import('./protocols/nearChainSigs');
                     this.registerProtocol(nearProtocol);
                     return nearProtocol;
@@ -835,6 +845,8 @@ export class UnifiedBridgeManager {
         await Promise.all([
             'cctp',
             'ccip',
+            'base-solana-bridge',
+            'debridge',
             'near',
             'near-intents',
             'zcash',
