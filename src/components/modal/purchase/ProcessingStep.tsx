@@ -16,37 +16,190 @@ interface ProcessingStepProps {
   nearUsdcTransferTxHash?: string | null;
 }
 
-const STAGE_LABELS: Record<string, string> = {
-  initializing: "Initializing...",
-  quote_requested: "Getting quote from 1Click API",
-  intent_submitted: "Intent submitted - executing purchase...",
-  waiting_deposit: "Waiting for you to send USDC to deposit address",
-  waiting_execution: "Waiting for solver to execute",
-  deriving_address: "Deriving Base address",
-  building_tx: "Preparing transaction",
-  tx_ready: "Transaction ready",
-  computing_digest: "Preparing signature",
-  requesting_signature: "Requesting signature in NEAR wallet",
-  signature_requested: "Signature requested",
-  polling_signature: "Waiting for signature",
-  signature_complete: "Signature complete",
-  serializing_tx: "Finalizing transaction",
-  broadcasting_tx: "Broadcasting to Base",
-  complete: "Purchase submitted",
-  solver_processing: "Solver is processing intent",
-  solver_completed: "Solver completed execution",
-  solver_failed: "Solver failed to execute",
-  funds_bridged: "Funds bridged to Base",
-  balance_refreshed: "Base balance refreshed",
-  waiting_bridge: "Waiting for bridge to complete",
-  funds_received: "Funds received on Base",
-  bridge_complete: "Bridge complete - ready to purchase",
-  signing: "Signing with Chain Signatures",
-  chain_sig_approving: "Approving with Chain Signatures",
-  broadcasting_purchase: "Broadcasting ticket purchase",
-  purchase_completed: "Purchase completed successfully",
-  usdc_transfer_complete: "USDC transfer confirmed - bridging now",
+/**
+ * STAGE METADATA
+ * Single source of truth for all stage information including:
+ * - Human-readable labels
+ * - Descriptions (what's happening)
+ * - Time estimates (manage expectations)
+ * - Contextual tips (what to expect next)
+ */
+const STAGE_INFO: Record<string, {
+  label: string;
+  description?: string;
+  estimatedSeconds?: number;
+  tip?: string;
+}> = {
+  // Initialization & Setup
+  initializing: {
+    label: "Initializing...",
+    description: "Setting up your NEAR wallet connection",
+    estimatedSeconds: 5,
+  },
+  deriving_address: {
+    label: "Deriving Base address",
+    description: "Creating your unique Base address from NEAR account",
+    estimatedSeconds: 3,
+    tip: "This address receives your bridged USDC",
+  },
+  quote_requested: {
+    label: "Getting quote from 1Click API",
+    description: "Fetching current bridge rates and solver availability",
+    estimatedSeconds: 3,
+  },
+
+  // User Action Required
+  waiting_deposit: {
+    label: "Waiting for USDC transfer",
+    description: "Ready for you to send USDC from your NEAR wallet",
+    tip: "📋 Check your wallet for the deposit address or use the one shown below",
+  },
+  intent_submitted: {
+    label: "Intent submitted",
+    description: "Your cross-chain request is created and ready",
+    estimatedSeconds: 5,
+  },
+
+  // Bridge Execution (Main Wait)
+  usdc_transfer_complete: {
+    label: "USDC transfer confirmed",
+    description: "Your USDC has left NEAR successfully",
+    estimatedSeconds: 5,
+  },
+  waiting_bridge: {
+    label: "🌉 Bridge in progress",
+    description: "The 1Click solver network is securely moving USDC to Base",
+    estimatedSeconds: 180,
+    tip: "⏱️ Usually takes 2-3 minutes. No action needed—relax!",
+  },
+  funds_received: {
+    label: "✅ Funds received on Base",
+    description: "Your USDC has safely arrived on the Base network",
+    estimatedSeconds: 2,
+    tip: "🎉 Ready for final ticket purchase",
+  },
+  bridge_complete: {
+    label: "Bridge complete - ready to purchase",
+    description: "Everything prepared for the final step",
+    estimatedSeconds: 2,
+  },
+
+  // Transaction Building
+  building_tx: {
+    label: "Preparing transaction",
+    description: "Building the ticket purchase transaction",
+    estimatedSeconds: 5,
+  },
+  tx_ready: {
+    label: "Transaction ready",
+    description: "Waiting to sign the transaction",
+    estimatedSeconds: 2,
+  },
+  computing_digest: {
+    label: "Preparing signature",
+    description: "Preparing data for cryptographic signing",
+    estimatedSeconds: 3,
+  },
+
+  // Signing & Approval
+  signing: {
+    label: "Signing with Chain Signatures",
+    description: "Using NEAR's MPC network to sign the purchase",
+    estimatedSeconds: 15,
+    tip: "👀 Check your NEAR wallet for any prompts",
+  },
+  requesting_signature: {
+    label: "Requesting signature in NEAR wallet",
+    description: "Awaiting signature approval",
+    estimatedSeconds: 30,
+    tip: "👉 Approve the transaction in your wallet",
+  },
+  signature_requested: {
+    label: "Signature requested",
+    description: "Signature request sent to NEAR network",
+    estimatedSeconds: 10,
+  },
+  polling_signature: {
+    label: "Waiting for signature",
+    description: "Waiting for NEAR MPC to complete signing",
+    estimatedSeconds: 15,
+  },
+  signature_complete: {
+    label: "✅ Signature complete",
+    description: "Transaction is cryptographically signed",
+    estimatedSeconds: 2,
+  },
+  chain_sig_approving: {
+    label: "Approving with Chain Signatures",
+    description: "Final approval on Base network",
+    estimatedSeconds: 10,
+  },
+
+  // Broadcasting & Completion
+  serializing_tx: {
+    label: "Finalizing transaction",
+    description: "Preparing transaction for broadcast",
+    estimatedSeconds: 2,
+  },
+  broadcasting_tx: {
+    label: "Broadcasting to Base",
+    description: "Submitting transaction to Base network",
+    estimatedSeconds: 5,
+  },
+  broadcasting_purchase: {
+    label: "🎫 Broadcasting ticket purchase",
+    description: "Submitting your purchase to Megapot smart contract",
+    estimatedSeconds: 30,
+    tip: "⚡ Final step—almost there!",
+  },
+  complete: {
+    label: "Purchase submitted",
+    description: "Transaction broadcast successfully",
+    estimatedSeconds: 5,
+  },
+  purchase_completed: {
+    label: "✅ Purchase completed!",
+    description: "Your tickets are now in your wallet",
+    estimatedSeconds: 2,
+  },
+
+  // Solver States (Future/Fallback)
+  waiting_execution: {
+    label: "Waiting for solver to execute",
+    estimatedSeconds: 120,
+    tip: "The solver network is processing your transaction",
+  },
+  solver_processing: {
+    label: "Solver is processing intent",
+    estimatedSeconds: 60,
+  },
+  solver_completed: {
+    label: "✅ Solver completed execution",
+    estimatedSeconds: 2,
+  },
+  solver_failed: {
+    label: "❌ Solver execution failed",
+    description: "The solver could not complete the transaction",
+  },
+  funds_bridged: {
+    label: "Funds bridged to Base",
+    estimatedSeconds: 2,
+  },
+  balance_refreshed: {
+    label: "Base balance refreshed",
+    estimatedSeconds: 2,
+  },
 };
+
+/**
+ * Get formatted time estimate
+ */
+function formatTimeEstimate(seconds?: number): string {
+  if (!seconds) return "";
+  if (seconds < 60) return `~${seconds}s`;
+  if (seconds < 120) return "~1-2 min";
+  return `~${Math.round(seconds / 60)}m`;
+}
 
 export function ProcessingStep({
   isApproving,
@@ -84,18 +237,53 @@ export function ProcessingStep({
 
       {nearStages && nearStages.length > 0 && (
         <div className="mt-4 w-full bg-white/5 rounded-lg p-4">
-          <p className="text-white/70 text-sm mb-2">NEAR Intents Status</p>
-          <ul className="text-xs text-white/60 space-y-1">
-            {nearStages.map((s, i) => (
-              <li key={`${s}-${i}`} className="flex items-center gap-2">
-                {i < nearStages.length - 1 ? (
-                  <span className="inline-block w-4 h-4 rounded-full bg-green-500" />
-                ) : (
-                  <span className="inline-block w-4 h-4 rounded-full border-2 border-blue-400 animate-pulse" />
-                )}
-                <span>{STAGE_LABELS[s] || s.replace(/_/g, " ")}</span>
-              </li>
-            ))}
+          <p className="text-white/70 text-sm mb-3 font-semibold">🔄 NEAR Intents Status</p>
+          <ul className="space-y-2">
+            {nearStages.map((s, i) => {
+              const stageData = STAGE_INFO[s];
+              const isActive = i === nearStages.length - 1;
+              const isCompleted = i < nearStages.length - 1;
+
+              return (
+                <li key={`${s}-${i}`} className="text-xs space-y-1">
+                  <div className="flex items-start gap-2">
+                    <div className="mt-0.5 flex-shrink-0">
+                      {isCompleted && (
+                        <span className="inline-block w-4 h-4 rounded-full bg-green-500" />
+                      )}
+                      {isActive && (
+                        <span className="inline-block w-4 h-4 rounded-full border-2 border-blue-400 animate-pulse" />
+                      )}
+                      {!isActive && !isCompleted && (
+                        <span className="inline-block w-4 h-4 rounded-full bg-gray-600" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className={`font-medium ${
+                        isCompleted ? 'text-green-400' :
+                        isActive ? 'text-blue-300' :
+                        'text-gray-400'
+                      }`}>
+                        {stageData?.label || s.replace(/_/g, " ")}
+                      </p>
+                      {isActive && (
+                        <>
+                          {stageData?.description && (
+                            <p className="text-gray-300 mt-1">{stageData.description}</p>
+                          )}
+                          {stageData?.estimatedSeconds && stageData.estimatedSeconds > 0 && (
+                            <p className="text-gray-400 mt-1">⏱️ {formatTimeEstimate(stageData.estimatedSeconds)}</p>
+                          )}
+                          {stageData?.tip && (
+                            <p className="text-blue-300 mt-1">{stageData.tip}</p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
 
           {/* Fund Flow Visualization */}

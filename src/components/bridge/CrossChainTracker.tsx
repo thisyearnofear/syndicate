@@ -25,10 +25,34 @@ interface CrossChainTrackerProps {
 }
 
 const steps = [
-  { id: 'confirmed_stacks', title: 'Transaction Sent', icon: Wallet, description: 'Your request has been sent to the Stacks network.' },
-  { id: 'bridging', title: 'Bridging to Base', icon: ArrowRightLeft, description: 'Your funds are crossing the bridge. This may take a few minutes.' },
-  { id: 'purchasing', title: 'Purchasing Tickets', icon: Ticket, description: 'Finalizing your purchase on the Base network.' },
-  { id: 'complete', title: 'Success!', icon: PartyPopper, description: 'Your tickets are in your wallet!' },
+  { 
+    id: 'confirmed_stacks', 
+    title: 'Transaction Sent', 
+    icon: Wallet, 
+    description: 'Your request has been sent to the Stacks network.',
+    estimatedMinutes: 1,
+  },
+  { 
+    id: 'bridging', 
+    title: 'Bridging to Base', 
+    icon: ArrowRightLeft, 
+    description: 'The bridge operator is converting sBTC → USDC and moving funds across networks.',
+    tip: 'Usually takes 2-3 minutes. You don\'t need to do anything.',
+    estimatedMinutes: 3,
+  },
+  { 
+    id: 'purchasing', 
+    title: 'Purchasing Tickets', 
+    icon: Ticket, 
+    description: 'Finalizing your purchase on the Base network. Your USDC is being used to buy tickets.',
+    estimatedMinutes: 1,
+  },
+  { 
+    id: 'complete', 
+    title: 'Success!', 
+    icon: PartyPopper, 
+    description: 'Your tickets are confirmed and ready for the draw!',
+  },
 ];
 
 export function CrossChainTracker({ status, stacksTxId, baseTxId, error, receipt }: CrossChainTrackerProps) {
@@ -95,13 +119,19 @@ export function CrossChainTracker({ status, stacksTxId, baseTxId, error, receipt
                                 "text-sm",
                                 stepStatus === 'complete' ? "text-green-300" : stepStatus === 'in_progress' ? "text-blue-300" : "text-gray-500"
                             )}>{step.description}</p>
+                            {stepStatus === 'in_progress' && 'estimatedMinutes' in step && (
+                                <p className="text-xs text-gray-400 mt-1">⏱️ Usually {step.estimatedMinutes} minute{step.estimatedMinutes > 1 ? 's' : ''}</p>
+                            )}
+                            {stepStatus === 'in_progress' && 'tip' in step && (
+                                <p className="text-xs text-blue-300 mt-1">💡 {step.tip}</p>
+                            )}
                             {step.id === 'confirmed_stacks' && stacksTxId && (
-                                <a href={receipt?.stacksExplorer || StacksExplorerLink} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline mt-1 block">
+                                <a href={receipt?.stacksExplorer || StacksExplorerLink} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline mt-2 block">
                                     View on Stacks Explorer
                                 </a>
                             )}
                             {step.id === 'purchasing' && baseTxId && (
-                                <a href={receipt?.baseExplorer || undefined} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline mt-1 block">
+                                <a href={receipt?.baseExplorer || undefined} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline mt-2 block">
                                     View on Base Explorer
                                 </a>
                             )}
@@ -119,31 +149,48 @@ export function CrossChainTracker({ status, stacksTxId, baseTxId, error, receipt
         )}
 
         {status === 'complete' && (
-            <div className="mt-6 space-y-4">
+            <div className="mt-6 space-y-4 animate-fade-in">
                 <div className="text-center">
-                    <p className="text-green-400 text-sm font-medium mb-3">🎉 Your tickets are ready!</p>
-                    <a 
-                        href={receipt?.megapotApp || '#'} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-block bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3 px-6 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/50 border border-green-400/30"
-                    >
-                        🎟️ View on Megapot
-                    </a>
-                </div>
-                <div className="bg-black/20 rounded-lg p-3 space-y-2 text-left">
-                    <p className="text-xs text-gray-400 font-semibold uppercase">Transaction Links</p>
-                    {receipt?.stacksExplorer && (
-                        <a href={receipt.stacksExplorer} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline block truncate">
-                            📋 Stacks Receipt
+                    <div className="text-4xl animate-bounce mb-2">🎉</div>
+                    <h3 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-400 mb-2">
+                        Tickets Purchased!
+                    </h3>
+                    <p className="text-sm text-gray-300 mb-4">
+                        Your sBTC was bridged to USDC on Base and tickets purchased to your wallet.
+                    </p>
+                    <div className="space-y-2">
+                        <a 
+                            href={receipt?.megapotApp || '#'} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-block w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3 px-6 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/50 border border-green-400/30"
+                        >
+                            🎟️ View Tickets on Megapot
                         </a>
-                    )}
-                    {receipt?.baseExplorer && (
-                        <a href={receipt.baseExplorer} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline block truncate">
-                            📋 Base Receipt
-                        </a>
-                    )}
+                    </div>
                 </div>
+
+                <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-lg p-4 space-y-3">
+                    <p className="text-xs text-gray-400 font-semibold uppercase">Transaction Proof</p>
+                    <div className="space-y-2">
+                        {receipt?.stacksExplorer && (
+                            <a href={receipt.stacksExplorer} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 break-all">
+                                <span>📋</span>
+                                <span>View on Stacks Explorer</span>
+                            </a>
+                        )}
+                        {receipt?.baseExplorer && (
+                            <a href={receipt.baseExplorer} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 break-all">
+                                <span>🔗</span>
+                                <span>View on Base Explorer</span>
+                            </a>
+                        )}
+                    </div>
+                </div>
+
+                <p className="text-xs text-gray-400 text-center">
+                    ✨ Your tickets are now active for the next Megapot draw
+                </p>
             </div>
         )}
     </div>
