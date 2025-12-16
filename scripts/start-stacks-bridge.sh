@@ -55,14 +55,22 @@ if [ ! -d "node_modules" ]; then
     echo ""
 fi
 
+# Create logs directory
+mkdir -p logs
+
 # Run the operator
 echo "🎧 Starting listener..."
 echo ""
 
+# ENHANCEMENT: Log to file for monitoring
+LOG_FILE="logs/operator.log"
+echo "📝 Logging to: $LOG_FILE"
+echo ""
+
 # Use tsx to run TypeScript directly (better ESM support)
 if command -v tsx &> /dev/null; then
-    tsx scripts/stacks-bridge-operator.ts
+    tsx scripts/stacks-bridge-operator.ts | tee -a "$LOG_FILE"
 else
     # Fallback to npx tsx if not globally installed
-    npx tsx scripts/stacks-bridge-operator.ts
+    npx tsx scripts/stacks-bridge-operator.ts | tee -a "$LOG_FILE"
 fi

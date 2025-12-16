@@ -95,7 +95,12 @@ export function useCrossChainWinnings(): CrossChainWinningsState {
       }
     };
 
+    // ENHANCEMENT: Check on mount
     checkWinnings();
+    
+    // ENHANCEMENT: Poll every 60 seconds for automatic winnings detection
+    const intervalId = setInterval(checkWinnings, 60_000);
+    return () => clearInterval(intervalId);
   }, [address, walletType, isConnected]);
 
   return state;
