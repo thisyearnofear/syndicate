@@ -25,7 +25,7 @@ import { nearWalletSelectorService } from '@/domains/wallet/services/nearWalletS
 import { web3Service } from '@/services/web3Service';
 import { openContractCall } from '@stacks/connect';
 import { uintCV } from '@stacks/transactions';
-import * as stacksNetwork from '@stacks/network';
+import { STACKS_MAINNET } from '@stacks/network';
 
 interface WinningsWithdrawalFlowProps {
   nearAccountId?: string;
@@ -36,7 +36,7 @@ interface WinningsWithdrawalFlowProps {
 
 type WithdrawalStep = 'check' | 'confirm' | 'processing' | 'transfer' | 'success' | 'error';
 
-const STACKS_NETWORK = new stacksNetwork.StacksMainnet();
+const STACKS_NETWORK = STACKS_MAINNET;
 const LOTTERY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_STACKS_LOTTERY_CONTRACT || 'SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery';
 const LOTTERY_CONTRACT_NAME = 'stacks-lottery';
 

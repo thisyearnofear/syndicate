@@ -34,6 +34,8 @@ export type BridgeProtocolType =
     | 'cctp'      // Circle CCTP (EVM + Solana)
     | 'ccip'      // Chainlink CCIP (EVM only)
     | 'wormhole'  // Wormhole (multi-chain)
+    | 'base-solana-bridge' // Base-Solana Bridge (official, Chainlink CCIP)
+    | 'debridge'  // deBridge DLN (intent-based fallback)
     | 'near'      // NEAR Chain Signatures
     | 'near-intents' // NEAR Intents (Solver-based)
     | 'stacks'    // Stacks → Base bridge (sBTC → USDC)

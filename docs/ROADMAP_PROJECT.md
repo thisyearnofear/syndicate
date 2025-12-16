@@ -9,7 +9,7 @@
 | Component | Status | Notes |
 |-----------|--------|-------|
 | **EVM Wallet (MetaMask)** | ✅ Working | Connects reliably |
-| **Solana Wallet (Phantom)** | ✅ Working | Detects, balance queries sometimes slow |
+| **Solana Wallet (Phantom)** | ⚠️ Partial | Detects & balance queries work; **missing: bridge + purchase** |
 | **NEAR Wallet + Derived Addresses** | ✅ Working | Deterministic MPC-derived Base addresses |
 | **NEAR → Base via 1Click Intents** | ✅ Working | Bridge transfers USDC to derived address |
 | **EVM → Base Bridge (CCTP)** | ✅ Improved | Consolidated attestation, better redemption |
@@ -40,18 +40,27 @@
 - [ ] Add bridge transaction monitoring
 - [ ] Create integration tests for happy path + failure modes
 
-#### Week 3: Stabilize Solana
-- [ ] Fix Phantom wallet balance queries
-- [ ] Ensure CCTP Solana → Base works end-to-end
-- [ ] Add timeout handling for slow operations
-- [ ] Test on devnet before mainnet
-- [ ] Document Solana-specific edge cases
+#### Week 3: Complete Solana Integration (CORRECTED PLAN)
+- [ ] Create `deBridgeService.ts` - Bridge quote + polling via deBridge API
+- [ ] Create `SolanaFlow.tsx` component - Hybrid option selector
+- [ ] Update `useTicketPurchase.ts` - Replace error with Solana flow
+- [ ] Add Phantom option - Link to Phantom's built-in swapper
+- [ ] Test on Solana devnet + Base testnet
+- [ ] Document deBridge + Phantom integration
+
+**IMPORTANT**: Previous plan incorrectly assumed Solana has "intents" like NEAR. It doesn't.
+**Correction**: Use deBridge's intent-based solver system (proven, production-ready).
+**See**: `docs/SOLANA_BRIDGE_STRATEGY.md` for complete analysis of all available bridges.
+
+**Implementation Details**: See `docs/CROSSCHAIN_TECHNICAL.md` Section 6 (Solana Integration - Corrected Plan)
 
 **Output**: 
 ```
 ✅ Single ticket purchase: EVM → Base ✓
-✅ Single ticket purchase: Solana → Base ✓
+✅ Single ticket purchase: NEAR → Base ✓
+✅ Single ticket purchase: Solana → Base ✓ [NEW]
 ✅ Bridge monitoring + error recovery ✓
+✅ Parity across all supported chains ✓
 ```
 
 ### Phase 1: Bitcoin/ICP Foundation (Weeks 4-10) 🚀

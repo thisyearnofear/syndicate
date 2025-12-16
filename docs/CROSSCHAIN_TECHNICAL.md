@@ -443,4 +443,206 @@ The Stacks integration was completed following the project's core principles:
 
 ---
 
-**Status**: Production-ready cross-chain bridge system with comprehensive error handling, performance optimization, and user experience improvements.
+## 6. Solana Integration (CORRECTED PLAN)
+
+### Key Correction: Solana Has NO Intents Protocol
+**Previous Misconception**: "Call solanaIntentsService for Solana intents"
+**Reality**: Solana does NOT have an intents protocol like NEAR. Must use external bridge infrastructure.
+
+**See**: `docs/SOLANA_BRIDGE_STRATEGY.md` for full analysis of available bridges.
+
+### Current Status: ⚠️ Incomplete (Hard Error)
+- ✅ Phantom wallet detection working
+- ✅ USDC balance queries via API
+- ❌ **Missing**: Automated bridge to Base
+- ❌ **Missing**: Ticket purchase flow
+- ❌ **Missing**: Winnings withdrawal to Solana
+
+Users currently see error: *"Please bridge USDC manually using external bridge"*
+
+### Why Previous Plan Was Wrong
+
+| Assumption | Reality |
+|-----------|---------|
+| "Solana has Intents SDK" | Solana has NO native intents protocol |
+| "Call solanaIntentsService" | Would need to wrap 3rd-party bridge API |
+| "Deterministic addresses" | Solana uses actual user addresses, not derived |
+| "Simple NEAR mirror" | Different architecture, different bridges |
+
+### Recommended Implementation (Hybrid Strategy)
+
+Two options: Let users choose their preferred bridge.
+
+#### Option A: Phantom's Li.Fi Integration (Simplest)
+
+**What**: Direct users to Phantom's built-in cross-chain swapper
+- Phantom has this feature (released Nov 2023)
+- Routes through Li.Fi aggregator internally
+- Supports Wormhole, CCTP, deBridge, Allbridge, Mayan
+
+**Implementation** (1 day):
+```typescript
+// Simple approach - guide users to Phantom
+// Button: "Bridge via Phantom's Cross-Chain Swapper"
+// Opens: https://phantom.app/learn/blog/cross-chain-swapper
+```
+
+**Pros**:
+- ✅ Already works, millions of users
+- ✅ Phantom handles all complexity
+- ✅ Zero backend needed
+- ✅ Users trust Phantom
+
+**Cons**:
+- ❌ Leaves our dApp
+- ❌ No transaction tracking
+
+---
+
+#### Option B: Base-Solana Bridge (Official - RECOMMENDED)
+
+**What**: Integrate the official Base bridge secured by Chainlink CCIP (released Dec 2025)
+
+**How It Works**:
+```
+Solana User (any Solana wallet)
+  ↓
+Bridge SOL/SPL tokens
+  ├─ Solana → Base: Lock SOL, mint ERC20 on Base
+  ├─ Base → Solana: Burn ERC20, unlock SOL
+  ↓
+Chainlink CCIP validates cross-chain messages
+  ↓
+Twin Contract Pattern:
+  ├─ Each Solana address has deterministic Base contract
+  ├─ Tokens received in Twin, can auto-execute calls
+  ↓
+USDC appears on Base → Execute purchase
+```
+
+**Developer Implementation**:
+- **GitHub**: https://github.com/base/bridge (open-source)
+- **Docs**: https://docs.base.org/base-chain/quickstart/base-solana-bridge
+- **Already Live**: Mainnet ready (Solana mainnet ↔ Base mainnet)
+- **No SDK needed**: Call Solana bridge program directly
+- **Reference Scripts**: Token wrapping, auto-relay examples in repo
+
+**Key Features**:
+- Push-based (Solana → Base): Lock + optional relayer for gas
+- Proof-based (Base → Solana): Burn + Merkle proof
+- Supports: SOL, SPL tokens, arbitrary cross-chain messages
+- Twin contracts: Deterministic smart contracts on Base per Solana address
+
+**Timeline**: 3-4 days (integrate + test)
+
+**Pros**:
+- ✅ Official Coinbase + Chainlink infrastructure
+- ✅ Already live on mainnet
+- ✅ Open-source with examples
+- ✅ Handles both SOL and SPL tokens
+- ✅ Deterministic addresses (like NEAR)
+
+**Cons**:
+- ⚠️ Slower: 5-10 minutes (vs deBridge <1 sec)
+- ⚠️ Pull-based: Requires 3 steps (Solana → approve → execute on Base)
+- ⚠️ Medium complexity (Solana program calls + Merkle proofs)
+
+---
+
+#### Option C: deBridge as Fallback
+
+If Base bridge is slow or unavailable, use deBridge intent solvers:
+- Speed: <1 second
+- Public API (no auth)
+- Faster but less official than Base bridge
+
+```typescript
+// Pseudo-code
+const bridge = await baseSolanaBridge.bridge(amount);
+if (bridge.timeout) {
+  // Fallback to deBridge
+  const quote = await deBridgeService.getQuote();
+}
+```
+
+**Timeline**: +1 day to add fallback
+
+---
+
+### Available Bridges (Solana → Base)
+
+| Bridge | Speed | Method | Cost | Developer Integration |
+|--------|-------|--------|------|----------------------|
+| **Base-Solana Bridge** | 5-10 min | Chainlink CCIP + Coinbase | Low | ✅ Official (Dec 2025) |
+| deBridge DLN | <1 sec | Intent-based solvers | Flat | Public API |
+| Li.Fi (Phantom) | <1 min | Aggregates multiple | 0.85% | Phantom built-in |
+| Mayan Finance | <1 min | Competitive solvers | Low | dApp integration |
+| Wormhole | 5-10 min | Lock-and-mint | Low | dApp integration |
+| CCTP (Circle) | 15-20 min | Native USDC burn-mint | Low | dApp integration |
+
+**NEW (Dec 2025)**: Base released an official bridge secured by Chainlink CCIP. This is the **most official option** for Solana ↔ Base transfers. Already integrated in: Zora, Aerodrome, Virtuals, Flaunch, Relay.
+
+**For Syndicate**: Use Base-Solana Bridge + deBridge as fallback options.
+
+---
+
+### Implementation Timeline
+
+#### Phase 1 (Week 1-2): Base-Solana Bridge + deBridge Fallback
+- Integrate Base-Solana Bridge (official, most secure)
+- Add deBridge as fallback if Base bridge unavailable
+- Create SolanaFlow component with both options
+- Update useTicketPurchase hook
+- Testing on devnet/testnet
+
+**Implementation Options** (in priority order):
+1. **Base-Solana Bridge** (Official - Recommend First)
+   - Secured by Chainlink CCIP + Coinbase
+   - Open-source: https://github.com/base/bridge
+   - Docs: https://docs.base.org/base-chain/quickstart/base-solana-bridge
+   - Speed: 5-10 minutes
+   - Can lock/burn SOL or SPL tokens, mint ERC20 on Base
+   - Twin contract pattern: Each Solana address maps to a Base smart contract
+   - Already live on mainnet
+
+2. **deBridge DLN** (Fallback - Faster alternative)
+   - Intent-based (solvers compete on rates)
+   - Speed: <1 second to minutes
+   - Public API, no auth needed
+   - If Base bridge has issues, use deBridge
+
+**Output**:
+```
+✅ Solana → Base bridge working (Base-Solana Bridge)
+✅ Fallback available (deBridge)
+✅ Parity with NEAR/Stacks flows
+✅ Full transaction tracking
+✅ Official Coinbase infrastructure
+```
+
+#### Phase 2 (Future): Winnings Withdrawal
+Mirror `claimAndWithdrawWinningsToNear()` for Solana:
+- Claim winnings on Base
+- Get reverse bridge quote (Base → Solana via deBridge)
+- Transfer to user's Solana address
+- Poll until received
+
+---
+
+### Testing Approach
+1. **Unit tests**: deBridge quote/polling logic
+2. **Integration**: Solana devnet + Base testnet
+3. **E2E**: Real Phantom wallet on devnet
+4. **Error scenarios**: Bridge timeout, network errors, insufficient balance
+
+### Success Criteria
+✅ Solana users can purchase tickets in 3-4 clicks
+✅ Bridge success rate > 95%
+✅ Average bridge time < 60 seconds
+✅ Full transaction tracking and recovery
+✅ Both Phantom and deBridge options available
+✅ Parity with NEAR/Stacks flows
+
+---
+
+**Status**: Production-ready cross-chain bridge system with comprehensive error handling, performance optimization, and user experience improvements. Solana integration planned as Phase 2 enhancement.
