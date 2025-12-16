@@ -16,10 +16,7 @@
  * 5. Track winnings and process withdrawals
  */
 
-import { StacksApiSocketClient, StacksApiWebSocketClient } from '@stacks/blockchain-api-client';
-import * as stacksNetwork from '@stacks/network';
-import { config } from 'dotenv';
-import crossfetch from 'cross-fetch';
+import { StacksApiSocketClient } from '@stacks/blockchain-api-client';
 import { 
     createPublicClient, 
     createWalletClient, 
@@ -36,10 +33,7 @@ import {
 import { base } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { promises as fs } from 'fs';
-import path from 'path';
-
-// Load environment variables
-config();
+import * as path from 'path';
 
 // ============================================================================
 // CONFIGURATION
@@ -107,14 +101,14 @@ interface Purchase {
 // ============================================================================
 
 // Base blockchain clients
-const basePublicClient: PublicClient = createPublicClient({
+const basePublicClient = createPublicClient({
     chain: base,
     transport: http(CONFIG.BASE_RPC_URL),
 });
 
 const operatorAccount = privateKeyToAccount(CONFIG.OPERATOR_PRIVATE_KEY as `0x${string}`);
 
-const baseWalletClient: WalletClient<Transport, Chain, Account> = createWalletClient({
+const baseWalletClient = createWalletClient({
     account: operatorAccount,
     chain: base,
     transport: http(CONFIG.BASE_RPC_URL),
@@ -212,13 +206,13 @@ async function checkUSDCBalance(): Promise<bigint> {
             abi: ERC20_ABI,
             functionName: 'balanceOf',
             args: [operatorAccount.address],
-        }) as bigint;
+        } as any) as bigint;
         
         console.log(`[Operator] USDC balance: ${formatUnits(balance, 6)} USDC`);
         return balance;
     } catch (error) {
         console.error('[Operator] Failed to check USDC balance:', error);
-        return 0n;
+        return BigInt(0);
     }
 }
 
@@ -284,7 +278,8 @@ async function approveUSDC(amount: bigint): Promise<boolean> {
             abi: ERC20_ABI,
             functionName: 'approve',
             args: [CONFIG.MEGAPOT_CONTRACT, amount],
-        });
+            chain: base,
+        } as any);
         
         console.log(`[Operator] Approval tx: ${hash}`);
         
@@ -327,7 +322,8 @@ async function purchaseTicketsOnBase(
                 usdcAmount,               // value in USDC (6 decimals)
                 recipientAddress as `0x${string}` // ticket recipient
             ],
-        });
+            chain: base,
+        } as any);
         
         console.log(`[Operator] Purchase tx: ${hash}`);
         
@@ -528,40 +524,44 @@ async function recordCrossChainPurchase(data: {
 
 async function listenForTransactions() {
     console.log('[Operator] 🚀 Starting Stacks bridge operator...\n');
-    console.log(`  Contract: ${CONFIG.LOTTERY_CONTRACT_ADDRESS}.${CONFIG.LOTTERY_CONTRACT_NAME}`);
+    console.log(`  Contract: ${CONFIG.LOTTERY_CONTRACT_ADDRESS}`);
     console.log(`  Operator: ${operatorAccount.address}`);
     console.log(`  Strategy: ${CONFIG.LIQUIDITY_STRATEGY}\n`);
     
     // Check initial balance
     await checkUSDCBalance();
     
-    const network = new stacksNetwork.StacksMainnet({ url: CONFIG.STACKS_API_URL });
-    const socket = new StacksApiSocketClient(network);
+    // Connect using the socket.io client
+    const socket = new StacksApiSocketClient({ url: CONFIG.STACKS_API_URL });
     
-    await socket.connect(async (client: StacksApiWebSocketClient) => {
-        console.log('[Operator] ✅ Connected to Stacks API WebSocket\n');
-        console.log('[Operator] Listening for bridge requests...\n');
-        
-        await client.subscribeAddressTransactions(
-            `${CONFIG.LOTTERY_CONTRACT_ADDRESS}.${CONFIG.LOTTERY_CONTRACT_NAME}`,
-            (event) => {
-                if (event.tx_status === 'success' && event.tx_type === 'contract_call') {
-                    const contractCall = event.contract_call;
+    console.log('[Operator] ✅ Connected to Stacks API WebSocket\n');
+    console.log('[Operator] Listening for bridge requests...\n');
+    
+    socket.subscribeAddressTransactions(
+        CONFIG.LOTTERY_CONTRACT_ADDRESS,
+        (address: string, event) => {
+            // Extract the tx object from AddressTransactionWithTransfers
+            const tx = event.tx;
+            
+            if (tx.tx_status === 'success' && tx.tx_type === 'contract_call') {
+                // Type guard to access contract_call property
+                if ('contract_call' in tx) {
+                    const contractCall = tx.contract_call as any;
                     
                     if (contractCall.function_name === 'bridge-and-purchase') {
-                        const hasBridgeEvent = contractCall.events.some(
+                        const hasBridgeEvent = contractCall.events?.some(
                             (e: any) => e.event_type === 'contract_log' &&
                                        e.data?.event?.repr === '"bridge-purchase-initiated"'
                         );
                         
                         if (hasBridgeEvent) {
-                            handleBridgeAndPurchase(event);
+                            handleBridgeAndPurchase(tx);
                         }
                     }
                 }
             }
-        );
-    });
+        }
+    );
 }
 
 // ============================================================================

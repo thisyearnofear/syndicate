@@ -28,6 +28,13 @@ if [ -z "$STACKS_BRIDGE_OPERATOR_KEY" ]; then
     exit 1
 fi
 
+# Validate private key format
+if [[ ! "$STACKS_BRIDGE_OPERATOR_KEY" =~ ^0x[0-9a-fA-F]{64}$ ]]; then
+    echo "❌ Error: STACKS_BRIDGE_OPERATOR_KEY must be a hex string starting with 0x (66 characters total)"
+    echo "   Example: 0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+    exit 1
+fi
+
 echo "✅ Environment loaded"
 echo ""
 
@@ -52,5 +59,10 @@ fi
 echo "🎧 Starting listener..."
 echo ""
 
-# Use ts-node to run TypeScript directly
-npx ts-node scripts/stacks-bridge-operator.ts
+# Use tsx to run TypeScript directly (better ESM support)
+if command -v tsx &> /dev/null; then
+    tsx scripts/stacks-bridge-operator.ts
+else
+    # Fallback to npx tsx if not globally installed
+    npx tsx scripts/stacks-bridge-operator.ts
+fi

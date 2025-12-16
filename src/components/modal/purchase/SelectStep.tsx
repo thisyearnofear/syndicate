@@ -48,7 +48,7 @@ export function SelectStep({
   onGetNearQuote, isGettingQuote, onConfirmIntent, buyTicketsWithStacks, evmAddress,
 }: SelectStepProps) {
   
-  const canBridgeAndBuy = Boolean(isConnected && walletType === WalletTypes.PHANTOM && hasInsufficientBalance && parseFloat(solanaBalance || "0") >= parseFloat(totalCost || "0"));
+  const canBridgeAndBuy = Boolean(isConnected && walletType === WalletTypes.SOLANA && hasInsufficientBalance && parseFloat(solanaBalance || "0") >= parseFloat(totalCost || "0"));
   const isStacksWallet = STACKS_WALLETS.includes(walletType as any);
 
   if (showBridgeGuidance || isBridging) {
@@ -119,10 +119,10 @@ export function SelectStep({
       {hasInsufficientBalance && !isStacksWallet && <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4"><div className="flex items-center gap-2 text-yellow-400"><AlertCircle className="w-5 h-5" /><span>Insufficient USDC balance</span></div><button onClick={refreshBalance} className="text-yellow-300 hover:text-yellow-200 text-sm mt-2 underline">Refresh Balance</button></div>}
       
       {isStacksWallet && !evmAddress && (
-        <div className="bg-blue-500/20 border border-blue-500/30 rounded-lg p-4 text-center space-y-2">
-            <div className="flex items-center gap-2 text-blue-400 justify-center"><AlertCircle className="w-5 h-5" /><span className="font-semibold">Connect EVM Wallet for Ticket Receipt</span></div>
-            <p className="text-blue-300 text-xs">Your Stacks wallet will bridge STX → sBTC → USDC on Base. Connect an EVM wallet (MetaMask, WalletConnect) below to receive your tickets.</p>
-            <div className="mt-3 flex justify-center">
+        <div className="glass-premium border border-blue-500/30 rounded-xl p-4 text-center space-y-3">
+            <div className="flex items-center gap-2 text-blue-400 justify-center"><AlertCircle className="w-5 h-5" /><span className="font-semibold">🔗 Connect EVM Wallet for Ticket Receipt</span></div>
+            <p className="text-blue-300 text-sm">Your Stacks wallet will bridge STX → sBTC → USDC on Base. Connect an EVM wallet (MetaMask, WalletConnect) below to receive your tickets.</p>
+            <div className="mt-2 flex justify-center">
               <ConnectButton showBalance={false} chainStatus="none" />
             </div>
         </div>
@@ -134,7 +134,7 @@ export function SelectStep({
         <Button
             variant="default"
             size="lg"
-            className="w-full bg-gradient-to-r from-orange-500 to-stone-500 hover:from-orange-600 hover:to-stone-600 text-white shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-2xl hover:shadow-orange-500/30 border border-orange-400/30 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
                 if (buyTicketsWithStacks && evmAddress) {
                     buyTicketsWithStacks({
@@ -146,7 +146,7 @@ export function SelectStep({
             }}
             disabled={!evmAddress || isPurchasing}
         >
-            {isPurchasing ? 'Processing...' : `Purchase with Stacks`}
+            {isPurchasing ? <><span className="animate-spin mr-2">⏳</span> Processing Stacks Purchase...</> : <><span className="mr-2">⚡</span> Purchase with Stacks</>}
         </Button>
       )}
 
