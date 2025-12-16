@@ -14,6 +14,28 @@
 import type { BridgeProtocol, BridgeParams, BridgeEstimate, BridgeResult, ProtocolHealth, ChainIdentifier, BridgeStatus } from '../types';
 import { BridgeErrorCode, BridgeError } from '../types';
 
+/**
+ * DEBRIDGE DLN API - PRODUCTION READY
+ * 
+ * 0-TVL cross-chain infrastructure with intent-based solvers
+ * API Docs: https://docs.debridge.com/dln-details/overview/introduction
+ * 
+ * Supports: Solana ↔ EVM (Base, Ethereum, Arbitrum, etc.)
+ * Features:
+ * - Near-instant settlement (<1 second)
+ * - Zero slippage on any order size
+ * - Native token trading (no wrapped token risks)
+ * - Limit orders with future execution
+ * - 0-TVL: No liquidity pools, solver competition instead
+ * 
+ * Chain IDs:
+ * - Solana: 7565164
+ * - Base: 8453
+ * 
+ * Tokens:
+ * - Solana USDC: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyB7bF
+ * - Base USDC: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+ */
 const DEBRIDGE_API = 'https://api.dln.trade/v1.0';
 
 interface DeBridgeQuoteResponse {
@@ -189,32 +211,46 @@ export class DeBridgeProtocol implements BridgeProtocol {
    */
   private async getQuote(params: BridgeParams): Promise<DeBridgeQuoteResponse> {
     try {
-      // In production: Call actual deBridge API
-      // const response = await fetch(`${DEBRIDGE_API}/dln/quote`, {
-      //   method: 'POST',
-      //   body: JSON.stringify({
-      //     srcChainId: 7565164,
-      //     srcChainTokenIn: params.token || USDC_SOLANA,
-      //     srcChainTokenInAmount: params.amount,
-      //     dstChainId: 8453,
-      //     dstChainTokenOut: USDC_BASE,
-      //   }),
-      // });
-      // return response.json();
+      // deBridge chain IDs
+      const SOLANA_CHAIN_ID = 7565164;
+      const BASE_CHAIN_ID = 8453;
+      const USDC_SOLANA = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyB7bF';
+      const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
-      // For MVP: Return mock quote
-      return {
-        estimation: {
-          dstChainTokenOut: {
-            amount: params.amount, // 1:1 for USDC
-          },
+      const response = await fetch(`${DEBRIDGE_API}/dln/quote`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        orderId: `debridge-${Date.now()}`,
-      };
+        body: JSON.stringify({
+          srcChainId: SOLANA_CHAIN_ID,
+          srcChainTokenIn: params.token || USDC_SOLANA,
+          srcChainTokenInAmount: params.amount,
+          dstChainId: BASE_CHAIN_ID,
+          dstChainTokenOut: USDC_BASE,
+          dstChainTokenOutRecipient: params.destinationAddress,
+          referralCode: 0,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`deBridge API error: ${errorData.message || response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      // Cache the quote
+      this.quoteCache.set(`${params.sourceChain}-${params.destinationChain}-${params.amount}`, {
+        quote: data,
+        timestamp: Date.now(),
+      });
+
+      return data;
     } catch (error) {
       throw new BridgeError(
         BridgeErrorCode.ESTIMATION_FAILED,
-        'Failed to get deBridge quote',
+        `Failed to get deBridge quote: ${error instanceof Error ? error.message : String(error)}`,
         'debridge'
       );
     }
@@ -229,52 +265,70 @@ export class DeBridgeProtocol implements BridgeProtocol {
     params: BridgeParams
   ): Promise<{ success: boolean; amountReceived?: string; txHash?: string; error?: string }> {
     const startTime = Date.now();
-    const pollInterval = 3000; // 3 seconds
+    const pollInterval = 5000; // 5 seconds
 
     while (Date.now() - startTime < timeoutMs) {
       try {
-        // In production: Call deBridge status API
-        // const response = await fetch(
-        //   `${DEBRIDGE_API}/dln/order/status?orderId=${orderId}&depositAddress=${params.destinationAddress}`
-        // );
-        // const data = await response.json() as DeBridgeStatusResponse;
+        const response = await fetch(
+          `${DEBRIDGE_API}/dln/order/status?orderId=${orderId}&txHash=`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+        );
 
-        // For MVP: Simulate status progression
-        const elapsedMs = Date.now() - startTime;
-        let status: DeBridgeStatusResponse['status'] = 'pending';
+        if (!response.ok) {
+          // If we get a 404, the order might not be in deBridge's system yet
+          if (response.status === 404) {
+            params.onStatus?.('waiting_deposit', {
+              protocol: 'debridge',
+              message: 'Order not yet received by deBridge',
+              elapsedSeconds: Math.round((Date.now() - startTime) / 1000),
+            });
+          } else {
+            throw new Error(`deBridge status API error: ${response.statusText}`);
+          }
+        } else {
+          const data = (await response.json()) as DeBridgeStatusResponse;
 
-        if (elapsedMs > 10_000) {
-          status = 'completed';
-        }
+          params.onStatus?.('waiting_deposit', {
+            protocol: 'debridge',
+            message: `Bridge status: ${data.status}`,
+            elapsedSeconds: Math.round((Date.now() - startTime) / 1000),
+          });
 
-        params.onStatus?.('waiting_deposit', {
-          protocol: 'debridge',
-          message: `Bridge status: ${status}`,
-          elapsedSeconds: Math.round(elapsedMs / 1000),
-        });
+          if (data.status === 'completed') {
+            return {
+              success: true,
+              amountReceived: data.amountReceived || params.amount,
+              txHash: data.txHash || `debridge_tx_${orderId}`,
+            };
+          }
 
-        if (status === 'completed') {
-          return {
-            success: true,
-            amountReceived: params.amount,
-            txHash: `debridge_tx_${orderId}`,
-          };
-        }
-
-        if (status === 'failed') {
-          return {
-            success: false,
-            error: 'deBridge solver rejected order',
-          };
+          if (data.status === 'failed') {
+            return {
+              success: false,
+              error: 'deBridge solver rejected order',
+            };
+          }
         }
 
         // Wait before next poll
         await new Promise(resolve => setTimeout(resolve, pollInterval));
       } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Polling failed',
-        };
+        // Log error but continue polling - network issues are temporary
+        console.warn('[deBridge] Polling error:', error);
+        
+        params.onStatus?.('waiting_deposit', {
+          protocol: 'debridge',
+          message: `Polling (attempt ${Math.round((Date.now() - startTime) / pollInterval)})...`,
+          elapsedSeconds: Math.round((Date.now() - startTime) / 1000),
+        });
+
+        // Wait before next attempt
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
       }
     }
 
