@@ -53,13 +53,15 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   const { jackpotStats, prizeAmount, isLoading: jackpotLoading, error: jackpotError, refresh: refreshLottery } = useLottery();
   
   // Existing purchase hook for EVM, Solana, NEAR
-  const {
-    isInitializing, isPurchasing, isApproving, isCheckingBalance, userBalance, solanaBalance,
-    ticketPrice, lastTxHash, error, purchaseSuccess, purchasedTicketCount, nearStages,
-    nearRecipient, nearRequestId, nearEthBalance, nearEstimatedFeeEth, nearIntentTxHash,
-    nearDestinationTxHash, nearDepositAddress, nearUsdcTransferTxHash, purchaseTickets,
-    refreshBalance, retryAfterFunding, clearError, reset, needsBridgeGuidance,
-  } = useTicketPurchase();
+   const {
+     isInitializing, isPurchasing, isApproving, isCheckingBalance, userBalance, solanaBalance,
+     ticketPrice, lastTxHash, error, purchaseSuccess, purchasedTicketCount, nearStages,
+     nearRecipient, nearRequestId, nearEthBalance, nearEstimatedFeeEth, nearIntentTxHash,
+     nearDestinationTxHash, nearDepositAddress, nearUsdcTransferTxHash, purchaseTickets,
+     refreshBalance, retryAfterFunding, clearError, reset, needsBridgeGuidance,
+     // NEW: Solana bridge state (Phase 3)
+     bridgeStatus, bridgeStages, bridgeDepositAddress,
+   } = useTicketPurchase();
 
   // New hook for the Stacks purchase flow
   const {
@@ -286,7 +288,24 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
       case "select":
         return <SelectStep setStep={setStep as (step: "mode") => void} selectedSyndicate={selectedSyndicate} prizeAmount={prizeAmount} jackpotLoading={jackpotLoading} jackpotError={jackpotError} ticketPrice={ticketPrice} ticketCount={ticketCount} setTicketCount={setTicketCount} quickAmounts={quickAmounts} totalCost={totalCost} oddsInfo={oddsInfo} hasInsufficientBalance={hasInsufficientBalance} refreshBalance={refreshBalance} isConnected={isConnected} handlePurchase={handlePurchase} isPurchasing={isPurchasing} isInitializing={isInitializing} purchaseMode={purchaseMode} walletType={walletType} solanaBalance={solanaBalance} onStartBridge={handleStartBridge} isBridging={isBridging} showBridgeGuidance={showBridgeGuidance} nearQuote={nearQuote} onGetNearQuote={handleGetNearQuote} isGettingQuote={isGettingQuote} onConfirmIntent={handlePurchase} buyTicketsWithStacks={buyTicketsWithStacks} evmAddress={evmAddress || undefined} />;
       case "processing":
-        return <ProcessingStep isApproving={isApproving} nearStages={nearStages} nearRecipient={nearRecipient} nearRequestId={nearRequestId} nearEthBalance={nearEthBalance} nearEstimatedFeeEth={nearEstimatedFeeEth} nearIntentTxHash={nearIntentTxHash} nearDestinationTxHash={nearDestinationTxHash} nearDepositAddress={nearDepositAddress} nearUsdcTransferTxHash={nearUsdcTransferTxHash} onRetryAfterFunding={retryAfterFunding} />;
+         return <ProcessingStep 
+           isApproving={isApproving} 
+           // NEAR Intents props
+           nearStages={nearStages} 
+           nearRecipient={nearRecipient} 
+           nearRequestId={nearRequestId} 
+           nearEthBalance={nearEthBalance} 
+           nearEstimatedFeeEth={nearEstimatedFeeEth} 
+           nearIntentTxHash={nearIntentTxHash} 
+           nearDestinationTxHash={nearDestinationTxHash} 
+           nearDepositAddress={nearDepositAddress} 
+           nearUsdcTransferTxHash={nearUsdcTransferTxHash} 
+           onRetryAfterFunding={retryAfterFunding}
+           // NEW: Solana Bridge props (Phase 3)
+           bridgeStages={bridgeStages}
+           bridgeStatus={bridgeStatus}
+           bridgeDepositAddress={bridgeDepositAddress}
+         />;
       case "success":
         return <SuccessStep purchaseMode={purchaseMode} purchasedTicketCount={purchasedTicketCount} selectedSyndicate={selectedSyndicate} lastTxHash={lastTxHash} onClose={handleClose} setShowShareModal={setShowShareModal} />;
       default:

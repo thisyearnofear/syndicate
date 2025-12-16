@@ -6,6 +6,7 @@ import Confetti from "react-confetti";
 
 interface ProcessingStepProps {
   isApproving: boolean;
+  // NEAR Intents stages
   nearStages?: string[];
   nearRecipient?: string | null;
   nearEthBalance?: string | null;
@@ -16,6 +17,10 @@ interface ProcessingStepProps {
   nearDestinationTxHash?: string | null;
   nearDepositAddress?: string | null;
   nearUsdcTransferTxHash?: string | null;
+  // NEW: Solana bridge stages (Phase 3)
+  bridgeStages?: string[];
+  bridgeStatus?: string | null;
+  bridgeDepositAddress?: string | null;
 }
 
 /**
@@ -199,7 +204,51 @@ const STAGE_INFO: Record<string, {
     label: "Base balance refreshed",
     estimatedSeconds: 2,
   },
-};
+
+  // Solana Bridge States (Phase 3)
+  validating: {
+    label: "Validating...",
+    description: "Checking bridge parameters",
+    estimatedSeconds: 2,
+  },
+  approve: {
+    label: "Preparing bridge",
+    description: "Getting ready to bridge USDC from Solana to Base",
+    estimatedSeconds: 3,
+  },
+  approved: {
+    label: "Bridge ready",
+    description: "Waiting for you to send USDC",
+    tip: "📋 Send your USDC to the deposit address shown below",
+  },
+  burning: {
+    label: "Locking USDC on Solana",
+    description: "Securing your USDC in the bridge contract",
+    estimatedSeconds: 5,
+  },
+  burn_confirmed: {
+    label: "✅ USDC locked on Solana",
+    description: "Your USDC has been secured",
+    estimatedSeconds: 2,
+  },
+  waiting_attestation: {
+    label: "🌉 Waiting for attestation",
+    description: "Chainlink CCIP validators confirming the lock",
+    estimatedSeconds: 120,
+    tip: "⏱️ Usually takes 2-5 minutes",
+  },
+  minting: {
+    label: "Minting on Base",
+    description: "Creating wrapped USDC on Base network",
+    estimatedSeconds: 30,
+  },
+  waiting_deposit: {
+    label: "Waiting for deposit",
+    description: "Waiting for solver to receive and bridge your USDC",
+    estimatedSeconds: 60,
+    tip: "📋 Deposit address shown below—send USDC there",
+  },
+  };
 
 /**
  * Get formatted time estimate
@@ -223,11 +272,17 @@ export function ProcessingStep({
   nearDestinationTxHash,
   nearDepositAddress,
   nearUsdcTransferTxHash,
+  bridgeStages,
+  bridgeStatus,
+  bridgeDepositAddress,
 }: ProcessingStepProps) {
+  // Support both NEAR and Solana bridge flows
+  const stages = bridgeStages ?? nearStages;
   const currentStage =
-    nearStages && nearStages.length > 0
-      ? nearStages[nearStages.length - 1]
+    stages && stages.length > 0
+      ? stages[stages.length - 1]
       : undefined;
+  const isSolanaBridge = !!bridgeStages;
   
   const confettiRef = useRef<HTMLDivElement>(null);
   const celebratedStagesRef = useRef<Set<string>>(new Set());
@@ -272,14 +327,16 @@ export function ProcessingStep({
           : "Please confirm the transaction in your wallet"}
       </p>
 
-      {nearStages && nearStages.length > 0 && (
-        <div className="mt-4 w-full bg-white/5 rounded-lg p-4">
-          <p className="text-white/70 text-sm mb-3 font-semibold">🔄 NEAR Intents Status</p>
-          <ul className="space-y-2">
-            {nearStages.map((s, i) => {
-              const stageData = STAGE_INFO[s];
-              const isActive = i === nearStages.length - 1;
-              const isCompleted = i < nearStages.length - 1;
+      {stages && stages.length > 0 && (
+         <div className="mt-4 w-full bg-white/5 rounded-lg p-4">
+           <p className="text-white/70 text-sm mb-3 font-semibold">
+             {isSolanaBridge ? '🌉 Solana Bridge Status' : '🔄 NEAR Intents Status'}
+           </p>
+           <ul className="space-y-2">
+             {stages.map((s, i) => {
+               const stageData = STAGE_INFO[s];
+               const isActive = i === stages.length - 1;
+               const isCompleted = i < stages.length - 1;
 
               return (
                 <li key={`${s}-${i}`} className="text-xs space-y-1">
@@ -325,8 +382,32 @@ export function ProcessingStep({
 
           {/* Fund Flow Visualization */}
           <div className="mt-4 pt-4 border-t border-white/10">
-            <p className="text-white/70 text-xs mb-3 font-semibold">Fund Flow Tracking</p>
+            <p className="text-white/70 text-xs mb-3 font-semibold">
+              {isSolanaBridge ? 'Bridge Details' : 'Fund Flow Tracking'}
+            </p>
             <div className="space-y-3 text-xs">
+              {/* Solana Bridge - Deposit Address (deBridge flow) */}
+              {isSolanaBridge && bridgeDepositAddress && (
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded p-3">
+                  <p className="text-blue-300 mb-2 font-semibold">📬 Send USDC to this address (deBridge)</p>
+                  <p className="text-white/60 break-all font-mono text-xs mb-3 bg-white/5 p-2 rounded">
+                    {bridgeDepositAddress}
+                  </p>
+                  <button
+                    className="px-2 py-1 bg-blue-500/20 hover:bg-blue-500/30 rounded text-blue-300 hover:text-blue-200 text-xs"
+                    onClick={() => {
+                      navigator.clipboard.writeText(bridgeDepositAddress);
+                      // Could show toast "Copied!" here
+                    }}
+                  >
+                    📋 Copy address
+                  </button>
+                  <p className="text-white/50 text-xs mt-2">
+                    ⏱️ Waiting for your deposit to arrive...
+                  </p>
+                </div>
+              )}
+
               {nearUsdcTransferTxHash && (
                 <div className="bg-green-500/10 border border-green-500/30 rounded p-2">
                   <p className="text-green-300 mb-1">✓ USDC Sent from NEAR</p>
