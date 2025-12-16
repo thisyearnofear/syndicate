@@ -23,6 +23,9 @@ type PhantomProvider = {
   isPhantom?: boolean;
   connect?: (options?: { onlyIfTrusted?: boolean }) => Promise<{ publicKey?: { toString?: () => string } | string }>;
   disconnect?: () => Promise<void>;
+  signTransaction?: (transaction: unknown) => Promise<{ signature?: Uint8Array | string }>;
+  signMessage?: (message: Uint8Array) => Promise<{ signature: Uint8Array }>;
+  signAndSendTransaction?: (transaction: unknown) => Promise<{ signature: string }>;
 };
 
 class SolanaWalletService {
@@ -110,7 +113,96 @@ class SolanaWalletService {
     const integer = total / 1000000n;
     const frac = (total % 1000000n).toString().padStart(6, '0');
     return `${integer}.${frac}`;
-  }
-}
+    }
+
+    /**
+    * Sign a Solana transaction with Phantom wallet
+    * 
+    * PHASE 4 PRODUCTION: Used by Base-Solana Bridge for Phantom signatures
+    * Requires wallet to be connected first via connectPhantom()
+    * 
+    * @param transaction - Transaction object from @solana/web3.js
+    * @returns Signature string or Uint8Array
+    * @throws Error if wallet not connected or signing fails
+    */
+    async signTransaction(transaction: unknown): Promise<string | Uint8Array> {
+    if (!this.state.connected || !this.state.publicKey) {
+      throw new Error('Phantom wallet not connected');
+    }
+
+    if (!this.solana?.signTransaction) {
+      throw new Error('Phantom wallet does not support signing transactions');
+    }
+
+    try {
+      const result = await this.solana.signTransaction(transaction);
+      if (!result?.signature) {
+        throw new Error('No signature returned from Phantom');
+      }
+      return result.signature;
+    } catch (error) {
+      throw new Error(`Failed to sign transaction with Phantom: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    }
+
+    /**
+    * Sign a message with Phantom wallet
+    * 
+    * Useful for authentication or message verification
+    * 
+    * @param message - Message bytes to sign
+    * @returns Signature as Uint8Array
+    * @throws Error if wallet not connected or signing fails
+    */
+    async signMessage(message: Uint8Array): Promise<Uint8Array> {
+    if (!this.state.connected || !this.state.publicKey) {
+      throw new Error('Phantom wallet not connected');
+    }
+
+    if (!this.solana?.signMessage) {
+      throw new Error('Phantom wallet does not support signing messages');
+    }
+
+    try {
+      const result = await this.solana.signMessage(message);
+      if (!result?.signature) {
+        throw new Error('No signature returned from Phantom');
+      }
+      return result.signature;
+    } catch (error) {
+      throw new Error(`Failed to sign message with Phantom: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    }
+
+    /**
+    * Sign and send a transaction with Phantom
+    * 
+    * PHASE 4 PRODUCTION: For Base-Solana Bridge USDC locking
+    * Phantom handles signing and broadcasting to Solana network
+    * 
+    * @param transaction - Transaction object from @solana/web3.js
+    * @returns Transaction signature string
+    * @throws Error if wallet not connected or transaction fails
+    */
+    async signAndSendTransaction(transaction: unknown): Promise<string> {
+    if (!this.state.connected || !this.state.publicKey) {
+      throw new Error('Phantom wallet not connected');
+    }
+
+    if (!this.solana?.signAndSendTransaction) {
+      throw new Error('Phantom wallet does not support signAndSendTransaction');
+    }
+
+    try {
+      const result = await this.solana.signAndSendTransaction(transaction);
+      if (!result?.signature) {
+        throw new Error('No signature returned from Phantom');
+      }
+      return result.signature;
+    } catch (error) {
+      throw new Error(`Failed to sign and send transaction with Phantom: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    }
+    }
 
 export const solanaWalletService = new SolanaWalletService();

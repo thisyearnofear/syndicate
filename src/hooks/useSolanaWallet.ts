@@ -40,5 +40,28 @@ export function useSolanaWallet(usdcMint?: string, rpcUrl?: string) {
     return bal;
   }, [publicKey, usdcMint, rpcUrl]);
 
-  return { ready, publicKey, usdcBalance, connect, disconnect, refreshUsdc };
+  // PHASE 4: Phantom signing methods
+  const signTransaction = useCallback(async (transaction: unknown) => {
+    return await solanaWalletService.signTransaction(transaction);
+  }, []);
+
+  const signMessage = useCallback(async (message: Uint8Array) => {
+    return await solanaWalletService.signMessage(message);
+  }, []);
+
+  const signAndSendTransaction = useCallback(async (transaction: unknown) => {
+    return await solanaWalletService.signAndSendTransaction(transaction);
+  }, []);
+
+  return {
+    ready,
+    publicKey,
+    usdcBalance,
+    connect,
+    disconnect,
+    refreshUsdc,
+    signTransaction,
+    signMessage,
+    signAndSendTransaction,
+  };
 }

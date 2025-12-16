@@ -25,11 +25,30 @@ import { BridgeError, BridgeErrorCode } from './types';
 // UnifiedBridgeManager Class
 // ============================================================================
 
+/**
+ * PHASE 4 MONITORING: Bridge analytics and success tracking
+ * Used for monitoring bridge method selection and success rates
+ */
+interface BridgeAnalytics {
+    bridgeAttempts: Map<BridgeProtocolType, { attempts: number; successes: number; failures: number }>;
+    methodSelection: Map<BridgeProtocolType, { timesSelected: number; avgTimeMs: number }>;
+    errorFrequency: Map<BridgeErrorCode, number>;
+    lastRecorded: Date;
+}
+
 export class UnifiedBridgeManager {
     private protocols: Map<BridgeProtocolType, BridgeProtocol> = new Map();
     private healthCache: Map<BridgeProtocolType, ProtocolHealth> = new Map();
     private lastHealthCheck: Map<BridgeProtocolType, number> = new Map();
     private readonly healthCacheTtlMs = 60_000; // 1 minute
+
+    // PHASE 4: Analytics and monitoring
+    private analytics: BridgeAnalytics = {
+        bridgeAttempts: new Map(),
+        methodSelection: new Map(),
+        errorFrequency: new Map(),
+        lastRecorded: new Date(),
+    };
 
     constructor() {
         // Protocols will be registered lazily on first use
@@ -135,6 +154,8 @@ export class UnifiedBridgeManager {
             if (result.success) {
                 // Update health cache on success
                 await this.updateHealthCache(primaryProtocol.name, true);
+                // PHASE 4: Record successful bridge attempt
+                this.recordBridgeAttempt(primaryProtocol.name, true, result.actualTimeMs);
                 return result;
             }
 
@@ -149,10 +170,20 @@ export class UnifiedBridgeManager {
             }
 
             await this.updateHealthCache(primaryProtocol.name, false);
+            // PHASE 4: Record failed bridge attempt
+            this.recordBridgeAttempt(primaryProtocol.name, false);
+            if (result.errorCode) {
+                this.recordBridgeError(result.errorCode as BridgeErrorCode);
+            }
 
         } catch (error) {
             console.warn(`[BridgeManager] ${primaryProtocol.name} threw error:`, error);
             await this.updateHealthCache(primaryProtocol.name, false);
+            // PHASE 4: Record failed bridge attempt and error
+            this.recordBridgeAttempt(primaryProtocol.name, false);
+            if (error instanceof BridgeError) {
+                this.recordBridgeError(error.code);
+            }
         }
 
         // If fallback is disabled, return failure
@@ -194,13 +225,25 @@ export class UnifiedBridgeManager {
             const fallbackResult = await fallbackProtocol.bridge(params);
             if (fallbackResult.success) {
                 await this.updateHealthCache(fallbackProtocol.name, true);
+                // PHASE 4: Record successful fallback bridge attempt
+                this.recordBridgeAttempt(fallbackProtocol.name, true, fallbackResult.actualTimeMs);
             } else {
                 await this.updateHealthCache(fallbackProtocol.name, false);
+                // PHASE 4: Record failed fallback bridge attempt
+                this.recordBridgeAttempt(fallbackProtocol.name, false);
+                if (fallbackResult.errorCode) {
+                    this.recordBridgeError(fallbackResult.errorCode as BridgeErrorCode);
+                }
             }
             return fallbackResult;
         } catch (fallbackError) {
             console.warn(`[BridgeManager] Fallback protocol ${fallbackProtocol.name} also failed:`, fallbackError);
             await this.updateHealthCache(fallbackProtocol.name, false);
+            // PHASE 4: Record fallback protocol error
+            this.recordBridgeAttempt(fallbackProtocol.name, false);
+            if (fallbackError instanceof BridgeError) {
+                this.recordBridgeError(fallbackError.code);
+            }
 
             return {
                 success: false,
@@ -1069,6 +1112,95 @@ export class UnifiedBridgeManager {
         }
 
         return suggestions;
+    }
+
+    /**
+     * PHASE 4 ANALYTICS: Record bridge attempt
+     * Tracks which protocols are selected and their success rates
+     */
+    private recordBridgeAttempt(protocol: BridgeProtocolType, success: boolean, timeMs?: number): void {
+        // Track attempt count and success/failure
+        const current = this.analytics.bridgeAttempts.get(protocol) || { attempts: 0, successes: 0, failures: 0 };
+        current.attempts++;
+        if (success) {
+            current.successes++;
+        } else {
+            current.failures++;
+        }
+        this.analytics.bridgeAttempts.set(protocol, current);
+
+        // Track method selection
+        if (timeMs !== undefined) {
+            const selection = this.analytics.methodSelection.get(protocol) || { timesSelected: 0, avgTimeMs: 0 };
+            const newAvg = (selection.avgTimeMs * selection.timesSelected + timeMs) / (selection.timesSelected + 1);
+            selection.timesSelected++;
+            selection.avgTimeMs = newAvg;
+            this.analytics.methodSelection.set(protocol, selection);
+        }
+
+        this.analytics.lastRecorded = new Date();
+    }
+
+    /**
+     * PHASE 4 ANALYTICS: Record bridge error
+     * Tracks error frequency by type for monitoring
+     */
+    private recordBridgeError(errorCode: BridgeErrorCode): void {
+        const current = this.analytics.errorFrequency.get(errorCode) || 0;
+        this.analytics.errorFrequency.set(errorCode, current + 1);
+    }
+
+    /**
+     * PHASE 4 ANALYTICS: Get bridge analytics
+     * Returns analytics data for dashboard/monitoring
+     */
+    public getAnalytics(): BridgeAnalytics {
+        return {
+            ...this.analytics,
+            lastRecorded: new Date(this.analytics.lastRecorded),
+        };
+    }
+
+    /**
+     * PHASE 4 ANALYTICS: Get bridge success rate by protocol
+     * Used for monitoring bridge method selection effectiveness
+     */
+    public getProtocolSuccessRates(): Map<BridgeProtocolType, number> {
+        const rates = new Map<BridgeProtocolType, number>();
+
+        for (const [protocol, stats] of this.analytics.bridgeAttempts) {
+            const successRate = stats.attempts > 0 ? stats.successes / stats.attempts : 0;
+            rates.set(protocol, successRate);
+        }
+
+        return rates;
+    }
+
+    /**
+     * PHASE 4 ANALYTICS: Get most common errors
+     * Useful for identifying patterns and improving reliability
+     */
+    public getMostCommonErrors(limit: number = 5): Array<{ error: BridgeErrorCode; count: number }> {
+        const errors = Array.from(this.analytics.errorFrequency.entries())
+            .map(([error, count]) => ({ error, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, limit);
+
+        return errors;
+    }
+
+    /**
+     * PHASE 4 ANALYTICS: Reset analytics data
+     * Useful for testing or resetting metrics
+     */
+    public resetAnalytics(): void {
+        this.analytics = {
+            bridgeAttempts: new Map(),
+            methodSelection: new Map(),
+            errorFrequency: new Map(),
+            lastRecorded: new Date(),
+        };
+        console.log('[BridgeManager] Analytics reset');
     }
 }
 
