@@ -59,7 +59,7 @@ export function WinningsWithdrawalFlow({
   } = useTicketPurchase();
 
   const [step, setStep] = useState<WithdrawalStep>('check');
-  const [winningsAmount, setWinningsAmount] = useState<string>('0');
+  const [localWinningsAmount, setLocalWinningsAmount] = useState<string>('0');
   const [checkingWinnings, setCheckingWinnings] = useState(true);
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -77,14 +77,14 @@ export function WinningsWithdrawalFlow({
         const userInfo = await web3Service.getUserInfoForAddress(derivedEvmAddress);
 
         if (!userInfo) {
-          setWinningsAmount('0');
+          setLocalWinningsAmount('0');
           setStep('error');
           setLocalError('Could not check winnings on Base');
           return;
         }
 
         const amount = parseFloat(userInfo.winningsClaimable);
-        setWinningsAmount(userInfo.winningsClaimable);
+        setLocalWinningsAmount(userInfo.winningsClaimable);
 
         if (amount > 0) {
           setStep('confirm');
@@ -186,14 +186,14 @@ export function WinningsWithdrawalFlow({
   }
 
   // Confirm withdrawal
-  if (step === 'confirm' && parseFloat(winningsAmount) > 0) {
+  if (step === 'confirm' && parseFloat(localWinningsAmount) > 0) {
     return (
       <div className="glass-premium p-8 rounded-xl border border-green-500/30 bg-green-500/5 space-y-6">
         <div>
           <h4 className="text-white font-semibold mb-4">🎉 You Have Winnings!</h4>
           <div className="bg-black/30 rounded-lg p-4 mb-4">
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-green-400">${winningsAmount}</span>
+              <span className="text-4xl font-bold text-green-400">${localWinningsAmount}</span>
               <span className="text-gray-400">USDC on Base</span>
             </div>
           </div>
@@ -230,34 +230,34 @@ export function WinningsWithdrawalFlow({
           ) : (
             <>
               <span className="text-xl mr-2">✨</span>
-              Claim & Withdraw ${winningsAmount} to NEAR
+              Claim & Withdraw ${localWinningsAmount} to NEAR
             </>
           )}
-        </Button>
-      </div>
-    );
-  }
+          </Button>
+          </div>
+          );
+          }
 
-  // Processing claim
-  if (step === 'processing') {
-    return (
-      <div className="glass-premium p-8 rounded-xl border border-blue-500/30 bg-blue-500/5">
-        <div className="flex items-center justify-center gap-4 mb-6">
+          // Processing claim
+          if (step === 'processing') {
+          return (
+          <div className="glass-premium p-8 rounded-xl border border-blue-500/30 bg-blue-500/5">
+          <div className="flex items-center justify-center gap-4 mb-6">
           <Loader className="w-6 h-6 animate-spin text-blue-400" />
           <div>
             <h4 className="text-white font-semibold">Claiming Winnings...</h4>
             <p className="text-gray-400 text-sm">Setting up reverse bridge to NEAR</p>
           </div>
-        </div>
-        <div className="space-y-2 bg-black/20 rounded-lg p-4">
+          </div>
+          <div className="space-y-2 bg-black/20 rounded-lg p-4">
           <p className="text-gray-300 text-sm">
             💡 <strong>What's happening:</strong> We're claiming your $
-            {winningsAmount} in winnings on Base and preparing the bridge back to your NEAR account.
+            {localWinningsAmount} in winnings on Base and preparing the bridge back to your NEAR account.
           </p>
-        </div>
-      </div>
-    );
-  }
+          </div>
+          </div>
+          );
+          }
 
   // Transfer to deposit
   if (step === 'transfer' && nearWithdrawalDepositAddress) {

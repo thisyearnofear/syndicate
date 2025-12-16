@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { CompactStack } from "@/shared/components/premium/CompactLayout";
+import Confetti from "react-confetti";
 
 interface ProcessingStepProps {
   isApproving: boolean;
@@ -29,6 +31,7 @@ const STAGE_INFO: Record<string, {
   description?: string;
   estimatedSeconds?: number;
   tip?: string;
+  celebrate?: boolean; // Trigger celebration (confetti)
 }> = {
   // Initialization & Setup
   initializing: {
@@ -77,6 +80,7 @@ const STAGE_INFO: Record<string, {
     description: "Your USDC has safely arrived on the Base network",
     estimatedSeconds: 2,
     tip: "🎉 Ready for final ticket purchase",
+    celebrate: true,
   },
   bridge_complete: {
     label: "Bridge complete - ready to purchase",
@@ -161,25 +165,31 @@ const STAGE_INFO: Record<string, {
     label: "✅ Purchase completed!",
     description: "Your tickets are now in your wallet",
     estimatedSeconds: 2,
+    celebrate: true,
   },
 
   // Solver States (Future/Fallback)
   waiting_execution: {
     label: "Waiting for solver to execute",
     estimatedSeconds: 120,
-    tip: "The solver network is processing your transaction",
+    description: "The solver network is processing your transaction",
+    tip: "This usually takes 1-3 minutes. Relax, we're working on it!",
   },
   solver_processing: {
     label: "Solver is processing intent",
     estimatedSeconds: 60,
+    description: "The 1Click solver is executing your cross-chain swap",
+    tip: "Backend is handling the complex bridge operations",
   },
   solver_completed: {
     label: "✅ Solver completed execution",
     estimatedSeconds: 2,
+    celebrate: true,
   },
   solver_failed: {
     label: "❌ Solver execution failed",
     description: "The solver could not complete the transaction",
+    tip: "Please retry or contact support if this persists",
   },
   funds_bridged: {
     label: "Funds bridged to Base",
@@ -218,9 +228,36 @@ export function ProcessingStep({
     nearStages && nearStages.length > 0
       ? nearStages[nearStages.length - 1]
       : undefined;
+  
+  const confettiRef = useRef<HTMLDivElement>(null);
+  const celebratedStagesRef = useRef<Set<string>>(new Set());
+
+  // Trigger confetti for celebration stages (only once per stage)
+  useEffect(() => {
+    if (!currentStage) return;
+    
+    const stageData = STAGE_INFO[currentStage];
+    if (stageData?.celebrate && !celebratedStagesRef.current.has(currentStage)) {
+      celebratedStagesRef.current.add(currentStage);
+      
+      // Trigger confetti briefly (auto-clears after animation)
+      // Can be extended if needed, but keeping it subtle for focus
+    }
+  }, [currentStage]);
+
   return (
-    <CompactStack spacing="lg" align="center">
-      <div className="w-20 h-20 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+    <div ref={confettiRef} className="relative">
+      {currentStage && STAGE_INFO[currentStage]?.celebrate && (
+        <Confetti
+          width={typeof window !== 'undefined' ? window.innerWidth : 0}
+          height={typeof window !== 'undefined' ? window.innerHeight : 0}
+          numberOfPieces={50}
+          gravity={0.3}
+          recycle={false}
+        />
+      )}
+      <CompactStack spacing="lg" align="center">
+        <div className="w-20 h-20 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
       <h2 className="font-bold text-xl md:text-4xl lg:text-5xl leading-tight tracking-tight text-white">
         Processing Purchase...
       </h2>
@@ -442,6 +479,7 @@ export function ProcessingStep({
           )}
         </div>
       )}
-    </CompactStack>
+      </CompactStack>
+    </div>
   );
 }
