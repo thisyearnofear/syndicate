@@ -236,8 +236,8 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
       onSuccess?.(purchasedTicketCount);
       successToast("Tickets Purchased!", `${purchasedTicketCount} ticket${purchasedTicketCount > 1 ? "s" : ""} successfully purchased`, { label: "View My Tickets", onClick: () => (window.location.href = "/my-tickets") });
       try {
-        const sourceChain = walletType === WalletTypes.PHANTOM ? "solana" : walletType === WalletTypes.NEAR ? "near" : "ethereum";
-        const body = { sourceChain, sourceWallet: walletType === WalletTypes.PHANTOM ? address : undefined, baseWallet: evmAddress || address || undefined, bridgeTxHash: bridgeMetadata?.burnSignature, mintTxHash: bridgeMetadata?.mintTxHash, ticketPurchaseTx: lastTxHash, ticketCount: purchasedTicketCount };
+        const sourceChain = walletType === WalletTypes.SOLANA ? "solana" : walletType === WalletTypes.NEAR ? "near" : "ethereum";
+        const body = { sourceChain, sourceWallet: walletType === WalletTypes.SOLANA ? address : undefined, baseWallet: evmAddress || address || undefined, bridgeTxHash: bridgeMetadata?.burnSignature, mintTxHash: bridgeMetadata?.mintTxHash, ticketPurchaseTx: lastTxHash, ticketCount: purchasedTicketCount };
         fetch("/api/cross-chain-purchases", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       } catch (err) {
         console.error("Error tracking cross-chain purchase:", err);
@@ -267,7 +267,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   const hasInsufficientBalance = userBalance && parseFloat(userBalance.usdc) < parseFloat(totalCost);
 
   useEffect(() => {
-    if (!isConnected || walletType !== WalletTypes.PHANTOM) return;
+    if (!isConnected || walletType !== WalletTypes.SOLANA) return;
     const baseUSDC = parseFloat(userBalance?.usdc || "0");
     const requiredAmount = parseFloat(totalCost || "0");
     if (baseUSDC >= requiredAmount) {
@@ -297,23 +297,25 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   if (!isOpen) return null;
   if (isTrackerOpen) {
     return (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
-            <CrossChainTracker
-                status={trackerState.status}
-                stacksTxId={trackerState.stacksTxId}
-                baseTxId={trackerState.baseTxId}
-                error={trackerState.error}
-            />
-            <Button onClick={closeTracker} variant="ghost" className="absolute top-4 right-4 text-white hover:text-gray-300">
-                Close
-            </Button>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-lg">
+            <div className="relative w-full max-w-md mx-auto">
+                <CrossChainTracker
+                    status={trackerState.status}
+                    stacksTxId={trackerState.stacksTxId}
+                    baseTxId={trackerState.baseTxId}
+                    error={trackerState.error}
+                />
+                <Button onClick={closeTracker} variant="ghost" className="absolute -top-12 right-0 text-white hover:text-gray-300 bg-black/50 backdrop-blur-sm rounded-full w-8 h-8 p-0">
+                    ✕
+                </Button>
+            </div>
         </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={handleClose} />
+    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={handleClose} />
       <div className="relative glass-premium rounded-3xl p-6 w-full max-w-lg border border-white/20 animate-scale-in max-h-[85vh] overflow-y-auto">
         <CompactFlex align="center" justify="between" className="mb-6">
           <div className="flex-1">
@@ -343,16 +345,16 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
 
         {isConnected && userBalance && step === "select" && (
           <div className="space-y-3 mb-6">
-            {(walletType === WalletTypes.PHANTOM || walletType === WalletTypes.NEAR) && (
+            {(walletType === WalletTypes.SOLANA || walletType === WalletTypes.NEAR) && (
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
                 <p className="text-blue-300 text-sm">💡 USDC lives on Solana, NEAR, and Base.</p>
                 <div className="text-blue-200 text-xs mt-1">{(() => { const baseUSDC = parseFloat(userBalance?.usdc || "0"); const requiredAmount = parseFloat(totalCost || "0"); const deficit = Math.max(0, requiredAmount - baseUSDC); const solUSDC = parseFloat(solanaBalance || "0"); return `Need ${requiredAmount.toFixed(2)} • Have ${baseUSDC.toFixed(2)} on Base (deficit ${deficit.toFixed(2)}) • ${solUSDC.toFixed(2)} on Solana`; })()}</div>
               </div>
             )}
             {walletType === WalletTypes.NEAR && <div className="bg-white/5 rounded-lg p-4 border border-blue-500/20"><div className="flex justify-between items-center"><span className="text-white/70">🌌 Your USDC on NEAR:</span><span className="text-white font-semibold">${solanaBalance || "0"}</span></div><p className="text-xs text-gray-400 mt-2">Using NEAR Chain Signatures for cross-chain execution</p></div>}
-            {walletType === WalletTypes.PHANTOM && <div className="bg-white/5 rounded-lg p-4 border border-purple-500/20"><div className="flex justify-between items-center"><span className="text-white/70">🟣 Your USDC on Solana:</span><span className="text-white font-semibold">${solanaBalance || "0"}</span></div></div>}
-            {walletType === WalletTypes.PHANTOM && !evmConnected && <div className="bg-white/5 rounded-lg p-4 border border-blue-500/20"><div className="flex items-center justify-between"><div className="text-white/70">Connect an EVM wallet to receive bridged USDC on Base</div><ConnectButton showBalance={false} chainStatus="none" /></div></div>}
-            <div className={`rounded-lg p-4 ${walletType === WalletTypes.PHANTOM ? "bg-white/5 border border-blue-500/20" : "bg-white/5"}`}><div className="flex justify-between items-center"><span className="text-white/70">🔵 Your USDC on Base:</span><span className="text-white font-semibold">${userBalance.usdc}</span></div></div>
+            {walletType === WalletTypes.SOLANA && <div className="bg-white/5 rounded-lg p-4 border border-purple-500/20"><div className="flex justify-between items-center"><span className="text-white/70">🟣 Your USDC on Solana:</span><span className="text-white font-semibold">${solanaBalance || "0"}</span></div></div>}
+            {walletType === WalletTypes.SOLANA && !evmConnected && <div className="bg-white/5 rounded-lg p-4 border border-blue-500/20"><div className="flex items-center justify-between"><div className="text-white/70">Connect an EVM wallet to receive bridged USDC on Base</div><ConnectButton showBalance={false} chainStatus="none" /></div></div>}
+            <div className={`rounded-lg p-4 ${walletType === WalletTypes.SOLANA ? "bg-white/5 border border-blue-500/20" : "bg-white/5"}`}><div className="flex justify-between items-center"><span className="text-white/70">🔵 Your USDC on Base:</span><span className="text-white font-semibold">${userBalance.usdc}</span></div></div>
             {isCheckingBalance && <div className="flex items-center gap-2 text-white/60"><Loader className="w-4 h-4 animate-spin" /><span className="text-sm">Updating balance...</span></div>}
           </div>
         )}
