@@ -282,7 +282,7 @@ export class DeBridgeProtocol implements BridgeProtocol {
         if (!response.ok) {
           // If we get a 404, the order might not be in deBridge's system yet
           if (response.status === 404) {
-            params.onStatus?.('waiting_deposit', {
+            params.onStatus?.('solver_waiting_deposit', {
               protocol: 'debridge',
               message: 'Order not yet received by deBridge',
               elapsedSeconds: Math.round((Date.now() - startTime) / 1000),
@@ -293,7 +293,7 @@ export class DeBridgeProtocol implements BridgeProtocol {
         } else {
           const data = (await response.json()) as DeBridgeStatusResponse;
 
-          params.onStatus?.('waiting_deposit', {
+          params.onStatus?.('solver_waiting_deposit', {
             protocol: 'debridge',
             message: `Bridge status: ${data.status}`,
             elapsedSeconds: Math.round((Date.now() - startTime) / 1000),
@@ -321,7 +321,7 @@ export class DeBridgeProtocol implements BridgeProtocol {
         // Log error but continue polling - network issues are temporary
         console.warn('[deBridge] Polling error:', error);
         
-        params.onStatus?.('waiting_deposit', {
+        params.onStatus?.('solver_waiting_deposit', {
           protocol: 'debridge',
           message: `Polling (attempt ${Math.round((Date.now() - startTime) / pollInterval)})...`,
           elapsedSeconds: Math.round((Date.now() - startTime) / 1000),
@@ -344,7 +344,6 @@ export class DeBridgeProtocol implements BridgeProtocol {
   async getHealth(): Promise<ProtocolHealth> {
     return {
       ...this.healthStatus,
-      lastSuccessTime: new Date(),
     };
   }
 

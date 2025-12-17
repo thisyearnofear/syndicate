@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
+import { Transaction, VersionedTransaction } from '@solana/web3.js';
 import { solanaWalletService } from '@/services/solanaWalletService';
 
 export function useSolanaWallet(usdcMint?: string, rpcUrl?: string) {
@@ -41,7 +42,7 @@ export function useSolanaWallet(usdcMint?: string, rpcUrl?: string) {
   }, [publicKey, usdcMint, rpcUrl]);
 
   // PHASE 4: Phantom signing methods
-  const signTransaction = useCallback(async (transaction: unknown) => {
+  const signTransaction = useCallback(async (transaction: Transaction | VersionedTransaction) => {
     return await solanaWalletService.signTransaction(transaction);
   }, []);
 
@@ -49,7 +50,7 @@ export function useSolanaWallet(usdcMint?: string, rpcUrl?: string) {
     return await solanaWalletService.signMessage(message);
   }, []);
 
-  const signAndSendTransaction = useCallback(async (transaction: unknown) => {
+  const signAndSendTransaction = useCallback(async (transaction: Transaction | VersionedTransaction) => {
     return await solanaWalletService.signAndSendTransaction(transaction);
   }, []);
 

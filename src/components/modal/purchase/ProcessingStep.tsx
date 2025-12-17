@@ -242,8 +242,8 @@ const STAGE_INFO: Record<string, {
     description: "Creating wrapped USDC on Base network",
     estimatedSeconds: 30,
   },
-  waiting_deposit: {
-    label: "Waiting for deposit",
+  solver_waiting_deposit: {
+    label: "Waiting for solver deposit",
     description: "Waiting for solver to receive and bridge your USDC",
     estimatedSeconds: 60,
     tip: "📋 Deposit address shown below—send USDC there",

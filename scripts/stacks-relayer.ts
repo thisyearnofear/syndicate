@@ -1,7 +1,7 @@
 
 import { StacksApiSocketClient, StacksApiWebSocketClient } from '@stacks/blockchain-api-client';
-import * as stacksNetwork from '@stacks/network';
-import { config } from 'dotenv';
+import { StacksMainnet } from '@stacks/network';
+import dotenv from 'dotenv';
 import crossfetch from 'cross-fetch';
 import { createPublicClient, http, Abi } from 'viem';
 import { base } from 'viem/chains';
@@ -10,7 +10,7 @@ import path from 'path';
 import { TrackerStatus } from '../src/components/bridge/CrossChainTracker'; // Import status type
 
 // Load environment variables from .env file
-config();
+dotenv.config();
 
 // --- Constants ---
 const STACKS_API_URL = process.env.NEXT_PUBLIC_STACKS_API_URL || 'https://api.stacks.co';
@@ -166,8 +166,7 @@ async function handleBridgeAndPurchase(event: any) {
 async function listenForTransactions() {
   console.log('[Relayer] Starting Stacks transaction listener...');
 
-  const network = new stacksNetwork.StacksMainnet({ url: STACKS_API_URL });
-  const socket = new StacksApiSocketClient(network);
+  const socket = StacksApiSocketClient.connect({ url: STACKS_API_URL });
 
   await socket.connect(async (client: StacksApiWebSocketClient) => {
     console.log('[Relayer] Connected to Stacks API WebSocket.');

@@ -428,7 +428,6 @@ function StacksWinningsFlow({
           functionName: 'claim-winnings',
           functionArgs: [],
           network: STACKS_NETWORK,
-          appName: 'Syndicate',
           onFinish: (data) => {
             console.log('[Stacks] Claim transaction:', data);
             setStep('success');

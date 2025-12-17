@@ -1,6 +1,5 @@
-// STUB: Using stubs while Solana deps are disabled for hackathon
-// TO RE-ENABLE: Replace with '@solana/web3.js' and '@solana/spl-token'
-import { Connection, PublicKey, getAssociatedTokenAddress } from '@/stubs/solana';
+import { Connection, PublicKey } from '@solana/web3.js';
+import { getAssociatedTokenAddress } from '@solana/spl-token';
 
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 
@@ -42,8 +41,9 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     // Validate wallet address
+    let walletPubkey: PublicKey;
     try {
-      new PublicKey(walletAddress);
+      walletPubkey = new PublicKey(walletAddress);
     } catch {
       return Response.json(
         { error: 'invalid wallet address' },
@@ -51,7 +51,6 @@ export async function GET(request: Request): Promise<Response> {
       );
     }
 
-    const walletPubkey = new PublicKey(walletAddress);
     const usdcMint = new PublicKey(USDC_MINT);
     const ata = await getAssociatedTokenAddress(usdcMint, walletPubkey);
 
@@ -62,7 +61,7 @@ export async function GET(request: Request): Promise<Response> {
       try {
         const connection = new Connection(url, 'confirmed');
         const bal = await connection.getTokenAccountBalance(ata);
-        const balance = bal?.value?.uiAmount?.toString() || '0';
+        const balance = bal?.value?.uiAmount?.toString() || bal?.value?.uiAmountString || '0';
 
         return Response.json(
           { balance, success: true },
