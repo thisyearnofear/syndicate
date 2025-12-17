@@ -19,6 +19,7 @@ import type {
     BridgeResult,
     ProtocolHealth,
     ChainIdentifier,
+    BridgeStatus,
 } from '../types';
 import { BridgeError, BridgeErrorCode } from '../types';
 
@@ -82,7 +83,7 @@ export class StacksProtocol implements BridgeProtocol {
             // The UI already handles this via useCrossChainPurchase hook
             // This protocol just validates and tracks
 
-            params.onStatus?.('initiating', { 
+            params.onStatus?.('validating', {
                 protocol: 'stacks',
                 message: 'Waiting for Stacks contract call...'
             });
@@ -98,7 +99,7 @@ export class StacksProtocol implements BridgeProtocol {
             const result: BridgeResult = {
                 success: true,
                 protocol: 'stacks',
-                status: 'pending',
+                status: 'pending' as BridgeStatus,
                 bridgeId: `stacks-pending-${Date.now()}`,
                 details: {
                     message: 'Bridge initiated on Stacks. Operator will process the transaction.',
@@ -126,7 +127,7 @@ export class StacksProtocol implements BridgeProtocol {
                 protocol: 'stacks',
                 status: 'failed',
                 error: error instanceof Error ? error.message : 'Unknown error',
-                errorCode: error instanceof BridgeError ? error.code : BridgeErrorCode.UNKNOWN_ERROR,
+                errorCode: error instanceof BridgeError ? error.code : BridgeErrorCode.UNKNOWN,
             };
         }
     }
@@ -146,14 +147,11 @@ export class StacksProtocol implements BridgeProtocol {
             isHealthy,
             successRate,
             averageTimeMs,
-            lastFailure: this.lastFailure,
             consecutiveFailures: this.failureCount,
             estimatedFee: '0.01',
             statusDetails: {
                 recentFailures,
                 lowSuccessRate,
-                lastSuccessTime: this.successCount > 0 ? new Date() : null,
-                operatorStatus: 'Check scripts/stacks-bridge-operator.ts logs',
             }
         };
     }

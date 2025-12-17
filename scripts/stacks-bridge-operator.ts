@@ -41,7 +41,7 @@ import {
     principalCV,
     stringAsciiCV,
 } from '@stacks/transactions';
-import * as stacksNetwork from '@stacks/network';
+import { StacksMainnet } from '@stacks/network';
 
 // ============================================================================
 // CONFIGURATION
@@ -630,12 +630,12 @@ async function recordWinningsOnStacks(data: {
                 stringAsciiCV(baseTxHashProof),
             ],
             senderKey: operatorStacksKey,
-            network: new stacksNetwork.StacksMainnet(),
+            network: new StacksMainnet(),
             fee: 10000, // Standard fee in microstacks
         });
 
         // Broadcast to Stacks network
-        const network = new stacksNetwork.StacksMainnet();
+        const network = new StacksMainnet();
         const txResponse = await broadcastTransaction(tx, network);
 
         console.log(`[Operator] ✅ Winnings recorded! Tx: ${txResponse.txid}`);
@@ -664,7 +664,7 @@ async function listenForTransactions() {
     await checkUSDCBalance();
     
     // Connect using the socket.io client
-    const socket = new StacksApiSocketClient({ url: CONFIG.STACKS_API_URL });
+    const socket = new StacksApiSocketClient({ url: CONFIG.STACKS_API_URL as string });
     
     console.log('[Operator] ✅ Connected to Stacks API WebSocket\n');
     console.log('[Operator] Listening for bridge requests...\n');

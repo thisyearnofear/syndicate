@@ -3,7 +3,7 @@
 import { useCallback, useState, useEffect } from 'react';
 import { bridgeManager } from '@/services/bridges';
 import { openContractCall } from '@stacks/connect';
-import { STACKS_MAINNET } from '@stacks/network';
+import { StacksMainnet } from '@stacks/network';
 import { stringAsciiCV, uintCV } from '@stacks/transactions';
 import type { ChainIdentifier } from '@/services/bridges/types';
 import type { SourceChain } from '@/config/chains';
@@ -15,7 +15,7 @@ import { TrackerStatus } from '@/components/bridge/CrossChainTracker';
 // 2. The contract address must be in the correct STX format (starting with 'ST')
 // 3. The wallet must be able to verify the contract (may require ABI in some cases)
 // 4. If testing locally, use Stacks testnet and update the network constant
-const STACKS_NETWORK = STACKS_MAINNET;
+const STACKS_NETWORK = new StacksMainnet();
 // IMPORTANT: Update this with your deployed contract address from .env
 const LOTTERY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_STACKS_LOTTERY_CONTRACT || 'SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery';
 const LOTTERY_CONTRACT_NAME = 'stacks-lottery';
@@ -201,7 +201,6 @@ async function bridgeFromStacks(params: {
           stringAsciiCV(params.baseAddress),
         ],
         network: STACKS_NETWORK,
-        appName: 'Syndicate',
         // Add error handler for contract validation issues
         onError: (error) => {
           console.error('Stacks contract call failed:', error);
@@ -240,7 +239,8 @@ async function bridgeFromStacks(params: {
     });
   } catch (validationError) {
     console.error('Stacks contract validation error:', validationError);
-    params.onStatus('error', { error: validationError.message });
-    return { success: false, error: validationError.message };
+    const errorMessage = validationError instanceof Error ? validationError.message : 'Stacks bridge validation failed';
+    params.onStatus('error', { error: errorMessage });
+    return { success: false, error: errorMessage };
   }
 }

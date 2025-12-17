@@ -22,123 +22,6 @@ import { CHAINS, CONTRACTS } from '@/config';
 // SOLANA BRIDGE EXECUTION (ENHANCEMENT: Base-Solana Bridge + deBridge fallback)
 // ============================================================================
 
-/**
- * Execute Solana → Base bridge for ticket purchase
- * Uses Base-Solana Bridge (official) with deBridge fallback (faster)
- * 
- * Flow:
- * 1. Get Phantom and Base addresses
- * 2. Calculate bridge amount
- * 3. Bridge USDC via UnifiedBridgeManager (auto-selects Base-Solana Bridge → deBridge)
- * 4. If deBridge used: Show deposit address to user, wait for deposit
- * 5. Poll for arrival on Base
- * 6. Execute ticket purchase when USDC arrives
- */
-async function executeSolanaBridgePurchase(
-  ticketCount: number,
-  solanaBalance: string | null,
-  onDepositAddressReady?: (address: string, protocol: string) => void
-): Promise<TicketPurchaseResult> {
-  if (!solanaBalance || parseFloat(solanaBalance) <= 0) {
-    throw new Error('Insufficient Solana USDC balance. Please ensure you have USDC on Solana.');
-  }
-
-  try {
-    // Get wallet addresses
-    const phantomAddress = address; // From useWalletConnection hook (Solana address)
-    if (!phantomAddress) {
-      throw new Error('Phantom wallet address not connected');
-    }
-
-    // For Base destination: We need the derived EVM address from Phantom
-    // For MVP: User provides their Base address during flow
-    // TODO: Auto-derive Base address if using Phantom Bridge Flow
-    const baseAddress = phantomAddress; // Placeholder - will be user-provided
-
-    // Calculate amount needed for tickets
-    const ticketPrice = parseFloat(state.ticketPrice);
-    const bridgeAmount = (ticketCount * ticketPrice).toString();
-
-    // Import bridge manager (lazy load)
-    const { bridgeManager } = await import('@/services/bridges');
-
-    // Track which protocol is being used for callback
-    let bridgeProtocol = 'unknown';
-
-    // Execute bridge with UnifiedBridgeManager
-    // Auto-selects between Base-Solana Bridge (primary) and deBridge (fallback)
-    const bridgeResult = await bridgeManager.bridge({
-      sourceChain: 'solana',
-      destinationChain: 'base',
-      sourceAddress: phantomAddress,
-      destinationAddress: baseAddress,
-      amount: bridgeAmount,
-      protocol: 'auto', // Auto-select best protocol
-      allowFallback: true, // Try deBridge if Base-Solana Bridge fails
-      onStatus: (status, data) => {
-        console.log(`[Solana Bridge] Status: ${status}`, data);
-        
-        // Extract protocol name from result if available
-        if (data?.protocol) {
-          bridgeProtocol = data.protocol as string;
-        }
-
-        // Wire status callbacks to UI state
-        setState(prev => {
-          const newStages = [...prev.bridgeStages];
-          // Only add unique stages
-          if (!newStages.includes(status)) {
-            newStages.push(status);
-          }
-
-          return {
-            ...prev,
-            bridgeStatus: status,
-            bridgeStages: newStages,
-            // Store deposit address if provided
-            bridgeDepositAddress: (data?.depositAddress as string | undefined) ?? prev.bridgeDepositAddress,
-          };
-        });
-
-        // Notify caller if deposit address ready (for deBridge flow)
-        if (status === 'approved' && data?.depositAddress && onDepositAddressReady) {
-          onDepositAddressReady(data.depositAddress as string, bridgeProtocol);
-        }
-      },
-    });
-
-    if (!bridgeResult.success) {
-      throw new Error(
-        bridgeResult.error || `Bridge failed: ${bridgeResult.errorCode}`
-      );
-    }
-
-    // Bridge succeeded - USDC arrived on Base
-    // Initialize Web3 for Base purchase if not already done (required for Solana bridge flow)
-    if (!web3Service.isReady()) {
-      const initialized = await web3Service.initialize();
-      if (!initialized) {
-        throw new Error('Failed to initialize Web3 service for Base ticket purchase');
-      }
-    }
-    
-    // Now purchase tickets on Base
-    const purchaseResult = await web3Service.purchaseTickets(ticketCount);
-
-    if (!purchaseResult.success) {
-      throw new Error(purchaseResult.error || 'Ticket purchase failed');
-    }
-
-    return {
-      success: true,
-      txHash: purchaseResult.txHash,
-      ticketCount,
-    };
-  } catch (error) {
-    throw error;
-  }
-}
-
 export interface TicketPurchaseState {
   // Loading states
   isInitializing: boolean;
@@ -241,7 +124,7 @@ export interface TicketPurchaseActions {
 }
 
 export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions {
-  const { isConnected, walletType, address } = useWalletConnection();
+  const { isConnected, walletType, address, evmAddress } = useWalletConnection();
 
   // Debouncing refs for balance refresh
   const lastBalanceRefreshRef = useRef<number>(0);
@@ -411,7 +294,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
 
     setState(prev => ({ ...prev, isCheckingBalance: true }));
     try {
-      if (walletType === WalletTypes.PHANTOM) {
+      if (walletType === WalletTypes.SOLANA) {
         setState(prev => ({
           ...prev,
           userBalance: { usdc: '0', eth: '0', hasEnoughUsdc: false, hasEnoughEth: false },
@@ -675,7 +558,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
    * NEW: Check if bridge guidance is needed for Solana users
    */
   const needsBridgeGuidance = useCallback((totalCost: string): boolean => {
-    if (walletType !== WalletTypes.PHANTOM) return false;
+    if (walletType !== WalletTypes.SOLANA) return false;
     if (!state.userBalance || !state.solanaBalance) return false;
 
     // Check if user has insufficient Base USDC but sufficient Solana USDC
@@ -685,6 +568,110 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
 
     return baseUSDC < requiredAmount && solanaUSDC >= requiredAmount;
   }, [walletType, state.userBalance, state.solanaBalance]);
+
+  const executeSolanaBridgePurchase = useCallback(async (
+    ticketCount: number,
+    onDepositAddressReady?: (address: string, protocol: string) => void
+  ): Promise<TicketPurchaseResult> => {
+    const solanaBalance = state.solanaBalance;
+    if (!solanaBalance || parseFloat(solanaBalance) <= 0) {
+      throw new Error('Insufficient Solana USDC balance. Please ensure you have USDC on Solana.');
+    }
+
+    if (!address) {
+      throw new Error('Solana wallet address not connected');
+    }
+
+    if (!evmAddress) {
+      throw new Error('Connect an EVM wallet (MetaMask, Coinbase, etc.) to complete the purchase on Base.');
+    }
+
+    if (typeof window === 'undefined' || !window.ethereum) {
+      throw new Error('Base purchases require an EVM wallet provider (window.ethereum). Please connect one first.');
+    }
+
+    const ticketPrice = parseFloat(state.ticketPrice || '1');
+    if (!Number.isFinite(ticketPrice) || ticketPrice <= 0) {
+      throw new Error('Ticket price unavailable. Please refresh and try again.');
+    }
+
+    const bridgeAmount = (ticketCount * ticketPrice).toString();
+
+    setState(prev => ({
+      ...prev,
+      bridgeStatus: 'initializing',
+      bridgeStages: ['initializing'],
+      bridgeDepositAddress: null,
+    }));
+
+    const { bridgeManager } = await import('@/services/bridges');
+    let bridgeProtocol = 'unknown';
+
+    const bridgeResult = await bridgeManager.bridge({
+      sourceChain: 'solana',
+      destinationChain: 'base',
+      sourceAddress: address,
+      destinationAddress: evmAddress,
+      amount: bridgeAmount,
+      protocol: 'auto',
+      allowFallback: true,
+      onStatus: (status, data) => {
+        setState(prev => {
+          const newStages = prev.bridgeStages.includes(status)
+            ? prev.bridgeStages
+            : [...prev.bridgeStages, status];
+          return {
+            ...prev,
+            bridgeStatus: status,
+            bridgeStages: newStages,
+            bridgeDepositAddress: (data?.depositAddress as string | undefined) ?? prev.bridgeDepositAddress,
+          };
+        });
+
+        if (data?.protocol) {
+          bridgeProtocol = data.protocol as string;
+        }
+
+        if (status === 'approved' && data?.depositAddress && onDepositAddressReady) {
+          onDepositAddressReady(data.depositAddress as string, bridgeProtocol);
+        }
+      },
+    });
+
+    if (!bridgeResult.success) {
+      setState(prev => ({
+        ...prev,
+        bridgeStatus: 'failed',
+        bridgeStages: prev.bridgeStages.includes('failed') ? prev.bridgeStages : [...prev.bridgeStages, 'failed'],
+      }));
+      throw new Error(bridgeResult.error || `Bridge failed: ${bridgeResult.errorCode}`);
+    }
+
+    if (!web3Service.isReady()) {
+      const initialized = await web3Service.initialize();
+      if (!initialized) {
+        throw new Error('Failed to initialize Base contracts. Please ensure your EVM wallet is connected.');
+      }
+    }
+
+    const purchaseResult = await web3Service.purchaseTickets(ticketCount);
+
+    if (!purchaseResult.success) {
+      throw new Error(purchaseResult.error || 'Ticket purchase failed');
+    }
+
+    setState(prev => ({
+      ...prev,
+      bridgeStatus: 'complete',
+      bridgeStages: prev.bridgeStages.includes('complete') ? prev.bridgeStages : [...prev.bridgeStages, 'complete'],
+    }));
+
+    return {
+      success: true,
+      txHash: purchaseResult.txHash,
+      ticketCount,
+    };
+  }, [address, evmAddress, state.solanaBalance, state.ticketPrice, setState]);
 
   /**
    * Purchase tickets
@@ -844,17 +831,13 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
         } finally {
           setState(prev => ({ ...prev, isApproving: false }));
         }
-      } else if (walletType === WalletTypes.PHANTOM) {
+      } else if (walletType === WalletTypes.SOLANA) {
         // ENHANCEMENT: Execute Solana bridge flow (Base-Solana Bridge + deBridge fallback)
         try {
           result = await executeSolanaBridgePurchase(
             ticketCount,
-            state.solanaBalance,
-            // Callback when deposit address is ready (for deBridge)
             (depositAddress: string, protocol: string) => {
               console.log(`[Bridge] Deposit address ready for ${protocol}:`, depositAddress);
-              // UI can use bridgeDepositAddress from state to show to user
-              // This is already wired via setState in executeSolanaBridgePurchase
             }
           );
         } catch (error) {
@@ -1039,7 +1022,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
   useEffect(() => {
     if (isConnected && walletType && !state.isInitializing && !state.isServiceReady) {
       // For EVM, we also check if service is ready
-      const isEvm = walletType !== WalletTypes.NEAR && walletType !== WalletTypes.PHANTOM;
+      const isEvm = walletType !== WalletTypes.NEAR && walletType !== WalletTypes.SOLANA;
       if (isEvm && web3Service.isReady()) {
         // Already ready (e.g. from previous session)
         return;

@@ -87,13 +87,34 @@ class WalletLoader {
 
   /**
    * Load Solana wallet libraries only when Phantom is selected
-   * STUB: Returns stubs while Solana deps are disabled for hackathon
    */
-  private async loadSolanaWallet(): Promise<{ walletAdapter: unknown; web3: unknown }> {
-    // STUB: Solana deps disabled for hackathon
-    console.warn('[WalletLoader] Solana libraries disabled - using stubs');
-    const solanaStubs = await import('@/stubs/solana');
-    return { walletAdapter: null, web3: solanaStubs };
+  private async loadSolanaWallet(): Promise<{
+    web3: typeof import('@solana/web3.js');
+    walletAdapterBase: typeof import('@solana/wallet-adapter-base');
+    walletAdapterReact: typeof import('@solana/wallet-adapter-react');
+    walletAdapterWallets: typeof import('@solana/wallet-adapter-wallets');
+    walletAdapterUi: typeof import('@solana/wallet-adapter-react-ui');
+  }> {
+    try {
+      const [web3, walletAdapterBase, walletAdapterReact, walletAdapterWallets, walletAdapterUi] = await Promise.all([
+        import('@solana/web3.js'),
+        import('@solana/wallet-adapter-base'),
+        import('@solana/wallet-adapter-react'),
+        import('@solana/wallet-adapter-wallets'),
+        import('@solana/wallet-adapter-react-ui'),
+      ]);
+
+      return {
+        web3,
+        walletAdapterBase,
+        walletAdapterReact,
+        walletAdapterWallets,
+        walletAdapterUi,
+      };
+    } catch (error) {
+      console.error('[WalletLoader] Failed to load Solana libraries', error);
+      throw error;
+    }
   }
 
   /**
