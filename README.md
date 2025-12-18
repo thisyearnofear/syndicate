@@ -97,6 +97,8 @@ Visit `http://localhost:3000` to try the platform.
 
 ### Progress Update (Dec 2025)
 
+**Current Focus**: Seamless bridge flows across all supported chains
+
 - **Stacks Bridge Deployed**: Complete sBTC → Base bridge with operator service
   - Contract: `SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery`
   - Production-ready operator service with retry logic & monitoring
@@ -109,11 +111,20 @@ Visit `http://localhost:3000` to try the platform.
   - 1Click SDK bridges USDC from NEAR to Base
   - NEAR Chain Signatures executes Megapot purchase (MPC signing)
   - No wallet switching required - seamless UX
-- CCTP Solana→Base aligned with V2 programs and consolidated attestation fetch
-- Manual Base mint available from UI when automatic redemption isn't possible
-- Wormhole fallback updated to SDK v4 with EVM signer adapters and VAA redemption
-- Protocol selection uses `estimateAllRoutes` with lazy module loading
-- Feature status banners for transparent development visibility
+
+- **Solana Bridge**: In progress
+  - CCTP protocol integrated for Solana → Base
+  - Balance checking improved with better error diagnostics
+  - See [Solana Bridge Debug Guide](./docs/SOLANA_BRIDGE_DEBUG.md)
+  
+- **Enhanced for cross-chain parity**:
+  - Unified transaction status tracking across all chains
+  - Improved balance fetch error handling with user-friendly messages
+  - Loading states for async balance checks
+  - Feature status banners for transparent development visibility
+
+**Roadmap** (deferred to Q2 2026):
+- USDCx support on Stacks (Circle xReserve) - optional user choice between sBTC and USDCx
 
 ## 🔧 Configuration
 
