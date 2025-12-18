@@ -304,17 +304,28 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
           setState(prev => ({ ...prev, isCheckingSolanaBalance: true }));
           try {
             const response = await fetch(`/api/solana-balance?wallet=${encodeURIComponent(address)}`);
-            const data = await response.json();
-            const solanaBalance = data.balance || '0';
-            setState(prev => ({
-              ...prev,
-              solanaBalance,
-              isCheckingSolanaBalance: false
-            }));
+            if (!response.ok) {
+              console.warn('Solana balance fetch failed with status:', response.status);
+              setState(prev => ({
+                ...prev,
+                solanaBalance: '0',
+                isCheckingSolanaBalance: false
+              }));
+            } else {
+              const data = await response.json();
+              const solanaBalance = data.balance || '0';
+              console.debug('[useTicketPurchase] Solana balance fetched:', { solanaBalance, address });
+              setState(prev => ({
+                ...prev,
+                solanaBalance,
+                isCheckingSolanaBalance: false
+              }));
+            }
           } catch (e) {
             console.warn('Failed to fetch Solana balance:', e);
             setState(prev => ({
               ...prev,
+              solanaBalance: '0',
               isCheckingSolanaBalance: false
             }));
           }
@@ -575,7 +586,10 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
   ): Promise<TicketPurchaseResult> => {
     const solanaBalance = state.solanaBalance;
     if (!solanaBalance || parseFloat(solanaBalance) <= 0) {
-      throw new Error('Insufficient Solana USDC balance. Please ensure you have USDC on Solana.');
+      const balanceMsg = !solanaBalance 
+        ? 'Could not fetch Solana USDC balance. Check your wallet or try refreshing.'
+        : 'Insufficient Solana USDC balance. Please ensure you have USDC on Solana.';
+      throw new Error(balanceMsg);
     }
 
     if (!address) {

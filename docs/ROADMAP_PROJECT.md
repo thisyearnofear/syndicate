@@ -22,9 +22,9 @@
 
 ## Strategic Roadmap
 
-### Phase 0: Stabilization (Weeks 1-3) 🔧
-**Goal**: Get existing EVM + Solana flows reliably working  
-**Success Criteria**: Users can purchase tickets from Ethereum → Base without issues
+### Phase 0: Stabilization (Dec 2025) 🔧
+**Goal**: Get existing bridge flows (NEAR, Solana, Stacks) working seamlessly  
+**Success Criteria**: Users can purchase tickets from all supported chains without UX friction
 
 #### Week 1: Audit & Document Current State
 - [ ] Document actual bridge failures (CCTP, CCIP, Wormhole)
@@ -301,11 +301,28 @@ DEFAULT_PRIVACY_LEVEL=high
 
 ---
 
+## Future Enhancements (Roadmap for Later)
+
+### USDCx Support on Stacks (Q2 2025)
+**Context**: Circle deployed USDCx (USDC-backed stablecoin) on Stacks via xReserve. Users can now choose between:
+- **sBTC** (Bitcoin-backed, current)
+- **USDCx** (Dollar-backed, new option)
+
+**Implementation Plan**:
+1. Update Stacks contract to accept USDCx in addition to sBTC
+2. Modify bridge operator to handle USDCx → USDC conversion (simpler than sBTC)
+3. Add wallet UI selector: "Pay with sBTC" vs "Pay with USDCx"
+4. Test with Stacks DeFi partners (Bitflow, Granite)
+
+**Why Later?**: Existing sBTC flow is working well. USDCx is a user convenience feature, not blocking.
+
+---
+
 **Timeline Overview**:
-- Week 1-3: Stabilization
-- Week 4-10: Bitcoin/ICP Foundation  
-- Week 11-15: ZecLottery Development
-- Month 4-6: Advanced Features
+- Dec 2025: Stabilization (NEAR, Solana, Stacks bridge flows)
+- Q1 2026: Bitcoin/ICP Foundation  
+- Q2 2026: USDCx on Stacks + Advanced Features
+- Q3+ 2026: Zero-Knowledge Privacy + Additional Chains
 
 **Total Effort**: ~24 weeks (6 months)  
-**Expected Outcome**: Production-ready platform with Bitcoin + Zcash support
+**Expected Outcome**: Production-ready platform with seamless cross-chain lottery access

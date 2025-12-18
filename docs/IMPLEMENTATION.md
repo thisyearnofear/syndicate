@@ -284,10 +284,54 @@ jest.setup.js           # Test setup
 - Logical file groupings
 - Consistent naming conventions
 
+## UI/UX Enhancements (December 18, 2025)
+
+### Unified Balance Display Component
+**File**: `src/components/modal/BalanceDisplay.tsx`
+
+Consolidated balance checking into a single, reusable component shown across all wallet types:
+- Chain-specific icon + name (🟣 Solana, 🌌 NEAR, ₿ Stacks, ⛓️ EVM)
+- Real-time balance with loading states
+- Shows: required amount, current balance, deficit (if insufficient)
+- Action buttons: Refresh or Bridge from another chain
+- Color-coded status indicators
+
+**Location**: Displays at top of ticket selection form after user connects wallet
+
+**Bug Fixes**:
+- Fixed NEAR balance display (was incorrectly using `solanaBalance` variable)
+- Better RPC error handling with HTTP status checking
+- Improved error messages distinguishing between "couldn't fetch" vs "insufficient"
+
+**Applied Principles**:
+- ENHANCEMENT FIRST: Enhanced SelectStep instead of creating overlays
+- DRY: One component replaces fragmented balance cards
+- CLEAN: Separated balance display from purchase logic
+- MODULAR: Independent and reusable component
+
+## Solana Bridge Debugging
+
+**Common Issues**:
+1. **"Insufficient balance" error with valid USDC**:
+   - Check browser console for: `[useTicketPurchase] Solana balance fetched: { solanaBalance: '...'`
+   - If not present: RPC fetch failed (check RPC status or create USDC token account)
+   - User may need to create Associated Token Account (ATA) for USDC on their wallet
+
+2. **Balance shows "0" but user has USDC**:
+   - Verify ATA exists: Check wallet on Solscan.io under Token Accounts
+   - Solution: Open Phantom/Solflare and create USDC token account (one-time gas cost)
+
+3. **Timeout on balance fetch**:
+   - RPC endpoint down or rate-limited
+   - Code tries multiple RPC endpoints with fallback logic
+   - Check .env.local has valid Alchemy key or public RPC configured
+
+**Testing**: Open DevTools Console → Buy page → Select Solana wallet → Look for balance fetch debug messages
+
 ## Future Roadmap
 
 ### Immediate (Week 1)
-- [ ] Complete comprehensive manual testing
+- [ ] Complete comprehensive manual testing (NEAR, Solana, Stacks, EVM flows)
 - [ ] Set up error monitoring (Sentry)
 - [ ] Deploy to staging environment
 
@@ -296,10 +340,10 @@ jest.setup.js           # Test setup
 - [ ] Expand automated test coverage
 - [ ] Performance optimization
 
-### Long Term (Quarter 1)
-- [ ] Additional chain support
-- [ ] Advanced yield strategies
-- [ ] Enhanced syndicate features
+### Long Term
+- Q1 2026: Bitcoin/ICP Foundation
+- Q2 2026: USDCx support on Stacks (user choice: sBTC vs USDCx)
+- Q3+ 2026: Zero-Knowledge privacy features
 
 ---
 
