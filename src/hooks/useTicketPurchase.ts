@@ -241,10 +241,10 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
         }
       }
 
-      const errorMessage = walletType === WalletTypes.EVM 
+      const errorMessage = walletType === WalletTypes.EVM
         ? 'Failed to initialize Web3 service'
         : 'Failed to initialize purchase service';
-      
+
       setState(prev => ({
         ...prev,
         isInitializing: false,
@@ -353,6 +353,63 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
           }
         } catch (e) {
           console.error('Failed to fetch NEAR balance:', e);
+          setState(prev => ({ ...prev, isCheckingBalance: false }));
+        }
+      } else if (walletType === WalletTypes.STACKS) {
+        // Stacks Balance - Fetch from API
+        if (address) {
+          setState(prev => ({ ...prev, isCheckingBalance: true }));
+          try {
+            // Fetch balances using the extended API endpoint
+            const response = await fetch(`/api/stacks-lottery?endpoint=/extended/v1/address/${address}/balances`);
+
+            if (response.ok) {
+              const data = await response.json();
+
+              // Parse fungible tokens to find USDC
+              // Stacks API returns: { fungible_tokens: { "contract::name": { balance: "..." } }, stx: { ... } }
+              const tokens = data.fungible_tokens || {};
+              let usdcBalance = '0';
+              let stxBalance = '0';
+
+              // 1. Get STX balance
+              if (data.stx && data.stx.balance) {
+                // STX has 6 decimals
+                stxBalance = (parseFloat(data.stx.balance) / 1_000_000).toString();
+              }
+
+              // 2. Find USDC token (case-insensitive search for 'usdc')
+              const usdcKey = Object.keys(tokens).find(key =>
+                key.toLowerCase().includes('usdc')
+              );
+
+              if (usdcKey) {
+                // USDC typically has 6 decimals on Stacks
+                const rawBalance = tokens[usdcKey].balance;
+                usdcBalance = (parseFloat(rawBalance) / 1_000_000).toString();
+                console.debug('[useTicketPurchase] Found Stacks USDC:', { key: usdcKey, balance: usdcBalance });
+              }
+
+              setState(prev => ({
+                ...prev,
+                userBalance: {
+                  usdc: usdcBalance,
+                  eth: stxBalance, // Store STX balance in 'eth' field for generic usage
+                  hasEnoughUsdc: parseFloat(usdcBalance) >= 1,
+                  hasEnoughEth: parseFloat(stxBalance) > 0 // Has gas (STX)
+                },
+                solanaBalance: usdcBalance, // For consistency
+                isCheckingBalance: false
+              }));
+            } else {
+              console.warn('Failed to fetch Stacks balance:', response.status);
+              setState(prev => ({ ...prev, isCheckingBalance: false }));
+            }
+          } catch (error) {
+            console.warn('Error fetching Stacks balance:', error);
+            setState(prev => ({ ...prev, isCheckingBalance: false }));
+          }
+        } else {
           setState(prev => ({ ...prev, isCheckingBalance: false }));
         }
       } else {
@@ -586,7 +643,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
   ): Promise<TicketPurchaseResult> => {
     const solanaBalance = state.solanaBalance;
     if (!solanaBalance || parseFloat(solanaBalance) <= 0) {
-      const balanceMsg = !solanaBalance 
+      const balanceMsg = !solanaBalance
         ? 'Could not fetch Solana USDC balance. Check your wallet or try refreshing.'
         : 'Insufficient Solana USDC balance. Please ensure you have USDC on Solana.';
       throw new Error(balanceMsg);
@@ -758,14 +815,14 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
                     result = { success: false, error: intentRes.error || 'Intent execution failed' };
                   } else {
                     // Intent submitted - now transfer USDC to deposit address
-                    setState(prev => ({ 
-                      ...prev, 
+                    setState(prev => ({
+                      ...prev,
                       nearStages: [...prev.nearStages, 'intent_submitted'],
-                      nearRequestId: String(intentRes.intentHash), 
+                      nearRequestId: String(intentRes.intentHash),
                       nearIntentTxHash: intentRes.txHash || null,
                       nearDepositAddress: String(intentRes.depositAddress),
                     }));
-                    
+
                     // Step 2: Transfer USDC from NEAR to the deposit address
                     setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'waiting_deposit'] }));
                     const transferResult = await nearIntentsService.transferUsdcToDepositAddress({
@@ -776,13 +833,13 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
                     });
 
                     if (!transferResult.success) {
-                      result = { 
-                        success: false, 
-                        error: transferResult.error || 'Failed to transfer USDC to deposit address' 
+                      result = {
+                        success: false,
+                        error: transferResult.error || 'Failed to transfer USDC to deposit address'
                       };
                     } else {
-                      setState(prev => ({ 
-                        ...prev, 
+                      setState(prev => ({
+                        ...prev,
                         nearStages: [...prev.nearStages, 'usdc_transfer_complete'],
                         nearUsdcTransferTxHash: transferResult.txHash || null,
                       }));
@@ -802,7 +859,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
                         maxWaitMs: 300000, // 5 minutes to wait for bridge completion
                         onStatus: (status: string, details?: Record<string, unknown>) => {
                           console.log('Purchase Flow Status:', status, details);
-                          
+
                           // Map service statuses to UI stages
                           if (status === 'waiting_bridge') {
                             setState(prev => ({ ...prev, nearStages: [...prev.nearStages, 'waiting_bridge'] }));
@@ -1122,7 +1179,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       // Step 2: Get updated user info to find out how much was claimed
       await getCurrentTicketInfo();
       const currentInfo = state.userTicketInfo;
-      
+
       if (!currentInfo || parseFloat(currentInfo.winningsClaimable) <= 0) {
         throw new Error('No winnings to withdraw');
       }
@@ -1197,7 +1254,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     try {
       const provider = new (await import('ethers')).BrowserProvider(window.ethereum!);
       const derivedEvmAddress = await nearIntentsService.deriveEvmAddress(nearAccountId);
-      
+
       if (!derivedEvmAddress) {
         throw new Error('Failed to derive EVM address');
       }
@@ -1258,4 +1315,4 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     reset,
     retryAfterFunding,
   };
-  }
+}

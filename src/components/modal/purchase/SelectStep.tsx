@@ -50,7 +50,7 @@ export function SelectStep({
   walletType, solanaBalance, userBalance, isCheckingBalance, onStartBridge, isBridging, showBridgeGuidance, nearQuote,
   onGetNearQuote, isGettingQuote, onConfirmIntent, buyTicketsWithStacks, evmAddress,
 }: SelectStepProps) {
-  
+
   const canBridgeAndBuy = Boolean(isConnected && walletType === WalletTypes.SOLANA && hasInsufficientBalance && parseFloat(solanaBalance || "0") >= parseFloat(totalCost || "0"));
   const isStacksWallet = STACKS_WALLETS.includes(walletType as any);
 
@@ -98,17 +98,19 @@ export function SelectStep({
       </div>
 
       {/* UNIFIED BALANCE DISPLAY */}
-      {isConnected && !isStacksWallet && (
-        <BalanceDisplay 
+      {isConnected && (
+        <BalanceDisplay
           walletType={walletType}
           balance={
-            walletType === WalletTypes.SOLANA 
-              ? solanaBalance 
-              : walletType === WalletTypes.NEAR 
-              ? userBalance?.usdc 
-              : null
+            walletType === WalletTypes.SOLANA
+              ? solanaBalance
+              : walletType === WalletTypes.NEAR
+                ? userBalance?.usdc
+                : isStacksWallet
+                  ? userBalance?.usdc // Stacks USDC fetched in hook
+                  : null
           }
-          isCheckingBalance={isCheckingBalance && (walletType === WalletTypes.SOLANA || walletType === WalletTypes.NEAR)}
+          isCheckingBalance={isCheckingBalance && (walletType === WalletTypes.SOLANA || walletType === WalletTypes.NEAR || isStacksWallet)}
           requiredAmount={totalCost}
           onRefresh={refreshBalance}
           onBridge={canBridgeAndBuy ? onStartBridge : undefined}
@@ -136,36 +138,41 @@ export function SelectStep({
         {selectedSyndicate && <div className="mt-4 pt-4 border-t border-white/10"><div className="flex items-center justify-between text-xs"><span className="text-gray-400">Pool Impact:</span><span className="text-purple-400 font-semibold">Joining {selectedSyndicate.membersCount.toLocaleString()}{" "}members</span></div><div className="flex items-center justify-between text-xs mt-1"><span className="text-gray-400">Cause Support:</span><span className="text-green-400 font-semibold">20% of winnings → {selectedSyndicate.cause.name}</span></div></div>}
         {walletType === WalletTypes.NEAR && <div className="mt-4 pt-4 border-t border-white/10"><p className="text-white/80 text-sm mb-2">NEAR Intents Quote</p>{!nearQuote ? <div className="flex items-center justify-between"><p className="text-gray-400 text-xs">Get a solver quote for executing purchase via NEAR Intents</p><Button size="sm" variant="outline" onClick={onGetNearQuote} disabled={isGettingQuote}>{isGettingQuote ? <><span className="animate-spin mr-2">⏳</span>Quoting...</> : "Get Quote"}</Button></div> : <div className="space-y-2 text-xs text-white/70"><div className="flex items-center justify-between"><span>Solver</span><span className="font-mono">{nearQuote.solverName || "default"}</span></div><div className="flex items-center justify-between"><span>Estimated Fee</span><span className="font-mono">{nearQuote.estimatedFee} ({nearQuote.estimatedFeePercent}%)</span></div><div className="flex items-center justify-between"><span>Destination Amount</span><span className="font-mono">{nearQuote.destinationAmount} USDC</span></div>{nearQuote.timeLimit && <div className="flex items-center justify-between"><span>Time Limit</span><span className="font-mono">{Math.ceil(nearQuote.timeLimit / 60)} min</span></div>}<div className="pt-2"><Button size="sm" className="w-full bg-gradient-to-r from-blue-600 to-purple-600" onClick={onConfirmIntent}>Confirm Intent & Execute</Button></div></div>}</div>}
       </div>
-      
+
       {isStacksWallet && !evmAddress && (
         <div className="glass-premium border border-blue-500/30 rounded-xl p-4 text-center space-y-3">
-            <div className="flex items-center gap-2 text-blue-400 justify-center"><AlertCircle className="w-5 h-5" /><span className="font-semibold">🔗 Connect EVM Wallet for Ticket Receipt</span></div>
-            <p className="text-blue-300 text-sm">Your Stacks wallet will bridge STX → sBTC → USDC on Base. Connect an EVM wallet (MetaMask, WalletConnect) below to receive your tickets.</p>
-            <div className="mt-2 flex justify-center">
-              <ConnectButton showBalance={false} chainStatus="none" />
-            </div>
+          <div className="flex items-center gap-2 text-blue-400 justify-center"><AlertCircle className="w-5 h-5" /><span className="font-semibold">🔗 Connect EVM Wallet for Ticket Receipt</span></div>
+          <p className="text-blue-300 text-sm">
+            {parseFloat(userBalance?.usdc || '0') > 0
+              ? "Your Stacks USDC will be bridged to Base via CCTP. Connect an EVM wallet below to receive your tickets."
+              : "Your Stacks STX will be bridged to Base. Connect an EVM wallet below to receive your tickets."
+            }
+          </p>
+          <div className="mt-2 flex justify-center">
+            <ConnectButton showBalance={false} chainStatus="none" />
+          </div>
         </div>
       )}
 
       {isConnected && !isStacksWallet && (canBridgeAndBuy ? <Button variant="default" size="lg" className="w-full bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 hover:from-blue-700 hover:via-purple-700 hover:to-indigo-700 text-white shadow-2xl hover:shadow-blue-500/30 border border-blue-400/30 disabled:opacity-50 disabled:cursor-not-allowed" onClick={onStartBridge}>{`🔁 Bridge & Buy - $${totalCost}`}</Button> : <Button variant="default" size="lg" className="w-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white shadow-2xl hover:shadow-yellow-500/30 border border-yellow-400/30 disabled:opacity-50 disabled:cursor-not-allowed" onClick={handlePurchase} disabled={isPurchasing || isInitializing || !!hasInsufficientBalance}>{isInitializing ? <>⏳ Initializing...</> : isPurchasing ? <>⚡ Processing...</> : hasInsufficientBalance ? "Insufficient Balance" : selectedSyndicate ? `🌊 Join ${selectedSyndicate.name} - $${totalCost}` : `⚡ Purchase ${ticketCount} Ticket${ticketCount > 1 ? "s" : ""} - $${totalCost}`}</Button>)}
-      
+
       {isConnected && isStacksWallet && (
         <Button
-            variant="default"
-            size="lg"
-            className="w-full bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-2xl hover:shadow-orange-500/30 border border-orange-400/30 disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={() => {
-                if (buyTicketsWithStacks && evmAddress) {
-                    buyTicketsWithStacks({
-                        sourceChain: 'stacks',
-                        ticketCount,
-                        recipientBase: evmAddress,
-                    });
-                }
-            }}
-            disabled={!evmAddress || isPurchasing}
+          variant="default"
+          size="lg"
+          className="w-full bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-2xl hover:shadow-orange-500/30 border border-orange-400/30 disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={() => {
+            if (buyTicketsWithStacks && evmAddress) {
+              buyTicketsWithStacks({
+                sourceChain: 'stacks',
+                ticketCount,
+                recipientBase: evmAddress,
+              });
+            }
+          }}
+          disabled={!evmAddress || isPurchasing}
         >
-            {isPurchasing ? <><span className="animate-spin mr-2">⏳</span> Processing Stacks Purchase...</> : <><span className="mr-2">⚡</span> Purchase with Stacks</>}
+          {isPurchasing ? <><span className="animate-spin mr-2">⏳</span> Processing Stacks Purchase...</> : <><span className="mr-2">⚡</span> Purchase with Stacks</>}
         </Button>
       )}
 

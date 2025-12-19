@@ -70,6 +70,8 @@ export function useTicketHistory(): TicketHistoryState & TicketHistoryActions {
                 apiUrl += '&chain=stacks';
             } else if (walletType === 'solana') {
                 apiUrl += '&chain=solana';
+            } else if (walletType === 'near') {
+                apiUrl += '&chain=near';
             }
 
             const response = await fetch(apiUrl);

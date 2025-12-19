@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
             '/lottery/ticket-purchases',
             '/lottery/daily-giveaway-winners',
             '/address/', // For wallet balance queries
+            '/extended/v1/address/', // For detailed balance queries including tokens
             '/bridge/sbtc-to-base',
         ];
 
