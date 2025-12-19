@@ -211,13 +211,12 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
 
         // Only load user-specific data - jackpot is already available from API via useLottery hook
         try {
+          // Fetch balance for all wallet types - ensures Solana/NEAR balance is loaded
+          await refreshBalance();
+
           // Only load EVM-specific data when using EVM wallet
           if (walletType === WalletTypes.EVM) {
-            await Promise.allSettled([
-              refreshBalance(),
-              // Removed: refreshJackpot() - jackpot data comes from Megapot API, not blockchain
-              loadTicketPrice(),
-            ]);
+            await loadTicketPrice();
 
             // Load user ticket info and odds info for EVM wallets
             try {
@@ -236,6 +235,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
           } else {
             console.log(`Skipping EVM-specific data loading for ${walletType} wallet`);
           }
+          // Note: catch block for data loading is handled by outer try/catch or individual try/matches above
         } catch (dataError) {
           console.warn('Some data failed to load, but initialization succeeded:', dataError);
         }
