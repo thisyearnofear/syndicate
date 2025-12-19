@@ -16,10 +16,10 @@ export interface BridgeGuidanceCardProps {
     sourceBalance: string;
     targetBalance: string;
     requiredAmount: string;
-    onBridge: (amount: string, protocol?: 'cctp' | 'wormhole') => void;
+    onBridge: (amount: string, protocol?: string) => void;
     onDismiss: () => void;
     skipProtocolSelection?: boolean;
-    preselectedProtocol?: 'cctp' | 'wormhole';
+    preselectedProtocol?: string;
     evmConnected?: boolean;
     evmAddress?: string;
 }
@@ -39,7 +39,10 @@ export function BridgeGuidanceCard({
     const sourceIcon = sourceChain === 'solana' ? '🟣' : sourceChain === 'stacks' ? '₿' : '⟠';
     const sourceLabel = sourceChain === 'solana' ? 'Solana' : sourceChain === 'stacks' ? 'Stacks' : 'Ethereum';
     const [amountInput, setAmountInput] = React.useState<string>(requiredAmount);
-    const [selectedProtocol, setSelectedProtocol] = React.useState<'wormhole' | 'cctp'>(preselectedProtocol);
+
+    // Default protocols based on chain
+    const defaultProtocol = preselectedProtocol || (sourceChain === 'solana' ? 'debridge' : 'cctp');
+    const [selectedProtocol, setSelectedProtocol] = React.useState<string>(defaultProtocol);
 
     return (
         <div className="glass-premium rounded-xl p-6 border border-blue-500/30 animate-fade-in">
@@ -89,22 +92,42 @@ export function BridgeGuidanceCard({
             </div>
 
             {/* Protocol Selection - Only show if not skipping */}
-            {!skipProtocolSelection && (
+            {!skipProtocolSelection && sourceChain === 'solana' && (
                 <div className="mb-6">
                     <p className="text-gray-400 text-sm mb-3">Choose Bridge Protocol:</p>
                     <div className="grid grid-cols-2 gap-3">
                         <button
-                            onClick={() => setSelectedProtocol('wormhole')}
-                            className={`p-4 rounded-lg border-2 transition-all ${selectedProtocol === 'wormhole'
+                            onClick={() => setSelectedProtocol('debridge')}
+                            className={`p-4 rounded-lg border-2 transition-all ${selectedProtocol === 'debridge'
                                 ? 'border-blue-500 bg-blue-500/10'
                                 : 'border-white/10 bg-white/5 hover:border-white/20'
                                 }`}
                         >
-                            <div className="text-white font-bold text-lg mb-1">Wormhole</div>
-                            <div className="text-gray-400 text-sm mb-2">5-10 minutes</div>
-                            <div className="text-green-400 text-xs font-medium">⚡ Recommended</div>
+                            <div className="text-white font-bold text-lg mb-1">deBridge</div>
+                            <div className="text-gray-400 text-sm mb-2">~30 seconds</div>
+                            <div className="text-green-400 text-xs font-medium">⚡ Fastest</div>
                         </button>
 
+                        <button
+                            onClick={() => setSelectedProtocol('base-solana-bridge')}
+                            className={`p-4 rounded-lg border-2 transition-all ${selectedProtocol === 'base-solana-bridge'
+                                ? 'border-blue-500 bg-blue-500/10'
+                                : 'border-white/10 bg-white/5 hover:border-white/20'
+                                }`}
+                        >
+                            <div className="text-white font-bold text-lg mb-1">Base Bridge</div>
+                            <div className="text-gray-400 text-sm mb-2">5-10 minutes</div>
+                            <div className="text-blue-400 text-xs font-medium">🛡️ Official</div>
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Protocol Selection - Ethereum (Existing) */}
+            {!skipProtocolSelection && sourceChain === 'ethereum' && (
+                <div className="mb-6">
+                    <p className="text-gray-400 text-sm mb-3">Choose Bridge Protocol:</p>
+                    <div className="grid grid-cols-2 gap-3">
                         <button
                             onClick={() => setSelectedProtocol('cctp')}
                             className={`p-4 rounded-lg border-2 transition-all ${selectedProtocol === 'cctp'
@@ -116,9 +139,22 @@ export function BridgeGuidanceCard({
                             <div className="text-gray-400 text-sm mb-2">15-20 minutes</div>
                             <div className="text-blue-400 text-xs font-medium">🔵 Native USDC</div>
                         </button>
+
+                        <button
+                            onClick={() => setSelectedProtocol('wormhole')}
+                            className={`p-4 rounded-lg border-2 transition-all ${selectedProtocol === 'wormhole'
+                                ? 'border-blue-500 bg-blue-500/10'
+                                : 'border-white/10 bg-white/5 hover:border-white/20'
+                                }`}
+                        >
+                            <div className="text-white font-bold text-lg mb-1">Wormhole</div>
+                            <div className="text-gray-400 text-sm mb-2">5-10 minutes</div>
+                            <div className="text-gray-400 text-xs font-medium">Alternative</div>
+                        </button>
                     </div>
                 </div>
             )}
+
 
             {/* Actions */}
             <div className="space-y-3">
@@ -159,7 +195,7 @@ export function BridgeGuidanceCard({
                     size="lg"
                 >
                     <span className="text-lg mr-2">🌉</span>
-                    {!evmConnected ? 'Connect EVM Wallet First' : `Start Bridge (${selectedProtocol === 'wormhole' ? '5-10 min' : '15-20 min'})`}
+                    {!evmConnected ? 'Connect EVM Wallet First' : `Start Bridge (${selectedProtocol === 'debridge' ? '~30s' : '5-10 min'})`}
                 </Button>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -187,7 +223,7 @@ export function BridgeGuidanceCard({
             <div className="mt-4 flex items-center justify-center gap-2 text-gray-400 text-sm">
                 <Clock className="w-4 h-4" />
                 <span>
-                    {selectedProtocol === 'wormhole' ? 'Faster option selected' : 'Slower but native USDC'}
+                    {selectedProtocol === 'debridge' ? 'Fastest option selected' : 'Standard bridge selected'}
                 </span>
             </div>
         </div>

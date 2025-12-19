@@ -51,17 +51,17 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   const successToast = useSuccessToast();
   const errorToast = useErrorToast();
   const { jackpotStats, prizeAmount, isLoading: jackpotLoading, error: jackpotError, refresh: refreshLottery } = useLottery();
-  
+
   // Existing purchase hook for EVM, Solana, NEAR
-   const {
-     isInitializing, isPurchasing, isApproving, isCheckingBalance, userBalance, solanaBalance,
-     ticketPrice, lastTxHash, error, purchaseSuccess, purchasedTicketCount, nearStages,
-     nearRecipient, nearRequestId, nearEthBalance, nearEstimatedFeeEth, nearIntentTxHash,
-     nearDestinationTxHash, nearDepositAddress, nearUsdcTransferTxHash, purchaseTickets,
-     refreshBalance, retryAfterFunding, clearError, reset, needsBridgeGuidance,
-     // NEW: Solana bridge state (Phase 3)
-     bridgeStatus, bridgeStages, bridgeDepositAddress,
-   } = useTicketPurchase();
+  const {
+    isInitializing, isPurchasing, isApproving, isCheckingBalance, userBalance, solanaBalance,
+    ticketPrice, lastTxHash, error, purchaseSuccess, purchasedTicketCount, nearStages,
+    nearRecipient, nearRequestId, nearEthBalance, nearEstimatedFeeEth, nearIntentTxHash,
+    nearDestinationTxHash, nearDepositAddress, nearUsdcTransferTxHash, purchaseTickets,
+    refreshBalance, retryAfterFunding, clearError, reset, needsBridgeGuidance,
+    // NEW: Solana bridge state (Phase 3)
+    bridgeStatus, bridgeStages, bridgeDepositAddress,
+  } = useTicketPurchase();
 
   // New hook for the Stacks purchase flow
   const {
@@ -82,7 +82,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   const [showShareModal, setShowShareModal] = useState(false);
   const [showBridgeGuidance, setShowBridgeGuidance] = useState(false);
   const [isBridging, setIsBridging] = useState(false);
-  const [selectedBridgeProtocol, setSelectedBridgeProtocol] = useState<"cctp" | "wormhole" | null>(null);
+  const [selectedBridgeProtocol, setSelectedBridgeProtocol] = useState<string | null>(null);
   const { address: evmAddress, isConnected: evmConnected } = useAccount();
   const [bridgeMetadata, setBridgeMetadata] = useState<{ protocol?: string; bridgeId?: string; burnSignature?: string; message?: string; attestation?: string; mintTxHash?: string; } | null>(null);
   const [bridgeAmount, setBridgeAmount] = useState<string | null>(null);
@@ -97,7 +97,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   };
 
   // Bridge handler functions (unchanged)
-  const handleStartBridge = (amt?: string, protocol?: "cctp" | "wormhole") => {
+  const handleStartBridge = (amt?: string, protocol?: string) => {
     if (!evmConnected || !evmAddress) {
       errorToast("EVM Wallet Required", "Connect an EVM wallet to receive USDC on Base");
       return;
@@ -288,24 +288,24 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
       case "select":
         return <SelectStep setStep={setStep as (step: "mode") => void} selectedSyndicate={selectedSyndicate} prizeAmount={prizeAmount} jackpotLoading={jackpotLoading} jackpotError={jackpotError} ticketPrice={ticketPrice} ticketCount={ticketCount} setTicketCount={setTicketCount} quickAmounts={quickAmounts} totalCost={totalCost} oddsInfo={oddsInfo} hasInsufficientBalance={hasInsufficientBalance} refreshBalance={refreshBalance} isConnected={isConnected} handlePurchase={handlePurchase} isPurchasing={isPurchasing} isInitializing={isInitializing} purchaseMode={purchaseMode} walletType={walletType} solanaBalance={solanaBalance} userBalance={userBalance} isCheckingBalance={isCheckingBalance} onStartBridge={handleStartBridge} isBridging={isBridging} showBridgeGuidance={showBridgeGuidance} nearQuote={nearQuote} onGetNearQuote={handleGetNearQuote} isGettingQuote={isGettingQuote} onConfirmIntent={handlePurchase} buyTicketsWithStacks={buyTicketsWithStacks} evmAddress={evmAddress || undefined} />;
       case "processing":
-         return <ProcessingStep 
-           isApproving={isApproving} 
-           // NEAR Intents props
-           nearStages={nearStages} 
-           nearRecipient={nearRecipient} 
-           nearRequestId={nearRequestId} 
-           nearEthBalance={nearEthBalance} 
-           nearEstimatedFeeEth={nearEstimatedFeeEth} 
-           nearIntentTxHash={nearIntentTxHash} 
-           nearDestinationTxHash={nearDestinationTxHash} 
-           nearDepositAddress={nearDepositAddress} 
-           nearUsdcTransferTxHash={nearUsdcTransferTxHash} 
-           onRetryAfterFunding={retryAfterFunding}
-           // NEW: Solana Bridge props (Phase 3)
-           bridgeStages={bridgeStages}
-           bridgeStatus={bridgeStatus}
-           bridgeDepositAddress={bridgeDepositAddress}
-         />;
+        return <ProcessingStep
+          isApproving={isApproving}
+          // NEAR Intents props
+          nearStages={nearStages}
+          nearRecipient={nearRecipient}
+          nearRequestId={nearRequestId}
+          nearEthBalance={nearEthBalance}
+          nearEstimatedFeeEth={nearEstimatedFeeEth}
+          nearIntentTxHash={nearIntentTxHash}
+          nearDestinationTxHash={nearDestinationTxHash}
+          nearDepositAddress={nearDepositAddress}
+          nearUsdcTransferTxHash={nearUsdcTransferTxHash}
+          onRetryAfterFunding={retryAfterFunding}
+          // NEW: Solana Bridge props (Phase 3)
+          bridgeStages={bridgeStages}
+          bridgeStatus={bridgeStatus}
+          bridgeDepositAddress={bridgeDepositAddress}
+        />;
       case "success":
         return <SuccessStep purchaseMode={purchaseMode} purchasedTicketCount={purchasedTicketCount} selectedSyndicate={selectedSyndicate} lastTxHash={lastTxHash} onClose={handleClose} setShowShareModal={setShowShareModal} />;
       default:
@@ -316,19 +316,19 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   if (!isOpen) return null;
   if (isTrackerOpen) {
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-lg">
-            <div className="relative w-full max-w-md mx-auto">
-                <CrossChainTracker
-                    status={trackerState.status}
-                    stacksTxId={trackerState.stacksTxId}
-                    baseTxId={trackerState.baseTxId}
-                    error={trackerState.error}
-                />
-                <Button onClick={closeTracker} variant="ghost" className="absolute -top-12 right-0 text-white hover:text-gray-300 bg-black/50 backdrop-blur-sm rounded-full w-8 h-8 p-0">
-                    ✕
-                </Button>
-            </div>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-lg">
+        <div className="relative w-full max-w-md mx-auto">
+          <CrossChainTracker
+            status={trackerState.status}
+            stacksTxId={trackerState.stacksTxId}
+            baseTxId={trackerState.baseTxId}
+            error={trackerState.error}
+          />
+          <Button onClick={closeTracker} variant="ghost" className="absolute -top-12 right-0 text-white hover:text-gray-300 bg-black/50 backdrop-blur-sm rounded-full w-8 h-8 p-0">
+            ✕
+          </Button>
         </div>
+      </div>
     );
   }
 
@@ -338,7 +338,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
       <div className="relative glass-premium rounded-3xl p-6 w-full max-w-lg border border-white/20 animate-scale-in max-h-[85vh] overflow-y-auto">
         <CompactFlex align="center" justify="between" className="mb-6">
           <div className="flex-1">
-            <h2 className="font-bold text-2xl md:text-4xl lg:text-5xl leading-tight tracking-tight text-white">{step === "success" ? "🎉 Success!" : step === "mode" ? "🎫 Buy Tickets" : step === "yield" ? "💰 Yield Strategy" : selectedSyndicate ? `🌊 ${selectedSyndicate.name}`: "🎫 Buy Tickets"}</h2>
+            <h2 className="font-bold text-2xl md:text-4xl lg:text-5xl leading-tight tracking-tight text-white">{step === "success" ? "🎉 Success!" : step === "mode" ? "🎫 Buy Tickets" : step === "yield" ? "💰 Yield Strategy" : selectedSyndicate ? `🌊 ${selectedSyndicate.name}` : "🎫 Buy Tickets"}</h2>
             {selectedSyndicate && step !== "mode" && step !== "yield" && <p className="text-sm text-gray-400 mt-1">Supporting {selectedSyndicate.cause.name} • {selectedSyndicate.membersCount.toLocaleString()} members</p>}
             {step === "yield" && <p className="text-sm text-gray-400 mt-1">Choose how your capital generates yield to support causes and amplify participation</p>}
           </div>
