@@ -29,7 +29,7 @@ export interface FocusedBridgeFlowProps {
   onStatus?: (status: string, data?: Record<string, unknown>) => void;
   onError: (error: string) => void;
   onCancel: () => void;
-  preselectedProtocol?: "cctp" | "wormhole";
+  preselectedProtocol?: string;
 }
 
 export function FocusedBridgeFlow({
@@ -76,19 +76,45 @@ export function FocusedBridgeFlow({
       !selectedProtocol &&
       sourceChain !== "near"
     ) {
-      const protocol = preselectedProtocol === "wormhole" ? "wormhole" : "cctp";
-      const protocolOption: ProtocolOption = {
-        protocol: protocol,
-        id: `${protocol}-preselected`,
-        name: protocol === "wormhole" ? "Wormhole" : "CCTP",
-        icon: protocol === "wormhole" ? "⚡" : "🔵",
-        estimatedFee: "0.01", // Placeholder
-        etaMinutes: protocol === "wormhole" ? 10 : 20,
-        description:
-          protocol === "wormhole"
-            ? "Fast cross-chain bridge"
-            : "Native USDC bridge",
-      };
+      let protocolOption: ProtocolOption;
+
+      // Handle Solana Protocols
+      if (preselectedProtocol === 'debridge') {
+        protocolOption = {
+          protocol: 'debridge',
+          id: 'debridge-preselected',
+          name: 'deBridge',
+          icon: '⚡',
+          estimatedFee: '0.00',
+          etaMinutes: 1, // ~30s
+          description: 'Fastest cross-chain bridge',
+        };
+      } else if (preselectedProtocol === 'base-solana-bridge') {
+        protocolOption = {
+          protocol: 'base-solana-bridge',
+          id: 'base-solana-preselected',
+          name: 'Base Bridge',
+          icon: '🛡️',
+          estimatedFee: '0.00',
+          etaMinutes: 10,
+          description: 'Official Base-Solana Bridge',
+        };
+      } else {
+        // Fallback for existing EVM protocols
+        const protocol = preselectedProtocol === "wormhole" ? "wormhole" : "cctp";
+        protocolOption = {
+          protocol: protocol,
+          id: `${protocol}-preselected`,
+          name: protocol === "wormhole" ? "Wormhole" : "CCTP",
+          icon: protocol === "wormhole" ? "⚡" : "🔵",
+          estimatedFee: "0.01",
+          etaMinutes: protocol === "wormhole" ? 10 : 20,
+          description:
+            protocol === "wormhole"
+              ? "Fast cross-chain bridge"
+              : "Native USDC bridge",
+        };
+      }
       setSelectedProtocol(protocolOption);
     }
   }, [preselectedProtocol, stage, selectedProtocol, sourceChain]);
@@ -111,14 +137,14 @@ export function FocusedBridgeFlow({
       }
 
       if (sourceChain === "near") {
-         // NEAR Intents bridge path (1Click SDK only)
-         // This bridges USDC from NEAR to Base at the recipient address
-         // For automatic ticket purchase with Chain Signatures, use the main purchase flow
-         setEvents((prev) =>
-           [...prev, { status: "initializing", ts: Date.now() }].slice(-3)
-         );
-         setCurrentStatus("initializing");
-         setProgress(10);
+        // NEAR Intents bridge path (1Click SDK only)
+        // This bridges USDC from NEAR to Base at the recipient address
+        // For automatic ticket purchase with Chain Signatures, use the main purchase flow
+        setEvents((prev) =>
+          [...prev, { status: "initializing", ts: Date.now() }].slice(-3)
+        );
+        setCurrentStatus("initializing");
+        setProgress(10);
 
         const ok = await nearWalletSelectorService.init();
         if (!ok) throw new Error("NEAR wallet not ready");
@@ -208,7 +234,7 @@ export function FocusedBridgeFlow({
                 },
               ].slice(-3)
             );
-          } catch {}
+          } catch { }
         })();
 
         // Poll Base USDC balance until bridged
@@ -229,21 +255,21 @@ export function FocusedBridgeFlow({
         }
 
         setEvents((prev) =>
-           [...prev, { status: "bridge_complete", ts: Date.now() }].slice(-3)
-         );
-         setCurrentStatus("complete");
-         setProgress(100);
-         setStage("complete");
+          [...prev, { status: "bridge_complete", ts: Date.now() }].slice(-3)
+        );
+        setCurrentStatus("complete");
+        setProgress(100);
+        setStage("complete");
 
-         // Provide info about derived address and ticket purchase
-         if (recipient) {
-           setBaseEthHint({ 
-             have: recipient, 
-             need: "💡 USDC is now on Base. To buy tickets automatically, use the main purchase flow which uses Chain Signatures." 
-           });
-         }
+        // Provide info about derived address and ticket purchase
+        if (recipient) {
+          setBaseEthHint({
+            have: recipient,
+            need: "💡 USDC is now on Base. To buy tickets automatically, use the main purchase flow which uses Chain Signatures."
+          });
+        }
 
-         onComplete({ success: true } as BridgeResult);
+        onComplete({ success: true } as BridgeResult);
       } else {
         const result = await bridgeManager.bridge({
           sourceChain,
@@ -284,6 +310,9 @@ export function FocusedBridgeFlow({
               "solana_cctp:confirmed": 70,
               "solana_cctp:message_extracted": 80,
               "solana_cctp:attestation_fetched": 95,
+              "solver_waiting_deposit": 50,
+              "solver_completed": 100,
+              "solver_pending": 60,
             };
 
             const newProgress = progressMap[status];
@@ -303,19 +332,19 @@ export function FocusedBridgeFlow({
         }
       }
     } catch (err) {
-     const error = err as Error;
-     let errorMessage = error.message || "Bridge failed";
-     
-     // Clean up error messages - remove JSON dumps and technical details
-     if (errorMessage.includes('{')) {
-       // Extract just the user-friendly part before JSON
-       const parts = errorMessage.split(/(Code:|Publish params:|Details:)/);
-       errorMessage = parts[0].trim() || "Bridge transaction failed";
-     }
-     
-     setError(errorMessage);
-     setStage("error");
-     onError(errorMessage);
+      const error = err as Error;
+      let errorMessage = error.message || "Bridge failed";
+
+      // Clean up error messages - remove JSON dumps and technical details
+      if (errorMessage.includes('{')) {
+        // Extract just the user-friendly part before JSON
+        const parts = errorMessage.split(/(Code:|Publish params:|Details:)/);
+        errorMessage = parts[0].trim() || "Bridge transaction failed";
+      }
+
+      setError(errorMessage);
+      setStage("error");
+      onError(errorMessage);
     }
   }, [
     selectedProtocol,
@@ -381,6 +410,9 @@ export function FocusedBridgeFlow({
       "solana_cctp:confirmed": "Confirmed on Solana",
       "solana_cctp:message_extracted": "Message Extracted",
       "solana_cctp:attestation_fetched": "Attestation Received",
+      "solver_waiting_deposit": "Waiting for Deposit...",
+      "solver_completed": "Bridge Complete!",
+      "solver_pending": "Processing...",
     };
 
     return messages[status] || "Processing...";
@@ -408,6 +440,9 @@ export function FocusedBridgeFlow({
       "solana_cctp:sent": "Waiting for Solana network confirmation",
       "solana_cctp:confirmed": "Fetching attestation from Circle",
       "solana_cctp:attestation_fetched": "Ready to mint on Base",
+      "solver_waiting_deposit": "Please send USDC to the deposit address shown in your wallet",
+      "solver_completed": "Funds have arrived on Base!",
+      "solver_pending": "Solvers are fulfilling your order...",
     };
 
     return (
@@ -534,6 +569,25 @@ export function FocusedBridgeFlow({
                 {getStatusDescription(currentStatus, error)}
               </p>
 
+              {/* Show Deposit Address if available (Unique to deBridge flow) */}
+              {currentStatus === "solver_waiting_deposit" && events.some(e => e.info?.depositAddress) && (
+                <div className="mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
+                  <p className="text-xs text-blue-300 font-semibold mb-1">Deposit Address:</p>
+                  <div className="flex items-center justify-between text-sm text-white font-mono bg-black/20 p-2 rounded">
+                    <span className="truncate">{events.find(e => e.info?.depositAddress)?.info?.depositAddress as string}</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0"
+                      onClick={() => navigator.clipboard.writeText(events.find(e => e.info?.depositAddress)?.info?.depositAddress as string)}
+                    >
+                      📋
+                    </Button>
+                  </div>
+                  <p className="text-xs text-blue-300/80 mt-2">Send the exact amount to this address on Solana.</p>
+                </div>
+              )}
+
               {/* Transaction Link */}
               {txHash && (
                 <a
@@ -639,23 +693,21 @@ export function FocusedBridgeFlow({
         </div>
 
         {baseEthHint && (
-           <div className={`border rounded-lg p-4 ${
-             baseEthHint.have.startsWith('0x') 
-               ? 'bg-blue-500/10 border-blue-500/30' 
-               : 'bg-yellow-500/10 border-yellow-500/30'
-           }`}>
-             <p className={`text-sm ${
-               baseEthHint.have.startsWith('0x') 
-                 ? 'text-blue-300' 
-                 : 'text-yellow-300'
-             }`}>
-               {baseEthHint.have.startsWith('0x') 
-                 ? baseEthHint.need
-                 : `Low Base ETH detected. Have ${baseEthHint.have} ETH, suggested ${baseEthHint.need} ETH for approvals.`
-               }
-             </p>
-           </div>
-         )}
+          <div className={`border rounded-lg p-4 ${baseEthHint.have.startsWith('0x')
+            ? 'bg-blue-500/10 border-blue-500/30'
+            : 'bg-yellow-500/10 border-yellow-500/30'
+            }`}>
+            <p className={`text-sm ${baseEthHint.have.startsWith('0x')
+              ? 'text-blue-300'
+              : 'text-yellow-300'
+              }`}>
+              {baseEthHint.have.startsWith('0x')
+                ? baseEthHint.need
+                : `Low Base ETH detected. Have ${baseEthHint.have} ETH, suggested ${baseEthHint.need} ETH for approvals.`
+              }
+            </p>
+          </div>
+        )}
 
         <div className="pt-4">
           <Button
