@@ -54,6 +54,17 @@ export async function GET(request: NextRequest) {
                 // DB file might not exist or be empty
                 return NextResponse.json([]);
             }
+        } else if (chain === 'solana') {
+            // Solana flow
+            // Basic validation for Solana address (base58, length ~32-44)
+            const isSolanaAddress = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(walletAddress);
+            if (!isSolanaAddress) {
+                return NextResponse.json({ error: 'Invalid Solana wallet address format' }, { status: 400 });
+            }
+
+            // TODO: Implement Solana cross-chain mapping similar to Stacks
+            // For now, return empty array to prevent 400 errors in UI
+            return NextResponse.json([]);
         } else {
             // Default flow: Assume the provided address is an EVM address
             const isEvmAddress = /^0x[a-fA-F0-9]{40}$/.test(walletAddress);
@@ -74,7 +85,7 @@ export async function GET(request: NextRequest) {
         const combinedData = allPurchases.flat();
 
         // --- The rest of the logic is for data enrichment (timestamps, etc.) ---
-        
+
         const baseRpcUrl = process.env.BASE_RPC_URL || 'https://mainnet.base.org';
         const provider = new ethers.JsonRpcProvider(baseRpcUrl);
         const globalCache = global as { __txTimestampCache?: Map<string, string> };

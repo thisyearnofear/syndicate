@@ -68,6 +68,8 @@ export function useTicketHistory(): TicketHistoryState & TicketHistoryActions {
             let apiUrl = `/api/ticket-purchases?wallet=${address}`;
             if (STACKS_WALLETS.includes(walletType as any)) {
                 apiUrl += '&chain=stacks';
+            } else if (walletType === 'solana') {
+                apiUrl += '&chain=solana';
             }
 
             const response = await fetch(apiUrl);
