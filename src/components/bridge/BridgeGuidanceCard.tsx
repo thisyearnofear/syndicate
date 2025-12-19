@@ -12,7 +12,7 @@ import { Button } from '@/shared/components/ui/Button';
 import { ArrowDown, Clock, ExternalLink } from 'lucide-react';
 
 export interface BridgeGuidanceCardProps {
-    sourceChain: 'solana' | 'ethereum';
+    sourceChain: 'solana' | 'ethereum' | 'stacks';
     sourceBalance: string;
     targetBalance: string;
     requiredAmount: string;
@@ -36,7 +36,8 @@ export function BridgeGuidanceCard({
     evmConnected = false,
     evmAddress
 }: BridgeGuidanceCardProps) {
-    const sourceIcon = sourceChain === 'solana' ? '🟣' : '⟠';
+    const sourceIcon = sourceChain === 'solana' ? '🟣' : sourceChain === 'stacks' ? '₿' : '⟠';
+    const sourceLabel = sourceChain === 'solana' ? 'Solana' : sourceChain === 'stacks' ? 'Stacks' : 'Ethereum';
     const [amountInput, setAmountInput] = React.useState<string>(requiredAmount);
     const [selectedProtocol, setSelectedProtocol] = React.useState<'wormhole' | 'cctp'>(preselectedProtocol);
 
@@ -60,7 +61,7 @@ export function BridgeGuidanceCard({
                     <div className="flex items-center gap-3">
                         <span className="text-3xl">{sourceIcon}</span>
                         <div>
-                            <p className="text-white font-medium">{sourceChain === 'solana' ? 'Solana' : 'Ethereum'}</p>
+                            <p className="text-white font-medium">{sourceLabel}</p>
                             <p className="text-gray-400 text-sm">Available</p>
                         </div>
                     </div>
@@ -135,7 +136,7 @@ export function BridgeGuidanceCard({
                         </div>
                     </div>
                 )}
-                
+
                 <div>
                     <div className="flex items-center justify-between">
                         <span className="text-sm text-gray-400">Amount to bridge (USDC)</span>

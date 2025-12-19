@@ -56,14 +56,23 @@ export async function GET(request: NextRequest) {
             }
         } else if (chain === 'solana') {
             // Solana flow
-            // Basic validation for Solana address (base58, length ~32-44)
             const isSolanaAddress = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(walletAddress);
             if (!isSolanaAddress) {
                 return NextResponse.json({ error: 'Invalid Solana wallet address format' }, { status: 400 });
             }
+            return NextResponse.json([]);
+        } else if (chain === 'near') {
+            // NEAR flow
+            // Basic validation for NEAR address (implicit hex or named .near/.testnet)
+            const isNearAddress = /^(?:[a-z0-9][a-z0-9-_]{1,61}[a-z0-9]\.near|[a-f0-9]{64})$/.test(walletAddress);
+            if (!isNearAddress) {
+                // Don't fail hard on regex as NEAR addresses can be complex, but do basic check
+                // If it fails strict check, just return empty for now to avoid 500s
+                console.warn(`Invalid NEAR address format: ${walletAddress}`);
+                return NextResponse.json([]);
+            }
 
-            // TODO: Implement Solana cross-chain mapping similar to Stacks
-            // For now, return empty array to prevent 400 errors in UI
+            // TODO: Implement NEAR cross-chain mapping
             return NextResponse.json([]);
         } else {
             // Default flow: Assume the provided address is an EVM address
