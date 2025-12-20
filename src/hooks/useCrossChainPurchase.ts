@@ -3,22 +3,22 @@
 import { useCallback, useState, useEffect } from 'react';
 import { bridgeManager } from '@/services/bridges';
 import { openContractCall } from '@stacks/connect';
-import { StacksMainnet } from '@stacks/network';
+import { StacksMainnet, StacksTestnet } from '@stacks/network';
 import { stringAsciiCV, uintCV } from '@stacks/transactions';
 import type { ChainIdentifier } from '@/services/bridges/types';
 import type { SourceChain } from '@/config/chains';
 import { TrackerStatus } from '@/components/bridge/CrossChainTracker';
 
 // --- Constants ---
-// NOTE: For the contract to be recognized as valid by Stacks wallets:
-// 1. The contract must be deployed on the Stacks mainnet
-// 2. The contract address must be in the correct STX format (starting with 'ST')
-// 3. The wallet must be able to verify the contract (may require ABI in some cases)
-// 4. If testing locally, use Stacks testnet and update the network constant
-const STACKS_NETWORK = new StacksMainnet();
 // IMPORTANT: Update this with your deployed contract address from .env
 const LOTTERY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_STACKS_LOTTERY_CONTRACT || 'SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery';
 const LOTTERY_CONTRACT_NAME = 'stacks-lottery';
+
+// Auto-detect network based on contract address prefix
+// SP = Mainnet, ST = Testnet
+const isMainnetAddress = LOTTERY_CONTRACT_ADDRESS.startsWith('SP');
+const STACKS_NETWORK = isMainnetAddress ? new StacksMainnet() : new StacksTestnet();
+
 const POLLING_INTERVAL = 5000; // 5 seconds
 
 export interface CrossChainPurchaseState {

@@ -59,6 +59,7 @@ export function FocusedBridgeFlow({
     need: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorProtocol, setErrorProtocol] = useState<string | null>(null);
   const [events, setEvents] = useState<
     Array<{ status: string; info?: Record<string, unknown>; ts: number }>
   >([]);
@@ -327,6 +328,7 @@ export function FocusedBridgeFlow({
           onComplete(result);
         } else {
           setError(result.error || "Bridge failed");
+          setErrorProtocol(selectedProtocol?.name || "Unknown");
           setStage("error");
           onError(result.error || "Bridge failed");
         }
@@ -343,6 +345,7 @@ export function FocusedBridgeFlow({
       }
 
       setError(errorMessage);
+      setErrorProtocol(selectedProtocol?.name || "Unknown");
       setStage("error");
       onError(errorMessage);
     }
@@ -726,12 +729,32 @@ export function FocusedBridgeFlow({
     const getErrorIcon = () => {
       if (error?.includes('key')) return '🔑';
       if (error?.includes('balance')) return '💰';
-      if (error?.includes('timeout')) return '⏱️';
+      if (error?.includes('timeout') || error?.includes('rate')) return '⏱️';
       if (error?.includes('sign')) return '✍️';
       return '⚠️';
     };
 
+    const getFallbackBridge = () => {
+      if (errorProtocol === 'debridge' || errorProtocol === '⚡ deBridge') {
+        return { name: 'Base-Solana Bridge', icon: '🛡️' };
+      }
+      if (errorProtocol === 'base-solana-bridge' || errorProtocol === '🛡️ Base Bridge') {
+        return { name: 'deBridge', icon: '⚡' };
+      }
+      return null;
+    };
+
     const getSuggestedActions = () => {
+      const fallback = getFallbackBridge();
+      const fallbackAction = fallback ? `Try ${fallback.name} instead` : null;
+
+      if (error?.includes('rate')) {
+        return [
+          'Network is temporarily congested',
+          fallbackAction || 'Try again in a moment',
+          'Check your internet connection',
+        ].filter(Boolean);
+      }
       if (error?.includes('key') || error?.includes('registered')) {
         return [
           'Ensure your wallet has the correct keys configured',
@@ -748,15 +771,17 @@ export function FocusedBridgeFlow({
       if (error?.includes('timeout')) {
         return [
           'The network may be congested',
-          'Try again in a few moments',
-        ];
+          fallbackAction || 'Try again in a few moments',
+        ].filter(Boolean);
       }
       return [
         'Check your wallet connection',
         'Ensure you have sufficient balance',
-        'Try using a different network endpoint',
-      ];
+        fallbackAction || 'Try using a different network endpoint',
+      ].filter(Boolean);
     };
+
+    const fallback = getFallbackBridge();
 
     return (
       <div className="space-y-6 animate-fade-in">
@@ -768,6 +793,9 @@ export function FocusedBridgeFlow({
           </div>
 
           <h3 className="text-white font-bold text-xl mb-2">Bridge Failed</h3>
+          {errorProtocol && (
+            <p className="text-gray-500 text-xs mb-2">({errorProtocol} encountered an error)</p>
+          )}
           <p className="text-gray-400 text-sm leading-relaxed max-w-md mx-auto">{error}</p>
         </div>
 
@@ -783,6 +811,15 @@ export function FocusedBridgeFlow({
           </ul>
         </div>
 
+        {fallback && (
+          <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+            <p className="text-blue-300 text-sm mb-2">💡 <span className="font-semibold">Try Alternative</span></p>
+            <p className="text-blue-200 text-xs leading-relaxed mb-3">
+              {fallback.name} is a faster alternative that might work better for you.
+            </p>
+          </div>
+        )}
+
         <div className="flex gap-3">
           <Button
             onClick={onCancel}
@@ -795,10 +832,12 @@ export function FocusedBridgeFlow({
             onClick={() => {
               setStage("select");
               setError(null);
+              setErrorProtocol(null);
+              setSelectedProtocol(null);
             }}
             className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold"
           >
-            Try Again
+            Try Different Bridge
           </Button>
         </div>
       </div>

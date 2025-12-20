@@ -207,53 +207,85 @@ export class DeBridgeProtocol implements BridgeProtocol {
   }
 
   /**
-   * Get quote from deBridge API
+   * Get quote from deBridge API with retry logic
    */
   private async getQuote(params: BridgeParams): Promise<DeBridgeQuoteResponse> {
-    try {
-      // deBridge chain IDs
-      const SOLANA_CHAIN_ID = 7565164;
-      const BASE_CHAIN_ID = 8453;
-      const USDC_SOLANA = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyB7bF';
-      const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+    const maxRetries = 3;
+    let lastError: Error | null = null;
 
-      const response = await fetch(`${DEBRIDGE_API}/dln/quote`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          srcChainId: SOLANA_CHAIN_ID,
-          srcChainTokenIn: params.token || USDC_SOLANA,
-          srcChainTokenInAmount: params.amount,
-          dstChainId: BASE_CHAIN_ID,
-          dstChainTokenOut: USDC_BASE,
-          dstChainTokenOutRecipient: params.destinationAddress,
-          referralCode: 0,
-        }),
-      });
+    // deBridge chain IDs
+    const SOLANA_CHAIN_ID = 7565164;
+    const BASE_CHAIN_ID = 8453;
+    const USDC_SOLANA = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyB7bF';
+    const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`deBridge API error: ${errorData.message || response.statusText}`);
+    const requestBody = {
+      srcChainId: SOLANA_CHAIN_ID,
+      srcChainTokenIn: params.token || USDC_SOLANA,
+      srcChainTokenInAmount: params.amount,
+      dstChainId: BASE_CHAIN_ID,
+      dstChainTokenOut: USDC_BASE,
+      dstChainTokenOutRecipient: params.destinationAddress,
+      referralCode: 0,
+    };
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const response = await fetch(`${DEBRIDGE_API}/dln/quote`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          const errorMsg = errorData.message || response.statusText;
+          
+          // Rate limit - retry with backoff
+          if (response.status === 429 || response.status === 503) {
+            lastError = new Error(`deBridge rate limited: ${errorMsg}`);
+            if (attempt < maxRetries - 1) {
+              const backoff = Math.pow(2, attempt) * 1000; // exponential backoff
+              await new Promise(resolve => setTimeout(resolve, backoff));
+              continue;
+            }
+          } else {
+            throw new Error(`deBridge API error: ${errorMsg}`);
+          }
+        }
+
+        const data = await response.json();
+        
+        // Cache the quote
+        this.quoteCache.set(`${params.sourceChain}-${params.destinationChain}-${params.amount}`, {
+          quote: data,
+          timestamp: Date.now(),
+        });
+
+        return data;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        
+        // Retry on network errors, but not on validation errors
+        if (attempt < maxRetries - 1 && lastError.message.includes('rate')) {
+          const backoff = Math.pow(2, attempt) * 1000;
+          await new Promise(resolve => setTimeout(resolve, backoff));
+          continue;
+        }
+        
+        if (attempt === maxRetries - 1) {
+          break;
+        }
       }
-
-      const data = await response.json();
-      
-      // Cache the quote
-      this.quoteCache.set(`${params.sourceChain}-${params.destinationChain}-${params.amount}`, {
-        quote: data,
-        timestamp: Date.now(),
-      });
-
-      return data;
-    } catch (error) {
-      throw new BridgeError(
-        BridgeErrorCode.ESTIMATION_FAILED,
-        `Failed to get deBridge quote: ${error instanceof Error ? error.message : String(error)}`,
-        'debridge'
-      );
     }
+
+    throw new BridgeError(
+      BridgeErrorCode.ESTIMATION_FAILED,
+      `Failed to get deBridge quote after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`,
+      'debridge'
+    );
   }
 
   /**
