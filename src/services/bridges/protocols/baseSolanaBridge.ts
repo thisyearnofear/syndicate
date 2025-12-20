@@ -14,6 +14,7 @@
 
 import type { BridgeProtocol, BridgeParams, BridgeEstimate, BridgeResult, ProtocolHealth, ChainIdentifier, BridgeStatus } from '../types';
 import { BridgeErrorCode, BridgeError } from '../types';
+import { getBaseRpcUrls } from '@/utils/rpcFallback';
 
 interface BaseSolanaBridgeQuote {
   fromChain: 'solana' | 'base';
@@ -257,6 +258,7 @@ export class BaseSolanaBridgeProtocol implements BridgeProtocol {
   /**
    * Poll Base RPC for USDC balance at destination address
    * This confirms funds have arrived from the Solana bridge
+   * Implements RPC fallback for resilience against rate limits
    */
   private async pollBaseForFunds(
     destinationAddress: string,
@@ -264,13 +266,16 @@ export class BaseSolanaBridgeProtocol implements BridgeProtocol {
   ): Promise<{ success: boolean; balance?: string; destinationTxHash?: string; sourceTxHash?: string }> {
     const startTime = Date.now();
     const pollInterval = 10_000; // 10 seconds
-    const BASE_RPC = process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://base-mainnet.g.alchemy.com/v2/zXTB8midlluEtdL8Gay5bvz5RI-FfsDH';
+    const baseRpcUrls = getBaseRpcUrls();
     const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+    let rpcUrlIndex = 0;
 
     while (Date.now() - startTime < timeoutMs) {
+      const currentRpc = baseRpcUrls[rpcUrlIndex % baseRpcUrls.length];
+
       try {
         // Query USDC balance on Base via RPC
-        const response = await fetch(BASE_RPC, {
+        const response = await fetch(currentRpc, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -288,28 +293,36 @@ export class BaseSolanaBridgeProtocol implements BridgeProtocol {
         });
 
         if (!response.ok) {
-          throw new Error(`RPC error: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        
-        if (data.result && data.result !== '0x0') {
-          // Funds received!
-          const balanceHex = data.result;
-          const balance = BigInt(balanceHex).toString();
+          // Rate limit - try next RPC on next poll cycle
+          if (response.status === 429 || response.status === 503) {
+            rpcUrlIndex++;
+            console.warn(`[Base-Solana Bridge] RPC ${rpcUrlIndex - 1} rate limited, trying next`);
+          } else {
+            throw new Error(`RPC error: ${response.statusText}`);
+          }
+        } else {
+          const data = await response.json();
           
-          return {
-            success: true,
-            balance,
-            destinationTxHash: `base-${Date.now()}`, // Mock TxHash
-          };
+          if (data.result && data.result !== '0x0') {
+            // Funds received!
+            const balanceHex = data.result;
+            const balance = BigInt(balanceHex).toString();
+            
+            return {
+              success: true,
+              balance,
+              destinationTxHash: `base-${Date.now()}`, // Mock TxHash
+            };
+          }
         }
 
         // Not received yet, wait and retry
         await new Promise(resolve => setTimeout(resolve, pollInterval));
       } catch (error) {
-        console.warn('[Base-Solana Bridge] Poll error:', error);
-        // Continue polling on network errors
+        console.warn(`[Base-Solana Bridge] Poll error on RPC ${rpcUrlIndex}:`, error);
+        // Rotate to next RPC on error
+        rpcUrlIndex++;
+        // Continue polling with next RPC
         await new Promise(resolve => setTimeout(resolve, pollInterval));
       }
     }
