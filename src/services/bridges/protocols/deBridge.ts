@@ -3,7 +3,7 @@
  * 
  * Intent-based bridge with solver competition
  * Faster alternative to Base-Solana Bridge for Solana → Base
- * API: https://api.dln.trade/v1.0/
+ * API: https://dln.debridge.finance/v1.0/
  * 
  * Core Principles Applied:
  * - ENHANCEMENT FIRST: Implements BridgeProtocol interface
@@ -19,6 +19,7 @@ import { BridgeErrorCode, BridgeError } from '../types';
  * 
  * 0-TVL cross-chain infrastructure with intent-based solvers
  * API Docs: https://docs.debridge.com/dln-details/overview/introduction
+ * API Reference: https://docs.debridge.com/api-reference/dln/
  * 
  * Supports: Solana ↔ EVM (Base, Ethereum, Arbitrum, etc.)
  * Features:
@@ -36,7 +37,7 @@ import { BridgeErrorCode, BridgeError } from '../types';
  * - Solana USDC: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyB7bF
  * - Base USDC: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
  */
-const DEBRIDGE_API = 'https://api.dln.trade/v1.0';
+const DEBRIDGE_API = 'https://dln.debridge.finance/v1.0';
 
 interface DeBridgeQuoteResponse {
   estimation: {
@@ -208,6 +209,7 @@ export class DeBridgeProtocol implements BridgeProtocol {
 
   /**
    * Get quote from deBridge API with retry logic
+   * Uses the order/create-tx endpoint to get both quote and transaction data
    */
   private async getQuote(params: BridgeParams): Promise<DeBridgeQuoteResponse> {
     const maxRetries = 3;
@@ -219,24 +221,27 @@ export class DeBridgeProtocol implements BridgeProtocol {
     const USDC_SOLANA = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyB7bF';
     const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
-    const requestBody = {
-      srcChainId: SOLANA_CHAIN_ID,
+    // Parse amount: convert to smallest units (6 decimals for USDC)
+    const amountInSmallestUnits = Math.floor(parseFloat(params.amount) * 1e6).toString();
+
+    // Query parameters for deBridge API
+    const queryParams = new URLSearchParams({
+      srcChainId: SOLANA_CHAIN_ID.toString(),
       srcChainTokenIn: params.token || USDC_SOLANA,
-      srcChainTokenInAmount: params.amount,
-      dstChainId: BASE_CHAIN_ID,
+      srcChainTokenInAmount: amountInSmallestUnits,
+      dstChainId: BASE_CHAIN_ID.toString(),
       dstChainTokenOut: USDC_BASE,
       dstChainTokenOutRecipient: params.destinationAddress,
-      referralCode: 0,
-    };
+    });
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        const response = await fetch(`${DEBRIDGE_API}/dln/quote`, {
-          method: 'POST',
+        const url = `${DEBRIDGE_API}/dln/order/create-tx?${queryParams.toString()}`;
+        const response = await fetch(url, {
+          method: 'GET',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(requestBody),
         });
 
         if (!response.ok) {
@@ -252,7 +257,7 @@ export class DeBridgeProtocol implements BridgeProtocol {
               continue;
             }
           } else {
-            throw new Error(`deBridge API error: ${errorMsg}`);
+            throw new Error(`deBridge API error (${response.status}): ${errorMsg}`);
           }
         }
 
@@ -268,8 +273,8 @@ export class DeBridgeProtocol implements BridgeProtocol {
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
         
-        // Retry on network errors, but not on validation errors
-        if (attempt < maxRetries - 1 && lastError.message.includes('rate')) {
+        // Retry on network errors and rate limits
+        if (attempt < maxRetries - 1 && (lastError.message.includes('rate') || lastError.message.includes('fetch'))) {
           const backoff = Math.pow(2, attempt) * 1000;
           await new Promise(resolve => setTimeout(resolve, backoff));
           continue;
