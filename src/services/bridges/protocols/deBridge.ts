@@ -224,14 +224,21 @@ export class DeBridgeProtocol implements BridgeProtocol {
     // Parse amount: convert to smallest units (6 decimals for USDC)
     const amountInSmallestUnits = Math.floor(parseFloat(params.amount) * 1e6).toString();
 
+    // Determine source chain token - use provided token or default to USDC
+    // If token is a symbol like "USDC" or "USDC.e", ignore it and use the mint address
+    const srcChainToken = (params.token && params.token.length > 10) ? params.token : USDC_SOLANA;
+
     // Query parameters for deBridge API
+    // Required: srcChainId, srcChainTokenIn, srcChainTokenInAmount, dstChainId, dstChainTokenOut
+    // Optional but recommended: dstChainTokenOutRecipient (required for transaction construction), senderAddress
     const queryParams = new URLSearchParams({
       srcChainId: SOLANA_CHAIN_ID.toString(),
-      srcChainTokenIn: params.token || USDC_SOLANA,
+      srcChainTokenIn: srcChainToken,
       srcChainTokenInAmount: amountInSmallestUnits,
       dstChainId: BASE_CHAIN_ID.toString(),
       dstChainTokenOut: USDC_BASE,
       dstChainTokenOutRecipient: params.destinationAddress,
+      senderAddress: params.sourceAddress || '', // Optional, for quote-only requests
     });
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
