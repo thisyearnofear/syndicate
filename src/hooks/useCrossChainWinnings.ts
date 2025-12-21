@@ -18,6 +18,9 @@ export interface CrossChainWinningsState {
   error: string | null;
   winningsAmount: string; // In USDC, formatted
   associatedEvmAddress: string | null;
+  // Stacks specific
+  stacksClaimableWinnings?: string;
+  stacksWinningsToken?: string;
 }
 
 export function useCrossChainWinnings(): CrossChainWinningsState {
@@ -46,7 +49,7 @@ export function useCrossChainWinnings(): CrossChainWinningsState {
           throw new Error('Could not fetch cross-chain purchase history.');
         }
         const purchases: { evmAddress: string }[] = await response.json();
-        
+
         if (purchases.length === 0) {
           // No purchases found for this Stacks address
           setState({ isLoading: false, error: null, winningsAmount: '0', associatedEvmAddress: null });
@@ -57,7 +60,7 @@ export function useCrossChainWinnings(): CrossChainWinningsState {
         // A more robust implementation might check all associated addresses.
         const evmAddress = purchases[0].evmAddress;
         if (!evmAddress) {
-            throw new Error('No associated EVM address found.');
+          throw new Error('No associated EVM address found.');
         }
 
         // 2. Check for winnings on Base for that EVM address
@@ -67,21 +70,54 @@ export function useCrossChainWinnings(): CrossChainWinningsState {
         const megapotAbi = web3Service.getMegapotAbi();
 
         const userInfo = await client.readContract({
-            address: megapotAddress as `0x${string}`,
-            abi: megapotAbi,
-            functionName: 'usersInfo',
-            args: [evmAddress],
+          address: megapotAddress as `0x${string}`,
+          abi: megapotAbi,
+          functionName: 'usersInfo',
+          args: [evmAddress],
         });
-        
+
         // usersInfo returns a tuple: [ticketsPurchasedTotalBps, winningsClaimable, isActive]
         const winningsClaimableRaw = (userInfo as any[])[1];
         const winningsFormatted = formatUnits(winningsClaimableRaw, 6); // Assuming USDC has 6 decimals
 
+        // 3. Check for recorded winnings on Stacks
+        let stacksClaimable = '0';
+        let stacksToken = undefined;
+
+        try {
+          const stacksLotteryContract = process.env.NEXT_PUBLIC_STACKS_LOTTERY_CONTRACT || 'SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3';
+          const stacksResponse = await fetch(`/api/stacks-lottery?endpoint=/extended/v1/address/${address}/balances`); // Not really balances, but we need the read-only call
+          // Actually, we should call the read-only function get-winnings
+          const readOnlyResponse = await fetch(`/api/stacks-lottery?endpoint=/v2/map_entry/${stacksLotteryContract.split('.')[0]}/${stacksLotteryContract.split('.')[1]}/winnings`, {
+            method: 'POST',
+            body: JSON.stringify({
+              key: { type: 'principal', value: address }
+            })
+          });
+
+          if (readOnlyResponse.ok) {
+            const data = await readOnlyResponse.json();
+            if (data.data) {
+              // Parse response
+              // Expected: { total-winnings: u123, claimed: bool, token: principal, ... }
+              const winnersData = data.data;
+              if (!winnersData.claimed?.value) {
+                stacksClaimable = (parseFloat(winnersData['total-winnings']?.value || '0') / 1_000_000).toString();
+                stacksToken = winnersData.token?.value;
+              }
+            }
+          }
+        } catch (stacksErr) {
+          console.warn('Failed to check Stacks winnings:', stacksErr);
+        }
+
         setState({
-            isLoading: false,
-            error: null,
-            winningsAmount: winningsFormatted,
-            associatedEvmAddress: evmAddress,
+          isLoading: false,
+          error: null,
+          winningsAmount: winningsFormatted,
+          associatedEvmAddress: evmAddress,
+          stacksClaimableWinnings: stacksClaimable,
+          stacksWinningsToken: stacksToken
         });
 
       } catch (err) {
@@ -97,7 +133,7 @@ export function useCrossChainWinnings(): CrossChainWinningsState {
 
     // ENHANCEMENT: Check on mount
     checkWinnings();
-    
+
     // ENHANCEMENT: Poll every 60 seconds for automatic winnings detection
     const intervalId = setInterval(checkWinnings, 60_000);
     return () => clearInterval(intervalId);

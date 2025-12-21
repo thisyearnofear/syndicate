@@ -5,10 +5,10 @@
   "version": 1,
   "networks": {
     "mainnet": {
-      "start_block": 5434550,
+      "start_block": 5434600,
       "if_this": {
         "scope": "print_event",
-        "contract_identifier": "SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery",
+        "contract_identifier": "SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3",
         "contains": "bridge-purchase-initiated"
       },
       "then_that": {

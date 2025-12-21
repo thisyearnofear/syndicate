@@ -11,9 +11,11 @@
   )
 )
 
-;; Stacks-to-Megapot Bridge Contract
+;; Stacks-to-Megapot Bridge Contract (Clarity 3 / Nakamoto Edition)
 ;; Bridges tokens from Stacks to Base for Megapot lottery participation
 ;; Handles ticket purchases and winnings claims without Base wallet requirement
+
+(define-constant VERSION u300) ;; v3.0.0
 
 ;; Contract owner
 (define-constant CONTRACT_OWNER tx-sender)
@@ -22,7 +24,7 @@
 (define-constant BRIDGE_OPERATOR tx-sender)
 
 ;; Bridge Address for cross-chain to Base - now configurable
-(define-data-var bridge-address principal (as-contract tx-sender))
+(define-data-var bridge-address principal tx-sender)
 
 ;; Error codes
 (define-constant ERR_NOT_ENOUGH_SBTC (err u1001))
@@ -105,7 +107,7 @@
         base-address: base-address,
         ticket-count: ticket-count,
         sbtc-amount: total-cost,
-        purchase-block: block-height,
+        purchase-block: stacks-block-height,
         processed: false,
         base-tx-hash: none,
         token: token-principal,
@@ -127,7 +129,7 @@
       sbtc-amount: total-cost,
       ticket-price: (var-get ticket-price),
       bridge-fee: fee,
-      block-height: block-height,
+      block-height: stacks-block-height,
       token: token-principal
     })
     
@@ -230,7 +232,7 @@
     
     ;; Transfer winnings from bridge to user
     (try! (as-contract (contract-call? token-trait
-      transfer amount (as-contract tx-sender) (get stacks-user winnings-data) none)))
+      transfer amount (as-contract tx-sender) tx-sender none)))
     
     ;; Mark as claimed
     (map-set winnings 
@@ -304,9 +306,17 @@
     (var-set bridge-address new-address)
     (print {
       event: "bridge-address-updated",
-      old-address: (var-get bridge-address),
       new-address: new-address
     })
+    (ok true)
+  )
+)
+
+;; Helper to set the bridge to the contract itself
+(define-public (set-bridge-to-self)
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT_OWNER) ERR_NOT_AUTHORIZED)
+    (var-set bridge-address (as-contract tx-sender))
     (ok true)
   )
 )
@@ -336,11 +346,12 @@
 )
 
 ;; Emergency withdrawal (only owner)
-(define-public (emergency-withdraw (amount uint))
+;; Now takes the token-trait as an argument to avoid hardcoded principal literal errors
+(define-public (emergency-withdraw (token-trait <sip-010-trait>) (amount uint))
   (begin
     (asserts! (is-eq tx-sender CONTRACT_OWNER) ERR_NOT_AUTHORIZED)
-    
-    (as-contract (contract-call? 'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token
-      transfer amount tx-sender CONTRACT_OWNER none))
+    (as-contract 
+      (contract-call? token-trait transfer amount (as-contract tx-sender) CONTRACT_OWNER none)
+    )
   )
 )

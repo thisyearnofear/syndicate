@@ -40,17 +40,19 @@ export async function POST(req: NextRequest) {
             if (eventData) {
               const baseAddress = eventData.base_address?.repr?.replace(/"/g, '') || '';
               const ticketCount = parseInt(eventData.ticket_count?.repr?.replace('u', '') || '0');
-              const sbtcAmount = BigInt(eventData.sbtc_amount?.repr?.replace('u', '') || '0');
+              const amount = BigInt(eventData.sbtc_amount?.repr?.replace('u', '') || '0');
+              const tokenPrincipal = eventData.token?.repr || 'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token';
 
               if (baseAddress && ticketCount > 0) {
-                console.log(`[Chainhook] Processing: ${ticketCount} tickets for ${baseAddress}`);
+                console.log(`[Chainhook] Processing: ${ticketCount} tickets for ${baseAddress} using ${tokenPrincipal}`);
 
                 // Execute the bridge & purchase
                 await stacksBridgeOperator.processBridgeEvent(
                   txId,
                   baseAddress,
                   ticketCount,
-                  sbtcAmount
+                  amount,
+                  tokenPrincipal
                 );
               }
             }
