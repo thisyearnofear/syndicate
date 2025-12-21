@@ -17,6 +17,8 @@ import { nearWalletSelectorService } from '@/domains/wallet/services/nearWalletS
 import { nearIntentsService } from '@/services/nearIntentsService';
 import { executeNearIntentsFullFlow } from '@/services/nearIntentsPurchaseService';
 import { CHAINS, CONTRACTS } from '@/config';
+import { solanaWalletService } from '@/services/solanaWalletService';
+import { Transaction, VersionedTransaction } from '@solana/web3.js';
 
 // ============================================================================
 // SOLANA BRIDGE EXECUTION (ENHANCEMENT: Base-Solana Bridge + deBridge fallback)
@@ -678,7 +680,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     const { bridgeManager } = await import('@/services/bridges');
     let bridgeProtocol = 'unknown';
 
-    const bridgeResult = await bridgeManager.bridge({
+    let bridgeResult = await bridgeManager.bridge({
       sourceChain: 'solana',
       destinationChain: 'base',
       sourceAddress: address,
@@ -708,6 +710,72 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
         }
       },
     });
+
+    // NEW: Handle pending_signature status for deBridge/intent-based bridges
+    if (bridgeResult.status === 'pending_signature' && bridgeResult.details?.txData) {
+      const txData = bridgeResult.details.txData as any;
+
+      setState(prev => ({
+        ...prev,
+        bridgeStatus: 'pending_signature',
+        bridgeStages: [...prev.bridgeStages, 'pending_signature']
+      }));
+
+      try {
+        console.log('[useTicketPurchase] Requesting Solana wallet signature for deBridge transaction...');
+
+        let signature: string;
+
+        // Handle different transaction formats (base64 or object)
+        if (typeof txData === 'string' || txData.data) {
+          const base64Tx = typeof txData === 'string' ? txData : txData.data;
+
+          // Browser-safe base64 to Uint8Array
+          const binaryString = window.atob(base64Tx);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const buffer = bytes; // Compatibility with solana/web3.js deserializers
+
+          // Try to deserialize as VersionedTransaction first, fallback to Transaction
+          let tx: Transaction | VersionedTransaction;
+          try {
+            tx = VersionedTransaction.deserialize(buffer);
+          } catch (e) {
+            tx = Transaction.from(buffer);
+          }
+
+          signature = await solanaWalletService.signAndSendTransaction(tx);
+        } else {
+          throw new Error('Unsupported transaction format from bridge protocol');
+        }
+
+        console.log('[useTicketPurchase] Solana transaction submitted:', signature);
+
+        // Resume bridge with the signed transaction hash
+        bridgeResult = await bridgeManager.bridge({
+          sourceChain: 'solana',
+          destinationChain: 'base',
+          sourceAddress: address,
+          destinationAddress: evmAddress,
+          amount: bridgeAmount,
+          protocol: bridgeResult.protocol, // Stay with the same protocol
+          options: {
+            signedTxHash: signature,
+            orderId: bridgeResult.bridgeId
+          }
+        });
+      } catch (signError) {
+        console.error('[useTicketPurchase] Solana signing failed:', signError);
+        setState(prev => ({
+          ...prev,
+          bridgeStatus: 'failed',
+          error: signError instanceof Error ? signError.message : 'User rejected signing'
+        }));
+        throw signError;
+      }
+    }
 
     if (!bridgeResult.success) {
       setState(prev => ({

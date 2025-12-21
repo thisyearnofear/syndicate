@@ -54,6 +54,8 @@ export type BridgeStatus =
     | 'burning'
     | 'burn_confirmed'    // Burn transaction confirmed
     | 'waiting_attestation'
+    | 'pending_signature' // Waiting for user wallet signature (deBridge)
+    | 'solver_waiting_deposit' // deBridge solver waiting for deposit
     | 'minting'
     | 'complete'
     | 'failed';
@@ -73,27 +75,27 @@ export type AddressType = {
  */
 export interface BridgeProtocol {
     readonly name: BridgeProtocolType;
-    
+
     /**
      * Check if this protocol supports the given route
      */
     supports(sourceChain: ChainIdentifier, destinationChain: ChainIdentifier): boolean;
-    
+
     /**
      * Estimate bridge cost and time
      */
     estimate(params: BridgeParams): Promise<BridgeEstimate>;
-    
+
     /**
      * Execute the bridge
      */
     bridge(params: BridgeParams): Promise<BridgeResult>;
-    
+
     /**
      * Get current protocol health
      */
     getHealth(): Promise<ProtocolHealth>;
-    
+
     /**
      * Validate bridge parameters
      */
@@ -110,16 +112,16 @@ export interface BridgeParams {
     destinationAddress: string;
     amount: string; // Amount to bridge (in base units or token decimals)
     token?: string;  // Token address/symbol
-    
+
     // Optional parameters
     wallet?: any;    // Wallet/signer instance
     protocol?: BridgeProtocolType | 'auto'; // Specific protocol or auto-select
     allowFallback?: boolean; // Allow fallback to other protocols if primary fails
     dryRun?: boolean; // Test without executing
-    
+
     // Status callbacks
     onStatus?: (status: BridgeStatus, data?: Record<string, unknown>) => void;
-    
+
     // Additional protocol-specific options
     options?: Record<string, unknown>;
 }
@@ -202,6 +204,7 @@ export interface ProtocolHealth {
     successRate: number;          // 0-1 (e.g. 0.95 = 95%)
     averageTimeMs: number;
     lastFailure?: Date;
+    lastSuccessTime?: Date;
     consecutiveFailures: number;
     estimatedFee?: string;
 

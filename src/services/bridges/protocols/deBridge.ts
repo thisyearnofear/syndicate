@@ -1,33 +1,18 @@
 /**
- * DEBRIDGE DLN PROTOCOL (FALLBACK)
+ * DEBRIDGE DLN PROTOCOL - FETCH IMPLEMENTATION
  * 
- * Intent-based bridge with solver competition
- * Faster alternative to Base-Solana Bridge for Solana → Base
- * API: https://dln.debridge.finance/v1.0/
+ * Uses direct DLN API calls for Solana ↔ EVM bridging.
+ * (Switched to raw fetch from SDK to resolve dependency conflicts)
  * 
  * Core Principles Applied:
- * - ENHANCEMENT FIRST: Implements BridgeProtocol interface
- * - CLEAN: Fallback-specific implementation
- * - PERFORMANT: Caches quotes, minimal polling
- */
-
-import type { BridgeProtocol, BridgeParams, BridgeEstimate, BridgeResult, ProtocolHealth, ChainIdentifier, BridgeStatus } from '../types';
-import { BridgeErrorCode, BridgeError } from '../types';
-
-/**
- * DEBRIDGE DLN API - PRODUCTION READY
+ * - RESILIENCE: Direct API access with retry logic
+ * - CLEAN: Proper Solana transaction handling via create-tx
+ * - PERFORMANT: Polling via the lightweight stats API
  * 
- * 0-TVL cross-chain infrastructure with intent-based solvers
- * API Docs: https://docs.debridge.com/dln-details/overview/introduction
- * API Reference: https://docs.debridge.com/api-reference/dln/
- * 
- * Supports: Solana ↔ EVM (Base, Ethereum, Arbitrum, etc.)
- * Features:
- * - Near-instant settlement (<1 second)
- * - Zero slippage on any order size
- * - Native token trading (no wrapped token risks)
- * - Limit orders with future execution
- * - 0-TVL: No liquidity pools, solver competition instead
+ * Flow:
+ * 1. getQuoteWithTx -> Get base64 transaction
+ * 2. Return pending_signature -> UI handles signing
+ * 3. resumed bridge call -> Poll stats API for fulfillment
  * 
  * Chain IDs:
  * - Solana: 7565164
@@ -37,21 +22,70 @@ import { BridgeErrorCode, BridgeError } from '../types';
  * - Solana USDC: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyB7bF
  * - Base USDC: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
  */
+
+import type { BridgeProtocol, BridgeParams, BridgeEstimate, BridgeResult, ProtocolHealth, ChainIdentifier, BridgeStatus } from '../types';
+import { BridgeErrorCode, BridgeError } from '../types';
+
+// deBridge API endpoints
+const DEBRIDGE_STATS_API = 'https://stats-api.dln.trade';
 const DEBRIDGE_API = 'https://dln.debridge.finance/v1.0';
+
+// Chain constants
+const SOLANA_CHAIN_ID = 7565164;
+const BASE_CHAIN_ID = 8453;
+const USDC_SOLANA = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyB7bF';
+const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
 interface DeBridgeQuoteResponse {
   estimation: {
+    srcChainTokenIn: {
+      amount: string;
+      approximateUsdValue: number;
+    };
     dstChainTokenOut: {
       amount: string;
+      recommendedAmount: string;
+      approximateUsdValue: number;
     };
+    costsDetails: Array<{
+      type: string;
+      payload: {
+        feeAmount: string;
+        feeBps?: string;
+      };
+    }>;
   };
-  orderId: string;
+  tx?: {
+    data: string;
+    to: string;
+    value: string;
+  };
+  orderId?: string;
+  order?: {
+    approximateFulfillmentDelay: number;
+  };
 }
 
-interface DeBridgeStatusResponse {
-  status: 'pending' | 'completed' | 'failed';
-  amountReceived?: string;
-  txHash?: string;
+interface DeBridgeOrderStatus {
+  state: 'Created' | 'Fulfilled' | 'SentUnlock' | 'ClaimedUnlock' | 'Cancelled' |
+  'OrderCancelled' | 'SentOrderCancel' | 'ClaimedOrderCancel';
+  orderId: string;
+  createdAt: string;
+  fulfilledAt?: string;
+  claimedAt?: string;
+  give?: {
+    chainId: number;
+    tokenAddress: string;
+    amount: string;
+  };
+  take?: {
+    chainId: number;
+    tokenAddress: string;
+    amount: string;
+  };
+  fulfillTx?: {
+    txHash: string;
+  };
 }
 
 export class DeBridgeProtocol implements BridgeProtocol {
@@ -78,6 +112,7 @@ export class DeBridgeProtocol implements BridgeProtocol {
     return supportedPairs.some(([src, dst]) => sourceChain === src && destinationChain === dst);
   }
 
+
   /**
    * Get quote from deBridge API
    */
@@ -87,37 +122,45 @@ export class DeBridgeProtocol implements BridgeProtocol {
       const cached = this.quoteCache.get(cacheKey);
 
       if (cached && Date.now() - cached.timestamp < this.quoteCacheTtl) {
+        const totalFee = this.calculateTotalFee(cached.quote);
         return {
-          fee: '0.0', // deBridge fees are included in slippage
-          timeMs: 30_000, // 30 seconds
+          fee: totalFee,
+          timeMs: (cached.quote.order?.approximateFulfillmentDelay || 30) * 1000,
         };
       }
 
-      // In production: Call deBridge quote API
-      // POST https://api.dln.trade/v1.0/dln/quote
-      // {
-      //   srcChainId: 7565164 (Solana),
-      //   srcChainTokenIn: "So11...", (Solana USDC)
-      //   srcChainTokenInAmount: "1000000000",
-      //   dstChainId: 8453 (Base),
-      //   dstChainTokenOut: "0x8335..." (Base USDC)
-      // }
+      // Get fresh quote
+      const quote = await this.getQuote(params);
+      const totalFee = this.calculateTotalFee(quote);
 
-      // For MVP: Return estimated values
-      const estimate: BridgeEstimate = {
-        fee: '0.0', // Flat fee included in output
-        timeMs: 30_000, // 30 seconds to minutes
+      return {
+        fee: totalFee,
+        timeMs: (quote.order?.approximateFulfillmentDelay || 30) * 1000,
       };
-
-      return estimate;
     } catch (error) {
-      throw new BridgeError(
-        BridgeErrorCode.ESTIMATION_FAILED,
-        'deBridge quote failed',
-        'debridge',
-        { originalError: error instanceof Error ? error.message : String(error) }
-      );
+      // Return default estimate on error
+      console.warn('[deBridge] Estimate failed, using defaults:', error);
+      return {
+        fee: '0.50', // Estimated $0.50 fee
+        timeMs: 60_000, // 1 minute
+      };
     }
+  }
+
+  /**
+   * Calculate total fee from quote
+   */
+  private calculateTotalFee(quote: DeBridgeQuoteResponse): string {
+    if (!quote.estimation?.costsDetails) return '0.0';
+
+    let totalFeeUsd = 0;
+    for (const cost of quote.estimation.costsDetails) {
+      if (cost.payload?.feeAmount) {
+        // Convert to USD (assuming 6 decimal USDC)
+        totalFeeUsd += parseInt(cost.payload.feeAmount) / 1e6;
+      }
+    }
+    return totalFeeUsd.toFixed(2);
   }
 
   /**
@@ -155,6 +198,7 @@ export class DeBridgeProtocol implements BridgeProtocol {
 
   /**
    * Bridge Solana → Base via deBridge solvers
+   * Returns transaction data for the user to sign with their wallet
    */
   private async bridgeSolanaToBase(params: BridgeParams): Promise<BridgeResult> {
     const startTime = Date.now();
@@ -162,43 +206,84 @@ export class DeBridgeProtocol implements BridgeProtocol {
     try {
       params.onStatus?.('approve', {
         protocol: 'debridge',
-        message: 'Getting deBridge solver quote',
+        message: 'Getting deBridge quote and transaction...',
       });
 
-      // Step 1: Get quote from deBridge API
-      // This returns deposit address where user sends USDC
-      const quote = await this.getQuote(params);
+      // Step 1: Get quote with transaction data
+      const quote = await this.getQuoteWithTx(params);
+
+      if (!quote.tx || !quote.orderId) {
+        throw new BridgeError(
+          BridgeErrorCode.ESTIMATION_FAILED,
+          'deBridge did not return transaction data. Please try again.',
+          'debridge'
+        );
+      }
 
       params.onStatus?.('approved', {
         protocol: 'debridge',
-        depositAddress: quote.orderId,
-        message: 'Quote received. Send USDC to deposit address.',
+        orderId: quote.orderId,
+        message: 'Transaction ready. Please sign with your Solana wallet.',
+        txData: quote.tx,
       });
 
-      // Step 2: User sends USDC on Solana (in wallet UI)
-      // This is handled by useTicketPurchase hook showing deposit address
+      // Step 2: The transaction signing happens in the wallet hook
+      // We return the transaction data for the frontend to handle
+      // The frontend will use Phantom/Solflare to sign and submit
 
-      // Step 3: Poll for completion
-      const pollTimeout = 60_000; // 60 seconds max
-      const pollResult = await this.pollBridgeStatus(quote.orderId, pollTimeout, params);
+      // Step 3: If signedTx is provided (from retry), submit and poll
+      if (params.options?.signedTxHash) {
+        const signedTxHash = params.options.signedTxHash as string;
+        params.onStatus?.('burning', {
+          protocol: 'debridge',
+          message: 'Transaction submitted. Waiting for solver fulfillment...',
+          txHash: signedTxHash,
+        });
 
-      if (!pollResult.success) {
-        throw new Error(`Bridge polling failed: ${pollResult.error}`);
+        // Poll for completion
+        const pollResult = await this.pollOrderStatus(quote.orderId, 120_000, params);
+
+        if (!pollResult.success) {
+          throw new BridgeError(
+            BridgeErrorCode.TRANSACTION_TIMEOUT,
+            `Bridge order not fulfilled: ${pollResult.error}`,
+            'debridge'
+          );
+        }
+
+        const actualTimeMs = Date.now() - startTime;
+
+        return {
+          success: true,
+          protocol: 'debridge',
+          bridgeId: quote.orderId,
+          sourceTxHash: signedTxHash,
+          destinationTxHash: pollResult.fulfillTxHash,
+          status: 'complete' as BridgeStatus,
+          estimatedTimeMs: (quote.order?.approximateFulfillmentDelay || 30) * 1000,
+          actualTimeMs,
+          details: {
+            amountReceived: quote.estimation?.dstChainTokenOut?.recommendedAmount,
+            solver: 'DLN Solver Network',
+          },
+        };
       }
 
+      // Return pending result with transaction data for wallet signing
       const actualTimeMs = Date.now() - startTime;
 
       return {
         success: true,
         protocol: 'debridge',
         bridgeId: quote.orderId,
-        destinationTxHash: pollResult.txHash,
-        status: 'complete' as BridgeStatus,
-        estimatedTimeMs: 30_000,
+        status: 'pending_signature' as BridgeStatus,
+        estimatedTimeMs: (quote.order?.approximateFulfillmentDelay || 30) * 1000,
         actualTimeMs,
         details: {
-          amountReceived: pollResult.amountReceived,
-          solvers: 'Competitive auction',
+          txData: quote.tx,
+          orderId: quote.orderId,
+          estimatedOutput: quote.estimation?.dstChainTokenOut?.recommendedAmount,
+          requiresWalletSignature: true,
         },
       };
     } catch (error) {
@@ -208,68 +293,113 @@ export class DeBridgeProtocol implements BridgeProtocol {
   }
 
   /**
-   * Get quote from deBridge API with retry logic
-   * Uses the order/create-tx endpoint to get both quote and transaction data
+   * Get quote from deBridge API (for estimates only)
    */
   private async getQuote(params: BridgeParams): Promise<DeBridgeQuoteResponse> {
-    const maxRetries = 3;
-    let lastError: Error | null = null;
-
-    // deBridge chain IDs
-    const SOLANA_CHAIN_ID = 7565164;
-    const BASE_CHAIN_ID = 8453;
-    const USDC_SOLANA = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyB7bF';
-    const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
-
-    // Parse amount: convert to smallest units (6 decimals for USDC)
     const amountInSmallestUnits = Math.floor(parseFloat(params.amount) * 1e6).toString();
-
-    // Determine source chain token - use provided token or default to USDC
-    // If token is a symbol like "USDC" or "USDC.e", ignore it and use the mint address
     const srcChainToken = (params.token && params.token.length > 10) ? params.token : USDC_SOLANA;
 
-    // Query parameters for deBridge API
-    // Required: srcChainId, srcChainTokenIn, srcChainTokenInAmount, dstChainId, dstChainTokenOut
-    // Optional but recommended: dstChainTokenOutRecipient (required for transaction construction), senderAddress
     const queryParams = new URLSearchParams({
       srcChainId: SOLANA_CHAIN_ID.toString(),
       srcChainTokenIn: srcChainToken,
       srcChainTokenInAmount: amountInSmallestUnits,
       dstChainId: BASE_CHAIN_ID.toString(),
       dstChainTokenOut: USDC_BASE,
-      dstChainTokenOutRecipient: params.destinationAddress,
-      senderAddress: params.sourceAddress || '', // Optional, for quote-only requests
     });
+
+    const url = `${DEBRIDGE_API}/dln/order/quote?${queryParams.toString()}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new BridgeError(
+        BridgeErrorCode.ESTIMATION_FAILED,
+        `deBridge quote failed: ${errorData.errorMessage || response.statusText}`,
+        'debridge'
+      );
+    }
+
+    const data = await response.json();
+
+    // Cache the quote
+    this.quoteCache.set(`${params.sourceChain}-${params.destinationChain}-${params.amount}`, {
+      quote: data,
+      timestamp: Date.now(),
+    });
+
+    return data;
+  }
+
+  /**
+   * Get quote with transaction data from deBridge API
+   * Uses create-tx endpoint which returns ready-to-sign transaction
+   */
+  private async getQuoteWithTx(params: BridgeParams): Promise<DeBridgeQuoteResponse> {
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+
+    const amountInSmallestUnits = Math.floor(parseFloat(params.amount) * 1e6).toString();
+    const srcChainToken = (params.token && params.token.length > 10) ? params.token : USDC_SOLANA;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
+        // Build query params for create-tx endpoint
+        const queryParams = new URLSearchParams({
+          srcChainId: SOLANA_CHAIN_ID.toString(),
+          srcChainTokenIn: srcChainToken,
+          srcChainTokenInAmount: amountInSmallestUnits,
+          dstChainId: BASE_CHAIN_ID.toString(),
+          dstChainTokenOut: USDC_BASE,
+          dstChainTokenOutRecipient: params.destinationAddress,
+          senderAddress: params.sourceAddress,
+          // Solana-specific: Enable nonce account for better reliability
+          prependOperatingExpenses: 'true',
+        });
+
         const url = `${DEBRIDGE_API}/dln/order/create-tx?${queryParams.toString()}`;
+
+        console.log(`[deBridge] Getting quote+tx (attempt ${attempt + 1}/${maxRetries})`);
+
         const response = await fetch(url, {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
         });
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          const errorMsg = errorData.message || response.statusText;
-          
-          // Rate limit - retry with backoff
+          const errorMsg = errorData.errorMessage || errorData.message || response.statusText;
+
+          // Check for specific error types
+          if (errorData.errorId === 'INTERNAL_SERVER_ERROR') {
+            console.warn('[deBridge] API internal error, retrying...');
+            lastError = new Error(`deBridge API internal error: ${errorMsg}`);
+            if (attempt < maxRetries - 1) {
+              await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+              continue;
+            }
+          }
+
           if (response.status === 429 || response.status === 503) {
             lastError = new Error(`deBridge rate limited: ${errorMsg}`);
             if (attempt < maxRetries - 1) {
-              const backoff = Math.pow(2, attempt) * 1000; // exponential backoff
-              await new Promise(resolve => setTimeout(resolve, backoff));
+              await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 2000));
               continue;
             }
-          } else {
-            throw new Error(`deBridge API error (${response.status}): ${errorMsg}`);
           }
+
+          throw new BridgeError(
+            BridgeErrorCode.ESTIMATION_FAILED,
+            `deBridge create-tx failed: ${errorMsg}`,
+            'debridge'
+          );
         }
 
         const data = await response.json();
-        
+
         // Cache the quote
         this.quoteCache.set(`${params.sourceChain}-${params.destinationChain}-${params.amount}`, {
           quote: data,
@@ -279,106 +409,86 @@ export class DeBridgeProtocol implements BridgeProtocol {
         return data;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        
-        // Retry on network errors and rate limits
-        if (attempt < maxRetries - 1 && (lastError.message.includes('rate') || lastError.message.includes('fetch'))) {
-          const backoff = Math.pow(2, attempt) * 1000;
-          await new Promise(resolve => setTimeout(resolve, backoff));
+
+        if (attempt < maxRetries - 1) {
+          console.warn(`[deBridge] Attempt ${attempt + 1} failed:`, lastError.message);
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
           continue;
-        }
-        
-        if (attempt === maxRetries - 1) {
-          break;
         }
       }
     }
 
     throw new BridgeError(
       BridgeErrorCode.ESTIMATION_FAILED,
-      `Failed to get deBridge quote after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`,
+      `Failed to get deBridge transaction after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`,
       'debridge'
     );
   }
 
   /**
-   * Poll deBridge for bridge completion
+   * Poll deBridge stats API for order completion
    */
-  private async pollBridgeStatus(
+  private async pollOrderStatus(
     orderId: string,
     timeoutMs: number,
     params: BridgeParams
-  ): Promise<{ success: boolean; amountReceived?: string; txHash?: string; error?: string }> {
+  ): Promise<{ success: boolean; fulfillTxHash?: string; error?: string }> {
     const startTime = Date.now();
     const pollInterval = 5000; // 5 seconds
 
     while (Date.now() - startTime < timeoutMs) {
       try {
         const response = await fetch(
-          `${DEBRIDGE_API}/dln/order/status?orderId=${orderId}&txHash=`,
+          `${DEBRIDGE_STATS_API}/api/Orders/${orderId}`,
           {
             method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
           }
         );
 
-        if (!response.ok) {
-          // If we get a 404, the order might not be in deBridge's system yet
-          if (response.status === 404) {
-            params.onStatus?.('solver_waiting_deposit', {
-              protocol: 'debridge',
-              message: 'Order not yet received by deBridge',
-              elapsedSeconds: Math.round((Date.now() - startTime) / 1000),
-            });
-          } else {
-            throw new Error(`deBridge status API error: ${response.statusText}`);
-          }
-        } else {
-          const data = (await response.json()) as DeBridgeStatusResponse;
+        if (response.status === 404) {
+          // Order not yet in system
+          params.onStatus?.('solver_waiting_deposit', {
+            protocol: 'debridge',
+            message: 'Waiting for order to be indexed...',
+            elapsedSeconds: Math.round((Date.now() - startTime) / 1000),
+          });
+        } else if (response.ok) {
+          const data = (await response.json()) as DeBridgeOrderStatus;
 
           params.onStatus?.('solver_waiting_deposit', {
             protocol: 'debridge',
-            message: `Bridge status: ${data.status}`,
+            message: `Order status: ${data.state}`,
             elapsedSeconds: Math.round((Date.now() - startTime) / 1000),
           });
 
-          if (data.status === 'completed') {
+          // Check for completion states
+          if (data.state === 'Fulfilled' || data.state === 'SentUnlock' || data.state === 'ClaimedUnlock') {
             return {
               success: true,
-              amountReceived: data.amountReceived || params.amount,
-              txHash: data.txHash || `debridge_tx_${orderId}`,
+              fulfillTxHash: data.fulfillTx?.txHash,
             };
           }
 
-          if (data.status === 'failed') {
+          // Check for failure states
+          if (data.state === 'Cancelled' || data.state === 'OrderCancelled' || data.state === 'ClaimedOrderCancel') {
             return {
               success: false,
-              error: 'deBridge solver rejected order',
+              error: `Order was cancelled: ${data.state}`,
             };
           }
         }
 
-        // Wait before next poll
         await new Promise(resolve => setTimeout(resolve, pollInterval));
       } catch (error) {
-        // Log error but continue polling - network issues are temporary
         console.warn('[deBridge] Polling error:', error);
-        
-        params.onStatus?.('solver_waiting_deposit', {
-          protocol: 'debridge',
-          message: `Polling (attempt ${Math.round((Date.now() - startTime) / pollInterval)})...`,
-          elapsedSeconds: Math.round((Date.now() - startTime) / 1000),
-        });
-
-        // Wait before next attempt
         await new Promise(resolve => setTimeout(resolve, pollInterval));
       }
     }
 
     return {
       success: false,
-      error: `Bridge timeout after ${timeoutMs}ms`,
+      error: `Order status timeout after ${timeoutMs}ms`,
     };
   }
 
@@ -386,9 +496,22 @@ export class DeBridgeProtocol implements BridgeProtocol {
    * Get protocol health
    */
   async getHealth(): Promise<ProtocolHealth> {
-    return {
-      ...this.healthStatus,
-    };
+    try {
+      // Quick health check - try to get a quote
+      const testQuote = await fetch(`${DEBRIDGE_API}/supported-chains-info`);
+
+      return {
+        ...this.healthStatus,
+        isHealthy: testQuote.ok,
+        lastSuccessTime: testQuote.ok ? new Date() : undefined,
+      };
+    } catch {
+      return {
+        ...this.healthStatus,
+        isHealthy: false,
+        consecutiveFailures: (this.healthStatus.consecutiveFailures ?? 0) + 1,
+      };
+    }
   }
 
   /**
@@ -406,8 +529,24 @@ export class DeBridgeProtocol implements BridgeProtocol {
       return { valid: false, error: 'Invalid amount' };
     }
 
+    // deBridge has a minimum amount requirement (~$1 in most cases)
+    const amountNum = parseFloat(params.amount);
+    if (amountNum < 1) {
+      return { valid: false, error: 'Minimum amount is $1 USDC' };
+    }
+
     if (!params.sourceAddress || !params.destinationAddress) {
       return { valid: false, error: 'Missing addresses' };
+    }
+
+    // Validate Solana address format
+    if (params.sourceChain === 'solana' && params.sourceAddress.length < 32) {
+      return { valid: false, error: 'Invalid Solana source address' };
+    }
+
+    // Validate EVM address format
+    if (params.destinationChain === 'base' && !params.destinationAddress.startsWith('0x')) {
+      return { valid: false, error: 'Invalid Base destination address' };
     }
 
     return { valid: true };
@@ -420,6 +559,11 @@ export class DeBridgeProtocol implements BridgeProtocol {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const code = error instanceof BridgeError ? error.code : BridgeErrorCode.UNKNOWN;
 
+    // Suggest fallback for API errors
+    const suggestFallback = errorMessage.includes('INTERNAL_SERVER_ERROR') ||
+      errorMessage.includes('rate limit') ||
+      errorMessage.includes('timeout');
+
     return {
       success: false,
       protocol: 'debridge',
@@ -427,6 +571,8 @@ export class DeBridgeProtocol implements BridgeProtocol {
       error: errorMessage,
       errorCode: code,
       actualTimeMs,
+      suggestFallback,
+      fallbackReason: suggestFallback ? 'deBridge API temporarily unavailable. Try Base-Solana Bridge.' : undefined,
     };
   }
 }
