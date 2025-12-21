@@ -194,6 +194,13 @@ async function bridgeFromStacks(params: {
       throw new Error('Invalid Base address format');
     }
 
+    console.log('[Stacks Bridge] Preparing contract call:', {
+      contractAddress: CONTRACT_PRINCIPAL,
+      contractName: CONTRACT_NAME,
+      functionName: 'bridge-and-purchase',
+      args: [params.ticketCount, params.baseAddress, params.tokenPrincipal]
+    });
+
     return new Promise((resolve) => {
       openContractCall({
         contractAddress: CONTRACT_PRINCIPAL,
@@ -202,16 +209,18 @@ async function bridgeFromStacks(params: {
         functionArgs: [
           uintCV(params.ticketCount),
           stringAsciiCV(params.baseAddress),
-          // NEW: Third argument is the payment token principal trait
+          // Pass the token principal trait
           contractPrincipalCV(tokenAddress, tokenContractName),
         ],
-        network: STACKS_NETWORK,
-        // onError: (error) => ... // Lint fix: onError is not a valid property on ContractCallOptions
+        // REMOVED: network object to let the wallet decide.
+        // This prevents internal Hiro/Leather sponsorship verification crashes.
         onFinish: (data) => {
+          console.log('[Stacks Bridge] Transaction broadcasted:', data.txId);
           params.onStatus('broadcasted', data);
           resolve({ success: true, sourceTxHash: data.txId });
         },
         onCancel: () => {
+          console.log('[Stacks Bridge] Transaction cancelled by user');
           params.onStatus('user_rejected', {});
           resolve({ success: false, error: 'User rejected the transaction' });
         },
