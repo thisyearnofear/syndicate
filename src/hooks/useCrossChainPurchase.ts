@@ -4,7 +4,7 @@ import { useCallback, useState, useEffect } from 'react';
 import { bridgeManager } from '@/services/bridges';
 import { openContractCall } from '@stacks/connect';
 import { StacksMainnet, StacksTestnet } from '@stacks/network';
-import { stringAsciiCV, uintCV } from '@stacks/transactions';
+import { stringAsciiCV, uintCV, contractPrincipalCV } from '@stacks/transactions';
 import type { ChainIdentifier } from '@/services/bridges/types';
 import type { SourceChain } from '@/config/chains';
 import { TrackerStatus } from '@/components/bridge/CrossChainTracker';
@@ -74,6 +74,7 @@ export function useCrossChainPurchase() {
     sourceChain: ChainIdentifier | SourceChain;
     ticketCount: number;
     recipientBase: string;
+    stacksTokenPrincipal?: string; // NEW: The token principal to use for payment (e.g. SP3Y...usdc-token)
   }) => {
     setState({ status: 'idle' });
 
@@ -86,6 +87,7 @@ export function useCrossChainPurchase() {
         const bridgeResult = await bridgeFromStacks({
           baseAddress: params.recipientBase,
           ticketCount: params.ticketCount,
+          tokenPrincipal: params.stacksTokenPrincipal || 'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token', // Default to Circle USDC
           onStatus: (status, data) => {
             console.debug('[Stacks Bridge] Status:', status, data);
             if (status === 'broadcasted') {
@@ -144,11 +146,17 @@ export function useCrossChainPurchase() {
 async function bridgeFromStacks(params: {
   baseAddress: string;
   ticketCount: number;
+  tokenPrincipal: string; // NEW: The token principal to use for payment
   onStatus: (status: string, data: any) => void;
 }): Promise<{ success: boolean; sourceTxHash?: string; error?: string }> {
   try {
+    const [tokenAddress, tokenContractName] = params.tokenPrincipal.split('.');
+    if (!tokenAddress || !tokenContractName) {
+      throw new Error('Invalid token principal format. Expected ADDRESS.CONTRACT_NAME');
+    }
+
     console.log('[Stacks Bridge] Using contract address:', LOTTERY_CONTRACT_ADDRESS);
-    console.log('[Stacks Bridge] Using contract address:', LOTTERY_CONTRACT_ADDRESS);
+    console.log('[Stacks Bridge] Using payment token:', params.tokenPrincipal);
     // console.log('[Stacks Bridge] Network:', STACKS_NETWORK.networkId); // Lint fix: networkId doesn't exist
 
     // Validate contract address format
@@ -200,7 +208,8 @@ async function bridgeFromStacks(params: {
         functionArgs: [
           uintCV(params.ticketCount),
           stringAsciiCV(params.baseAddress),
-          // TODO: Future enhancement - Support USDC payment tokenCV if user prefers USDC over STX
+          // NEW: Third argument is the payment token principal trait
+          contractPrincipalCV(tokenAddress, tokenContractName),
         ],
         network: STACKS_NETWORK,
         // onError: (error) => ... // Lint fix: onError is not a valid property on ContractCallOptions

@@ -86,6 +86,10 @@ export interface TicketPurchaseState {
   nearWithdrawalTxHash?: string | null; // Transaction hash of winnings transfer to deposit
   isWithdrawingWinningsToNear?: boolean; // Currently processing winnings withdrawal
 
+  // Stacks specific state
+  stacksBalances?: Record<string, string>; // principal -> balance
+  selectedStacksToken?: string; // current best/selected token principal
+
   // Initialization state
   isServiceReady: boolean;
 }
@@ -175,6 +179,8 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     nearWithdrawalDepositAmount: null,
     nearWithdrawalTxHash: null,
     isWithdrawingWinningsToNear: false,
+    stacksBalances: {},
+    selectedStacksToken: 'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token',
     isServiceReady: false,
   });
 
@@ -380,27 +386,43 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
                 stxBalance = (parseFloat(data.stx.balance) / 1_000_000).toString();
               }
 
-              // 2. Find USDC token (case-insensitive search for 'usdc')
-              const usdcKey = Object.keys(tokens).find(key =>
-                key.toLowerCase().includes('usdc')
-              );
+              // 2. Find Usable Bridge Tokens (USDC, aeUSDC, sUSDT)
+              const supportedTokens = {
+                'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token': 'USDC',
+                'SP3Y2ZSH8P7D50B0VBTSX11S7XSG24M1VB9YFQA4K.token-aeusdc': 'aeUSDC',
+                'SP2XD7417HGPRTREMKF748VNEQPDRR0RMANB7X1NK.token-susdt': 'sUSDT'
+              };
 
-              if (usdcKey) {
-                // USDC typically has 6 decimals on Stacks
-                const rawBalance = tokens[usdcKey].balance;
-                usdcBalance = (parseFloat(rawBalance) / 1_000_000).toString();
-                console.debug('[useTicketPurchase] Found Stacks USDC:', { key: usdcKey, balance: usdcBalance });
-              }
+              const stacksBalances: Record<string, string> = {};
+              let totalUsableBalance = 0;
+              let bestToken = 'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token';
+              let maxBalance = -1;
+
+              Object.entries(supportedTokens).forEach(([principal, name]) => {
+                const tokenData = tokens[principal];
+                const balance = tokenData ? parseFloat(tokenData.balance) / 1_000_000 : 0;
+                stacksBalances[principal] = balance.toString();
+                totalUsableBalance += balance;
+
+                if (balance > maxBalance) {
+                  maxBalance = balance;
+                  bestToken = principal;
+                }
+              });
+
+              console.debug('[useTicketPurchase] Stacks Balances:', stacksBalances);
 
               setState(prev => ({
                 ...prev,
                 userBalance: {
-                  usdc: usdcBalance,
-                  eth: stxBalance, // Store STX balance in 'eth' field for generic usage
-                  hasEnoughUsdc: parseFloat(usdcBalance) >= 1,
-                  hasEnoughEth: parseFloat(stxBalance) > 0 // Has gas (STX)
+                  usdc: totalUsableBalance.toString(),
+                  eth: stxBalance,
+                  hasEnoughUsdc: totalUsableBalance >= 1,
+                  hasEnoughEth: parseFloat(stxBalance) > 0
                 },
-                solanaBalance: usdcBalance, // For consistency
+                solanaBalance: totalUsableBalance.toString(),
+                stacksBalances,
+                selectedStacksToken: bestToken,
                 isCheckingBalance: false
               }));
             } else {

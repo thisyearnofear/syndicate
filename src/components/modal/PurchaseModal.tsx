@@ -61,6 +61,8 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
     refreshBalance, retryAfterFunding, clearError, reset, needsBridgeGuidance,
     // NEW: Solana bridge state (Phase 3)
     bridgeStatus, bridgeStages, bridgeDepositAddress,
+    // NEW: Stacks specific
+    selectedStacksToken, stacksBalances,
   } = useTicketPurchase();
 
   // New hook for the Stacks purchase flow
@@ -286,7 +288,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
       case "yield":
         return <YieldStrategyStep selectedStrategy={selectedVaultStrategy} onStrategySelect={setSelectedVaultStrategy} ticketsAllocation={yieldToTicketsPercentage} causesAllocation={yieldToCausesPercentage} onAllocationChange={(tickets, causes) => { setYieldToTicketsPercentage(tickets); setYieldToCausesPercentage(causes); }} onNext={() => setStep("select")} onBack={() => setStep("mode")} userAddress={isConnected ? address || undefined : undefined} />;
       case "select":
-        return <SelectStep setStep={setStep as (step: "mode") => void} selectedSyndicate={selectedSyndicate} prizeAmount={prizeAmount} jackpotLoading={jackpotLoading} jackpotError={jackpotError} ticketPrice={ticketPrice} ticketCount={ticketCount} setTicketCount={setTicketCount} quickAmounts={quickAmounts} totalCost={totalCost} oddsInfo={oddsInfo} hasInsufficientBalance={hasInsufficientBalance} refreshBalance={refreshBalance} isConnected={isConnected} handlePurchase={handlePurchase} isPurchasing={isPurchasing} isInitializing={isInitializing} purchaseMode={purchaseMode} walletType={walletType} solanaBalance={solanaBalance} userBalance={userBalance} isCheckingBalance={isCheckingBalance} onStartBridge={handleStartBridge} isBridging={isBridging} showBridgeGuidance={showBridgeGuidance} nearQuote={nearQuote} onGetNearQuote={handleGetNearQuote} isGettingQuote={isGettingQuote} onConfirmIntent={handlePurchase} buyTicketsWithStacks={buyTicketsWithStacks} evmAddress={evmAddress || undefined} />;
+        return <SelectStep setStep={setStep as (step: "mode") => void} selectedSyndicate={selectedSyndicate} prizeAmount={prizeAmount} jackpotLoading={jackpotLoading} jackpotError={jackpotError} ticketPrice={ticketPrice} ticketCount={ticketCount} setTicketCount={setTicketCount} quickAmounts={quickAmounts} totalCost={totalCost} oddsInfo={oddsInfo} hasInsufficientBalance={hasInsufficientBalance} refreshBalance={refreshBalance} isConnected={isConnected} handlePurchase={handlePurchase} isPurchasing={isPurchasing} isInitializing={isInitializing} purchaseMode={purchaseMode} walletType={walletType} solanaBalance={solanaBalance} userBalance={userBalance} isCheckingBalance={isCheckingBalance} onStartBridge={handleStartBridge} isBridging={isBridging} showBridgeGuidance={showBridgeGuidance} nearQuote={nearQuote} onGetNearQuote={handleGetNearQuote} isGettingQuote={isGettingQuote} onConfirmIntent={handlePurchase} buyTicketsWithStacks={buyTicketsWithStacks} evmAddress={evmAddress || undefined} stacksBalances={stacksBalances} selectedStacksToken={selectedStacksToken} />;
       case "processing":
         return <ProcessingStep
           isApproving={isApproving}
@@ -364,14 +366,15 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
 
         {isConnected && userBalance && step === "select" && (
           <div className="space-y-3 mb-6">
-            {(walletType === WalletTypes.SOLANA || walletType === WalletTypes.NEAR) && (
+            {(walletType === WalletTypes.SOLANA || walletType === WalletTypes.NEAR || walletType === WalletTypes.STACKS) && (
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
-                <p className="text-blue-300 text-sm">💡 USDC lives on Solana, NEAR, and Base.</p>
-                <div className="text-blue-200 text-xs mt-1">{(() => { const baseUSDC = parseFloat(userBalance?.usdc || "0"); const requiredAmount = parseFloat(totalCost || "0"); const deficit = Math.max(0, requiredAmount - baseUSDC); const solUSDC = parseFloat(solanaBalance || "0"); return `Need ${requiredAmount.toFixed(2)} • Have ${baseUSDC.toFixed(2)} on Base (deficit ${deficit.toFixed(2)}) • ${solUSDC.toFixed(2)} on Solana`; })()}</div>
+                <p className="text-blue-300 text-sm">💡 USDC lives on {walletType === WalletTypes.STACKS ? 'Stacks' : walletType === WalletTypes.SOLANA ? 'Solana' : 'NEAR'}, and Base.</p>
+                <div className="text-blue-200 text-xs mt-1">{(() => { const baseUSDC = parseFloat(userBalance?.usdc || "0"); const requiredAmount = parseFloat(totalCost || "0"); const deficit = Math.max(0, requiredAmount - baseUSDC); const sourceUSDC = parseFloat(solanaBalance || "0"); return `Need ${requiredAmount.toFixed(2)} • Have ${baseUSDC.toFixed(2)} on Base (deficit ${deficit.toFixed(2)}) • ${sourceUSDC.toFixed(2)} on ${walletType === WalletTypes.STACKS ? 'Stacks' : walletType === WalletTypes.SOLANA ? 'Solana' : 'NEAR'}`; })()}</div>
               </div>
             )}
             {walletType === WalletTypes.NEAR && <div className="bg-white/5 rounded-lg p-4 border border-blue-500/20"><div className="flex justify-between items-center"><span className="text-white/70">🌌 Your USDC on NEAR:</span><span className="text-white font-semibold">${solanaBalance || "0"}</span></div><p className="text-xs text-gray-400 mt-2">Using NEAR Chain Signatures for cross-chain execution</p></div>}
             {walletType === WalletTypes.SOLANA && <div className="bg-white/5 rounded-lg p-4 border border-purple-500/20"><div className="flex justify-between items-center"><span className="text-white/70">🟣 Your USDC on Solana:</span><span className="text-white font-semibold">${solanaBalance || "0"}</span></div></div>}
+            {walletType === WalletTypes.STACKS && <div className="bg-white/5 rounded-lg p-4 border border-orange-500/20"><div className="flex justify-between items-center"><span className="text-white/70">₿ Your USDC on Stacks:</span><span className="text-white font-semibold">${solanaBalance || "0"}</span></div></div>}
             {walletType === WalletTypes.SOLANA && !evmConnected && <div className="bg-white/5 rounded-lg p-4 border border-blue-500/20"><div className="flex items-center justify-between"><div className="text-white/70">Connect an EVM wallet to receive bridged USDC on Base</div><ConnectButton showBalance={false} chainStatus="none" /></div></div>}
             <div className={`rounded-lg p-4 ${walletType === WalletTypes.SOLANA ? "bg-white/5 border border-blue-500/20" : "bg-white/5"}`}><div className="flex justify-between items-center"><span className="text-white/70">🔵 Your USDC on Base:</span><span className="text-white font-semibold">${userBalance.usdc}</span></div></div>
             {isCheckingBalance && <div className="flex items-center gap-2 text-white/60"><Loader className="w-4 h-4 animate-spin" /><span className="text-sm">Updating balance...</span></div>}

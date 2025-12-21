@@ -36,12 +36,12 @@ export function getAvailableWallets(): WalletType[] {
   // Check for any Stacks wallet (Leather, Xverse, Asigna, Fordefi)
   // @stacks/connect auto-detects which one is available
   if (typeof window !== 'undefined') {
-    const hasStacksWallet = 
+    const hasStacksWallet =
       (window as any).LeatherProvider ||
       (window as any).XverseProviders ||
       (window as any).AsignaProvider ||
       (window as any).FordefiProvider;
-    
+
     if (hasStacksWallet) {
       available.push(WalletTypes.STACKS);
     }
@@ -168,19 +168,19 @@ export function useUnifiedWallet(): {
       }
 
       // Initialize variables - EVM case throws error so won't get here
-       let address: string = '';
-       let chainId: number = 0;
+      let address: string = '';
+      let chainId: number = 0;
 
-       switch (walletType) {
-         case WalletTypes.EVM:
-           // For EVM wallets, prefer wagmi/RainbowKit connection to avoid conflicts
-           // wagmi will handle the connection and our WalletContext will sync with it
-           // We don't need to do anything here as RainbowKit handles the connection flow
-           console.log('EVM wallet connection handled by RainbowKit');
-           return;
-           break;
+      switch (walletType) {
+        case WalletTypes.EVM:
+          // For EVM wallets, prefer wagmi/RainbowKit connection to avoid conflicts
+          // wagmi will handle the connection and our WalletContext will sync with it
+          // We don't need to do anything here as RainbowKit handles the connection flow
+          console.log('EVM wallet connection handled by RainbowKit');
+          return;
+          break;
 
-         case WalletTypes.SOLANA:
+        case WalletTypes.SOLANA:
           // SOLANA-FIRST APPROACH: Always connect via Solana interface first
           // This ensures we get Phantom specifically (not MetaMask via window.ethereum)
           const hasPhantomSolana = window.solana?.isPhantom;
@@ -296,6 +296,20 @@ export function useUnifiedWallet(): {
 
         case WalletTypes.STACKS:
           try {
+            // METAMASK CONFLICT PREVENTION: Disable MetaMask auto-connection while using Stacks
+            // This prevents wagmi from interfering with Stacks wallet connections (like Leather)
+            try {
+              if (typeof window !== 'undefined' && (window as any).ethereum) {
+                const originalProvider = (window as any).ethereum;
+                (window as any).ethereum = null;
+                setTimeout(() => {
+                  (window as any).ethereum = originalProvider;
+                }, 1000);
+              }
+            } catch (error) {
+              console.warn('Could not disable MetaMask auto-connect for Stacks:', error);
+            }
+
             const stacksWallet = await connectStacksWallet(WalletTypes.STACKS as StacksWalletType);
             address = stacksWallet.address;
             chainId = 12345; // Stacks mainnet chain ID
@@ -356,19 +370,19 @@ export function useUnifiedWallet(): {
     }
 
     try {
-       if (state.walletType === WalletTypes.EVM && window.ethereum) {
-         await window.ethereum.request({
-           method: 'wallet_switchEthereumChain',
-           params: [{ chainId: `0x${targetChainId.toString(16)}` }],
-         });
+      if (state.walletType === WalletTypes.EVM && window.ethereum) {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: `0x${targetChainId.toString(16)}` }],
+        });
 
-         dispatch({ type: 'NETWORK_CHANGED', payload: { chainId: targetChainId } });
-       } else if (state.walletType === WalletTypes.SOLANA) {
-         // Solana wallet connected via Phantom - chain switching happens through cross-chain bridge
-         throw createError('UNSUPPORTED_OPERATION', 'Solana wallet is connected via Phantom. Use cross-chain bridge for EVM operations.');
-       } else {
-         throw createError('UNSUPPORTED_OPERATION', 'Chain switching not supported for this wallet');
-       }
+        dispatch({ type: 'NETWORK_CHANGED', payload: { chainId: targetChainId } });
+      } else if (state.walletType === WalletTypes.SOLANA) {
+        // Solana wallet connected via Phantom - chain switching happens through cross-chain bridge
+        throw createError('UNSUPPORTED_OPERATION', 'Solana wallet is connected via Phantom. Use cross-chain bridge for EVM operations.');
+      } else {
+        throw createError('UNSUPPORTED_OPERATION', 'Chain switching not supported for this wallet');
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to switch chain';
       dispatch({ type: 'CONNECT_FAILURE', payload: { error: errorMessage } });
@@ -488,7 +502,7 @@ async function connectStacksWalletWithConnect(): Promise<{ address: string; publ
     console.error('Stacks wallet connection error:', error);
 
     const errorMessage = error instanceof Error ? error.message : String(error);
-    
+
     // Check for user rejection
     if (errorMessage?.includes('rejected') || errorMessage?.includes('cancelled')) {
       throw createError('CONNECTION_REJECTED', 'Connection was rejected. Please try again.');

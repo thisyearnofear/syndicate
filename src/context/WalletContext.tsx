@@ -29,9 +29,9 @@ export interface WalletState {
 export type WalletAction =
   | { type: "CONNECT_START"; payload?: { walletType: WalletType } }
   | {
-      type: "CONNECT_SUCCESS";
-      payload: { address: string; walletType: WalletType; chainId: number };
-    }
+    type: "CONNECT_SUCCESS";
+    payload: { address: string; walletType: WalletType; chainId: number };
+  }
   | { type: "CONNECT_FAILURE"; payload: { error: string } }
   | { type: "DISCONNECT" }
   | { type: "CLEAR_ERROR" }
@@ -129,15 +129,15 @@ export const walletReducer = (
       return isRecent
         ? { ...action.payload, isModalOpen: false }
         : {
-            isConnected: false,
-            address: null,
-            walletType: null,
-            chainId: null,
-            isConnecting: false,
-            error: null,
-            lastConnectedAt: null,
-            isModalOpen: false,
-          };
+          isConnected: false,
+          address: null,
+          walletType: null,
+          chainId: null,
+          isConnecting: false,
+          error: null,
+          lastConnectedAt: null,
+          isModalOpen: false,
+        };
 
     case "NETWORK_CHANGED":
       return {
@@ -184,20 +184,22 @@ export function WalletProvider({ children }: WalletProviderProps) {
   const { disconnect: wagmiDisconnect } = useDisconnect();
 
   // Manual wagmi sync function (called only when user explicitly connects)
-   const syncWithWagmi = useCallback(() => {
-     const isNonEvmWallet =
-       state.walletType === "solana" || state.walletType === "near";
+  const syncWithWagmi = useCallback(() => {
+    const isNonEvmWallet =
+      state.walletType === "solana" ||
+      state.walletType === "near" ||
+      state.walletType === "stacks";
 
-     if (wagmiConnected && address && !isNonEvmWallet) {
-       let walletType: WalletType = "evm";
+    if (wagmiConnected && address && !isNonEvmWallet) {
+      let walletType: WalletType = "evm";
 
-       if (connector?.id === "metaMask") {
-         walletType = "evm";
-       } else if (connector?.id === "walletConnect") {
-         walletType = "evm";
-       } else {
-         walletType = "evm";
-       }
+      if (connector?.id === "metaMask") {
+        walletType = "evm";
+      } else if (connector?.id === "walletConnect") {
+        walletType = "evm";
+      } else {
+        walletType = "evm";
+      }
 
       dispatch({
         type: "CONNECT_SUCCESS",

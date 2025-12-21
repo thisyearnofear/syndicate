@@ -1,5 +1,18 @@
+;; SIP-010 Trait Definition
+(define-trait sip-010-trait
+  (
+    (transfer (uint principal principal (optional (buff 34))) (response bool uint))
+    (get-name () (response (string-ascii 32) uint))
+    (get-symbol () (response (string-ascii 10) uint))
+    (get-decimals () (response uint uint))
+    (get-balance (principal) (response uint uint))
+    (get-total-supply () (response uint uint))
+    (get-token-uri () (response (optional (string-utf8 256)) uint))
+  )
+)
+
 ;; Stacks-to-Megapot Bridge Contract
-;; Bridges sBTC from Stacks to Base for Megapot lottery participation
+;; Bridges tokens from Stacks to Base for Megapot lottery participation
 ;; Handles ticket purchases and winnings claims without Base wallet requirement
 
 ;; Contract owner
@@ -9,7 +22,7 @@
 (define-constant BRIDGE_OPERATOR tx-sender)
 
 ;; Bridge Address for cross-chain to Base - now configurable
-(define-data-var bridge-address principal tx-sender)
+(define-data-var bridge-address principal (as-contract tx-sender))
 
 ;; Error codes
 (define-constant ERR_NOT_ENOUGH_SBTC (err u1001))
@@ -22,8 +35,8 @@
 (define-constant ERR_PURCHASE_ALREADY_PROCESSED (err u1009))
 
 ;; Configuration
-(define-data-var ticket-price uint u1000000) ;; 1 sBTC per ticket (in micro-units)
-(define-data-var bridge-fee uint u10000) ;; 0.01 sBTC bridge fee
+(define-data-var ticket-price uint u1000000) ;; 1 USDC per ticket (6 decimals)
+(define-data-var bridge-fee uint u100000) ;; 0.1 USDC bridge fee
 (define-data-var service-enabled bool true)
 
 ;; Counter for purchase IDs
@@ -40,6 +53,7 @@
     purchase-block: uint,
     processed: bool,
     base-tx-hash: (optional (string-ascii 66)),
+    token: principal,
   }
 )
 
@@ -51,6 +65,7 @@
     claimed: bool,
     megapot-round: uint,
     base-tx-hash: (string-ascii 66),
+    token: principal,
   }
 )
 
@@ -63,22 +78,23 @@
 ;; CORE BRIDGE FUNCTIONS
 ;; ============================================
 
-;; Bridge sBTC to Base and purchase Megapot tickets
-;; This is the main entry point for users
-(define-public (bridge-and-purchase (ticket-count uint) (base-address (string-ascii 42)))
+;; Bridge tokens to Base and purchase Megapot tickets
+;; payment-token must be a SIP-010 token
+(define-public (bridge-and-purchase (ticket-count uint) (base-address (string-ascii 42)) (payment-token <sip-010-trait>))
   (let (
     (ticket-cost (* ticket-count (var-get ticket-price)))
     (fee (var-get bridge-fee))
     (total-cost (+ ticket-cost fee))
     (purchase-id (var-get next-purchase-id))
+    (token-principal (contract-of payment-token))
   )
     ;; Validations
     (asserts! (var-get service-enabled) (err u1010))
     (asserts! (> ticket-count u0) ERR_INVALID_TICKET_COUNT)
     (asserts! (is-eq (len base-address) u42) ERR_INVALID_BASE_ADDRESS)
     
-    ;; Transfer sBTC from buyer to bridge address
-    (try! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token
+    ;; Transfer tokens from buyer to bridge address
+    (try! (contract-call? payment-token
       transfer total-cost tx-sender (var-get bridge-address) none))
     
     ;; Record the purchase
@@ -92,6 +108,7 @@
         purchase-block: block-height,
         processed: false,
         base-tx-hash: none,
+        token: token-principal,
       }
     )
     
@@ -110,7 +127,8 @@
       sbtc-amount: total-cost,
       ticket-price: (var-get ticket-price),
       bridge-fee: fee,
-      block-height: block-height
+      block-height: block-height,
+      token: token-principal
     })
     
     (ok purchase-id)
@@ -154,6 +172,7 @@
   (amount uint) 
   (round uint)
   (base-tx-hash (string-ascii 66))
+  (token-principal principal)
 )
   (begin
     (asserts! (is-eq tx-sender BRIDGE_OPERATOR) ERR_NOT_AUTHORIZED)
@@ -168,7 +187,8 @@
             total-winnings: (+ (get total-winnings existing-winnings) amount),
             claimed: false,
             megapot-round: round,
-            base-tx-hash: base-tx-hash
+            base-tx-hash: base-tx-hash,
+            token: token-principal
           }
         )
       ;; Create new winnings record
@@ -178,7 +198,8 @@
           total-winnings: amount,
           claimed: false,
           megapot-round: round,
-          base-tx-hash: base-tx-hash
+          base-tx-hash: base-tx-hash,
+          token: token-principal
         }
       )
     )
@@ -188,7 +209,8 @@
       winner: winner,
       amount: amount,
       round: round,
-      base-tx-hash: base-tx-hash
+      base-tx-hash: base-tx-hash,
+      token: token-principal
     })
     
     (ok true)
@@ -196,17 +218,18 @@
 )
 
 ;; User claims their winnings (bridged back from Base to Stacks)
-(define-public (claim-winnings)
+(define-public (claim-winnings (token-trait <sip-010-trait>))
   (let (
     (winnings-data (unwrap! (map-get? winnings { stacks-user: tx-sender }) ERR_PURCHASE_NOT_FOUND))
     (amount (get total-winnings winnings-data))
+    (token-principal (contract-of token-trait))
   )
+    (asserts! (is-eq token-principal (get token winnings-data)) ERR_NOT_AUTHORIZED)
     (asserts! (not (get claimed winnings-data)) ERR_ALREADY_CLAIMED)
     (asserts! (> amount u0) ERR_INVALID_AMOUNT)
     
     ;; Transfer winnings from bridge to user
-    ;; FIXED: Corrected sender/recipient order
-    (try! (as-contract (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token
+    (try! (as-contract (contract-call? token-trait
       transfer amount (as-contract tx-sender) (get stacks-user winnings-data) none)))
     
     ;; Mark as claimed
@@ -221,7 +244,8 @@
     (print {
       event: "winnings-claimed",
       user: tx-sender,
-      amount: amount
+      amount: amount,
+      token: token-principal
     })
     
     (ok amount)
@@ -316,7 +340,7 @@
   (begin
     (asserts! (is-eq tx-sender CONTRACT_OWNER) ERR_NOT_AUTHORIZED)
     
-    (as-contract (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token
+    (as-contract (contract-call? 'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token
       transfer amount tx-sender CONTRACT_OWNER none))
   )
 )
