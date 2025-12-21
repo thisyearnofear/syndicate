@@ -478,13 +478,20 @@ async function connectStacksWalletWithConnect(): Promise<{ address: string; publ
     console.log('Stacks wallet connection successful');
 
     // Response format from @stacks/connect:
-    // { addresses: [{ address: string, publicKey: string, ... }, ...] }
+    // { addresses: [{ address: string, publicKey: string, symbol: string, ... }, ...] }
     if (!response?.addresses || !Array.isArray(response.addresses) || response.addresses.length === 0) {
       throw new Error('No Stacks addresses found in wallet response');
     }
 
-    // Get the first address (primary account)
-    const primaryAddress = response.addresses[0];
+    // ENHANCEMENT: Filter for STX address to avoid picking BTC address (which Leather often returns first)
+    // Leather returns symbols like 'STX' and 'BTC'
+    const stxAddress = response.addresses.find((addr: any) =>
+      addr.symbol === 'STX' ||
+      addr.address.startsWith('SP') ||
+      addr.address.startsWith('ST')
+    );
+
+    const primaryAddress = stxAddress || response.addresses[0];
 
     if (!primaryAddress?.address) {
       throw createError(

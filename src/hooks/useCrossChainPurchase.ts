@@ -11,12 +11,14 @@ import { TrackerStatus } from '@/components/bridge/CrossChainTracker';
 
 // --- Constants ---
 // IMPORTANT: Update this with your deployed contract address from .env
-const LOTTERY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_STACKS_LOTTERY_CONTRACT || 'SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3';
-const LOTTERY_CONTRACT_NAME = 'stacks-lottery-v3';
+const FULL_LOTTERY_CONTRACT = process.env.NEXT_PUBLIC_STACKS_LOTTERY_CONTRACT || 'SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3';
+
+// Split into parts for @stacks/connect
+const [CONTRACT_PRINCIPAL, CONTRACT_NAME] = FULL_LOTTERY_CONTRACT.split('.');
 
 // Auto-detect network based on contract address prefix
 // SP = Mainnet, ST = Testnet
-const isMainnetAddress = LOTTERY_CONTRACT_ADDRESS.startsWith('SP');
+const isMainnetAddress = CONTRACT_PRINCIPAL?.startsWith('SP');
 const STACKS_NETWORK = isMainnetAddress ? new StacksMainnet() : new StacksTestnet();
 
 const POLLING_INTERVAL = 5000; // 5 seconds
@@ -155,38 +157,30 @@ async function bridgeFromStacks(params: {
       throw new Error('Invalid token principal format. Expected ADDRESS.CONTRACT_NAME');
     }
 
-    console.log('[Stacks Bridge] Using contract address:', LOTTERY_CONTRACT_ADDRESS);
+    console.log('[Stacks Bridge] Using contract principal:', CONTRACT_PRINCIPAL);
+    console.log('[Stacks Bridge] Using contract name:', CONTRACT_NAME);
     console.log('[Stacks Bridge] Using payment token:', params.tokenPrincipal);
-    // console.log('[Stacks Bridge] Network:', STACKS_NETWORK.networkId); // Lint fix: networkId doesn't exist
 
     // Validate contract address format
-    if (!LOTTERY_CONTRACT_ADDRESS) {
-      throw new Error('Stacks contract address not configured. Please set NEXT_PUBLIC_STACKS_LOTTERY_CONTRACT environment variable.');
+    if (!CONTRACT_PRINCIPAL || !CONTRACT_NAME) {
+      throw new Error(`Invalid Stacks contract configuration: "${FULL_LOTTERY_CONTRACT}". Expected PRINCIPAL.CONTRACT_NAME`);
     }
 
-    if (!LOTTERY_CONTRACT_ADDRESS.startsWith('ST') && !LOTTERY_CONTRACT_ADDRESS.startsWith('SP')) {
-      throw new Error(`Invalid Stacks contract address format: "${LOTTERY_CONTRACT_ADDRESS}". Must start with ST (contract) or SP (principal)`);
+    if (!CONTRACT_PRINCIPAL.startsWith('ST') && !CONTRACT_PRINCIPAL.startsWith('SP')) {
+      throw new Error(`Invalid Stacks principal address format: "${CONTRACT_PRINCIPAL}". Must start with ST or SP`);
     }
 
-    // Validate the full contract address format (principal.contract-name)
-    const addressParts = LOTTERY_CONTRACT_ADDRESS.split('.');
-    if (addressParts.length !== 2 || !addressParts[1]) {
-      throw new Error(`Invalid Stacks contract address format: "${LOTTERY_CONTRACT_ADDRESS}". Expected format: PRINCIPAL.CONTRACT_NAME`);
-    }
-
-    // Check if contract is properly formatted for Stacks network
-    const [principal, contractName] = addressParts;
-    if (principal.length !== 41 || (principal.startsWith('SP') && !/^[SP][0-9A-HJ-NP-Z]{40}$/.test(principal))) {
-      throw new Error(`Invalid Stacks principal address: "${principal}". Must be 41 characters starting with SP followed by 40 alphanumeric characters.`);
+    // Check if principal is properly formatted
+    if (CONTRACT_PRINCIPAL.length !== 41 || (CONTRACT_PRINCIPAL.startsWith('SP') && !/^[SP][0-9A-HJ-NP-Z]{40}$/.test(CONTRACT_PRINCIPAL))) {
+      throw new Error(`Invalid Stacks principal address: "${CONTRACT_PRINCIPAL}". Must be 41 characters starting with SP followed by 40 alphanumeric characters.`);
     }
 
     // Check if contract name is valid
-    if (!contractName || contractName.length > 128 || !/^[a-z][a-z0-9-]*$/.test(contractName)) {
-      throw new Error(`Invalid Stacks contract name: "${contractName}". Must be lowercase alphanumeric with hyphens, starting with a letter.`);
+    if (!CONTRACT_NAME || CONTRACT_NAME.length > 128 || !/^[a-z][a-z0-9-]*$/.test(CONTRACT_NAME)) {
+      throw new Error(`Invalid Stacks contract name: "${CONTRACT_NAME}". Must be lowercase alphanumeric with hyphens, starting with a letter.`);
     }
 
-    // Additional check for contract deployment
-    console.log('[Stacks Bridge] Contract validation passed. Attempting to call:', principal + '.' + contractName);
+    console.log('[Stacks Bridge] Contract validation passed. Attempting to call:', CONTRACT_PRINCIPAL + '.' + CONTRACT_NAME);
 
     // If we get here, the contract address is valid but might not be deployed
     // The actual deployment check will happen when we try to call the contract
@@ -202,8 +196,8 @@ async function bridgeFromStacks(params: {
 
     return new Promise((resolve) => {
       openContractCall({
-        contractAddress: LOTTERY_CONTRACT_ADDRESS,
-        contractName: LOTTERY_CONTRACT_NAME,
+        contractAddress: CONTRACT_PRINCIPAL,
+        contractName: CONTRACT_NAME,
         functionName: 'bridge-and-purchase',
         functionArgs: [
           uintCV(params.ticketCount),

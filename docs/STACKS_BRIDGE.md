@@ -1,12 +1,12 @@
 # Stacks-to-Megapot Bridge System
 
-**Status**: ✅ Production Ready (Pre-funded liquidity strategy)  
-**Contract Deployed**: `SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery`  
-**Last Updated**: December 15, 2024
+**Status**: ✅ Production Ready (V3 Multi-Token Bridge)  
+**Contract Deployed**: `SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3`  
+**Last Updated**: December 22, 2025
 
 ## Overview
 
-A trustless bridge system enabling Stacks users to participate in Megapot lottery on Base without needing a Base wallet. Users pay with sBTC on Stacks, and the bridge operator handles cross-chain execution transparently.
+A trustless bridge system enabling Stacks users to participate in Megapot lottery on Base without needing a Base wallet. Users pay with supported Stacks tokens (USDC, aeUSDC, or sUSDT), and the bridge operator handles cross-chain execution transparently.
 
 ### Architecture Principles ✨
 
@@ -20,10 +20,10 @@ Built following our core principles:
 ## System Components
 
 ### 1. Stacks Smart Contract ✅
-**File**: `contracts/stacks-lottery.clar`
+**File**: `contracts/stacks-lottery-v3.clar`
 
 **Key Functions**:
-- `bridge-and-purchase(ticket-count, base-address)` - User entry point
+- `bridge-and-purchase(ticket-count, base-address, token-principal)` - User entry point
 - `confirm-purchase-processed(purchase-id, base-tx-hash)` - Operator confirmation
 - `record-winnings(winner, amount, round, base-tx-hash)` - Record wins
 - `claim-winnings()` - User claims back to Stacks
@@ -40,7 +40,7 @@ Built following our core principles:
 
 **Responsibilities**:
 - 🎧 Listen for Stacks contract events (WebSocket)
-- 💱 Convert sBTC → USDC (pre-funded pool strategy)
+- 💱 Convert Stacks Tokens → USDC (pre-funded pool strategy)
 - 🎫 Execute Megapot purchases on Base
 - ✅ Confirm transactions back to Stacks
 - 💰 Monitor and distribute winnings
@@ -80,8 +80,8 @@ Integrates Stacks bridge with unified bridge manager for:
 ```
 1. USER (Stacks)
    ├─> Connects Stacks wallet (Leather/Xverse/etc)
-   └─> Calls: bridge-and-purchase(5 tickets, "0xABC...")
-       └─> Transfers sBTC to bridge contract
+   └─> Calls: bridge-and-purchase(5 tickets, "0xABC...", token-principal)
+       └─> Transfers tokens to bridge contract
 
 2. STACKS CONTRACT
    ├─> Records purchase with unique ID
@@ -147,8 +147,8 @@ Create `.env.local`:
 STACKS_BRIDGE_OPERATOR_KEY=0x...
 
 # Stacks Configuration
-STACKS_LOTTERY_CONTRACT=SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG
-NEXT_PUBLIC_STACKS_API_URL=https://api.stacks.co
+STACKS_LOTTERY_CONTRACT=SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3
+NEXT_PUBLIC_STACKS_API_URL=https://api.mainnet.hiro.so
 
 # Base Configuration  
 NEXT_PUBLIC_BASE_RPC_URL=https://base-mainnet.g.alchemy.com/v2/YOUR_KEY
@@ -160,9 +160,8 @@ LIQUIDITY_STRATEGY=pre-funded  # or 'real-time' (future)
 
 ### Deploy Stacks Contract
 
-✅ **Already Deployed!**
-- **Contract ID**: `SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery`
-- **Transaction**: `0x1eeabe6650e189dfdd53ca76ee0e5f25430b8f8fe71a9b73656280ff4d515b8b`
+✅ **V3 Deployed!**
+- **Contract ID**: `SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3`
 - **Network**: Stacks Mainnet
 
 The contract is already configured in `.env.local`.
@@ -269,9 +268,9 @@ cast balance --rpc-url $NEXT_PUBLIC_BASE_RPC_URL \
 ### Strategy 2: Real-time Conversion (Future) 🚧
 
 **Planned architecture**:
-1. Accept sBTC on Stacks
-2. Bridge BTC to Base (via wrapped BTC)
-3. Swap wBTC → USDC on Uniswap/Base DEX
+1. Accept Stacks tokens (USDC, sUSDT, aeUSDC) on Stacks
+2. Bridge assets via automated cross-chain routes
+3. Swap for USDC on Base (if needed)
 4. Purchase tickets
 
 **Pros**:
@@ -288,23 +287,23 @@ cast balance --rpc-url $NEXT_PUBLIC_BASE_RPC_URL \
 
 ### Revenue Streams
 
-1. **Bridge Fee**: 0.01 sBTC per purchase (configured in contract)
+1. **Bridge Fee**: 1 USDC (0.10 per ticket)
 2. **Megapot Referral**: 10% of ticket price (0.10 USDC per ticket)
-3. **Conversion Spread**: Small margin on sBTC ↔ USDC (future)
+3. **Yield on Reserve**: Earning yield on the pre-funded USDC pool
 
 ### Economics Example (100 tickets/day)
 
 **Revenue**:
-- Bridge fees: 100 × 0.01 sBTC = 1 sBTC/day (~$100/day @ $100k BTC)
+- Bridge fees: 100 × 0.10 USDC = $10/day
 - Referral fees: 100 × $1 × 10% = $10/day
-- **Total**: ~$110/day = $3,300/month
+- **Total**: ~$20/day = $600/month
 
 **Costs**:
 - Base gas fees: ~$50-100/month (variable)
 - Server infrastructure: ~$50/month
 - **Total**: ~$100-150/month
 
-**Net Profit**: ~$3,150-3,200/month @ 100 tickets/day
+**Net Profit**: ~$450-500/month @ 100 tickets/day
 
 Scale at 1000 tickets/day → **~$31,500/month profit!**
 
@@ -464,7 +463,8 @@ cast balance $OPERATOR_ADDRESS --rpc-url $BASE_RPC
 
 **Purchase Flow** → Full provenance trail:
 - Fixed function name bug (`bridge-and-purchase-tickets` → `bridge-and-purchase`)
-- Stacks Explorer link: verify sBTC left user's wallet
+- Multi-token support: Bridge via USDC, aeUSDC, or sUSDT
+- Stacks Explorer link: verify tokens left user's wallet
 - Base Explorer link: verify Megapot received the purchase
 - Megapot app link: view tickets directly
 
@@ -476,8 +476,8 @@ cast balance $OPERATOR_ADDRESS --rpc-url $BASE_RPC
 
 **Winnings Claiming** → Simple redemption flow:
 - User calls `claim-winnings()` on Stacks contract
-- Operator detects claim and processes weekly batch redemptions
-- sBTC transferred to user's Stacks wallet within 7 days
+- Operator detects claim and processes redemptions
+- Stacks tokens transferred to user's Stacks wallet
 
 **Operator Monitoring** → Simple, observable:
 - Logs all activity to `logs/operator.log`
@@ -538,9 +538,9 @@ tail -f logs/operator.log | grep -i "win\|record"
 # 9. Verify claim was recorded on Stacks
 tail logs/operator.log | grep "claim-winnings\|Claim transaction"
 
-# 10. Operator processes batch redemption (weekly)
+# 10. Operator processes redemption
 # - Withdraws USDC from Megapot
-# - Transfers sBTC to user on Stacks
+# - Transfers Stacks tokens to user on Stacks
 ```
 
 **Quick Health Check**:
@@ -559,7 +559,8 @@ Should show:
 ## Roadmap
 
 ### Phase 1: MVP (Current) ✅
-- [x] Stacks contract deployment
+- [x] Stacks contract deployment (V1)
+- [x] V3 Deployment with Multi-Token support
 - [x] Bridge operator with pre-funded liquidity
 - [x] Frontend integration
 - [x] Status tracking + receipt verification

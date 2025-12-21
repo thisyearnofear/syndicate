@@ -390,7 +390,8 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
               const supportedTokens = {
                 'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token': 'USDC',
                 'SP3Y2ZSH8P7D50B0VBTSX11S7XSG24M1VB9YFQA4K.token-aeusdc': 'aeUSDC',
-                'SP2XD7417HGPRTREMKF748VNEQPDRR0RMANB7X1NK.token-susdt': 'sUSDT'
+                'SP2XD7417HGPRTREMKF748VNEQPDRR0RMANB7X1NK.token-susdt': 'sUSDT',
+                'SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA2WBX.token-susdt': 'sUSDT (Alex)'
               };
 
               const stacksBalances: Record<string, string> = {};
@@ -399,8 +400,10 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
               let maxBalance = -1;
 
               Object.entries(supportedTokens).forEach(([principal, name]) => {
-                // Find token data by prefix matching (e.g. principal::symbol)
-                const tokenKey = Object.keys(tokens).find(k => k.startsWith(principal));
+                // Find token data by prefix matching (e.g. principal::symbol) - case insensitive for contract name parts
+                const tokenKey = Object.keys(tokens).find(k =>
+                  k.toLowerCase().startsWith(principal.toLowerCase())
+                );
                 const tokenData = tokenKey ? tokens[tokenKey] : null;
 
                 const balance = tokenData ? parseFloat(tokenData.balance) / (tokenData.decimals || 1_000_000) : 0;

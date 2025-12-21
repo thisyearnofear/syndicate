@@ -99,11 +99,11 @@ Visit `http://localhost:3000` to try the platform.
 
 **Current Focus**: Seamless bridge flows across all supported chains
 
-- **Stacks Bridge Deployed**: Complete sBTC → Base bridge with operator service
-  - Contract: `SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery`
+- **Stacks Bridge V3 Live**: Complete multi-token bridge supporting USDC, sUSDT, and aeUSDC
+  - Contract: `SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3`
   - Production-ready operator service with retry logic & monitoring
   - Pre-funded USDC liquidity strategy
-  - Earns 10% Megapot referral fees
+  - Supports Clarity 3 multi-token standard
   - See [Stacks Bridge Guide](./docs/STACKS_BRIDGE.md)
 
 - **NEAR Intents + Chain Signatures**: Complete end-to-end NEAR → Base ticket purchase

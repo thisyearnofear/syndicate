@@ -18,6 +18,7 @@
 | **Claim Winnings (NEAR)** | ✅ Complete | Reverse bridge via NEAR Intents |
 | **Yield Strategies (Aave/Morpho)** | ❌ Not Working | UI built but vault integration untested |
 | **Syndicates (Pooling)** | ❌ Not Working | Components exist, governance not implemented |
+| **Stacks → Base via V3 Bridge** | ✅ Complete | Multi-token (USDC, sUSDT, aeUSDC) support |
 | **Bitcoin/ICP** | 🔄 Planned | Phase 1 target |
 
 ## Strategic Roadmap
