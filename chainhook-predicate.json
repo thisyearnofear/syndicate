@@ -1,0 +1,34 @@
+{
+  "chain": "stacks",
+  "uuid": "stacks-lottery-bridge-v1-2225",
+  "name": "Stacks Lottery Bridge",
+  "version": 1,
+  "networks": {
+    "testnet": {
+      "if_this": {
+        "scope": "contract_call",
+        "contract_identifier": "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stacks-lottery",
+        "method": "bridge-and-purchase"
+      },
+      "then_that": {
+        "http_post": {
+          "url": "https://syndicateapp.vercel.app/api/chainhook",
+          "authorization_header": "Bearer syndicate_ch_8f2b3c4d5e6f7a8b9c0d1e2f3g4h5i6j"
+        }
+      }
+    },
+    "mainnet": {
+      "if_this": {
+        "scope": "contract_call",
+        "contract_identifier": "SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery",
+        "method": "bridge-and-purchase"
+      },
+      "then_that": {
+        "http_post": {
+          "url": "https://syndicateapp.vercel.app/api/chainhook",
+          "authorization_header": "Bearer syndicate_ch_8f2b3c4d5e6f7a8b9c0d1e2f3g4h5i6j"
+        }
+      }
+    }
+  }
+}
