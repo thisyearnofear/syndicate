@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Button } from "@/shared/components/ui/Button";
 import { CompactStack, CompactFlex } from "@/shared/components/premium/CompactLayout";
 import { AlertCircle } from "lucide-react";
@@ -39,8 +40,10 @@ interface SelectStepProps {
   isGettingQuote?: boolean;
   onConfirmIntent?: () => void;
   // New props for Stacks flow
-  buyTicketsWithStacks?: (params: { sourceChain: 'stacks'; ticketCount: number; recipientBase: string; }) => void;
+  buyTicketsWithStacks?: (params: { sourceChain: 'stacks'; ticketCount: number; recipientBase: string; stacksTokenPrincipal?: string; }) => void;
   evmAddress?: string;
+  stacksBalances?: Record<string, string>;
+  selectedStacksToken?: string;
 }
 
 export function SelectStep({
@@ -49,10 +52,25 @@ export function SelectStep({
   refreshBalance, isConnected, handlePurchase, isPurchasing, isInitializing, purchaseMode,
   walletType, solanaBalance, userBalance, isCheckingBalance, onStartBridge, isBridging, showBridgeGuidance, nearQuote,
   onGetNearQuote, isGettingQuote, onConfirmIntent, buyTicketsWithStacks, evmAddress,
+  stacksBalances, selectedStacksToken,
 }: SelectStepProps) {
+
+  const [localSelectedStacksToken, setLocalSelectedStacksToken] = useState<string | undefined>(selectedStacksToken);
+
+  useEffect(() => {
+    if (selectedStacksToken && !localSelectedStacksToken) {
+      setLocalSelectedStacksToken(selectedStacksToken);
+    }
+  }, [selectedStacksToken]);
 
   const canBridgeAndBuy = Boolean(isConnected && walletType === WalletTypes.SOLANA && hasInsufficientBalance && parseFloat(solanaBalance || "0") >= parseFloat(totalCost || "0"));
   const isStacksWallet = STACKS_WALLETS.includes(walletType as any);
+
+  const STACKS_TOKENS = {
+    'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token': { name: 'USDC', icon: '🔵' },
+    'SP3Y2ZSH8P7D50B0VBTSX11S7XSG24M1VB9YFQA4K.token-aeusdc': { name: 'aeUSDC', icon: '🌀' },
+    'SP2XD7417HGPRTREMKF748VNEQPDRR0RMANB7X1NK.token-susdt': { name: 'sUSDT', icon: '🟢' }
+  };
 
   if (showBridgeGuidance || isBridging) {
     return (
@@ -139,13 +157,40 @@ export function SelectStep({
         {walletType === WalletTypes.NEAR && <div className="mt-4 pt-4 border-t border-white/10"><p className="text-white/80 text-sm mb-2">NEAR Intents Quote</p>{!nearQuote ? <div className="flex items-center justify-between"><p className="text-gray-400 text-xs">Get a solver quote for executing purchase via NEAR Intents</p><Button size="sm" variant="outline" onClick={onGetNearQuote} disabled={isGettingQuote}>{isGettingQuote ? <><span className="animate-spin mr-2">⏳</span>Quoting...</> : "Get Quote"}</Button></div> : <div className="space-y-2 text-xs text-white/70"><div className="flex items-center justify-between"><span>Solver</span><span className="font-mono">{nearQuote.solverName || "default"}</span></div><div className="flex items-center justify-between"><span>Estimated Fee</span><span className="font-mono">{nearQuote.estimatedFee} ({nearQuote.estimatedFeePercent}%)</span></div><div className="flex items-center justify-between"><span>Destination Amount</span><span className="font-mono">{nearQuote.destinationAmount} USDC</span></div>{nearQuote.timeLimit && <div className="flex items-center justify-between"><span>Time Limit</span><span className="font-mono">{Math.ceil(nearQuote.timeLimit / 60)} min</span></div>}<div className="pt-2"><Button size="sm" className="w-full bg-gradient-to-r from-blue-600 to-purple-600" onClick={onConfirmIntent}>Confirm Intent & Execute</Button></div></div>}</div>}
       </div>
 
+      {isStacksWallet && stacksBalances && Object.values(stacksBalances).filter(b => parseFloat(b) > 0).length > 1 && (
+        <div className="space-y-3">
+          <p className="text-sm font-medium">Select Payment Token</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            {Object.entries(STACKS_TOKENS).map(([principal, details]) => {
+              const balance = stacksBalances[principal] || "0";
+              if (parseFloat(balance) === 0 && principal !== localSelectedStacksToken) return null;
+
+              return (
+                <button
+                  key={principal}
+                  onClick={() => setLocalSelectedStacksToken(principal)}
+                  className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 ${localSelectedStacksToken === principal
+                      ? "border-orange-500 bg-orange-500/10 shadow-[0_0_15px_rgba(249,115,22,0.2)]"
+                      : "border-white/10 bg-white/5 hover:border-white/30"
+                    }`}
+                >
+                  <span className="text-xl mb-1">{details.icon}</span>
+                  <span className="text-xs font-bold text-white">{details.name}</span>
+                  <span className="text-[10px] text-gray-400">${parseFloat(balance).toFixed(2)}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {isStacksWallet && !evmAddress && (
         <div className="glass-premium border border-blue-500/30 rounded-xl p-4 text-center space-y-3">
           <div className="flex items-center gap-2 text-blue-400 justify-center"><AlertCircle className="w-5 h-5" /><span className="font-semibold">🔗 Connect EVM Wallet for Ticket Receipt</span></div>
           <p className="text-blue-300 text-sm">
             {parseFloat(userBalance?.usdc || '0') > 0
-              ? "Your Stacks USDC will be bridged to Base via CCTP. Connect an EVM wallet below to receive your tickets."
-              : "Your Stacks STX will be bridged to Base. Connect an EVM wallet below to receive your tickets."
+              ? "Your Stacks assets will be bridged to Base via Megapot's bridge. Connect an EVM wallet below to receive your tickets."
+              : "Your Stacks tokens will be bridged to Base. Connect an EVM wallet below to receive your tickets."
             }
           </p>
           <div className="mt-2 flex justify-center">
@@ -167,12 +212,13 @@ export function SelectStep({
                 sourceChain: 'stacks',
                 ticketCount,
                 recipientBase: evmAddress,
+                stacksTokenPrincipal: localSelectedStacksToken,
               });
             }
           }}
           disabled={!evmAddress || isPurchasing}
         >
-          {isPurchasing ? <><span className="animate-spin mr-2">⏳</span> Processing Stacks Purchase...</> : <><span className="mr-2">⚡</span> Purchase with Stacks</>}
+          {isPurchasing ? <><span className="animate-spin mr-2">⏳</span> Processing Stacks Purchase...</> : <><span className="mr-2">⚡</span> Purchase {ticketCount} Ticket{ticketCount > 1 ? 's' : ''} - ${totalCost} {localSelectedStacksToken ? STACKS_TOKENS[localSelectedStacksToken as keyof typeof STACKS_TOKENS]?.name : 'USDC'}</>}
         </Button>
       )}
 
