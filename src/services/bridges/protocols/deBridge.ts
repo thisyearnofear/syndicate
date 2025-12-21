@@ -410,10 +410,23 @@ export class DeBridgeProtocol implements BridgeProtocol {
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
 
+        // If it's an internal server error (500), we might want to fail faster or classify it as protocol unavailable
+        // if it persists.
+        const isInternalError = lastError.message.includes('INTERNAL_SERVER_ERROR') || lastError.message.includes('Internal Error');
+
         if (attempt < maxRetries - 1) {
           console.warn(`[deBridge] Attempt ${attempt + 1} failed:`, lastError.message);
           await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
           continue;
+        }
+        
+        // If we exhausted retries and it was a 500 error, mark protocol as unavailable
+        if (isInternalError) {
+             throw new BridgeError(
+                BridgeErrorCode.PROTOCOL_UNAVAILABLE,
+                `deBridge API unavailable (500): ${lastError.message}`,
+                'debridge'
+            );
         }
       }
     }

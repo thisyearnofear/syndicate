@@ -47,7 +47,7 @@ export function FocusedBridgeFlow({
   const { address: sourceAddress } = useWalletConnection();
   // If protocol is preselected, skip selection stage and go directly to bridging
   const [stage, setStage] = useState<
-    "select" | "bridging" | "complete" | "error"
+    "select" | "bridging" | "complete" | "error" | "manual_action"
   >(preselectedProtocol ? "bridging" : "select");
   const [selectedProtocol, setSelectedProtocol] =
     useState<ProtocolOption | null>(null);
@@ -64,6 +64,7 @@ export function FocusedBridgeFlow({
     Array<{ status: string; info?: Record<string, unknown>; ts: number }>
   >([]);
   const [amountInput, setAmountInput] = useState<string>(amount);
+  const [manualActionUrl, setManualActionUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setAmountInput(amount);
@@ -283,6 +284,17 @@ export function FocusedBridgeFlow({
           onStatus: (status, data) => {
             setCurrentStatus(status);
             const dataObj = data && typeof data === 'object' && !Array.isArray(data) && data !== null ? data as Record<string, unknown> : undefined;
+            
+            // Handle manual action requirement
+            if (status === 'manual_action_required') {
+                const url = dataObj?.redirectUrl as string;
+                if (url) {
+                    setManualActionUrl(url);
+                    setStage('manual_action');
+                    return;
+                }
+            }
+
             onStatus?.(status, dataObj);
 
             setEvents((prev) => {
@@ -660,6 +672,57 @@ export function FocusedBridgeFlow({
             </div>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // Render manual action stage
+  if (stage === "manual_action") {
+    return (
+      <div className="space-y-6 animate-fade-in text-center">
+        <div className="flex justify-center">
+          <div className="w-20 h-20 rounded-full bg-blue-500/20 flex items-center justify-center">
+            <ExternalLink className="w-10 h-10 text-blue-400" />
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-white font-bold text-2xl mb-2">
+            Manual Action Required
+          </h3>
+          <p className="text-gray-400">
+            Automated bridging to Base is currently unavailable. 
+            Please use the official Portal Bridge to continue.
+          </p>
+        </div>
+
+        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-5 text-left">
+          <h4 className="text-blue-300 font-semibold mb-2 flex items-center gap-2">
+            <span>💡</span> Next Steps:
+          </h4>
+          <ol className="text-gray-300 text-sm space-y-3 ml-4 list-decimal">
+            <li>Click the button below to open <strong>Portal Bridge</strong>.</li>
+            <li>Connect your Solana wallet and bridge <strong>USDC</strong> to <strong>Base</strong>.</li>
+            <li>Once the bridge is complete, come back here to finish your purchase.</li>
+          </ol>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <Button
+            onClick={() => window.open(manualActionUrl || 'https://portalbridge.com', '_blank')}
+            className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold py-4 h-auto text-lg flex items-center justify-center gap-2"
+          >
+            Open Portal Bridge <ExternalLink className="w-5 h-5" />
+          </Button>
+          
+          <Button
+            onClick={onCancel}
+            variant="ghost"
+            className="text-gray-400 hover:text-white"
+          >
+            Cancel and try later
+          </Button>
+        </div>
       </div>
     );
   }

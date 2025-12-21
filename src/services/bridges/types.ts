@@ -56,6 +56,7 @@ export type BridgeStatus =
     | 'waiting_attestation'
     | 'pending_signature' // Waiting for user wallet signature (deBridge)
     | 'solver_waiting_deposit' // deBridge solver waiting for deposit
+    | 'manual_action_required' // Manual user action required (e.g. external bridge)
     | 'minting'
     | 'complete'
     | 'failed';
@@ -156,6 +157,7 @@ export interface BridgeResult {
     // Fallback suggestions (for failed bridges)
     suggestFallback?: boolean;    // Whether protocol suggests trying fallback
     fallbackReason?: string;      // Human-readable reason for suggesting fallback
+    redirectUrl?: string;         // URL for manual/external bridge action
 
     // Timing & Cost
     estimatedTimeMs?: number;
