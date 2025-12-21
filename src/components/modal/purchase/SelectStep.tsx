@@ -66,6 +66,12 @@ export function SelectStep({
   const canBridgeAndBuy = Boolean(isConnected && walletType === WalletTypes.SOLANA && hasInsufficientBalance && parseFloat(solanaBalance || "0") >= parseFloat(totalCost || "0"));
   const isStacksWallet = STACKS_WALLETS.includes(walletType as any);
 
+  // Stacks has a 0.1 USDC bridge fee per ticket
+  const stacksFeePerTicket = 0.1;
+  const displayTotalCost = isStacksWallet
+    ? (parseFloat(totalCost) + (ticketCount * stacksFeePerTicket)).toFixed(2)
+    : totalCost;
+
   const STACKS_TOKENS = {
     'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token': { name: 'USDC', icon: '🔵' },
     'SP3Y2ZSH8P7D50B0VBTSX11S7XSG24M1VB9YFQA4K.token-aeusdc': { name: 'aeUSDC', icon: '🌀' },
@@ -138,7 +144,7 @@ export function SelectStep({
       <div className="glass p-6 rounded-2xl">
         <CompactFlex align="center" justify="between" className="mb-4">
           <p className="font-medium text-gray-300 leading-relaxed">Total Cost:</p>
-          <div className="text-3xl font-black text-green-400">${totalCost} USDC</div>
+          <div className="text-3xl font-black text-green-400">${displayTotalCost} USDC</div>
         </CompactFlex>
 
         {oddsInfo && (
@@ -170,8 +176,8 @@ export function SelectStep({
                   key={principal}
                   onClick={() => setLocalSelectedStacksToken(principal)}
                   className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 ${localSelectedStacksToken === principal
-                      ? "border-orange-500 bg-orange-500/10 shadow-[0_0_15px_rgba(249,115,22,0.2)]"
-                      : "border-white/10 bg-white/5 hover:border-white/30"
+                    ? "border-orange-500 bg-orange-500/10 shadow-[0_0_15px_rgba(249,115,22,0.2)]"
+                    : "border-white/10 bg-white/5 hover:border-white/30"
                     }`}
                 >
                   <span className="text-xl mb-1">{details.icon}</span>
@@ -218,7 +224,7 @@ export function SelectStep({
           }}
           disabled={!evmAddress || isPurchasing}
         >
-          {isPurchasing ? <><span className="animate-spin mr-2">⏳</span> Processing Stacks Purchase...</> : <><span className="mr-2">⚡</span> Purchase {ticketCount} Ticket{ticketCount > 1 ? 's' : ''} - ${totalCost} {localSelectedStacksToken ? STACKS_TOKENS[localSelectedStacksToken as keyof typeof STACKS_TOKENS]?.name : 'USDC'}</>}
+          {isPurchasing ? <><span className="animate-spin mr-2">⏳</span> Processing Stacks Purchase...</> : <><span className="mr-2">⚡</span> Purchase {ticketCount} Ticket{ticketCount > 1 ? 's' : ''} - ${displayTotalCost} {localSelectedStacksToken && STACKS_TOKENS[localSelectedStacksToken as keyof typeof STACKS_TOKENS] ? STACKS_TOKENS[localSelectedStacksToken as keyof typeof STACKS_TOKENS].name : 'USDC'}</>}
         </Button>
       )}
 
