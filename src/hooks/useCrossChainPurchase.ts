@@ -11,8 +11,8 @@ import { TrackerStatus } from '@/components/bridge/CrossChainTracker';
 
 // --- Constants ---
 // IMPORTANT: Update this with your deployed contract address from .env
-const LOTTERY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_STACKS_LOTTERY_CONTRACT || 'SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery';
-const LOTTERY_CONTRACT_NAME = 'stacks-lottery';
+const LOTTERY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_STACKS_LOTTERY_CONTRACT || 'SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3';
+const LOTTERY_CONTRACT_NAME = 'stacks-lottery-v3';
 
 // Auto-detect network based on contract address prefix
 // SP = Mainnet, ST = Testnet

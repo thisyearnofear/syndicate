@@ -26,8 +26,8 @@ import * as path from 'path';
 const CONFIG = {
     // Stacks
     STACKS_API_URL: process.env.NEXT_PUBLIC_STACKS_API_URL || 'https://api.stacks.co',
-    LOTTERY_CONTRACT_ADDRESS: process.env.STACKS_LOTTERY_CONTRACT || 'SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery',
-    LOTTERY_CONTRACT_NAME: 'stacks-lottery',
+    LOTTERY_CONTRACT_ADDRESS: process.env.STACKS_LOTTERY_CONTRACT || 'SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3',
+    LOTTERY_CONTRACT_NAME: 'stacks-lottery-v3',
 
     // Base
     BASE_RPC_URL: process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://base-mainnet.g.alchemy.com/v2/demo',
@@ -113,8 +113,8 @@ export class StacksBridgeOperator {
     /**
      * Main entry point for processing a bridge request received from Chainhook
      */
-    async processBridgeEvent(txId: string, baseAddress: string, ticketCount: number, sbtcAmount: bigint) {
-        console.log(`[StacksBridgeOperator] Processing bridge request: ${txId}`);
+    async processBridgeEvent(txId: string, baseAddress: string, ticketCount: number, amount: bigint, tokenPrincipal: string) {
+        console.log(`[StacksBridgeOperator] Processing bridge request: ${txId} (${tokenPrincipal})`);
 
         if (!CONFIG.OPERATOR_PRIVATE_KEY) {
             throw new Error('STACKS_BRIDGE_OPERATOR_KEY not set - cannot process bridge event');
@@ -166,7 +166,7 @@ export class StacksBridgeOperator {
 
             // 3. Record for UI tracking
             await this.recordCrossChainPurchase({
-                stacksAddress: 'unknown', // We don't necessarily have this from the event repr, but could extract from tx
+                stacksAddress: 'unknown',
                 evmAddress: baseAddress,
                 stacksTxId: txId,
                 baseTxId: purchaseHash,
@@ -189,6 +189,7 @@ export class StacksBridgeOperator {
         evmAddress: string;
         winningsAmount: bigint;
         round: number;
+        tokenPrincipal: string; // NEW: The token the user used
     }): Promise<boolean> {
         try {
             if (!CONFIG.OPERATOR_PRIVATE_KEY) {
@@ -199,7 +200,7 @@ export class StacksBridgeOperator {
             // Format proof (simplified for now)
             const baseTxHashProof = `0x${this.operatorAccount.address.slice(2).padEnd(64, '0')}`;
 
-            console.log(`[StacksBridgeOperator] Recording winnings for ${data.stacksAddress}...`);
+            console.log(`[StacksBridgeOperator] Recording winnings for ${data.stacksAddress} in ${data.tokenPrincipal}...`);
 
             const tx = await makeContractCall({
                 contractAddress: CONFIG.LOTTERY_CONTRACT_ADDRESS.split('.')[0],
@@ -210,6 +211,7 @@ export class StacksBridgeOperator {
                     uintCV(data.winningsAmount),
                     uintCV(data.round),
                     stringAsciiCV(baseTxHashProof),
+                    principalCV(data.tokenPrincipal), // NEW: Pass the token principal
                 ],
                 senderKey: CONFIG.OPERATOR_PRIVATE_KEY,
                 network: 'mainnet',
