@@ -5,6 +5,7 @@ import { bridgeManager } from '@/services/bridges';
 import { openContractCall } from '@stacks/connect';
 import { StacksMainnet, StacksTestnet } from '@stacks/network';
 import { stringAsciiCV, uintCV, contractPrincipalCV } from '@stacks/transactions';
+import { PostConditionMode } from '@stacks/transactions';
 import type { ChainIdentifier } from '@/services/bridges/types';
 import type { SourceChain } from '@/config/chains';
 import { TrackerStatus } from '@/components/bridge/CrossChainTracker';
@@ -212,6 +213,7 @@ async function bridgeFromStacks(params: {
           // Pass the token principal trait
           contractPrincipalCV(tokenAddress, tokenContractName),
         ],
+        postConditionMode: PostConditionMode.Allow,
         // REMOVED: network object to let the wallet decide.
         // This prevents internal Hiro/Leather sponsorship verification crashes.
         onFinish: (data) => {
