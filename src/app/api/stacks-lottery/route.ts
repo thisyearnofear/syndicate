@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const STACKS_API_BASE_URL = process.env.NEXT_PUBLIC_STACKS_API_URL || 'https://api.stacks.co/v2';
+const STACKS_API_BASE_URL = process.env.NEXT_PUBLIC_STACKS_API_URL || 'https://api.mainnet.hiro.so';
 const STACKS_API_KEY = process.env.NEXT_PUBLIC_STACKS_API_KEY;
 
 export async function GET(request: NextRequest) {

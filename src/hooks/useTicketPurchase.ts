@@ -399,8 +399,11 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
               let maxBalance = -1;
 
               Object.entries(supportedTokens).forEach(([principal, name]) => {
-                const tokenData = tokens[principal];
-                const balance = tokenData ? parseFloat(tokenData.balance) / 1_000_000 : 0;
+                // Find token data by prefix matching (e.g. principal::symbol)
+                const tokenKey = Object.keys(tokens).find(k => k.startsWith(principal));
+                const tokenData = tokenKey ? tokens[tokenKey] : null;
+
+                const balance = tokenData ? parseFloat(tokenData.balance) / (tokenData.decimals || 1_000_000) : 0;
                 stacksBalances[principal] = balance.toString();
                 totalUsableBalance += balance;
 
@@ -410,7 +413,10 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
                 }
               });
 
+              console.debug('[useTicketPurchase] Stacks API Raw Tokens:', Object.keys(tokens));
               console.debug('[useTicketPurchase] Stacks Balances:', stacksBalances);
+              console.debug('[useTicketPurchase] Total Usable Balance:', totalUsableBalance);
+              console.debug('[useTicketPurchase] Best Token:', bestToken);
 
               setState(prev => ({
                 ...prev,
@@ -427,11 +433,19 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
               }));
             } else {
               console.warn('Failed to fetch Stacks balance:', response.status);
-              setState(prev => ({ ...prev, isCheckingBalance: false }));
+              setState(prev => ({
+                ...prev,
+                userBalance: prev.userBalance || { usdc: '0', eth: '0', hasEnoughUsdc: false, hasEnoughEth: false },
+                isCheckingBalance: false
+              }));
             }
-          } catch (error) {
-            console.warn('Error fetching Stacks balance:', error);
-            setState(prev => ({ ...prev, isCheckingBalance: false }));
+          } catch (e) {
+            console.error('Failed to fetch Stacks balance:', e);
+            setState(prev => ({
+              ...prev,
+              userBalance: prev.userBalance || { usdc: '0', eth: '0', hasEnoughUsdc: false, hasEnoughEth: false },
+              isCheckingBalance: false
+            }));
           }
         } else {
           setState(prev => ({ ...prev, isCheckingBalance: false }));

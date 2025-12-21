@@ -62,7 +62,7 @@ export const CHAINS = {
     name: "Stacks",
     network: "stacks-mainnet",
     nativeCurrency: { name: "Stacks", symbol: "STX", decimals: 6 },
-    rpcUrl: process.env.NEXT_PUBLIC_STACKS_RPC_URL || "https://api.stacks.co",
+    rpcUrl: process.env.NEXT_PUBLIC_STACKS_RPC_URL || "https://api.mainnet.hiro.so",
     explorerUrl: "https://explorer.stacks.co",
     pimlicoRpcUrl: process.env.NEXT_PUBLIC_PIMLICO_STACKS_RPC || "https://api.pimlico.io/v2/12345/rpc",
   },
@@ -149,7 +149,7 @@ export const API = {
     },
   },
   stacks: {
-    baseUrl: process.env.NEXT_PUBLIC_STACKS_API_URL || "https://api.stacks.co/v2",
+    baseUrl: process.env.NEXT_PUBLIC_STACKS_API_URL || "https://api.mainnet.hiro.so",
     apiKey: process.env.NEXT_PUBLIC_STACKS_API_KEY,
     endpoints: {
       jackpotStats: "/lottery/jackpot-round-stats/active",
