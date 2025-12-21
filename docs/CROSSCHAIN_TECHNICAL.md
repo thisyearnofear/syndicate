@@ -308,8 +308,8 @@ Stacks represents a Bitcoin L2 solution that has been successfully integrated in
 
 #### Key Features:
 - **Bitcoin Foundation**: Stacks L2 on Bitcoin aligns with the Bitcoin-first strategy
-- **sBTC Token**: 1:1 Bitcoin-backed token compatible with USDC-based system
-- **Smart Contracts**: Clarity language provides deterministic lottery logic
+- **Multi-Token Support**: Native support for USDC, sUSDT, and aeUSDC on Stacks
+- **Smart Contracts**: Clarity 3 smart contract (`stacks-lottery-v3`) providing deterministic lottery logic
 - **Wallet Ecosystem**: Professional wallets (Leather, Xverse, Asigna, Fordefi) with modern UX
 - **Development Tools**: Clarinet CLI and comprehensive documentation
 
@@ -327,27 +327,27 @@ Stacks represents a Bitcoin L2 solution that has been successfully integrated in
 - Asigna - Bitcoin multisig wallet
 - Fordefi - Institutional Bitcoin wallet
 
-#### Bridge Architecture: sBTC to Base
-The Stacks integration uses an sBTC → Base bridge pattern:
+#### Bridge Architecture: Stacks Tokens to Base
+The Stacks integration uses a Stacks Tokens → Base bridge pattern:
 
 ```
-Stacks Wallet (STX/sBTC) → sBTC Bridge → USDC on Base → Megapot Lottery
-      ↓                           ↓                  ↓              ↓
-   Leather/Xverse/           sBTC → USDC        Cross-chain    Lottery
-   Asigna/Fordefi            bridging            purchase       participation
+Stacks Wallet (USDC/sUSDT/aeUSDC) → Bridge Contract → USDC on Base → Megapot Lottery
+         ↓                           ↓                  ↓              ↓
+   Leather/Xverse/           Token Locked        Cross-chain    Lottery
+   Asigna/Fordefi            in Contract         purchase       participation
 ```
 
 #### Stacks-Specific Services
 - `src/domains/lottery/services/stacksLotteryService.ts` - Stacks-specific functionality
 - `src/app/api/stacks-lottery/route.ts` - API proxy for Stacks endpoints
-- `contracts/stacks-lottery.clar` - Clarity smart contract
+- `contracts/stacks-lottery-v3.clar` - Clarity V3 smart contract
 
 ### Protocol Implementation
 
-#### 1. sBTC Bridge Protocol
-- **Supports**: Stacks → Base (via sBTC mechanism)
-- **Features**: BTC-backed token bridging, Stacks-specific transaction handling
-- **Time**: Variable (depends on Bitcoin confirmations)
+#### 1. Stacks Bridge Protocol
+- **Supports**: Stacks → Base (Multi-token USDC, sUSDT, aeUSDC)
+- **Features**: Native Stacks token bridging, V3 contract handling
+- **Time**: 1-2 Stacks blocks (~10-20 minutes)
 - **Integration**: Works with existing cross-chain purchase hook
 
 #### 2. API Endpoints
@@ -375,11 +375,11 @@ export const API = {
 ```typescript
 // Enhanced existing hook to support Stacks
 if (params.sourceChain === 'stacks') {
-  // Stacks -> Base bridge via sBTC
+  // Stacks -> Base bridge via V3 Contract
   const bridgeResult = await bridgeFromStacks({
-    walletAddress: params.recipientBase,
+    baseAddress: params.recipientBase,
     ticketCount: params.ticketCount,
-    amount,
+    tokenPrincipal: params.stacksTokenPrincipal,
     onStatus: (status, data) => {
       console.debug('[Stacks Bridge] Status:', status, data);
     }
