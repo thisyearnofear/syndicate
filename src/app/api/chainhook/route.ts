@@ -1,14 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stacksBridgeOperator } from '@/services/stacksBridgeOperator';
 
-// Constants (Should be env vars in production)
-const SECRET_TOKEN = process.env.CHAINHOOK_SECRET_TOKEN || 'syndicate_ch_8f2b3c4d5e6f7a8b9c0d1e2f3g4h5i6j';
+// Must be set via environment variable
+const SECRET_TOKEN = process.env.CHAINHOOK_SECRET_TOKEN;
+
+if (!SECRET_TOKEN) {
+  throw new Error('CHAINHOOK_SECRET_TOKEN environment variable is required');
+}
 
 export async function POST(req: NextRequest) {
   try {
     // 1. Authorization Check
     const authHeader = req.headers.get('authorization');
-    if (!authHeader || authHeader.replace('Bearer ', '') !== SECRET_TOKEN) {
+    const bearer = authHeader?.replace('Bearer ', '');
+
+    // DEBUG LOG
+    const fs = require('fs');
+    const timestamp = new Date().toISOString();
+    fs.appendFileSync('scripts/chainhook-debug.log', `[${timestamp}] [Chainhook Entry] Auth: ${bearer === SECRET_TOKEN ? 'OK' : 'FAIL'} | Bearer: ${bearer?.substring(0, 20)}...\n`);
+
+    if (!authHeader || bearer !== SECRET_TOKEN) {
       console.warn('[Chainhook] Unauthorized attempt');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -19,6 +30,8 @@ export async function POST(req: NextRequest) {
     // Chainhook payloads are arrays of blocks/transactions
     // We need to iterate through them to find our events
     const events = body.apply || [];
+    
+    fs.appendFileSync('scripts/chainhook-debug.log', `[${timestamp}] [Chainhook] Received payload with ${events.length} blocks\n`);
 
     for (const blockEvent of events) {
       for (const tx of blockEvent.transactions) {

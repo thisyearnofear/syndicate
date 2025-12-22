@@ -36,22 +36,24 @@ Built following our core principles:
 - ✅ Emergency controls
 
 ### 2. Bridge Operator Service ✅
-**File**: `scripts/stacks-bridge-operator.ts`
+**File**: `src/services/stacksBridgeOperator.ts`
 
-**Responsibilities**:
-- 🎧 Listen for Stacks contract events (WebSocket)
+**Responsibilities** (triggered via Chainhook):
+- 🎧 Receive Stacks contract events via Chainhook POST
 - 💱 Convert Stacks Tokens → USDC (pre-funded pool strategy)
 - 🎫 Execute Megapot purchases on Base
-- ✅ Confirm transactions back to Stacks
+- ✅ Confirm transactions back to Stacks (future)
 - 💰 Monitor and distribute winnings
 
 **Features**:
-- ✅ Real-time event listening via Stacks API
+- ✅ Event-driven via Chainhook (no polling)
 - ✅ Production-ready error handling with retry logic
 - ✅ Status persistence to filesystem
 - ✅ USDC balance monitoring
 - ✅ Automatic gas management
 - ✅ 10% referral fee earning from Megapot
+
+**Note**: Chainhook is configured in `chainhook-predicate.json` and actively running. No need to run a background service anymore.
 
 ### 3. Bridge Protocol Integration ✅
 **File**: `src/services/bridges/protocols/stacks.ts`
@@ -88,8 +90,13 @@ Integrates Stacks bridge with unified bridge manager for:
    ├─> Emits: "bridge-purchase-initiated" event
    └─> Status: confirmed_stacks
 
-3. BRIDGE OPERATOR (Off-chain)
-   ├─> Detects event via WebSocket
+3. CHAINHOOK SERVICE
+   ├─> Detects event via on-chain monitoring
+   ├─> POST to /api/chainhook with event data
+   └─> Forwards to StacksBridgeOperator
+
+4. BRIDGE OPERATOR (Off-chain, triggered by Chainhook)
+   ├─> Receives event via /api/chainhook
    ├─> Checks USDC reserve (pre-funded)
    ├─> Status: bridging
    ├─> Approves USDC for Megapot
@@ -201,42 +208,39 @@ The operator needs on Base:
 
 Transfer to the address from Step 3.
 
-### Start Bridge Operator
+### Chainhook Configuration
 
-```bash
-# Run the startup script
-./scripts/start-stacks-bridge.sh
+The bridge now uses **Chainhook for event detection** instead of running a background operator script.
 
-# Or run directly
-npx ts-node scripts/stacks-bridge-operator.ts
+**Configuration File**: `chainhook-predicate.json`
+
+```json
+{
+  "chain": "stacks",
+  "uuid": "stacks-lottery-bridge-final",
+  "name": "Stacks Lottery Bridge",
+  "networks": {
+    "mainnet": {
+      "start_block": 5434600,
+      "if_this": {
+        "scope": "print_event",
+        "contract_identifier": "SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3",
+        "contains": "bridge-purchase-initiated"
+      },
+      "then_that": {
+        "http_post": {
+          "url": "https://syndicateapp.vercel.app/api/chainhook",
+          "authorization_header": "Bearer {CHAINHOOK_SECRET_TOKEN}"
+        }
+      }
+    }
+  }
+}
 ```
 
-**Expected Output**:
-```
-🚀 Starting Stacks bridge operator...
+**Status**: ✅ Active (no action needed)
 
-  Contract: SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery
-  Operator: 0x742d35Cc6634C0532925a3b8...
-  Strategy: pre-funded
-
-[Operator] USDC balance: 1000.0 USDC
-[Operator] ✅ Connected to Stacks API WebSocket
-
-[Operator] Listening for bridge requests...
-```
-
-### Production Deployment
-
-For production, run operator as a service:
-
-```bash
-# Using PM2
-pm2 start scripts/stacks-bridge-operator.ts --name stacks-bridge
-
-# Using systemd (create service file)
-sudo systemctl enable stacks-bridge
-sudo systemctl start stacks-bridge
-```
+Chainhook automatically detects `bridge-purchase-initiated` events and POSTs to `/api/chainhook`, which routes the event to `StacksBridgeOperator.processBridgeEvent()`.
 
 ## Liquidity Management
 
@@ -312,11 +316,11 @@ Scale at 1000 tickets/day → **~$31,500/month profit!**
 ### Health Checks
 
 ```bash
-# Check operator is running
-ps aux | grep stacks-bridge-operator
-
 # Check recent purchases
 cat scripts/purchase-status.json | jq '.[] | select(.status == "complete")'
+
+# Check Chainhook status (configured in Hiro dashboard)
+# https://dashboard.chainhook.io/
 
 # Check USDC balance
 # (see Liquidity Management section)
@@ -340,7 +344,7 @@ cat scripts/purchase-status.json | jq '.[] | select(.status == "complete")'
 **Set up alerts for**:
 - ⚠️ Low USDC balance (< 100 USDC)
 - ⚠️ Failed purchases (status: error)
-- ⚠️ Operator offline (no heartbeat)
+- ⚠️ Chainhook service down (check Hiro dashboard)
 - ⚠️ High gas prices on Base
 
 ## Security Considerations
@@ -407,22 +411,19 @@ STACKS_LOTTERY_CONTRACT=ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
 ```bash
 # Test contract (Clarity)
 clarinet test contracts/stacks-lottery.clar
-
-# Test operator logic
-npm run test -- scripts/stacks-bridge-operator.test.ts
 ```
 
 ## Troubleshooting
 
-### Issue: Operator not detecting events
+### Issue: Chainhook not detecting events
 
 **Solution**:
 ```bash
-# Check WebSocket connection
-# Look for: "✅ Connected to Stacks API WebSocket"
+# Check Chainhook status at Hiro dashboard
+# https://dashboard.chainhook.io/
 
-# Verify contract address
-echo $STACKS_LOTTERY_CONTRACT
+# Verify contract address is correct in chainhook-predicate.json
+cat chainhook-predicate.json | jq .networks.mainnet.if_this.contract_identifier
 
 # Check Stacks API status
 curl https://api.stacks.co/v2/info | jq
@@ -481,25 +482,27 @@ cast balance $OPERATOR_ADDRESS --rpc-url $BASE_RPC
 
 **Operator Monitoring** → Simple, observable:
 - Logs all activity to `logs/operator.log`
-- Health check script: `./scripts/health-check-operator.sh`
-
 #### Files Enhanced (ENHANCEMENT FIRST)
 
 | File | Enhancement |
 |------|-------------|
-| `scripts/stacks-bridge-operator.ts` | Implemented `recordWinningsOnStacks()` using `@stacks/transactions` |
+| `src/services/stacksBridgeOperator.ts` | Handles events from Chainhook via `/api/chainhook` |
+| `src/app/api/chainhook/route.ts` | Routes Chainhook POSTs to StacksBridgeOperator |
 | `/api/purchase-status/[txId]` | Returns `receipt` object with explorer links |
 | `src/components/bridge/CrossChainTracker.tsx` | Displays Stacks & Base receipts |
 | `src/hooks/useCrossChainPurchase.ts` | Propagates receipt data end-to-end |
 | `src/hooks/useCrossChainWinnings.ts` | Auto-polls every 60s for winnings |
 | `src/components/bridge/WinningsWithdrawalFlow.tsx` | Added Stacks claiming flow (enhanced NEAR support) |
-| `scripts/start-stacks-bridge.sh` | Logs to file; creates `logs/operator.log` |
-| `docs/STACKS_BRIDGE.md` | Updated roadmap + enhancements |
-| `scripts/health-check-operator.sh` | NEW: Monitor operator health |
+| `chainhook-predicate.json` | Chainhook configuration for event detection |
+| `docs/STACKS_BRIDGE.md` | Updated to remove operator script references |
 
-**Total new files**: 1 (health check—justified for MVP operation)  
-**Total enhanced files**: 8 (zero code duplication)  
-**New component code**: ~230 lines (pure StacksWinningsFlow, integrated into existing component)
+**Deleted** (CONSOLIDATION):
+- `scripts/stacks-bridge-operator.ts` - Replaced by Chainhook
+- `scripts/health-check-operator.sh` - No longer needed
+- `scripts/start-stacks-bridge.sh` - No longer needed
+
+**Total enhanced files**: 9 (zero code duplication)  
+**Component code**: ~230 lines (StacksWinningsFlow, integrated into existing component)
 
 #### How to Verify MVP Works
 
