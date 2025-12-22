@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
             // event.data.value.data contains the tuple fields if it's a tuple
             const eventData = event.data.value.data;
             console.log(`[Chainhook] Event data keys: ${eventData ? Object.keys(eventData).join(', ') : 'UNDEFINED'}`);
+            console.log(`[Chainhook] Event data structure:`, JSON.stringify(eventData, null, 2).substring(0, 1000));
 
             if (eventData) {
               const baseAddress = (eventData['base-address']?.repr || eventData.base_address?.repr || '').replace(/"/g, '');
