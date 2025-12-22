@@ -34,21 +34,31 @@ export async function POST(req: NextRequest) {
     console.log(`[Chainhook] Full payload:`, JSON.stringify(body, null, 2).substring(0, 2000));
 
     for (const blockEvent of events) {
-      for (const tx of blockEvent.transactions) {
-        const txId = tx.transaction_identifier.hash;
+      console.log(`[Chainhook] Processing block ${blockEvent.block_identifier.hash}`);
+      const txs = blockEvent.transactions || [];
+      console.log(`[Chainhook] Block has ${txs.length} transactions`);
+      
+      for (const tx of txs) {
+        const txId = tx.transaction_identifier?.hash;
+        console.log(`[Chainhook] Processing tx ${txId}`);
+        
         const txEvents = tx.metadata?.receipt?.events || [];
+        console.log(`[Chainhook] Tx has ${txEvents.length} events`);
 
         for (const event of txEvents) {
+          console.log(`[Chainhook] Event type: ${event.type}, has repr: ${!!event.data?.value?.repr}`);
+          
           // Look for the specific contract log/print event
           if (event.type === 'SmartContractEvent' &&
             event.data?.value?.repr?.includes('bridge-purchase-initiated')) {
 
-            console.log(`[Chainhook] Received bridge purchase event in tx ${txId}`);
+            console.log(`[Chainhook] ✅ FOUND MATCHING EVENT in tx ${txId}`);
 
             // Extract Data from the event
             // The structure in Chainhook for a print event is:
             // event.data.value.data contains the tuple fields if it's a tuple
             const eventData = event.data.value.data;
+            console.log(`[Chainhook] Event data keys: ${eventData ? Object.keys(eventData).join(', ') : 'UNDEFINED'}`);
 
             if (eventData) {
               const baseAddress = (eventData['base-address']?.repr || eventData.base_address?.repr || '').replace(/"/g, '');
@@ -56,18 +66,29 @@ export async function POST(req: NextRequest) {
               const amount = BigInt((eventData['sbtc-amount']?.repr || eventData.sbtc_amount?.repr || '0').replace('u', ''));
               const tokenPrincipal = (eventData['token']?.repr || eventData.token?.repr || 'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token');
 
+              console.log(`[Chainhook] Extracted - baseAddress: ${baseAddress}, ticketCount: ${ticketCount}, amount: ${amount}, token: ${tokenPrincipal}`);
+
               if (baseAddress && ticketCount > 0) {
-                console.log(`[Chainhook] Processing: ${ticketCount} tickets for ${baseAddress} using ${tokenPrincipal}`);
+                console.log(`[Chainhook] ✅ Valid event data, processing: ${ticketCount} tickets for ${baseAddress}`);
 
                 // Execute the bridge & purchase
-                await stacksBridgeOperator.processBridgeEvent(
-                  txId,
-                  baseAddress,
-                  ticketCount,
-                  amount,
-                  tokenPrincipal
-                );
+                try {
+                  await stacksBridgeOperator.processBridgeEvent(
+                    txId,
+                    baseAddress,
+                    ticketCount,
+                    amount,
+                    tokenPrincipal
+                  );
+                  console.log(`[Chainhook] ✅ Bridge event processing completed for ${txId}`);
+                } catch (processingError) {
+                  console.error(`[Chainhook] ❌ Error processing bridge event:`, processingError);
+                }
+              } else {
+                console.log(`[Chainhook] ⚠️  Invalid event data - baseAddress empty or ticketCount invalid`);
               }
+            } else {
+              console.log(`[Chainhook] ⚠️  Event data is undefined`);
             }
           }
         }
