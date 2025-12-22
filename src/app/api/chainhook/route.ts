@@ -71,26 +71,29 @@ export async function POST(req: NextRequest) {
               const amount = BigInt((eventData['sbtc-amount']?.repr || eventData.sbtc_amount?.repr || '0').replace(/u/g, ''));
               const tokenPrincipal = (eventData['token']?.repr || eventData.token?.repr || 'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token');
 
-              console.log(`[Chainhook] Extracted - baseAddress: ${baseAddress}, ticketCount: ${ticketCount}, amount: ${amount}, token: ${tokenPrincipal}`);
+              console.log(`[Chainhook] Raw baseAddress: "${(eventData['base-address']?.repr || eventData.base_address?.repr || '')}"`);
+              console.log(`[Chainhook] Raw ticketCount: "${(eventData['ticket-count']?.repr || eventData.ticket_count?.repr || '0')}"`);
+              console.log(`[Chainhook] Extracted - baseAddress: "${baseAddress}", ticketCount: ${ticketCount}, amount: ${amount}, token: ${tokenPrincipal}`);
 
               if (baseAddress && ticketCount > 0) {
                 console.log(`[Chainhook] ✅ Valid event data, processing: ${ticketCount} tickets for ${baseAddress}`);
 
                 // Execute the bridge & purchase
                 try {
-                  await stacksBridgeOperator.processBridgeEvent(
+                  const result = await stacksBridgeOperator.processBridgeEvent(
                     txId,
                     baseAddress,
                     ticketCount,
                     amount,
                     tokenPrincipal
                   );
-                  console.log(`[Chainhook] ✅ Bridge event processing completed for ${txId}`);
+                  console.log(`[Chainhook] ✅ Bridge event processing completed for ${txId}:`, result);
                 } catch (processingError) {
                   console.error(`[Chainhook] ❌ Error processing bridge event:`, processingError);
+                  throw processingError;
                 }
               } else {
-                console.log(`[Chainhook] ⚠️  Invalid event data - baseAddress empty or ticketCount invalid`);
+                console.log(`[Chainhook] ⚠️  Invalid event data - baseAddress: "${baseAddress}" (empty=${!baseAddress}), ticketCount: ${ticketCount} (<=0=${ticketCount <= 0})`);
               }
             } else {
               console.log(`[Chainhook] ⚠️  Event data is undefined`);
