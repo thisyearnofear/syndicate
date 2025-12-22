@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stacksBridgeOperator } from '@/services/stacksBridgeOperator';
 
+// Helper: Extract field from event data, trying both dash and underscore variants
+function getField(obj: any, dashKey: string): string | undefined {
+  if (!obj) return undefined;
+  const underscoreKey = dashKey.replace(/-/g, '_');
+  return obj[dashKey]?.repr || obj[underscoreKey]?.repr;
+}
+
 export async function POST(req: NextRequest) {
   try {
     // Log every request to verify Chainhook is hitting the endpoint
@@ -49,9 +56,12 @@ export async function POST(req: NextRequest) {
           console.log(`[Chainhook] Event type: ${event.type}, has repr: ${!!event.data?.value?.repr}`);
           
           // Look for the specific contract log/print event
-          if (event.type === 'SmartContractEvent' &&
-            event.data?.value?.repr?.includes('bridge-purchase-initiated')) {
-
+          // Chainhook sends print events as type 'ContractPrintEvent' not 'SmartContractEvent'
+          const isMatchingEvent = 
+            (event.type === 'ContractPrintEvent' || event.type === 'SmartContractEvent') &&
+            event.data?.value?.repr?.includes('bridge-purchase-initiated');
+          
+          if (isMatchingEvent) {
             console.log(`[Chainhook] ✅ FOUND MATCHING EVENT in tx ${txId}`);
 
             // Extract Data from the event
@@ -61,10 +71,13 @@ export async function POST(req: NextRequest) {
             console.log(`[Chainhook] Event data keys: ${eventData ? Object.keys(eventData).join(', ') : 'UNDEFINED'}`);
 
             if (eventData) {
-              const baseAddress = (eventData['base-address']?.repr || eventData.base_address?.repr || '').replace(/"/g, '');
-              const ticketCount = parseInt((eventData['ticket-count']?.repr || eventData.ticket_count?.repr || '0').replace('u', ''));
-              const amount = BigInt((eventData['sbtc-amount']?.repr || eventData.sbtc_amount?.repr || '0').replace('u', ''));
-              const tokenPrincipal = (eventData['token']?.repr || eventData.token?.repr || 'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token');
+              const baseAddressRaw = getField(eventData, 'base-address') || '';
+              const baseAddress = baseAddressRaw.replace(/"/g, '');
+              const ticketCountRaw = getField(eventData, 'ticket-count') || '0';
+              const ticketCount = parseInt(ticketCountRaw.replace(/u/g, ''));
+              const amountRaw = getField(eventData, 'sbtc-amount') || '0';
+              const amount = BigInt(amountRaw.replace(/u/g, ''));
+              const tokenPrincipal = getField(eventData, 'token') || 'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token';
 
               console.log(`[Chainhook] Extracted - baseAddress: ${baseAddress}, ticketCount: ${ticketCount}, amount: ${amount}, token: ${tokenPrincipal}`);
 
