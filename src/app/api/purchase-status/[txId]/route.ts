@@ -22,7 +22,13 @@ export async function GET(
     const data = await fs.readFile(STATUS_FILE_PATH, 'utf-8');
     const statuses = JSON.parse(data);
     const normalizedId = txId.startsWith('0x') ? txId.substring(2) : txId;
+    
+    console.log(`[purchase-status] Looking up txId: ${txId}`);
+    console.log(`[purchase-status] Normalized ID: ${normalizedId}`);
+    console.log(`[purchase-status] Available keys: ${Object.keys(statuses).join(', ')}`);
+    
     const purchaseStatus = statuses[txId] || statuses[normalizedId] || statuses['0x' + normalizedId];
+    console.log(`[purchase-status] Found status: ${purchaseStatus ? 'YES' : 'NO'}`);
 
     if (purchaseStatus) {
       // ENHANCEMENT: Enrich status with receipt links
