@@ -3,6 +3,9 @@ import { stacksBridgeOperator } from '@/services/stacksBridgeOperator';
 
 export async function POST(req: NextRequest) {
   try {
+    // Log every request to verify Chainhook is hitting the endpoint
+    console.log('[Chainhook] POST received at', new Date().toISOString());
+    
     // Authorization check - prevent unauthorized bridge execution
     // Endpoint is public, so we must verify requests come from Chainhook
     const SECRET_TOKEN = process.env.CHAINHOOK_SECRET_TOKEN;
