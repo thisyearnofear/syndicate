@@ -141,6 +141,9 @@ export class StacksBridgeOperator {
     /**
      * Main entry point for processing a bridge request received from Chainhook
      */
+    /**
+     * Main entry point for processing a bridge request received from Chainhook
+     */
     async processBridgeEvent(txId: string, baseAddress: string, ticketCount: number, amount: bigint, tokenPrincipal: string) {
         console.log(`[StacksBridgeOperator] Processing bridge request: ${txId} (${tokenPrincipal})`);
 
@@ -149,19 +152,34 @@ export class StacksBridgeOperator {
         }
 
         try {
-            // 1. Validate Liquidity (Pre-funded strategy)
-            // Stacks V3 contract uses raw units from the transfer.
-            // If it's sUSDT (8 decimals), 1 ticket (1,000,000 units) is actually 0.01 tokens.
-            // If it's USDC (6 decimals), 1 ticket (1,000,000 units) is 1.00 tokens.
+            // 1. Calculate Actual Ticket Count from Value
+            // The Stacks contract might have received an "adjusted" ticket count 
+            // for tokens with different decimal places (like sUSDT).
+            // We calculate the actual value based on the raw amount and token decimals.
+
             const isEightDecimal = tokenPrincipal.toLowerCase().includes('susdt');
-            const unitsPerTicket = 1_000_000n; // Contract's internal ticket price
+            const unitsPerDollar = isEightDecimal ? 100_000_000n : 1_000_000n;
 
-            // Calculate how many USDC (6 decimals) we need to buy on Base
-            // based on the raw units received on Stacks
-            const ticketCountFromUnits = Number(amount / unitsPerTicket);
-            const actualTicketCount = Math.max(ticketCount, ticketCountFromUnits);
+            // Subtract the 0.10 fee (relative to unitsPerDollar)
+            const feeInUnits = unitsPerDollar / 10n;
+            const netAmount = amount > feeInUnits ? amount - feeInUnits : 0n;
 
-            const requiredUSDC = parseUnits(actualTicketCount.toString(), 6);
+            // 1 ticket = 1 USD (unitsPerDollar)
+            const calculatedTicketCount = Number(netAmount / unitsPerDollar);
+
+            // Safety: Use the higher of the two (contract's reported count vs calculated)
+            // But if it's 8-decimal, the contract's count is likely the "inflated" one,
+            // so we trust the calculation more.
+            const finalTicketCount = isEightDecimal ? calculatedTicketCount : Math.max(ticketCount, calculatedTicketCount);
+
+            console.log(`[StacksBridgeOperator] Raw Amount: ${amount}, Calculated Tickets: ${calculatedTicketCount}, Final Tickets: ${finalTicketCount}`);
+
+            if (finalTicketCount <= 0) {
+                await this.updateStatus(txId, 'error', { error: 'Insufficient payment for 1 ticket' });
+                throw new Error(`Insufficient payment. Amount: ${amount}, Required for 1 ticket: ${unitsPerDollar + feeInUnits}`);
+            }
+
+            const requiredUSDC = parseUnits(finalTicketCount.toString(), 6);
             const balance = await this.checkUSDCBalance();
 
             if (balance < requiredUSDC) {
@@ -171,7 +189,7 @@ export class StacksBridgeOperator {
 
             // 2. Approve & Purchase on Base
             await this.updateStatus(txId, 'bridging');
-            console.log(`[StacksBridgeOperator] Purchasing ${actualTicketCount} tickets for ${baseAddress}...`);
+            console.log(`[StacksBridgeOperator] Purchasing ${finalTicketCount} tickets for ${baseAddress}...`);
 
             // Approve
             const approveHash = await this.baseWalletClient.writeContract({
@@ -214,7 +232,7 @@ export class StacksBridgeOperator {
                 evmAddress: baseAddress,
                 stacksTxId: txId,
                 baseTxId: purchaseHash,
-                ticketCount,
+                ticketCount: finalTicketCount,
             });
 
             return {
