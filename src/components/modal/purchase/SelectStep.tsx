@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/shared/components/ui/Button";
 import { CompactStack, CompactFlex } from "@/shared/components/premium/CompactLayout";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Zap } from "lucide-react";
 import type { SyndicateInfo } from "@/domains/lottery/types";
 import { WalletTypes, STACKS_WALLETS } from "@/domains/wallet/types";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
@@ -44,6 +44,7 @@ interface SelectStepProps {
   evmAddress?: string;
   stacksBalances?: Record<string, string>;
   selectedStacksToken?: string;
+  mirrorAddress?: string | null;
 }
 
 export function SelectStep({
@@ -52,7 +53,7 @@ export function SelectStep({
   refreshBalance, isConnected, handlePurchase, isPurchasing, isInitializing, purchaseMode,
   walletType, solanaBalance, userBalance, isCheckingBalance, onStartBridge, isBridging, showBridgeGuidance, nearQuote,
   onGetNearQuote, isGettingQuote, onConfirmIntent, buyTicketsWithStacks, evmAddress,
-  stacksBalances, selectedStacksToken,
+  stacksBalances, selectedStacksToken, mirrorAddress,
 }: SelectStepProps) {
 
   const [localSelectedStacksToken, setLocalSelectedStacksToken] = useState<string | undefined>(selectedStacksToken);
@@ -191,18 +192,28 @@ export function SelectStep({
         </div>
       )}
 
-      {isStacksWallet && !evmAddress && (
+      {isStacksWallet && !evmAddress && !mirrorAddress && (
         <div className="glass-premium border border-blue-500/30 rounded-xl p-4 text-center space-y-3">
           <div className="flex items-center gap-2 text-blue-400 justify-center"><AlertCircle className="w-5 h-5" /><span className="font-semibold">🔗 Connect EVM Wallet for Ticket Receipt</span></div>
           <p className="text-blue-300 text-sm">
-            {parseFloat(userBalance?.usdc || '0') > 0
-              ? "Your Stacks assets will be bridged to Base via Megapot's bridge. Connect an EVM wallet below to receive your tickets."
-              : "Your Stacks tokens will be bridged to Base. Connect an EVM wallet below to receive your tickets."
-            }
+            Connect an EVM wallet below to receive your tickets on Base.
           </p>
           <div className="mt-2 flex justify-center">
             <ConnectButton showBalance={false} chainStatus="none" />
           </div>
+        </div>
+      )}
+
+      {isStacksWallet && !evmAddress && mirrorAddress && (
+        <div className="glass-premium border border-orange-500/30 rounded-xl p-4 text-center space-y-2">
+          <div className="flex items-center gap-2 text-orange-400 justify-center">
+            <Zap className="w-4 h-4" />
+            <span className="font-semibold text-sm">Deterministic Base Identity Active</span>
+          </div>
+          <p className="text-gray-400 text-xs">
+            Using your Stacks key to secure tickets on Base.<br />
+            <span className="font-mono text-[10px] text-orange-200">{mirrorAddress.slice(0, 6)}...{mirrorAddress.slice(-4)}</span>
+          </p>
         </div>
       )}
 
@@ -214,16 +225,19 @@ export function SelectStep({
           size="lg"
           className="w-full bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-2xl hover:shadow-orange-500/30 border border-orange-400/30 disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={() => {
-            if (buyTicketsWithStacks && evmAddress) {
-              buyTicketsWithStacks({
-                sourceChain: 'stacks',
-                ticketCount,
-                recipientBase: evmAddress,
-                stacksTokenPrincipal: localSelectedStacksToken,
-              });
+            if (buyTicketsWithStacks) {
+              const recipient = evmAddress || mirrorAddress;
+              if (recipient) {
+                buyTicketsWithStacks({
+                  sourceChain: 'stacks',
+                  ticketCount,
+                  recipientBase: recipient,
+                  stacksTokenPrincipal: localSelectedStacksToken,
+                });
+              }
             }
           }}
-          disabled={!evmAddress || isPurchasing}
+          disabled={(!evmAddress && !mirrorAddress) || isPurchasing}
         >
           {isPurchasing ? <><span className="animate-spin mr-2">⏳</span> Processing Stacks Purchase...</> : <><span className="mr-2">⚡</span> Purchase {ticketCount} Ticket{ticketCount > 1 ? 's' : ''} - ${displayTotalCost} {localSelectedStacksToken && STACKS_TOKENS[localSelectedStacksToken as keyof typeof STACKS_TOKENS] ? STACKS_TOKENS[localSelectedStacksToken as keyof typeof STACKS_TOKENS].name : 'USDC'}</>}
         </Button>

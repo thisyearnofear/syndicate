@@ -14,6 +14,7 @@ import { createError } from '@/shared/utils';
 import { useWalletContext } from '@/context/WalletContext';
 import type { WalletModuleFactory } from '@near-wallet-selector/core';
 import { WalletType, WalletTypes, STACKS_WALLETS, type StacksWalletType } from '../types';
+import { computeAddress } from 'ethers';
 
 // =============================================================================
 // WALLET DETECTION
@@ -314,7 +315,17 @@ export function useUnifiedWallet(): {
             address = stacksWallet.address;
             chainId = 12345; // Stacks mainnet chain ID
 
-            console.log('Stacks wallet connected:', address);
+            // Pass the mirror address into the state so it's available to the rest of the app
+            dispatch({
+              type: 'CONNECT_SUCCESS',
+              payload: {
+                address,
+                walletType,
+                chainId,
+                mirrorAddress: stacksWallet.mirrorAddress
+              }
+            });
+            return;
           } catch (error: unknown) {
             const message = (error as { message?: string }).message || '';
             console.error('Stacks wallet connection error:', error);
@@ -410,6 +421,24 @@ export function useUnifiedWallet(): {
 // =============================================================================
 
 /**
+ * Derive a deterministic EVM address from a Stacks public key.
+ * 
+ * Since Stacks and EVM both use secp256k1, we can calculate the 0x address
+ * that corresponds to the same public key.
+ */
+export function deriveMirrorAddress(publicKey: string): string {
+  if (!publicKey) return '';
+  try {
+    // ethers.computeAddress handles both compressed (02/03) and uncompressed (04) hex public keys
+    const cleanPubKey = publicKey.startsWith('0x') ? publicKey : `0x${publicKey}`;
+    return computeAddress(cleanPubKey);
+  } catch (error) {
+    console.error('Failed to derive mirror address:', error);
+    return '';
+  }
+}
+
+/**
  * Connect to a Stacks wallet
  * 
  * Uses @stacks/connect for all Stacks wallets, which provides:
@@ -420,7 +449,7 @@ export function useUnifiedWallet(): {
  * Note: The walletType parameter is kept for backward compatibility but @stacks/connect
  * will automatically detect the available wallet and show a selection UI if multiple are present.
  */
-async function connectStacksWallet(walletType: StacksWalletType): Promise<{ address: string; publicKey: string }> {
+async function connectStacksWallet(walletType: StacksWalletType): Promise<{ address: string; publicKey: string; mirrorAddress: string }> {
   // All Stacks wallets use the same @stacks/connect interface now
   // The walletType parameter is for logging/tracking purposes only
   console.log(`Connecting with Stacks wallet type: ${walletType}`);
@@ -437,7 +466,7 @@ async function connectStacksWallet(walletType: StacksWalletType): Promise<{ addr
  * they may fail to serialize the response properly, causing "setImmedia... is not valid JSON" errors.
  * We wrap the call to ensure clean serialization of the result.
  */
-async function connectStacksWalletWithConnect(): Promise<{ address: string; publicKey: string }> {
+async function connectStacksWalletWithConnect(): Promise<{ address: string; publicKey: string; mirrorAddress: string }> {
   try {
     console.log('Initiating Stacks wallet connection with @stacks/connect...');
 
@@ -501,9 +530,13 @@ async function connectStacksWalletWithConnect(): Promise<{ address: string; publ
     }
 
     // Return only serializable data (no function references, no circular references)
+    const publicKey = primaryAddress.publicKey ? String(primaryAddress.publicKey) : '';
+    const mirrorAddress = deriveMirrorAddress(publicKey);
+
     return {
       address: String(primaryAddress.address),
-      publicKey: primaryAddress.publicKey ? String(primaryAddress.publicKey) : '',
+      publicKey,
+      mirrorAddress
     };
   } catch (error) {
     console.error('Stacks wallet connection error:', error);

@@ -47,7 +47,7 @@ export interface PurchaseModalProps {
 }
 
 export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseModalProps) {
-  const { isConnected, connect, address, walletType } = useWalletConnection();
+  const { isConnected, connect, address, walletType, mirrorAddress } = useWalletConnection();
   const successToast = useSuccessToast();
   const errorToast = useErrorToast();
   const { jackpotStats, prizeAmount, isLoading: jackpotLoading, error: jackpotError, refresh: refreshLottery } = useLottery();
@@ -288,7 +288,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
       case "yield":
         return <YieldStrategyStep selectedStrategy={selectedVaultStrategy} onStrategySelect={setSelectedVaultStrategy} ticketsAllocation={yieldToTicketsPercentage} causesAllocation={yieldToCausesPercentage} onAllocationChange={(tickets, causes) => { setYieldToTicketsPercentage(tickets); setYieldToCausesPercentage(causes); }} onNext={() => setStep("select")} onBack={() => setStep("mode")} userAddress={isConnected ? address || undefined : undefined} />;
       case "select":
-        return <SelectStep setStep={setStep as (step: "mode") => void} selectedSyndicate={selectedSyndicate} prizeAmount={prizeAmount} jackpotLoading={jackpotLoading} jackpotError={jackpotError} ticketPrice={ticketPrice} ticketCount={ticketCount} setTicketCount={setTicketCount} quickAmounts={quickAmounts} totalCost={totalCost} oddsInfo={oddsInfo} hasInsufficientBalance={hasInsufficientBalance} refreshBalance={refreshBalance} isConnected={isConnected} handlePurchase={handlePurchase} isPurchasing={isPurchasing} isInitializing={isInitializing} purchaseMode={purchaseMode} walletType={walletType} solanaBalance={solanaBalance} userBalance={userBalance} isCheckingBalance={isCheckingBalance} onStartBridge={handleStartBridge} isBridging={isBridging} showBridgeGuidance={showBridgeGuidance} nearQuote={nearQuote} onGetNearQuote={handleGetNearQuote} isGettingQuote={isGettingQuote} onConfirmIntent={handlePurchase} buyTicketsWithStacks={buyTicketsWithStacks} evmAddress={evmAddress || undefined} stacksBalances={stacksBalances} selectedStacksToken={selectedStacksToken} />;
+        return <SelectStep setStep={setStep as (step: "mode") => void} selectedSyndicate={selectedSyndicate} prizeAmount={prizeAmount} jackpotLoading={jackpotLoading} jackpotError={jackpotError} ticketPrice={ticketPrice} ticketCount={ticketCount} setTicketCount={setTicketCount} quickAmounts={quickAmounts} totalCost={totalCost} oddsInfo={oddsInfo} hasInsufficientBalance={hasInsufficientBalance} refreshBalance={refreshBalance} isConnected={isConnected} handlePurchase={handlePurchase} isPurchasing={isPurchasing} isInitializing={isInitializing} purchaseMode={purchaseMode} walletType={walletType} solanaBalance={solanaBalance} userBalance={userBalance} isCheckingBalance={isCheckingBalance} onStartBridge={handleStartBridge} isBridging={isBridging} showBridgeGuidance={showBridgeGuidance} nearQuote={nearQuote} onGetNearQuote={handleGetNearQuote} isGettingQuote={isGettingQuote} onConfirmIntent={handlePurchase} buyTicketsWithStacks={buyTicketsWithStacks} evmAddress={evmAddress || undefined} stacksBalances={stacksBalances} selectedStacksToken={selectedStacksToken} mirrorAddress={mirrorAddress} />;
       case "processing":
         return <ProcessingStep
           isApproving={isApproving}

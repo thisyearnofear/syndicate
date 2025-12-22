@@ -406,7 +406,10 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
                 );
                 const tokenData = tokenKey ? tokens[tokenKey] : null;
 
-                const balance = tokenData ? parseFloat(tokenData.balance) / (tokenData.decimals || 1_000_000) : 0;
+                const balanceRaw = tokenData ? parseFloat(tokenData.balance) : 0;
+                const decimals = principal.includes('susdt') ? 100_000_000 : 1_000_000;
+                const balance = balanceRaw / decimals;
+
                 stacksBalances[principal] = balance.toString();
                 totalUsableBalance += balance;
 

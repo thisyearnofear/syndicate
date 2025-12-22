@@ -40,6 +40,7 @@ const CONFIG = {
     // Bridge configuration
     MAX_RETRY_ATTEMPTS: 3,
     RETRY_DELAY_MS: 5000,
+    STATUS_FILE_PATH: path.join(process.cwd(), 'scripts', 'purchase-status.json'),
     CROSS_CHAIN_PURCHASES_FILE: path.join(process.cwd(), 'scripts', 'cross-chain-purchases.json'),
 };
 
@@ -111,6 +112,33 @@ export class StacksBridgeOperator {
     }
 
     /**
+     * Persist status updates for UI tracking
+     */
+    private async updateStatus(txId: string, status: any, updates: any = {}) {
+        try {
+            let statuses: any = {};
+            try {
+                const data = await fs.readFile(CONFIG.STATUS_FILE_PATH, 'utf-8');
+                statuses = JSON.parse(data);
+            } catch (e) {
+                // Initialize if file doesn't exist
+            }
+
+            statuses[txId] = {
+                ...(statuses[txId] || {}),
+                status,
+                ...updates,
+                updatedAt: new Date().toISOString()
+            };
+
+            await fs.writeFile(CONFIG.STATUS_FILE_PATH, JSON.stringify(statuses, null, 2));
+            console.log(`[StacksBridgeOperator] Status updated: ${txId} → ${status}`);
+        } catch (error) {
+            console.error('[StacksBridgeOperator] Failed to update status file:', error);
+        }
+    }
+
+    /**
      * Main entry point for processing a bridge request received from Chainhook
      */
     async processBridgeEvent(txId: string, baseAddress: string, ticketCount: number, amount: bigint, tokenPrincipal: string) {
@@ -122,15 +150,28 @@ export class StacksBridgeOperator {
 
         try {
             // 1. Validate Liquidity (Pre-funded strategy)
-            const requiredUSDC = parseUnits(ticketCount.toString(), 6);
+            // Stacks V3 contract uses raw units from the transfer.
+            // If it's sUSDT (8 decimals), 1 ticket (1,000,000 units) is actually 0.01 tokens.
+            // If it's USDC (6 decimals), 1 ticket (1,000,000 units) is 1.00 tokens.
+            const isEightDecimal = tokenPrincipal.toLowerCase().includes('susdt');
+            const unitsPerTicket = 1_000_000n; // Contract's internal ticket price
+
+            // Calculate how many USDC (6 decimals) we need to buy on Base
+            // based on the raw units received on Stacks
+            const ticketCountFromUnits = Number(amount / unitsPerTicket);
+            const actualTicketCount = Math.max(ticketCount, ticketCountFromUnits);
+
+            const requiredUSDC = parseUnits(actualTicketCount.toString(), 6);
             const balance = await this.checkUSDCBalance();
 
             if (balance < requiredUSDC) {
+                await this.updateStatus(txId, 'error', { error: 'Insufficient bridge liquidity' });
                 throw new Error(`Insufficient USDC reserve. Have: ${formatUnits(balance, 6)}, Need: ${formatUnits(requiredUSDC, 6)}`);
             }
 
             // 2. Approve & Purchase on Base
-            console.log(`[StacksBridgeOperator] Purchasing ${ticketCount} tickets for ${baseAddress}...`);
+            await this.updateStatus(txId, 'bridging');
+            console.log(`[StacksBridgeOperator] Purchasing ${actualTicketCount} tickets for ${baseAddress}...`);
 
             // Approve
             const approveHash = await this.baseWalletClient.writeContract({
@@ -144,6 +185,7 @@ export class StacksBridgeOperator {
             await this.basePublicClient.waitForTransactionReceipt({ hash: approveHash });
 
             // Purchase
+            await this.updateStatus(txId, 'purchasing');
             const purchaseHash = await this.baseWalletClient.writeContract({
                 address: CONFIG.MEGAPOT_CONTRACT,
                 abi: MEGAPOT_ABI,
@@ -159,12 +201,14 @@ export class StacksBridgeOperator {
             const receipt = await this.basePublicClient.waitForTransactionReceipt({ hash: purchaseHash });
 
             if (receipt.status !== 'success') {
+                await this.updateStatus(txId, 'error', { error: 'Base transaction reverted' });
                 throw new Error('Base transaction reverted');
             }
 
             console.log(`[StacksBridgeOperator] ✅ Purchase successful! Base TX: ${purchaseHash}`);
 
             // 3. Record for UI tracking
+            await this.updateStatus(txId, 'complete', { baseTxId: purchaseHash });
             await this.recordCrossChainPurchase({
                 stacksAddress: 'unknown',
                 evmAddress: baseAddress,
@@ -179,6 +223,8 @@ export class StacksBridgeOperator {
             };
 
         } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            await this.updateStatus(txId, 'error', { error: message });
             console.error(`[StacksBridgeOperator] ❌ Bridge processing failed:`, error);
             throw error;
         }
