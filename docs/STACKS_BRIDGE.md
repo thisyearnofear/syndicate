@@ -208,39 +208,67 @@ The operator needs on Base:
 
 Transfer to the address from Step 3.
 
-### Chainhook Configuration
+### Chainhook 2.0 Configuration (Hiro Platform - Hosted)
 
-The bridge now uses **Chainhook for event detection** instead of running a background operator script.
+The bridge uses **Chainhooks 2.0** (hosted on Hiro Platform) for reliable, reorg-aware event detection.
 
-**Configuration File**: `chainhook-predicate.json`
+**Registration**: Done via TypeScript SDK (no JSON config files)
 
-```json
+```bash
+# Set environment variables
+export CHAINHOOK_API_KEY=your_api_key_from_https://platform.hiro.so
+export CHAINHOOK_SECRET_TOKEN=your_webhook_authorization_secret
+export CHAINHOOK_WEBHOOK_URL=https://yourdomain.com/api/chainhook
+
+# Register the chainhook
+npx ts-node scripts/register-chainhook-v2.ts
+```
+
+**What Happens**:
+1. Chainhooks 2.0 service monitors Stacks mainnet
+2. Detects `bridge-purchase-initiated` events from contract `SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3`
+3. POSTs to `/api/chainhook` with the webhook payload
+4. Payload is routed to `StacksBridgeOperator.processBridgeEvent()`
+
+**Payload Structure** (Chainhooks 2.0):
+```
 {
-  "chain": "stacks",
-  "uuid": "stacks-lottery-bridge-final",
-  "name": "Stacks Lottery Bridge",
-  "networks": {
-    "mainnet": {
-      "start_block": 5434600,
-      "if_this": {
-        "scope": "print_event",
-        "contract_identifier": "SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3",
-        "contains": "bridge-purchase-initiated"
-      },
-      "then_that": {
-        "http_post": {
-          "url": "https://syndicateapp.vercel.app/api/chainhook",
-          "authorization_header": "Bearer {CHAINHOOK_SECRET_TOKEN}"
-        }
-      }
-    }
-  }
+  "event": {
+    "apply": [{
+      "block_identifier": {...},
+      "transactions": [{
+        "transaction_identifier": {"hash": "0x..."},
+        "operations": [
+          {
+            "type": "contract_log",
+            "data": {
+              "value": {
+                "repr": "(event ...)",
+                "data": {
+                  "base-address": {"repr": "0x..."},
+                  "ticket-count": {"repr": "u5"},
+                  "sbtc-amount": {"repr": "u5100000"},
+                  "token": {"repr": "SP3Y2ZSH..."}
+                }
+              }
+            }
+          }
+        ]
+      }]
+    }]
+  },
+  "chainhook": {...}
 }
 ```
 
-**Status**: ✅ Active (no action needed)
+**Status**: ✅ Chainhooks 2.0 (Beta) - Modern, hosted, reliable
 
-Chainhook automatically detects `bridge-purchase-initiated` events and POSTs to `/api/chainhook`, which routes the event to `StacksBridgeOperator.processBridgeEvent()`.
+**Benefits over v1**:
+- ✅ Fully hosted (no self-hosted binary management)
+- ✅ Built-in reorg handling
+- ✅ Better performance and reliability
+- ✅ Automatic queuing and retries
+- ✅ Dashboard observability at https://platform.hiro.so
 
 ## Liquidity Management
 
@@ -419,14 +447,19 @@ clarinet test contracts/stacks-lottery.clar
 
 **Solution**:
 ```bash
-# Check Chainhook status at Hiro dashboard
-# https://dashboard.chainhook.io/
+# Check Chainhook status at Hiro Platform
+# https://platform.hiro.so (select your project)
 
-# Verify contract address is correct in chainhook-predicate.json
-cat chainhook-predicate.json | jq .networks.mainnet.if_this.contract_identifier
+# Verify chainhook is registered and enabled
+export CHAINHOOK_API_KEY=your_api_key
+npx ts-node -e "
+const { ChainhooksClient, StacksNetwork } = require('@hirosystems/chainhooks-client');
+const client = new ChainhooksClient({ apiKey: process.env.CHAINHOOK_API_KEY, network: StacksNetwork.mainnet });
+client.getChainhook('stacks-lottery-bridge-v2').then(ch => console.log(JSON.stringify(ch, null, 2)));
+"
 
 # Check Stacks API status
-curl https://api.stacks.co/v2/info | jq
+curl https://api.mainnet.hiro.so/v2/info | jq
 ```
 
 ### Issue: Insufficient USDC balance
@@ -454,13 +487,28 @@ cast call $MEGAPOT "isPaused()" --rpc-url $BASE_RPC
 cast balance $OPERATOR_ADDRESS --rpc-url $BASE_RPC
 ```
 
-## Recent Enhancements (December 2024)
+## Recent Enhancements (December 2025 - Chainhooks 2.0 Migration)
 
-### MVP Loop Closed ✅
+### Migrated to Chainhooks 2.0 ✅
 
-**Status**: Full end-to-end cross-chain purchase + winnings detection + claiming working
+**Status**: Fully migrated from self-hosted Chainhook v1 to Hiro Platform Chainhooks 2.0 (Beta)
 
-#### What Was Implemented
+#### What Changed
+
+**From v1 (self-hosted)**:
+- ❌ Local Chainhook binary with multiple dependencies
+- ❌ JSON predicate file configuration (`chainhook-predicate.json`)
+- ❌ Payload structure: `metadata.receipt.events`
+- ❌ Manual binary management and updates
+
+**To v2 (hosted)**:
+- ✅ Hiro Platform hosted service (no setup required)
+- ✅ TypeScript SDK registration (`scripts/register-chainhook-v2.ts`)
+- ✅ Payload structure: `event.apply[].transactions[].operations[]`
+- ✅ Automatic reorg handling, queuing, retries
+- ✅ Dashboard observability at https://platform.hiro.so
+
+#### What Was Enhanced
 
 **Purchase Flow** → Full provenance trail:
 - Fixed function name bug (`bridge-and-purchase-tickets` → `bridge-and-purchase`)
@@ -482,27 +530,26 @@ cast balance $OPERATOR_ADDRESS --rpc-url $BASE_RPC
 
 **Operator Monitoring** → Simple, observable:
 - Logs all activity to `logs/operator.log`
-#### Files Enhanced (ENHANCEMENT FIRST)
+#### Files Enhanced (ENHANCEMENT FIRST + AGGRESSIVE CONSOLIDATION)
 
+**Enhanced**:
 | File | Enhancement |
 |------|-------------|
-| `src/services/stacksBridgeOperator.ts` | Handles events from Chainhook via `/api/chainhook` |
-| `src/app/api/chainhook/route.ts` | Routes Chainhook POSTs to StacksBridgeOperator |
-| `/api/purchase-status/[txId]` | Returns `receipt` object with explorer links |
-| `src/components/bridge/CrossChainTracker.tsx` | Displays Stacks & Base receipts |
-| `src/hooks/useCrossChainPurchase.ts` | Propagates receipt data end-to-end |
-| `src/hooks/useCrossChainWinnings.ts` | Auto-polls every 60s for winnings |
-| `src/components/bridge/WinningsWithdrawalFlow.tsx` | Added Stacks claiming flow (enhanced NEAR support) |
-| `chainhook-predicate.json` | Chainhook configuration for event detection |
-| `docs/STACKS_BRIDGE.md` | Updated to remove operator script references |
+| `src/app/api/chainhook/route.ts` | Rewritten for Chainhooks 2.0 payload structure (operations array, contract_log type) |
+| `docs/STACKS_BRIDGE.md` | Updated setup, payload structure, troubleshooting for v2 |
+| `scripts/register-chainhook-v2.ts` | New: TypeScript SDK-based registration (replaces JSON config) |
 
 **Deleted** (CONSOLIDATION):
-- `scripts/stacks-bridge-operator.ts` - Replaced by Chainhook
-- `scripts/health-check-operator.sh` - No longer needed
-- `scripts/start-stacks-bridge.sh` - No longer needed
+- `chainhook-predicate.json` - JSON v1 format, replaced by SDK registration
+- `chainhook-predicate.example.json` - No longer needed
+- Old operator scripts already deleted in prior enhancements
 
-**Total enhanced files**: 9 (zero code duplication)  
-**Component code**: ~230 lines (StacksWinningsFlow, integrated into existing component)
+**Payload Processing Changes**:
+- Old: `tx.metadata?.receipt?.events` → `event.type === 'SmartContractEvent'`
+- New: `tx.operations` → `op.type === 'contract_log'`
+- Field extraction now handles Clarity tuple structure from v2
+
+**Total enhanced files**: 3 (DRY principle: single source of truth in STACKS_BRIDGE.md)
 
 #### How to Verify MVP Works
 
