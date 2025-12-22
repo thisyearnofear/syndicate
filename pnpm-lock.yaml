@@ -26,6 +26,9 @@ importers:
       '@defuse-protocol/one-click-sdk-typescript':
         specifier: 0.1.14
         version: 0.1.14
+      '@hirosystems/chainhooks-client':
+        specifier: ^1.0.0
+        version: 1.0.0(@sinclair/typebox@0.33.22)
       '@metamask/delegation-toolkit':
         specifier: ^0.11.0
         version: 0.11.0(viem@2.41.2(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.13))
@@ -249,6 +252,9 @@ importers:
       typescript:
         specifier: ^5
         version: 5.9.3
+      undici:
+        specifier: ^7.16.0
+        version: 7.16.0
       webpack-bundle-analyzer:
         specifier: ^4.10.2
         version: 4.10.2(bufferutil@4.0.9)(utf-8-validate@5.0.10)
@@ -804,6 +810,11 @@ packages:
     peerDependencies:
       bn.js: 5.2.1
       borsh: 0.7.0
+
+  '@hirosystems/chainhooks-client@1.0.0':
+    resolution: {integrity: sha512-xPp/2ATix/KS0Nbclh4ckq6UGK8Kb0+d3s2K5LzpS6jeUxpTjuF0++M4KmGSMRMThoo33v9IuMRQyK8wPb8Tgg==}
+    peerDependencies:
+      '@sinclair/typebox': ^0.34.33
 
   '@hot-labs/omni-sdk@2.20.2':
     resolution: {integrity: sha512-BubAkyuZkF4qsiBR0i4eVowZEZpjwdo96SkTHGGMNmx9rCibCWE0bEZIDmiVasCuSEHECDh8+lUzbV1Coc57WQ==}
@@ -8520,6 +8531,10 @@ packages:
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
 
+  undici@7.16.0:
+    resolution: {integrity: sha512-QEg3HPMll0o3t2ourKwOeUAZ159Kn9mx5pnzHRQO8+Wixmh88YdZRiIwat0iNzNNXn0yoEtXJqFpyW7eM8BV7g==}
+    engines: {node: '>=20.18.1'}
+
   unicode-trie@2.0.0:
     resolution: {integrity: sha512-x7bc76x0bm4prf1VLg79uhAzKw8DVboClSN5VxJuQ+LKDOVEW9CdH+VY7SP+vX7xCYQqzzgQpFqz15zeLvAtZQ==}
 
@@ -10013,6 +10028,10 @@ snapshots:
       uuid4: 2.0.3
     transitivePeerDependencies:
       - encoding
+
+  '@hirosystems/chainhooks-client@1.0.0(@sinclair/typebox@0.33.22)':
+    dependencies:
+      '@sinclair/typebox': 0.33.22
 
   '@hot-labs/omni-sdk@2.20.2(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)':
     dependencies:
@@ -23002,6 +23021,8 @@ snapshots:
   undici-types@6.21.0: {}
 
   undici-types@7.16.0: {}
+
+  undici@7.16.0: {}
 
   unicode-trie@2.0.0:
     dependencies:
