@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stacksBridgeOperator } from '@/services/stacksBridgeOperator';
 
-// Helper: Extract field from event data, trying both dash and underscore variants
-function getField(obj: any, dashKey: string): string | undefined {
-  if (!obj) return undefined;
-  const underscoreKey = dashKey.replace(/-/g, '_');
-  return obj[dashKey]?.repr || obj[underscoreKey]?.repr;
-}
-
 export async function POST(req: NextRequest) {
   try {
     // Log every request to verify Chainhook is hitting the endpoint
@@ -53,12 +46,14 @@ export async function POST(req: NextRequest) {
         console.log(`[Chainhook] Tx has ${txEvents.length} events`);
 
         for (const event of txEvents) {
-          console.log(`[Chainhook] Event type: ${event.type}, has repr: ${!!event.data?.value?.repr}`);
+          console.log(`[Chainhook] Event type: ${event.type}`);
+          console.log(`[Chainhook] Event data keys: ${Object.keys(event.data || {}).join(', ')}`);
+          console.log(`[Chainhook] Has repr: ${!!event.data?.value?.repr}`);
           
           // Look for the specific contract log/print event
-          // Chainhook sends print events as type 'ContractPrintEvent' not 'SmartContractEvent'
+          // Self-hosted Chainhook 1.x uses SmartContractEvent for print events
           const isMatchingEvent = 
-            (event.type === 'ContractPrintEvent' || event.type === 'SmartContractEvent') &&
+            event.type === 'SmartContractEvent' &&
             event.data?.value?.repr?.includes('bridge-purchase-initiated');
           
           if (isMatchingEvent) {
@@ -71,13 +66,10 @@ export async function POST(req: NextRequest) {
             console.log(`[Chainhook] Event data keys: ${eventData ? Object.keys(eventData).join(', ') : 'UNDEFINED'}`);
 
             if (eventData) {
-              const baseAddressRaw = getField(eventData, 'base-address') || '';
-              const baseAddress = baseAddressRaw.replace(/"/g, '');
-              const ticketCountRaw = getField(eventData, 'ticket-count') || '0';
-              const ticketCount = parseInt(ticketCountRaw.replace(/u/g, ''));
-              const amountRaw = getField(eventData, 'sbtc-amount') || '0';
-              const amount = BigInt(amountRaw.replace(/u/g, ''));
-              const tokenPrincipal = getField(eventData, 'token') || 'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token';
+              const baseAddress = (eventData['base-address']?.repr || eventData.base_address?.repr || '').replace(/"/g, '');
+              const ticketCount = parseInt((eventData['ticket-count']?.repr || eventData.ticket_count?.repr || '0').replace(/u/g, ''));
+              const amount = BigInt((eventData['sbtc-amount']?.repr || eventData.sbtc_amount?.repr || '0').replace(/u/g, ''));
+              const tokenPrincipal = (eventData['token']?.repr || eventData.token?.repr || 'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token');
 
               console.log(`[Chainhook] Extracted - baseAddress: ${baseAddress}, ticketCount: ${ticketCount}, amount: ${amount}, token: ${tokenPrincipal}`);
 
