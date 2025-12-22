@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
     const events = body.apply || [];
     
     console.log(`[Chainhook] Received payload with ${events.length} blocks`);
+    console.log(`[Chainhook] Full payload:`, JSON.stringify(body, null, 2).substring(0, 2000));
 
     for (const blockEvent of events) {
       for (const tx of blockEvent.transactions) {
