@@ -23,6 +23,7 @@ export interface WalletState {
   isConnecting: boolean;
   error: string | null;
   lastConnectedAt: number | null;
+  mirrorAddress: string | null;
   isModalOpen: boolean;
 }
 
@@ -30,7 +31,7 @@ export type WalletAction =
   | { type: "CONNECT_START"; payload?: { walletType: WalletType } }
   | {
     type: "CONNECT_SUCCESS";
-    payload: { address: string; walletType: WalletType; chainId: number };
+    payload: { address: string; walletType: WalletType; chainId: number; mirrorAddress?: string | null };
   }
   | { type: "CONNECT_FAILURE"; payload: { error: string } }
   | { type: "DISCONNECT" }
@@ -58,6 +59,7 @@ const defaultWalletState: WalletState = {
   isConnecting: false,
   error: null,
   lastConnectedAt: null,
+  mirrorAddress: null,
   isModalOpen: false,
 };
 
@@ -91,6 +93,7 @@ export const walletReducer = (
         address: action.payload.address,
         walletType: action.payload.walletType,
         chainId: action.payload.chainId,
+        mirrorAddress: action.payload.mirrorAddress || null,
         error: null,
         lastConnectedAt: Date.now(),
       };
@@ -111,6 +114,7 @@ export const walletReducer = (
         isConnecting: false,
         error: null,
         lastConnectedAt: null,
+        mirrorAddress: null,
         isModalOpen: false,
       };
 
@@ -136,6 +140,7 @@ export const walletReducer = (
           isConnecting: false,
           error: null,
           lastConnectedAt: null,
+          mirrorAddress: null,
           isModalOpen: false,
         };
 
