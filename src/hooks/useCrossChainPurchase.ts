@@ -216,7 +216,7 @@ async function bridgeFromStacks(params: {
     });
 
     return new Promise((resolve) => {
-      openContractCall({
+      const callConfig: any = {
         contractAddress: CONTRACT_PRINCIPAL,
         contractName: CONTRACT_NAME,
         functionName: 'bridge-and-purchase',
@@ -227,8 +227,6 @@ async function bridgeFromStacks(params: {
           contractPrincipalCV(tokenAddress, tokenContractName),
         ],
         postConditionMode: PostConditionMode.Allow,
-        // REMOVED: network object to let the wallet decide.
-        // This prevents internal Hiro/Leather sponsorship verification crashes.
         onFinish: (data) => {
           console.log('[Stacks Bridge] Transaction broadcasted:', data.txId);
           params.onStatus('broadcasted', data);
@@ -239,11 +237,21 @@ async function bridgeFromStacks(params: {
           params.onStatus('user_rejected', {});
           resolve({ success: false, error: 'User rejected the transaction' });
         },
-      });
+      };
+
+      // Only use sponsorshipProxyUrl for standard USDC
+      // aeUSDC and other tokens may not have sponsor support
+      const isStandardUSdc = params.tokenPrincipal === 'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token';
+      if (isStandardUSdc && process.env.NEXT_PUBLIC_SPONSOR_PROXY_URL) {
+        callConfig.sponsorshipProxyUrl = process.env.NEXT_PUBLIC_SPONSOR_PROXY_URL;
+      }
+
+      openContractCall(callConfig);
     });
   } catch (validationError) {
-    console.error('Stacks contract validation error:', validationError);
+    console.error('[Stacks Bridge] Validation/broadcast error:', validationError);
     const errorMessage = validationError instanceof Error ? validationError.message : 'Stacks bridge validation failed';
+    console.error('[Stacks Bridge] Full error details:', JSON.stringify(validationError, null, 2));
     params.onStatus('error', { error: errorMessage });
     return { success: false, error: errorMessage };
   }

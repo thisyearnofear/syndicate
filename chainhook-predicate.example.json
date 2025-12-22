@@ -13,8 +13,7 @@
       },
       "then_that": {
         "http_post": {
-          "url": "https://syndicateapp.vercel.app/api/chainhook",
-          "authorization_header": "Bearer YOUR_CHAINHOOK_SECRET_TOKEN_HERE"
+          "url": "https://syndicateapp.vercel.app/api/chainhook"
         }
       }
     }
