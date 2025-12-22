@@ -212,7 +212,12 @@ Transfer to the address from Step 3.
 
 The bridge uses **Chainhooks 2.0** (hosted on Hiro Platform) for reliable, reorg-aware event detection.
 
-**Registration**: Done via TypeScript SDK (no JSON config files)
+**Status**: ✅ **Already Registered**
+- **UUID**: `480d87da-4420-4983-ae0e-2227f3b31200`
+- **Status**: `streaming` (actively monitoring)
+- **URL**: https://platform.hiro.so
+
+**To re-register** (if needed):
 
 ```bash
 # Set environment variables
@@ -221,7 +226,7 @@ export CHAINHOOK_SECRET_TOKEN=your_webhook_authorization_secret
 export CHAINHOOK_WEBHOOK_URL=https://yourdomain.com/api/chainhook
 
 # Register the chainhook
-npx ts-node scripts/register-chainhook-v2.ts
+npx tsx scripts/register-chainhook-v2.ts
 ```
 
 **What Happens**:
@@ -447,19 +452,23 @@ clarinet test contracts/stacks-lottery.clar
 
 **Solution**:
 ```bash
-# Check Chainhook status at Hiro Platform
-# https://platform.hiro.so (select your project)
+# Check Chainhook status at Hiro Platform dashboard
+# https://platform.hiro.so → Your Project → Chainhooks
 
 # Verify chainhook is registered and enabled
 export CHAINHOOK_API_KEY=your_api_key
-npx ts-node -e "
-const { ChainhooksClient, StacksNetwork } = require('@hirosystems/chainhooks-client');
-const client = new ChainhooksClient({ apiKey: process.env.CHAINHOOK_API_KEY, network: StacksNetwork.mainnet });
-client.getChainhook('stacks-lottery-bridge-v2').then(ch => console.log(JSON.stringify(ch, null, 2)));
+npx tsx -e "
+import { ChainhooksClient, CHAINHOOKS_BASE_URL } from '@hirosystems/chainhooks-client';
+const client = new ChainhooksClient({ baseUrl: CHAINHOOKS_BASE_URL.mainnet, apiKey: process.env.CHAINHOOK_API_KEY });
+const ch = await client.getChainhook('480d87da-4420-4983-ae0e-2227f3b31200');
+console.log(JSON.stringify(ch, null, 2));
 "
 
 # Check Stacks API status
-curl https://api.mainnet.hiro.so/v2/info | jq
+curl https://api.mainnet.hiro.so/v2/info | jq '.version'
+
+# Check webhook endpoint is accessible
+curl -I https://yourdomain.com/api/chainhook
 ```
 
 ### Issue: Insufficient USDC balance
