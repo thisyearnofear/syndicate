@@ -34,6 +34,9 @@ yarn-error.log*
 .env
 .env.local
 
+# secret config files
+chainhook-predicate.json
+
 # vercel
 .vercel
 

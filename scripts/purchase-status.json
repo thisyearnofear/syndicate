@@ -1,1 +1,9 @@
-{}
+{
+  "a5c3604bf131a2e1015b34a447c5b685db38eb29af85f79c8585cf9acfc0faf7": {
+    "stacksTxId": "a5c3604bf131a2e1015b34a447c5b685db38eb29af85f79c8585cf9acfc0faf7",
+    "status": "error",
+    "updatedAt": "2025-12-22T00:41:04.878Z",
+    "error": "The contract function \"purchaseTickets\" reverted with the following reason:\nERC20: transfer amount exceeds allowance\n\nContract Call:\n  address:   0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95\n  function:  purchaseTickets(address referrer, uint256 value, address recipient)\n  args:                     (0x0000000000000000000000000000000000000000, 1000000, 0xfc8f467A16D5f65aCb2a8A01aAC3e3aF81862d3B)\n  sender:    0x64074397C0243Bcdd68CE37F42DdefA3be8a7f22\n\nDocs: https://viem.sh/docs/contract/writeContract\nVersion: viem@2.43.2",
+    "baseTxId": "0x07bab70b0686a7691e5ec3ba9964e4edeaff194828c7888d86d954b97d0dc97c"
+  }
+}

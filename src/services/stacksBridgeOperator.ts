@@ -196,16 +196,21 @@ export class StacksBridgeOperator {
             await this.updateStatus(txId, 'bridging');
             console.log(`[StacksBridgeOperator] Purchasing ${finalTicketCount} tickets for ${baseAddress}...`);
 
-            // Approve
+            // Approve - use max uint256 to avoid allowance issues
+            const maxUint256 = BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935');
             const approveHash = await this.baseWalletClient.writeContract({
                 address: CONFIG.USDC_CONTRACT,
                 abi: ERC20_ABI,
                 functionName: 'approve',
-                args: [CONFIG.MEGAPOT_CONTRACT, requiredUSDC],
+                args: [CONFIG.MEGAPOT_CONTRACT, maxUint256],
                 chain: base,
             } as any);
 
-            await this.basePublicClient.waitForTransactionReceipt({ hash: approveHash });
+            const approveReceipt = await this.basePublicClient.waitForTransactionReceipt({ hash: approveHash });
+            if (approveReceipt.status !== 'success') {
+                await this.updateStatus(txId, 'error', { error: 'USDC approval failed' });
+                throw new Error('USDC approval failed');
+            }
 
             // Purchase
             await this.updateStatus(txId, 'purchasing');
@@ -214,7 +219,7 @@ export class StacksBridgeOperator {
                 abi: MEGAPOT_ABI,
                 functionName: 'purchaseTickets',
                 args: [
-                    this.operatorAccount.address, // referrer
+                    this.operatorAccount.address, // referrer (operator earns 10% fee)
                     requiredUSDC,
                     baseAddress as `0x${string}`
                 ],
@@ -231,7 +236,10 @@ export class StacksBridgeOperator {
             console.log(`[StacksBridgeOperator] ✅ Purchase successful! Base TX: ${purchaseHash}`);
 
             // 3. Record for UI tracking
-            await this.updateStatus(txId, 'complete', { baseTxId: purchaseHash });
+            await this.updateStatus(txId, 'complete', {
+                baseTxId: purchaseHash,
+                error: null
+            });
             await this.recordCrossChainPurchase({
                 stacksAddress: 'unknown',
                 evmAddress: baseAddress,

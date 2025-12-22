@@ -14,7 +14,7 @@
       "then_that": {
         "http_post": {
           "url": "https://syndicateapp.vercel.app/api/chainhook",
-          "authorization_header": "Bearer syndicate_ch_8f2b3c4d5e6f7a8b9c0d1e2f3g4h5i6j"
+          "authorization_header": "Bearer YOUR_CHAINHOOK_SECRET_TOKEN_HERE"
         }
       }
     }

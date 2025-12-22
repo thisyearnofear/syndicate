@@ -2,15 +2,17 @@
  * STACKS PROTOCOL - Bridge Integration
  * 
  * ENHANCEMENT FIRST: Extends existing bridge architecture
- * - DRY: Reuses bridge operator logic from scripts/stacks-bridge-operator.ts
- * - CLEAN: Clear separation between on-chain (Clarity contract) and off-chain (operator)
+ * - DRY: Single source of truth via Chainhook → /api/chainhook → StacksBridgeOperator service
+ * - CLEAN: Clear separation between on-chain (Clarity contract) and off-chain (Chainhook → API)
  * - MODULAR: Implements BridgeProtocol interface for unified management
+ * - CONSOLIDATION: Deleted legacy WebSocket polling in favor of Chainhook push model
  * 
  * Architecture:
- * 1. User calls Stacks contract → emits event
- * 2. Bridge operator listens → converts sBTC → USDC
- * 3. Operator executes Megapot purchase on Base
- * 4. Status tracked via existing TrackerStatus system
+ * 1. User calls Stacks contract → emits "bridge-purchase-initiated" event
+ * 2. Chainhook detects event → POST to /api/chainhook
+ * 3. API routes to StacksBridgeOperator.processBridgeEvent()
+ * 4. Operator converts tokens → executes Megapot purchase on Base
+ * 5. Status tracked via /api/purchase-status/[txId]
  */
 
 import type {
@@ -74,8 +76,9 @@ export class StacksProtocol implements BridgeProtocol {
             params.onStatus?.('validating', { protocol: 'stacks' });
 
             // ENHANCEMENT: The actual bridge logic is handled by:
-            // 1. Stacks contract (contracts/stacks-lottery.clar)
-            // 2. Bridge operator (scripts/stacks-bridge-operator.ts)
+            // 1. Stacks contract (contracts/stacks-lottery.clar) - emits event
+            // 2. Chainhook service - detects event and POSTs to /api/chainhook
+            // 3. StacksBridgeOperator service - processes the bridge
             // 
             // This protocol acts as the coordinator/interface
 
@@ -89,11 +92,12 @@ export class StacksProtocol implements BridgeProtocol {
             });
 
             // The actual flow is:
-            // 1. User calls bridge-and-purchase via @stacks/connect (already implemented in UI)
-            // 2. Contract emits event
-            // 3. Bridge operator picks up event (scripts/stacks-bridge-operator.ts)
-            // 4. Operator processes bridge + purchase
-            // 5. Status tracked via /api/purchase-status/[txId]
+            // 1. User calls bridge-and-purchase via @stacks/connect (implemented in UI)
+            // 2. Contract emits "bridge-purchase-initiated" event
+            // 3. Chainhook detects event → POST to /api/chainhook
+            // 4. API routes to StacksBridgeOperator.processBridgeEvent()
+            // 5. Operator processes bridge + purchase on Base
+            // 6. Status tracked via /api/purchase-status/[txId]
 
             // Return pending status - operator will complete the bridge
             const result: BridgeResult = {

@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "stacksAddress": "unknown",
+    "evmAddress": "0xfc8f467A16D5f65aCb2a8A01aAC3e3aF81862d3B",
+    "stacksTxId": "0xa5c3604bf131a2e1015b34a447c5b685db38eb29af85f79c8585cf9acfc0faf7",
+    "baseTxId": "0x07bab70b0686a7691e5ec3ba9964e4edeaff194828c7888d86d954b97d0dc97c",
+    "ticketCount": 1,
+    "sourceChain": "stacks",
+    "purchaseTimestamp": "2025-12-22T00:40:26.373Z"
+  }
+]
