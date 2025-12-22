@@ -87,10 +87,23 @@ export function useCrossChainPurchase() {
         setTrackerOpen(true);
         setState({ status: 'broadcasting' }); // Initial status while waiting for user
 
+        // ENHANCEMENT: Multi-decimal support for Stacks tokens (e.g. sUSDT with 8 decimals)
+        // Since the contract math is fixed at 6 decimals, we send an "inflated" ticket count
+        // for 8-decimal tokens to ensure the correct number of raw units are transferred.
+        const tokenPrincipal = params.stacksTokenPrincipal || 'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token';
+        const isEightDecimal = tokenPrincipal.toLowerCase().includes('susdt');
+
+        // For sUSDT, we want 1 ticket ($1.00) to result in 100,000,000 units.
+        // The contract does: units = (count * 1,000,000) + 100,000.
+        // So we send (count * 100 + 10) to get the correct 8-decimal value.
+        const adjustedTicketCount = isEightDecimal
+          ? (params.ticketCount * 100 + 10)
+          : params.ticketCount;
+
         const bridgeResult = await bridgeFromStacks({
           baseAddress: params.recipientBase,
-          ticketCount: params.ticketCount,
-          tokenPrincipal: params.stacksTokenPrincipal || 'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token', // Default to Circle USDC
+          ticketCount: adjustedTicketCount,
+          tokenPrincipal: tokenPrincipal,
           onStatus: (status, data) => {
             console.debug('[Stacks Bridge] Status:', status, data);
             if (status === 'broadcasted') {
