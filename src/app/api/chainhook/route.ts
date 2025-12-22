@@ -38,10 +38,10 @@ export async function POST(req: NextRequest) {
             const eventData = event.data.value.data;
 
             if (eventData) {
-              const baseAddress = eventData.base_address?.repr?.replace(/"/g, '') || '';
-              const ticketCount = parseInt(eventData.ticket_count?.repr?.replace('u', '') || '0');
-              const amount = BigInt(eventData.sbtc_amount?.repr?.replace('u', '') || '0');
-              const tokenPrincipal = eventData.token?.repr || 'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token';
+              const baseAddress = (eventData['base-address']?.repr || eventData.base_address?.repr || '').replace(/"/g, '');
+              const ticketCount = parseInt((eventData['ticket-count']?.repr || eventData.ticket_count?.repr || '0').replace('u', ''));
+              const amount = BigInt((eventData['sbtc-amount']?.repr || eventData.sbtc_amount?.repr || '0').replace('u', ''));
+              const tokenPrincipal = (eventData['token']?.repr || eventData.token?.repr || 'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token');
 
               if (baseAddress && ticketCount > 0) {
                 console.log(`[Chainhook] Processing: ${ticketCount} tickets for ${baseAddress} using ${tokenPrincipal}`);
