@@ -21,7 +21,8 @@ export async function GET(
   try {
     const data = await fs.readFile(STATUS_FILE_PATH, 'utf-8');
     const statuses = JSON.parse(data);
-    const purchaseStatus = statuses[txId];
+    const normalizedId = txId.startsWith('0x') ? txId.substring(2) : txId;
+    const purchaseStatus = statuses[txId] || statuses[normalizedId] || statuses['0x' + normalizedId];
 
     if (purchaseStatus) {
       // ENHANCEMENT: Enrich status with receipt links
@@ -36,8 +37,8 @@ export async function GET(
     } else {
       // If not found, it might just not be processed yet.
       // Return a pending status instead of a 404 to make client-side logic simpler.
-      return NextResponse.json({ 
-        status: 'broadcasting', 
+      return NextResponse.json({
+        status: 'broadcasting',
         stacksTxId: txId,
         receipt: {
           stacksExplorer: `https://explorer.stacks.co/txid/${txId}?chain=mainnet`,
@@ -49,15 +50,15 @@ export async function GET(
   } catch (error) {
     // If the file doesn't exist or there's a parsing error, assume pending.
     if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-        return NextResponse.json({ 
-          status: 'broadcasting', 
-          stacksTxId: txId,
-          receipt: {
-            stacksExplorer: `https://explorer.stacks.co/txid/${txId}?chain=mainnet`,
-            baseExplorer: null,
-            megapotApp: null,
-          }
-        });
+      return NextResponse.json({
+        status: 'broadcasting',
+        stacksTxId: txId,
+        receipt: {
+          stacksExplorer: `https://explorer.stacks.co/txid/${txId}?chain=mainnet`,
+          baseExplorer: null,
+          megapotApp: null,
+        }
+      });
     }
     console.error(`Error reading status for txId ${txId}:`, error);
     return NextResponse.json({ error: 'Failed to retrieve purchase status' }, { status: 500 });

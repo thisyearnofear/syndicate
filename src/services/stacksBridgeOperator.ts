@@ -110,6 +110,9 @@ export class StacksBridgeOperator {
             transport: http(CONFIG.BASE_RPC_URL),
         });
     }
+    private normalizeTxId(txId: string): string {
+        return txId.startsWith('0x') ? txId.substring(2) : txId;
+    }
 
     /**
      * Persist status updates for UI tracking
@@ -124,15 +127,17 @@ export class StacksBridgeOperator {
                 // Initialize if file doesn't exist
             }
 
-            statuses[txId] = {
-                ...(statuses[txId] || {}),
+            const normalizedId = this.normalizeTxId(txId);
+            statuses[normalizedId] = {
+                ...(statuses[normalizedId] || {}),
+                stacksTxId: normalizedId,
                 status,
                 ...updates,
                 updatedAt: new Date().toISOString()
             };
 
             await fs.writeFile(CONFIG.STATUS_FILE_PATH, JSON.stringify(statuses, null, 2));
-            console.log(`[StacksBridgeOperator] Status updated: ${txId} → ${status}`);
+            console.log(`[StacksBridgeOperator] Status updated: ${normalizedId} → ${status}`);
         } catch (error) {
             console.error('[StacksBridgeOperator] Failed to update status file:', error);
         }
