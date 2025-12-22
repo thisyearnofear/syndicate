@@ -3,25 +3,20 @@ import { stacksBridgeOperator } from '@/services/stacksBridgeOperator';
 
 export async function POST(req: NextRequest) {
   try {
-    // Get token from environment
+    // Authorization check - prevent unauthorized bridge execution
+    // Endpoint is public, so we must verify requests come from Chainhook
     const SECRET_TOKEN = process.env.CHAINHOOK_SECRET_TOKEN;
     
     if (!SECRET_TOKEN) {
-      console.error('[Chainhook] CHAINHOOK_SECRET_TOKEN not set in environment');
+      console.error('[Chainhook] CHAINHOOK_SECRET_TOKEN not configured');
       return NextResponse.json({ error: 'Chainhook not configured' }, { status: 500 });
     }
 
-    // 1. Authorization Check
     const authHeader = req.headers.get('authorization');
     const bearer = authHeader?.replace('Bearer ', '');
 
-    // DEBUG LOG
-    const fs = require('fs');
-    const timestamp = new Date().toISOString();
-    fs.appendFileSync('scripts/chainhook-debug.log', `[${timestamp}] [Chainhook Entry] Auth: ${bearer === SECRET_TOKEN ? 'OK' : 'FAIL'} | Bearer: ${bearer?.substring(0, 20)}...\n`);
-
     if (!authHeader || bearer !== SECRET_TOKEN) {
-      console.warn('[Chainhook] Unauthorized attempt');
+      console.warn('[Chainhook] Unauthorized access attempt');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -32,7 +27,7 @@ export async function POST(req: NextRequest) {
     // We need to iterate through them to find our events
     const events = body.apply || [];
     
-    fs.appendFileSync('scripts/chainhook-debug.log', `[${timestamp}] [Chainhook] Received payload with ${events.length} blocks\n`);
+    console.log(`[Chainhook] Received payload with ${events.length} blocks`);
 
     for (const blockEvent of events) {
       for (const tx of blockEvent.transactions) {
@@ -78,8 +73,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: 'received' }, { status: 200 });
 
   } catch (error) {
-    console.error('[Chainhook] Error processing request:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : '';
+    console.error('[Chainhook] Error processing request:', errorMsg);
+    console.error('[Chainhook] Stack:', errorStack);
+    return NextResponse.json({ 
+      error: 'Internal Server Error',
+      details: errorMsg 
+    }, { status: 500 });
   }
 }
 
