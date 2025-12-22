@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stacksBridgeOperator } from '@/services/stacksBridgeOperator';
 
-// Must be set via environment variable
-const SECRET_TOKEN = process.env.CHAINHOOK_SECRET_TOKEN;
-
-if (!SECRET_TOKEN) {
-  throw new Error('CHAINHOOK_SECRET_TOKEN environment variable is required');
-}
-
 export async function POST(req: NextRequest) {
   try {
+    // Get token from environment
+    const SECRET_TOKEN = process.env.CHAINHOOK_SECRET_TOKEN;
+    
+    if (!SECRET_TOKEN) {
+      console.error('[Chainhook] CHAINHOOK_SECRET_TOKEN not set in environment');
+      return NextResponse.json({ error: 'Chainhook not configured' }, { status: 500 });
+    }
+
     // 1. Authorization Check
     const authHeader = req.headers.get('authorization');
     const bearer = authHeader?.replace('Bearer ', '');
