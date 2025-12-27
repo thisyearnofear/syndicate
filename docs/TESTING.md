@@ -235,6 +235,82 @@ npm run dev
    - Test user understanding
    - Test recovery options
 
+## Advanced Permissions Testing (Phase 5-6)
+
+### UI Integration Testing
+
+#### Test Case 1: Permission Request Modal
+- **Steps**: After purchase, click "Enable Auto-Purchase" button
+- **Expected**: Modal opens with preset selection (Weekly $50 / Monthly $200)
+- **Verify**:
+  - [ ] Presets clearly display amounts and frequencies
+  - [ ] Review screen shows all permission details
+  - [ ] MetaMask Flask shows permission request when approved
+  - [ ] Success confirmation displays after approval
+
+#### Test Case 2: localStorage Persistence
+- **Steps**: Grant permission, reload page, verify state restored
+- **Expected**: Permission remains active after page reload
+- **Browser Console Verification**:
+  ```javascript
+  localStorage.getItem('syndicate:advanced-permission')
+  localStorage.getItem('syndicate:auto-purchase-config')
+  ```
+
+#### Test Case 3: Settings Component
+- **Steps**: Navigate to settings after enabling auto-purchase
+- **Expected**: View current permission, execution schedule, revoke option
+- **Verify**:
+  - [ ] Permission status displays correctly
+  - [ ] Execution schedule shows next purchase time
+  - [ ] Pause/resume buttons functional
+  - [ ] Revoke with confirmation dialog
+
+#### Test Case 4: Error Handling
+- **Steps**: Reject permission in MetaMask
+- **Expected**: Clear error message with "Try Again" button
+- **Verify**:
+  - [ ] Error message is user-friendly
+  - [ ] Can retry without issues
+  - [ ] Can cancel and close modal
+
+#### Test Case 5: Automation Execution (API)
+- **Steps**: Trigger manual execution via API
+- **Command**:
+  ```bash
+  curl -X POST http://localhost:3000/api/automation/execute-permitted-tickets \
+    -H "Content-Type: application/json" \
+    -d '{"configs": [/* active config */], "apiKey": "test-key"}'
+  ```
+- **Expected**: Returns success with execution count
+- **Verify**:
+  - [ ] API accepts batch configs
+  - [ ] Returns proper status codes
+  - [ ] Error handling for invalid API key
+
+#### Test Case 6: Multiple Presets
+- **Steps**: Request weekly permission, revoke, request monthly
+- **Expected**: Config updates correctly for new preset
+- **Verify**:
+  - [ ] Can switch between weekly/monthly
+  - [ ] Amounts update correctly ($50 vs $200)
+  - [ ] Permissions don't conflict
+
+### MetaMask Flask Compatibility
+
+#### Prerequisites
+- MetaMask Flask v13.5.0+ installed (NOT regular MetaMask)
+- Base Sepolia network added (RPC: https://sepolia.base.org)
+- Test USDC available on Base Sepolia
+
+#### Checklist
+- [ ] Flask version shows 13.5.0+
+- [ ] Advanced Permissions prompt appears (not regular approval)
+- [ ] Permission request shows `erc20:spend` scope clearly
+- [ ] Weekly/monthly period displays correctly
+- [ ] USDC token address shows correctly
+- [ ] User can approve/reject without issues
+
 ## Test Success Criteria
 
 ### Minimum Viable Testing (Required)
@@ -244,6 +320,8 @@ npm run dev
 - [ ] Clear error messages for all failure scenarios
 - [ ] No critical bugs blocking core functionality
 - [ ] All major pages load without errors
+- [ ] Permission request modal works on Base/Ethereum/Avalanche
+- [ ] localStorage persists permission config
 
 ### Comprehensive Testing (Recommended)
 - [ ] 95%+ success rate on all flows
@@ -251,6 +329,8 @@ npm run dev
 - [ ] Excellent mobile experience
 - [ ] Fast transaction times (< 2 minutes for bridges)
 - [ ] Positive user feedback on UX
+- [ ] Automation execution successful in batch
+- [ ] Multiple preset switches work seamlessly
 
 ## Testing Scripts
 

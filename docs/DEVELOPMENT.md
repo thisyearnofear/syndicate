@@ -9,6 +9,7 @@
 - Node.js v18+
 - npm or yarn
 - MetaMask wallet (for EVM testing)
+  - For Advanced Permissions testing: MetaMask Flask v13.5.0+ (required for ERC-7715)
 - Phantom wallet (optional, for Solana testing)
 - NEAR wallet (optional)
 - Stacks wallet (optional, for Bitcoin L2 testing): Leather, Xverse, Asigna, or Fordefi
@@ -20,6 +21,9 @@ npm install --legacy-peer-deps
 
 # Create environment file
 cp .env.example .env.local
+
+# Add for Advanced Permissions automation (optional)
+# AUTOMATION_API_KEY=your-secret-key-for-cron-jobs
 
 # Start development server
 npm run dev
