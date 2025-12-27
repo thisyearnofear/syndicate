@@ -37,6 +37,12 @@ yarn-error.log*
 # secret config files
 chainhook-predicate.json
 
+# utility scripts
+scripts/check-chainhook-status.ts
+scripts/enable-chainhook.ts
+scripts/re-register-chainhook.ts
+scripts/get-consumer-secret.ts
+
 # vercel
 .vercel
 

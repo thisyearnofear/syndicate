@@ -29,6 +29,7 @@
     "@defuse-protocol/one-click-sdk-typescript": "0.1.14",
     "@hirosystems/chainhooks-client": "^1.0.0",
     "@metamask/delegation-toolkit": "^0.11.0",
+    "@metamask/smart-accounts-kit": "^0.3.0",
     "@near-js/accounts": "^2.5.1",
     "@near-js/crypto": "^2.5.1",
     "@near-js/keystores": "^2.5.1",

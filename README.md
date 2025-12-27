@@ -55,6 +55,7 @@ A multi-chain lottery platform built on top of [Megapot](https://megapot.io), en
 - **Cross-chain bridges** (CCTP, CCIP, Wormhole)
 - **Lottery ticket purchases** via Megapot
 - **Transaction history** and balance tracking
+- **Advanced Permissions (ERC-7715)**: One-click auto-purchase with MetaMask delegation
 
 ### 🚧 In Development (UI Complete, Smart Contracts Coming Q1 2025)
 - **Yield Strategies**: Aave, Morpho, Spark integration
