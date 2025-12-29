@@ -170,7 +170,7 @@ export function WalletConnectionCard({
                 <div className="text-gray-400 text-xs">Supports 300+ wallets</div>
               </div>
             </CompactFlex>
-            <div className="flex items-center">
+            <div className="flex items-center" onClickCapture={() => handleConnect(wallet.type)}>
               <ConnectButton showBalance={false} chainStatus="none" />
             </div>
           </CompactFlex>
