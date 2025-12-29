@@ -150,29 +150,12 @@ export function InfoTooltip({
           <div
             className="absolute w-2 h-2 bg-gray-900 border border-gray-700 rotate-45"
             style={{
-              ...{
-                top: [' -4px', 'auto', '50%', '50%'][['top', 'bottom', 'left', 'right'].indexOf(position)],
-                bottom: [
-                  'auto',
-                  '-4px',
-                  '50%',
-                  '50%',
-                ][['top', 'bottom', 'left', 'right'].indexOf(position)],
-                left: ['50%', '50%', 'auto', 'auto'][
-                  ['top', 'bottom', 'left', 'right'].indexOf(position)
-                ],
-                right: ['auto', 'auto', '-4px', 'auto'][
-                  ['top', 'bottom', 'left', 'right'].indexOf(position)
-                ],
-                transform: {
-                  top: 'translateX(-50%)',
-                  bottom: 'translateX(-50%)',
-                  left: 'translateY(-50%)',
-                  right: 'translateY(-50%)',
-                }[position],
-              }}
-            />
-          </div>
+              ...(position === 'top' && { bottom: '-5px', left: '50%', transform: 'translateX(-50%)' }),
+              ...(position === 'bottom' && { top: '-5px', left: '50%', transform: 'translateX(-50%)' }),
+              ...(position === 'left' && { right: '-5px', top: '50%', transform: 'translateY(-50%)' }),
+              ...(position === 'right' && { left: '-5px', top: '50%', transform: 'translateY(-50%)' }),
+            }}
+          />
         </div>
       )}
     </div>
