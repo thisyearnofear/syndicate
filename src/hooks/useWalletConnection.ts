@@ -21,16 +21,32 @@ import { useAccount } from 'wagmi';
 export function useWalletConnection() {
   const { state } = useWalletContext();
   const { connect, disconnect, switchChain, clearError } = useUnifiedWallet();
-  const { address: evmAddress, isConnected: evmConnected } = useAccount();
+  const { address: evmAddress, isConnected: evmConnected, connector } = useAccount();
+
+  // DERIVED STATE: Single source of truth across all wallet types
+  // This ensures that if wagmi is connected, the app reflects it even if context hasn't synced
+  const isConnected = state.isConnected || evmConnected;
+  
+  // Consolidate address: prefer non-EVM if that's what's in context, else use EVM
+  const address = state.address || evmAddress || null;
+  
+  // Consolidate wallet type
+  let walletType = state.walletType;
+  if (!walletType && evmConnected) {
+    walletType = 'evm';
+  }
 
   return {
-    // Solana/Non-EVM wallet from context
     ...state,
+    isConnected,
+    address,
+    walletType,
+    // Methods
     connect,
     disconnect,
     switchChain,
     clearError,
-    // EVM wallet from wagmi (NEW)
+    // Backward compatibility / explicit access
     evmAddress,
     evmConnected,
   };
