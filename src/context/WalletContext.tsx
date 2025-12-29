@@ -188,73 +188,6 @@ export function WalletProvider({ children }: WalletProviderProps) {
   } = useAccount();
   const { disconnect: wagmiDisconnect } = useDisconnect();
 
-  // Manual wagmi sync function (called only when user explicitly connects)
-  const syncWithWagmi = useCallback(() => {
-    const isNonEvmWallet =
-      state.walletType === "solana" ||
-      state.walletType === "near" ||
-      state.walletType === "stacks";
-
-    if (wagmiConnected && address && !isNonEvmWallet) {
-      let walletType: WalletType = "evm";
-
-      if (connector?.id === "metaMask") {
-        walletType = "evm";
-      } else if (connector?.id === "walletConnect") {
-        walletType = "evm";
-      } else {
-        walletType = "evm";
-      }
-
-      dispatch({
-        type: "CONNECT_SUCCESS",
-        payload: {
-          address,
-          walletType,
-          chainId: wagmiChainId || 8453,
-        },
-      });
-    }
-  }, [
-    wagmiConnected,
-    address,
-    wagmiChainId,
-    connector,
-    dispatch,
-    state.walletType,
-  ]);
-
-  // FIXED: Only sync with wagmi when user explicitly connects via RainbowKit
-  // Do NOT auto-sync to prevent automatic MetaMask connection on page load
-  useEffect(() => {
-    // Track if this is a user-initiated connection (not auto-connect on page load)
-    const isUserInitiated = wagmiConnected && address && state.isConnecting;
-
-    // Sync when wagmi connects AND user initiated the connection
-    if (isUserInitiated) {
-      console.log("WalletContext: User connected via RainbowKit, syncing...");
-      syncWithWagmi();
-    }
-    // Only disconnect when wagmi is disconnected but our internal state still shows connected EVM wallet
-    else if (
-      !wagmiConnected &&
-      state.isConnected &&
-      (state.walletType === "evm" || !state.walletType) &&
-      state.address
-    ) {
-      console.log("WalletContext: Wagmi disconnected, updating internal state");
-      dispatch({ type: "DISCONNECT" });
-    }
-  }, [
-    wagmiConnected,
-    address,
-    syncWithWagmi,
-    state.isConnected,
-    state.isConnecting,
-    state.walletType,
-    state.address,
-  ]);
-
   // Enhanced disconnect function that handles all wallet types
   const disconnectWallet = useCallback(async () => {
     try {
@@ -303,16 +236,17 @@ export function WalletProvider({ children }: WalletProviderProps) {
     }
   }, [wagmiConnected, wagmiDisconnect, state.walletType]);
 
-  // Persist state to localStorage
+  // Persist state to localStorage (Only for non-EVM wallets)
   useEffect(() => {
     try {
       if (
         typeof window !== "undefined" &&
         typeof localStorage !== "undefined"
       ) {
-        if (state.isConnected && state.address) {
+        // Only persist non-EVM wallets, as wagmi handles EVM persistence
+        if (state.isConnected && state.address && state.walletType !== 'evm') {
           localStorage.setItem("wallet_state", JSON.stringify(state));
-        } else {
+        } else if (state.walletType !== 'evm') {
           localStorage.removeItem("wallet_state");
         }
       }
@@ -321,9 +255,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
     }
   }, [state]);
 
-  // ANTI-SPAM FIX & NEAR PERSISTENCE
-  // 1. Disable auto-restoration for EVM wallets to prevent MetaMask spam
-  // 2. Allow restoration for NEAR wallets to ensure cross-page consistency
+  // RESTORE NON-EVM SESSIONS (NEAR, etc.)
   useEffect(() => {
     const restoreState = async () => {
       try {
@@ -361,19 +293,12 @@ export function WalletProvider({ children }: WalletProviderProps) {
                     isConnected: true,
                   },
                 });
-                return; // Successfully restored
               }
             }
-
-            // For EVM/Others: Clear state to prevent spam
-            console.log(
-              "WalletContext: Clearing saved wallet state to prevent auto-connection spam"
-            );
-            localStorage.removeItem("wallet_state");
           }
         }
       } catch (error) {
-        console.warn("Failed to restore/clear wallet state:", error);
+        console.warn("Failed to restore wallet state:", error);
       }
     };
 
