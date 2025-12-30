@@ -106,8 +106,10 @@ async function executeEVMPurchase(req: PurchaseRequest): Promise<PurchaseResult>
      // Convert ticket price from decimal string (e.g., "1.0") to raw units (e.g., "1000000" for USDC)
      const ticketPriceRaw = BigInt(Math.floor(parseFloat(ticketPrice) * 1_000_000));
      const requiredAmount = ticketPriceRaw * BigInt(req.ticketCount);
-    
-    if (BigInt(balance.usdc) < requiredAmount) {
+     
+     // Convert balance from decimal string (e.g., "10.0") to raw units before BigInt conversion
+     const balanceRaw = BigInt(Math.floor(parseFloat(balance.usdc) * 1_000_000));
+     if (balanceRaw < requiredAmount) {
       return {
         success: false,
         error: {
