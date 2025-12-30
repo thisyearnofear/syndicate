@@ -1,7 +1,7 @@
 # Development Guide
 
-**Last Updated**: December 11, 2025  
-**Status**: Active Development (NEAR + Cross-Chain Bridge)
+**Last Updated**: December 31, 2025  
+**Status**: Active Development (Wallet State Management + Cross-Chain Bridge)
 
 ## Quick Start
 
@@ -298,6 +298,145 @@ npm run perf
 3. Regular dependency audits
 4. Input validation for all user inputs
 5. Secure coding practices
+
+## Wallet State Management
+
+### Architecture (Dec 2025 Improvements)
+
+**Single Source of Truth**: `WalletContext` is authoritative for all wallet types (EVM, Solana, Stacks, NEAR).
+
+**How It Works**:
+- EVM wallets: wagmi/RainbowKit → syncs to context via `SYNC_WAGMI` action
+- Non-EVM wallets: Service directly dispatches to context
+- Components: Use `useWalletConnection()` hook (reads context only)
+
+### Using Wallet State
+
+**Primary Hook** (use this everywhere):
+```typescript
+import { useWalletConnection } from '@/hooks/useWalletConnection';
+
+const { isConnected, address, walletType, connect, disconnect } = useWalletConnection();
+```
+
+**Available Properties**:
+- `isConnected` - Boolean
+- `address` - User address (all wallet types)
+- `walletType` - 'evm' | 'solana' | 'stacks' | 'near'
+- `chainId` - Numeric (EVM) or string (non-EVM)
+- `isConnecting` - Boolean
+- `error` - Error message or null
+- `mirrorAddress` - For Stacks: derived EVM address
+
+**Methods**:
+- `connect(walletType)` - Connect wallet
+- `disconnect()` - Disconnect wallet
+- `switchChain(chainId)` - Switch EVM chain (throws error for non-EVM)
+- `clearError()` - Clear error state
+
+### Connection Patterns
+
+**All wallet types use same interface**:
+```typescript
+await connect('evm');    // MetaMask/WalletConnect
+await connect('solana'); // Phantom
+await connect('near');   // NEAR Wallet
+await connect('stacks'); // Leather/Xverse/etc
+```
+
+### Chain IDs
+
+**Use constants instead of magic numbers**:
+```typescript
+import { CHAIN_IDS } from '@/domains/wallet/constants';
+
+// EVM chains (numeric)
+CHAIN_IDS.BASE          // 8453
+CHAIN_IDS.ETHEREUM      // 1
+CHAIN_IDS.POLYGON       // 137
+CHAIN_IDS.AVALANCHE     // 43114
+
+// Non-EVM chains (string)
+CHAIN_IDS.SOLANA        // 'solana'
+CHAIN_IDS.STACKS        // 'stacks'
+CHAIN_IDS.NEAR          // 'near'
+```
+
+**Helper functions**:
+```typescript
+import { isEvmChain, isSolanaChain, canWalletOperateOnChain } from '@/domains/wallet/constants';
+
+if (isEvmChain(chainId)) { /* numeric */ }
+if (isSolanaChain(chainId)) { /* string */ }
+if (canWalletOperateOnChain(walletType, chainId)) { /* check support */ }
+```
+
+### Error Handling
+
+**Standardized error handling**:
+```typescript
+import { normalizeWalletError, WalletErrorCodes } from '@/domains/wallet/errors';
+
+try {
+  await connect('solana');
+} catch (error) {
+  const walletError = normalizeWalletError(error);
+  
+  switch (walletError.code) {
+    case WalletErrorCodes.WALLET_NOT_INSTALLED:
+      showDownloadPrompt(walletError.downloadUrl);
+      break;
+    case WalletErrorCodes.CONNECTION_REJECTED:
+      showMessage('User rejected connection');
+      break;
+    case WalletErrorCodes.BRIDGE_REQUIRED:
+      showMessage('Use cross-chain bridge for this wallet');
+      break;
+    default:
+      showMessage(walletError.message);
+  }
+}
+```
+
+### Session Persistence
+
+- **EVM**: Automatically handled by wagmi (browser wallet storage)
+- **Non-EVM**: Persisted to localStorage, restored on reload if < 24 hours
+  - Solana, Stacks: Service restores session on app load
+  - NEAR: nearWalletSelectorService manages session
+
+### Code Structure
+
+**Key Files**:
+- `src/domains/wallet/constants.ts` - Chain IDs, wallet-chain mapping
+- `src/domains/wallet/errors.ts` - Error codes, messages, recovery
+- `src/context/WalletContext.tsx` - State management & SYNC_WAGMI
+- `src/hooks/useWalletConnection.ts` - Primary hook
+- `src/domains/wallet/services/unifiedWalletService.ts` - Connection orchestration
+- `src/components/wallet/` - UI components
+
+### Testing Wallet Connections
+
+```typescript
+// Test EVM connection
+const { connect, isConnected, address } = useWalletConnection();
+await connect('evm');
+expect(isConnected).toBe(true);
+expect(address).toBeTruthy();
+
+// Test error handling
+try {
+  await connect('solana'); // When Phantom not installed
+  fail('Should throw');
+} catch (error) {
+  expect(error.code).toBe('WALLET_NOT_INSTALLED');
+}
+
+// Test chain switching
+const { switchChain } = useWalletConnection();
+await switchChain(CHAIN_IDS.BASE); // Works for EVM
+await switchChain(8453); // Throws BRIDGE_REQUIRED for non-EVM
+```
 
 ---
 
