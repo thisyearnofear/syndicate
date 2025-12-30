@@ -15,11 +15,13 @@
 
 import { useState, Suspense, lazy } from 'react';
 import { Button } from '@/shared/components/ui/Button';
-import { Loader, AlertCircle, Check } from 'lucide-react';
+import { Loader, AlertCircle, Check, Zap } from 'lucide-react';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { useSimplePurchase } from '@/hooks/useSimplePurchase';
+import { useERC7715 } from '@/hooks/useERC7715';
 import WalletConnectionManager from '@/components/wallet/WalletConnectionManager';
 import { CompactStack, CompactCard } from '@/shared/components/premium/CompactLayout';
+import { AutoPurchasePermissionModal } from './AutoPurchasePermissionModal';
 
 // Lazy load celebration modal
 const CelebrationModal = lazy(() => import('./CelebrationModal'));
@@ -34,10 +36,13 @@ export interface SimplePurchaseModalProps {
 export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseModalProps) {
   const { isConnected, address, walletType } = useWalletConnection();
   const { purchase, isPurchasing, error, txHash, clearError, reset } = useSimplePurchase();
+  const { permissions, isSupported } = useERC7715();
   
   const [step, setStep] = useState<PurchaseStep>('connect');
   const [ticketCount, setTicketCount] = useState(1);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const hasActivePermission = permissions.length > 0 && isSupported;
 
   if (!isOpen) return null;
 
@@ -99,6 +104,16 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
               </p>
             </div>
 
+            {/* ENHANCEMENT: Show permission status */}
+            {hasActivePermission && (
+              <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-3 flex items-center gap-2">
+                <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
+                <div>
+                  <p className="text-green-300 font-medium text-sm">✓ Auto-Purchase Enabled</p>
+                </div>
+              </div>
+            )}
+
             {error && (
               <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
@@ -145,6 +160,18 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
               </div>
               <p className="text-xs text-gray-400">Cost: ${ticketCount} USD</p>
             </div>
+
+            {/* ENHANCEMENT: Quick auto-purchase setup */}
+            {!hasActivePermission && isSupported && (
+              <Button
+                variant="secondary"
+                className="w-full flex items-center justify-center gap-2"
+                onClick={() => setShowPermissionModal(true)}
+              >
+                <Zap className="w-4 h-4" />
+                Enable Auto-Purchase
+              </Button>
+            )}
 
             <div className="flex gap-3">
               <Button
@@ -277,6 +304,16 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
           }}
         />
       </Suspense>
+
+      {/* Auto-purchase permission modal */}
+      <AutoPurchasePermissionModal
+        isOpen={showPermissionModal}
+        onClose={() => setShowPermissionModal(false)}
+        onSuccess={() => {
+          setShowPermissionModal(false);
+          // Optional: show success message
+        }}
+      />
     </>
   );
 }

@@ -29,7 +29,7 @@ export interface UseSimplePurchaseState {
 }
 
 export interface UseSimplePurchaseActions {
-  purchase: (request: Partial<PurchaseRequest>) => Promise<PurchaseResult>;
+  purchase: (request: Partial<PurchaseRequest>, permissionId?: string) => Promise<PurchaseResult>;
   clearError: () => void;
   reset: () => void;
 }
@@ -46,7 +46,7 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
   });
 
   const purchase = useCallback(
-    async (request: Partial<PurchaseRequest>): Promise<PurchaseResult> => {
+    async (request: Partial<PurchaseRequest>, permissionId?: string): Promise<PurchaseResult> => {
       setState(prev => ({
         ...prev,
         isPurchasing: true,
@@ -103,7 +103,7 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
           chain,
           ticketCount: request.ticketCount || 1,
           recipientAddress: request.recipientAddress,
-          permissionId: request.permissionId,
+          permissionId: request.permissionId || permissionId,
           stacksTokenPrincipal: request.stacksTokenPrincipal,
         };
 
