@@ -65,15 +65,20 @@ done
 
 # Also patch the main actions index file to remove problematic test imports
 find node_modules -path "*/viem/_esm/actions/index.js" -type f 2>/dev/null | while read file; do
-  echo "Patching main actions index: $file"
-  # Create a backup and then modify the file to remove test imports
-  temp_file=$(mktemp)
+  echo "Checking main actions index: $file"
   
-  # Copy all lines except the test imports (lines that include './test/')
-  grep -v "from './test/" "$file" > "$temp_file"
-  
-  # Add empty exports for the test functions to maintain compatibility
-  cat >> "$temp_file" << 'EOF'
+  if grep -q "// Empty exports for test functions to avoid build errors" "$file"; then
+     echo "  - Already patched. Skipping."
+  else
+     echo "  - Patching..."
+     # Create a backup and then modify the file to remove test imports
+     temp_file=$(mktemp)
+     
+     # Copy all lines except the test imports (lines that include './test/')
+     grep -v "from './test/" "$file" > "$temp_file"
+     
+     # Add empty exports for the test functions to maintain compatibility
+     cat >> "$temp_file" << 'EOF'
 
 // Empty exports for test functions to avoid build errors
 export const dropTransaction = () => {};
@@ -107,8 +112,9 @@ export const setStorageAt = () => {};
 export const snapshot = () => {};
 export const stopImpersonatingAccount = () => {};
 EOF
-  
-  mv "$temp_file" "$file"
+     
+     mv "$temp_file" "$file"
+  fi
 done
 
 echo "Viem patch complete."
