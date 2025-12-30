@@ -6,49 +6,45 @@
  * - DRY: Delegates to unified wallet service as single source of truth
  * - CLEAN: Clear separation of concerns
  * - MODULAR: Composable with new domain structure
- * - FIX: Now returns both Solana AND EVM wallet state for unified access
+ * - FIX: Now properly syncs EVM and non-EVM wallet state
  */
 
 import { useUnifiedWallet } from '@/domains/wallet/services/unifiedWalletService';
 import { useWalletContext } from '@/context/WalletContext';
-import { useAccount } from 'wagmi';
 
 /**
  * ENHANCEMENT FIRST: Enhanced wallet connection hook
- * Now returns both Solana (via context) and EVM (via wagmi) wallet state
- * Single source for all wallet information
+ * Unified interface for all wallet types (EVM, Solana, Stacks, NEAR)
+ * 
+ * STATE CONSOLIDATION:
+ * - Primary source: WalletContext (all wallet types sync here)
+ * - Fallback: wagmi for EVM state (syncs to context via effect)
+ * - Single point of truth: state.isConnected + state.address + state.walletType
  */
 export function useWalletConnection() {
   const { state } = useWalletContext();
   const { connect, disconnect, switchChain, clearError } = useUnifiedWallet();
-  const { address: evmAddress, isConnected: evmConnected, connector } = useAccount();
 
-  // DERIVED STATE: Single source of truth across all wallet types
-  // This ensures that if wagmi is connected, the app reflects it even if context hasn't synced
-  const isConnected = state.isConnected || evmConnected;
-  
-  // Consolidate address: prefer non-EVM if that's what's in context, else use EVM
-  const address = state.address || evmAddress || null;
-  
-  // Consolidate wallet type
-  let walletType = state.walletType;
-  if (!walletType && evmConnected) {
-    walletType = 'evm';
-  }
+  // The context now handles syncing with wagmi via SYNC_WAGMI action
+  // So we can rely on state.isConnected as the single source of truth
 
   return {
-    ...state,
-    isConnected,
-    address,
-    walletType,
-    // Methods
+    // State properties
+    isConnected: state.isConnected,
+    address: state.address,
+    walletType: state.walletType,
+    chainId: state.chainId,
+    isConnecting: state.isConnecting,
+    error: state.error,
+    lastConnectedAt: state.lastConnectedAt,
+    mirrorAddress: state.mirrorAddress,
+    isModalOpen: state.isModalOpen,
+    
+    // Service methods
     connect,
     disconnect,
     switchChain,
     clearError,
-    // Backward compatibility / explicit access
-    evmAddress,
-    evmConnected,
   };
 }
 

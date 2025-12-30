@@ -15,6 +15,7 @@ import { useWalletContext } from '@/context/WalletContext';
 import type { WalletModuleFactory } from '@near-wallet-selector/core';
 import { WalletType, WalletTypes, STACKS_WALLETS, type StacksWalletType } from '../types';
 import { computeAddress } from 'ethers';
+import { CHAIN_IDS, isSolanaChain } from '../constants';
 
 // =============================================================================
 // WALLET DETECTION
@@ -224,7 +225,7 @@ export function useUnifiedWallet(): {
 
             // Store Solana address
             address = connection.publicKey.toString();
-            chainId = 0; // Use 0 for Solana (non-EVM)
+            chainId = CHAIN_IDS.SOLANA; // Use string constant for Solana (non-EVM)
 
             // Initialize Solana wallet service for cross-chain operations
             try {
@@ -368,9 +369,10 @@ export function useUnifiedWallet(): {
   }, [dispatch]);
 
   /**
-   * ENHANCEMENT FIRST: Switch chain with error handling
+   * ENHANCEMENT FIRST: Switch chain with standardized error handling
+   * CLEAN: Single interface for all wallet types
    */
-  const switchChain = useCallback(async (targetChainId: number) => {
+  const switchChain = useCallback(async (targetChainId: number | string) => {
     if (!state.isConnected || !state.walletType) {
       throw createError('WALLET_NOT_CONNECTED', 'No wallet connected');
     }
@@ -381,18 +383,51 @@ export function useUnifiedWallet(): {
     }
 
     try {
-      if (state.walletType === WalletTypes.EVM && window.ethereum) {
-        await window.ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: `0x${targetChainId.toString(16)}` }],
-        });
+      switch (state.walletType) {
+        case WalletTypes.EVM:
+          // EVM wallets use wallet_switchEthereumChain (numeric chain ID only)
+          if (!window.ethereum) {
+            throw createError('WALLET_NOT_FOUND', 'MetaMask or WalletConnect provider not found');
+          }
 
-        dispatch({ type: 'NETWORK_CHANGED', payload: { chainId: targetChainId } });
-      } else if (state.walletType === WalletTypes.SOLANA) {
-        // Solana wallet connected via Phantom - chain switching happens through cross-chain bridge
-        throw createError('UNSUPPORTED_OPERATION', 'Solana wallet is connected via Phantom. Use cross-chain bridge for EVM operations.');
-      } else {
-        throw createError('UNSUPPORTED_OPERATION', 'Chain switching not supported for this wallet');
+          if (typeof targetChainId !== 'number') {
+            throw createError('INVALID_CHAIN_ID', 'EVM wallets require numeric chain IDs');
+          }
+
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: `0x${targetChainId.toString(16)}` }],
+          });
+
+          dispatch({ type: 'NETWORK_CHANGED', payload: { chainId: targetChainId } });
+          break;
+
+        case WalletTypes.SOLANA:
+          // Solana is non-EVM; network switching happens through bridge
+          throw createError(
+            'BRIDGE_REQUIRED',
+            'Solana wallet is connected. Use the cross-chain bridge to purchase on Base.'
+          );
+
+        case WalletTypes.STACKS:
+          // Stacks is non-EVM; network switching happens through bridge
+          throw createError(
+            'BRIDGE_REQUIRED',
+            'Stacks wallet is connected. Use the cross-chain bridge to purchase on Base.'
+          );
+
+        case WalletTypes.NEAR:
+          // NEAR uses chain signatures for derived accounts
+          throw createError(
+            'BRIDGE_REQUIRED',
+            'NEAR wallet uses chain signatures. Use the cross-chain bridge to purchase on Base.'
+          );
+
+        default:
+          throw createError(
+            'UNSUPPORTED_WALLET',
+            `Chain switching not supported for ${state.walletType}`
+          );
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to switch chain';

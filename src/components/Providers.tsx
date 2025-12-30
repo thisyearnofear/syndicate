@@ -1,5 +1,25 @@
 "use client";
 
+/**
+ * PROVIDERS COMPONENT
+ * 
+ * Sets up the provider hierarchy for wallet state management:
+ * 1. WagmiProvider: Manages EVM wallet connections (from wagmi)
+ * 2. RainbowKitProvider: UI for EVM wallet selection (from @rainbow-me/rainbowkit)
+ * 3. QueryClientProvider: React Query for async state
+ * 4. WalletProvider: Unified wallet state for ALL wallet types
+ * 
+ * Order matters:
+ * - WagmiProvider must wrap RainbowKitProvider (wagmi provides the config)
+ * - RainbowKitProvider wraps QueryClientProvider
+ * - WalletProvider is in ClientProviders (after hydration)
+ * 
+ * This setup allows:
+ * - EVM wallets: Handled by wagmi/RainbowKit, synced to WalletContext via SYNC_WAGMI
+ * - Non-EVM wallets: Handled by custom services, stored in WalletContext directly
+ * - Single interface: useWalletConnection() works for all wallet types
+ */
+
 import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

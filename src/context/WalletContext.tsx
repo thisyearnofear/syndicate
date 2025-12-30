@@ -1,5 +1,29 @@
 "use client";
 
+/**
+ * WALLET CONTEXT
+ * 
+ * UNIFIED STATE MANAGEMENT FOR ALL WALLET TYPES
+ * 
+ * Architecture:
+ * - Primary state: WalletState (context) - single source of truth for all wallets
+ * - EVM sync: wagmi hooks → SYNC_WAGMI action → context state
+ * - Non-EVM: Direct dispatch → context state
+ * 
+ * Connection Lifecycle:
+ * 1. User selects wallet type → dispatch CONNECT_START
+ * 2. Wallet service connects → dispatch CONNECT_SUCCESS (with address, chainId)
+ * 3. Context persists state and notifies subscribers
+ * 4. For EVM: wagmi also updates → SYNC_WAGMI keeps them in sync
+ * 5. On disconnect: dispatch DISCONNECT → context clears all state
+ * 
+ * Key Improvements:
+ * - SYNC_WAGMI action: Automatically syncs wagmi EVM connections to context
+ * - Single source of truth: All wallet types route through context
+ * - No duplicate state: wagmi is read-only, context is authoritative
+ * - Service isolation: Each wallet service is independent
+ */
+
 import React, {
   createContext,
   useContext,
@@ -10,6 +34,7 @@ import React, {
 import { useAccount, useDisconnect } from "wagmi";
 import { useCallback } from "react";
 import { WalletType } from "@/domains/wallet/types";
+import { isEvmChain, isSolanaChain } from "@/domains/wallet/constants";
 
 // =============================================================================
 // TYPES
@@ -19,27 +44,31 @@ export interface WalletState {
   isConnected: boolean;
   address: string | null;
   walletType: WalletType | null;
-  chainId: number | null;
+  chainId: number | string | null;  // Support both numeric (EVM) and string (Solana, Stacks, NEAR) IDs
   isConnecting: boolean;
   error: string | null;
   lastConnectedAt: number | null;
   mirrorAddress: string | null;
   isModalOpen: boolean;
+  // Track sync state with wagmi for better visibility
+  isWagmiConnected?: boolean;
 }
 
 export type WalletAction =
   | { type: "CONNECT_START"; payload?: { walletType: WalletType } }
   | {
     type: "CONNECT_SUCCESS";
-    payload: { address: string; walletType: WalletType; chainId: number; mirrorAddress?: string | null };
+    payload: { address: string; walletType: WalletType; chainId: number | string; mirrorAddress?: string | null };
   }
   | { type: "CONNECT_FAILURE"; payload: { error: string } }
   | { type: "DISCONNECT" }
   | { type: "CLEAR_ERROR" }
   | { type: "RESTORE_STATE"; payload: WalletState }
-  | { type: "NETWORK_CHANGED"; payload: { chainId: number } }
+  | { type: "NETWORK_CHANGED"; payload: { chainId: number | string } }
   | { type: "OPEN_MODAL" }
-  | { type: "CLOSE_MODAL" };
+  | { type: "CLOSE_MODAL" }
+  | { type: "SYNC_WAGMI"; payload: { address: string | null; chainId: number | undefined; isConnected: boolean } } 
+  | { type: "SYNC_COMPLETE" };
 
 // =============================================================================
 // CONTEXT
@@ -164,6 +193,58 @@ export const walletReducer = (
         error: null,
       };
 
+    case "SYNC_WAGMI":
+      /**
+       * SYNC_WAGMI: Keep context in sync with wagmi (EVM wallet changes)
+       * 
+       * Why needed:
+       * - wagmi manages EVM connections independently via RainbowKit
+       * - We need context to reflect these changes for unified state
+       * - But we don't want wagmi to overwrite non-EVM wallet state
+       * 
+       * Logic:
+       * 1. If non-EVM wallet is connected, ignore wagmi state (prevent overwrite)
+       * 2. If EVM wallet is newly connected, sync it to context
+       * 3. Otherwise, just track wagmi connection status
+       * 
+       * Flow:
+       * EVM Connection → RainbowKit/wagmi updates → useAccount hook fires
+       * → Effect calls dispatch(SYNC_WAGMI) → context updates → subscribers notified
+       */
+      if (
+        action.payload.isConnected &&
+        action.payload.address &&
+        state.walletType !== 'evm' &&
+        state.address
+      ) {
+        // Non-EVM wallet already connected, don't sync wagmi state
+        return { ...state, isWagmiConnected: false };
+      }
+
+      if (
+        action.payload.isConnected &&
+        action.payload.address &&
+        (!state.isConnected || state.address !== action.payload.address)
+      ) {
+        // EVM wallet connected via wagmi, sync it to context
+        return {
+          ...state,
+          isConnected: true,
+          isConnecting: false,
+          address: action.payload.address,
+          walletType: 'evm',
+          chainId: action.payload.chainId || null,
+          isWagmiConnected: true,
+          lastConnectedAt: Date.now(),
+        };
+      }
+
+      return { ...state, isWagmiConnected: !!action.payload.isConnected };
+
+    case "SYNC_COMPLETE":
+      // Clear wagmi sync flag after complete
+      return { ...state, isWagmiConnected: false };
+
     default:
       return state;
   }
@@ -255,7 +336,40 @@ export function WalletProvider({ children }: WalletProviderProps) {
     }
   }, [state]);
 
-  // RESTORE NON-EVM SESSIONS (NEAR, etc.)
+  /**
+   * SYNC WITH WAGMI: Keep context in sync with EVM wallet connections
+   * 
+   * ENHANCEMENT FIRST: This effect is the bridge between wagmi and our context.
+   * 
+   * When an EVM wallet is connected via RainbowKit:
+   * 1. User clicks wallet → RainbowKit handles connection
+   * 2. wagmi/useAccount updates → this effect fires
+   * 3. Dispatch SYNC_WAGMI → context updates → subscribers notified
+   * 
+   * When an EVM wallet is disconnected:
+   * 1. User clicks disconnect → RainbowKit disconnects
+   * 2. wagmi/useAccount detects it → this effect fires
+   * 3. Dispatch DISCONNECT → context clears all state
+   * 
+   * This ensures context is always the authoritative wallet state.
+   */
+  useEffect(() => {
+    if (wagmiConnected && address) {
+      dispatch({
+        type: "SYNC_WAGMI",
+        payload: {
+          address,
+          chainId: wagmiChainId,
+          isConnected: wagmiConnected,
+        },
+      });
+    } else if (!wagmiConnected && state.walletType === 'evm') {
+      // EVM wallet was disconnected via wagmi/RainbowKit
+      dispatch({ type: "DISCONNECT" });
+    }
+  }, [wagmiConnected, address, wagmiChainId, state.walletType]);
+
+  // RESTORE NON-EVM SESSIONS (NEAR, Stacks, Solana)
   useEffect(() => {
     const restoreState = async () => {
       try {
