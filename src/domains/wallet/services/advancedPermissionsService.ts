@@ -96,6 +96,13 @@ class AdvancedPermissionsService {
    * MODULAR: Request a new Advanced Permission from user
    * 
    * Example: User grants "spend 10 USDC per week on automated ticket purchases"
+   * 
+   * NOTE: Phase 2 placeholder - ERC-7715 support requires:
+   * 1. MetaMask smart account infrastructure
+   * 2. EIP-7702 enabled chains (Base, Ethereum, Avalanche)
+   * 3. User to have smart account enabled
+   * 
+   * Currently returns helpful error to user.
    */
   async requestPermission(request: PermissionRequest): Promise<PermissionResult> {
     if (!this.isInitialized || !this.walletClient) {
@@ -106,12 +113,23 @@ class AdvancedPermissionsService {
     }
 
     try {
-      // CLEAN: Build permission request for Smart Accounts Kit
+      // CLEAN: Check if wallet supports ERC-7715 (requestExecutionPermissions)
+      const provider = (this.walletClient as any).transport?.request ? this.walletClient : null;
+      const supportsErc7715 = (this.walletClient as any).requestExecutionPermissions !== undefined;
+
+      if (!supportsErc7715) {
+        return {
+          success: false,
+          error: 'Advanced Permissions (ERC-7715) requires MetaMask smart account upgrade. ' +
+                 'Please enable smart account in MetaMask settings on Base, Ethereum, or Avalanche.',
+        };
+      }
+
+      // Build permission request for Smart Accounts Kit
       const permissionRequest = this.buildPermissionRequest(request);
 
       // Request permissions from user via MetaMask ERC-7715 provider
-      // Note: ERC-7715 is handled natively by MetaMask smart account extension
-      const permissions = await (this.walletClient as any).requestExecutionPermissions?.({
+      const permissions = await (this.walletClient as any).requestExecutionPermissions({
         permissions: [permissionRequest],
       });
 
@@ -134,6 +152,23 @@ class AdvancedPermissionsService {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
+      
+      // CLEAN: Provide helpful error messages for common issues
+      if (message.includes('Cannot set property ethereum')) {
+        return {
+          success: false,
+          error: 'Provider conflict detected. Please refresh the page and try again.',
+        };
+      }
+      
+      if (message.includes('not a function') || message.includes('requestExecutionPermissions')) {
+        return {
+          success: false,
+          error: 'Your MetaMask wallet does not support Advanced Permissions yet. ' +
+                 'Please ensure MetaMask is fully updated and smart accounts are enabled.',
+        };
+      }
+
       return {
         success: false,
         error: `Failed to request permission: ${message}`,
