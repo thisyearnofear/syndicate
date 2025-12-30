@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/shared/components/ui/Button';
 import { AlertCircle, AlertCircle as CheckCircle, Loader, Zap } from 'lucide-react';
 import { useAdvancedPermissions } from '@/hooks/useAdvancedPermissions';
+import { useERC7715 } from '@/hooks/useERC7715';
 import { AdvancedPermissionsTooltip } from '@/components/common/InfoTooltip';
 import { PERMISSION_PRESETS } from '@/domains/wallet/services/advancedPermissionsService';
 import type { AutoPurchaseConfig } from '@/domains/wallet/types';
@@ -60,6 +61,8 @@ export function AutoPurchasePermissionModal({
     clearError,
   } = useAdvancedPermissions();
 
+  const { createAutoPurchaseSession } = useERC7715();
+
   // CLEAN: Handle preset selection
   const handleSelectPreset = (preset: 'weekly' | 'monthly') => {
     setSelectedPreset(preset);
@@ -93,6 +96,16 @@ export function AutoPurchasePermissionModal({
           lastExecuted: undefined,
           nextExecution: Date.now() + (frequency === 'weekly' ? 7 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000),
         };
+
+        // ENHANCEMENT FIRST: Create batch session for 4 auto-purchases
+        // This reduces user approval friction by batching multiple future purchases
+        try {
+          await createAutoPurchaseSession(permission.permissionId, 4);
+          console.log('Batch session created for 4 purchases');
+        } catch (sessionError) {
+          console.warn('Session creation optional, continuing:', sessionError);
+          // Session creation is optional, don't block on failure
+        }
 
         setStep('success');
 

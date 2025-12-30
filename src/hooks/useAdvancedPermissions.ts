@@ -1,250 +1,179 @@
 /**
- * USE ADVANCED PERMISSIONS HOOK
+ * USE ADVANCED PERMISSIONS HOOK (DELEGATING WRAPPER)
  * 
  * Core Principles Applied:
- * - ENHANCEMENT FIRST: Wraps advancedPermissionsService for UI components
- * - DRY: Single hook for all permission operations
- * - CLEAN: Clear state management and error handling
- * - MODULAR: Composable hook with straightforward API
- * - PERFORMANT: Caches permissions, minimizes re-renders
+ * - ENHANCEMENT FIRST: Delegates to unified useERC7715 hook
+ * - DRY: Single source of truth (useERC7715)
+ * - CLEAN: Maintains backward-compatible API
+ * - MODULAR: Thin wrapper, no duplicate logic
  * 
- * Provides:
- * - Request permission from user
- * - Manage permission state
- * - Check permission validity
- * - Load/save permission config
+ * This hook now delegates to the unified useERC7715 hook.
+ * It maintains backward compatibility with the autopurchase feature
+ * while using the single source of truth for all ERC-7715 operations.
+ * 
+ * MIGRATION NOTE: New code should import and use useERC7715 directly.
+ * This hook exists only for backward compatibility.
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useWalletClient } from 'wagmi';
-import { advancedPermissionsService, PERMISSION_PRESETS } from '@/domains/wallet/services/advancedPermissionsService';
+import { useERC7715 } from './useERC7715';
 import { useWalletConnection } from './useWalletConnection';
-import type { AdvancedPermission, PermissionRequest, AutoPurchaseConfig } from '@/domains/wallet/types';
-import { CONTRACTS } from '@/config';
+import { PERMISSION_PRESETS } from '@/domains/wallet/services/advancedPermissionsService';
+import type { AdvancedPermission, AutoPurchaseConfig } from '@/domains/wallet/types';
 
 // =============================================================================
-// TYPES
+// TYPES (BACKWARD COMPATIBILITY)
 // =============================================================================
 
 export interface UseAdvancedPermissionsState {
-  // Permission state
   permission: AdvancedPermission | null;
   isActive: boolean;
-  
-  // UI state
   isLoading: boolean;
   isRequesting: boolean;
   error: string | null;
-  
-  // Auto-purchase config
   autoPurchaseConfig: AutoPurchaseConfig | null;
 }
 
 export interface UseAdvancedPermissionsActions {
-  // Permission operations
-  requestPermission: (request: PermissionRequest) => Promise<boolean>;
+  requestPermission: (request: any) => Promise<boolean>;
   requestPresetPermission: (preset: 'weekly' | 'monthly') => Promise<boolean>;
   revokePermission: () => void;
-  
-  // Config operations
   saveAutoPurchaseConfig: (config: AutoPurchaseConfig) => void;
   clearAutoPurchaseConfig: () => void;
-  
-  // Utility
   reloadPermission: () => Promise<void>;
   clearError: () => void;
 }
 
 // =============================================================================
-// HOOK
+// HOOK (DELEGATING WRAPPER)
 // =============================================================================
 
 const STORAGE_KEY_PERMISSION = 'syndicate:advanced-permission';
 const STORAGE_KEY_AUTO_CONFIG = 'syndicate:auto-purchase-config';
 
 export function useAdvancedPermissions(): UseAdvancedPermissionsState & UseAdvancedPermissionsActions {
-  // State
-  const [permission, setPermission] = useState<AdvancedPermission | null>(null);
-  const [autoPurchaseConfig, setAutoPurchaseConfig] = useState<AutoPurchaseConfig | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isRequesting, setIsRequesting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Wallet connection
-  const { isConnected, walletType, address } = useWalletConnection();
+  // Delegate to unified ERC-7715 hook
+  const erc7715 = useERC7715();
   const { data: walletClient } = useWalletClient();
-  
-  // Track if service is initialized
-  const serviceInitialized = useRef(false);
+  const { isConnected } = useWalletConnection();
 
-  // CLEAN: Initialize service with wallet client when available
+  // Local state for backward compatibility
+  const [autoPurchaseConfig, setAutoPurchaseConfig] = useState<AutoPurchaseConfig | null>(null);
+
+  // Load stored config on mount
   useEffect(() => {
-    if (!walletClient || walletType !== 'evm' || serviceInitialized.current) {
-      return;
-    }
-
+    if (typeof window === 'undefined') return;
     try {
-      advancedPermissionsService.init(walletClient);
-      serviceInitialized.current = true;
-      console.log('Advanced Permissions Service initialized');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      console.error('Failed to initialize Advanced Permissions Service:', message);
-      setError(`Advanced Permissions not supported: ${message}`);
-    }
-  }, [walletClient, walletType]);
-
-  // PERFORMANT: Load saved permission from storage on mount
-  useEffect(() => {
-    if (isLoading) return;
-
-    setIsLoading(true);
-    try {
-      // Load from localStorage
-      const savedPermission = localStorage.getItem(STORAGE_KEY_PERMISSION);
-      const savedConfig = localStorage.getItem(STORAGE_KEY_AUTO_CONFIG);
-
-      if (savedPermission) {
-        try {
-          const parsed = JSON.parse(savedPermission);
-          setPermission(parsed);
-        } catch (e) {
-          console.error('Failed to parse saved permission:', e);
-          localStorage.removeItem(STORAGE_KEY_PERMISSION);
-        }
+      const stored = localStorage.getItem(STORAGE_KEY_AUTO_CONFIG);
+      if (stored) {
+        setAutoPurchaseConfig(JSON.parse(stored));
       }
-
-      if (savedConfig) {
-        try {
-          const parsed = JSON.parse(savedConfig);
-          setAutoPurchaseConfig(parsed);
-        } catch (e) {
-          console.error('Failed to parse saved config:', e);
-          localStorage.removeItem(STORAGE_KEY_AUTO_CONFIG);
-        }
-      }
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      console.error('Failed to load auto-purchase config:', error);
     }
   }, []);
 
-  // CLEAN: Request permission from user
+  // Convert erc7715 permissions to old AdvancedPermission type
+  const permission: AdvancedPermission | null = erc7715.permissions.length > 0
+    ? {
+        permissionId: erc7715.permissions[0].id,
+        scope: erc7715.permissions[0].type,
+        token: erc7715.permissions[0].target,
+        spender: '0x0000000000000000000000000000000000000000', // Placeholder
+        limit: erc7715.permissions[0].limit,
+        remaining: erc7715.permissions[0].limit - erc7715.permissions[0].spent,
+        period: erc7715.permissions[0].period,
+        grantedAt: erc7715.permissions[0].grantedAt,
+        expiresAt: erc7715.permissions[0].expiresAt,
+        isActive: erc7715.permissions[0].isActive,
+      }
+    : null;
+
+  // Request permission (delegates to erc7715)
   const requestPermission = useCallback(
-    async (request: PermissionRequest): Promise<boolean> => {
-      if (!isConnected) {
-        setError('Wallet not connected');
+    async (request: any): Promise<boolean> => {
+      if (!erc7715.isSupported) {
         return false;
       }
 
-      if (!serviceInitialized.current) {
-        setError('Advanced Permissions not initialized. Please reconnect wallet.');
-        return false;
-      }
+      const result = await erc7715.requestAdvancedPermission(
+        request.scope || 'erc20:spend',
+        request.tokenAddress,
+        request.limit,
+        request.period
+      );
 
-      setIsRequesting(true);
-      setError(null);
-
-      try {
-        // Request permission from service (already initialized)
-        const result = await advancedPermissionsService.requestPermission(request);
-
-        if (result.success && result.permission) {
-          // Save to state and localStorage
-          setPermission(result.permission);
-          localStorage.setItem(STORAGE_KEY_PERMISSION, JSON.stringify(result.permission));
-          return true;
-        } else {
-          const errorMsg = result.error || 'Failed to request permission';
-          setError(errorMsg);
-          return false;
-        }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Unknown error';
-        setError(`Permission request failed: ${message}`);
-        return false;
-      } finally {
-        setIsRequesting(false);
-      }
+      return !!result;
     },
-    [isConnected]
+    [erc7715]
   );
 
-  // MODULAR: Request preset permission
+  // Request preset permission
   const requestPresetPermission = useCallback(
     async (preset: 'weekly' | 'monthly'): Promise<boolean> => {
-      const presetConfig = preset === 'weekly' 
-        ? PERMISSION_PRESETS.STANDARD_WEEKLY 
-        : PERMISSION_PRESETS.AGGRESSIVE_MONTHLY;
+      const presetConfig = PERMISSION_PRESETS[preset];
+      if (!presetConfig) return false;
 
-      const request: PermissionRequest = {
-        scope: 'erc20:spend',
-        tokenAddress: CONTRACTS.usdc,
-        ...presetConfig,
-      };
-
-      return requestPermission(request);
+      return requestPermission({
+        scope: presetConfig.scope,
+        tokenAddress: presetConfig.tokenAddress,
+        limit: presetConfig.limit,
+        period: presetConfig.period,
+        description: presetConfig.description,
+      });
     },
     [requestPermission]
   );
 
-  // CLEAN: Revoke permission
+  // Revoke permission
   const revokePermission = useCallback(() => {
-    setPermission(null);
-    setAutoPurchaseConfig(null);
-    localStorage.removeItem(STORAGE_KEY_PERMISSION);
-    localStorage.removeItem(STORAGE_KEY_AUTO_CONFIG);
-    setError(null);
-  }, []);
+    if (permission) {
+      erc7715.revokePermission(permission.permissionId);
+    }
+  }, [permission, erc7715]);
 
-  // CLEAN: Save auto-purchase config
+  // Save auto-purchase config
   const saveAutoPurchaseConfig = useCallback((config: AutoPurchaseConfig) => {
     setAutoPurchaseConfig(config);
-    localStorage.setItem(STORAGE_KEY_AUTO_CONFIG, JSON.stringify(config));
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEY_AUTO_CONFIG, JSON.stringify(config));
+      } catch (error) {
+        console.error('Failed to save auto-purchase config:', error);
+      }
+    }
   }, []);
 
-  // CLEAN: Clear auto-purchase config
+  // Clear auto-purchase config
   const clearAutoPurchaseConfig = useCallback(() => {
     setAutoPurchaseConfig(null);
-    localStorage.removeItem(STORAGE_KEY_AUTO_CONFIG);
-  }, []);
-
-  // PERFORMANT: Reload permission state
-  const reloadPermission = useCallback(async () => {
-    if (!permission) return;
-
-    setIsLoading(true);
-    try {
-      // TODO: In Phase 3, verify permission is still valid on-chain
-      // For now, just verify it's not expired based on local state
-      if (permission.expiresAt && permission.expiresAt < Date.now()) {
-        setError('Permission has expired');
-        setPermission(null);
-        localStorage.removeItem(STORAGE_KEY_PERMISSION);
-        return;
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem(STORAGE_KEY_AUTO_CONFIG);
+      } catch (error) {
+        console.error('Failed to clear auto-purchase config:', error);
       }
-
-      // Permission is still valid
-      setError(null);
-    } finally {
-      setIsLoading(false);
     }
-  }, [permission]);
-
-  // CLEAN: Clear error
-  const clearError = useCallback(() => {
-    setError(null);
   }, []);
 
-  // PERFORMANT: Check if permission is active
-  const isActive = permission?.isActive ?? false;
+  // Reload permission
+  const reloadPermission = useCallback(async () => {
+    erc7715.refresh();
+  }, [erc7715]);
+
+  // Clear error
+  const clearError = useCallback(() => {
+    erc7715.clearError();
+  }, [erc7715]);
 
   return {
     // State
     permission,
-    isActive,
-    isLoading,
-    isRequesting,
-    error,
+    isActive: permission?.isActive ?? false,
+    isLoading: erc7715.isLoading,
+    isRequesting: erc7715.isRequesting,
+    error: erc7715.error,
     autoPurchaseConfig,
 
     // Actions
@@ -259,76 +188,60 @@ export function useAdvancedPermissions(): UseAdvancedPermissionsState & UseAdvan
 }
 
 // =============================================================================
-// UTILITY HOOK: Check if user can enable auto-purchase
+// UTILITY HOOKS
 // =============================================================================
 
+/**
+ * Hook to check if user can enable auto-purchase
+ */
 export function useCanEnableAutoPurchase(): {
   canEnable: boolean;
   reason?: string;
   chainRequirement?: string;
 } {
-  const { isConnected, walletType, chainId } = useWalletConnection();
+  const { isConnected, walletType } = useWalletConnection();
   const { permission } = useAdvancedPermissions();
+  const { isSupported, support } = useERC7715();
 
-  // CLEAN: Check prerequisites for Advanced Permissions (ERC-7715)
-  // Requires: MetaMask Flask, Base/Ethereum/Avalanche with EIP-7702 support
-  
   if (!isConnected) {
     return { canEnable: false, reason: 'Wallet not connected' };
   }
 
-  // Only MetaMask supports Advanced Permissions (ERC-7715)
   if (walletType !== 'evm') {
-    return { 
-      canEnable: false, 
+    return {
+      canEnable: false,
       reason: 'Advanced Permissions only available on MetaMask',
-      chainRequirement: 'Supports Base, Ethereum, Avalanche'
+      chainRequirement: 'Supports Base, Ethereum, Avalanche',
     };
   }
 
-  // Check if on supported chain (must be EIP-7702)
-  const supportedChains = [8453, 1, 43114]; // Base, Ethereum, Avalanche
-  const numChainId = typeof chainId === 'string' ? parseInt(chainId, 10) : chainId;
-  if (numChainId && !supportedChains.includes(numChainId)) {
+  if (!isSupported) {
     return {
       canEnable: false,
-      reason: 'Switch to Base, Ethereum, or Avalanche',
-      chainRequirement: 'Current chain not supported for Advanced Permissions'
+      reason: support?.message || 'Advanced Permissions not supported',
+      chainRequirement: support?.reason,
     };
   }
 
   if (permission && permission.isActive) {
-    return { 
-      canEnable: false, 
-      reason: 'Auto-purchase already enabled' 
+    return {
+      canEnable: false,
+      reason: 'Auto-purchase already enabled',
     };
   }
 
   return { canEnable: true };
 }
 
-// =============================================================================
-// UTILITY HOOK: Auto-purchase state
-// =============================================================================
-
-export function useAutoPurchaseState(): {
-  isEnabled: boolean;
-  nextExecution?: number;
-  lastExecution?: number;
-  frequency?: string;
-  amountPerPeriod?: bigint;
-} {
-  const { autoPurchaseConfig, permission } = useAdvancedPermissions();
-
-  if (!autoPurchaseConfig || !permission?.isActive) {
-    return { isEnabled: false };
-  }
+/**
+ * Hook to get auto-purchase state
+ */
+export function useAutoPurchaseState() {
+  const { autoPurchaseConfig } = useAdvancedPermissions();
 
   return {
-    isEnabled: autoPurchaseConfig.enabled,
-    nextExecution: autoPurchaseConfig.nextExecution,
-    lastExecution: autoPurchaseConfig.lastExecuted,
-    frequency: autoPurchaseConfig.frequency,
-    amountPerPeriod: autoPurchaseConfig.amountPerPeriod,
+    isEnabled: autoPurchaseConfig?.enabled ?? false,
+    config: autoPurchaseConfig,
+    nextExecution: autoPurchaseConfig?.nextExecution,
   };
 }
