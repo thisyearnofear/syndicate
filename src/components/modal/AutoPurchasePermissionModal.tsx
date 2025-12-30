@@ -142,8 +142,14 @@ export function AutoPurchasePermissionModal({
                 <AdvancedPermissionsTooltip />
               </div>
               <DialogDescription>
-                Set up automatic weekly or monthly lottery ticket purchases
-              </DialogDescription>
+                   <div className="space-y-2">
+                     <p>Set up automatic weekly or monthly lottery ticket purchases</p>
+                     <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                       ⚠️ Advanced Permissions (ERC-7715) requires MetaMask smart account. 
+                       Requires MetaMask v12.3+ and smart account enabled on Base/Ethereum/Avalanche.
+                     </p>
+                   </div>
+                 </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-3">
