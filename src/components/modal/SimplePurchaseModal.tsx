@@ -13,7 +13,7 @@
  * No yield/syndicate features in MVP
  */
 
-import { useState, Suspense, lazy } from 'react';
+import { useState, Suspense, lazy, useEffect } from 'react';
 import { Button } from '@/shared/components/ui/Button';
 import { Loader, AlertCircle, Check, Zap } from 'lucide-react';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
@@ -43,6 +43,13 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
   const [showCelebration, setShowCelebration] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const hasActivePermission = permissions.length > 0 && isSupported;
+
+  // Auto-advance to select step when wallet is connected and modal is open
+  useEffect(() => {
+    if (isOpen && isConnected && address && step === 'connect') {
+      setStep('select');
+    }
+  }, [isOpen, isConnected, address, step]);
 
   if (!isOpen) return null;
 

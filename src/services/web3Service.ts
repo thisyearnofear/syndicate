@@ -636,8 +636,10 @@ class Web3Service {
   }
 
   /**
-  * Calculate odds information for current jackpot
-  */
+   * Calculate odds information for current jackpot
+   * NOTE: This uses cached/estimated odds since the contract call may fail
+   * The actual jackpot data comes from the Megapot API via useLottery hook
+   */
   async getOddsInfo(): Promise<OddsInfo | null> {
   if (!this.isInitialized || !this.megapotContract) {
       console.warn('Web3 service not initialized');
@@ -649,9 +651,17 @@ class Web3Service {
     }
 
     try {
-      // Get odds per ticket from contract (if available) or estimate
-      // For now, we'll use the jackpot size to estimate odds
-      const jackpotSize = await this.megapotContract.getCurrentJackpot();
+      // Try to get current jackpot from contract
+      // If this fails (contract not deployed, network issue, etc), return null
+      // The UI will fall back to API data via useLottery hook
+      let jackpotSize;
+      try {
+        jackpotSize = await this.megapotContract.getCurrentJackpot();
+      } catch (contractError) {
+        console.warn('Contract getCurrentJackpot call failed, using API data instead:', contractError);
+        // Return null so the UI uses API data from useLottery hook
+        return null;
+      }
 
       // Convert to readable numbers
       const jackpotUSD = parseFloat(ethers.formatUnits(jackpotSize, 6));
