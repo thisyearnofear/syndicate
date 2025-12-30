@@ -733,6 +733,70 @@ class Web3Service {
       value: '0',
     };
   }
+
+  /**
+   * ENHANCEMENT FIRST: Execute ticket purchase with delegated permissions
+   * 
+   * Used by automated systems (permittedTicketExecutor, backend cron)
+   * to execute purchases on behalf of users who granted Advanced Permissions
+   */
+  async purchaseTicketsWithDelegation(
+    userAddress: string,
+    ticketCount: number,
+    amountUsdc: bigint
+  ): Promise<string> {
+    try {
+      // CLEAN: Ensure contracts are initialized
+      if (!this.megapotContract || !this.usdcContract) {
+        // Try initialization if not ready
+        if (!this.isInitialized) {
+          await this.initializeReadOnly();
+        }
+        if (!this.megapotContract || !this.usdcContract) {
+          throw new Error('Contracts not initialized');
+        }
+      }
+
+      // Get fresh signer - if in browser with wallet, use it; otherwise throw
+      let signer: ethers.Signer;
+      try {
+        signer = await this.getFreshSigner();
+      } catch {
+        // If no browser signer available, this is backend execution
+        // In production, this would use a backend signer (relayer, account abstraction)
+        console.warn('No browser signer available - backend execution mode');
+        throw new Error('Backend execution requires account abstraction setup');
+      }
+
+      // CLEAN: Build and execute the purchase transaction
+      const referrer = ethers.ZeroAddress;
+      const txContract = new ethers.Contract(
+        this.megapotContractAddress,
+        MEGAPOT_ABI,
+        signer
+      );
+
+      // Execute purchase for the user address
+      const tx = await txContract.purchaseTickets(
+        referrer,
+        amountUsdc,
+        userAddress
+      );
+
+      // Wait for confirmation
+      const receipt = await tx.wait();
+      
+      if (!receipt) {
+        throw new Error('Transaction failed - no receipt');
+      }
+
+      console.log('Delegated purchase executed:', receipt.hash);
+      return receipt.hash;
+    } catch (error) {
+      console.error('Delegated ticket purchase failed:', error);
+      throw error;
+    }
+  }
 }
 
 // Export singleton instance

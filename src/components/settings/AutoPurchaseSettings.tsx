@@ -142,7 +142,7 @@ export function AutoPurchaseSettings() {
               Frequency
             </p>
             <p className="text-sm font-semibold text-gray-900 mt-1 capitalize">
-              {autoPurchaseState.frequency}
+              {autoPurchaseState.config?.frequency || 'weekly'}
             </p>
           </div>
           <div>
@@ -150,7 +150,7 @@ export function AutoPurchaseSettings() {
               Amount per Period
             </p>
             <p className="text-sm font-semibold text-gray-900 mt-1">
-              ${Number(autoPurchaseState.amountPerPeriod) / 10 ** 6} USDC
+              ${Number(autoPurchaseState.config?.amountPerPeriod || BigInt(0)) / 10 ** 6} USDC
             </p>
           </div>
           <div>
@@ -184,9 +184,9 @@ export function AutoPurchaseSettings() {
               <p className="text-sm text-gray-700 mt-1">
                 {new Date(autoPurchaseState.nextExecution).toLocaleString()}
               </p>
-              {autoPurchaseState.lastExecution && (
+              {autoPurchaseState.config?.lastExecuted && (
                 <p className="text-xs text-gray-600 mt-2">
-                  Last executed: {new Date(autoPurchaseState.lastExecution).toLocaleString()}
+                  Last executed: {new Date(autoPurchaseState.config.lastExecuted).toLocaleString()}
                 </p>
               )}
             </div>

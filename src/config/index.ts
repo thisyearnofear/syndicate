@@ -415,6 +415,8 @@ export const FEATURES = {
 
   enableMockData: process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true",
 
+  enableERC7715SmartSessions: process.env.NEXT_PUBLIC_ENABLE_ERC7715_SESSIONS === "true",
+
 } as const;
 
 

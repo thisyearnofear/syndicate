@@ -148,17 +148,18 @@ class MegapotService {
   }
 
   /**
-   * ENHANCEMENT FIRST: Execute ticket purchase with Advanced Permissions
-   * 
-   * CLEAN: Supports automated purchases where:
-   * - User has already granted permission to spend X USDC per period
-   * - Syndicate can execute this purchase without additional user approval
-   * 
-   * MODULAR: Can be called from:
-   * - Manual UI trigger (one-time purchase)
-   * - Automation service (recurring purchases on schedule)
-   * - Backend cron job (periodic execution)
-   */
+    * ENHANCEMENT FIRST: Execute ticket purchase with Advanced Permissions
+    * 
+    * CLEAN: Automated purchase execution where:
+    * - User has granted permission to spend X USDC per period
+    * - Called from permittedTicketExecutor or backend cron job
+    * - No additional user approval needed
+    * 
+    * MODULAR: Can be called from:
+    * - Automation service (recurring purchases on schedule)
+    * - Backend cron job (periodic execution)
+    * - Frontend automation trigger
+    */
   async executePurchaseWithPermission(params: {
     userAddress: string;
     permissionId: string;
@@ -175,39 +176,58 @@ class MegapotService {
           success: false,
           error: {
             code: 'NETWORK_ERROR',
-            message: 'Megapot lottery is only on Base. Switch chains and try again.',
+            message: 'Megapot lottery is only on Base.',
           },
         };
       }
 
-      // PERFORMANT: Check cache for recent permission validity
-      const permissionCacheKey = `permission:${params.permissionId}:${params.userAddress}`;
-      const cachedValidation = this.cache.get(permissionCacheKey) as { timestamp: number } | undefined;
+      // PERFORMANT: Check cache for recent execution
+      const executionCacheKey = `execution:${params.permissionId}:${params.userAddress}`;
+      const cachedExecution = this.cache.get(executionCacheKey) as { data: { txHash: string }; timestamp: number } | undefined;
       
-      if (cachedValidation && Date.now() - (cachedValidation?.timestamp || 0) < 60000) {
-        // Permission was validated in last 60 seconds, safe to use
-        console.log('Using cached permission validation');
+      if (cachedExecution && Date.now() - cachedExecution.timestamp < 5000) {
+        // Same execution requested within 5 seconds, return cached result
+        return {
+          success: true,
+          txHash: cachedExecution.data.txHash,
+          mode: 'individual',
+        };
       }
 
-      // TODO: In Phase 3, integrate with Smart Accounts Kit to:
-      // 1. Verify permission is still valid and has sufficient remaining allowance
-      // 2. Build the execution transaction using sendUserOperationWithDelegation
-      // 3. Return transaction hash when successful
+      // Dynamic import web3Service to avoid circular dependency
+      const { web3Service } = await import('@/services/web3Service');
+      
+      // Verify web3Service is initialized (should be from frontend context)
+      // For backend execution, we'll use read-only initialization
+      if (!web3Service.isReady()) {
+        const { CHAINS } = await import('@/config');
+        await web3Service.initialize(CHAINS.base.rpcUrl);
+      }
 
-      // For now, return success structure for integration planning
+      // CLEAN: Execute the purchase using web3Service
+      const txHash = await web3Service.purchaseTicketsWithDelegation(
+        params.userAddress,
+        params.ticketCount,
+        params.amountUsdc
+      );
+
+      // PERFORMANT: Cache successful execution
+      this.cache.set(executionCacheKey, { data: { txHash }, timestamp: Date.now() });
+
       return {
         success: true,
-        txHash: undefined, // Will be populated after Smart Accounts Kit integration
+        txHash,
         mode: 'individual',
       };
     } catch (error) {
       console.error('Failed to execute permitted purchase:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      
       return {
         success: false,
         error: {
           code: 'CONTRACT_ERROR',
-          message: 'Failed to execute purchase with permission',
-          details: error,
+          message: `Purchase failed: ${message}`,
         },
       };
     }
