@@ -386,6 +386,14 @@ export class ERC7715Service {
   }
 
   /**
+   * Get a specific permission by ID
+   */
+  getPermission(permissionId: string): AdvancedPermissionGrant | null {
+    const permission = this.permissions.get(permissionId);
+    return permission || null;
+  }
+
+  /**
    * Get all active grants (permissions + sessions)
    */
   getActiveGrants(): ERC7715Grant[] {
