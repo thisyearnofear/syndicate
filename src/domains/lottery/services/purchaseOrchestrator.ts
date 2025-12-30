@@ -94,16 +94,18 @@ export interface PurchaseProgress {
  * Supports both direct and delegated (ERC-7715) purchases
  */
 async function executeEVMPurchase(req: PurchaseRequest): Promise<PurchaseResult> {
-  try {
-    // Initialize web3 service if needed
-    if (!web3Service.isReady()) {
-      await web3Service.initialize();
-    }
+   try {
+     // Initialize web3 service if needed
+     if (!web3Service.isReady()) {
+       await web3Service.initialize();
+     }
 
-    // Check balance
-    const balance = await web3Service.getUserBalance();
-    const ticketPrice = await web3Service.getTicketPrice();
-    const requiredAmount = BigInt(ticketPrice) * BigInt(req.ticketCount);
+     // Check balance
+     const balance = await web3Service.getUserBalance();
+     const ticketPrice = await web3Service.getTicketPrice();
+     // Convert ticket price from decimal string (e.g., "1.0") to raw units (e.g., "1000000" for USDC)
+     const ticketPriceRaw = BigInt(Math.floor(parseFloat(ticketPrice) * 1_000_000));
+     const requiredAmount = ticketPriceRaw * BigInt(req.ticketCount);
     
     if (BigInt(balance.usdc) < requiredAmount) {
       return {
