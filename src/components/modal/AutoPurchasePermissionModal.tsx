@@ -86,6 +86,7 @@ export function AutoPurchasePermissionModal({
         const amountPerPeriod = selectedPreset === 'weekly'
           ? BigInt(10 * 10 ** 6)  // $10 per week
           : BigInt(50 * 10 ** 6); // $50 per month
+        const ticketCount = selectedPreset === 'weekly' ? 10 : 50; // Tickets to buy
 
         const config: AutoPurchaseConfig = {
           enabled: true,
@@ -97,7 +98,21 @@ export function AutoPurchasePermissionModal({
           nextExecution: Date.now() + (frequency === 'weekly' ? 7 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000),
         };
 
-        // ENHANCEMENT FIRST: Create batch session for 4 auto-purchases
+        // ENHANCEMENT FIRST: Save auto-purchase config to localStorage for executor
+        try {
+          const executorConfig = {
+            permissionId: permission.permissionId,
+            frequency,
+            ticketCount,
+            nextExecutionTime: config.nextExecution,
+          };
+          localStorage.setItem('syndicate_autopurchase_config', JSON.stringify(executorConfig));
+          console.log('Auto-purchase config saved');
+        } catch (storageError) {
+          console.warn('Failed to save config:', storageError);
+        }
+
+        // Create batch session for 4 auto-purchases
         // This reduces user approval friction by batching multiple future purchases
         try {
           await createAutoPurchaseSession(permission.permissionId, 4);
