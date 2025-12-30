@@ -14,6 +14,7 @@ import { useState, useCallback, useEffect, Suspense, lazy } from "react";
 import Link from "next/link";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { useTicketPurchase } from "@/hooks/useTicketPurchase";
+import { useAutoPurchaseExecutor } from "@/hooks/useAutoPurchaseExecutor";
 import type { UserIdentity } from '../../interfaces';
 import { socialService } from "@/services/socialService";
 
@@ -57,6 +58,7 @@ export default function PremiumHome() {
   const [isMounted, setIsMounted] = useState(false);
   const { isConnected, address } = useWalletConnection();
   const { userTicketInfo, claimWinnings, isClaimingWinnings } = useTicketPurchase();
+  const { isEnabled: autoPurchaseEnabled, nextExecution } = useAutoPurchaseExecutor(true);
 
   // Set mounted state for hydration consistency
   useEffect(() => {
