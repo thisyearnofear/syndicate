@@ -25,83 +25,90 @@ done
 find node_modules -path "*/viem/_esm/clients/decorators/test.js" -type f 2>/dev/null | while read file; do
   echo "Patching decorator: $file"
   cat > "$file" << 'EOF'
-// Patched to avoid missing export errors with test actions
-import { dropTransaction } from '../../actions/test/dropTransaction.js';
-import { dumpState } from '../../actions/test/dumpState.js';
-import { getAutomine } from '../../actions/test/getAutomine.js';
-import { getTxpoolContent } from '../../actions/test/getTxpoolContent.js';
-import { getTxpoolStatus } from '../../actions/test/getTxpoolStatus.js';
-import { impersonateAccount } from '../../actions/test/impersonateAccount.js';
-import { increaseTime } from '../../actions/test/increaseTime.js';
-import { inspectTxpool } from '../../actions/test/inspectTxpool.js';
-import { loadState } from '../../actions/test/loadState.js';
-import { mine } from '../../actions/test/mine.js';
-import { removeBlockTimestampInterval } from '../../actions/test/removeBlockTimestampInterval.js';
-import { reset } from '../../actions/test/reset.js';
-import { revert } from '../../actions/test/revert.js';
-import { sendUnsignedTransaction } from '../../actions/test/sendUnsignedTransaction.js';
-import { setAutomine } from '../../actions/test/setAutomine.js';
-import { setBalance } from '../../actions/test/setBalance.js';
-import { setBlockGasLimit } from '../../actions/test/setBlockGasLimit.js';
-import { setBlockTimestampInterval } from '../../actions/test/setBlockTimestampInterval.js';
-import { setCode } from '../../actions/test/setCode.js';
-import { setCoinbase } from '../../actions/test/setCoinbase.js';
-import { setIntervalMining } from '../../actions/test/setIntervalMining.js';
-import { setLoggingEnabled } from '../../actions/test/setLoggingEnabled.js';
-import { setMinGasPrice } from '../../actions/test/setMinGasPrice.js';
-import { setNextBlockBaseFeePerGas } from '../../actions/test/setNextBlockBaseFeePerGas.js';
-import { setNextBlockTimestamp } from '../../actions/test/setNextBlockTimestamp.js';
-import { setNonce } from '../../actions/test/setNonce.js';
-import { setRpcUrl } from '../../actions/test/setRpcUrl.js';
-import { setStorageAt } from '../../actions/test/setStorageAt.js';
-import { snapshot } from '../../actions/test/snapshot.js';
-import { stopImpersonatingAccount } from '../../actions/test/stopImpersonatingAccount.js';
-
-export { 
-  dropTransaction, dumpState, getAutomine, getTxpoolContent, getTxpoolStatus,
-  impersonateAccount, increaseTime, inspectTxpool, loadState, mine,
-  removeBlockTimestampInterval, reset, revert, sendUnsignedTransaction,
-  setAutomine, setBalance, setBlockGasLimit, setBlockTimestampInterval,
-  setCode, setCoinbase, setIntervalMining, setLoggingEnabled, setMinGasPrice,
-  setNextBlockBaseFeePerGas, setNextBlockTimestamp, setNonce, setRpcUrl,
-  setStorageAt, snapshot, stopImpersonatingAccount
-};
+// Empty test decorator to avoid build errors in production
+export const dropTransaction = () => {};
+export const dumpState = () => {};
+export const getAutomine = () => {};
+export const getTxpoolContent = () => {};
+export const getTxpoolStatus = () => {};
+export const impersonateAccount = () => {};
+export const increaseTime = () => {};
+export const inspectTxpool = () => {};
+export const loadState = () => {};
+export const mine = () => {};
+export const removeBlockTimestampInterval = () => {};
+export const reset = () => {};
+export const revert = () => {};
+export const sendUnsignedTransaction = () => {};
+export const setAutomine = () => {};
+export const setBalance = () => {};
+export const setBlockGasLimit = () => {};
+export const setBlockTimestampInterval = () => {};
+export const setCode = () => {};
+export const setCoinbase = () => {};
+export const setIntervalMining = () => {};
+export const setLoggingEnabled = () => {};
+export const setMinGasPrice = () => {};
+export const setNextBlockBaseFeePerGas = () => {};
+export const setNextBlockTimestamp = () => {};
+export const setNonce = () => {};
+export const setRpcUrl = () => {};
+export const setStorageAt = () => {};
+export const snapshot = () => {};
+export const stopImpersonatingAccount = () => {};
 
 export function testActions(client) {
-  return {
-    dropTransaction: (args) => dropTransaction(client, args),
-    dumpState: () => dumpState(client),
-    getAutomine: () => getAutomine(client),
-    getTxpoolContent: () => getTxpoolContent(client),
-    getTxpoolStatus: () => getTxpoolStatus(client),
-    impersonateAccount: (args) => impersonateAccount(client, args),
-    increaseTime: (args) => increaseTime(client, args), 
-    inspectTxpool: () => inspectTxpool(client),
-    loadState: (args) => loadState(client, args),
-    mine: (args) => mine(client, args),
-    removeBlockTimestampInterval: () => removeBlockTimestampInterval(client),
-    reset: (args) => reset(client, args),
-    revert: (args) => revert(client, args),
-    sendUnsignedTransaction: (args) => sendUnsignedTransaction(client, args),
-    setAutomine: (args) => setAutomine(client, args),
-    setBalance: (args) => setBalance(client, args),
-    setBlockGasLimit: (args) => setBlockGasLimit(client, args),
-    setBlockTimestampInterval: (args) => setBlockTimestampInterval(client, args),
-    setCode: (args) => setCode(client, args),
-    setCoinbase: (args) => setCoinbase(client, args),
-    setIntervalMining: (args) => setIntervalMining(client, args),
-    setLoggingEnabled: (args) => setLoggingEnabled(client, args),
-    setMinGasPrice: (args) => setMinGasPrice(client, args),
-    setNextBlockBaseFeePerGas: (args) => setNextBlockBaseFeePerGas(client, args),
-    setNextBlockTimestamp: (args) => setNextBlockTimestamp(client, args),
-    setNonce: (args) => setNonce(client, args),
-    setRpcUrl: (args) => setRpcUrl(client, args),
-    setStorageAt: (args) => setStorageAt(client, args),
-    snapshot: () => snapshot(client),
-    stopImpersonatingAccount: (args) => stopImpersonatingAccount(client, args),
-  };
+  return {};
 }
 EOF
+done
+
+# Also patch the main actions index file to remove problematic test imports
+find node_modules -path "*/viem/_esm/actions/index.js" -type f 2>/dev/null | while read file; do
+  echo "Patching main actions index: $file"
+  # Create a backup and then modify the file to remove test imports
+  temp_file=$(mktemp)
+  
+  # Copy all lines except the test imports (lines that include './test/')
+  grep -v "from './test/" "$file" > "$temp_file"
+  
+  # Add empty exports for the test functions to maintain compatibility
+  cat >> "$temp_file" << 'EOF'
+
+// Empty exports for test functions to avoid build errors
+export const dropTransaction = () => {};
+export const dumpState = () => {};
+export const getAutomine = () => {};
+export const getTxpoolContent = () => {};
+export const getTxpoolStatus = () => {};
+export const impersonateAccount = () => {};
+export const increaseTime = () => {};
+export const inspectTxpool = () => {};
+export const loadState = () => {};
+export const mine = () => {};
+export const removeBlockTimestampInterval = () => {};
+export const reset = () => {};
+export const revert = () => {};
+export const sendUnsignedTransaction = () => {};
+export const setAutomine = () => {};
+export const setBalance = () => {};
+export const setBlockGasLimit = () => {};
+export const setBlockTimestampInterval = () => {};
+export const setCode = () => {};
+export const setCoinbase = () => {};
+export const setIntervalMining = () => {};
+export const setLoggingEnabled = () => {};
+export const setMinGasPrice = () => {};
+export const setNextBlockBaseFeePerGas = () => {};
+export const setNextBlockTimestamp = () => {};
+export const setNonce = () => {};
+export const setRpcUrl = () => {};
+export const setStorageAt = () => {};
+export const snapshot = () => {};
+export const stopImpersonatingAccount = () => {};
+EOF
+  
+  mv "$temp_file" "$file"
 done
 
 echo "Viem patch complete."

@@ -227,11 +227,11 @@ async function bridgeFromStacks(params: {
           contractPrincipalCV(tokenAddress, tokenContractName),
         ],
         postConditionMode: PostConditionMode.Allow,
-        onFinish: (data) => {
-          console.log('[Stacks Bridge] Transaction broadcasted:', data.txId);
-          params.onStatus('broadcasted', data);
-          resolve({ success: true, sourceTxHash: data.txId });
-        },
+        onFinish: (data: any) => {
+           console.log('[Stacks Bridge] Transaction broadcasted:', data.txId);
+           params.onStatus('broadcasted', data);
+           resolve({ success: true, sourceTxHash: data.txId });
+         },
         onCancel: () => {
           console.log('[Stacks Bridge] Transaction cancelled by user');
           params.onStatus('user_rejected', {});

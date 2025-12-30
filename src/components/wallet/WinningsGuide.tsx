@@ -1,7 +1,7 @@
 "use client";
 
 import { useCrossChainWinnings } from "@/hooks/useCrossChainWinnings";
-import { useWalletConnection } from "@/hooks/useWalletConnection";
+import { useWalletContext } from "@/context/WalletContext";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Loader, AlertCircle } from 'lucide-react';
 
@@ -11,7 +11,9 @@ import { Loader, AlertCircle } from 'lucide-react';
  */
 export function WinningsGuide() {
     const { isLoading, error, winningsAmount, associatedEvmAddress } = useCrossChainWinnings();
-    const { evmConnected, evmAddress } = useWalletConnection();
+    const { state } = useWalletContext();
+    const evmConnected = state.walletType === 'evm' && state.isConnected;
+    const evmAddress = state.address;
 
     const hasWinnings = parseFloat(winningsAmount) > 0;
     

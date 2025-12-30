@@ -288,7 +288,8 @@ export function useCanEnableAutoPurchase(): {
 
   // Check if on supported chain (must be EIP-7702)
   const supportedChains = [8453, 1, 43114]; // Base, Ethereum, Avalanche
-  if (chainId && !supportedChains.includes(chainId)) {
+  const numChainId = typeof chainId === 'string' ? parseInt(chainId, 10) : chainId;
+  if (numChainId && !supportedChains.includes(numChainId)) {
     return {
       canEnable: false,
       reason: 'Switch to Base, Ethereum, or Avalanche',

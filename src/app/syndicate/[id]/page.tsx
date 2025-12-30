@@ -8,8 +8,13 @@ import type { SyndicateInfo } from "@/domains/lottery/types";
 import PurchaseModal from "@/components/modal/PurchaseModal"; // Import the modal
 
 export default function SyndicateDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const router = useRouter();
+   const params = useParams<{ id: string }>();
+   const id = params?.id;
+   const router = useRouter();
+   
+   if (!id) {
+     return <div className="p-4 text-center text-red-500">Syndicate ID is required</div>;
+   }
   const [syndicate, setSyndicate] = useState<SyndicateInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

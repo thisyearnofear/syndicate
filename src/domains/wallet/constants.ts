@@ -65,7 +65,11 @@ export function canWalletOperateOnChain(
   chainId: ChainId | number | string
 ): boolean {
   const nativeChains = WALLET_NATIVE_CHAINS[walletType];
-  return nativeChains.includes(chainId as any);
+  // Convert to array if needed and check membership
+  if (Array.isArray(nativeChains)) {
+    return nativeChains.includes(chainId as any);
+  }
+  return false;
 }
 
 // =============================================================================

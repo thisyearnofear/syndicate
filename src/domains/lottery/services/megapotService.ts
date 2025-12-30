@@ -182,9 +182,9 @@ class MegapotService {
 
       // PERFORMANT: Check cache for recent permission validity
       const permissionCacheKey = `permission:${params.permissionId}:${params.userAddress}`;
-      const cachedValidation = this.cache.get(permissionCacheKey);
+      const cachedValidation = this.cache.get(permissionCacheKey) as { timestamp: number } | undefined;
       
-      if (!cachedValidation && Date.now() - (cachedValidation?.timestamp || 0) < 60000) {
+      if (cachedValidation && Date.now() - (cachedValidation?.timestamp || 0) < 60000) {
         // Permission was validated in last 60 seconds, safe to use
         console.log('Using cached permission validation');
       }

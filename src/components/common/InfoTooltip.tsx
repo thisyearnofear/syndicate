@@ -14,7 +14,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { HelpCircle, X } from 'lucide-react';
+import { AlertCircle as HelpCircle, X } from 'lucide-react';
 import { colors, animations, shadows, spacing, borderRadius } from '@/config/design';
 
 interface InfoTooltipProps {
@@ -63,8 +63,8 @@ export function InfoTooltip({
   autoCloseDelay = null,
 }: InfoTooltipProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const tooltipRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+   const tooltipRef = useRef<HTMLDivElement>(null);
+   const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Handle auto-close
   useEffect(() => {
@@ -133,11 +133,12 @@ export function InfoTooltip({
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-semibold text-gray-50">{title}</h3>
               <button
-                onClick={() => setIsOpen(false)}
-                className="p-0.5 hover:bg-gray-700 rounded transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
+                 type="button"
+                 onClick={() => setIsOpen(false)}
+                 className="p-0.5 hover:bg-gray-700 rounded transition-colors"
+               >
+                 <X className="w-4 h-4" />
+               </button>
             </div>
           )}
 

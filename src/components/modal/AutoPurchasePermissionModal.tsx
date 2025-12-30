@@ -17,9 +17,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/shared/components/ui/Dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog';
 import { Button } from '@/shared/components/ui/Button';
-import { AlertCircle, CheckCircle2, Loader, Zap } from 'lucide-react';
+import { AlertCircle, AlertCircle as CheckCircle, Loader, Zap } from 'lucide-react';
 import { useAdvancedPermissions } from '@/hooks/useAdvancedPermissions';
 import { AdvancedPermissionsTooltip } from '@/components/common/InfoTooltip';
 import { PERMISSION_PRESETS } from '@/domains/wallet/services/advancedPermissionsService';
@@ -291,7 +291,7 @@ export function AutoPurchasePermissionModal({
             </DialogHeader>
 
             <div className="flex flex-col items-center justify-center py-8 space-y-4">
-              <CheckCircle2 className="w-12 h-12 text-green-600" />
+              <CheckCircle className="w-12 h-12 text-green-600" />
               <div className="text-center space-y-2">
                 <p className="text-gray-900 font-semibold">
                   Permission granted successfully

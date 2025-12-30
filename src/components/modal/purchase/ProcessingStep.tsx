@@ -440,7 +440,7 @@ export function ProcessingStep({
                 </div>
               )}
 
-              {(nearStages.includes('funds_received') || nearStages.includes('bridge_complete')) && nearRecipient && (
+              {(nearStages?.includes('funds_received') || nearStages?.includes('bridge_complete')) && nearRecipient && (
                 <div className="bg-green-500/10 border border-green-500/30 rounded p-2">
                   <p className="text-green-300 mb-1">✓ USDC Received on Base</p>
                   <p className="text-white/60 text-xs">Destination address:</p>

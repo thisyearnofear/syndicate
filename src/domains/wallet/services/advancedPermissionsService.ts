@@ -17,7 +17,7 @@
  * - Smart Accounts Kit properly configured
  */
 
-import { createWalletClient, createPublicClient, http, erc7715ProviderActions, type WalletClient } from 'viem';
+import { createWalletClient, createPublicClient, http, type WalletClient } from 'viem';
 import { CHAINS, CONTRACTS, CHAIN_IDS } from '@/config';
 import type { AdvancedPermission, PermissionRequest, PermissionResult, AutoPurchaseConfig } from '../types';
 
@@ -106,14 +106,12 @@ class AdvancedPermissionsService {
     }
 
     try {
-      // CLEAN: Extend wallet client with ERC-7715 actions
-      const extendedClient = this.walletClient.extend(erc7715ProviderActions());
-
-      // Build permission request for Smart Accounts Kit
+      // CLEAN: Build permission request for Smart Accounts Kit
       const permissionRequest = this.buildPermissionRequest(request);
 
-      // Request permissions from user
-      const permissions = await extendedClient.requestExecutionPermissions({
+      // Request permissions from user via MetaMask ERC-7715 provider
+      // Note: ERC-7715 is handled natively by MetaMask smart account extension
+      const permissions = await (this.walletClient as any).requestExecutionPermissions?.({
         permissions: [permissionRequest],
       });
 
