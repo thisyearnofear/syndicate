@@ -15,7 +15,7 @@
 
 import { useState, Suspense, lazy } from 'react';
 import { Button } from '@/shared/components/ui/Button';
-import { Loader, AlertCircle, CheckCircle } from 'lucide-react';
+import { Loader, AlertCircle, Check } from 'lucide-react';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { useSimplePurchase } from '@/hooks/useSimplePurchase';
 import WalletConnectionManager from '@/components/wallet/WalletConnectionManager';
@@ -197,7 +197,9 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
           <CompactStack spacing="md" align="center">
             <div className="text-center">
               <div className="inline-block mb-4">
-                <CheckCircle className="w-16 h-16 text-green-400" />
+                <div className="w-16 h-16 rounded-full bg-green-400/20 flex items-center justify-center">
+                  <Check className="w-8 h-8 text-green-400" />
+                </div>
               </div>
               <h2 className="text-2xl font-bold text-white mb-2">Purchase Successful!</h2>
               <p className="text-gray-400 mb-4">
@@ -267,7 +269,12 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
         <CelebrationModal
           isOpen={showCelebration}
           onClose={() => setShowCelebration(false)}
-          ticketCount={ticketCount}
+          achievement={{
+            title: 'Purchase Successful!',
+            message: `You've purchased ${ticketCount} lottery ticket${ticketCount !== 1 ? 's' : ''}. Good luck!`,
+            icon: '🎉',
+            tickets: ticketCount,
+          }}
         />
       </Suspense>
     </>

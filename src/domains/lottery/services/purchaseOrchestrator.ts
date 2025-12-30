@@ -23,7 +23,7 @@ import { web3Service } from '@/services/web3Service';
 import { solanaWalletService } from '@/services/solanaWalletService';
 import { bridgeManager } from '@/services/bridges';
 import { megapotService } from './megapotService';
-import { erc7715Service } from '@/services/erc7715Service';
+import { getERC7715Service } from '@/services/erc7715Service';
 import { CHAINS } from '@/config';
 import type { ChainIdentifier } from '@/services/bridges/types';
 
@@ -122,6 +122,7 @@ async function executeEVMPurchase(req: PurchaseRequest): Promise<PurchaseResult>
       // User has already granted permission, no signature needed
       
       // Get permission from erc7715Service
+      const erc7715Service = getERC7715Service();
       const permission = erc7715Service.getPermission(req.permissionId);
       if (!permission || !permission.isActive) {
         return {
@@ -134,12 +135,12 @@ async function executeEVMPurchase(req: PurchaseRequest): Promise<PurchaseResult>
       }
 
       // Check if permission covers the amount
-      if (permission.permission && BigInt(permission.permission.limit) < requiredAmount) {
+      if (permission.limit && BigInt(permission.limit) < requiredAmount) {
         return {
           success: false,
           error: {
             code: 'PERMISSION_EXCEEDED',
-            message: `Permission limit (${permission.permission.limit}) exceeded by request (${requiredAmount})`,
+            message: `Permission limit (${permission.limit}) exceeded by request (${requiredAmount})`,
           },
         };
       }
@@ -245,7 +246,9 @@ async function executeNEARPurchase(req: PurchaseRequest): Promise<PurchaseResult
 async function executeSolanaPurchase(req: PurchaseRequest): Promise<PurchaseResult> {
   try {
     // Check Solana balance
-    const balance = await solanaWalletService.getBalance(req.userAddress);
+    const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC || '';
+    const usdcMint = '4zMMC9srt5Ri5X14Y1jb38J8A5R4oXnc1vDCkKXgQEfJ'; // USDC mint on Solana
+    const balance = await solanaWalletService.getUsdcBalance(rpcUrl, usdcMint);
     const ticketPrice = await web3Service.getTicketPrice();
     const requiredAmount = parseFloat(ticketPrice) * req.ticketCount;
 
@@ -416,9 +419,12 @@ class PurchaseOrchestrator {
           balance = '0'; // Placeholder - service handles it
           break;
         
-        case 'solana':
-          balance = await solanaWalletService.getBalance(userAddress);
+        case 'solana': {
+          const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC || '';
+          const usdcMint = '4zMMC9srt5Ri5X14Y1jb38J8A5R4oXnc1vDCkKXgQEfJ';
+          balance = await solanaWalletService.getUsdcBalance(rpcUrl, usdcMint);
           break;
+        }
         
         case 'stacks':
           // Stacks balance info handled in bridge manager
