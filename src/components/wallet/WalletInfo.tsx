@@ -23,10 +23,12 @@ export default function WalletInfo({
     return null;
   }
 
-  const getChainName = (chainId: number | null) => {
+  const getChainName = (chainId: number | string | null) => {
      if (chainId === null || chainId === undefined) return "Unknown Network";
 
-     switch (chainId) {
+     const numChainId = typeof chainId === 'string' ? parseInt(chainId, 10) : chainId;
+
+     switch (numChainId) {
        case CHAIN_IDS.BASE:
          return "Base";
        case CHAIN_IDS.BASE_SEPOLIA:
@@ -42,14 +44,16 @@ export default function WalletInfo({
        case 12345:
          return "Stacks";
        default:
-         return `Network (${chainId})`;
+         return `Network (${numChainId})`;
      }
    };
 
-   const getChainColor = (chainId: number | null) => {
+   const getChainColor = (chainId: number | string | null) => {
      if (chainId === null || chainId === undefined) return "gray";
 
-     switch (chainId) {
+     const numChainId = typeof chainId === 'string' ? parseInt(chainId, 10) : chainId;
+
+     switch (numChainId) {
        case CHAIN_IDS.BASE:
          return "blue";
        case CHAIN_IDS.BASE_SEPOLIA:

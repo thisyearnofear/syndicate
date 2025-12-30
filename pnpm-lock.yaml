@@ -32,6 +32,9 @@ importers:
       '@metamask/delegation-toolkit':
         specifier: ^0.11.0
         version: 0.11.0(viem@2.41.2(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.13))
+      '@metamask/smart-accounts-kit':
+        specifier: ^0.3.0
+        version: 0.3.0(viem@2.41.2(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.13))
       '@near-js/accounts':
         specifier: ^2.5.1
         version: 2.5.1(aa211f6842ae8a1a94a4a8d5025a4b2f)
@@ -1031,12 +1034,28 @@ packages:
   '@lit/reactive-element@2.1.1':
     resolution: {integrity: sha512-N+dm5PAYdQ8e6UlywyyrgI2t++wFGXfHx+dSJ1oBrg6FAxUj40jId++EaRm80MKX5JnlH1sBsyZ5h0bcZKemCg==}
 
+  '@metamask/7715-permission-types@0.4.0':
+    resolution: {integrity: sha512-zRGASXeJ1LEbThi7fMXcP1xsoq/iXg/h9NL+lg1IhJUxOgO7An8TQs+Qvg8f+nGaYZnGlcWmhyEi8+razmRTgA==}
+    engines: {node: ^18.18 || >=20}
+
+  '@metamask/abi-utils@3.0.0':
+    resolution: {integrity: sha512-a/l0DiSIr7+CBYVpHygUa3ztSlYLFCQMsklLna+t6qmNY9+eIO5TedNxhyIyvaJ+4cN7TLy0NQFbp9FV3X2ktg==}
+    engines: {node: ^18.18 || ^20.14 || >=22}
+
   '@metamask/delegation-abis@0.11.0':
     resolution: {integrity: sha512-tnNGFDLQ5jfgPhHJaT5JwvF759nja1iGAG00REbk1Ufir+TxjxTmF8L9MbJifZmUh4fnyqV4Ik6NAOYVNBPVBg==}
     engines: {node: ^18.18 || >=20}
 
+  '@metamask/delegation-core@0.3.0':
+    resolution: {integrity: sha512-a0vMu0pIOKD8AydSdSI991SY6BN0XzGhyXoaKbNg55NchyTyNMBuoAXZ92GS8+/jGtyIouQBglh6CUxhZZHmVw==}
+    engines: {node: ^18.18 || >=20}
+
   '@metamask/delegation-deployments@0.11.0':
     resolution: {integrity: sha512-RfeMr1Ct0givG7oOy1unwdb5lGttq9pape4OGz2mk8quG0KDqDi7cw3fzYc7wz9xFDZ2YrFanYRacaLTlqWS8g==}
+    engines: {node: ^18.18 || >=20}
+
+  '@metamask/delegation-deployments@0.15.0':
+    resolution: {integrity: sha512-5nlEPy7OGfNTcwSQ2kP7S2IOg2kFj9B8zcEOP3UeJxsFGX4U4IjNKxGVLtNTFHEa8RWmiFkl0Ifz9kDq/63fRw==}
     engines: {node: ^18.18 || >=20}
 
   '@metamask/delegation-toolkit@0.11.0':
@@ -1111,6 +1130,12 @@ packages:
 
   '@metamask/sdk@0.33.1':
     resolution: {integrity: sha512-1mcOQVGr9rSrVcbKPNVzbZ8eCl1K0FATsYH3WJ/MH4WcZDWGECWrXJPNMZoEAkLxWiMe8jOQBumg2pmcDa9zpQ==}
+
+  '@metamask/smart-accounts-kit@0.3.0':
+    resolution: {integrity: sha512-WwaLwSB3WO5p0WpuxVEvTJbOZ1dr2wCBeq1IoEpv9EjFwiPNXlorji77PRskjQjFgFAc9XrERt4jWX7oua6N+Q==}
+    engines: {node: ^18.18 || >=20}
+    peerDependencies:
+      viem: ^2.31.4
 
   '@metamask/superstruct@3.2.1':
     resolution: {integrity: sha512-fLgJnDOXFmuVlB38rUN5SmU7hAFQcCjrg3Vrxz67KTY7YHFnSNEKvX4avmEBdOI0yTCxZjwMCFEqsC8k2+Wd3g==}
@@ -8816,6 +8841,9 @@ packages:
     resolution: {integrity: sha512-c5EGNOiyxxV5qmTtAB7rbiXxi1ooX1pQKMLX/MIabJjRA0SJBQOjKF+KSVfHkr9U1cADPon0mRiVe/riyaiDUA==}
     engines: {node: '>=10.13.0'}
 
+  webauthn-p256@0.0.10:
+    resolution: {integrity: sha512-EeYD+gmIT80YkSIDb2iWq0lq2zbHo1CxHlQTeJ+KkCILWpVy3zASH3ByD4bopzfk0uCwXxLqKGLqp2W4O28VFA==}
+
   webauthn-p256@0.0.5:
     resolution: {integrity: sha512-drMGNWKdaixZNobeORVIqq7k5DsRC9FnG201K2QjeOoQLmtSDaSsVZdkg6n5jUALJKcAG++zBPJXmv6hy0nWFg==}
 
@@ -10475,9 +10503,28 @@ snapshots:
     dependencies:
       '@lit-labs/ssr-dom-shim': 1.4.0
 
+  '@metamask/7715-permission-types@0.4.0': {}
+
+  '@metamask/abi-utils@3.0.0':
+    dependencies:
+      '@metamask/superstruct': 3.2.1
+      '@metamask/utils': 11.8.1
+    transitivePeerDependencies:
+      - supports-color
+
   '@metamask/delegation-abis@0.11.0': {}
 
+  '@metamask/delegation-core@0.3.0':
+    dependencies:
+      '@metamask/abi-utils': 3.0.0
+      '@metamask/utils': 11.8.1
+      '@noble/hashes': 1.8.0
+    transitivePeerDependencies:
+      - supports-color
+
   '@metamask/delegation-deployments@0.11.0': {}
+
+  '@metamask/delegation-deployments@0.15.0': {}
 
   '@metamask/delegation-toolkit@0.11.0(viem@2.41.2(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.13))':
     dependencies:
@@ -10620,6 +10667,18 @@ snapshots:
       - encoding
       - supports-color
       - utf-8-validate
+
+  '@metamask/smart-accounts-kit@0.3.0(viem@2.41.2(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.13))':
+    dependencies:
+      '@metamask/7715-permission-types': 0.4.0
+      '@metamask/delegation-abis': 0.11.0
+      '@metamask/delegation-core': 0.3.0
+      '@metamask/delegation-deployments': 0.15.0
+      buffer: 6.0.3
+      viem: 2.41.2(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.1.13)
+      webauthn-p256: 0.0.10
+    transitivePeerDependencies:
+      - supports-color
 
   '@metamask/superstruct@3.2.1': {}
 
@@ -23363,6 +23422,11 @@ snapshots:
     dependencies:
       glob-to-regexp: 0.4.1
       graceful-fs: 4.2.11
+
+  webauthn-p256@0.0.10:
+    dependencies:
+      '@noble/curves': 1.9.7
+      '@noble/hashes': 1.8.0
 
   webauthn-p256@0.0.5:
     dependencies:

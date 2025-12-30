@@ -7,7 +7,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { web3Service, type TicketPurchaseResult, type UserBalance, type UserTicketInfo, type OddsInfo } from '@/services/web3Service';
-import { useWalletConnection } from './useWalletConnection';
+import { useWalletContext } from '@/context/WalletContext';
 import { WalletTypes } from '@/domains/wallet/types';
 import type { SyndicateInfo, PurchaseOptions, SyndicateImpact } from '@/domains/lottery/types';
 import type { YieldConversionResult } from '@/services/yieldToTicketsService';
@@ -130,13 +130,14 @@ export interface TicketPurchaseActions {
 }
 
 export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions {
-  const { isConnected, walletType, address, evmAddress } = useWalletConnection();
+   const walletState = useWalletContext().state;
+   const { isConnected, walletType, address, chainId } = walletState;
 
-  // Debouncing refs for balance refresh
-  const lastBalanceRefreshRef = useRef<number>(0);
-  const balanceRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+   // Debouncing refs for balance refresh
+   const lastBalanceRefreshRef = useRef<number>(0);
+   const balanceRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [state, setState] = useState<TicketPurchaseState>({
+   const [state, setState] = useState<TicketPurchaseState>({
     isInitializing: false,
     isPurchasing: false,
     isApproving: false,
@@ -697,7 +698,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       throw new Error('Solana wallet address not connected');
     }
 
-    if (!evmAddress) {
+    if (!address) {
       throw new Error('Connect an EVM wallet (MetaMask, Coinbase, etc.) to complete the purchase on Base.');
     }
 
@@ -726,7 +727,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       sourceChain: 'solana',
       destinationChain: 'base',
       sourceAddress: address,
-      destinationAddress: evmAddress,
+      destinationAddress: address,
       amount: bridgeAmount,
       protocol: 'auto',
       allowFallback: true,
@@ -800,7 +801,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
           sourceChain: 'solana',
           destinationChain: 'base',
           sourceAddress: address,
-          destinationAddress: evmAddress,
+          destinationAddress: address,
           amount: bridgeAmount,
           protocol: bridgeResult.protocol, // Stay with the same protocol
           options: {
@@ -852,7 +853,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       txHash: purchaseResult.txHash,
       ticketCount,
     };
-  }, [address, evmAddress, state.solanaBalance, state.ticketPrice, setState]);
+  }, [address, address, state.solanaBalance, state.ticketPrice, setState]);
 
   /**
    * Purchase tickets
@@ -1313,10 +1314,10 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
       }
 
       const reverseQuote = await nearIntentsService.withdrawWinningsToNear({
-        evmAddress: derivedEvmAddress,
-        nearAccountId,
-        amountUsdc: winningsAmount,
-      });
+         evmAddress: derivedEvmAddress,
+         nearAccountId,
+         amountUsdc: winningsAmount,
+       });
 
       if (!reverseQuote.success || !reverseQuote.depositAddress) {
         throw new Error(reverseQuote.error || 'Failed to get reverse bridge quote');

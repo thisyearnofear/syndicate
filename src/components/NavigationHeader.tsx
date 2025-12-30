@@ -14,10 +14,10 @@ import { usePathname } from 'next/navigation';
 import Navigation from './Navigation';
 
 export default function NavigationHeader() {
-  const pathname = usePathname();
+   const pathname = usePathname();
 
-  // Only show navigation on main pages, not on modal-heavy pages
-  const showNavigation = !pathname.includes('/auth') && !pathname.includes('/onboarding');
+   // Only show navigation on main pages, not on modal-heavy pages
+   const showNavigation = pathname && !pathname.includes('/auth') && !pathname.includes('/onboarding');
 
   if (!showNavigation) return null;
 

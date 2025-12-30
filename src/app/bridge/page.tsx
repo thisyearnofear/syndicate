@@ -15,7 +15,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { FocusedBridgeFlow } from "@/components/bridge/FocusedBridgeFlow";
 import { WinningsWithdrawalFlow } from "@/components/bridge/WinningsWithdrawalFlow";
-import { useWalletConnection } from "@/hooks/useWalletConnection";
+import { useWalletContext } from "@/context/WalletContext";
 import { WalletTypes } from "@/domains/wallet/types";
 import { Button } from "@/shared/components/ui/Button";
 import { WalletConnectionCard } from "@/components/wallet/WalletConnectionCard";
@@ -40,7 +40,8 @@ interface ChainOption {
 }
 
 export default function BridgePage() {
-  const { isConnected, evmAddress, evmConnected, walletType } = useWalletConnection();
+  const { state } = useWalletContext();
+  const { address, isConnected, walletType, chainId } = state;
   const [isBridging, setIsBridging] = useState(false);
   const [bridgeAmount, setBridgeAmount] = useState("10");
   const [showSuccess, setShowSuccess] = useState(false);
@@ -119,19 +120,20 @@ export default function BridgePage() {
   );
 
   // Determine wallet connection status based on selected chain
+  const isEvmConnected = walletType === 'evm' && isConnected;
    const needsWalletConnection = useMemo(() => {
      if (sourceChain === "solana") {
        return !isConnected || walletType !== "solana";
      } else if (sourceChain === "near") {
        return !isConnected || walletType !== "near";
      } else if (sourceChain === "ethereum") {
-       return !evmConnected;
+       return !isEvmConnected;
      }
      return true;
-  }, [sourceChain, isConnected, evmConnected, walletType]);
+  }, [sourceChain, isConnected, isEvmConnected, walletType]);
 
   // Determine if EVM wallet is needed for destination
-  const needsEvmWallet = !evmConnected;
+  const needsEvmWallet = !isEvmConnected;
 
   const handleBridgeComplete = () => {
     setShowSuccess(true);
@@ -394,14 +396,14 @@ export default function BridgePage() {
                     </div>
                   ) : (
                     <FocusedBridgeFlow
-                      sourceChain={sourceChain === "ethereum" ? "ethereum" : sourceChain}
-                      destinationChain="base"
-                      amount={bridgeAmount}
-                      recipient={evmAddress || ""}
-                      onComplete={handleBridgeComplete}
-                      onError={handleBridgeError}
-                      onCancel={() => setIsBridging(false)}
-                    />
+                       sourceChain={sourceChain === "ethereum" ? "ethereum" : sourceChain}
+                       destinationChain="base"
+                       amount={bridgeAmount}
+                       recipient={address || ""}
+                       onComplete={handleBridgeComplete}
+                       onError={handleBridgeError}
+                       onCancel={() => setIsBridging(false)}
+                     />
                   )}
                 </div>
               )}

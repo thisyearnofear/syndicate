@@ -225,7 +225,7 @@ export function useUnifiedWallet(): {
 
             // Store Solana address
             address = connection.publicKey.toString();
-            chainId = CHAIN_IDS.SOLANA; // Use string constant for Solana (non-EVM)
+            chainId = 0; // Solana uses placeholder 0 in context, actual chain ID is 'solana'
 
             // Initialize Solana wallet service for cross-chain operations
             try {

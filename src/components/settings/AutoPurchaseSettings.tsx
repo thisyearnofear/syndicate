@@ -17,7 +17,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AlertCircle, CheckCircle2, Clock, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { AlertCircle, AlertCircle as CheckCircle, Clock, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 import { useAdvancedPermissions, useAutoPurchaseState } from '@/hooks/useAdvancedPermissions';
 import { AutoPurchasePermissionModal } from '../modal/AutoPurchasePermissionModal';
@@ -78,7 +78,6 @@ export function AutoPurchaseSettings() {
               </p>
               <Button
                 onClick={() => setShowPermissionModal(true)}
-                variant="primary"
               >
                 Enable Auto-Purchase
               </Button>
@@ -102,7 +101,7 @@ export function AutoPurchaseSettings() {
       <div className="bg-green-50 border border-green-200 rounded-lg p-6">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-1" />
+            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-1" />
             <div>
               <h3 className="font-semibold text-gray-900">
                 Auto-Purchase Enabled
