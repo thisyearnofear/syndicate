@@ -283,8 +283,8 @@ export class ERC7715Service {
           type,
           data: {
             tokenAddress: target,
-            periodAmount: limit.toString(),
-            periodDuration,
+            periodAmount: `0x${limit.toString(16)}`,
+            periodDuration: `0x${periodDuration.toString(16)}`,
             justification: `Permission to spend ${limit.toString()} tokens ${period}`,
           },
         }
