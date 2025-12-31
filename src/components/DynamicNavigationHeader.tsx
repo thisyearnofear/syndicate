@@ -1,5 +1,3 @@
-'use client';
-
 import dynamic from 'next/dynamic';
 
 // Dynamically import NavigationHeader with SSR enabled but with loading state

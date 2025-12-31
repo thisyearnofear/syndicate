@@ -17,7 +17,9 @@ export default function NavigationHeader() {
    const pathname = usePathname();
 
    // Only show navigation on main pages, not on modal-heavy pages
-   const showNavigation = pathname && !pathname.includes('/auth') && !pathname.includes('/onboarding');
+   const showNavigation = !pathname || (!pathname.includes('/auth') && !pathname.includes('/onboarding'));
+   
+   console.log('NavigationHeader - pathname:', pathname, 'showNavigation:', showNavigation);
 
   if (!showNavigation) return null;
 

@@ -15,7 +15,7 @@
 
 import { useState, Suspense, lazy, useEffect } from 'react';
 import { Button } from '@/shared/components/ui/Button';
-import { Loader, AlertCircle, Check, Zap, ChevronDown } from 'lucide-react';
+import { Loader, AlertCircle, Check, Zap } from 'lucide-react';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { useSimplePurchase } from '@/hooks/useSimplePurchase';
 import { useERC7715 } from '@/hooks/useERC7715';
@@ -42,7 +42,6 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
   const [ticketCount, setTicketCount] = useState(1);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
-  const [showAutoPurchaseInfo, setShowAutoPurchaseInfo] = useState(false);
   const hasActivePermission = permissions.length > 0 && isSupported;
 
   // Auto-advance to select step when wallet is connected and modal is open
@@ -112,12 +111,17 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
               </p>
             </div>
 
-            {/* ENHANCEMENT: Show permission status */}
+            {/* ENHANCEMENT: Show permission status with details */}
             {hasActivePermission && (
-              <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-3 flex items-center gap-2">
-                <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
-                <div>
-                  <p className="text-green-300 font-medium text-sm">✓ Auto-Purchase Enabled</p>
+              <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-green-300 font-medium text-sm">✓ Auto-Purchase Enabled</p>
+                    <p className="text-xs text-green-200 mt-1">
+                      Tickets will be automatically purchased on your scheduled frequency without requiring signatures.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -139,34 +143,27 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
               </div>
             )}
 
-            {/* ENHANCEMENT: Collapsible auto-purchase info (Base/EVM only, chain-aware) */}
+            {/* ENHANCEMENT: Auto-purchase setup (expanded by default, Base/EVM only, chain-aware) */}
             {!hasActivePermission && isSupported && walletType === 'evm' && (
-              <div className="border border-gray-700/50 rounded-lg overflow-hidden">
-                <button
-                  onClick={() => setShowAutoPurchaseInfo(!showAutoPurchaseInfo)}
-                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-800/30 transition-colors"
-                >
-                  <span className="text-sm font-medium text-gray-300">Auto-Purchase (Optional)</span>
-                  <ChevronDown 
-                    className={`w-4 h-4 text-gray-400 transition-transform ${showAutoPurchaseInfo ? 'rotate-180' : ''}`}
-                  />
-                </button>
-                {showAutoPurchaseInfo && (
-                  <div className="px-4 py-3 bg-gray-800/20 border-t border-gray-700/50 space-y-3">
-                    <p className="text-xs text-gray-400">
-                      Enable MetaMask Advanced Permissions to buy tickets automatically every day without signing.
+              <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-lg p-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <Zap className="w-5 h-5 text-indigo-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-indigo-300 mb-1">Enable Auto-Purchase</p>
+                    <p className="text-xs text-gray-300">
+                      Set up automatic weekly or monthly ticket purchases using MetaMask Advanced Permissions. No signing required after setup.
                     </p>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="w-full text-xs"
-                      onClick={() => setShowPermissionModal(true)}
-                    >
-                      <Zap className="w-3 h-3 mr-1" />
-                      Set Up Auto-Purchase
-                    </Button>
                   </div>
-                )}
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full text-xs"
+                  onClick={() => setShowPermissionModal(true)}
+                >
+                  <Zap className="w-3 h-3 mr-1" />
+                  Set Up Auto-Purchase
+                </Button>
               </div>
             )}
 
