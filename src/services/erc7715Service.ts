@@ -20,7 +20,8 @@
 
 import { createWalletClient, custom, WalletClient, Address } from 'viem';
 import { sepolia, base, mainnet, avalanche } from 'viem/chains';
-
+// Import directly from the specific actions entry point to ensure correct resolution
+import { erc7715ProviderActions } from '@metamask/smart-accounts-kit/actions';
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -126,13 +127,14 @@ export class ERC7715Service {
 
     if (this.supportInfo.isSupported && typeof window !== 'undefined' && window.ethereum) {
       try {
-        // Initialize base client
+        // Initialize base client and extend with ERC-7715 actions actions
         const baseClient = createWalletClient({
           chain: this.getChainFromId(this.getCurrentChainId()),
           transport: custom(window.ethereum),
         });
 
-        this.walletClient = baseClient;
+        // Extend client with Smart Accounts Kit actions
+        this.walletClient = baseClient.extend(erc7715ProviderActions());
         this.initialized = true;
       } catch (error) {
         console.error('Failed to initialize wallet client:', error);
@@ -258,39 +260,33 @@ export class ERC7715Service {
         console.warn('[ERC7715] Snap request failed, attempting permissions request anyway:', snapError);
       }
 
-      console.log('[ERC7715] Requesting permissions from Snap (grant_permissions)...');
+      console.log('[ERC7715] Requesting permissions via Smart Accounts Kit (SDK)...');
 
-      // Request permissions by invoking the Snap directly
-      // standard wallet_grantPermissions is not exposed by Flask currently
-      const grantedPermissions = await provider.request({
-        method: 'wallet_invokeSnap',
-        params: {
-          snapId,
-          request: {
-            method: 'grant_permissions',
-            params: [{
-              chainId: hexChainId,
-              expiry,
-              signer: {
-                type: 'account',
-                data: {
-                  address: provider.selectedAddress || (this.walletClient as any)?.account?.address,
-                },
-              },
-              permissions: [
-                {
-                  type,
-                  data: {
-                    tokenAddress: target,
-                    periodAmount: limit.toString(),
-                    periodDuration,
-                    justification: `Permission to spend ${limit.toString()} tokens ${period}`,
-                  },
-                }
-              ],
-            }]
-          }
+      const sdkProvider = (this.walletClient as any);
+
+      // Use the SDK's requestExecutionPermissions action
+      // The SDK formats the parameters correctly for the underlying RPC method
+      const grantedPermissions = await sdkProvider.requestExecutionPermissions({
+        chainId: hexChainId,
+        expiry,
+        signer: {
+          type: 'account',
+          data: {
+            // @ts-ignore - Handle possible disconnect
+            address: provider.selectedAddress || sdkProvider.account?.address,
+          },
         },
+        permissions: [
+          {
+            type,
+            data: {
+              tokenAddress: target,
+              periodAmount: limit.toString(),
+              periodDuration,
+              justification: `Permission to spend ${limit.toString()} tokens ${period}`,
+            },
+          }
+        ],
       });
 
       if (!grantedPermissions || grantedPermissions.length === 0) {
