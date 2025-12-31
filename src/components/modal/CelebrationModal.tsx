@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { X, Ticket, Gift } from 'lucide-react';
+import { ShareModal } from './ShareModal';
 
 interface CelebrationModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export default function CelebrationModal({ isOpen, onClose, achievement }: Celeb
   const [showConfetti, setShowConfetti] = useState(false);
   const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; color: string; delay: number }>>([]);
   const [mounted, setMounted] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -114,17 +116,9 @@ export default function CelebrationModal({ isOpen, onClose, achievement }: Celeb
               Continue Playing! 🎯
             </button>
             <button
-              onClick={() => {
-                // DELIGHT: Share achievement (could integrate with social media)
-                if (navigator.share) {
-                  navigator.share({
-                    title: achievement.title,
-                    text: achievement.message,
-                    url: window.location.href
-                  });
-                }
-              }}
-              className="bg-gray-700 hover:bg-gray-600 text-white p-3 rounded-lg transition-all transform hover:scale-105 active:scale-95"
+              onClick={() => setShowShareModal(true)}
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white p-3 rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-lg"
+              title="Share your achievement"
             >
               <Gift className="w-5 h-5" />
             </button>
@@ -132,7 +126,12 @@ export default function CelebrationModal({ isOpen, onClose, achievement }: Celeb
         </div>
       </div>
 
-
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        ticketCount={achievement.tickets || 0}
+      />
     </div>
   );
 }
