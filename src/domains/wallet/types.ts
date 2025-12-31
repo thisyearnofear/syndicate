@@ -101,13 +101,14 @@ export function getWalletRouting(walletType: WalletType): {
 /**
  * Represents a granted Advanced Permission for automated actions
  * CLEAN: Single source of truth for permission state
+ * Matches MetaMask ERC-7715 format (erc20-token-periodic, native-token-periodic)
  */
 export interface AdvancedPermission {
     /** Unique permission identifier from MetaMask */
     permissionId: string;
     
-    /** Permission scope (e.g., "erc20:spend") */
-    scope: 'erc20:spend' | 'native:spend';
+    /** Permission scope - MetaMask ERC-7715 format */
+    scope: 'erc20-token-periodic' | 'native-token-periodic';
     
     /** Token address (for ERC-20 permissions) or null for native */
     token: string | null;
@@ -138,8 +139,8 @@ export interface AdvancedPermission {
  * Configuration for requesting a new Advanced Permission
  */
 export interface PermissionRequest {
-    /** Permission scope */
-    scope: 'erc20:spend' | 'native:spend';
+    /** Permission scope - MetaMask ERC-7715 format */
+    scope: 'erc20-token-periodic' | 'native-token-periodic';
     
     /** Target token address (required for ERC-20) */
     tokenAddress?: string;

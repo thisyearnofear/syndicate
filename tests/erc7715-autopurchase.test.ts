@@ -27,7 +27,7 @@ describe('ERC-7715 Auto-Purchase Flow', () => {
       
       const mockPermission: AdvancedPermission = {
         permissionId: 'test-perm-001',
-        scope: 'erc20:spend',
+        scope: 'erc20-token-periodic',
         token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
         spender: '0x0000000000000000000000000000000000000000',
         limit: BigInt(50 * 10 ** 6), // 50 USDC
@@ -38,7 +38,7 @@ describe('ERC-7715 Auto-Purchase Flow', () => {
         isActive: true,
       };
 
-      expect(mockPermission.scope).toBe('erc20:spend');
+      expect(mockPermission.scope).toBe('erc20-token-periodic');
       expect(mockPermission.limit).toBe(BigInt(50 * 10 ** 6));
       expect(mockPermission.isActive).toBe(true);
     });
@@ -93,7 +93,7 @@ describe('ERC-7715 Auto-Purchase Flow', () => {
         enabled: true,
         permission: {
           permissionId: 'test-perm',
-          scope: 'erc20:spend',
+          scope: 'erc20-token-periodic',
           token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
           spender: '0x0000000000000000000000000000000000000000',
           limit: BigInt(50 * 10 ** 6),
@@ -123,7 +123,7 @@ describe('ERC-7715 Auto-Purchase Flow', () => {
         enabled: true,
         permission: {
           permissionId: 'test-perm',
-          scope: 'erc20:spend',
+          scope: 'erc20-token-periodic',
           token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
           spender: '0x0000000000000000000000000000000000000000',
           limit: BigInt(50 * 10 ** 6),
@@ -152,7 +152,7 @@ describe('ERC-7715 Auto-Purchase Flow', () => {
         enabled: true,
         permission: {
           permissionId: 'test-perm',
-          scope: 'erc20:spend',
+          scope: 'erc20-token-periodic',
           token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
           spender: '0x0000000000000000000000000000000000000000',
           limit: BigInt(50 * 10 ** 6),

@@ -274,7 +274,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
         updateStage('evm_requesting_permission');
         console.log('Requesting ERC-7715 Advanced Permission for ticket purchases...');
         const permission = await requestAdvancedPermission(
-          'erc20:spend',
+          'erc20-token-periodic',
           megapotAddress,
           totalSpend,
           'daily'

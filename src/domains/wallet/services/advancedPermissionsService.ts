@@ -45,17 +45,18 @@ const USDC_BASE = CONTRACTS.usdc;
 
 /**
  * Preset permission configurations for common use cases
+ * Matches MetaMask ERC-7715 format (erc20-token-periodic)
  */
 export const PERMISSION_PRESETS = {
   weekly: {
-    scope: 'erc20:spend' as const,
+    scope: 'erc20-token-periodic' as const,
     tokenAddress: USDC_BASE,
     limit: DEFAULT_LIMITS.WEEKLY,
     period: 'weekly' as const,
     description: 'Spend up to 50 USDC per week for automatic ticket purchases',
   },
   monthly: {
-    scope: 'erc20:spend' as const,
+    scope: 'erc20-token-periodic' as const,
     tokenAddress: USDC_BASE,
     limit: DEFAULT_LIMITS.MONTHLY,
     period: 'monthly' as const,
