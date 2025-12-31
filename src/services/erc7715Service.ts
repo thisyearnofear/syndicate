@@ -126,10 +126,13 @@ export class ERC7715Service {
 
     if (this.supportInfo.isSupported && typeof window !== 'undefined' && window.ethereum) {
       try {
-        this.walletClient = createWalletClient({
+        // Initialize base client
+        const baseClient = createWalletClient({
           chain: this.getChainFromId(this.getCurrentChainId()),
           transport: custom(window.ethereum),
         });
+
+        this.walletClient = baseClient;
         this.initialized = true;
       } catch (error) {
         console.error('Failed to initialize wallet client:', error);
@@ -236,10 +239,28 @@ export class ERC7715Service {
       const expiry = period === 'unlimited' ? currentTime + (365 * 24 * 60 * 60) : currentTime + (180 * 24 * 60 * 60); // 6 months or 1 year
       const hexChainId = `0x${this.getCurrentChainId().toString(16)}`;
 
+      console.log('[ERC7715] Requesting permissions via Smart Accounts Kit...');
+
+      console.log('[ERC7715] Ensuring Delegation Snap is installed...');
+
+      const snapId = 'npm:@metamask/delegation-toolkit';
+
+      try {
+        // Request the Delegation Toolkit Snap
+        await provider.request({
+          method: 'wallet_requestSnaps',
+          params: {
+            [snapId]: {},
+          },
+        });
+        console.log('[ERC7715] Snap installed/connected');
+      } catch (snapError) {
+        console.warn('[ERC7715] Snap request failed, attempting permissions request anyway:', snapError);
+      }
+
       console.log('[ERC7715] Requesting permissions via wallet_grantPermissions...');
 
       // Request permissions using raw RPC (wallet_grantPermissions)
-      // This works with MetaMask Flask where requestExecutionPermissions helper might be missing
       const grantedPermissions = await provider.request({
         method: 'wallet_grantPermissions',
         params: [{
