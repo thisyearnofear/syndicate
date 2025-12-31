@@ -20,7 +20,7 @@ import React, { useState } from 'react';
 import { AlertCircle, AlertCircle as CheckCircle, Clock, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 import { useAdvancedPermissions, useAutoPurchaseState } from '@/hooks/useAdvancedPermissions';
-import { AutoPurchasePermissionModal } from '../modal/AutoPurchasePermissionModal';
+import { ImprovedAutoPurchaseModal } from '../modal/ImprovedAutoPurchaseModal';
 import type { AutoPurchaseConfig } from '@/domains/wallet/types';
 
 // =============================================================================
@@ -85,7 +85,7 @@ export function AutoPurchaseSettings() {
           </div>
         </div>
 
-        <AutoPurchasePermissionModal
+        <ImprovedAutoPurchaseModal
           isOpen={showPermissionModal}
           onClose={() => setShowPermissionModal(false)}
           onSuccess={handlePermissionGranted}
@@ -258,7 +258,7 @@ export function AutoPurchaseSettings() {
       </div>
 
       {/* MODAL */}
-      <AutoPurchasePermissionModal
+      <ImprovedAutoPurchaseModal
         isOpen={showPermissionModal}
         onClose={() => setShowPermissionModal(false)}
         onSuccess={handlePermissionGranted}
