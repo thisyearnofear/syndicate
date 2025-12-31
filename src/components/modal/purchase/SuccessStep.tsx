@@ -107,7 +107,7 @@ export function SuccessStep({
       )}
       
       {/* Show reason if auto-purchase unavailable */}
-      {!canEnable && reason && (
+      {!canEnable && reason && typeof reason === 'string' && (
         <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 w-full text-center">
           <p className="text-xs text-gray-400">{reason}</p>
         </div>
