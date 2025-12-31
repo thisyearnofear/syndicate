@@ -200,6 +200,10 @@ export function AutoPurchasePermissionModal({
     onClose();
   };
 
+  if (!isOpen) {
+    return null;
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
