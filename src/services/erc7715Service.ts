@@ -147,6 +147,7 @@ export class ERC7715Service {
 
   /**
    * Check ERC-7715 support
+   * Only checks what matters: provider exists and has the capability
    */
   private checkSupport(): ERC7715SupportInfo {
     const supportedChains = SUPPORTED_CHAINS;
@@ -164,56 +165,13 @@ export class ERC7715Service {
 
     const provider = window.ethereum as any;
 
-    // Check for MetaMask - property may be on provider directly or under _metamask
-    const isMetaMask = provider.isMetaMask || provider._metamask?.isMetaMask;
-    if (!isMetaMask) {
-      return {
-        isSupported: false,
-        reason: 'not-metamask',
-        message: 'ERC-7715 requires MetaMask',
-        minimumVersion: `${FLASK_VERSION_MINIMUM.major}.${FLASK_VERSION_MINIMUM.minor}.0`,
-        upgradeUrl: FLASK_DOCS_URL,
-        supportedChains,
-      };
-    }
-
-    // Check for Flask - property may be on provider directly or under _metamask
-    const isFlask = (provider.isFlask || provider._metamask?.isFlask) === true;
-    const versionString = provider.version || provider._metamask?.version || '';
-
-    if (!isFlask) {
+    // Only check what matters: Advanced Permissions capability exists
+    const hasAdvancedPermissions = typeof provider.requestExecutionPermissions === 'function';
+    if (!hasAdvancedPermissions) {
       return {
         isSupported: false,
         reason: 'flask-only',
-        message: `MetaMask Flask ${FLASK_VERSION_MINIMUM.major}.${FLASK_VERSION_MINIMUM.minor}.0+ required (production support coming Q1-Q2 2025)`,
-        minimumVersion: `${FLASK_VERSION_MINIMUM.major}.${FLASK_VERSION_MINIMUM.minor}.0`,
-        upgradeUrl: FLASK_DOCS_URL,
-        supportedChains,
-      };
-    }
-
-    const versionMatch = versionString.match(/(\d+)\.(\d+)\.(\d+)/);
-    if (versionMatch) {
-      const [, major, minor] = versionMatch.map(Number);
-      if (major < FLASK_VERSION_MINIMUM.major || 
-          (major === FLASK_VERSION_MINIMUM.major && minor < FLASK_VERSION_MINIMUM.minor)) {
-        return {
-          isSupported: false,
-          reason: 'flask-outdated',
-          message: `MetaMask Flask ${versionString} is outdated. Upgrade to ${FLASK_VERSION_MINIMUM.major}.${FLASK_VERSION_MINIMUM.minor}.0+`,
-          minimumVersion: `${FLASK_VERSION_MINIMUM.major}.${FLASK_VERSION_MINIMUM.minor}.0`,
-          upgradeUrl: FLASK_DOCS_URL,
-          supportedChains,
-        };
-      }
-    }
-
-    const chainId = this.getCurrentChainId();
-    if (!supportedChains.includes(chainId)) {
-      return {
-        isSupported: false,
-        reason: 'unsupported-chain',
-        message: `Switch to Base, Ethereum, or Avalanche`,
+        message: `MetaMask Flask ${FLASK_VERSION_MINIMUM.major}.${FLASK_VERSION_MINIMUM.minor}.0+ required`,
         minimumVersion: `${FLASK_VERSION_MINIMUM.major}.${FLASK_VERSION_MINIMUM.minor}.0`,
         upgradeUrl: FLASK_DOCS_URL,
         supportedChains,
