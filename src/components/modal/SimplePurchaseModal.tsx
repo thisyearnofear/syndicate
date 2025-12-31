@@ -193,22 +193,6 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
                 )}
               </Button>
             </div>
-
-            {/* ENHANCEMENT: Auto-purchase tip (Base/EVM only, chain-aware) */}
-            {!hasActivePermission && isSupported && walletType === 'evm' && (
-              <div className="text-center pt-2 border-t border-gray-700/50">
-                <p className="text-xs text-gray-400 mb-2">
-                  Don't want to sign every time?
-                </p>
-                <button
-                  onClick={() => setShowPermissionModal(true)}
-                  className="text-xs text-blue-400 hover:text-blue-300 underline transition-colors"
-                  disabled={isPurchasing}
-                >
-                  Enable auto-purchase with MetaMask Advanced Permissions
-                </button>
-              </div>
-            )}
           </CompactStack>
         );
 
@@ -254,6 +238,27 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
                 </a>
               )}
             </div>
+
+            {/* ENHANCEMENT: Auto-purchase upsell (Base/EVM only, chain-aware, success momentum) */}
+            {!hasActivePermission && isSupported && walletType === 'evm' && (
+              <div className="w-full bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 space-y-3">
+                <div>
+                  <p className="text-sm font-medium text-blue-300 mb-1">Never sign again</p>
+                  <p className="text-xs text-gray-300">
+                    Enable auto-purchase to buy tickets daily without signing. Powered by MetaMask Advanced Permissions.
+                  </p>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full text-xs"
+                  onClick={() => setShowPermissionModal(true)}
+                >
+                  <Zap className="w-3 h-3 mr-1" />
+                  Enable Auto-Purchase
+                </Button>
+              </div>
+            )}
 
             <div className="flex gap-3 w-full">
               <Button
