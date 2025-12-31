@@ -21,6 +21,8 @@ interface ProcessingStepProps {
   bridgeStages?: string[];
   bridgeStatus?: string | null;
   bridgeDepositAddress?: string | null;
+  // NEW: EVM purchase stages
+  evmPurchaseStages?: string[];
 }
 
 /**
@@ -173,6 +175,52 @@ const STAGE_INFO: Record<string, {
     celebrate: true,
   },
 
+  // EVM Purchase Flow
+  evm_initializing: {
+    label: "Initializing purchase...",
+    description: "Setting up your EVM wallet connection",
+    estimatedSeconds: 2,
+  },
+  evm_requesting_permission: {
+    label: "Requesting advanced permissions",
+    description: "Asking MetaMask Flask to grant ERC-7715 spending permissions",
+    estimatedSeconds: 10,
+    tip: "👉 Approve the permission request in your MetaMask Flask wallet",
+  },
+  evm_permission_granted: {
+    label: "✅ Permissions granted",
+    description: "Advanced spending permissions enabled",
+    estimatedSeconds: 2,
+  },
+  evm_approving_usdc: {
+    label: "Approving USDC...",
+    description: "Granting Megapot contract permission to spend your USDC",
+    estimatedSeconds: 15,
+    tip: "👉 Confirm the approval in your wallet",
+  },
+  evm_usdc_approved: {
+    label: "✅ USDC approved",
+    description: "Megapot contract can now spend your USDC",
+    estimatedSeconds: 2,
+  },
+  evm_purchasing_tickets: {
+    label: "🎫 Purchasing tickets...",
+    description: "Submitting your purchase to the Megapot smart contract",
+    estimatedSeconds: 30,
+    tip: "⚡ Final step—sign to complete your purchase!",
+  },
+  evm_purchase_submitted: {
+    label: "Purchase submitted",
+    description: "Transaction broadcast to Base network",
+    estimatedSeconds: 5,
+  },
+  evm_purchase_confirmed: {
+    label: "✅ Tickets purchased!",
+    description: "Your tickets are now in your wallet",
+    estimatedSeconds: 2,
+    celebrate: true,
+  },
+
   // Solver States (Future/Fallback)
   waiting_execution: {
     label: "Waiting for solver to execute",
@@ -275,14 +323,16 @@ export function ProcessingStep({
   bridgeStages,
   bridgeStatus,
   bridgeDepositAddress,
+  evmPurchaseStages,
 }: ProcessingStepProps) {
-  // Support both NEAR and Solana bridge flows
-  const stages = bridgeStages ?? nearStages;
+  // Support EVM, NEAR, and Solana flows
+  const stages = evmPurchaseStages ?? bridgeStages ?? nearStages;
   const currentStage =
     stages && stages.length > 0
       ? stages[stages.length - 1]
       : undefined;
   const isSolanaBridge = !!bridgeStages;
+  const isEvmPurchase = !!evmPurchaseStages;
   
   const confettiRef = useRef<HTMLDivElement>(null);
   const celebratedStagesRef = useRef<Set<string>>(new Set());
@@ -317,12 +367,16 @@ export function ProcessingStep({
         Processing Purchase...
       </h2>
       <p className="text-gray-400 text-center leading-relaxed">
-        {isApproving
+        {isEvmPurchase && currentStage
+          ? STAGE_INFO[currentStage]?.description || "Processing your purchase..."
+          : isApproving
           ? "Approving USDC spending..."
           : "Purchasing your tickets..."}
       </p>
       <p className="text-sm text-white/50 text-center">
-        {currentStage === "requesting_signature"
+        {isEvmPurchase && currentStage?.includes('permission')
+          ? "Approve in your MetaMask Flask wallet"
+          : currentStage === "requesting_signature"
           ? "Approve in your NEAR wallet"
           : "Please confirm the transaction in your wallet"}
       </p>
@@ -330,7 +384,7 @@ export function ProcessingStep({
       {stages && stages.length > 0 && (
          <div className="mt-4 w-full bg-white/5 rounded-lg p-4">
            <p className="text-white/70 text-sm mb-3 font-semibold">
-             {isSolanaBridge ? '🌉 Solana Bridge Status' : '🔄 NEAR Intents Status'}
+             {isEvmPurchase ? '🎫 Purchase Progress' : isSolanaBridge ? '🌉 Solana Bridge Status' : '🔄 NEAR Intents Status'}
            </p>
            <ul className="space-y-2">
              {stages.map((s, i) => {
