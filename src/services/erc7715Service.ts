@@ -123,7 +123,7 @@ export class ERC7715Service {
    */
   async initialize(): Promise<ERC7715SupportInfo> {
     this.supportInfo = this.checkSupport();
-    
+
     if (this.supportInfo.isSupported && typeof window !== 'undefined' && window.ethereum) {
       try {
         this.walletClient = createWalletClient({
@@ -188,7 +188,7 @@ export class ERC7715Service {
     // The UI will show and requests will fail gracefully if not actually supported
     console.log('[ERC7715] MetaMask detected - assuming potential Flask support');
     console.log('[ERC7715] Will show UI and let permission requests fail gracefully if needed');
-    
+
     return {
       isSupported: true,
       reason: 'supported',
@@ -216,11 +216,11 @@ export class ERC7715Service {
     }
 
     try {
-      const provider = (this.walletClient as any);
-      
-      // Check if wallet supports requestExecutionPermissions (Advanced Permissions)
-      if (!provider.requestExecutionPermissions) {
-        throw new Error('MetaMask Advanced Permissions not available. Please ensure MetaMask Flask 13.5.0+ is installed.');
+      // FIX: Use window.ethereum directly as Viem WalletClient doesn't expose requestExecutionPermissions
+      const provider = (window as any).ethereum;
+
+      if (!provider) {
+        throw new Error('MetaMask provider not found');
       }
 
       // Convert period to seconds (MetaMask expects duration in seconds)
@@ -234,33 +234,36 @@ export class ERC7715Service {
       const periodDuration = periodDurations[period];
       const currentTime = Math.floor(Date.now() / 1000);
       const expiry = period === 'unlimited' ? currentTime + (365 * 24 * 60 * 60) : currentTime + (180 * 24 * 60 * 60); // 6 months or 1 year
+      const hexChainId = `0x${this.getCurrentChainId().toString(16)}`;
 
-      // Request permission using MetaMask's proper format
-      // This follows the documented API: requestExecutionPermissions
-      const grantedPermissions = await provider.requestExecutionPermissions([
-        {
-          chainId: this.getCurrentChainId(),
+      console.log('[ERC7715] Requesting permissions via wallet_grantPermissions...');
+
+      // Request permissions using raw RPC (wallet_grantPermissions)
+      // This works with MetaMask Flask where requestExecutionPermissions helper might be missing
+      const grantedPermissions = await provider.request({
+        method: 'wallet_grantPermissions',
+        params: [{
+          chainId: hexChainId,
           expiry,
           signer: {
             type: 'account',
             data: {
-              // Session account (can be user's smart account or delegated account)
-              // If not provided, MetaMask will create one
-              address: (this.walletClient as any).account?.address,
+              address: provider.selectedAddress || (this.walletClient as any)?.account?.address,
             },
           },
-          permission: {
-            type,
-            data: {
-              tokenAddress: target,
-              periodAmount: limit,
-              periodDuration,
-              justification: `Permission to spend ${limit.toString()} tokens ${period}`,
-            },
-          },
-          isAdjustmentAllowed: true, // Allow user to adjust limits
-        },
-      ]);
+          permissions: [
+            {
+              type,
+              data: {
+                tokenAddress: target,
+                periodAmount: limit.toString(),
+                periodDuration,
+                justification: `Permission to spend ${limit.toString()} tokens ${period}`,
+              },
+            }
+          ],
+        }]
+      });
 
       if (!grantedPermissions || grantedPermissions.length === 0) {
         return null; // User rejected
