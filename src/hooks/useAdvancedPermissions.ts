@@ -15,7 +15,7 @@
  * This hook exists only for backward compatibility.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useERC7715 } from './useERC7715';
 import { useWalletConnection } from './useWalletConnection';
 import { PERMISSION_PRESETS } from '@/domains/wallet/services/advancedPermissionsService';
