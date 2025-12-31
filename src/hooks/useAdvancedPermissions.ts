@@ -58,7 +58,7 @@ const STORAGE_KEY_AUTO_CONFIG = 'syndicate:auto-purchase-config';
 export function useAdvancedPermissions(): UseAdvancedPermissionsState & UseAdvancedPermissionsActions {
   // Delegate to unified ERC-7715 hook
   const erc7715 = useERC7715();
-  const { isConnected } = useWalletConnection();
+  const { isConnected, walletType } = useWalletConnection();
 
   // Local state for backward compatibility
   const [autoPurchaseConfig, setAutoPurchaseConfig] = useState<AutoPurchaseConfig | null>(null);
