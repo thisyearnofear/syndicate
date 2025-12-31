@@ -147,12 +147,13 @@ export class ERC7715Service {
 
   /**
    * Check ERC-7715 support
-   * Only checks what matters: provider exists and has the capability
+   * RELAXED: Just check if MetaMask and try the API - let it fail gracefully if not supported
    */
   private checkSupport(): ERC7715SupportInfo {
     const supportedChains = SUPPORTED_CHAINS;
 
     if (typeof window === 'undefined' || !window.ethereum) {
+      console.log('[ERC7715] No window.ethereum provider found');
       return {
         isSupported: false,
         reason: 'no-provider',
@@ -165,23 +166,28 @@ export class ERC7715Service {
 
     const provider = window.ethereum as any;
 
-    // Only check what matters: Advanced Permissions capability exists
-    const hasAdvancedPermissions = typeof provider.requestExecutionPermissions === 'function';
-    if (!hasAdvancedPermissions) {
+    // Check if it's MetaMask (only hard requirement)
+    if (!provider.isMetaMask) {
+      console.log('[ERC7715] Not MetaMask');
       return {
         isSupported: false,
-        reason: 'flask-only',
-        message: `MetaMask Flask ${FLASK_VERSION_MINIMUM.major}.${FLASK_VERSION_MINIMUM.minor}.0+ required`,
+        reason: 'not-metamask',
+        message: 'Please use MetaMask wallet',
         minimumVersion: `${FLASK_VERSION_MINIMUM.major}.${FLASK_VERSION_MINIMUM.minor}.0`,
         upgradeUrl: FLASK_DOCS_URL,
         supportedChains,
       };
     }
 
+    // RELAXED: If MetaMask is detected, assume Flask might be available
+    // The UI will show and requests will fail gracefully if not actually supported
+    console.log('[ERC7715] MetaMask detected - assuming potential Flask support');
+    console.log('[ERC7715] Will show UI and let permission requests fail gracefully if needed');
+    
     return {
       isSupported: true,
       reason: 'supported',
-      message: 'ERC-7715 Advanced Permissions and Smart Sessions available',
+      message: 'MetaMask detected - Advanced Permissions may be available',
       minimumVersion: `${FLASK_VERSION_MINIMUM.major}.${FLASK_VERSION_MINIMUM.minor}.0`,
       upgradeUrl: FLASK_DOCS_URL,
       supportedChains,

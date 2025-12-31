@@ -11,6 +11,15 @@ interface EthereumProvider {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
   on: (event: string, handler: (...args: unknown[]) => void) => void;
   removeListener: (event: string, handler: (...args: unknown[]) => void) => void;
+  // MetaMask Flask specific
+  _metamask?: {
+    isFlask?: boolean;
+    isMetaMask?: boolean;
+    version?: string;
+  };
+  // ERC-7715 Advanced Permissions API
+  requestExecutionPermissions?: (args: any) => Promise<any>;
+  chainId?: string;
 }
 
 interface PhantomProvider {
