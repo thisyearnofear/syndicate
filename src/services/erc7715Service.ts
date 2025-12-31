@@ -164,7 +164,9 @@ export class ERC7715Service {
 
     const provider = window.ethereum as any;
 
-    if (!provider._metamask?.isMetaMask) {
+    // Check for MetaMask - property may be on provider directly or under _metamask
+    const isMetaMask = provider.isMetaMask || provider._metamask?.isMetaMask;
+    if (!isMetaMask) {
       return {
         isSupported: false,
         reason: 'not-metamask',
@@ -175,8 +177,9 @@ export class ERC7715Service {
       };
     }
 
-    const isFlask = provider._metamask?.isFlask === true;
-    const versionString = provider._metamask?.version || '';
+    // Check for Flask - property may be on provider directly or under _metamask
+    const isFlask = (provider.isFlask || provider._metamask?.isFlask) === true;
+    const versionString = provider.version || provider._metamask?.version || '';
 
     if (!isFlask) {
       return {
