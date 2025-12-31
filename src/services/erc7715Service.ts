@@ -243,7 +243,7 @@ export class ERC7715Service {
 
       console.log('[ERC7715] Ensuring Delegation Snap is installed...');
 
-      const snapId = 'npm:@metamask/delegation-toolkit';
+      const snapId = 'npm:@metamask/gator-permissions-snap';
 
       try {
         // Request the Delegation Toolkit Snap
