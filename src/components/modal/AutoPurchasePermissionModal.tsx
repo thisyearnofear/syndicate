@@ -59,9 +59,24 @@ export function AutoPurchasePermissionModal({
     autoPurchaseConfig,
     permission,
     clearError,
+    isLoading,
   } = useAdvancedPermissions();
 
   const { createAutoPurchaseSession } = useERC7715();
+
+  // Don't render if still loading hooks
+  if (isOpen && isLoading) {
+    return (
+      <Dialog open={true} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-md">
+          <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <Loader className="w-12 h-12 text-indigo-600 animate-spin" />
+            <p className="text-gray-900 font-semibold">Loading...</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   // CLEAN: Handle preset selection
   const handleSelectPreset = (preset: 'weekly' | 'monthly') => {
@@ -78,6 +93,8 @@ export function AutoPurchasePermissionModal({
     setErrorMessage(null);
 
     try {
+      // Request permission from MetaMask Flask
+      // This calls wallet_grantPermissions (ERC-7715) internally
       const success = await requestPresetPermission(selectedPreset);
 
       if (success && permission) {

@@ -16,7 +16,6 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { useWalletClient } from 'wagmi';
 import { useERC7715 } from './useERC7715';
 import { useWalletConnection } from './useWalletConnection';
 import { PERMISSION_PRESETS } from '@/domains/wallet/services/advancedPermissionsService';
@@ -55,7 +54,6 @@ const STORAGE_KEY_AUTO_CONFIG = 'syndicate:auto-purchase-config';
 export function useAdvancedPermissions(): UseAdvancedPermissionsState & UseAdvancedPermissionsActions {
   // Delegate to unified ERC-7715 hook
   const erc7715 = useERC7715();
-  const { data: walletClient } = useWalletClient();
   const { isConnected } = useWalletConnection();
 
   // Local state for backward compatibility

@@ -43,14 +43,19 @@ export interface ERC7715SupportInfo {
  */
 export interface AdvancedPermissionGrant {
   id: string;
-  type: 'erc20:spend' | 'native:spend';
-  target: Address; // Contract or recipient
+  type: 'erc20-token-periodic' | 'native-token-periodic';
+  target: Address; // Token contract address
   limit: bigint;
   period: 'daily' | 'weekly' | 'monthly' | 'unlimited';
   spent: bigint;
   grantedAt: number;
   expiresAt: number | null;
   isActive: boolean;
+  // MetaMask response data
+  context?: any;
+  signerMeta?: {
+    delegationManager?: Address;
+  };
 }
 
 /**
@@ -195,11 +200,12 @@ export class ERC7715Service {
   }
 
   /**
-   * Request Advanced Permission from user
-   * User grants permission to spend tokens/execute actions
+   * Request Advanced Permission from user (ERC-7715)
+   * Follows MetaMask Smart Accounts Kit documentation
+   * Reference: https://docs.metamask.io/smart-accounts-kit/guides/advanced-permissions/
    */
   async requestAdvancedPermission(
-    type: 'erc20:spend' | 'native:spend',
+    type: 'erc20-token-periodic' | 'native-token-periodic',
     target: Address,
     limit: bigint,
     period: 'daily' | 'weekly' | 'monthly' | 'unlimited'
@@ -214,35 +220,67 @@ export class ERC7715Service {
       
       // Check if wallet supports requestExecutionPermissions (Advanced Permissions)
       if (!provider.requestExecutionPermissions) {
-        throw new Error('MetaMask Advanced Permissions not available');
+        throw new Error('MetaMask Advanced Permissions not available. Please ensure MetaMask Flask 13.5.0+ is installed.');
       }
 
-      // Request permission from MetaMask
-      const permissions = await provider.requestExecutionPermissions({
-        permissions: [
-          {
-            type,
-            target,
-            limit,
-            period,
-          },
-        ],
-      });
+      // Convert period to seconds (MetaMask expects duration in seconds)
+      const periodDurations: Record<string, number> = {
+        daily: 86400,        // 1 day
+        weekly: 604800,      // 7 days
+        monthly: 2592000,    // 30 days
+        unlimited: 0,        // No limit
+      };
 
-      if (!permissions || permissions.length === 0) {
+      const periodDuration = periodDurations[period];
+      const currentTime = Math.floor(Date.now() / 1000);
+      const expiry = period === 'unlimited' ? currentTime + (365 * 24 * 60 * 60) : currentTime + (180 * 24 * 60 * 60); // 6 months or 1 year
+
+      // Request permission using MetaMask's proper format
+      // This follows the documented API: requestExecutionPermissions
+      const grantedPermissions = await provider.requestExecutionPermissions([
+        {
+          chainId: this.getCurrentChainId(),
+          expiry,
+          signer: {
+            type: 'account',
+            data: {
+              // Session account (can be user's smart account or delegated account)
+              // If not provided, MetaMask will create one
+              address: (this.walletClient as any).account?.address,
+            },
+          },
+          permission: {
+            type,
+            data: {
+              tokenAddress: target,
+              periodAmount: limit,
+              periodDuration,
+              justification: `Permission to spend ${limit.toString()} tokens ${period}`,
+            },
+          },
+          isAdjustmentAllowed: true, // Allow user to adjust limits
+        },
+      ]);
+
+      if (!grantedPermissions || grantedPermissions.length === 0) {
         return null; // User rejected
       }
 
+      const permissionResponse = grantedPermissions[0];
+
       const grant: AdvancedPermissionGrant = {
-        id: `perm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: permissionResponse.context?.id || `perm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         type,
         target,
         limit,
         period,
         spent: BigInt(0),
         grantedAt: Math.floor(Date.now() / 1000),
-        expiresAt: null,
+        expiresAt: expiry,
         isActive: true,
+        // Store MetaMask response data for redemption
+        context: permissionResponse.context,
+        signerMeta: permissionResponse.signerMeta,
       };
 
       this.permissions.set(grant.id, grant);
@@ -250,7 +288,7 @@ export class ERC7715Service {
       return grant;
     } catch (error) {
       console.error('Failed to request permission:', error);
-      return null;
+      throw error;
     }
   }
 

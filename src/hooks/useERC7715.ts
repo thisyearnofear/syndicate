@@ -43,7 +43,7 @@ export interface UseERC7715State {
 export interface UseERC7715Actions {
   // Permissions
   requestAdvancedPermission: (
-    type: 'erc20:spend' | 'native:spend',
+    type: 'erc20-token-periodic' | 'native-token-periodic',
     target: Address,
     limit: bigint,
     period: 'daily' | 'weekly' | 'monthly' | 'unlimited'
@@ -86,28 +86,44 @@ export function useERC7715(): UseERC7715State & UseERC7715Actions {
 
   // Initialize on mount
   useEffect(() => {
+    let isMounted = true;
+
     const initialize = async () => {
       setIsLoading(true);
       try {
         const supportInfo = await service.initialize();
-        setSupport(supportInfo);
-        const activeGrants = service.getActiveGrants();
-        setGrants(activeGrants);
+        
+        if (isMounted) {
+          setSupport(supportInfo);
+          const activeGrants = service.getActiveGrants();
+          setGrants(activeGrants);
+        }
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to initialize';
-        setError(message);
+        if (isMounted) {
+          const message = err instanceof Error ? err.message : 'Failed to initialize';
+          setError(message);
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
-    initialize();
+    // Don't initialize on server-side
+    if (typeof window !== 'undefined') {
+      initialize();
+    }
+
+    return () => {
+      isMounted = false;
+    };
   }, [service]);
 
   // Request Advanced Permission
   const requestAdvancedPermission = useCallback(
     async (
-      type: 'erc20:spend' | 'native:spend',
+      type: 'erc20-token-periodic' | 'native-token-periodic',
       target: Address,
       limit: bigint,
       period: 'daily' | 'weekly' | 'monthly' | 'unlimited'
