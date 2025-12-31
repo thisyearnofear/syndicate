@@ -239,7 +239,7 @@ export class ERC7715Service {
       const periodDuration = periodDurations[period];
       const currentTime = Math.floor(Date.now() / 1000);
       const expiry = period === 'unlimited' ? currentTime + (365 * 24 * 60 * 60) : currentTime + (180 * 24 * 60 * 60); // 6 months or 1 year
-      const hexChainId = `0x${this.getCurrentChainId().toString(16)}`;
+      const chainId = this.getCurrentChainId();
 
       console.log('[ERC7715] Requesting permissions via Smart Accounts Kit...');
 
@@ -267,8 +267,10 @@ export class ERC7715Service {
       // Use the SDK's requestExecutionPermissions action
       // The SDK formats the parameters correctly for the underlying RPC method
       // FIX: The SDK expects an array of requests, not a single object
+      // FIX: 'permission' must be a singular object, not an array 'permissions'
+      // FIX: Pass chainId as number, SDK handles toHex conversion
       const grantedPermissions = await sdkProvider.requestExecutionPermissions([{
-        chainId: hexChainId,
+        chainId,
         expiry,
         signer: {
           type: 'account',
@@ -277,17 +279,15 @@ export class ERC7715Service {
             address: provider.selectedAddress || sdkProvider.account?.address,
           },
         },
-        permissions: [
-          {
-            type,
-            data: {
-              tokenAddress: target,
-              periodAmount: limit.toString(),
-              periodDuration,
-              justification: `Permission to spend ${limit.toString()} tokens ${period}`,
-            },
-          }
-        ],
+        permission: {
+          type,
+          data: {
+            tokenAddress: target,
+            periodAmount: limit.toString(),
+            periodDuration,
+            justification: `Permission to spend ${limit.toString()} tokens ${period}`,
+          },
+        }
       }]);
 
       if (!grantedPermissions || grantedPermissions.length === 0) {
