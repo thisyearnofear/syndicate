@@ -39,6 +39,7 @@ const ProcessingStep = lazy(() => import("./purchase/ProcessingStep").then((mod)
 const SuccessStep = lazy(() => import("./purchase/SuccessStep").then((mod) => ({ default: mod.SuccessStep })));
 const YieldStrategyStep = lazy(() => import("./purchase/YieldStrategyStep").then((mod) => ({ default: mod.YieldStrategyStep })));
 import { ShareModal } from "./ShareModal";
+import { useERC7715 } from "@/hooks/useERC7715";
 
 export interface PurchaseModalProps {
   isOpen: boolean;
@@ -51,6 +52,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   const successToast = useSuccessToast();
   const errorToast = useErrorToast();
   const { jackpotStats, prizeAmount, isLoading: jackpotLoading, error: jackpotError, refresh: refreshLottery } = useLottery();
+  const { isSupported: erc7715Supported, requestAdvancedPermission } = useERC7715();
 
   // Existing purchase hook for EVM, Solana, NEAR
   const {
@@ -90,6 +92,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   const [bridgeAmount, setBridgeAmount] = useState<string | null>(null);
   const [nearQuote, setNearQuote] = useState<IntentQuote | null>(null);
   const [isGettingQuote, setIsGettingQuote] = useState(false);
+  const [evmPurchaseStages, setEvmPurchaseStages] = useState<string[]>([]);
 
   // Handle modal close with proper cleanup
   const handleClose = () => {
@@ -252,16 +255,64 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   const handlePurchase = async () => {
     if (!isConnected) return;
     setStep("processing");
+    const stages: string[] = [];
+    
+    const updateStage = (stage: string) => {
+      stages.push(stage);
+      setEvmPurchaseStages([...stages]);
+    };
+
     try {
+      // Request ERC-7715 Advanced Permission if supported (Flask only)
+      if (erc7715Supported && walletType === WalletTypes.EVM) {
+        updateStage('evm_initializing');
+        
+        const ticketPrice_ = parseFloat(ticketPrice);
+        const totalSpend = BigInt(Math.floor(ticketPrice_ * ticketCount * 1_000_000)); // USDC has 6 decimals
+        const megapotAddress = '0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95' as any; // Megapot on Base
+        
+        updateStage('evm_requesting_permission');
+        console.log('Requesting ERC-7715 Advanced Permission for ticket purchases...');
+        const permission = await requestAdvancedPermission(
+          'erc20:spend',
+          megapotAddress,
+          totalSpend,
+          'daily'
+        );
+        
+        if (permission) {
+          updateStage('evm_permission_granted');
+          console.log('Advanced Permission granted:', permission.id);
+          successToast("Permission Granted", "Advanced permissions enabled for automated purchases");
+        } else {
+          console.warn('User declined advanced permission - proceeding with standard purchase');
+        }
+      }
+
+      // Standard purchase flow
+      if (evmPurchaseStages.length > 0) {
+        updateStage('evm_approving_usdc');
+      }
+      
       const result = await purchaseTickets(ticketCount, purchaseMode === "syndicate" ? selectedSyndicate?.id : undefined, purchaseMode === "yield" ? selectedVaultStrategy || undefined : undefined, purchaseMode === "yield" ? yieldToTicketsPercentage : undefined, purchaseMode === "yield" ? yieldToCausesPercentage : undefined);
+      
+      if (evmPurchaseStages.length > 0) {
+        updateStage('evm_usdc_approved');
+        updateStage('evm_purchasing_tickets');
+        updateStage('evm_purchase_submitted');
+        updateStage('evm_purchase_confirmed');
+      }
+      
       if (result.success) setStep("success");
       else {
         setStep("select");
+        setEvmPurchaseStages([]);
         errorToast("Purchase Failed", result.error || "Unable to complete ticket purchase. Please try again.", { label: "Retry", onClick: () => handlePurchase() });
       }
     } catch (error) {
       console.error("Purchase failed:", error);
       setStep("select");
+      setEvmPurchaseStages([]);
       errorToast("Purchase Error", "An unexpected error occurred. Please check your connection and try again.");
     }
   };
@@ -292,6 +343,8 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
       case "processing":
         return <ProcessingStep
           isApproving={isApproving}
+          // EVM purchase stages
+          evmPurchaseStages={evmPurchaseStages}
           // NEAR Intents props
           nearStages={nearStages}
           nearRecipient={nearRecipient}
