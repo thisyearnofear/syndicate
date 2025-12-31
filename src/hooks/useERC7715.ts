@@ -84,7 +84,7 @@ export function useERC7715(): UseERC7715State & UseERC7715Actions {
 
   const service = getERC7715Service();
 
-  const initializationStarted = React.useRef(false);
+  const initializationStarted = useRef(false);
 
   // Initialize on mount
   useEffect(() => {
@@ -96,7 +96,7 @@ export function useERC7715(): UseERC7715State & UseERC7715Actions {
     const initialize = async () => {
       try {
         const supportInfo = await service.initialize();
-        
+
         if (isMounted) {
           setSupport(supportInfo);
           const activeGrants = service.getActiveGrants();
