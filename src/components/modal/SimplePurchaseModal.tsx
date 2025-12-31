@@ -168,18 +168,6 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
               <p className="text-xs text-gray-400">Cost: ${ticketCount} USD</p>
             </div>
 
-            {/* ENHANCEMENT: Quick auto-purchase setup */}
-            {!hasActivePermission && isSupported && (
-              <Button
-                variant="secondary"
-                className="w-full flex items-center justify-center gap-2"
-                onClick={() => setShowPermissionModal(true)}
-              >
-                <Zap className="w-4 h-4" />
-                Enable Auto-Purchase
-              </Button>
-            )}
-
             <div className="flex gap-3">
               <Button
                 variant="outline"
@@ -205,6 +193,22 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
                 )}
               </Button>
             </div>
+
+            {/* ENHANCEMENT: Auto-purchase tip (Base/EVM only, chain-aware) */}
+            {!hasActivePermission && isSupported && walletType === 'evm' && (
+              <div className="text-center pt-2 border-t border-gray-700/50">
+                <p className="text-xs text-gray-400 mb-2">
+                  Don't want to sign every time?
+                </p>
+                <button
+                  onClick={() => setShowPermissionModal(true)}
+                  className="text-xs text-blue-400 hover:text-blue-300 underline transition-colors"
+                  disabled={isPurchasing}
+                >
+                  Enable auto-purchase with MetaMask Advanced Permissions
+                </button>
+              </div>
+            )}
           </CompactStack>
         );
 
