@@ -216,8 +216,8 @@ export function useCanEnableAutoPurchase(): {
   if (!isSupported) {
     return {
       canEnable: false,
-      reason: support?.message || 'Advanced Permissions not supported',
-      chainRequirement: support?.reason,
+      reason: typeof support?.message === 'string' ? support.message : 'Advanced Permissions not supported',
+      chainRequirement: support ? 'Supports Base, Ethereum, Avalanche' : undefined,
     };
   }
 
