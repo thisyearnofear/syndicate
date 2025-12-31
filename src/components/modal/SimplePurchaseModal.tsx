@@ -21,7 +21,7 @@ import { useSimplePurchase } from '@/hooks/useSimplePurchase';
 import { useERC7715 } from '@/hooks/useERC7715';
 import WalletConnectionManager from '@/components/wallet/WalletConnectionManager';
 import { CompactStack, CompactCard } from '@/shared/components/premium/CompactLayout';
-import { AutoPurchasePermissionModal } from './AutoPurchasePermissionModal';
+import { ImprovedAutoPurchaseModal } from './ImprovedAutoPurchaseModal';
 
 // Lazy load celebration modal
 const CelebrationModal = lazy(() => import('./CelebrationModal'));
@@ -351,7 +351,7 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
       </Suspense>
 
       {/* Auto-purchase permission modal */}
-      <AutoPurchasePermissionModal
+      <ImprovedAutoPurchaseModal
         isOpen={showPermissionModal}
         onClose={() => setShowPermissionModal(false)}
         onSuccess={() => {
