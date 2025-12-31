@@ -129,12 +129,39 @@ export function AutoPurchasePermissionModal({
           setTimeout(() => onSuccess(config), 2000); // Wait for success animation
         }
       } else {
-        setErrorMessage(error || 'Failed to request permission');
+        // User-friendly error messages
+        const friendlyError = error 
+          ? (error.includes('User rejected') || error.includes('user denied') || error.includes('User denied')
+              ? 'You cancelled the permission request. No worries - you can try again anytime!'
+              : error.includes('not supported') || error.includes('not available')
+              ? 'Auto-purchase requires MetaMask Flask. Please install Flask from flask.metamask.io'
+              : error)
+          : 'Failed to set up auto-purchase. Please try again.';
+        
+        setErrorMessage(friendlyError);
         setStep('error');
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error occurred';
-      setErrorMessage(message);
+      console.error('[AutoPurchase] Permission error:', err);
+      
+      // Convert technical errors to user-friendly messages
+      let friendlyMessage = 'Unable to set up auto-purchase.';
+      
+      if (err instanceof Error) {
+        const errMsg = err.message.toLowerCase();
+        
+        if (errMsg.includes('user rejected') || errMsg.includes('user denied') || errMsg.includes('denied')) {
+          friendlyMessage = 'You cancelled the permission request. No problem - you can enable auto-purchase anytime from settings!';
+        } else if (errMsg.includes('not supported') || errMsg.includes('not available') || errMsg.includes('not a function')) {
+          friendlyMessage = 'Auto-purchase requires MetaMask Flask with Advanced Permissions. Please install Flask from flask.metamask.io to use this feature.';
+        } else if (errMsg.includes('network') || errMsg.includes('connection')) {
+          friendlyMessage = 'Network connection issue. Please check your internet and try again.';
+        } else {
+          friendlyMessage = `Unable to set up auto-purchase: ${err.message}`;
+        }
+      }
+      
+      setErrorMessage(friendlyMessage);
       setStep('error');
     }
   };
@@ -347,30 +374,42 @@ export function AutoPurchasePermissionModal({
         {step === 'error' && (
           <>
             <DialogHeader>
-              <DialogTitle>Permission Failed</DialogTitle>
+              <DialogTitle>Auto-Purchase Setup Failed</DialogTitle>
+              <DialogDescription>
+                Unable to enable automatic ticket purchases
+              </DialogDescription>
             </DialogHeader>
 
-            <div className="flex flex-col items-center justify-center py-8 space-y-4">
-              <AlertCircle className="w-12 h-12 text-red-600" />
-              <div className="text-center space-y-2">
-                <p className="text-gray-900 font-semibold">
-                  Failed to grant permission
-                </p>
+            <div className="flex flex-col items-center justify-center py-6 space-y-4">
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertCircle className="w-8 h-8 text-red-600" />
+              </div>
+              <div className="text-center space-y-3 max-w-sm">
                 {errorMessage && (
-                  <p className="text-sm text-red-600 bg-red-50 p-3 rounded">
+                  <p className="text-sm text-gray-700 leading-relaxed">
                     {errorMessage}
                   </p>
+                )}
+                {errorMessage?.includes('Flask') && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-left">
+                    <p className="text-xs text-blue-900 font-medium mb-1">
+                      💡 What is MetaMask Flask?
+                    </p>
+                    <p className="text-xs text-blue-800">
+                      Flask is MetaMask's developer version with experimental features like Advanced Permissions for auto-purchase.
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
 
-            <div className="flex gap-2 mt-6">
+            <div className="flex gap-2 mt-4">
               <Button
                 onClick={handleClose}
                 variant="secondary"
                 className="flex-1"
               >
-                Cancel
+                Close
               </Button>
               <Button
                 onClick={handleRetry}
