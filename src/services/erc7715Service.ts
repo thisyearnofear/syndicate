@@ -258,32 +258,39 @@ export class ERC7715Service {
         console.warn('[ERC7715] Snap request failed, attempting permissions request anyway:', snapError);
       }
 
-      console.log('[ERC7715] Requesting permissions via wallet_grantPermissions...');
+      console.log('[ERC7715] Requesting permissions from Snap (grant_permissions)...');
 
-      // Request permissions using raw RPC (wallet_grantPermissions)
+      // Request permissions by invoking the Snap directly
+      // standard wallet_grantPermissions is not exposed by Flask currently
       const grantedPermissions = await provider.request({
-        method: 'wallet_grantPermissions',
-        params: [{
-          chainId: hexChainId,
-          expiry,
-          signer: {
-            type: 'account',
-            data: {
-              address: provider.selectedAddress || (this.walletClient as any)?.account?.address,
-            },
-          },
-          permissions: [
-            {
-              type,
-              data: {
-                tokenAddress: target,
-                periodAmount: limit.toString(),
-                periodDuration,
-                justification: `Permission to spend ${limit.toString()} tokens ${period}`,
+        method: 'wallet_invokeSnap',
+        params: {
+          snapId,
+          request: {
+            method: 'grant_permissions',
+            params: [{
+              chainId: hexChainId,
+              expiry,
+              signer: {
+                type: 'account',
+                data: {
+                  address: provider.selectedAddress || (this.walletClient as any)?.account?.address,
+                },
               },
-            }
-          ],
-        }]
+              permissions: [
+                {
+                  type,
+                  data: {
+                    tokenAddress: target,
+                    periodAmount: limit.toString(),
+                    periodDuration,
+                    justification: `Permission to spend ${limit.toString()} tokens ${period}`,
+                  },
+                }
+              ],
+            }]
+          }
+        },
       });
 
       if (!grantedPermissions || grantedPermissions.length === 0) {
