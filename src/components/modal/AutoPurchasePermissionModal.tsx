@@ -147,12 +147,13 @@ export function AutoPurchasePermissionModal({
         }
       } else {
         // User-friendly error messages
+        const errorStr = typeof error === 'string' ? error : 'Permission request failed';
         const friendlyError = error 
-          ? (error.includes('User rejected') || error.includes('user denied') || error.includes('User denied')
+          ? (errorStr.includes('User rejected') || errorStr.includes('user denied') || errorStr.includes('User denied')
               ? 'You cancelled the permission request. No worries - you can try again anytime!'
-              : error.includes('not supported') || error.includes('not available')
+              : errorStr.includes('not supported') || errorStr.includes('not available')
               ? 'Auto-purchase requires MetaMask Flask. Please install Flask from flask.metamask.io'
-              : error)
+              : errorStr)
           : 'Failed to set up auto-purchase. Please try again.';
         
         setErrorMessage(friendlyError);
