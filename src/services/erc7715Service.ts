@@ -266,7 +266,8 @@ export class ERC7715Service {
 
       // Use the SDK's requestExecutionPermissions action
       // The SDK formats the parameters correctly for the underlying RPC method
-      const grantedPermissions = await sdkProvider.requestExecutionPermissions({
+      // FIX: The SDK expects an array of requests, not a single object
+      const grantedPermissions = await sdkProvider.requestExecutionPermissions([{
         chainId: hexChainId,
         expiry,
         signer: {
@@ -287,7 +288,7 @@ export class ERC7715Service {
             },
           }
         ],
-      });
+      }]);
 
       if (!grantedPermissions || grantedPermissions.length === 0) {
         return null; // User rejected
