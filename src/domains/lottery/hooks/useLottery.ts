@@ -130,18 +130,44 @@ export function useLottery() {
     };
   }, []);
 
-  return {
-    ...state,
-    refresh,
-    // Computed values
-    prizeAmount: state.jackpotStats?.prizeUsd ? parseFloat(state.jackpotStats.prizeUsd) : 0,
-    formattedPrize: state.jackpotStats?.prizeUsd 
-      ? `$${parseInt(state.jackpotStats.prizeUsd).toLocaleString()}`
+  const { jackpotStats, isLoading, error, lastUpdated } = state;
+
+  const prizeAmount = useMemo(() => 
+    jackpotStats?.prizeUsd ? parseFloat(jackpotStats.prizeUsd) : 0, 
+    [jackpotStats?.prizeUsd]
+  );
+
+  const formattedPrize = useMemo(() => 
+    jackpotStats?.prizeUsd 
+      ? `$${parseInt(jackpotStats.prizeUsd).toLocaleString()}`
       : '$0',
-    isStale: state.lastUpdated 
-      ? Date.now() - state.lastUpdated > performance.cache.jackpotData * 2
-      : false,
-  };
+    [jackpotStats?.prizeUsd]
+  );
+
+  const isStale = useMemo(() => 
+    lastUpdated ? Date.now() - lastUpdated > performance.cache.jackpotData * 2 : false,
+    [lastUpdated]
+  );
+
+  return useMemo(() => ({
+    jackpotStats,
+    isLoading,
+    error,
+    lastUpdated,
+    refresh,
+    prizeAmount,
+    formattedPrize,
+    isStale,
+  }), [
+    jackpotStats,
+    isLoading,
+    error,
+    lastUpdated,
+    refresh,
+    prizeAmount,
+    formattedPrize,
+    isStale,
+  ]);
 }
 
 /**

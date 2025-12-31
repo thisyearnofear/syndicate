@@ -30,8 +30,12 @@ export interface UseAdvancedPermissionsState {
   isActive: boolean;
   isLoading: boolean;
   isRequesting: boolean;
+  isSupported: boolean;
+  support: any;
   error: string | null;
   autoPurchaseConfig: AutoPurchaseConfig | null;
+  canEnable: boolean;
+  reason?: string;
 }
 
 export interface UseAdvancedPermissionsActions {
@@ -73,20 +77,23 @@ export function useAdvancedPermissions(): UseAdvancedPermissionsState & UseAdvan
   }, []);
 
   // Convert erc7715 permissions to old AdvancedPermission type
-  const permission: AdvancedPermission | null = erc7715.permissions.length > 0
-    ? {
-        permissionId: erc7715.permissions[0].id,
-        scope: erc7715.permissions[0].type,
-        token: erc7715.permissions[0].target,
-        spender: '0x0000000000000000000000000000000000000000', // Placeholder
-        limit: erc7715.permissions[0].limit,
-        remaining: erc7715.permissions[0].limit - erc7715.permissions[0].spent,
-        period: erc7715.permissions[0].period,
-        grantedAt: erc7715.permissions[0].grantedAt,
-        expiresAt: erc7715.permissions[0].expiresAt,
-        isActive: erc7715.permissions[0].isActive,
-      }
-    : null;
+  const permission: AdvancedPermission | null = useMemo(() => {
+    if (erc7715.permissions.length === 0) return null;
+    
+    const p = erc7715.permissions[0];
+    return {
+      permissionId: p.id,
+      scope: p.type,
+      token: p.target,
+      spender: '0x0000000000000000000000000000000000000000', // Placeholder
+      limit: p.limit,
+      remaining: p.limit - p.spent,
+      period: p.period,
+      grantedAt: p.grantedAt,
+      expiresAt: p.expiresAt,
+      isActive: p.isActive,
+    };
+  }, [erc7715.permissions]);
 
   // Request permission (delegates to erc7715)
   const requestPermission = useCallback(
@@ -165,14 +172,48 @@ export function useAdvancedPermissions(): UseAdvancedPermissionsState & UseAdvan
     erc7715.clearError();
   }, [erc7715]);
 
-  return {
+  // Calculate canEnable and reason
+  const { canEnable, reason } = useMemo(() => {
+    if (!isConnected) {
+      return { canEnable: false, reason: 'Wallet not connected' };
+    }
+
+    if (walletType !== 'evm') {
+      return {
+        canEnable: false,
+        reason: 'Advanced Permissions only available on MetaMask',
+      };
+    }
+
+    if (!erc7715.isSupported) {
+      return {
+        canEnable: false,
+        reason: typeof erc7715.support?.message === 'string' ? erc7715.support.message : 'Advanced Permissions not supported',
+      };
+    }
+
+    if (permission && permission.isActive) {
+      return {
+        canEnable: false,
+        reason: 'Auto-purchase already enabled',
+      };
+    }
+
+    return { canEnable: true };
+  }, [isConnected, walletType, erc7715.isSupported, erc7715.support, permission]);
+
+  return useMemo(() => ({
     // State
     permission,
     isActive: permission?.isActive ?? false,
     isLoading: erc7715.isLoading,
     isRequesting: erc7715.isRequesting,
+    isSupported: erc7715.isSupported,
+    support: erc7715.support,
     error: erc7715.error,
     autoPurchaseConfig,
+    canEnable,
+    reason,
 
     // Actions
     requestPermission,
@@ -182,7 +223,24 @@ export function useAdvancedPermissions(): UseAdvancedPermissionsState & UseAdvan
     clearAutoPurchaseConfig,
     reloadPermission,
     clearError,
-  };
+  }), [
+    permission,
+    erc7715.isLoading,
+    erc7715.isRequesting,
+    erc7715.isSupported,
+    erc7715.support,
+    erc7715.error,
+    autoPurchaseConfig,
+    canEnable,
+    reason,
+    requestPermission,
+    requestPresetPermission,
+    revokePermission,
+    saveAutoPurchaseConfig,
+    clearAutoPurchaseConfig,
+    reloadPermission,
+    clearError,
+  ]);
 }
 
 // =============================================================================
@@ -198,37 +256,38 @@ export function useCanEnableAutoPurchase(): {
   chainRequirement?: string;
 } {
   const { isConnected, walletType } = useWalletConnection();
-  const { permission } = useAdvancedPermissions();
-  const { isSupported, support } = useERC7715();
+  const { permission, isSupported, support } = useAdvancedPermissions();
 
-  if (!isConnected) {
-    return { canEnable: false, reason: 'Wallet not connected' };
-  }
+  return useMemo(() => {
+    if (!isConnected) {
+      return { canEnable: false, reason: 'Wallet not connected' };
+    }
 
-  if (walletType !== 'evm') {
-    return {
-      canEnable: false,
-      reason: 'Advanced Permissions only available on MetaMask',
-      chainRequirement: 'Supports Base, Ethereum, Avalanche',
-    };
-  }
+    if (walletType !== 'evm') {
+      return {
+        canEnable: false,
+        reason: 'Advanced Permissions only available on MetaMask',
+        chainRequirement: 'Supports Base, Ethereum, Avalanche',
+      };
+    }
 
-  if (!isSupported) {
-    return {
-      canEnable: false,
-      reason: typeof support?.message === 'string' ? support.message : 'Advanced Permissions not supported',
-      chainRequirement: support ? 'Supports Base, Ethereum, Avalanche' : undefined,
-    };
-  }
+    if (!isSupported) {
+      return {
+        canEnable: false,
+        reason: typeof support?.message === 'string' ? support.message : 'Advanced Permissions not supported',
+        chainRequirement: support ? 'Supports Base, Ethereum, Avalanche' : undefined,
+      };
+    }
 
-  if (permission && permission.isActive) {
-    return {
-      canEnable: false,
-      reason: 'Auto-purchase already enabled',
-    };
-  }
+    if (permission && permission.isActive) {
+      return {
+        canEnable: false,
+        reason: 'Auto-purchase already enabled',
+      };
+    }
 
-  return { canEnable: true };
+    return { canEnable: true };
+  }, [isConnected, walletType, isSupported, support, permission]);
 }
 
 /**

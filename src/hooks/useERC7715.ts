@@ -5,7 +5,7 @@
  * Provides complete ERC-7715 functionality
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Address } from 'viem';
 import {
   getERC7715Service,
@@ -84,12 +84,16 @@ export function useERC7715(): UseERC7715State & UseERC7715Actions {
 
   const service = getERC7715Service();
 
+  const initializationStarted = React.useRef(false);
+
   // Initialize on mount
   useEffect(() => {
+    if (initializationStarted.current) return;
+    initializationStarted.current = true;
+
     let isMounted = true;
 
     const initialize = async () => {
-      setIsLoading(true);
       try {
         const supportInfo = await service.initialize();
         
@@ -272,17 +276,17 @@ export function useERC7715(): UseERC7715State & UseERC7715Actions {
     setGrants(activeGrants);
   }, [service]);
 
-  const permissions = grants
+  const permissions = useMemo(() => grants
     .filter(g => g.type === 'advanced-permission')
     .map(g => g.permission!)
-    .filter(Boolean);
+    .filter(Boolean), [grants]);
 
-  const sessions = grants
+  const sessions = useMemo(() => grants
     .filter(g => g.type === 'smart-session')
     .map(g => g.session!)
-    .filter(Boolean);
+    .filter(Boolean), [grants]);
 
-  return {
+  return useMemo(() => ({
     // State
     support,
     isSupported: support?.isSupported ?? false,
@@ -303,5 +307,21 @@ export function useERC7715(): UseERC7715State & UseERC7715Actions {
     getSessionTimeRemaining,
     clearError,
     refresh,
-  };
+  }), [
+    support,
+    grants,
+    permissions,
+    sessions,
+    isLoading,
+    isRequesting,
+    error,
+    requestAdvancedPermission,
+    revokePermission,
+    createSmartSession,
+    createAutoPurchaseSession,
+    deleteSession,
+    getSessionTimeRemaining,
+    clearError,
+    refresh,
+  ]);
 }
