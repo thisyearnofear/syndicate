@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from "@/shared/components/ui/Button";
 import { CompactStack, CompactFlex } from "@/shared/components/premium/CompactLayout";
 import { ExternalLink, Share2, Zap } from 'lucide-react';
 import { AutoPurchasePermissionModalSimple as AutoPurchasePermissionModal } from "@/components/modal/AutoPurchasePermissionModalSimple";
-import { useAdvancedPermissions, useCanEnableAutoPurchase } from "@/hooks/useAdvancedPermissions";
+import { useAdvancedPermissions } from "@/hooks/useAdvancedPermissions";
 import type { SyndicateInfo } from "@/domains/lottery/types";
 import type { AutoPurchaseConfig } from "@/domains/wallet/types";
 
@@ -27,16 +27,15 @@ export function SuccessStep({
   setShowShareModal,
 }: SuccessStepProps) {
   const [showAutoPermissionModal, setShowAutoPermissionModal] = useState(false);
-  const { saveAutoPurchaseConfig } = useAdvancedPermissions();
-  const { canEnable, reason } = useCanEnableAutoPurchase();
+  const { saveAutoPurchaseConfig, canEnable, reason } = useAdvancedPermissions();
 
   // CLEAN: Handle successful permission grant
-  const handleAutoPurchaseSuccess = (config: AutoPurchaseConfig) => {
+  const handleAutoPurchaseSuccess = useCallback((config: AutoPurchaseConfig) => {
     // Save config to state and localStorage
     saveAutoPurchaseConfig(config);
     setShowAutoPermissionModal(false);
     // User can continue or close the modal
-  };
+  }, [saveAutoPurchaseConfig]);
 
   return (
     <CompactStack spacing="lg" align="center">
