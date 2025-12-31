@@ -205,7 +205,7 @@ export function AutoPurchasePermissionModal({
       <DialogContent className="sm:max-w-md">
         {/* PRESET SELECTION STEP */}
         {step === 'preset-selection' && (
-          <>
+          <div className="space-y-4">
             <DialogHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -265,12 +265,12 @@ export function AutoPurchasePermissionModal({
             >
               Cancel
             </Button>
-          </>
+          </div>
         )}
 
         {/* REVIEW STEP */}
         {step === 'review' && selectedPreset && (
-          <>
+          <div className="space-y-4">
             <DialogHeader>
               <DialogTitle>Confirm Permission</DialogTitle>
               <DialogDescription>
@@ -326,21 +326,21 @@ export function AutoPurchasePermissionModal({
                 className="flex-1"
               >
                 {isRequesting ? (
-                  <>
+                  <span className="flex items-center">
                     <Loader className="w-4 h-4 mr-2 animate-spin" />
                     Approving...
-                  </>
+                  </span>
                 ) : (
                   'Approve in MetaMask'
                 )}
               </Button>
             </div>
-          </>
+          </div>
         )}
 
         {/* APPROVING STEP */}
         {step === 'approving' && (
-          <>
+          <div className="space-y-4">
             <DialogHeader>
               <DialogTitle>Waiting for Approval</DialogTitle>
             </DialogHeader>
@@ -354,12 +354,12 @@ export function AutoPurchasePermissionModal({
                 </p>
               </div>
             </div>
-          </>
+          </div>
         )}
 
         {/* SUCCESS STEP */}
         {step === 'success' && (
-          <>
+          <div className="space-y-4">
             <DialogHeader>
               <DialogTitle>Permission Granted</DialogTitle>
               <DialogDescription>
@@ -383,12 +383,12 @@ export function AutoPurchasePermissionModal({
             <Button onClick={handleClose} className="w-full mt-4">
               Got it
             </Button>
-          </>
+          </div>
         )}
 
         {/* ERROR STEP */}
         {step === 'error' && (
-          <>
+          <div className="space-y-4">
             <DialogHeader>
               <DialogTitle>Auto-Purchase Setup Failed</DialogTitle>
               <DialogDescription>
@@ -434,7 +434,7 @@ export function AutoPurchasePermissionModal({
                 Try Again
               </Button>
             </div>
-          </>
+          </div>
         )}
       </DialogContent>
     </Dialog>
