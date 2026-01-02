@@ -66,6 +66,33 @@ export function AutoPurchaseSettings() {
   // CLEAN: Handle permission granted
   const handlePermissionGranted = async (config: AutoPurchaseConfig) => {
     saveAutoPurchaseConfig(config);
+
+    // ENHANCEMENT FIRST: Create database record for Vercel Cron automation
+    if (address && config.permission) {
+      try {
+        const response = await fetch('/api/automation/create-purchase', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userAddress: address,
+            permissionId: config.permission.id,
+            frequency: config.frequency,
+            amountPerPeriod: config.amountPerPeriod.toString(),
+          }),
+        });
+
+        if (!response.ok) {
+          console.error('[AutoPurchaseSettings] Failed to create database record');
+        } else {
+          const data = (await response.json()) as { purchaseId?: string };
+          console.log('[AutoPurchaseSettings] Database record created:', data.purchaseId);
+        }
+      } catch (err) {
+        console.error('[AutoPurchaseSettings] Database creation error:', err);
+        // Don't block on database error - automation still works via localStorage
+      }
+    }
+
     setShowPermissionModal(false);
   };
 
