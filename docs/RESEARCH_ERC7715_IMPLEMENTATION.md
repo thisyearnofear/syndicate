@@ -222,128 +222,222 @@ async function checkERC7715Support(): Promise<boolean> {
    - User education content
    - Gradual rollout strategy
 
-## Implementation Status (Updated Dec 2025)
+## Architecture Decision: Gelato Network for Automation (Updated Jan 2025)
 
-### ✅ COMPLETED - Hackathon Implementation
+### The Problem with Smart Sessions
 
-**Smart Sessions & Auto-Purchase**
-- `erc7715Service.createSmartSession()` - Creates batched execution sessions stored in localStorage
-- `erc7715Service.createAutoPurchaseSession()` - Specialized session for 4+ future purchases
-- `useERC7715()` hook - Full permission and session management API
-- `AutoPurchasePermissionModal` - Complete UX for permission request with session creation
+Initial implementation attempted to use MetaMask's built-in session accounts. **This approach failed** because:
 
-**Execution Layer**
-- `megapotService.executePurchaseWithPermission()` - Real purchase execution
-- `web3Service.purchaseTicketsWithDelegation()` - Delegated transaction execution
-- `permittedTicketExecutor` - Batch execution with failure tracking and retry logic
-- `/api/automation/execute-auto-purchases` - Backend API endpoint for cron jobs
+1. **Smart Sessions only work with ERC-20 transfers**: ERC-7715 `erc20-token-periodic` permissions only allow `transfer()` and `transferFrom()` calls
+2. **Megapot.purchaseTickets() is not a transfer**: It's a custom contract function requiring:
+   - USDC spending validation
+   - Referrer fee calculation
+   - Ticket accounting
+   - Complex internal state management
+3. **DelegationManager rejects non-transfer calldata**: The on-chain validator only permits standard ERC-20 operations
+4. **Smart Sessions cannot enforce non-transfer rules**: No way to apply custom business logic to arbitrary functions
 
-**Monitoring & Automation**
-- `useAutoExecutionMonitor()` - Tracks execution status and upcoming purchases
-- localStorage persistence for execution history
-- Exponential backoff polling for near-deadline purchases
+### The Solution: Gelato Network Automation
 
-### How It Works
+Instead of relying on Smart Sessions, we use **Gelato Network** for trustless, decentralized automation:
 
-1. **Permission Request** (Frontend)
-   - User clicks "Enable Auto-Purchase" → preset selection (weekly/monthly)
-   - MetaMask approves permission → permission stored in localStorage
-   
-2. **Session Creation** (Automatic after permission)
-   - System creates batch session for 4 future purchases
-   - Reduces approval friction for upcoming automatic executions
-   - Session stored locally with 7-day expiration
-
-3. **Scheduled Execution** (Backend cron)
-   - Vercel cron or external scheduler calls `/api/automation/execute-auto-purchases`
-   - Endpoint receives array of AutoPurchaseConfig objects
-   - `permittedTicketExecutor.executeBatch()` processes each config
-   - Executes Megapot purchase via delegated transaction
-
-4. **Monitoring** (Frontend)
-   - `useAutoExecutionMonitor()` polls localStorage for execution status
-   - Shows "Next purchase in X days" countdown
-   - Displays recent execution history and errors
-
-### Environment Setup
-
-```bash
-# Set in .env.local for development
-CRON_SECRET=your-secret-here
-AUTOMATION_API_KEY=your-api-key-here
-
-# For Vercel production
-# Set CRON_SECRET in Vercel dashboard → Settings → Environment Variables
+**Architecture:**
+```
+User → Grants Advanced Permission (USDC spending) → MetaMask
+  ↓
+Frontend → Stores permission grant + config → localStorage
+  ↓
+Gelato Automation Bot → Monitors time conditions every block
+  ↓
+Gelato calls → /api/automation/execute-purchase-tickets
+  ↓
+Backend verifies permission → calls Megapot.purchaseTickets()
+  ↓
+Gelato relays transaction → User's funds deducted automatically
 ```
 
-### Triggering Execution
+**Why Gelato Works:**
+- ✅ Runs on-chain automation without managing servers
+- ✅ Decentralized execution (Gelato handles reliability)
+- ✅ No backend infrastructure needed
+- ✅ Pays Gelato fees from USDC being spent
+- ✅ Can call ANY contract function (not limited to transfers)
+- ✅ Integrates seamlessly with Advanced Permissions for fund validation
 
-**Via Vercel Cron:**
-```bash
-# vercel.json
-{
-  "crons": [
-    {
-      "path": "/api/automation/execute-auto-purchases",
-      "schedule": "0 */6 * * *"
-    }
-  ]
+### How It Works for Auto-Purchase
+
+1. **Permission Request** (Frontend - MetaMask)
+   - User requests: "Spend 50 USDC per week for Megapot"
+   - MetaMask validates → Permission stored in localStorage
+   - Returns `permissionsContext` (proof of delegation)
+
+2. **Gelato Task Creation** (Frontend)
+   - Encode Megapot.purchaseTickets() call with referrer + recipient
+   - Register with Gelato: "Execute every 7 days"
+   - Gelato begins monitoring for execution window
+
+3. **Automated Execution** (Gelato Network)
+   - When execution time arrives, Gelato calls our API endpoint
+   - API verifies permission is still valid
+   - API calls Megapot.purchaseTickets() with delegation proof
+   - Megapot validates permission → executes transfer
+   - User's account gets tickets automatically
+
+4. **Fee Handling** (On-chain)
+   - Gelato fees (0.1-1% of USDC) deducted from purchase amount
+   - Transparent and predictable
+   - Charged directly from delegated USDC allowance
+
+### Implementation Plan
+
+#### Phase 1: Enhanced Advanced Permissions (Now)
+- ✅ Fix parameter types (bigint + number, not hex strings)
+- ✅ `erc7715Service` properly requests permissions
+- ✅ Stores permission context from MetaMask response
+- ✅ Frontend displays permission status
+
+#### Phase 2: Gelato Integration (This Sprint)
+- Create `gelatoAutomationService` for task management
+- Store Gelato task IDs + metadata in database
+- Endpoint: `/api/automation/execute-purchase-tickets`
+  - Validates Gelato request signature
+  - Verifies permission is in valid period
+  - Executes Megapot purchase
+  - Logs execution for monitoring
+
+#### Phase 3: Frontend Monitoring (This Sprint)
+- Dashboard shows "Next automatic purchase: Jan 15 at 2pm UTC"
+- Display permission status + remaining budget
+- Pause/resume automation without re-approving
+- View execution history
+
+### Megapot Integration Details
+
+**What Megapot Requires:**
+```typescript
+purchaseTickets(
+  referrer: Address,        // 0x0 for no referrer
+  value: bigint,            // Amount in USDC (1_000_000 = $1)
+  recipient: Address        // Who gets the tickets
+)
+```
+
+**What We Do:**
+```typescript
+// In /api/automation/execute-purchase-tickets
+const megapotAddress = "0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95";
+
+// 1. Verify permission allows this amount
+const remainingBudget = await verifyPermissionStatus(userAddress);
+if (remainingBudget < purchaseAmount) {
+  throw new Error('Insufficient delegated allowance');
 }
+
+// 2. Call Megapot with delegated USDC
+const tx = await publicClient.simulateContract({
+  address: megapotAddress,
+  abi: MEGAPOT_ABI,
+  functionName: 'purchaseTickets',
+  args: [REFERRER_ADDRESS, purchaseAmount, userAddress]
+});
+
+// 3. Execute via relay/EOA with delegated permissions
+return await executeDelegatedTransaction(tx);
 ```
 
-**Via External Scheduler (HTTP):**
-```bash
-curl -X POST https://your-app.com/api/automation/execute-auto-purchases \
-  -H "Authorization: Bearer YOUR_AUTOMATION_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "configs": [
-      {
-        "enabled": true,
-        "frequency": "weekly",
-        "amountPerPeriod": "10000000",
-        "tokenAddress": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-        "nextExecution": 1704067200000,
-        "permission": {...}
-      }
-    ]
-  }'
+### Configuration
+
+```typescript
+// .env.local
+GELATO_API_KEY=your-gelato-api-key
+GELATO_RELAYER_ADDRESS=your-gelato-relayer-address
+MEGAPOT_CONTRACT=0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95
+MEGAPOT_REFERRER=0x0000000000000000000000000000000000000000
+
+// Database (for persisting Gelato task IDs)
+// user_auto_purchase_tasks:
+//   - userId: string
+//   - gelatoTaskId: string
+//   - frequency: 'daily' | 'weekly' | 'monthly'
+//   - amountPerPeriod: bigint
+//   - status: 'active' | 'paused' | 'disabled'
+//   - createdAt: timestamp
 ```
 
-### Core Files
+### Core Implementation Files
 
-- **Services**
-  - `src/services/erc7715Service.ts` - Permission & session management
-  - `src/services/automation/permittedTicketExecutor.ts` - Batch execution engine
-  - `src/domains/lottery/services/megapotService.ts` - Megapot integration
-  - `src/services/web3Service.ts` - On-chain execution
+**New Files:**
+- `src/services/automation/gelatoService.ts` - Gelato API integration
+- `src/pages/api/automation/execute-purchase-tickets.ts` - Execution endpoint
+- `src/services/automation/permissionValidator.ts` - Permission period checking
+- `src/hooks/useGelatoAutomation.ts` - Frontend automation control
 
-- **Hooks**
-  - `src/hooks/useERC7715.ts` - ERC-7715 API
-  - `src/hooks/useAdvancedPermissions.ts` - Backward-compatible wrapper
-  - `src/hooks/useAutoExecutionMonitor.ts` - Execution monitoring
+**Enhanced Files:**
+- `src/services/erc7715Service.ts` - Already has permission request logic
+- `AutoPurchasePermissionModal.tsx` - Add Gelato task registration after permission
+- `useAdvancedPermissions.ts` - Add Gelato status to hook return
 
-- **UI**
-  - `src/components/modal/AutoPurchasePermissionModal.tsx` - Permission request
-  - `src/components/settings/AutoPurchaseSettings.tsx` - Status dashboard
+### Core Principles Applied
 
-- **API**
-  - `src/pages/api/automation/execute-auto-purchases.ts` - Cron endpoint
+**ENHANCEMENT FIRST**
+- Extend existing `erc7715Service` with permission context storage
+- Reuse `AutoPurchasePermissionModal` for Gelato signup
+- No new approval flows needed
 
-### Next Steps
+**AGGRESSIVE CONSOLIDATION**
+- Remove unused `createSmartSession()` and `createAutoPurchaseSession()` 
+- Smart Sessions don't work for this use case - delete them
+- Delete `permittedTicketExecutor.ts` (relaced by Gelato)
 
-**For Hackathon:**
-- ✅ Permission request & session creation working
-- ✅ Backend execution framework in place
-- ✅ Frontend monitoring with localStorage persistence
-- Todo: Test with real Megapot contract on Base testnet
+**DRY**
+- Single source of truth: `gelatoService` for all Gelato operations
+- Permission validation shared in `permissionValidator`
 
-**Post-Hackathon (Q1 2025):**
-- Integrate Smart Accounts Kit for true EIP-7702 support
-- Move to production with EIP-7702 mainnet activation
-- Add on-chain permission registry
-- Implement relayer for gasless transactions
+**CLEAN**
+- Gelato service isolated from ERC-7715 service
+- Clear API boundaries: request permission → register Gelato task → monitor
+- Explicit dependencies between layers
+
+**MODULAR**
+- `gelatoService` works independently of UI
+- Can test permission validation separately
+- Automation endpoint is standalone
+
+**PERFORMANT**
+- Gelato handles all polling (no frontend polling)
+- Minimal database queries
+- Cached permission status in localStorage
+
+**ORGANIZED**
+- `/automation/` folder contains all automation logic
+- Services in `/services/automation/`
+- API endpoints in `/pages/api/automation/`
+- Hooks in `/hooks/` with `useGelato*` prefix
+
+### Testing Checklist
+
+- [ ] Permission request with correct bigint/number types
+- [ ] Permission context properly extracted from MetaMask response
+- [ ] Gelato task creation with proper schedule encoding
+- [ ] Endpoint validates Gelato signature
+- [ ] Permission period validation works
+- [ ] Megapot.purchaseTickets() executes with delegated funds
+- [ ] Fee calculation is accurate
+- [ ] Frontend displays next execution time
+- [ ] Can pause/resume without re-approving
+- [ ] Execution history persists
+
+### Hackathon Submission
+
+**Title:** "Automated Lottery Ticket Purchases via MetaMask Advanced Permissions + Gelato"
+
+**Demonstration:**
+1. User grants Advanced Permission: "Spend 50 USDC per week"
+2. Click "Enable Auto-Purchase" → Gelato task created
+3. Dashboard shows "Next purchase in 7 days"
+4. (Gelato-simulated execution on testnet) Tickets purchased automatically
+5. Show delegated permission flow end-to-end
 
 ## Conclusion
 
-ERC-7715 implementation now includes **complete end-to-end auto-purchase system** suitable for hackathon submission. Permission request, session creation, backend execution, and frontend monitoring are all working together following core principles (Enhancement First, DRY, Clean, Modular, Performant).
+By combining **MetaMask Advanced Permissions** (permission grants) with **Gelato Network** (execution automation), we achieve true serverless auto-purchasing without backend complexity, while following all core principles of the Syndicate project.

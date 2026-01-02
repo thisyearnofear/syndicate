@@ -265,10 +265,13 @@ export class ERC7715Service {
       const sdkProvider = (this.walletClient as any);
 
       // Use the SDK's requestExecutionPermissions action
-      // The SDK formats the parameters correctly for the underlying RPC method
-      // FIX: The SDK expects an array of requests, not a single object
-      // FIX: 'permission' must be a singular object, not an array 'permissions'
-      // FIX: Pass chainId as number, SDK handles toHex conversion
+      // CRITICAL: Match MetaMask Smart Accounts Kit 0.3.0 API specification
+      // Reference: https://docs.metamask.io/smart-accounts-kit/guides/advanced-permissions/
+      // 
+      // Parameter types are strictly enforced:
+      // - periodAmount: bigint (e.g., parseUnits("50", 6) for 50 USDC)
+      // - periodDuration: number in seconds (e.g., 604800 for 7 days)
+      // - NOT hex strings (that was the original bug causing validation failures)
       const grantedPermissions = await sdkProvider.requestExecutionPermissions([{
         chainId,
         expiry,
@@ -283,11 +286,12 @@ export class ERC7715Service {
           type,
           data: {
             tokenAddress: target,
-            periodAmount: `0x${limit.toString(16)}`,
-            periodDuration: `0x${periodDuration.toString(16)}`,
+            periodAmount: limit,  // bigint - already correct type
+            periodDuration: periodDuration,  // number in seconds - already correct type
             justification: `Permission to spend ${limit.toString()} tokens ${period}`,
           },
-        }
+        },
+        isAdjustmentAllowed: true,  // Allow user to modify in MetaMask UI
       }]);
 
       if (!grantedPermissions || grantedPermissions.length === 0) {
@@ -566,6 +570,185 @@ export class ERC7715Service {
     } catch (error) {
       console.error('Failed to load from storage:', error);
     }
+  }
+
+  /**
+   * Validate permission for execution
+   * DRY: Single source of truth for validation logic
+   */
+  validatePermissionForExecution(
+    permission: AdvancedPermissionGrant,
+    requestedAmount: bigint
+  ): {
+    isValid: boolean;
+    reason?: string;
+    remainingBudget?: bigint;
+    currentPeriodEnd?: number;
+    hasExpired?: boolean;
+    isOutsideWindow?: boolean;
+  } {
+    const now = Math.floor(Date.now() / 1000);
+
+    // Check 1: Has permission expired?
+    if (permission.expiresAt && now > permission.expiresAt) {
+      return {
+        isValid: false,
+        reason: 'Permission has expired',
+        hasExpired: true,
+      };
+    }
+
+    // Check 2: Is within period window?
+    const periodWindow = this.getPeriodWindow(permission.period, permission.grantedAt);
+    if (now < periodWindow.periodStart || now >= periodWindow.periodEnd) {
+      return {
+        isValid: false,
+        reason: 'Outside of execution window for this period',
+        isOutsideWindow: true,
+        currentPeriodEnd: periodWindow.periodEnd,
+      };
+    }
+
+    // Check 3: Sufficient budget remaining?
+    const remaining = permission.limit - permission.spent;
+    if (remaining < requestedAmount) {
+      return {
+        isValid: false,
+        reason: 'Insufficient remaining budget for this period',
+        remainingBudget: remaining,
+      };
+    }
+
+    // All checks passed
+    return {
+      isValid: true,
+      remainingBudget: remaining,
+      currentPeriodEnd: periodWindow.periodEnd,
+    };
+  }
+
+  /**
+   * Calculate the current period window
+   */
+  getPeriodWindow(
+    period: 'daily' | 'weekly' | 'monthly' | 'unlimited',
+    grantedAt: number
+  ): { periodStart: number; periodEnd: number } {
+    const now = Math.floor(Date.now() / 1000);
+    const periodSeconds = this.getPeriodInSeconds(period);
+
+    if (period === 'unlimited') {
+      return {
+        periodStart: grantedAt,
+        periodEnd: Number.MAX_SAFE_INTEGER,
+      };
+    }
+
+    const elapsedSeconds = now - grantedAt;
+    const completePeriods = Math.floor(elapsedSeconds / periodSeconds);
+    const currentPeriodStart = grantedAt + completePeriods * periodSeconds;
+    const currentPeriodEnd = currentPeriodStart + periodSeconds;
+
+    return {
+      periodStart: currentPeriodStart,
+      periodEnd: currentPeriodEnd,
+    };
+  }
+
+  /**
+   * Get period duration in seconds
+   */
+  private getPeriodInSeconds(
+    period: 'daily' | 'weekly' | 'monthly' | 'unlimited'
+  ): number {
+    switch (period) {
+      case 'daily':
+        return 86400;
+      case 'weekly':
+        return 604800;
+      case 'monthly':
+        return 2592000;
+      case 'unlimited':
+        return Number.MAX_SAFE_INTEGER;
+      default:
+        return 604800;
+    }
+  }
+
+  /**
+   * Get time remaining until next period reset
+   */
+  getTimeUntilNextPeriod(
+    period: 'daily' | 'weekly' | 'monthly' | 'unlimited',
+    grantedAt: number
+  ): number {
+    const window = this.getPeriodWindow(period, grantedAt);
+    const now = Math.floor(Date.now() / 1000);
+    return Math.max(0, window.periodEnd - now);
+  }
+
+  /**
+   * Get remaining budget as percentage
+   */
+  getRemainingBudgetPercentage(permission: AdvancedPermissionGrant): number {
+    if (permission.limit === BigInt(0)) return 0;
+    const remaining = permission.limit - permission.spent;
+    return Math.floor((Number(remaining) / Number(permission.limit)) * 100);
+  }
+
+  /**
+   * Get human-readable permission status message
+   */
+  getPermissionStatusMessage(permission: AdvancedPermissionGrant): string {
+    const validation = this.validatePermissionForExecution(permission, BigInt(0));
+
+    if (!validation.isValid) {
+      if (validation.hasExpired) {
+        return 'Permission has expired. Please request a new one.';
+      }
+      if (validation.isOutsideWindow) {
+        const timeRemaining = this.getTimeUntilNextPeriod(
+          permission.period,
+          permission.grantedAt
+        );
+        const days = Math.ceil(timeRemaining / 86400);
+        return `Budget resets in ${days} day${days > 1 ? 's' : ''}`;
+      }
+      if (!validation.remainingBudget || validation.remainingBudget === BigInt(0)) {
+        return 'Budget limit reached for this period';
+      }
+    }
+
+    const remaining = permission.limit - permission.spent;
+    const remainingUSD = (Number(remaining) / 1_000_000).toFixed(2);
+    return `$${remainingUSD} USDC available this ${permission.period}`;
+  }
+
+  /**
+   * Get detailed permission expiry information
+   */
+  getExpiryInfo(permission: AdvancedPermissionGrant) {
+    const now = Math.floor(Date.now() / 1000);
+
+    if (!permission.expiresAt) {
+      return {
+        hasExpired: false,
+        expiresAt: null,
+        daysUntilExpiry: null,
+        isExpiringSoon: false,
+      };
+    }
+
+    const hasExpired = now > permission.expiresAt;
+    const secondsUntilExpiry = Math.max(0, permission.expiresAt - now);
+    const daysUntilExpiry = Math.ceil(secondsUntilExpiry / 86400);
+
+    return {
+      hasExpired,
+      expiresAt: permission.expiresAt,
+      daysUntilExpiry,
+      isExpiringSoon: daysUntilExpiry <= 7 && !hasExpired,
+    };
   }
 }
 

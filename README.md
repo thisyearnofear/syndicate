@@ -127,6 +127,15 @@ Visit `http://localhost:3000` to try the platform.
 **Roadmap** (deferred to Q2 2026):
 - USDCx support on Stacks (Circle xReserve) - optional user choice between sBTC and USDCx
 
+## 📖 Documentation
+
+- **[Recurring Purchase Automation](./docs/GELATO_AUTOMATION_PLAN.md)** - Automated recurring ticket purchases via MetaMask permissions
+- **[Gelato Setup Guide](./docs/GELATO_SETUP.md)** - Detailed automation setup (webhooks, database, testing)
+- **[Stacks Bridge](./docs/STACKS_BRIDGE.md)** - Bitcoin to Base bridging via Stacks
+- **[Solana Integration](./docs/SOLANA_IMPLEMENTATION_PLAN.md)** - Solana to Base bridging
+- **[Development Guide](./docs/DEVELOPMENT.md)** - Local setup and development
+- **[Testing Guide](./docs/TESTING.md)** - Test procedures and test suite
+
 ## 🔧 Configuration
 
 ```bash
