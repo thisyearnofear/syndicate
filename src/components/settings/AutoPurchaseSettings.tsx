@@ -16,12 +16,14 @@
 
 'use client';
 
-import React, { useState } from 'react';
-import { AlertCircle, AlertCircle as CheckCircle, Clock, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { AlertCircle, AlertCircle as CheckCircle, Clock, Trash2, ToggleLeft, ToggleRight, Loader } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 import { useAdvancedPermissions, useAutoPurchaseState } from '@/hooks/useAdvancedPermissions';
+import { useGelatoAutomation } from '@/hooks/useGelatoAutomation';
 import { ImprovedAutoPurchaseModal } from '../modal/ImprovedAutoPurchaseModal';
 import type { AutoPurchaseConfig } from '@/domains/wallet/types';
+import { useAccount } from 'wagmi';
 
 // =============================================================================
 // COMPONENT
@@ -30,7 +32,9 @@ import type { AutoPurchaseConfig } from '@/domains/wallet/types';
 export function AutoPurchaseSettings() {
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
+  const [isCreatingTask, setIsCreatingTask] = useState(false);
 
+  const { address } = useAccount();
   const {
     permission,
     autoPurchaseConfig,
@@ -39,28 +43,74 @@ export function AutoPurchaseSettings() {
   } = useAdvancedPermissions();
 
   const autoPurchaseState = useAutoPurchaseState();
+  const gelato = useGelatoAutomation(address);
+
+  // ENHANCEMENT FIRST: Sync Gelato task when permission changes
+  useEffect(() => {
+    if (!permission || !address || isCreatingTask) return;
+
+    // If permission exists but no Gelato task, create one
+    if (!gelato.activeTask && permission) {
+      (async () => {
+        setIsCreatingTask(true);
+        const frequency = autoPurchaseState.config?.frequency || 'weekly';
+        const success = await gelato.createTask(permission, frequency);
+        if (!success) {
+          console.warn('Failed to create Gelato task');
+        }
+        setIsCreatingTask(false);
+      })();
+    }
+  }, [permission, address, gelato.activeTask]);
 
   // CLEAN: Handle permission granted
-  const handlePermissionGranted = (config: AutoPurchaseConfig) => {
+  const handlePermissionGranted = async (config: AutoPurchaseConfig) => {
     saveAutoPurchaseConfig(config);
     setShowPermissionModal(false);
   };
 
-  // CLEAN: Handle revoke
-  const handleRevoke = () => {
-    revokePermission();
-    setShowRevokeConfirm(false);
+  // CLEAN: Handle revoke - also cancel Gelato task
+  const handleRevoke = async () => {
+    setIsCreatingTask(true);
+    try {
+      // Cancel Gelato task if active
+      if (gelato.activeTask?.taskId) {
+        await gelato.cancelTask();
+      }
+      
+      // Revoke permission
+      revokePermission();
+      setShowRevokeConfirm(false);
+    } finally {
+      setIsCreatingTask(false);
+    }
   };
 
-  // CLEAN: Handle pause/resume
-  const handleToggleEnabled = () => {
-    if (!autoPurchaseConfig) return;
+  // CLEAN: Handle pause/resume - sync with Gelato
+  const handleToggleEnabled = async () => {
+    if (!autoPurchaseConfig || !gelato.activeTask) return;
 
-    const updated: AutoPurchaseConfig = {
-      ...autoPurchaseConfig,
-      enabled: !autoPurchaseConfig.enabled,
-    };
-    saveAutoPurchaseConfig(updated);
+    setIsCreatingTask(true);
+    try {
+      const isEnabled = autoPurchaseConfig.enabled;
+      
+      if (isEnabled) {
+        // Pause task in Gelato
+        await gelato.pauseTask();
+      } else {
+        // Resume task in Gelato
+        await gelato.resumeTask();
+      }
+
+      // Update local state
+      const updated: AutoPurchaseConfig = {
+        ...autoPurchaseConfig,
+        enabled: !isEnabled,
+      };
+      saveAutoPurchaseConfig(updated);
+    } finally {
+      setIsCreatingTask(false);
+    }
   };
 
   // If no permission granted, show enable button
@@ -112,7 +162,14 @@ export function AutoPurchaseSettings() {
             </div>
           </div>
           <div className="flex gap-2">
-            {autoPurchaseState.isEnabled ? (
+            {isCreatingTask ? (
+              <button
+                disabled
+                className="p-2 cursor-not-allowed"
+              >
+                <Loader className="w-5 h-5 text-gray-400 animate-spin" />
+              </button>
+            ) : autoPurchaseState.isEnabled ? (
               <button
                 onClick={handleToggleEnabled}
                 className="p-2 hover:bg-green-100 rounded transition-colors"
@@ -228,6 +285,7 @@ export function AutoPurchaseSettings() {
             onClick={() => setShowRevokeConfirm(true)}
             variant="destructive"
             className="w-full"
+            disabled={isCreatingTask}
           >
             <Trash2 className="w-4 h-4 mr-2" />
             Revoke Permission
@@ -235,13 +293,14 @@ export function AutoPurchaseSettings() {
         ) : (
           <div className="space-y-2">
             <p className="text-sm text-gray-700">
-              Are you sure you want to revoke auto-purchase permission? This action cannot be undone and you'll need to grant a new permission to re-enable auto-purchase.
+              Are you sure you want to revoke auto-purchase permission? This will also cancel your Gelato automation task. You'll need to grant a new permission to re-enable auto-purchase.
             </p>
             <div className="flex gap-2">
               <Button
                 onClick={() => setShowRevokeConfirm(false)}
                 variant="secondary"
                 className="flex-1"
+                disabled={isCreatingTask}
               >
                 Cancel
               </Button>
@@ -249,8 +308,16 @@ export function AutoPurchaseSettings() {
                 onClick={handleRevoke}
                 variant="destructive"
                 className="flex-1"
+                disabled={isCreatingTask}
               >
-                Confirm Revoke
+                {isCreatingTask ? (
+                  <>
+                    <Loader className="w-4 h-4 mr-2 animate-spin" />
+                    Revoking...
+                  </>
+                ) : (
+                  'Confirm Revoke'
+                )}
               </Button>
             </div>
           </div>
