@@ -33,50 +33,120 @@ User has tickets (fully automated)
 
 ### 1. User Setup (One-time)
 
-```typescript
-// User grants permission for $50/week auto-purchase
-const permission = await requestAdvancedPermission({
-  amount: 50 * 10 ** 6,     // USDC (6 decimals)
-  frequency: 'weekly'
-});
+**Step 1: User opens settings and clicks "Enable Auto-Purchase"**
+- Component: `src/components/settings/AutoPurchaseSettings.tsx`
+- Shows: Weekly ($50) or Monthly ($200) preset options
+- Alternatives: `ImprovedAutoPurchaseModal` for custom amounts
 
-// Frontend stores in database
-await createAutoPurchase({
-  userAddress,
-  permissionId: permission.id,
-  frequency: 'weekly',
-  amountPerPeriod: 50 * 10 ** 6,
-  isActive: true
-});
-```
+**Step 2: User selects frequency and approves in MetaMask Flask**
+- Modal: `AutoPurchasePermissionModal.tsx` or `ImprovedAutoPurchaseModal.tsx`
+- Uses: `useAdvancedPermissions` hook
+- Calls: MetaMask `wallet_grantPermissions` (ERC-7715)
+- Result: Permission stored in browser & localStorage
 
-### 2. Automated Execution (Every Week)
+**Step 3: Frontend creates database record**
+- Component: `AutoPurchaseSettings.handlePermissionGranted()`
+- Calls: `POST /api/automation/create-purchase`
+- Stores in database:
+  - userAddress
+  - permissionId
+  - frequency (daily/weekly/monthly)
+  - amountPerPeriod
+  - isActive: true
+  - lastExecutedAt: now (starts next period)
 
-**Vercel Cron (hourly):**
-1. Queries `auto_purchases` table for active records
-2. Filters for purchases due based on frequency
-3. For each due purchase:
-   - ✅ Verifies permission is valid via `/api/permissions/verify`
-   - ✅ Executes purchase via `/api/automation/execute-purchase-tickets`
-   - ✅ Updates database via `/api/automation/mark-executed`
-4. Logs all activity to Vercel Function logs
+**Step 4: User sees automation dashboard**
+- Component: `AutoPurchaseSettings.tsx` shows:
+  - ✅ Permission status
+  - ✅ Frequency and amount
+  - ✅ Next execution time
+  - ✅ Pause/Resume buttons
+  - ✅ Remaining budget
+  - ✅ Execution history (when available)
+
+### 2. Automated Execution (Every Hour)
+
+**Vercel Cron trigger** (runs on schedule: `0 * * * *`)
+- Endpoint: `POST /api/crons/recurring-purchases`
+- Orchestrates the entire flow
+
+**For each due purchase:**
+
+1. **Query database**
+   ```sql
+   SELECT * FROM auto_purchases 
+   WHERE is_active = true
+   AND last_executed_at + interval_seconds <= now
+   ```
+
+2. **Verify permission is valid**
+   - Calls: `POST /api/permissions/verify`
+   - Checks: Permission not expired, budget remaining
+   - Result: true/false
+
+3. **Execute on-chain purchase**
+   - Calls: `POST /api/automation/execute-purchase-tickets`
+   - Action: Transfers USDC, mints lottery tickets
+   - Signed by: Delegated permission (ERC-7715)
+
+4. **Update database**
+   - Calls: `POST /api/automation/mark-executed`
+   - Updates: `last_executed_at = now()`
+   - Result: Next execution scheduled automatically
+
+**Logging:** All steps logged to Vercel Function logs with `[Cron]` prefix
 
 **Result:** User's USDC transferred, tickets minted. No user action needed.
 
 ## Implementation
 
-### Files Created
+### UI Components
 
-**Core:**
-- `src/pages/api/crons/recurring-purchases.ts` - Main orchestrator
-- `vercel.json` - Cron configuration
+**Permission Modal:**
+- `src/components/modal/AutoPurchasePermissionModal.tsx` - Preset options (weekly/monthly)
+- `src/components/modal/ImprovedAutoPurchaseModal.tsx` - Custom amounts & frequencies
 
-**Using Existing:**
-- `src/pages/api/automation/due-purchases.ts` - Query database
-- `src/pages/api/automation/mark-executed.ts` - Update database
-- `src/pages/api/automation/execute-purchase-tickets.ts` - Execute on-chain
-- `src/pages/api/permissions/verify.ts` - Validate permission
-- `src/services/erc7715Service.ts` - Permission logic
+**Settings Dashboard:**
+- `src/components/settings/AutoPurchaseSettings.tsx` - Main automation dashboard
+  - Shows permission status
+  - Displays frequency, amount, next execution
+  - Pause/Resume/Revoke controls
+  - Remaining budget warnings
+  - Wired to create database record on permission grant
+
+**Hooks:**
+- `src/hooks/useAdvancedPermissions.ts` - ERC-7715 permission management
+- `src/hooks/useGelatoAutomation.ts` - Task lifecycle (pause, resume, cancel)
+
+### API Endpoints
+
+**Cron Orchestrator:**
+- `src/pages/api/crons/recurring-purchases.ts` - Main hourly trigger
+  - Queries due purchases
+  - Verifies permissions
+  - Executes purchases
+  - Marks executed
+  - Logs all activity
+
+**Database Management:**
+- `src/pages/api/automation/create-purchase.ts` - Create auto-purchase record (called by UI)
+- `src/pages/api/automation/due-purchases.ts` - Query due purchases (called by cron)
+- `src/pages/api/automation/mark-executed.ts` - Update execution status (called by cron)
+
+**Execution:**
+- `src/pages/api/automation/execute-purchase-tickets.ts` - On-chain purchase via ERC-7715
+
+**Validation:**
+- `src/pages/api/permissions/verify.ts` - Verify permission validity and budget
+
+### Configuration
+
+**Cron Schedule:**
+- `vercel.json` - Defines cron as `0 * * * *` (every hour)
+
+**Services:**
+- `src/services/erc7715Service.ts` - MetaMask Advanced Permissions (ERC-7715)
+- `src/services/automation/gelatoService.ts` - Task management (optional, for future Gelato upgrade)
 
 ### Database Schema
 
@@ -97,13 +167,35 @@ CREATE TABLE auto_purchases (
 
 ## Testing
 
-### Local Test
+### End-to-End Flow (Local)
 
+**Terminal 1: Start dev server**
 ```bash
-# Terminal 1: Start dev server
 npm run dev
+```
 
-# Terminal 2: Simulate cron execution
+**Terminal 2: Create test purchase in database**
+```bash
+curl -X POST http://localhost:3000/api/automation/create-purchase \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userAddress": "0x742d35Cc6634C0532925a3b844Bc389e8f37e2aE",
+    "permissionId": "perm_test_123",
+    "frequency": "weekly",
+    "amountPerPeriod": "50000000"
+  }'
+```
+
+**Expected response:**
+```json
+{
+  "success": true,
+  "purchaseId": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Terminal 3: Simulate cron execution**
+```bash
 curl -X POST http://localhost:3000/api/crons/recurring-purchases
 
 # Expected response:
@@ -115,11 +207,33 @@ curl -X POST http://localhost:3000/api/crons/recurring-purchases
 }
 ```
 
+### UI Testing
+
+1. **Open app** → User settings/dashboard
+2. **Click "Enable Auto-Purchase"** → Modal opens
+3. **Select frequency** (weekly/monthly or custom)
+4. **Approve in MetaMask Flask** → Permission granted
+5. **Check database** → Record created in `auto_purchases`
+6. **View dashboard** → Shows permission status, next execution, etc.
+
 ### Check Logs
 
-Local: Check terminal output with `[Cron]` prefix
+**Local (dev server):** Terminal output with `[Cron]` prefix
 
-Production (Vercel): Dashboard → Functions → `api/crons/recurring-purchases` → Logs
+**Production (Vercel):**
+1. Go to Vercel dashboard → Your project
+2. Click **Functions** tab
+3. Find `api/crons/recurring-purchases`
+4. View recent invocations and logs
+
+**Expected log output:**
+```
+[Cron] Starting recurring purchases check at 2025-01-10T12:00:00Z
+[Cron] Found 5 active purchases
+[Cron] 2 purchases are due for execution
+[Cron] ✅ Executed purchase abc123 for 0xUser...
+[Cron] Completed: 2/2 purchases executed successfully
+```
 
 ## Deployment
 
