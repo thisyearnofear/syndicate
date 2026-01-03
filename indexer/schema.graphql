@@ -1,0 +1,27 @@
+type TicketPurchase {
+  id: ID!
+  recipient: String!
+  ticketsPurchased: BigInt!
+  referrer: String!
+  buyer: String!
+  transactionHash: String!
+  blockNumber: Int!
+  timestamp: Int!
+}
+
+type WinWithdrawal {
+  id: ID!
+  user: String!
+  amount: BigInt!
+  transactionHash: String!
+  blockNumber: Int!
+  timestamp: Int!
+}
+
+type User {
+  id: ID!
+  totalTickets: BigInt!
+  totalWinnings: BigInt!
+  purchases: [TicketPurchase!]! @derivedFrom(field: "recipient")
+  withdrawals: [WinWithdrawal!]! @derivedFrom(field: "user")
+}

@@ -29,6 +29,7 @@
   "exclude": [
     "node_modules",
     "tmp_*",
-    "src/__tests__/**/*"
+    "src/__tests__/**/*",
+    "indexer"
   ]
 }

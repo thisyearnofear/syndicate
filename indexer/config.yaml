@@ -1,0 +1,14 @@
+name: syndicate-indexer
+networks:
+  - id: 8453
+    rpc_config:
+      url: https://mainnet.base.org
+    start_block: 24000000 # Approximation to save time, can be 0
+    contracts:
+      - name: Megapot
+        address:
+          - 0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95
+        handler: src/EventHandlers.ts
+        events:
+          - event: UserTicketPurchase(address indexed recipient, uint256 ticketsPurchasedTotalBps, address indexed referrer, address indexed buyer)
+          - event: UserWinWithdrawal(address indexed user, uint256 amount)
