@@ -1,0 +1,26 @@
+{
+  "name": "syndicate-indexer",
+  "version": "0.1.0",
+  "description": "Envio indexer for Syndicate",
+  "main": "dist/src/index.js",
+  "scripts": {
+    "codegen": "envio codegen",
+    "dev": "envio dev",
+    "start": "envio start",
+    "test": "envio test"
+  },
+  "keywords": [
+    "envio",
+    "indexer",
+    "blockchain"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "envio": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "typescript": "^5.3.3"
+  }
+}
