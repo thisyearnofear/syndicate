@@ -81,12 +81,12 @@ Visit `http://localhost:3000` to try the platform.
 
 | Document                                    | Description                                              |
 | ------------------------------------------- | -------------------------------------------------------- |
-| [Development Guide](./docs/DEVELOPMENT.md)  | Setup, testing, deployment, and troubleshooting         |
-| [Implementation](./docs/IMPLEMENTATION.md)  | Technical architecture and system enhancements          |
-| [**Stacks Bridge**](./docs/STACKS_BRIDGE.md) | **Stacks bridge operator setup & deployment guide**     |
-| [Roadmap & Project](./docs/ROADMAP_PROJECT.md) | Project planning, timeline, and hackathon strategy     |
-| [Cross-Chain Technical](./docs/CROSSCHAIN_TECHNICAL.md) | Bridge protocols, NEAR Intents, and technical flows |
-| [Testing Strategy](./docs/TESTING.md)       | Test coverage, manual testing plan, and analysis        |
+| [Development Guide](./docs/setup/DEVELOPMENT.md)  | Setup, testing, deployment, and troubleshooting         |
+| [Implementation](./docs/project/IMPLEMENTATION.md)  | Technical architecture and system enhancements          |
+| [**Stacks Bridge**](./docs/bridges/STACKS_BRIDGE.md) | **Stacks bridge operator setup & deployment guide**     |
+| [Roadmap & Project](./docs/project/ROADMAP_PROJECT.md) | Project planning, timeline, and hackathon strategy     |
+| [Cross-Chain Technical](./docs/bridges/CROSSCHAIN_TECHNICAL.md) | Bridge protocols, NEAR Intents, and technical flows |
+| [Testing Strategy](./docs/setup/TESTING.md)       | Test coverage, manual testing plan, and analysis        |
 
 ## 🔐 Privacy & Security
 
@@ -105,7 +105,7 @@ Visit `http://localhost:3000` to try the platform.
   - Production-ready operator service with retry logic & monitoring
   - Pre-funded USDC liquidity strategy
   - Supports Clarity 3 multi-token standard
-  - See [Stacks Bridge Guide](./docs/STACKS_BRIDGE.md)
+  - See [Stacks Bridge Guide](./docs/bridges/STACKS_BRIDGE.md)
 
 - **NEAR Intents + Chain Signatures**: Complete end-to-end NEAR → Base ticket purchase
   - Deterministic address derivation (no storage needed)
@@ -129,12 +129,12 @@ Visit `http://localhost:3000` to try the platform.
 
 ## 📖 Documentation
 
-- **[Recurring Purchase Automation](./docs/GELATO_AUTOMATION_PLAN.md)** - Automated recurring ticket purchases via MetaMask permissions
-- **[Gelato Setup Guide](./docs/GELATO_SETUP.md)** - Detailed automation setup (webhooks, database, testing)
-- **[Stacks Bridge](./docs/STACKS_BRIDGE.md)** - Bitcoin to Base bridging via Stacks
-- **[Solana Integration](./docs/SOLANA_IMPLEMENTATION_PLAN.md)** - Solana to Base bridging
-- **[Development Guide](./docs/DEVELOPMENT.md)** - Local setup and development
-- **[Testing Guide](./docs/TESTING.md)** - Test procedures and test suite
+- **[Recurring Purchase Automation](./docs/automation/GELATO_AUTOMATION_PLAN.md)** - Automated recurring ticket purchases via MetaMask permissions
+- **[Gelato Setup Guide](./docs/automation/GELATO_SETUP.md)** - Detailed automation setup (webhooks, database, testing)
+- **[Stacks Bridge](./docs/bridges/STACKS_BRIDGE.md)** - Bitcoin to Base bridging via Stacks
+- **[Solana Integration](./docs/bridges/SOLANA_IMPLEMENTATION_PLAN.md)** - Solana to Base bridging
+- **[Development Guide](./docs/setup/DEVELOPMENT.md)** - Local setup and development
+- **[Testing Guide](./docs/setup/TESTING.md)** - Test procedures and test suite
 
 ## 🔧 Configuration
 
