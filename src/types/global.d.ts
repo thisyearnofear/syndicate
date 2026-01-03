@@ -1,45 +1,68 @@
-/**
- * GLOBAL TYPE DECLARATIONS
- * 
- * Core Principles Applied:
- * - CLEAN: Clear type definitions for wallet providers
- * - DRY: Single source of truth for global types
- */
+import type {
+  EIP6963AnnounceProviderEvent,
+  EIP6963RequestProviderEvent,
+  MetaMaskInpageProvider,
+} from '@metamask/providers';
+import type React from 'react';
 
-interface EthereumProvider {
-  isMetaMask?: boolean;
-  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-  on: (event: string, handler: (...args: unknown[]) => void) => void;
-  removeListener: (event: string, handler: (...args: unknown[]) => void) => void;
-  // MetaMask Flask specific
-  _metamask?: {
-    isFlask?: boolean;
-    isMetaMask?: boolean;
-    version?: string;
+interface Purchase {
+  startTicket?: number;
+  endTicket?: number;
+  ticketsPurchased?: number;
+  transactionHashes?: string[];
+  txHash?: string;
+  timestamp?: string | number;
+  createdAt?: string | number;
+  updatedAt?: string | number;
+  jackpotRoundId: number;
+  recipient: string;
+  referrer?: string;
+  buyer: string;
+}
+
+interface UserIdentity {
+  farcaster?: {
+    username: string;
+    followerCount?: number;
+    verified?: boolean;
   };
-  // ERC-7715 Advanced Permissions API
-  requestExecutionPermissions?: (args: any) => Promise<any>;
-  chainId?: string;
+  twitter?: {
+    username: string;
+    followerCount?: number;
+    verified?: boolean;
+  };
 }
 
-interface PhantomProvider {
-  ethereum: EthereumProvider;
-  isPhantom?: boolean;
-}
-
-interface SolanaProvider {
-  isPhantom?: boolean;
-  connect: () => Promise<{ publicKey: { toString: () => string } }>;
-  disconnect: () => Promise<void>;
-}
-
+/*
+ * Window type extension to support ethereum and phantom
+ */
 declare global {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface Window {
-    ethereum?: EthereumProvider;
-    phantom?: PhantomProvider;
-    solana?: SolanaProvider;
+    ethereum: MetaMaskInpageProvider & {
+      setProvider?: (provider: MetaMaskInpageProvider) => void;
+      detected?: MetaMaskInpageProvider[];
+      providers?: MetaMaskInpageProvider[];
+    };
+    phantom?: {
+      ethereum?: MetaMaskInpageProvider;
+    };
   }
-  var __txTimestampCache: Map<string, string>;
-}
 
-export {};
+  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+  interface WindowEventMap {
+    'eip6963:requestProvider': EIP6963RequestProviderEvent;
+    'eip6963:announceProvider': EIP6963AnnounceProviderEvent;
+  }
+
+  // Styled-jsx type declaration
+  namespace JSX {
+    interface IntrinsicElements {
+      style: React.StyleHTMLAttributes<HTMLStyleElement> & { 
+        jsx?: boolean;
+        global?: boolean;
+        children?: string;
+      };
+    }
+  }
+}
