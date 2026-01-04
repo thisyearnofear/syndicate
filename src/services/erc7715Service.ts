@@ -276,8 +276,8 @@ export class ERC7715Service {
             periodAmount: limit,
             periodDuration: periodDuration,
             justification: `Permission to spend ${limit.toString()} tokens ${period}`,
+            isAdjustmentAllowed: true,
           },
-          isAdjustmentAllowed: true,
         },
       }]);
 
