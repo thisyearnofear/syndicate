@@ -131,7 +131,7 @@ export class ERC7715Service {
         // Initialize base client and extend with ERC-7715 actions actions
         const baseClient = createWalletClient({
           chain: this.getChainFromId(this.getCurrentChainId()),
-          transport: custom(window.ethereum),
+          transport: custom(window.ethereum as any),
         });
 
         // Extend client with Smart Accounts Kit actions
