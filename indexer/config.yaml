@@ -1,4 +1,5 @@
 name: syndicate-indexer
+ecosystem: evm
 networks:
   - id: 8453
     rpc_config:
