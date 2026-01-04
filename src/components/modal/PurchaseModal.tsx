@@ -31,6 +31,8 @@ import { nearWalletSelectorService } from "@/domains/wallet/services/nearWalletS
 import { nearIntentsService } from "@/services/nearIntentsService";
 import type { IntentQuote } from "@/services/nearIntentsService";
 import { CrossChainTracker } from "@/components/bridge/CrossChainTracker"; // Stacks Flow
+import { getUsdcAddressForChain } from "@/domains/wallet/services/advancedPermissionsService";
+import { useChainId } from "wagmi";
 
 // Lazy load modal steps for better performance
 const ModeStep = lazy(() => import("./purchase/ModeStep").then((mod) => ({ default: mod.ModeStep })));
@@ -88,6 +90,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
   const [isBridging, setIsBridging] = useState(false);
   const [selectedBridgeProtocol, setSelectedBridgeProtocol] = useState<string | null>(null);
   const { address: evmAddress, isConnected: evmConnected } = useAccount();
+  const chainId = useChainId();
   const [bridgeMetadata, setBridgeMetadata] = useState<{ protocol?: string; bridgeId?: string; burnSignature?: string; message?: string; attestation?: string; mintTxHash?: string; } | null>(null);
   const [bridgeAmount, setBridgeAmount] = useState<string | null>(null);
   const [nearQuote, setNearQuote] = useState<IntentQuote | null>(null);
@@ -123,10 +126,10 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
           errorToast("EVM Wallet Required", "Connect an EVM wallet to mint bridged USDC on Base");
           return;
         }
-        const provider = new ethers.BrowserProvider(window.ethereum);
+        const provider = new ethers.BrowserProvider(window.ethereum as any);
         const network = await provider.getNetwork();
         if (network.chainId !== BigInt(8453)) {
-          await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x2105" }] });
+          await (window.ethereum as any).request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x2105" }] });
         }
         const signer = await provider.getSigner();
         const transmitter = new Contract(CCTP.base.messageTransmitter, ["function receiveMessage(bytes calldata message, bytes calldata attestation) external returns (bool)"], signer);
@@ -256,7 +259,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
     if (!isConnected) return;
     setStep("processing");
     const stages: string[] = [];
-    
+
     const updateStage = (stage: string) => {
       stages.push(stage);
       setEvmPurchaseStages([...stages]);
@@ -266,20 +269,22 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
       // Request ERC-7715 Advanced Permission if supported (Flask only)
       if (erc7715Supported && walletType === WalletTypes.EVM) {
         updateStage('evm_initializing');
-        
+
         const ticketPrice_ = parseFloat(ticketPrice);
         const totalSpend = BigInt(Math.floor(ticketPrice_ * ticketCount * 1_000_000)); // USDC has 6 decimals
-        const megapotAddress = '0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95' as any; // Megapot on Base
-        
+        // FIX: Use the USDC token address (not the Megapot contract) for ERC-7715 token permissions
+        // getUsdcAddressForChain handles testnet (Base Sepolia) vs mainnet (Base) automatically
+        const usdcTokenAddress = getUsdcAddressForChain(chainId);
+
         updateStage('evm_requesting_permission');
-        console.log('Requesting ERC-7715 Advanced Permission for ticket purchases...');
+        console.log(`Requesting ERC-7715 Advanced Permission for USDC (${usdcTokenAddress}) on chain ${chainId}...`);
         const permission = await requestAdvancedPermission(
           'erc20-token-periodic',
-          megapotAddress,
+          usdcTokenAddress,
           totalSpend,
           'daily'
         );
-        
+
         if (permission) {
           updateStage('evm_permission_granted');
           console.log('Advanced Permission granted:', permission.id);
@@ -293,16 +298,16 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess }: PurchaseMo
       if (evmPurchaseStages.length > 0) {
         updateStage('evm_approving_usdc');
       }
-      
+
       const result = await purchaseTickets(ticketCount, purchaseMode === "syndicate" ? selectedSyndicate?.id : undefined, purchaseMode === "yield" ? selectedVaultStrategy || undefined : undefined, purchaseMode === "yield" ? yieldToTicketsPercentage : undefined, purchaseMode === "yield" ? yieldToCausesPercentage : undefined);
-      
+
       if (evmPurchaseStages.length > 0) {
         updateStage('evm_usdc_approved');
         updateStage('evm_purchasing_tickets');
         updateStage('evm_purchase_submitted');
         updateStage('evm_purchase_confirmed');
       }
-      
+
       if (result.success) setStep("success");
       else {
         setStep("select");
