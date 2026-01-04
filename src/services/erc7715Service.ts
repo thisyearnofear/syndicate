@@ -255,6 +255,7 @@ export class ERC7715Service {
       // CRITICAL: Match MetaMask Smart Accounts Kit 0.3.0 API specification
       // Reference: https://docs.metamask.io/smart-accounts-kit/guides/advanced-permissions/
       // 
+      // IMPORTANT: isAdjustmentAllowed MUST be at TOP LEVEL, not in permission.data
       // Parameter types are strictly enforced:
       // - periodAmount: bigint (e.g., parseUnits("50", 6) for 50 USDC)
       // - periodDuration: number in seconds (e.g., 604800 for 7 days)
@@ -262,6 +263,7 @@ export class ERC7715Service {
       const grantedPermissions = await sdkProvider.requestExecutionPermissions([{
         chainId,
         expiry,
+        isAdjustmentAllowed: true,  // MOVED: Top-level, not in permission.data
         signer: {
           type: 'account',
           data: {
@@ -276,9 +278,9 @@ export class ERC7715Service {
             periodAmount: limit,
             periodDuration: periodDuration,
             justification: `Permission to spend ${limit.toString()} tokens ${period}`,
-            isAdjustmentAllowed: true,
           },
         },
+        rules: null,  // ADDED: Explicitly set rules to null (no caveats/restrictions)
       }]);
 
       if (!grantedPermissions || grantedPermissions.length === 0) {
