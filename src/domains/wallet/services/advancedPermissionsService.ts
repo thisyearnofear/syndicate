@@ -18,7 +18,7 @@
 
 import { WalletClient } from 'viem';
 import { getERC7715Service } from '@/services/erc7715Service';
-import { CONTRACTS } from '@/config';
+import { CONTRACTS, CHAIN_IDS } from '@/config';
 import type { AdvancedPermission, PermissionRequest, PermissionResult, AutoPurchaseConfig } from '../types';
 
 // =============================================================================
@@ -35,9 +35,22 @@ const DEFAULT_LIMITS = {
 } as const;
 
 /**
- * USDC token on Base (primary spendable token)
+ * USDC token addresses by chain
+ * Maps chainId to USDC contract address
  */
-const USDC_BASE = CONTRACTS.usdc;
+const USDC_BY_CHAIN: Record<number, `0x${string}`> = {
+  [CHAIN_IDS.BASE]: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',           // Base mainnet
+  [CHAIN_IDS.BASE_SEPOLIA]: '0x036CbD53842c5426634E7929541eC2318f3dCd01',   // Base Sepolia testnet
+  [CHAIN_IDS.ETHEREUM]: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',       // Ethereum mainnet
+  [CHAIN_IDS.SEPOLIA]: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',       // Ethereum Sepolia testnet
+};
+
+/**
+ * Get USDC address for current chain
+ */
+export function getUsdcAddressForChain(chainId: number): `0x${string}` {
+  return USDC_BY_CHAIN[chainId] || CONTRACTS.usdc as `0x${string}`;
+}
 
 // =============================================================================
 // PERMISSION PRESETS
@@ -46,23 +59,27 @@ const USDC_BASE = CONTRACTS.usdc;
 /**
  * Preset permission configurations for common use cases
  * Matches MetaMask ERC-7715 format (erc20-token-periodic)
+ * NOTE: tokenAddress should be set dynamically based on current chain
  */
-export const PERMISSION_PRESETS = {
-  weekly: {
-    scope: 'erc20-token-periodic' as const,
-    tokenAddress: USDC_BASE,
-    limit: DEFAULT_LIMITS.WEEKLY,
-    period: 'weekly' as const,
-    description: 'Spend up to 50 USDC per week for automatic ticket purchases',
-  },
-  monthly: {
-    scope: 'erc20-token-periodic' as const,
-    tokenAddress: USDC_BASE,
-    limit: DEFAULT_LIMITS.MONTHLY,
-    period: 'monthly' as const,
-    description: 'Spend up to 200 USDC per month for automatic ticket purchases',
-  },
-} as const;
+export function getPermissionPresets(chainId: number) {
+  const usdcAddress = getUsdcAddressForChain(chainId);
+  return {
+    weekly: {
+      scope: 'erc20-token-periodic' as const,
+      tokenAddress: usdcAddress,
+      limit: DEFAULT_LIMITS.WEEKLY,
+      period: 'weekly' as const,
+      description: 'Spend up to 50 USDC per week for automatic ticket purchases',
+    },
+    monthly: {
+      scope: 'erc20-token-periodic' as const,
+      tokenAddress: usdcAddress,
+      limit: DEFAULT_LIMITS.MONTHLY,
+      period: 'monthly' as const,
+      description: 'Spend up to 200 USDC per month for automatic ticket purchases',
+    },
+  } as const;
+}
 
 // =============================================================================
 // ADVANCED PERMISSIONS SERVICE (DELEGATING WRAPPER)
@@ -91,7 +108,7 @@ class AdvancedPermissionsService {
   /**
    * Request Advanced Permission (delegates to erc7715Service)
    */
-  async requestPermission(request: PermissionRequest): Promise<PermissionResult> {
+  async requestPermission(request: PermissionRequest, chainId?: number): Promise<PermissionResult> {
     if (!this.isInitialized) {
       return {
         success: false,
@@ -110,10 +127,14 @@ class AdvancedPermissionsService {
         };
       }
 
+      // Get token address - use provided address, or get from current chain, or fallback to config
+      const tokenAddress = request.tokenAddress || 
+        (chainId ? getUsdcAddressForChain(chainId) : CONTRACTS.usdc as `0x${string}`);
+
       // Convert from old PermissionRequest to erc7715Service format
       const permission = await service.requestAdvancedPermission(
         request.scope,
-        (request.tokenAddress || USDC_BASE) as `0x${string}`,
+        tokenAddress,
         request.limit,
         request.period
       );

@@ -23,55 +23,75 @@ export default function WalletInfo({
     return null;
   }
 
+  /**
+   * Get chain name and testnet indicator
+   * SINGLE SOURCE OF TRUTH for chain naming and testnet detection
+   */
+  const getChainInfo = (chainId: number | string | null) => {
+    if (chainId === null || chainId === undefined) {
+      return { name: "Unknown Network", isTestnet: false, badge: "" };
+    }
+
+    const numChainId = typeof chainId === 'string' ? parseInt(chainId, 10) : chainId;
+
+    const chainMap: Record<number, { name: string; isTestnet: boolean }> = {
+      [CHAIN_IDS.BASE]: { name: "Base", isTestnet: false },
+      [CHAIN_IDS.BASE_SEPOLIA]: { name: "Base Sepolia", isTestnet: true },
+      [CHAIN_IDS.ETHEREUM]: { name: "Ethereum", isTestnet: false },
+      [CHAIN_IDS.SEPOLIA]: { name: "Sepolia", isTestnet: true },
+      [CHAIN_IDS.AVALANCHE]: { name: "Avalanche", isTestnet: false },
+      [CHAIN_IDS.STACKS]: { name: "Stacks", isTestnet: false },
+    };
+
+    if (numChainId === 0) {
+      // Non-EVM chains
+      if (state.walletType === 'stacks') {
+        return { name: "Stacks", isTestnet: false, badge: "" };
+      }
+      const name = state.walletType === 'solana' ? "Solana" : "NEAR";
+      return { name, isTestnet: false, badge: "" };
+    }
+
+    const info = chainMap[numChainId] || { name: `Network (${numChainId})`, isTestnet: false };
+    const badge = info.isTestnet ? "TESTNET" : "";
+    
+    return { ...info, badge };
+  };
+
+  /**
+   * Get color based on chain and testnet status
+   * TESTNET: Warm warning colors (amber/orange)
+   * MAINNET: Standard chain colors
+   */
+  const getChainColor = (chainId: number | string | null) => {
+    if (chainId === null || chainId === undefined) return "gray";
+
+    const numChainId = typeof chainId === 'string' ? parseInt(chainId, 10) : chainId;
+    const { isTestnet } = getChainInfo(numChainId);
+
+    // Testnet always uses warning color
+    if (isTestnet) return "amber";
+
+    switch (numChainId) {
+      case CHAIN_IDS.BASE:
+        return "blue";
+      case CHAIN_IDS.ETHEREUM:
+        return "gray";
+      case CHAIN_IDS.AVALANCHE:
+        return "red";
+      case 0:
+        if (state.walletType === 'stacks') return "orange";
+        return state.walletType === 'solana' ? "purple" : "green";
+      case 12345:
+        return "orange";
+      default:
+        return "gray";
+    }
+  };
+
   const getChainName = (chainId: number | string | null) => {
-     if (chainId === null || chainId === undefined) return "Unknown Network";
-
-     const numChainId = typeof chainId === 'string' ? parseInt(chainId, 10) : chainId;
-
-     switch (numChainId) {
-       case CHAIN_IDS.BASE:
-         return "Base";
-       case CHAIN_IDS.BASE_SEPOLIA:
-         return "Base Sepolia";
-       case CHAIN_IDS.ETHEREUM:
-         return "Ethereum";
-       case CHAIN_IDS.AVALANCHE:
-         return "Avalanche";
-       case 0:
-         // Check wallet type to distinguish between Solana, NEAR, and Stacks
-         if (state.walletType === 'stacks') return "Stacks";
-         return state.walletType === 'solana' ? "Solana" : "NEAR";
-       case 12345:
-         return "Stacks";
-       default:
-         return `Network (${numChainId})`;
-     }
-   };
-
-   const getChainColor = (chainId: number | string | null) => {
-     if (chainId === null || chainId === undefined) return "gray";
-
-     const numChainId = typeof chainId === 'string' ? parseInt(chainId, 10) : chainId;
-
-     switch (numChainId) {
-       case CHAIN_IDS.BASE:
-         return "blue";
-       case CHAIN_IDS.BASE_SEPOLIA:
-         return "purple";
-       case CHAIN_IDS.ETHEREUM:
-         return "gray";
-       case CHAIN_IDS.AVALANCHE:
-         return "red";
-       case 0:
-         // Different colors for Solana, NEAR, and Stacks
-         if (state.walletType === 'stacks') return "orange";
-         return state.walletType === 'solana' ? "purple" : "green";
-       case 12345:
-         return "orange";
-       default:
-         return "gray";
-     }
-   };
+    return getChainInfo(chainId).name;
+  };
 
   const getWalletDisplayName = (walletType: string | null) => {
      if (!walletType) return "Wallet";
@@ -123,17 +143,34 @@ export default function WalletInfo({
 
   const routing = state.walletType ? getWalletRouting(state.walletType) : null;
 
+  const chainInfo = getChainInfo(state.chainId);
+  const chainColor = getChainColor(state.chainId);
+  const isTestnet = chainInfo.isTestnet;
+
   return (
     <div
-      className={`bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700 ${className}`}
+      className={`bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border ${
+        isTestnet ? 'border-amber-600/50' : 'border-gray-700'
+      } ${className}`}
     >
+      {/* Testnet warning banner */}
+      {isTestnet && (
+        <div className="mb-3 bg-amber-500/15 border border-amber-500/30 rounded-lg px-3 py-2 flex items-center gap-2">
+          <span className="text-amber-400 text-lg">⚠️</span>
+          <div className="flex-1">
+            <p className="text-xs font-semibold text-amber-300">TESTNET MODE</p>
+            <p className="text-xs text-amber-200/70">Using test tokens - no real funds</p>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col space-y-3">
         {/* Wallet and connection status */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            <span className="text-sm font-semibold text-green-400">
-              Connected
+            <div className={`w-2 h-2 rounded-full animate-pulse ${isTestnet ? 'bg-amber-400' : 'bg-green-400'}`} />
+            <span className={`text-sm font-semibold ${isTestnet ? 'text-amber-400' : 'text-green-400'}`}>
+              {isTestnet ? 'Connected (Testnet)' : 'Connected'}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -143,13 +180,12 @@ export default function WalletInfo({
             </span>
             {showNetworkIndicator && (
               <span
-                className={`text-xs bg-${getChainColor(
-                  state.chainId
-                )}-500/20 text-${getChainColor(
-                  state.chainId
-                )}-300 px-2 py-1 rounded-full`}
+                className={`text-xs bg-${chainColor}-500/20 text-${chainColor}-300 px-2 py-1 rounded-full flex items-center gap-1 ${
+                  isTestnet ? 'font-semibold' : ''
+                }`}
               >
                 {getChainName(state.chainId)}
+                {isTestnet && <span className="ml-1 font-bold">●</span>}
               </span>
             )}
           </div>

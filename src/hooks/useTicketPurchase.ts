@@ -210,8 +210,8 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
         // Stacks uses cross-chain bridge, no direct Web3 initialization needed
         success = true;
       } else {
-        // Default: EVM Base purchase path
-        success = await web3Service.initialize();
+        // Default: EVM Base/BaseSepolia purchase path
+        success = await web3Service.initialize(undefined, chainId);
       }
 
       if (success) {
@@ -830,7 +830,7 @@ export function useTicketPurchase(): TicketPurchaseState & TicketPurchaseActions
     }
 
     if (!web3Service.isReady()) {
-      const initialized = await web3Service.initialize();
+      const initialized = await web3Service.initialize(undefined, chainId);
       if (!initialized) {
         throw new Error('Failed to initialize Base contracts. Please ensure your EVM wallet is connected.');
       }
