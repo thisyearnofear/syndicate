@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/crons/recurring-purchases",
-      "schedule": "0 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }

@@ -1,15 +1,17 @@
 /**
  * Recurring Purchases Cron Job
  * 
- * Triggered hourly by Vercel Cron
+ * Triggered daily by Vercel Cron
  * Orchestrates the recurring purchase automation flow:
  * 1. Query due purchases from database
  * 2. Verify permissions are valid
  * 3. Execute purchases on-chain
  * 4. Mark as executed in database
  * 
- * No authentication needed - only runs on Vercel infrastructure
+ * Protected by CRON_SECRET - only runs on Vercel infrastructure
  */
+
+export const dynamic = 'force-dynamic';
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { sql } from '@vercel/postgres';
