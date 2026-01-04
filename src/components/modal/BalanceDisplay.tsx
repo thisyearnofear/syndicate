@@ -15,6 +15,7 @@ import React, { useMemo } from "react";
 import { AlertCircle, Zap, Check } from "lucide-react";
 import { WalletTypes, STACKS_WALLETS } from "@/domains/wallet/types";
 import { Button } from "@/shared/components/ui/Button";
+import { useNetworkInfo } from "@/hooks/useNetworkInfo";
 
 interface BalanceDisplayProps {
   walletType?: string | null;
@@ -63,6 +64,7 @@ export function BalanceDisplay({
 }: BalanceDisplayProps) {
   const chainInfo = useMemo(() => getChainIcon(walletType), [walletType]);
   const status = useMemo(() => getBalanceStatus(balance, requiredAmount, isCheckingBalance), [balance, requiredAmount, isCheckingBalance]);
+  const networkInfo = useNetworkInfo();
 
   const balanceNum = balance ? parseFloat(balance) : 0;
   const requiredNum = parseFloat(requiredAmount || '0');
@@ -75,7 +77,15 @@ export function BalanceDisplay({
   }
 
   return (
-    <div className="glass rounded-xl p-4 border border-white/10">
+    <div className={`glass rounded-xl p-4 border ${networkInfo.isTestnet ? 'border-amber-600/30 bg-amber-950/10' : 'border-white/10'}`}>
+      {/* Testnet warning in balance display */}
+      {networkInfo.isTestnet && (
+        <div className="mb-3 text-xs text-amber-400 flex items-center gap-1">
+          <span>⚠️ Testnet</span>
+          <span className="text-amber-300/70">({networkInfo.nativeToken})</span>
+        </div>
+      )}
+
       {/* Header: Chain + Balance */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -89,7 +99,7 @@ export function BalanceDisplay({
                   Checking...
                 </span>
               ) : balance !== null && balance !== undefined ? (
-                `$${parseFloat(balance).toFixed(2)} USDC`
+                `$${parseFloat(balance).toFixed(2)} ${networkInfo.nativeToken}`
               ) : (
                 'Unknown'
               )}

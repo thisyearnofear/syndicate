@@ -7,7 +7,7 @@
 
 import { ethers } from 'ethers';
 import type { BigNumberish } from 'ethers';
-import { CONTRACTS } from '@/config';
+import { CONTRACTS, getMegapotAddressForChain } from '@/config';
 import type { SyndicateImpact } from '@/domains/lottery/types';
 
 // Megapot contract ABI (minimal required functions)
@@ -107,8 +107,9 @@ class Web3Service {
   /**
    * Initialize Web3 service with user's wallet
    * @param readOnlyRpcUrl Optional: If provided, initializes in read-only mode without wallet
+   * @param chainId Optional: Chain ID to get the correct contract addresses (defaults to Base mainnet)
    */
-  async initialize(readOnlyRpcUrl?: string): Promise<boolean> {
+  async initialize(readOnlyRpcUrl?: string, chainId?: number): Promise<boolean> {
     try {
       // Check if we're in a browser environment
       if (!isBrowser()) {
@@ -116,21 +117,26 @@ class Web3Service {
         return false;
       }
 
+      // Update contract addresses based on chain if provided
+      if (chainId) {
+        this.megapotContractAddress = getMegapotAddressForChain(chainId);
+      }
+
       // NEW: Try read-only mode if requested or if no wallet is available
       if (readOnlyRpcUrl) {
-        return this.initializeReadOnly(readOnlyRpcUrl);
+        return this.initializeReadOnly(readOnlyRpcUrl, chainId);
       }
 
       if (!('ethereum' in window) || !window.ethereum) {
         // NEW: Fall back to read-only mode using public RPC
         console.warn('No wallet found, initializing in read-only mode');
-        return this.initializeReadOnly();
+        return this.initializeReadOnly(undefined, chainId);
       }
 
       this.provider = new ethers.BrowserProvider(window.ethereum);
 
-      // Ensure we're on Base network BEFORE marking as initialized
-      await this.ensureCorrectNetwork();
+      // Ensure we're on correct network BEFORE marking as initialized
+      await this.ensureCorrectNetwork(chainId);
 
       this.signer = await this.provider.getSigner();
       this.megapotContract = new ethers.Contract(
@@ -159,10 +165,18 @@ class Web3Service {
    * NEW: Initialize in read-only mode using JSON-RPC provider
    * Useful for NEAR Intents cross-chain purchases where wallet connection isn't available
    */
-  private async initializeReadOnly(rpcUrl?: string): Promise<boolean> {
+  private async initializeReadOnly(rpcUrl?: string, chainId?: number): Promise<boolean> {
     try {
       const { CHAINS } = await import('@/config');
-      const url = rpcUrl || CHAINS.base.rpcUrl;
+      
+      // Update contract addresses based on chain if provided
+      if (chainId) {
+        this.megapotContractAddress = getMegapotAddressForChain(chainId);
+      }
+      
+      // Select correct chain based on chainId
+      const chainConfig = chainId === 84532 ? CHAINS.baseSepolia : CHAINS.base;
+      const url = rpcUrl || chainConfig.rpcUrl;
       
       // Use JsonRpcProvider for read-only access
       this.provider = new ethers.JsonRpcProvider(url);
@@ -218,36 +232,38 @@ class Web3Service {
   }
 
   /**
-   * Ensure user is connected to Base network
+   * Ensure user is connected to correct network
    */
-  private async ensureCorrectNetwork(): Promise<void> {
+  private async ensureCorrectNetwork(chainId?: number): Promise<void> {
     if (!this.provider) throw new Error('Provider not initialized');
     if (!isBrowser()) return;
 
     const network = await this.provider.getNetwork();
-    const baseChainId = BigInt(8453); // Base mainnet
+    const targetChainId = BigInt(chainId ?? 8453); // Default to Base mainnet if not specified
 
-    if (network.chainId !== baseChainId) {
+    if (network.chainId !== targetChainId) {
       if (!window.ethereum) {
         throw new Error('Ethereum provider not found');
       }
       try {
+        const hexChainId = chainId === 84532 ? '0x14A34' : '0x2105'; // Base Sepolia or Base mainnet
         await window.ethereum.request({
           method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0x2105' }], // Base mainnet in hex
+          params: [{ chainId: hexChainId }],
         });
       } catch (switchError: unknown) {
-        // If Base network is not added to wallet, add it
+        // If network is not added to wallet, add it
         const code = (switchError as { code?: number }).code;
         if (code === 4902) {
           if (!window.ethereum) {
             throw new Error('Ethereum provider not found');
           }
+          const chainName = chainId === 84532 ? 'Base Sepolia' : 'Base';
           await window.ethereum.request({
             method: 'wallet_addEthereumChain',
             params: [{
-              chainId: '0x2105',
-              chainName: 'Base',
+              chainId: chainId === 84532 ? '0x14A34' : '0x2105',
+              chainName: chainName,
               nativeCurrency: {
                 name: 'Ethereum',
                 symbol: 'ETH',

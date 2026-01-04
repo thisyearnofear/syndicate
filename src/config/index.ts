@@ -84,8 +84,18 @@ export const DEFAULT_CHAIN = CHAINS.base;
 // CONTRACT CONFIGURATION
 // =============================================================================
 
+/**
+ * Megapot contract addresses by chain
+ * Testnet (Base Sepolia): 0x6f03c7BCaDAdBf5E6F5900DA3d56AdD8FbDac5De with mock MPUSDC
+ * Prod (Base Mainnet): 0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95 with real USDC
+ */
+const MEGAPOT_BY_CHAIN: Record<number, `0x${string}`> = {
+  [CHAIN_IDS.BASE]: '0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95',           // Base mainnet (prod)
+  [CHAIN_IDS.BASE_SEPOLIA]: '0x6f03c7BCaDAdBf5E6F5900DA3d56AdD8FbDac5De',   // Base Sepolia (testnet)
+};
+
 export const CONTRACTS = {
-  // Megapot lottery contract on Base
+  // Megapot lottery contract - chain-aware with env override
   megapot: process.env.NEXT_PUBLIC_MEGAPOT_CONTRACT || "0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95",
 
   // Syndicate coordination contract
@@ -106,6 +116,13 @@ export const CONTRACTS = {
   // USDC token on Base
   usdc: process.env.NEXT_PUBLIC_USDC_TOKEN_ADDRESS || "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
 } as const;
+
+/**
+ * Get Megapot contract address for current chain
+ */
+export function getMegapotAddressForChain(chainId: number): `0x${string}` {
+  return MEGAPOT_BY_CHAIN[chainId] || CONTRACTS.megapot as `0x${string}`;
+}
 
 // Contract events
 export const CONTRACT_EVENTS = {
