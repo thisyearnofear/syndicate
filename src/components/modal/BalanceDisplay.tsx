@@ -149,30 +149,44 @@ export function BalanceDisplay({
       </div>
 
       {/* Action buttons */}
-      <div className="flex gap-2 mt-4">
+      <div className="flex flex-col gap-2 mt-4">
         {isCheckingBalance ? (
           <button
             disabled
-            className="flex-1 text-xs text-gray-500 py-2 px-3 rounded-lg bg-white/5 cursor-not-allowed"
+            className="w-full text-xs text-gray-500 py-2 px-3 rounded-lg bg-white/5 cursor-not-allowed"
           >
             Checking balance...
           </button>
         ) : (
           <>
-            <button
-              onClick={onRefresh}
-              className="flex-1 text-xs py-2 px-3 rounded-lg bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors"
-            >
-              Refresh
-            </button>
-            {hasDeficit && onBridge && (
+            <div className="flex gap-2">
               <button
-                onClick={onBridge}
-                className="flex-1 text-xs py-2 px-3 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 hover:text-blue-200 transition-colors border border-blue-500/30 font-semibold flex items-center justify-center gap-1"
+                onClick={onRefresh}
+                className="flex-1 text-xs py-2 px-3 rounded-lg bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors"
               >
-                <Zap className="w-3 h-3" />
-                Bridge from another chain
+                Refresh
               </button>
+              {hasDeficit && onBridge && (
+                <button
+                  onClick={onBridge}
+                  className="flex-1 text-xs py-2 px-3 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 hover:text-blue-200 transition-colors border border-blue-500/30 font-semibold flex items-center justify-center gap-1"
+                >
+                  <Zap className="w-3 h-3" />
+                  Bridge
+                </button>
+              )}
+            </div>
+
+            {/* Testnet: Mint MPUSDC link */}
+            {networkInfo.isTestnet && hasDeficit && (
+              <a
+                href="https://sepolia.basescan.org/address/0xA4253E7C13525287C56550b8708100f93E60509f#writeContract"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full text-xs py-2 px-3 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 hover:text-amber-200 transition-colors border border-amber-500/30 font-semibold text-center"
+              >
+                🔗 Mint Test MPUSDC
+              </a>
             )}
           </>
         )}
