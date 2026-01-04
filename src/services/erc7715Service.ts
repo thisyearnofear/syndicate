@@ -19,7 +19,7 @@
  */
 
 import { createWalletClient, custom, WalletClient, Address } from 'viem';
-import { sepolia, base, mainnet, avalanche } from 'viem/chains';
+import { sepolia, base, mainnet, baseSepolia } from 'viem/chains';
 // Import directly from the specific actions entry point to ensure correct resolution
 import { erc7715ProviderActions } from '@metamask/smart-accounts-kit/actions';
 // =============================================================================
@@ -100,9 +100,10 @@ export interface ERC7715Grant {
 // =============================================================================
 
 const SUPPORTED_CHAINS = [
-  8453,  // Base
-  1,     // Ethereum
-  43114, // Avalanche
+  84532, // Base Sepolia (Testnet - ERC-7715 enabled for hackathon)
+  8453,  // Base (Mainnet - ERC-7715 now supported)
+  1,     // Ethereum (Mainnet)
+  11155111, // Ethereum Sepolia
 ];
 
 const FLASK_VERSION_MINIMUM = { major: 13, minor: 9 };
@@ -508,14 +509,16 @@ export class ERC7715Service {
    */
   private getChainFromId(chainId: number) {
     switch (chainId) {
+      case 84532:
+        return baseSepolia; // Base Sepolia - ERC-7715 enabled for hackathon
       case 8453:
         return base;
       case 1:
         return mainnet;
-      case 43114:
-        return avalanche;
+      case 11155111:
+        return sepolia; // Ethereum Sepolia
       default:
-        return sepolia; // Fallback
+        return base; // Fallback to Base
     }
   }
 
