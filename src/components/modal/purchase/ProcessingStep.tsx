@@ -183,9 +183,9 @@ const STAGE_INFO: Record<string, {
   },
   evm_requesting_permission: {
     label: "Requesting advanced permissions",
-    description: "Asking MetaMask Flask to grant ERC-7715 spending permissions",
+    description: "Asking MetaMask Flask to grant ERC-7715 spending permissions (Base Sepolia testnet)",
     estimatedSeconds: 10,
-    tip: "👉 Approve the permission request in your MetaMask Flask wallet",
+    tip: "👉 Approve the permission request in your MetaMask Flask wallet. ERC-7715 is available on Base Sepolia testnet.",
   },
   evm_permission_granted: {
     label: "✅ Permissions granted",
