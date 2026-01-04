@@ -83,6 +83,7 @@ Visit `http://localhost:3000` to try the platform.
 | ------------------------------------------- | -------------------------------------------------------- |
 | [Development Guide](./docs/setup/DEVELOPMENT.md)  | Setup, testing, deployment, and troubleshooting         |
 | [Implementation](./docs/project/IMPLEMENTATION.md)  | Technical architecture and system enhancements          |
+| [**ERC-7715 Setup (Judges)**](./ERC7715_SETUP_FOR_JUDGES.md) | **How to test Advanced Permissions on Base Sepolia**    |
 | [**Stacks Bridge**](./docs/bridges/STACKS_BRIDGE.md) | **Stacks bridge operator setup & deployment guide**     |
 | [Roadmap & Project](./docs/project/ROADMAP_PROJECT.md) | Project planning, timeline, and hackathon strategy     |
 | [Cross-Chain Technical](./docs/bridges/CROSSCHAIN_TECHNICAL.md) | Bridge protocols, NEAR Intents, and technical flows |
