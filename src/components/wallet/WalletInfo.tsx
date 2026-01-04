@@ -155,11 +155,22 @@ export default function WalletInfo({
     >
       {/* Testnet warning banner */}
       {isTestnet && (
-        <div className="mb-3 bg-amber-500/15 border border-amber-500/30 rounded-lg px-3 py-2 flex items-center gap-2">
-          <span className="text-amber-400 text-lg">⚠️</span>
-          <div className="flex-1">
+        <div className="mb-3 bg-amber-500/15 border border-amber-500/30 rounded-lg px-3 py-2 flex items-start gap-2">
+          <span className="text-amber-400 text-lg flex-shrink-0">⚠️</span>
+          <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-amber-300">TESTNET MODE</p>
             <p className="text-xs text-amber-200/70">Using test tokens - no real funds</p>
+            <p className="text-xs text-amber-200/60 mt-1">
+              Need test tokens? 
+              <a 
+                href="https://sepolia.basescan.org/address/0xA4253E7C13525287C56550b8708100f93E60509f#writeContract"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-amber-300 hover:text-amber-200 underline ml-1"
+              >
+                Mint MPUSDC →
+              </a>
+            </p>
           </div>
         </div>
       )}
