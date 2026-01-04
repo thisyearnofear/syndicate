@@ -243,22 +243,9 @@ export class ERC7715Service {
 
       console.log('[ERC7715] Requesting permissions via Smart Accounts Kit...');
 
-      console.log('[ERC7715] Ensuring Delegation Snap is installed...');
-
-      const snapId = 'npm:@metamask/gator-permissions-snap';
-
-      try {
-        // Request the Delegation Toolkit Snap
-        await provider.request({
-          method: 'wallet_requestSnaps',
-          params: {
-            [snapId]: {},
-          },
-        });
-        console.log('[ERC7715] Snap installed/connected');
-      } catch (snapError) {
-        console.warn('[ERC7715] Snap request failed, attempting permissions request anyway:', snapError);
-      }
+      // REMOVED: Manual Snap installation of @metamask/gator-permissions-snap
+      // The SDK or Wallet should handle the necessary capabilities.
+      // Explicitly requesting a blocked/experimental snap causes allowlist errors.
 
       console.log('[ERC7715] Requesting permissions via Smart Accounts Kit (SDK)...');
 
@@ -286,12 +273,12 @@ export class ERC7715Service {
           type,
           data: {
             tokenAddress: target,
-            periodAmount: limit,  // bigint - already correct type
-            periodDuration: periodDuration,  // number in seconds - already correct type
+            periodAmount: limit,
+            periodDuration: periodDuration,
             justification: `Permission to spend ${limit.toString()} tokens ${period}`,
           },
+          isAdjustmentAllowed: true,
         },
-        isAdjustmentAllowed: true,  // Allow user to modify in MetaMask UI
       }]);
 
       if (!grantedPermissions || grantedPermissions.length === 0) {
