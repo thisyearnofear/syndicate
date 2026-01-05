@@ -7,7 +7,7 @@
 
 import { ethers } from 'ethers';
 import type { BigNumberish } from 'ethers';
-import { CONTRACTS, getMegapotAddressForChain } from '@/config';
+import { CONTRACTS, getMegapotAddressForChain, getUsdcAddressForChain } from '@/config';
 import type { SyndicateImpact } from '@/domains/lottery/types';
 
 // Megapot contract ABI (minimal required functions)
@@ -120,6 +120,7 @@ class Web3Service {
       // Update contract addresses based on chain if provided
       if (chainId) {
         this.megapotContractAddress = getMegapotAddressForChain(chainId);
+        this.usdcContractAddress = getUsdcAddressForChain(chainId);
       }
 
       // NEW: Try read-only mode if requested or if no wallet is available
@@ -172,6 +173,7 @@ class Web3Service {
       // Update contract addresses based on chain if provided
       if (chainId) {
         this.megapotContractAddress = getMegapotAddressForChain(chainId);
+        this.usdcContractAddress = getUsdcAddressForChain(chainId);
       }
       
       // Select correct chain based on chainId
