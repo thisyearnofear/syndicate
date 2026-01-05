@@ -94,6 +94,13 @@ const MEGAPOT_BY_CHAIN: Record<number, `0x${string}`> = {
   [CHAIN_IDS.BASE_SEPOLIA]: '0x6f03c7BCaDAdBf5E6F5900DA3d56AdD8FbDac5De',   // Base Sepolia (testnet)
 };
 
+const USDC_BY_CHAIN: Record<number, `0x${string}`> = {
+  [CHAIN_IDS.BASE]: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',           // Base mainnet USDC.e
+  [CHAIN_IDS.BASE_SEPOLIA]: '0x036CbD53842c5426634E7929541eC2318f3dCd01',   // Base Sepolia testnet USDC
+  [CHAIN_IDS.ETHEREUM]: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',       // Ethereum mainnet USDC
+  [CHAIN_IDS.SEPOLIA]: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',       // Ethereum Sepolia testnet USDC
+};
+
 export const CONTRACTS = {
   // Megapot lottery contract - chain-aware with env override
   megapot: process.env.NEXT_PUBLIC_MEGAPOT_CONTRACT || "0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95",
@@ -122,6 +129,13 @@ export const CONTRACTS = {
  */
 export function getMegapotAddressForChain(chainId: number): `0x${string}` {
   return MEGAPOT_BY_CHAIN[chainId] || CONTRACTS.megapot as `0x${string}`;
+}
+
+/**
+ * Get USDC contract address for current chain
+ */
+export function getUsdcAddressForChain(chainId: number): `0x${string}` {
+  return USDC_BY_CHAIN[chainId] || CONTRACTS.usdc as `0x${string}`;
 }
 
 // Contract events
