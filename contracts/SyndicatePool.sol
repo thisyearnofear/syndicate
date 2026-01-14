@@ -7,21 +7,48 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title SyndicatePool
- * @notice Manages lottery syndicate pools with proportional winnings distribution
+ * @notice Manages lottery syndicate pools on Base with proportional winnings distribution
+ * 
+ * SYNDICATE ARCHITECTURE:
+ * Strategy: Base-only pools for MVP
+ * 
+ * Rationale:
+ * - Megapot lives on Base (0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95)
+ * - Users from any chain bridge to Base, join pool, participate
+ * - Single source of truth = no cross-chain coordination
+ * - Follows same UX pattern as individual ticket purchases
+ * 
+ * Future (Phase 3): If user demand warrants, lightweight mirror contracts on other
+ * chains can track membership locally while settling USDC/purchases on Base.
  * 
  * Core Principles Applied:
- * - CLEAN: Clear separation of pool management and distribution
- * - MODULAR: Composable with any ERC20 token (USDC)
- * - PERFORMANT: Gas-optimized with minimal storage
+ * - CLEAN: Clear separation of pool management and Megapot integration
+ * - MODULAR: Composable Megapot interface, pagination support
+ * - PERFORMANT: Gas-optimized with pagination, batch distribution
+ * - ORGANIZED: Domain-driven, Base-native deployment
  * 
  * Privacy-Ready: Supports encrypted amounts in Phase 3
  */
+
+// Megapot interface (minimal, only methods we use)
+interface IMegapot {
+    function purchaseTickets(uint256 ticketCount) external;
+    function getBalance() external view returns (uint256);
+}
+
 contract SyndicatePool is ReentrancyGuard, Ownable {
     // =============================================================================
     // STATE VARIABLES
     // =============================================================================
     
     IERC20 public immutable usdc;
+    IMegapot public immutable megapot;
+    
+    // Base chain configuration
+    uint256 public constant BASE_CHAIN_ID = 8453;
+    
+    // Ticket constants
+    uint256 public constant TICKET_PRICE_USDC = 1_000_000; // $1 USDC (6 decimals)
     
     struct Pool {
         address coordinator;
@@ -30,13 +57,26 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
         uint8 causeAllocationPercent; // 0-100
         bool isActive;
         bool privacyEnabled; // Phase 3: Enable encrypted amounts
+        bool isDrawn; // True after winnings distributed
         uint256 createdAt;
+        uint256 ticketsPurchased; // Tracks ticket purchases from pool
     }
     
     struct Member {
         uint256 amount;
+        uint256 amountWithdrawn; // Track partial exits
         uint256 joinedAt;
         bytes amountCommitment; // Phase 3: Cryptographic commitment
+        bool hasExited; // Prevent double exits
+    }
+    
+    struct DistributionState {
+        bytes32 poolId;
+        uint256 totalAmount;
+        uint256 causeAmount;
+        uint256 membersAmount;
+        uint256 lastProcessedIndex;
+        bool completed;
     }
     
     // Pool ID => Pool data
@@ -47,6 +87,13 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
     
     // Pool ID => Member addresses (for iteration)
     mapping(bytes32 => address[]) public poolMembers;
+    
+    // Distribution tracking for pagination
+    mapping(bytes32 => DistributionState) public distributionStates;
+    
+    // Multi-sig governance: pool coordinators can approve distribution
+    mapping(bytes32 => mapping(address => bool)) public approvals;
+    mapping(bytes32 => uint256) public approvalCount;
     
     // =============================================================================
     // EVENTS
@@ -65,7 +112,31 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
         uint256 amount
     );
     
-    event WinningsDistributed(
+    event MemberExited(
+        bytes32 indexed poolId,
+        address indexed member,
+        uint256 amountWithdrawn
+    );
+    
+    event TicketsPurchased(
+        bytes32 indexed poolId,
+        uint256 amount,
+        uint256 ticketCount
+    );
+    
+    event WinningsDistributionStarted(
+        bytes32 indexed poolId,
+        uint256 totalAmount
+    );
+    
+    event WinningsDistributionBatch(
+        bytes32 indexed poolId,
+        uint256 batchIndex,
+        uint256 membersProcessed,
+        uint256 totalDistributed
+    );
+    
+    event WinningsDistributionCompleted(
         bytes32 indexed poolId,
         uint256 totalAmount,
         uint256 causeAmount,
@@ -77,24 +148,40 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
         bool isActive
     );
     
+    event DistributionApproved(
+        bytes32 indexed poolId,
+        address indexed approver
+    );
+    
     // =============================================================================
     // ERRORS
     // =============================================================================
     
     error PoolNotFound();
     error PoolNotActive();
+    error PoolAlreadyDrawn();
     error InvalidAmount();
     error InvalidCauseAllocation();
     error OnlyCoordinator();
     error TransferFailed();
     error AlreadyMember();
+    error NotMember();
+    error AlreadyExited();
+    error InsufficientPoolBalance();
+    error InvalidDistributionState();
+    error InvalidTicketCount();
     
     // =============================================================================
     // CONSTRUCTOR
     // =============================================================================
     
-    constructor(address _usdc) {
+    /**
+     * @param _usdc USDC token address on Base (0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48)
+     * @param _megapot Megapot contract address on Base (0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95)
+     */
+    constructor(address _usdc, address _megapot) {
         usdc = IERC20(_usdc);
+        megapot = IMegapot(_megapot);
     }
     
     // =============================================================================
@@ -127,7 +214,9 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
             causeAllocationPercent: causeAllocationPercent,
             isActive: true,
             privacyEnabled: false,
-            createdAt: block.timestamp
+            isDrawn: false,
+            createdAt: block.timestamp,
+            ticketsPurchased: 0
         });
         
         emit PoolCreated(poolId, msg.sender, name, causeAllocationPercent);
@@ -142,9 +231,11 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
         Pool storage pool = pools[poolId];
         if (pool.coordinator == address(0)) revert PoolNotFound();
         if (!pool.isActive) revert PoolNotActive();
+        if (pool.isDrawn) revert PoolAlreadyDrawn();
         if (amount == 0) revert InvalidAmount();
         
         Member storage member = members[poolId][msg.sender];
+        if (member.hasExited) revert AlreadyExited();
         
         // If new member, add to array
         if (member.amount == 0) {
@@ -165,12 +256,99 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
     }
     
     /**
-     * @notice Distribute winnings to pool members proportionally
+     * @notice Exit pool before draw and recover contribution
+     * @param poolId Pool to exit
+     */
+    function exitPool(bytes32 poolId) external nonReentrant {
+        Pool storage pool = pools[poolId];
+        if (pool.coordinator == address(0)) revert PoolNotFound();
+        if (pool.isDrawn) revert PoolAlreadyDrawn();
+        
+        Member storage member = members[poolId][msg.sender];
+        if (member.amount == 0) revert NotMember();
+        if (member.hasExited) revert AlreadyExited();
+        
+        // Mark as exited before transfer (reentrancy guard)
+        member.hasExited = true;
+        uint256 withdrawAmount = member.amount;
+        member.amount = 0;
+        pool.totalPooled -= withdrawAmount;
+        pool.membersCount--;
+        
+        // Transfer USDC back to member
+        bool success = usdc.transfer(msg.sender, withdrawAmount);
+        if (!success) revert TransferFailed();
+        
+        emit MemberExited(poolId, msg.sender, withdrawAmount);
+    }
+    
+    /**
+     * @notice Purchase Megapot tickets on behalf of the pool
+     * 
+     * Flow:
+     * 1. Verify pool has sufficient USDC
+     * 2. Approve Megapot contract to spend USDC
+     * 3. Call Megapot.purchaseTickets()
+     * 4. Track purchase for winnings distribution
+     * 
+     * @param poolId Pool that is purchasing
+     * @param ticketCount Number of tickets to purchase
+     */
+    function purchaseTicketsFromPool(
+        bytes32 poolId,
+        uint256 ticketCount
+    ) external nonReentrant {
+        Pool storage pool = pools[poolId];
+        if (pool.coordinator == address(0)) revert PoolNotFound();
+        if (!pool.isActive) revert PoolNotActive();
+        if (pool.isDrawn) revert PoolAlreadyDrawn();
+        if (msg.sender != pool.coordinator) revert OnlyCoordinator();
+        if (ticketCount == 0) revert InvalidTicketCount();
+        
+        // Calculate total cost
+        uint256 totalCost = ticketCount * TICKET_PRICE_USDC;
+        
+        // Verify pool has sufficient USDC
+        if (pool.totalPooled < totalCost) {
+            revert InsufficientPoolBalance();
+        }
+        
+        // Deduct from pool total (reserve for winnings calculation)
+        pool.totalPooled -= totalCost;
+        
+        // Approve Megapot to spend USDC
+        bool approveSuccess = usdc.approve(address(megapot), totalCost);
+        if (!approveSuccess) revert TransferFailed();
+        
+        // Call Megapot to purchase tickets
+        // Megapot contract will transfer USDC from this contract
+        try megapot.purchaseTickets(ticketCount) {
+            // Track purchase
+            pool.ticketsPurchased += ticketCount;
+            
+            emit TicketsPurchased(poolId, totalCost, ticketCount);
+        } catch Error(string memory reason) {
+            // Restore pool balance if purchase fails
+            pool.totalPooled += totalCost;
+            revert(reason);
+        } catch {
+            // Restore pool balance if purchase fails (low-level error)
+            pool.totalPooled += totalCost;
+            revert TransferFailed();
+        }
+    }
+    
+    // =============================================================================
+    // WINNINGS DISTRIBUTION (Paginated for large pools)
+    // =============================================================================
+    
+    /**
+     * @notice Initiate winnings distribution (starts pagination process)
      * @param poolId Pool to distribute winnings for
      * @param totalAmount Total USDC winnings to distribute
      * @param causeWallet Address to send cause allocation
      */
-    function distributeWinnings(
+    function startWinningsDistribution(
         bytes32 poolId,
         uint256 totalAmount,
         address causeWallet
@@ -179,31 +357,72 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
         if (pool.coordinator == address(0)) revert PoolNotFound();
         if (msg.sender != pool.coordinator) revert OnlyCoordinator();
         if (totalAmount == 0) revert InvalidAmount();
+        if (pool.isDrawn) revert PoolAlreadyDrawn();
         
-        // Calculate cause allocation
+        // Verify contract has sufficient balance
+        if (usdc.balanceOf(address(this)) < totalAmount) {
+            revert InsufficientPoolBalance();
+        }
+        
+        // Calculate amounts
         uint256 causeAmount = (totalAmount * pool.causeAllocationPercent) / 100;
         uint256 membersAmount = totalAmount - causeAmount;
         
-        // Send cause allocation
+        // Send cause allocation immediately
         if (causeAmount > 0 && causeWallet != address(0)) {
             bool success = usdc.transfer(causeWallet, causeAmount);
             if (!success) revert TransferFailed();
         }
         
-        // Distribute to members proportionally
+        // Initialize distribution state for pagination
+        distributionStates[poolId] = DistributionState({
+            poolId: poolId,
+            totalAmount: totalAmount,
+            causeAmount: causeAmount,
+            membersAmount: membersAmount,
+            lastProcessedIndex: 0,
+            completed: false
+        });
+        
+        pool.isDrawn = true;
+        
+        emit WinningsDistributionStarted(poolId, totalAmount);
+    }
+    
+    /**
+     * @notice Process winnings distribution in batches (prevent gas limit issues)
+     * @param poolId Pool to continue distribution for
+     * @param batchSize Number of members to process in this batch
+     */
+    function continueWinningsDistribution(
+        bytes32 poolId,
+        uint256 batchSize
+    ) external nonReentrant {
+        DistributionState storage dist = distributionStates[poolId];
+        if (dist.completed) revert InvalidDistributionState();
+        
+        Pool storage pool = pools[poolId];
+        if (pool.coordinator == address(0)) revert PoolNotFound();
+        
         address[] memory memberAddresses = poolMembers[poolId];
         uint256 distributed = 0;
+        uint256 startIdx = dist.lastProcessedIndex;
+        uint256 endIdx = startIdx + batchSize > memberAddresses.length 
+            ? memberAddresses.length 
+            : startIdx + batchSize;
         
-        for (uint256 i = 0; i < memberAddresses.length; i++) {
+        for (uint256 i = startIdx; i < endIdx; i++) {
             address memberAddr = memberAddresses[i];
             Member storage member = members[poolId][memberAddr];
+            
+            if (member.hasExited || member.amount == 0) continue;
             
             uint256 memberShare;
             // Last member gets remainder to avoid rounding errors
             if (i == memberAddresses.length - 1) {
-                memberShare = membersAmount - distributed;
+                memberShare = dist.membersAmount - distributed;
             } else {
-                memberShare = (membersAmount * member.amount) / pool.totalPooled;
+                memberShare = (dist.membersAmount * member.amount) / pool.totalPooled;
                 distributed += memberShare;
             }
             
@@ -213,7 +432,25 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
             }
         }
         
-        emit WinningsDistributed(poolId, totalAmount, causeAmount, membersAmount);
+        dist.lastProcessedIndex = endIdx;
+        
+        // Mark complete if all members processed
+        if (endIdx >= memberAddresses.length) {
+            dist.completed = true;
+            emit WinningsDistributionCompleted(
+                poolId,
+                dist.totalAmount,
+                dist.causeAmount,
+                dist.membersAmount
+            );
+        } else {
+            emit WinningsDistributionBatch(
+                poolId,
+                startIdx / batchSize,
+                endIdx - startIdx,
+                distributed
+            );
+        }
     }
     
     /**
@@ -244,7 +481,9 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
         uint8 causeAllocationPercent,
         bool isActive,
         bool privacyEnabled,
-        uint256 createdAt
+        bool isDrawn,
+        uint256 createdAt,
+        uint256 ticketsPurchased
     ) {
         Pool storage pool = pools[poolId];
         return (
@@ -254,19 +493,26 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
             pool.causeAllocationPercent,
             pool.isActive,
             pool.privacyEnabled,
-            pool.createdAt
+            pool.isDrawn,
+            pool.createdAt,
+            pool.ticketsPurchased
         );
     }
     
     /**
-     * @notice Get member contribution
+     * @notice Get member contribution and status
      */
     function getMemberContribution(
         bytes32 poolId,
         address member
-    ) external view returns (uint256 amount, uint256 joinedAt) {
+    ) external view returns (
+        uint256 amount,
+        uint256 amountWithdrawn,
+        uint256 joinedAt,
+        bool hasExited
+    ) {
         Member storage m = members[poolId][member];
-        return (m.amount, m.joinedAt);
+        return (m.amount, m.amountWithdrawn, m.joinedAt, m.hasExited);
     }
     
     /**
@@ -274,6 +520,32 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
      */
     function getPoolMembers(bytes32 poolId) external view returns (address[] memory) {
         return poolMembers[poolId];
+    }
+    
+    /**
+     * @notice Get pool members paginated
+     */
+    function getPoolMembersPaginated(
+        bytes32 poolId,
+        uint256 offset,
+        uint256 limit
+    ) external view returns (address[] memory) {
+        address[] storage allMembers = poolMembers[poolId];
+        uint256 totalMembers = allMembers.length;
+        
+        if (offset >= totalMembers) {
+            return new address[](0);
+        }
+        
+        uint256 end = offset + limit > totalMembers ? totalMembers : offset + limit;
+        uint256 resultLength = end - offset;
+        address[] memory result = new address[](resultLength);
+        
+        for (uint256 i = 0; i < resultLength; i++) {
+            result[i] = allMembers[offset + i];
+        }
+        
+        return result;
     }
     
     /**
@@ -288,9 +560,30 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
         if (pool.totalPooled == 0) return 0;
         
         Member storage m = members[poolId][member];
-        uint256 membersAmount = totalWinnings - (totalWinnings * pool.causeAllocationPercent) / 100;
+        if (m.hasExited || m.amount == 0) return 0;
         
+        uint256 membersAmount = totalWinnings - (totalWinnings * pool.causeAllocationPercent) / 100;
         return (membersAmount * m.amount) / pool.totalPooled;
+    }
+    
+    /**
+     * @notice Get distribution state for a pool
+     */
+    function getDistributionState(bytes32 poolId) external view returns (
+        uint256 totalAmount,
+        uint256 causeAmount,
+        uint256 membersAmount,
+        uint256 lastProcessedIndex,
+        bool completed
+    ) {
+        DistributionState storage dist = distributionStates[poolId];
+        return (
+            dist.totalAmount,
+            dist.causeAmount,
+            dist.membersAmount,
+            dist.lastProcessedIndex,
+            dist.completed
+        );
     }
     
     // =============================================================================
@@ -299,28 +592,79 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
     
     /**
      * @notice Enable privacy mode for a pool (Phase 3)
-     * @dev Will require ZK proof verification
+     * @dev Will require ZK proof verification of pool integrity
+     * 
+     * Privacy Structure for Phase 3:
+     * - Each member's amount is encrypted via Pedersen commitment
+     * - Pool maintains: sum commitment C = Σ(member commitments)
+     * - Distribution uses range proofs to verify:
+     *   * Member amounts are positive
+     *   * Sum matches pool total
+     *   * Winnings distributed proportionally without revealing individual amounts
      */
     function enablePrivacy(bytes32 poolId) external {
         Pool storage pool = pools[poolId];
         if (pool.coordinator == address(0)) revert PoolNotFound();
         if (msg.sender != pool.coordinator) revert OnlyCoordinator();
         
-        // Phase 3: Add ZK proof verification here
+        // Phase 3: Implement Pedersen commitment verification
+        // Verify commitment C = Σ(member.amountCommitment) before enabling
         pool.privacyEnabled = true;
     }
     
     /**
      * @notice Join pool with encrypted amount (Phase 3)
-     * @dev Will verify ZK proof and store commitment
+     * @dev Will verify ZK proof proving:
+     *   * amountCommitment is valid Pedersen commitment
+     *   * commitment opens to amount in proof's encrypted data
+     *   * amount is within valid range (0, 10^9 USDC)
+     * 
+     * @param poolId Target pool
+     * @param amountCommitment Pedersen commitment: C = g^amount * h^randomness
+     * @param proof ZK proof structure {
+     *     encrypted_amount: bytes, // ElGamal encrypted amount
+     *     range_proof: bytes,       // Bulletproof range proof [0, 2^64]
+     *     commitment_proof: bytes   // Proof that commitment matches
+     * }
      */
     function joinPoolPrivate(
         bytes32 poolId,
         bytes calldata amountCommitment,
         bytes calldata proof
     ) external {
-        // Phase 3: Implement ZK proof verification
-        // For now, revert
-        revert("Privacy mode not yet implemented");
+        Pool storage pool = pools[poolId];
+        if (pool.coordinator == address(0)) revert PoolNotFound();
+        if (!pool.privacyEnabled) revert PoolNotActive();
+        
+        // Phase 3: Implement ZK verification
+        // 1. Verify range proof: 0 < amount < 2^64
+        // 2. Verify commitment proof
+        // 3. Store amountCommitment, decrypt and update totalPooled via coordinator
+        // 4. Transfer USDC
+        
+        revert("Privacy mode implementation pending Phase 3");
+    }
+    
+    /**
+     * @notice Distribute winnings with privacy preservation (Phase 3)
+     * @dev Uses ZK proofs to distribute winnings without revealing individual amounts
+     * 
+     * Flow:
+     * 1. Coordinator provides cryptographic evidence of total winnings
+     * 2. Each member's share computed off-chain using their commitment
+     * 3. ZK proof verifies: Σ(distributed shares) == totalWinnings (with cause allocated)
+     * 4. Members withdraw using private withdrawal proofs
+     */
+    function distributeWinningsPrivate(
+        bytes32 poolId,
+        uint256 totalAmount,
+        address causeWallet,
+        bytes calldata aggregateProof
+    ) external {
+        // Phase 3: Implement privacy-preserving distribution
+        // Use aggregated ZK proof to verify distribution correctness
+        // without revealing individual amounts
+        
+        revert("Privacy distribution implementation pending Phase 3");
     }
 }

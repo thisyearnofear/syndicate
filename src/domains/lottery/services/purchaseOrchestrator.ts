@@ -367,7 +367,20 @@ async function executeStacksPurchase(req: PurchaseRequest): Promise<PurchaseResu
 
 /**
  * Syndicate Pool Purchase Handler
- * ENHANCEMENT: Handles batch purchases for syndicate pools
+ * 
+ * ARCHITECTURE: Base-only syndicates (MVP)
+ * 
+ * Rationale:
+ * - All SyndicatePool contracts deployed to Base
+ * - Megapot lives on Base, not moving to other chains
+ * - Users from any chain can join by bridging USDC to Base first
+ * - Follows same pattern as individual ticket purchases
+ * 
+ * Future (Phase 3):
+ * - If user demand warrants, add lightweight mirror contracts on other chains
+ * - Mirror contracts track membership locally, settle on Base via bridges
+ * 
+ * ENHANCEMENT: Handles batch purchases for syndicate pools on Base
  */
 async function executeSyndicatePurchase(req: PurchaseRequest): Promise<PurchaseResult> {
   try {
@@ -381,13 +394,32 @@ async function executeSyndicatePurchase(req: PurchaseRequest): Promise<PurchaseR
       };
     }
 
+    // CRITICAL: Syndicate pools only exist on Base
+    // Users on other chains must bridge USDC to Base first
+    if (req.chain !== 'base') {
+      return {
+        success: false,
+        error: {
+          code: 'SYNDICATE_REQUIRES_BASE',
+          message: 'Syndicate pools are on Base. Please bridge your USDC to Base first.',
+          suggestedAction: 'bridge', // UI will show bridge modal
+        },
+      };
+    }
+
     // Import syndicate service dynamically
     const { syndicateService } = await import('@/domains/syndicate/services/syndicateService');
 
-    // Execute batch purchase for the pool
-    const result = await syndicateService.prepareAdHocBatchPurchase(
+    // Execute purchase on SyndicatePool contract
+    // This calls SyndicatePool.purchaseTicketsFromPool() which:
+    // 1. Verifies pool has sufficient USDC
+    // 2. Approves Megapot to spend USDC
+    // 3. Calls Megapot.purchaseTickets()
+    // 4. Tracks purchase for winnings distribution
+    const result = await syndicateService.executeSyndicatePurchase(
       req.syndicatePoolId,
-      req.ticketCount
+      req.ticketCount,
+      req.userAddress
     );
 
     if (!result.success) {

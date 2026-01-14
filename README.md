@@ -1,173 +1,66 @@
-# 🎯 Syndicate - Multi-Chain Lottery Platform
+## Foundry
 
-A multi-chain lottery platform built on top of [Megapot](https://megapot.io), enabling ticket purchases from any supported chain with native bridging, syndicate pooling, and DeFi yield strategies.
+**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
 
-## 🏗️ Three Layers
+Foundry consists of:
 
-### Layer 1: Direct Ticket Purchases
+-   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
+-   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
+-   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
+-   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
 
-**Simple, cross-chain lottery participation from your native wallet**
+## Documentation
 
-- **One Wallet, Any Chain**: Connect your native wallet from Stacks, Solana, NEAR, or EVM
-- **Seamless Bridging**: System automatically bridges assets to Base and buys tickets (no manual steps)
-- **No Account Creation**: Deterministic address derivation for NEAR and Stacks—your ticket lives on Base
-- **Supported Wallets**: 
-  - Stacks: Leather, Xverse, Asigna, Fordefi
-  - Solana: Phantom
-  - NEAR: NEAR Wallet
-  - EVM: MetaMask, WalletConnect (300+ wallets)
+https://book.getfoundry.sh/
 
-### Layer 2: Syndicates
+## Usage
 
-**Pooled participation with trustless distribution**
+### Build
 
-- Create or join pools of players to increase collective odds
-- **Pure Syndicates**: Split winnings proportionally among members
-- **Cause Syndicates**: Pre-commit winnings to good causes trustlessly via [0xSplits](https://splits.org)
-- Transparent, immutable distribution powered by smart contracts
-- Build community and drive participation through shared goals
-
-### Layer 3: DeFi Yield Strategies
-
-**Generate tickets from capital yields**
-
-- Deposit capital into DeFi vaults (Aave, Morpho, Spark)
-- Yield automatically converts to lottery tickets
-- Principal always protected—only yield is used
-- ERC-4626 vault standard for capital preservation
-
-## 🌐 Supported Chains
-
-| Chain           | Status         | Bridge Protocol | Wallets                      |
-| --------------- | -------------- | --------------- | ---------------------------- |
-| Base            | ✅ Primary     | Native          | MetaMask, WalletConnect      |
-| Ethereum        | ✅ Working     | CCTP, CCIP      | MetaMask, WalletConnect      |
-| Solana          | ✅ Working     | CCTP            | Phantom                      |
-| Polygon         | ✅ Working     | CCIP            | MetaMask, WalletConnect      |
-| Avalanche       | ✅ Working     | CCIP            | MetaMask, WalletConnect      |
-| Stacks (Bitcoin)| ✅ **Deployed** | Custom Bridge   | Leather, Xverse, Asigna, Fordefi |
-| Bitcoin/ICP     | 🔜 Planned     | ICP Canisters   | -                            |
-
-## 📊 Feature Status
-
-### ✅ Fully Operational
-- **Multi-wallet support** (MetaMask, Phantom, Web3Auth)
-- **Cross-chain bridges** (CCTP, CCIP, Wormhole)
-- **Lottery ticket purchases** via Megapot
-- **Transaction history** and balance tracking
-- **Advanced Permissions (ERC-7715)**: One-click auto-purchase with MetaMask delegation
-
-### 🚧 In Development (UI Complete, Smart Contracts Coming Q1 2025)
-- **Yield Strategies**: Aave, Morpho, Spark integration
-- **Syndicates**: Community pooling with governance models
-- Visible in dev mode with status banners when `NEXT_PUBLIC_SHOW_FEATURE_BANNERS=true`
-
-## 🚀 Quick Start
-
-```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
+```shell
+$ forge build
 ```
 
-Visit `http://localhost:3000` to try the platform.
+### Test
 
-## 📚 Documentation
-
-| Document                                    | Description                                              |
-| ------------------------------------------- | -------------------------------------------------------- |
-| [Development Guide](./docs/setup/DEVELOPMENT.md)  | Setup, testing, deployment, and troubleshooting         |
-| [Implementation](./docs/project/IMPLEMENTATION.md)  | Technical architecture and system enhancements          |
-| [**ERC-7715 Setup (Judges)**](./ERC7715_SETUP_FOR_JUDGES.md) | **How to test Advanced Permissions on Base Sepolia**    |
-| [**Stacks Bridge**](./docs/bridges/STACKS_BRIDGE.md) | **Stacks bridge operator setup & deployment guide**     |
-| [Roadmap & Project](./docs/project/ROADMAP_PROJECT.md) | Project planning, timeline, and hackathon strategy     |
-| [Cross-Chain Technical](./docs/bridges/CROSSCHAIN_TECHNICAL.md) | Bridge protocols, NEAR Intents, and technical flows |
-| [Testing Strategy](./docs/setup/TESTING.md)       | Test coverage, manual testing plan, and analysis        |
-
-## 🔐 Privacy & Security
-
-- No user database or KYC required
-- Direct wallet connections for maximum user control
-- Multi-chain support for enhanced privacy
-- Planned: Zero-knowledge proofs + Zcash integration (Q2 2025)
-- Planned: Private transaction relayers for bridge anonymity
-
-### Progress Update (Dec 2025)
-
-**Current Focus**: Seamless bridge flows across all supported chains
-
-- **Stacks Bridge V3 Live**: Complete multi-token bridge supporting USDC, sUSDT, and aeUSDC
-  - Contract: `SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3`
-  - Production-ready operator service with retry logic & monitoring
-  - Pre-funded USDC liquidity strategy
-  - Supports Clarity 3 multi-token standard
-  - See [Stacks Bridge Guide](./docs/bridges/STACKS_BRIDGE.md)
-
-- **NEAR Intents + Chain Signatures**: Complete end-to-end NEAR → Base ticket purchase
-  - Deterministic address derivation (no storage needed)
-  - 1Click SDK bridges USDC from NEAR to Base
-  - NEAR Chain Signatures executes Megapot purchase (MPC signing)
-  - No wallet switching required - seamless UX
-
-- **Solana Bridge**: In progress
-  - CCTP protocol integrated for Solana → Base
-  - Balance checking improved with better error diagnostics
-  - See [Solana Bridge Debug Guide](./docs/SOLANA_BRIDGE_DEBUG.md)
-  
-- **Enhanced for cross-chain parity**:
-  - Unified transaction status tracking across all chains
-  - Improved balance fetch error handling with user-friendly messages
-  - Loading states for async balance checks
-  - Feature status banners for transparent development visibility
-
-**Roadmap** (deferred to Q2 2026):
-- USDCx support on Stacks (Circle xReserve) - optional user choice between sBTC and USDCx
-
-## 📖 Documentation
-
-- **[Recurring Purchase Automation](./docs/automation/GELATO_AUTOMATION_PLAN.md)** - Automated recurring ticket purchases via MetaMask permissions
-- **[Gelato Setup Guide](./docs/automation/GELATO_SETUP.md)** - Detailed automation setup (webhooks, database, testing)
-- **[Stacks Bridge](./docs/bridges/STACKS_BRIDGE.md)** - Bitcoin to Base bridging via Stacks
-- **[Solana Integration](./docs/bridges/SOLANA_IMPLEMENTATION_PLAN.md)** - Solana to Base bridging
-- **[Development Guide](./docs/setup/DEVELOPMENT.md)** - Local setup and development
-- **[Testing Guide](./docs/setup/TESTING.md)** - Test procedures and test suite
-
-## 🔧 Configuration
-
-```bash
-# Required environment variables
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id
-NEXT_PUBLIC_BASE_RPC_URL=https://base-mainnet.g.alchemy.com/v2/your_key
-NEXT_PUBLIC_SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+```shell
+$ forge test
 ```
 
-See `.env.example` for full configuration.
+### Format
 
-## 🏛️ Architecture
-
-```
-src/
-├── domains/           # Business logic by domain
-│   ├── lottery/      # Megapot integration
-│   ├── syndicate/    # Pool management
-│   └── wallet/       # Multi-wallet support
-├── services/         # Bridge, vault, and chain services
-├── components/       # React components
-└── config/           # Chain and contract configuration
+```shell
+$ forge fmt
 ```
 
-## 🤝 Contributing
+### Gas Snapshots
 
-1. Enhancement first—improve existing code before adding new features
-2. Maintain TypeScript type safety throughout
-3. Test cross-chain flows thoroughly before merging
-4. Update documentation for any API changes
+```shell
+$ forge snapshot
+```
 
----
+### Anvil
 
-Built with ❤️ for **multi-chain DeFi** and **sustainable lottery mechanics**.
+```shell
+$ anvil
+```
+
+### Deploy
+
+```shell
+$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+```
+
+### Cast
+
+```shell
+$ cast <subcommand>
+```
+
+### Help
+
+```shell
+$ forge --help
+$ anvil --help
+$ cast --help
+```
