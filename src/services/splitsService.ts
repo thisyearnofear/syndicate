@@ -1,3 +1,17 @@
+/**
+ * SplitsService - Snapshot and distribution management
+ * 
+ * Core Principles Applied:
+ * - DRY: Uses distributionService for all calculations
+ * - ENHANCEMENT FIRST: Refactored to use shared distribution logic
+ * - CLEAN: Clear separation - snapshots here, distribution logic in distributionService
+ * - AGGRESSIVE CONSOLIDATION: Removed duplicate calculation logic
+ * 
+ * Manages participant snapshots for lottery winnings distribution.
+ * Delegates actual distribution calculations to distributionService.
+ */
+import { distributionService, type DistributionConfig } from './distributionService';
+
 export interface ParticipantShare {
   address: string;
   /** Share weight in basis points (0–10000). */
@@ -14,59 +28,17 @@ export interface Snapshot {
 }
 
 export interface DistributionResult {
-  total: string; // decimal string
+  total: string;
   allocations: Array<{ address: string; amount: string }>;
 }
 
-/**
- * SplitsService is a scaffold to compute and (eventually) execute on-chain splits
- * of lottery winnings among yield strategy participants.
- *
- * Recommended on-chain contract API (to be implemented separately):
- * - function snapshot(bytes32 strategyId, Participant[] participants, uint64 lockUntil)
- * - function distribute(bytes32 strategyId, uint256 amount, address token)
- * - function getSnapshot(bytes32 strategyId) returns Participant[]
- *
- * For now, this service computes off-chain allocation and returns a mock tx.
- */
-import { ethers } from 'ethers';
-import { CONTRACTS } from '@/config';
-
-type SplitsClientLike = {
-  createSplit(params: { accounts: string[]; percentAllocations: number[]; distributorFee: number }): Promise<{ address: string }>;
-  distributeERC20(params: { splitAddress: string; tokenAddress: string; distributorAddress: string }): Promise<{ hash: string; wait?: () => Promise<{ hash: string }> }>;
-};
-
 class SplitsService {
   private snapshots: Map<string, Snapshot> = new Map();
-  private provider: ethers.Provider | null = null;
-  private signer: ethers.Signer | null = null;
-  private splitsClient: SplitsClientLike | null = null; // Lazy-loaded @0xsplits/splits-sdk client
 
   /**
-   * Runtime-only loader to avoid TypeScript module resolution errors when SDK isn't installed.
+   * Create a snapshot of participants with their weights
+   * Snapshots are locked for a period to prevent free-riding
    */
-  private async loadSplitsClient(provider: ethers.Provider, signer?: ethers.Signer): Promise<void> {
-    if (this.splitsClient) return;
-    try {
-      // Use Function+dynamic import to avoid static resolution
-      const importer: () => Promise<unknown> = Function('return import("@0xsplits/splits-sdk")') as unknown as () => Promise<unknown>;
-      const mod = await importer();
-      const ClientCtor = (mod as { SplitsClient: new (args: { chainId: number; provider: ethers.Provider; signer?: ethers.Signer }) => SplitsClientLike }).SplitsClient;
-      this.splitsClient = new ClientCtor({ chainId: 8453, provider, signer });
-    } catch {
-      this.splitsClient = null;
-    }
-  }
-
-  async initialize(provider: ethers.Provider, signer?: ethers.Signer): Promise<boolean> {
-    this.provider = provider;
-    this.signer = signer || null;
-    // Lazily load the Splits SDK client; fall back gracefully if unavailable
-    await this.loadSplitsClient(provider, this.signer || undefined);
-    return true;
-  }
-
   snapshotParticipants(
     strategyId: string,
     participants: ParticipantShare[],
@@ -82,81 +54,111 @@ class SplitsService {
       participants: locked,
     };
     this.snapshots.set(strategyId, snap);
+
+    console.log('[SplitsService] Snapshot created:', {
+      strategyId,
+      participantsCount: participants.length,
+      lockUntil,
+    });
+
     return snap;
   }
 
+  /**
+   * Get snapshot for a strategy
+   */
+  getSnapshot(strategyId: string): Snapshot | null {
+    return this.snapshots.get(strategyId) || null;
+  }
+
+  /**
+   * Compute distribution using distributionService (DRY principle)
+   * @deprecated Use distributionService.calculateProportionalShares() directly
+   */
   computeDistribution(total: string, strategyId: string): DistributionResult {
     const snap = this.snapshots.get(strategyId);
     if (!snap) {
       return { total, allocations: [] };
     }
-    const totalNum = Number(total);
-    const sumBps = snap.participants.reduce((acc, p) => acc + p.weightBps, 0);
-    if (sumBps <= 0) {
-      return { total, allocations: [] };
-    }
-    const allocations = snap.participants.map((p) => {
-      const amt = (totalNum * p.weightBps) / 10000;
-      return { address: p.address, amount: amt.toFixed(6) };
-    });
-    return { total, allocations };
+
+    // Use distributionService for calculation (DRY)
+    const weights = snap.participants.map(p => ({
+      address: p.address,
+      weightBps: p.weightBps,
+    }));
+
+    const allocations = distributionService.calculateProportionalShares(total, weights);
+
+    return {
+      total,
+      allocations: allocations.map(a => ({
+        address: a.address,
+        amount: a.amount,
+      })),
+    };
   }
 
   /**
-   * Placeholder to execute on-chain distribution via a Splits contract.
-   * Returns a mock transaction hash for now.
+   * Distribute winnings using distributionService (DRY principle)
+   * ENHANCEMENT FIRST: Refactored to use shared distribution logic
    */
-  async distributeWinnings(total: string, strategyId: string): Promise<{ success: boolean; txHash?: string; error?: string }> {
-    const result = this.computeDistribution(total, strategyId);
-    if (result.allocations.length === 0) {
+  async distributeWinnings(
+    total: string,
+    strategyId: string
+  ): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    const snap = this.snapshots.get(strategyId);
+    if (!snap) {
+      return { success: false, error: 'No snapshot found for strategy' };
+    }
+
+    // Use distributionService for calculation and execution (DRY)
+    const weights = snap.participants.map(p => ({
+      address: p.address,
+      weightBps: p.weightBps,
+    }));
+
+    const allocations = distributionService.calculateProportionalShares(total, weights);
+
+    if (allocations.length === 0) {
       return { success: false, error: 'No allocations available for distribution' };
     }
 
-    // Ensure provider/signer are available by auto-initializing from web3Service
-    if (!this.provider || !this.signer) {
-      try {
-        const mod = await import('@/services/web3Service');
-        const provider = mod.web3Service.getProvider();
-        const signer = provider ? await mod.web3Service.getFreshSigner().catch(() => null) : null;
-        if (provider) {
-          this.provider = provider;
-          this.signer = signer || null;
-          // Lazy-load SDK client if not loaded yet
-          if (!this.splitsClient) {
-            await this.loadSplitsClient(provider, this.signer || undefined);
-          }
-        }
-      } catch {}
-    }
+    // Execute distribution via distributionService
+    const config: DistributionConfig = {
+      totalAmount: total,
+      recipients: allocations,
+      distributionType: 'vault', // Splits are typically for vault/yield strategies
+      poolOrVaultId: strategyId,
+    };
 
-    // If SDK is available, distribute ERC20 on Base via Splits
-    if (this.splitsClient && this.signer) {
-      try {
-        // Create percentages from weights (already computed proportions in computeDistribution)
-        const accounts = result.allocations.map(a => a.address);
-        const percents = result.allocations.map(a => Number(a.amount) / Number(total));
-        // Create or fetch a split for these accounts
-        const split = await this.splitsClient.createSplit({
-          accounts,
-          percentAllocations: percents,
-          distributorFee: 0,
-        });
-        // Distribute USDC to recipients
-        const tx = await this.splitsClient.distributeERC20({
-          splitAddress: split.address,
-          tokenAddress: CONTRACTS.usdc,
-          distributorAddress: await this.signer.getAddress(),
-        });
-        const rc = await tx.wait?.();
-        return { success: true, txHash: rc?.hash || tx.hash };
-      } catch (error: unknown) {
-        const msg = error instanceof Error ? error.message : 'Splits distribution failed';
-        return { success: false, error: msg };
-      }
-    }
+    const result = await distributionService.distributeToAddresses(config);
 
-    // Fallback: return a mock tx hash when SDK is not present
-    return { success: true, txHash: '0xmockSplitsDistributionTx' };
+    console.log('[SplitsService] Distribution executed:', {
+      strategyId,
+      totalAmount: total,
+      recipientsCount: allocations.length,
+      success: result.success,
+    });
+
+    return {
+      success: result.success,
+      txHash: result.txHash,
+      error: result.error,
+    };
+  }
+
+  /**
+   * Clear all snapshots (useful for testing)
+   */
+  clearSnapshots(): void {
+    this.snapshots.clear();
+  }
+
+  /**
+   * Get all active snapshots
+   */
+  getAllSnapshots(): Snapshot[] {
+    return Array.from(this.snapshots.values());
   }
 }
 
