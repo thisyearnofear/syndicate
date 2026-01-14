@@ -4,18 +4,108 @@
  * Core Principles Applied:
  * - MODULAR: Isolated syndicate logic
  * - CLEAN: Clear service interface
+ * - ENHANCEMENT FIRST: Building on existing stubs
  */
 
 import type { SyndicatePool } from '../types';
 import type { SyndicateInfo } from '@/domains/lottery/types';
 import { web3Service } from '@/services/web3Service';
 import { splitsService, type ParticipantShare } from '@/services/splitsService';
+import { distributionService } from '@/services/distributionService';
+import { syndicateRepository } from '@/lib/db/repositories/syndicateRepository';
 import { ethers } from 'ethers';
 
 export class SyndicateService {
+  /**
+   * Create a new syndicate pool
+   */
+  async createPool(params: {
+    name: string;
+    description?: string;
+    coordinatorAddress: string;
+    causeAllocationPercent: number;
+  }): Promise<string> {
+    // Validate cause allocation
+    if (params.causeAllocationPercent < 0 || params.causeAllocationPercent > 100) {
+      throw new Error('Cause allocation must be between 0 and 100');
+    }
+
+    // Validate coordinator address
+    if (!ethers.isAddress(params.coordinatorAddress)) {
+      throw new Error('Invalid coordinator address');
+    }
+
+    // Create pool in database
+    const poolId = await syndicateRepository.createPool(params);
+
+    console.log('[SyndicateService] Pool created:', {
+      poolId,
+      name: params.name,
+      coordinator: params.coordinatorAddress,
+    });
+
+    return poolId;
+  }
+
+  /**
+   * Join an existing pool with a contribution
+   */
+  async joinPool(params: {
+    poolId: string;
+    memberAddress: string;
+    amountUsdc: string;
+  }): Promise<boolean> {
+    // Validate amount
+    const amount = parseFloat(params.amountUsdc);
+    if (amount <= 0 || isNaN(amount)) {
+      throw new Error('Contribution amount must be greater than 0');
+    }
+
+    // Validate member address
+    if (!ethers.isAddress(params.memberAddress)) {
+      throw new Error('Invalid member address');
+    }
+
+    // Check pool exists and is active
+    const pool = await syndicateRepository.getPoolById(params.poolId);
+    if (!pool) {
+      throw new Error('Pool not found');
+    }
+    if (!pool.is_active) {
+      throw new Error('Pool is not active');
+    }
+
+    // Add member to pool
+    await syndicateRepository.addMember({
+      poolId: params.poolId,
+      memberAddress: params.memberAddress,
+      amountUsdc: params.amountUsdc,
+    });
+
+    console.log('[SyndicateService] Member joined pool:', {
+      poolId: params.poolId,
+      member: params.memberAddress,
+      amount: params.amountUsdc,
+    });
+
+    return true;
+  }
+
+  /**
+   * Get all active pools
+   */
   async getActivePools(): Promise<SyndicatePool[]> {
-    // Implementation here
-    return [];
+    const rows = await syndicateRepository.getActivePools();
+
+    return rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      description: row.description || '',
+      memberCount: row.members_count,
+      totalTickets: 0, // TODO: Track tickets purchased
+      causeAllocation: row.cause_allocation_percent,
+      isActive: row.is_active,
+    }));
   }
 
   async getActiveSyndicates(): Promise<SyndicateInfo[]> {
@@ -23,16 +113,6 @@ export class SyndicateService {
     if (!res.ok) return [];
     const data = await res.json();
     return data as SyndicateInfo[];
-  }
-
-  async joinPool(): Promise<boolean> {
-    // Implementation here
-    return true;
-  }
-
-  async createPool(): Promise<string> {
-    // Implementation here
-    return 'new-pool-id';
   }
 
   async prepareAdHocBatchPurchase(syndicateId: string, ticketCount: number): Promise<{ success: boolean; txHash?: string; error?: string; recipient?: string }> {
@@ -50,15 +130,190 @@ export class SyndicateService {
     return splitsService.snapshotParticipants(strategyId, shares, lockMinutes, roundId);
   }
 
-  async distributeProportionalRemainder(totalUsd: string, syndicateId: string, causePercent: number | undefined): Promise<{ success: boolean; txHash?: string; error?: string; donateUsd: string; remainderUsd: string }> {
-    const totalWei = ethers.parseUnits(totalUsd, 6);
-    const donateWei = causePercent && causePercent > 0 ? (totalWei * BigInt(causePercent)) / BigInt(100) : BigInt(0);
-    const remainderWei = totalWei - donateWei;
-    const remainderUsd = ethers.formatUnits(remainderWei, 6);
-    const donateUsd = ethers.formatUnits(donateWei, 6);
-    const strategyId = `${syndicateId}:adhoc`;
-    const dist = await splitsService.distributeWinnings(remainderUsd, strategyId);
-    return { success: dist.success, txHash: dist.txHash, error: dist.error, donateUsd, remainderUsd };
+  /**
+   * Distribute winnings to pool members proportionally
+   */
+  async distributeProportionalRemainder(
+    totalUsd: string,
+    syndicateId: string,
+    causePercent: number | undefined
+  ): Promise<{
+    success: boolean;
+    txHash?: string;
+    error?: string;
+    donateUsd: string;
+    remainderUsd: string;
+  }> {
+    try {
+      // Get pool info
+      const pool = await syndicateRepository.getPoolById(syndicateId);
+      if (!pool) {
+        return {
+          success: false,
+          error: 'Pool not found',
+          donateUsd: '0',
+          remainderUsd: '0',
+        };
+      }
+
+      // Use pool's cause allocation if not specified
+      const causeAllocationPercent = causePercent ?? pool.cause_allocation_percent;
+
+      // Calculate cause allocation
+      const { causeAmount, remainderAmount } = distributionService.calculateCauseAllocation(
+        totalUsd,
+        causeAllocationPercent
+      );
+
+      // Get pool members
+      const members = await syndicateRepository.getPoolMembers(syndicateId);
+
+      if (members.length === 0) {
+        return {
+          success: false,
+          error: 'No members in pool',
+          donateUsd: causeAmount,
+          remainderUsd: remainderAmount,
+        };
+      }
+
+      // Calculate member weights based on contributions
+      const totalPooled = parseFloat(pool.total_pooled_usdc);
+      const weights = members.map(member => ({
+        address: member.member_address,
+        weightBps: Math.floor((parseFloat(member.amount_usdc) / totalPooled) * 10000),
+      }));
+
+      // Calculate allocations
+      const allocations = distributionService.calculateProportionalShares(
+        remainderAmount,
+        weights
+      );
+
+      // Execute distribution
+      const result = await distributionService.distributeToAddresses({
+        totalAmount: remainderAmount,
+        recipients: allocations,
+        distributionType: 'syndicate',
+        poolOrVaultId: syndicateId,
+      });
+
+      console.log('[SyndicateService] Distribution executed:', {
+        poolId: syndicateId,
+        totalAmount: totalUsd,
+        causeAmount,
+        remainderAmount,
+        membersCount: members.length,
+        success: result.success,
+      });
+
+      return {
+        success: result.success,
+        txHash: result.txHash,
+        error: result.error,
+        donateUsd: causeAmount,
+        remainderUsd: remainderAmount,
+      };
+    } catch (error) {
+      console.error('[SyndicateService] Distribution failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Distribution failed',
+        donateUsd: '0',
+        remainderUsd: '0',
+      };
+    }
+  }
+
+  /**
+   * Get pool details including members
+   */
+  async getPoolDetails(poolId: string): Promise<{
+    pool: SyndicatePool;
+    members: Array<{ address: string; amount: string; joinedAt: number }>;
+    stats: { totalPooled: string; avgContribution: string };
+  } | null> {
+    const pool = await syndicateRepository.getPoolById(poolId);
+    if (!pool) return null;
+
+    const members = await syndicateRepository.getPoolMembers(poolId);
+    const stats = await syndicateRepository.getPoolStats(poolId);
+
+    return {
+      pool: {
+        id: pool.id,
+        name: pool.name,
+        description: pool.description || '',
+        memberCount: pool.members_count,
+        totalTickets: 0,
+        causeAllocation: pool.cause_allocation_percent,
+        isActive: pool.is_active,
+      },
+      members: members.map(m => ({
+        address: m.member_address,
+        amount: m.amount_usdc,
+        joinedAt: parseInt(m.joined_at),
+      })),
+      stats: {
+        totalPooled: stats?.totalPooled || '0',
+        avgContribution: stats?.avgContribution || '0',
+      },
+    };
+  }
+
+  /**
+   * Get pools for a specific member
+   */
+  async getMemberPools(memberAddress: string): Promise<SyndicatePool[]> {
+    const rows = await syndicateRepository.getMemberPools(memberAddress);
+
+    return rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      description: row.description || '',
+      memberCount: row.members_count,
+      totalTickets: 0,
+      causeAllocation: row.cause_allocation_percent,
+      isActive: row.is_active,
+    }));
+  }
+
+  /**
+   * Deactivate a pool (only coordinator can do this)
+   */
+  async deactivatePool(poolId: string, coordinatorAddress: string): Promise<boolean> {
+    const pool = await syndicateRepository.getPoolById(poolId);
+    if (!pool) {
+      throw new Error('Pool not found');
+    }
+
+    if (pool.coordinator_address.toLowerCase() !== coordinatorAddress.toLowerCase()) {
+      throw new Error('Only pool coordinator can deactivate the pool');
+    }
+
+    await syndicateRepository.updatePoolStatus(poolId, false);
+
+    console.log('[SyndicateService] Pool deactivated:', poolId);
+    return true;
+  }
+
+  /**
+   * Reactivate a pool (only coordinator can do this)
+   */
+  async reactivatePool(poolId: string, coordinatorAddress: string): Promise<boolean> {
+    const pool = await syndicateRepository.getPoolById(poolId);
+    if (!pool) {
+      throw new Error('Pool not found');
+    }
+
+    if (pool.coordinator_address.toLowerCase() !== coordinatorAddress.toLowerCase()) {
+      throw new Error('Only pool coordinator can reactivate the pool');
+    }
+
+    await syndicateRepository.updatePoolStatus(poolId, true);
+
+    console.log('[SyndicateService] Pool reactivated:', poolId);
+    return true;
   }
 }
 
