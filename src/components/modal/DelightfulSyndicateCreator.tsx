@@ -2,8 +2,18 @@
 import { useState, useEffect } from "react";
 import { X, Users, Heart, Sparkles, Target, Eye } from "lucide-react";
 import { Button } from "@/shared/components/ui/Button";
-// import SyndicateStepIndicator from "@/components/SyndicateStepIndicator";
-// import SyndicatePreview from "@/components/SyndicatePreview";
+import { syndicateService } from "@/domains/syndicate/services/syndicateService";
+import { useWalletConnection } from "@/hooks/useWalletConnection";
+
+/**
+ * DELIGHTFUL SYNDICATE CREATOR
+ * 
+ * Core Principles Applied:
+ * - ENHANCEMENT FIRST: Enhanced existing component with real backend integration
+ * - CLEAN: Clear separation of UI and business logic
+ * - DRY: Reuses syndicateService for all operations
+ * - AGGRESSIVE CONSOLIDATION: Removed governance complexity (not in backend)
+ */
 
 interface SyndicateCreatorProps {
   isOpen: boolean;
@@ -16,22 +26,9 @@ interface NewSyndicate {
   description: string;
   cause: string;
   causePercentage: number;
-  governanceModel: 'leader' | 'dao' | 'hybrid';
-  governanceParameters?: {
-    // Leader-guided parameters
-    maxFundAction?: number;      // Max % of funds leader can move without DAO approval
-    actionTimeLimit?: number;    // Time window for leader actions
-    
-    // DAO parameters
-    quorumPercentage?: number;   // Minimum participation for DAO decisions
-    executionDelay?: number;     // Time lock for DAO-executed actions
-    
-    // Hybrid parameters
-    thresholdAmount?: number;    // Amount above which DAO approval required
-    emergencySwitch?: boolean;   // Allow temporary leader control in emergencies
-  };
   maxMembers: number;
   minTicketsPerMember: number;
+  poolId?: string; // Added after creation
 }
 
 const AVAILABLE_CAUSES = [
@@ -44,16 +41,17 @@ const AVAILABLE_CAUSES = [
 ];
 
 export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }: SyndicateCreatorProps) {
+  const { isConnected, address } = useWalletConnection();
+
   const [formData, setFormData] = useState<NewSyndicate>({
     name: "",
     description: "",
     cause: "",
     causePercentage: 20,
-    governanceModel: 'leader', // Default to leader-guided
     maxMembers: 50,
     minTicketsPerMember: 1
   });
-  
+
   const [customCause, setCustomCause] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [currentStep, setCurrentStep] = useState<'basic' | 'cause' | 'config' | 'preview'>('basic');
@@ -72,7 +70,12 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    
+
+    // Wallet validation
+    if (!isConnected || !address) {
+      newErrors.wallet = "Please connect your wallet first";
+    }
+
     if (!formData.name.trim()) newErrors.name = "Syndicate name is required";
     if (!formData.description.trim()) newErrors.description = "Description is required";
     if (!formData.cause) newErrors.cause = "Please select a cause";
@@ -85,34 +88,47 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
     if (formData.maxMembers < 2 || formData.maxMembers > 1000) {
       newErrors.maxMembers = "Max members must be between 2 and 1000";
     }
-    if (!formData.governanceModel) newErrors.governanceModel = "Please select a governance model";
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (validateForm()) {
-      setIsCreating(true);
-      
-      // DELIGHT: Simulate creation process
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+    if (!validateForm()) return;
+
+    setIsCreating(true);
+
+    try {
+      // Create pool via real backend service
+      const poolId = await syndicateService.createPool({
+        name: formData.name,
+        description: formData.description,
+        coordinatorAddress: address!,
+        causeAllocationPercent: formData.causePercentage,
+      });
+
       const syndicateData = {
         ...formData,
-        cause: formData.cause === "custom" ? customCause : formData.cause
+        cause: formData.cause === "custom" ? customCause : formData.cause,
+        poolId,
       };
-      
+
       setIsCreating(false);
       setShowSuccess(true);
-      
+
       // Show success for a moment before closing
       setTimeout(() => {
         onCreate(syndicateData);
         onClose();
         resetForm();
-      }, 3000);
+      }, 2000);
+    } catch (error) {
+      console.error('[DelightfulSyndicateCreator] Failed to create pool:', error);
+      setIsCreating(false);
+      setErrors({
+        submit: error instanceof Error ? error.message : 'Failed to create syndicate. Please try again.',
+      });
     }
   };
 
@@ -122,7 +138,6 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
       description: "",
       cause: "",
       causePercentage: 20,
-      governanceModel: 'leader',
       maxMembers: 50,
       minTicketsPerMember: 1
     });
@@ -130,6 +145,7 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
     setCurrentStep('basic');
     setShowSuccess(false);
     setIsCreating(false);
+    setErrors({});
   };
 
   const nextStep = () => {
@@ -192,11 +208,11 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
               <span>Setting up cause allocation</span>
             </div>
             <div className="flex items-center justify-center gap-2">
-              <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+              <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
               <span>Configuring member settings</span>
             </div>
             <div className="flex items-center justify-center gap-2">
-              <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
+              <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
               <span>Preparing for launch</span>
             </div>
           </div>
@@ -215,7 +231,7 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
               <h3 className="text-xl font-bold text-white mb-2">Let&#39;s start with the basics</h3>
               <p className="text-gray-400">Give your syndicate a name and describe your mission</p>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Syndicate Name *
@@ -254,17 +270,16 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
               <h3 className="text-xl font-bold text-white mb-2">Choose your cause</h3>
               <p className="text-gray-400">Select what cause your syndicate will support</p>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {AVAILABLE_CAUSES.map((cause) => (
                 <div
                   key={cause.id}
                   onClick={() => setFormData({ ...formData, cause: cause.id })}
-                  className={`p-4 rounded-lg border cursor-pointer transition-all transform hover:scale-105 ${
-                    formData.cause === cause.id
-                      ? "border-green-500 bg-green-500/20 scale-105"
-                      : "border-gray-600 bg-gray-700/50 hover:border-gray-500"
-                  }`}
+                  className={`p-4 rounded-lg border cursor-pointer transition-all transform hover:scale-105 ${formData.cause === cause.id
+                    ? "border-green-500 bg-green-500/20 scale-105"
+                    : "border-gray-600 bg-gray-700/50 hover:border-gray-500"
+                    }`}
                 >
                   <div className="text-2xl mb-2">{cause.emoji}</div>
                   <h4 className="font-semibold text-white">{cause.name}</h4>
@@ -298,63 +313,9 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
             <div className="text-center mb-6">
               <Target className="w-12 h-12 text-blue-400 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-white mb-2">Configure your syndicate</h3>
-              <p className="text-gray-400">Set up governance, member limits, and cause allocation</p>
+              <p className="text-gray-400">Set member limits and cause allocation</p>
             </div>
-            
-            {/* Governance Model Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Governance Model
-              </label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div
-                  onClick={() => setFormData({ ...formData, governanceModel: 'leader' })}
-                  className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                    formData.governanceModel === 'leader'
-                      ? "border-green-500 bg-green-500/20"
-                      : "border-gray-600 bg-gray-700/50 hover:border-gray-500"
-                  }`}
-                >
-                  <h4 className="font-semibold text-white">Leader-Guided</h4>
-                  <p className="text-gray-400 text-sm">Fast decisions, higher risk</p>
-                  <div className="mt-2 text-xs text-gray-500">
-                    Leader makes strategy decisions
-                  </div>
-                </div>
-                
-                <div
-                  onClick={() => setFormData({ ...formData, governanceModel: 'dao' })}
-                  className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                    formData.governanceModel === 'dao'
-                      ? "border-blue-500 bg-blue-500/20"
-                      : "border-gray-600 bg-gray-700/50 hover:border-gray-500"
-                  }`}
-                >
-                  <h4 className="font-semibold text-white">DAO-Governed</h4>
-                  <p className="text-gray-400 text-sm">Secure consensus, slower decisions</p>
-                  <div className="mt-2 text-xs text-gray-500">
-                    Community votes on decisions
-                  </div>
-                </div>
-                
-                <div
-                  onClick={() => setFormData({ ...formData, governanceModel: 'hybrid' })}
-                  className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                    formData.governanceModel === 'hybrid'
-                      ? "border-purple-500 bg-purple-500/20"
-                      : "border-gray-600 bg-gray-700/50 hover:border-gray-500"
-                  }`}
-                >
-                  <h4 className="font-semibold text-white">Hybrid</h4>
-                  <p className="text-gray-400 text-sm">Configurable parameters</p>
-                  <div className="mt-2 text-xs text-gray-500">
-                    Mix of both approaches
-                  </div>
-                </div>
-              </div>
-              {errors.governanceModel && <p className="text-red-400 text-sm mt-1">{errors.governanceModel}</p>}
-            </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -416,7 +377,7 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
               <h3 className="text-xl font-bold text-white mb-2">Preview your syndicate</h3>
               <p className="text-gray-400">Review everything before creating</p>
             </div>
-            
+
             <div className="text-center">
               <p className="text-gray-400">Preview component not available</p>
             </div>
@@ -442,7 +403,7 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
               <X className="w-6 h-6" />
             </button>
           </div>
-          
+
           <div className="text-center">
             <p className="text-gray-400">Step: {currentStep}</p>
           </div>
@@ -454,30 +415,42 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
         </div>
 
         {/* Navigation */}
-        <div className="p-6 border-t border-gray-700 flex justify-between">
-          <Button
-            onClick={prevStep}
-            disabled={currentStep === 'basic'}
-            variant="secondary"
-          >
-            Previous
-          </Button>
-
-          {currentStep === 'preview' ? (
-            <Button
-              onClick={() => handleSubmit()}
-              variant="default"
-            >
-              Create Syndicate
-            </Button>
-          ) : (
-            <Button
-              onClick={nextStep}
-              variant="default"
-            >
-              Next
-            </Button>
+        <div className="p-6 border-t border-gray-700">
+          {/* Error Display */}
+          {(errors.wallet || errors.submit) && (
+            <div className="mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
+              <p className="text-red-400 text-sm">
+                {errors.wallet || errors.submit}
+              </p>
+            </div>
           )}
+
+          <div className="flex justify-between">
+            <Button
+              onClick={prevStep}
+              disabled={currentStep === 'basic'}
+              variant="secondary"
+            >
+              Previous
+            </Button>
+
+            {currentStep === 'preview' ? (
+              <Button
+                onClick={() => handleSubmit()}
+                variant="default"
+                disabled={!isConnected}
+              >
+                Create Syndicate
+              </Button>
+            ) : (
+              <Button
+                onClick={nextStep}
+                variant="default"
+              >
+                Next
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
