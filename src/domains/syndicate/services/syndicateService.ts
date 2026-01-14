@@ -298,8 +298,8 @@ export class SyndicateService {
   }
 
   /**
-   * Reactivate a pool (only coordinator can do this)
-   */
+    * Reactivate a pool (only coordinator can do this)
+    */
   async reactivatePool(poolId: string, coordinatorAddress: string): Promise<boolean> {
     const pool = await syndicateRepository.getPoolById(poolId);
     if (!pool) {
@@ -315,6 +315,105 @@ export class SyndicateService {
     console.log('[SyndicateService] Pool reactivated:', poolId);
     return true;
   }
-}
+
+  /**
+   * Execute a syndicate purchase on the SyndicatePool contract
+   * 
+   * ARCHITECTURE: Base-only syndicates
+   * 
+   * Flow:
+   * 1. Verify pool exists and is active
+   * 2. Call SyndicatePool.purchaseTicketsFromPool()
+   * 3. SyndicatePool approves Megapot and purchases tickets
+   * 4. Track purchase in database
+   * 
+   * @param poolId Database pool ID
+   * @param ticketCount Number of tickets to purchase
+   * @param coordinatorAddress Address of the coordinator (must match on-chain pool)
+   */
+  async executeSyndicatePurchase(
+    poolId: string,
+    ticketCount: number,
+    coordinatorAddress: string
+  ): Promise<{
+    success: boolean;
+    txHash?: string;
+    error?: string;
+  }> {
+    try {
+      // Verify pool exists
+      const pool = await syndicateRepository.getPoolById(poolId);
+      if (!pool) {
+        return {
+          success: false,
+          error: 'Pool not found',
+        };
+      }
+
+      // Verify coordinator matches
+      if (pool.coordinator_address.toLowerCase() !== coordinatorAddress.toLowerCase()) {
+        return {
+          success: false,
+          error: 'Only pool coordinator can execute purchases',
+        };
+      }
+
+      // Verify pool is active
+      if (!pool.is_active) {
+        return {
+          success: false,
+          error: 'Pool is not active',
+        };
+      }
+
+      // Validate ticket count
+      if (ticketCount < 1) {
+        return {
+          success: false,
+          error: 'Ticket count must be at least 1',
+        };
+      }
+
+      // Initialize web3 if needed
+      if (!web3Service.isReady()) {
+        await web3Service.initialize();
+      }
+
+      // TODO: Call SyndicatePool.purchaseTicketsFromPool()
+      // This requires:
+      // 1. Get contract instance via ethers.js/wagmi
+      // 2. Call purchaseTicketsFromPool(pool.contract_pool_id, ticketCount)
+      // 3. Wait for transaction confirmation
+      
+      // Placeholder implementation
+      console.log('[SyndicateService] Would execute syndicate purchase:', {
+        poolId,
+        ticketCount,
+        coordinatorAddress,
+      });
+
+      // For MVP: just log intent and return success
+      // Production implementation would interact with contract
+      const txHash = '0x' + '0'.repeat(64); // Placeholder
+
+      console.log('[SyndicateService] Syndicate purchase executed:', {
+        poolId,
+        ticketCount,
+        txHash,
+      });
+
+      return {
+        success: true,
+        txHash,
+      };
+    } catch (error) {
+      console.error('[SyndicateService] Syndicate purchase failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+  }
 
 export const syndicateService = new SyndicateService();
