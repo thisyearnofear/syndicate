@@ -14,8 +14,8 @@
 | **Phase 2.2** | SyndicateService (Real Logic) | Weeks 3-4 | 450 | ✅ Complete |
 | **Phase 2.3** | DRY Consolidation | Weeks 5-6 | +20 | ✅ Complete |
 | **Phase 2.4** | Vault Integration | Weeks 7-8 | +377 | ✅ Complete |
-| **Phase 2.5** | Smart Contracts + UI | Weeks 8-10 | 800 | 🔄 Next |
-| **Totals** | Syndicates + Vaults MVP | 10 weeks | 2,577 | 80% Complete |
+| **Phase 2.5** | Smart Contracts + UI | Weeks 8-10 | +280 | 🔄 In Progress |
+| **Totals** | Syndicates + Vaults MVP | 10 weeks | 2,057 | 80% Complete |
 
 **Key Constraint**: Build non-private first, but architecture **must be privacy-ready**. No refactoring in Phase 3.
 
@@ -202,7 +202,48 @@ Ticket delivered to Base address
 
 **Total Completed**: 1,777 lines
 
-### 🔄 Remaining: Weeks 8-10
+### 🔄 In Progress: Weeks 8-10
+
+#### Week 8-9: Smart Contracts
+- ✅ Created `SyndicatePool.sol` contract (280 lines)
+  - Pool creation with cause allocation
+  - Member joining with USDC contributions
+  - Proportional winnings distribution
+  - Coordinator access control
+  - Privacy-ready architecture (Phase 3 stubs)
+  - Gas optimized (minimal storage, immutable USDC)
+  - Security: ReentrancyGuard, custom errors, rounding protection
+- ✅ Contract documentation and deployment guide
+- [ ] Deploy to Base Sepolia testnet
+- [ ] Integration testing with syndicate service
+- [ ] Security review
+- [ ] Deploy to Base mainnet
+
+**Lines**: +280 lines (contract + docs)
+
+#### Week 9-10: UI Components & Final Polish
+- ✅ Enhanced `DelightfulSyndicateCreator.tsx` with real backend integration
+  - Integrated `syndicateService.createPool()` for real pool creation
+  - Added wallet connection validation via `useWalletConnection`
+  - Removed governance model complexity (not in backend)
+  - Added proper error handling and display
+  - Applied AGGRESSIVE CONSOLIDATION principle (-65 lines governance UI)
+- ✅ Enhanced `YieldStrategySelector.tsx` with vault manager integration
+  - Replaced Octant-specific code with `vaultManager`
+  - Integrated real vault APY and health status display
+  - Removed Uniswap and Octant strategies (not implemented)
+  - Added loading state for vault information
+  - Applied AGGRESSIVE CONSOLIDATION principle (-45 lines Octant code)
+- [ ] Enhance `SyndicateCard.tsx` to fetch and display real pool data
+- [ ] Integration tests
+- [ ] Production deployment
+
+**Lines**: +95 lines (UI enhancements), -110 lines (consolidation) = -15 net
+
+### 📊 Phase 2 Progress
+
+**Completed**: 2,142 / 2,577 lines (83%)
+**Remaining**: 435 lines (17%)
 
 #### Week 7-8: Vault Integration & Purchase Orchestration
 - [ ] Implement `yieldToTicketsService.getYieldAccrued()` using Aave provider
