@@ -342,9 +342,9 @@ export const BRIDGE = {
 
   rpc: {
 
-    primaryUrl: process.env.NEXT_PUBLIC_SOLANA_RPC || "https://api.mainnet-beta.solana.com",
+    primaryUrl: process.env.NEXT_PUBLIC_SOLANA_RPC || "https://rpc.ankr.com/solana",
 
-    fallbackUrls: (process.env.NEXT_PUBLIC_SOLANA_RPC_FALLBACKS || "")
+    fallbackUrls: (process.env.NEXT_PUBLIC_SOLANA_RPC_FALLBACKS || "https://solana-api.projectserum.com")
 
       .split(",")
 

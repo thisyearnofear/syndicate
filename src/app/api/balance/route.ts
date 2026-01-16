@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
 import { JsonRpcProvider } from '@near-js/providers';
 
-const SOLANA_RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://api.mainnet-beta.solana.com';
+const SOLANA_RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://rpc.ankr.com/solana';
 const BASE_RPC_URL = process.env.BASE_RPC_URL || 'https://mainnet.base.org';
 const NEAR_RPC_URL = process.env.NEXT_PUBLIC_NEAR_RPC_URL || 'https://rpc.mainnet.near.org';
 

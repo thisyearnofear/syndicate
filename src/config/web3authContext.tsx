@@ -9,17 +9,14 @@ import {
 } from '@/stubs/web3auth';
 
 // PHASE 4 MAINNET: Solana mainnet configuration for production
-export const solanaChainConfig = {
-  chainNamespace: CHAIN_NAMESPACES.SOLANA,
-  chainId: "0x1", // 0x1 for Mainnet-Beta
-  rpcTarget:
-    process.env.NEXT_PUBLIC_SOLANA_RPC ||
-    "https://api.mainnet-beta.solana.com",
+const solanaChainConfig = {
+  chainNamespace: "solana",
+  chainId: "0x1", // Please use 0x1 for Mainnet, 0x2 for Testnet, 0x3 for Devnet
+  rpcTarget: process.env.NEXT_PUBLIC_SOLANA_RPC || "https://rpc.ankr.com/solana",
   displayName: "Solana Mainnet",
-  blockExplorerUrl: "https://explorer.solana.com?cluster=mainnet-beta",
+  blockExplorer: "https://explorer.solana.com",
   ticker: "SOL",
   tickerName: "Solana",
-  logo: "https://images.toruswallet.io/solana.svg",
 };
 
 // PHASE 4 MAINNET: Web3Auth configuration with Solana mainnet support

@@ -59,7 +59,9 @@ export async function GET(request: Request): Promise<Response> {
 
     for (const url of urls) {
       try {
-        const connection = new Connection(url, 'confirmed');
+    const connection = new Connection(
+      process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://rpc.ankr.com/solana'
+    );
         const bal = await connection.getTokenAccountBalance(ata);
         const balance = bal?.value?.uiAmount?.toString() || bal?.value?.uiAmountString || '0';
 
