@@ -4,7 +4,7 @@ import React, { useCallback, useState } from 'react';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
 
 const SOLANA_USDC = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
-const SOLANA_RPC = process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://api.mainnet-beta.solana.com';
+const SOLANA_RPC = process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://rpc.ankr.com/solana';
 
 export function SolanaConnectExample() {
   const { ready, publicKey, usdcBalance, connect, disconnect, refreshUsdc } = useSolanaWallet(SOLANA_USDC, SOLANA_RPC);

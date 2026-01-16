@@ -18,16 +18,21 @@ export function getSolanaRpcUrls(): string[] {
   // Priority 2: Custom RPC
   const primary =
     process.env.NEXT_PUBLIC_SOLANA_RPC ||
-    'https://api.mainnet-beta.solana.com';
+    'https://rpc.ankr.com/solana';
   urls.push(primary);
 
   // Priority 3: Fallback endpoints
-  const fallbacks = (process.env.NEXT_PUBLIC_SOLANA_RPC_FALLBACKS || '')
+  const defaultFallbacks = [
+    'https://rpc.ankr.com/solana',
+    'https://solana-api.projectserum.com',
+  ];
+  
+  const configuredFallbacks = (process.env.NEXT_PUBLIC_SOLANA_RPC_FALLBACKS || '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
 
-  return [...urls, ...fallbacks].filter((u, i, a) => a.indexOf(u) === i);
+  return [...urls, ...configuredFallbacks, ...defaultFallbacks].filter((u, i, a) => a.indexOf(u) === i);
 }
 
 export function getBaseRpcUrls(): string[] {

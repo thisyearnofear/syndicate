@@ -139,6 +139,11 @@ class Web3Service {
       // Ensure we're on correct network BEFORE marking as initialized
       await this.ensureCorrectNetwork(chainId);
 
+      // Check if provider is still valid (might have been reset during await)
+      if (!this.provider) {
+        throw new Error('Provider lost during initialization');
+      }
+
       this.signer = await this.provider.getSigner();
       this.megapotContract = new ethers.Contract(
         this.megapotContractAddress,

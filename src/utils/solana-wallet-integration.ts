@@ -26,9 +26,9 @@ class SolanaWalletIntegration {
   }
 
   createSecureConnection(): Connection {
-    const endpoint = this.ALCHEMY_API_KEY ?
+    const endpoint = this.ALCHEMY_API_KEY && this.ALCHEMY_API_KEY !== 'your-api-key-here' ?
       `https://solana-mainnet.g.alchemy.com/v2/${this.ALCHEMY_API_KEY}` :
-      'https://api.mainnet-beta.solana.com';
+      'https://rpc.ankr.com/solana';
     return new Connection(endpoint, 'confirmed');
   }
 
