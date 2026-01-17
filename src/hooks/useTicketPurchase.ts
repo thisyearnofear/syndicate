@@ -1291,8 +1291,25 @@ export function useTicketPurchase(): TicketPurchaseState &
               const signer = await provider.getSigner();
               evmAddress = await signer.getAddress();
 
-              // Persist link
-              localStorage.setItem("syndicate_linked_evm", evmAddress);
+              // Persist link via API
+              try {
+                await fetch("/api/wallet/link", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    sourceWallet: address,
+                    sourceChain: walletType,
+                    evmAddress: evmAddress,
+                  }),
+                });
+                // Cache locally for performance
+                if (address) {
+                  localStorage.setItem(`syndicate_link_${address}`, evmAddress);
+                }
+              } catch (e) {
+                console.warn("Failed to persist wallet link:", e);
+              }
+
               setState((prev) => ({ ...prev, linkedEvmAddress: evmAddress }));
             }
 
@@ -1527,15 +1544,51 @@ export function useTicketPurchase(): TicketPurchaseState &
     } catch {}
   }, [state.nearRecipient]);
 
-  // Load persisted EVM link on mount
+  // Load persisted EVM link on wallet connection
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("syndicate_linked_evm");
-      if (stored) {
-        setState((prev) => ({ ...prev, linkedEvmAddress: stored }));
+    const fetchLinkedAddress = async () => {
+      if (isConnected && address && walletType !== WalletTypes.EVM) {
+        try {
+          // 1. Try wallet-specific local storage
+          const localStored = localStorage.getItem(`syndicate_link_${address}`);
+          if (localStored) {
+            setState((prev) => ({ ...prev, linkedEvmAddress: localStored }));
+          } else {
+            // Legacy fallback
+            const legacyStored = localStorage.getItem("syndicate_linked_evm");
+            if (legacyStored) {
+              setState((prev) => ({ ...prev, linkedEvmAddress: legacyStored }));
+            }
+          }
+
+          // 2. Fetch from API (Persistent)
+          const response = await fetch(
+            `/api/wallet/link?sourceWallet=${address}&sourceChain=${walletType}`,
+          );
+          if (response.ok) {
+            const data = await response.json();
+            if (data.linked && data.evmAddress) {
+              setState((prev) => ({
+                ...prev,
+                linkedEvmAddress: data.evmAddress,
+              }));
+              // Update local cache
+              localStorage.setItem(
+                `syndicate_link_${address}`,
+                data.evmAddress,
+              );
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to fetch linked wallet:", e);
+        }
+      } else if (!isConnected) {
+        setState((prev) => ({ ...prev, linkedEvmAddress: null }));
       }
-    }
-  }, []);
+    };
+
+    fetchLinkedAddress();
+  }, [isConnected, address, walletType]);
 
   /**
    * Auto-initialize when wallet connects
