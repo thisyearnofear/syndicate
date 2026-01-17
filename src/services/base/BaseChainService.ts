@@ -33,8 +33,15 @@ export class BaseChainService {
   private currentRpcUrl: string | null = null;
   private rpcUrls: string[] = [];
   private readonly RPC_TIMEOUT = 10000; // 10 seconds
+  private connectionLock = false;
 
   async initializeWithWallet(chainId?: number): Promise<boolean> {
+    if (this.connectionLock) {
+      console.warn("Wallet initialization already in progress");
+      return false;
+    }
+    this.connectionLock = true;
+
     try {
       if (!this.isBrowser()) {
         console.warn("BaseChainService requires browser environment");
@@ -76,6 +83,8 @@ export class BaseChainService {
         error,
       );
       return false;
+    } finally {
+      this.connectionLock = false;
     }
   }
 

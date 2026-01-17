@@ -323,7 +323,7 @@ export function useTicketPurchase(): TicketPurchaseState &
   const refreshBalance = useCallback(async (): Promise<void> => {
     const now = Date.now();
     const timeSinceLastRefresh = now - lastBalanceRefreshRef.current;
-    const minRefreshInterval = 2000; // 2 seconds minimum
+    const minRefreshInterval = 5000; // INCREASED: 5 seconds minimum to reduce RPC load
 
     // If called too soon, debounce the request
     if (timeSinceLastRefresh < minRefreshInterval) {
