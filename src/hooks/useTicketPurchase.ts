@@ -79,6 +79,7 @@ export interface TicketPurchaseState {
   bridgeStatus: string | null;
   bridgeStages: string[];
   bridgeDepositAddress?: string | null;
+  linkedEvmAddress?: string | null; // Persisted EVM address for cross-chain users
 
   // NEAR path status (optional)
   nearStages: string[];
@@ -189,6 +190,7 @@ export function useTicketPurchase(): TicketPurchaseState &
     bridgeStatus: null,
     bridgeStages: [],
     bridgeDepositAddress: null,
+    linkedEvmAddress: null,
     nearStages: [],
     nearRecipient: null,
     nearRequestId: null,
@@ -253,15 +255,16 @@ export function useTicketPurchase(): TicketPurchaseState &
           // Fetch balance for all wallet types - ensures Solana/NEAR balance is loaded
           await refreshBalance();
 
-          // Only load EVM-specific data when using EVM wallet
-          if (walletType === WalletTypes.EVM) {
+          // Only load EVM-specific data when using EVM wallet or if we have a linked address
+          if (walletType === WalletTypes.EVM || state.linkedEvmAddress) {
             await loadTicketPrice();
 
             // Load user ticket info and odds info for EVM wallets
             try {
-              const ticketInfo = await web3Service.getCurrentTicketInfo(
-                address || undefined,
-              );
+              const targetAddress =
+                state.linkedEvmAddress || address || undefined;
+              const ticketInfo =
+                await web3Service.getCurrentTicketInfo(targetAddress);
               setState((prev) => ({ ...prev, userTicketInfo: ticketInfo }));
             } catch (ticketError) {
               console.warn("Failed to load user ticket info:", ticketError);
@@ -311,7 +314,7 @@ export function useTicketPurchase(): TicketPurchaseState &
       }));
       return false;
     }
-  }, [isConnected, walletType]);
+  }, [isConnected, walletType, state.linkedEvmAddress]);
 
   /**
    * Refresh user balance - with debouncing to avoid excessive requests
@@ -1270,17 +1273,30 @@ export function useTicketPurchase(): TicketPurchaseState &
         } else if (walletType === WalletTypes.SOLANA) {
           // ENHANCEMENT: Execute Solana bridge flow (Base-Solana Bridge + deBridge fallback)
           try {
-            // Get destination EVM address from window.ethereum
-            if (typeof window === "undefined" || !window.ethereum) {
-              throw new Error(
-                "EVM wallet (MetaMask, Coinbase) required for destination address.",
+            // Get destination EVM address
+            // Check if we already have a linked address, otherwise ask wallet
+            let evmAddress = state.linkedEvmAddress;
+
+            if (!evmAddress) {
+              if (typeof window === "undefined" || !window.ethereum) {
+                throw new Error(
+                  "EVM wallet (MetaMask, Coinbase) required for destination address.",
+                );
+              }
+
+              const { ethers } = await import("ethers");
+              const provider = new ethers.BrowserProvider(
+                window.ethereum as any,
               );
+              const signer = await provider.getSigner();
+              evmAddress = await signer.getAddress();
+
+              // Persist link
+              localStorage.setItem("syndicate_linked_evm", evmAddress);
+              setState((prev) => ({ ...prev, linkedEvmAddress: evmAddress }));
             }
 
-            const { ethers } = await import("ethers");
-            const provider = new ethers.BrowserProvider(window.ethereum as any);
-            const signer = await provider.getSigner();
-            const evmAddress = await signer.getAddress();
+            if (!evmAddress) throw new Error("Destination address required");
 
             result = await executeSolanaBridgePurchase(
               ticketCount,
@@ -1425,6 +1441,7 @@ export function useTicketPurchase(): TicketPurchaseState &
       handleYieldStrategyPurchase,
       state.ticketPrice,
       initializeWeb3,
+      state.linkedEvmAddress,
     ],
   );
 
@@ -1510,6 +1527,16 @@ export function useTicketPurchase(): TicketPurchaseState &
     } catch {}
   }, [state.nearRecipient]);
 
+  // Load persisted EVM link on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("syndicate_linked_evm");
+      if (stored) {
+        setState((prev) => ({ ...prev, linkedEvmAddress: stored }));
+      }
+    }
+  }, []);
+
   /**
    * Auto-initialize when wallet connects
    */
@@ -1551,14 +1578,13 @@ export function useTicketPurchase(): TicketPurchaseState &
    */
   const getCurrentTicketInfo = useCallback(async (): Promise<void> => {
     try {
-      const ticketInfo = await web3Service.getCurrentTicketInfo(
-        address || undefined,
-      );
+      const targetAddress = state.linkedEvmAddress || address || undefined;
+      const ticketInfo = await web3Service.getCurrentTicketInfo(targetAddress);
       setState((prev) => ({ ...prev, userTicketInfo: ticketInfo }));
     } catch (error) {
       console.error("Failed to get user ticket info:", error);
     }
-  }, [address]);
+  }, [address, state.linkedEvmAddress]);
 
   /**
    * Get current odds information
