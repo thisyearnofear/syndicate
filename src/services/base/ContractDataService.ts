@@ -20,11 +20,11 @@ interface CacheEntry<T> {
  * Cache configuration for different data types
  */
 const CACHE_CONFIG = {
-  JACKPOT: 30000, // 30 seconds - changes frequently
-  TICKET_PRICE: 300000, // 5 minutes - rarely changes
-  USER_BALANCE: 10000, // 10 seconds - changes with transactions
-  USER_TICKETS: 15000, // 15 seconds - changes with purchases
-  ODDS: 30000, // 30 seconds - derived from jackpot
+  JACKPOT: 60000, // 60 seconds - reduce frequency
+  TICKET_PRICE: 600000, // 10 minutes - rarely changes
+  USER_BALANCE: 15000, // 15 seconds - changes with transactions
+  USER_TICKETS: 20000, // 20 seconds - changes with purchases
+  ODDS: 60000, // 60 seconds - derived from jackpot
 } as const;
 
 export interface UserTicketInfo {
@@ -50,6 +50,7 @@ export interface OddsInfo {
 
 export class ContractDataService {
   private cache = new Map<string, CacheEntry<any>>();
+  private pendingRequests = new Map<string, Promise<any>>();
 
   constructor(
     private baseChain: BaseChainService,
@@ -71,6 +72,26 @@ export class ContractDataService {
     }
 
     return entry.value as T;
+  }
+
+  /**
+   * Generic request deduplication wrapper
+   * Prevents multiple identical requests from hitting the RPC simultaneously
+   */
+  private async deduplicateRequest<T>(
+    key: string,
+    requestFn: () => Promise<T>,
+  ): Promise<T> {
+    if (this.pendingRequests.has(key)) {
+      return this.pendingRequests.get(key) as Promise<T>;
+    }
+
+    const promise = requestFn().finally(() => {
+      this.pendingRequests.delete(key);
+    });
+
+    this.pendingRequests.set(key, promise);
+    return promise;
   }
 
   /**
@@ -127,15 +148,17 @@ export class ContractDataService {
       return cached;
     }
 
-    try {
-      const jackpot = await this.megapotContract.getCurrentJackpot();
-      const formatted = ethers.formatUnits(jackpot, 6);
-      this.setCache(cacheKey, formatted, CACHE_CONFIG.JACKPOT);
-      return formatted;
-    } catch (error) {
-      console.error("Failed to get jackpot:", error);
-      return "0";
-    }
+    return this.deduplicateRequest(cacheKey, async () => {
+      try {
+        const jackpot = await this.megapotContract.getCurrentJackpot();
+        const formatted = ethers.formatUnits(jackpot, 6);
+        this.setCache(cacheKey, formatted, CACHE_CONFIG.JACKPOT);
+        return formatted;
+      } catch (error) {
+        console.error("Failed to get jackpot:", error);
+        return "0";
+      }
+    });
   }
 
   /**
@@ -148,15 +171,17 @@ export class ContractDataService {
       return cached;
     }
 
-    try {
-      const price = await this.megapotContract.ticketPrice();
-      const formatted = ethers.formatUnits(price, 6);
-      this.setCache(cacheKey, formatted, CACHE_CONFIG.TICKET_PRICE);
-      return formatted;
-    } catch (error) {
-      console.error("Failed to get ticket price:", error);
-      return "1";
-    }
+    return this.deduplicateRequest(cacheKey, async () => {
+      try {
+        const price = await this.megapotContract.ticketPrice();
+        const formatted = ethers.formatUnits(price, 6);
+        this.setCache(cacheKey, formatted, CACHE_CONFIG.TICKET_PRICE);
+        return formatted;
+      } catch (error) {
+        console.error("Failed to get ticket price:", error);
+        return "1";
+      }
+    });
   }
 
   /**
@@ -179,23 +204,33 @@ export class ContractDataService {
         return cached;
       }
 
-      const usdcBalance = await this.usdcContract.balanceOf(userAddress);
-      const usdcFormatted = ethers.formatUnits(usdcBalance, 6);
+      return this.deduplicateRequest(cacheKey, async () => {
+        try {
+          // Parallelize requests to reduce latency
+          const [usdcBalance, ethBalance] = await Promise.all([
+            this.usdcContract.balanceOf(userAddress),
+            provider.getBalance(userAddress),
+          ]);
 
-      const ethBalance = await provider.getBalance(userAddress);
-      const ethFormatted = ethers.formatEther(ethBalance);
+          const usdcFormatted = ethers.formatUnits(usdcBalance, 6);
+          const ethFormatted = ethers.formatEther(ethBalance);
 
-      const result: UserBalance = {
-        usdc: usdcFormatted,
-        eth: ethFormatted,
-        hasEnoughUsdc: parseFloat(usdcFormatted) >= 1,
-        hasEnoughEth: parseFloat(ethFormatted) >= 0.001,
-      };
+          const result: UserBalance = {
+            usdc: usdcFormatted,
+            eth: ethFormatted,
+            hasEnoughUsdc: parseFloat(usdcFormatted) >= 1,
+            hasEnoughEth: parseFloat(ethFormatted) >= 0.001,
+          };
 
-      this.setCache(cacheKey, result, CACHE_CONFIG.USER_BALANCE);
-      return result;
+          this.setCache(cacheKey, result, CACHE_CONFIG.USER_BALANCE);
+          return result;
+        } catch (error) {
+          console.error("Failed to get user balance:", error);
+          throw error;
+        }
+      });
     } catch (error) {
-      console.error("Failed to get user balance:", error);
+      // Fallback return only after retry logic fails
       return {
         usdc: "0",
         eth: "0",
@@ -222,26 +257,39 @@ export class ContractDataService {
         return cached;
       }
 
-      const [ticketsPurchasedTotalBps, winningsClaimable, isActive] =
-        await this.megapotContract.usersInfo(userAddress);
-      const lastWinner = await this.megapotContract.lastWinnerAddress();
+      return this.deduplicateRequest(cacheKey, async () => {
+        try {
+          const [userInfo, lastWinner] = await Promise.all([
+            this.megapotContract.usersInfo(userAddress),
+            this.megapotContract.lastWinnerAddress(),
+          ]);
 
-      const ticketsPurchased = Number(ticketsPurchasedTotalBps) / 10000;
-      const winningsFormatted = ethers.formatUnits(winningsClaimable, 6);
+          const ticketsPurchasedTotalBps =
+            userInfo.ticketsPurchasedTotalBps || userInfo[0];
+          const winningsClaimable = userInfo.winningsClaimable || userInfo[1];
+          const isActive = userInfo.active || userInfo[2];
 
-      const result: UserTicketInfo = {
-        ticketsPurchased,
-        winningsClaimable: winningsFormatted,
-        isActive,
-        hasWon:
-          lastWinner.toLowerCase() === userAddress.toLowerCase() &&
-          parseFloat(winningsFormatted) > 0,
-      };
+          const ticketsPurchased = Number(ticketsPurchasedTotalBps) / 10000;
+          const winningsFormatted = ethers.formatUnits(winningsClaimable, 6);
 
-      this.setCache(cacheKey, result, CACHE_CONFIG.USER_TICKETS);
-      return result;
+          const result: UserTicketInfo = {
+            ticketsPurchased,
+            winningsClaimable: winningsFormatted,
+            isActive,
+            hasWon:
+              lastWinner.toLowerCase() === userAddress.toLowerCase() &&
+              parseFloat(winningsFormatted) > 0,
+          };
+
+          this.setCache(cacheKey, result, CACHE_CONFIG.USER_TICKETS);
+          return result;
+        } catch (error) {
+          console.error("Failed to get ticket info:", error);
+          return null;
+        }
+      });
     } catch (error) {
-      console.error("Failed to get ticket info:", error);
+      console.error("Failed to get ticket info wrapper:", error);
       return null;
     }
   }
@@ -266,25 +314,27 @@ export class ContractDataService {
       return cached;
     }
 
-    try {
-      const userInfo = await this.megapotContract.usersInfo(address);
-      const ticketsRaw = userInfo.ticketsPurchasedTotalBps || userInfo[0];
-      const winningsRaw = userInfo.winningsClaimable || userInfo[1];
-      const activeRaw = userInfo.active || userInfo[2];
+    return this.deduplicateRequest(cacheKey, async () => {
+      try {
+        const userInfo = await this.megapotContract.usersInfo(address);
+        const ticketsRaw = userInfo.ticketsPurchasedTotalBps || userInfo[0];
+        const winningsRaw = userInfo.winningsClaimable || userInfo[1];
+        const activeRaw = userInfo.active || userInfo[2];
 
-      const result = {
-        ticketsPurchased: Number(ticketsRaw),
-        winningsClaimable: ethers.formatUnits(winningsRaw, 6),
-        isActive: Boolean(activeRaw),
-        rawValue: ticketsRaw,
-      };
+        const result = {
+          ticketsPurchased: Number(ticketsRaw),
+          winningsClaimable: ethers.formatUnits(winningsRaw, 6),
+          isActive: Boolean(activeRaw),
+          rawValue: ticketsRaw,
+        };
 
-      this.setCache(cacheKey, result, CACHE_CONFIG.USER_TICKETS);
-      return result;
-    } catch (error) {
-      console.error("Failed to get user info for address:", error);
-      return null;
-    }
+        this.setCache(cacheKey, result, CACHE_CONFIG.USER_TICKETS);
+        return result;
+      } catch (error) {
+        console.error("Failed to get user info for address:", error);
+        return null;
+      }
+    });
   }
 
   /**
@@ -298,14 +348,30 @@ export class ContractDataService {
       const signer = await this.baseChain.getFreshSigner();
       const address = await signer.getAddress();
 
-      const allowance = await this.usdcContract.allowance(
-        address,
-        megapotAddress,
+      // Cache allowance check for 5 seconds to prevent spamming during purchase flow
+      const cacheKey = `allowance:${address}:${megapotAddress}`;
+      const cached = this.getCached<bigint>(cacheKey);
+
+      let allowance = cached;
+      if (allowance === null) {
+        allowance = await this.deduplicateRequest(cacheKey, async () => {
+          const val = await this.usdcContract.allowance(
+            address,
+            megapotAddress,
+          );
+          this.setCache(cacheKey, val, 5000); // 5s cache
+          return val;
+        });
+      }
+
+      // Ticket price is rarely changed, safe to use cached version
+      const ticketPriceStr = await this.getTicketPrice();
+      const ticketPrice = BigInt(
+        Math.floor(parseFloat(ticketPriceStr) * 1_000_000),
       );
-      const ticketPrice = await this.megapotContract.ticketPrice();
       const requiredAmount = ticketPrice * BigInt(ticketCount);
 
-      return allowance >= requiredAmount;
+      return (allowance as bigint) >= requiredAmount;
     } catch (error) {
       console.error("Failed to check allowance:", error);
       return false;
@@ -322,28 +388,30 @@ export class ContractDataService {
       return cached;
     }
 
-    try {
-      const jackpotSize = await this.megapotContract.getCurrentJackpot();
-      const jackpotUSD = parseFloat(ethers.formatUnits(jackpotSize, 6));
-      const oddsPerTicket = jackpotUSD / 0.7;
+    return this.deduplicateRequest(cacheKey, async () => {
+      try {
+        const jackpotSize = await this.megapotContract.getCurrentJackpot();
+        const jackpotUSD = parseFloat(ethers.formatUnits(jackpotSize, 6));
+        const oddsPerTicket = jackpotUSD / 0.7;
 
-      const result: OddsInfo = {
-        oddsPerTicket,
-        oddsForTickets: (ticketCount: number) => oddsPerTicket / ticketCount,
-        oddsFormatted: (ticketCount: number) => {
-          const odds = oddsPerTicket / ticketCount;
-          return odds < 1
-            ? "Better than 1:1"
-            : `1 in ${odds.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-        },
-        potentialWinnings: jackpotUSD.toFixed(2),
-      };
+        const result: OddsInfo = {
+          oddsPerTicket,
+          oddsForTickets: (ticketCount: number) => oddsPerTicket / ticketCount,
+          oddsFormatted: (ticketCount: number) => {
+            const odds = oddsPerTicket / ticketCount;
+            return odds < 1
+              ? "Better than 1:1"
+              : `1 in ${odds.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+          },
+          potentialWinnings: jackpotUSD.toFixed(2),
+        };
 
-      this.setCache(cacheKey, result, CACHE_CONFIG.ODDS);
-      return result;
-    } catch (error) {
-      console.error("Failed to calculate odds:", error);
-      return null;
-    }
+        this.setCache(cacheKey, result, CACHE_CONFIG.ODDS);
+        return result;
+      } catch (error) {
+        console.error("Failed to calculate odds:", error);
+        return null;
+      }
+    });
   }
 }
