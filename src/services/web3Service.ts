@@ -1,29 +1,33 @@
 /**
  * WEB3 SERVICE FOR BASE NETWORK
- * 
+ *
  * REFACTORED: Now uses modular services for better separation of concerns
  * - BaseChainService: Provider/signer/network management
  * - ContractDataService: Read-only contract queries
  * - TransactionExecutor: Write operations
- * 
+ *
  * Core Principles Applied:
  * - MODULAR: Composed from specialized services
  * - CLEAN: Thin facade over domain services
  * - DRY: Delegates to single-responsibility services
  */
 
-import { ethers } from 'ethers';
-import type { BigNumberish } from 'ethers';
-import { CONTRACTS, getMegapotAddressForChain, getUsdcAddressForChain } from '@/config';
-import { BaseChainService } from './base/BaseChainService';
-import { ContractDataService } from './base/ContractDataService';
-import { TransactionExecutor } from './base/TransactionExecutor';
+import { ethers } from "ethers";
+import type { BigNumberish } from "ethers";
+import {
+  CONTRACTS,
+  getMegapotAddressForChain,
+  getUsdcAddressForChain,
+} from "@/config";
+import { BaseChainService } from "./base/BaseChainService";
+import { ContractDataService } from "./base/ContractDataService";
+import { TransactionExecutor } from "./base/TransactionExecutor";
 import type {
   UserBalance,
   UserTicketInfo,
-  OddsInfo
-} from './base/ContractDataService';
-import type { TicketPurchaseResult } from './base/TransactionExecutor';
+  OddsInfo,
+} from "./base/ContractDataService";
+import type { TicketPurchaseResult } from "./base/TransactionExecutor";
 
 // Megapot contract ABI
 export const MEGAPOT_ABI = [
@@ -77,7 +81,10 @@ class Web3Service {
   /**
    * Initialize service
    */
-  async initialize(readOnlyRpcUrl?: string, chainId?: number): Promise<boolean> {
+  async initialize(
+    readOnlyRpcUrl?: string,
+    chainId?: number,
+  ): Promise<boolean> {
     try {
       if (chainId) {
         this.megapotContractAddress = getMegapotAddressForChain(chainId);
@@ -91,23 +98,23 @@ class Web3Service {
       if (!success) return false;
 
       const provider = this.baseChain.getProvider();
-      if (!provider) throw new Error('Provider not available');
+      if (!provider) throw new Error("Provider not available");
 
       this.megapotContract = new ethers.Contract(
         this.megapotContractAddress,
         MEGAPOT_ABI,
-        provider
+        provider,
       );
       this.usdcContract = new ethers.Contract(
         this.usdcContractAddress,
         USDC_ABI,
-        provider
+        provider,
       );
 
       this.dataService = new ContractDataService(
         this.baseChain,
         this.megapotContract,
-        this.usdcContract
+        this.usdcContract,
       );
 
       this.txExecutor = new TransactionExecutor(
@@ -116,14 +123,14 @@ class Web3Service {
         this.megapotContract,
         this.usdcContract,
         this.megapotContractAddress,
-        USDC_ABI
+        USDC_ABI,
       );
 
       this.isInitialized = true;
-      console.log('Web3 service initialized');
+      console.log("Web3 service initialized");
       return true;
     } catch (error) {
-      console.error('Failed to initialize Web3 service:', error);
+      console.error("Failed to initialize Web3 service:", error);
       return false;
     }
   }
@@ -146,7 +153,19 @@ class Web3Service {
   }
 
   isReady(): boolean {
-    return this.isInitialized && this.dataService !== null && this.txExecutor !== null;
+    return (
+      this.isInitialized &&
+      this.dataService !== null &&
+      this.txExecutor !== null
+    );
+  }
+
+  isReadOnlyMode(): boolean {
+    return this.baseChain.isReadOnlyMode();
+  }
+
+  isWalletConnected(): boolean {
+    return this.isReady() && !this.baseChain.isReadOnlyMode();
   }
 
   reset(): void {
@@ -182,20 +201,20 @@ class Web3Service {
 
   // Data methods - delegate to ContractDataService
   async getCurrentJackpot(): Promise<string> {
-    return this.dataService?.getCurrentJackpot() ?? '0';
+    return this.dataService?.getCurrentJackpot() ?? "0";
   }
 
   async getTicketPrice(): Promise<string> {
-    return this.dataService?.getTicketPrice() ?? '1';
+    return this.dataService?.getTicketPrice() ?? "1";
   }
 
-  async getUserBalance(): Promise<UserBalance> {
-    if (!this.dataService) throw new Error('Service not initialized');
-    return this.dataService.getUserBalance();
+  async getUserBalance(address?: string): Promise<UserBalance> {
+    if (!this.dataService) throw new Error("Service not initialized");
+    return this.dataService.getUserBalance(address);
   }
 
-  async getCurrentTicketInfo(): Promise<UserTicketInfo | null> {
-    return this.dataService?.getCurrentTicketInfo() ?? null;
+  async getCurrentTicketInfo(address?: string): Promise<UserTicketInfo | null> {
+    return this.dataService?.getCurrentTicketInfo(address) ?? null;
   }
 
   async getUserInfoForAddress(address: string): Promise<{
@@ -213,41 +232,51 @@ class Web3Service {
 
   async checkUsdcAllowance(ticketCount: number): Promise<boolean> {
     if (!this.dataService) return false;
-    return this.dataService.checkUsdcAllowance(ticketCount, this.megapotContractAddress);
+    return this.dataService.checkUsdcAllowance(
+      ticketCount,
+      this.megapotContractAddress,
+    );
   }
 
   // Transaction methods - delegate to TransactionExecutor
   async approveUsdc(ticketCount: number): Promise<string> {
-    if (!this.txExecutor) throw new Error('Service not initialized');
+    if (!this.txExecutor) throw new Error("Service not initialized");
     return this.txExecutor.approveUsdc(ticketCount);
   }
 
-  async purchaseTickets(ticketCount: number, recipientOverride?: string): Promise<TicketPurchaseResult> {
-    if (!this.txExecutor) throw new Error('Service not initialized');
+  async purchaseTickets(
+    ticketCount: number,
+    recipientOverride?: string,
+  ): Promise<TicketPurchaseResult> {
+    if (!this.txExecutor) throw new Error("Service not initialized");
     return this.txExecutor.purchaseTickets(ticketCount, recipientOverride);
   }
 
   async claimWinnings(): Promise<string> {
-    if (!this.txExecutor) throw new Error('Service not initialized');
+    if (!this.txExecutor) throw new Error("Service not initialized");
     return this.txExecutor.claimWinnings();
   }
 
   async purchaseTicketsWithDelegation(
     userAddress: string,
     ticketCount: number,
-    amountUsdc: bigint
+    amountUsdc: bigint,
   ): Promise<string> {
-    if (!this.txExecutor) throw new Error('Service not initialized');
-    return this.txExecutor.purchaseTicketsWithDelegation(userAddress, ticketCount, amountUsdc);
+    if (!this.txExecutor) throw new Error("Service not initialized");
+    return this.txExecutor.purchaseTicketsWithDelegation(
+      userAddress,
+      ticketCount,
+      amountUsdc,
+    );
   }
 
   // Transaction builders
   async getAdHocBatchPurchaseCalls(
     ticketCount: number,
-    recipientOverride?: string
+    recipientOverride?: string,
   ): Promise<Array<{ to: string; data: string; value: string }>> {
     if (!this.megapotContract || !this.usdcContract) {
-      throw new Error('Contracts not initialized');
+      throw new Error("Contracts not initialized");
     }
     const ticketPrice = await this.megapotContract.ticketPrice();
     const usdcAmount = ticketPrice * BigInt(ticketCount);
@@ -255,28 +284,39 @@ class Web3Service {
     const recipient = recipientOverride ?? ethers.ZeroAddress;
     const usdcIface = new ethers.Interface(USDC_ABI);
     const megapotIface = new ethers.Interface(MEGAPOT_ABI);
-    const approveData = usdcIface.encodeFunctionData('approve', [this.megapotContractAddress, usdcAmount]);
-    const purchaseData = megapotIface.encodeFunctionData('purchaseTickets', [referrer, usdcAmount, recipient]);
+    const approveData = usdcIface.encodeFunctionData("approve", [
+      this.megapotContractAddress,
+      usdcAmount,
+    ]);
+    const purchaseData = megapotIface.encodeFunctionData("purchaseTickets", [
+      referrer,
+      usdcAmount,
+      recipient,
+    ]);
     return [
-      { to: this.usdcContractAddress, data: approveData, value: '0' },
-      { to: this.megapotContractAddress, data: purchaseData, value: '0' },
+      { to: this.usdcContractAddress, data: approveData, value: "0" },
+      { to: this.megapotContractAddress, data: purchaseData, value: "0" },
     ];
   }
 
   async buildPurchaseTransaction(
     ticketCount: number,
-    recipient: string
+    recipient: string,
   ): Promise<{ to: string; data: string; value: string }> {
-    if (!this.megapotContract) throw new Error('Contracts not initialized');
+    if (!this.megapotContract) throw new Error("Contracts not initialized");
     const ticketPrice = await this.megapotContract.ticketPrice();
     const usdcAmount = ticketPrice * BigInt(ticketCount);
     const referrer = ethers.ZeroAddress;
     const megapotIface = new ethers.Interface(MEGAPOT_ABI);
-    const purchaseData = megapotIface.encodeFunctionData('purchaseTickets', [referrer, usdcAmount, recipient]);
+    const purchaseData = megapotIface.encodeFunctionData("purchaseTickets", [
+      referrer,
+      usdcAmount,
+      recipient,
+    ]);
     return {
       to: this.megapotContractAddress,
       data: purchaseData,
-      value: '0',
+      value: "0",
     };
   }
 }
