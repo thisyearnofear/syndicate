@@ -1,39 +1,39 @@
 /**
  * PURCHASE ORCHESTRATOR SERVICE
- * 
+ *
  * Core Principles Applied:
  * - ENHANCEMENT FIRST: Consolidates all chain-specific purchase logic into single service
  * - DRY: Single source of truth for purchase execution across all supported chains
  * - CLEAN: Clear separation between orchestration, chain logic, and permissions
  * - MODULAR: Chain handlers are composable and independently testable
  * - ORGANIZED: Domain-driven design under lottery domain
- * 
+ *
  * Replaces fragmented logic in:
  * - useTicketPurchase.ts (1429 lines)
  * - useCrossChainPurchase.ts (258 lines)
  * - Individual service chain handlers
- * 
+ *
  * Supports all purchase modes:
  * 1. Direct purchase (user-initiated)
  * 2. Delegated purchase (Advanced Permissions / ERC-7715)
  */
 
-import type { WalletTypes } from '@/domains/wallet/types';
-import { web3Service } from '@/services/web3Service';
-import { solanaWalletService } from '@/services/solanaWalletService';
-import { bridgeManager } from '@/services/bridges';
-import { megapotService } from './megapotService';
-import { getERC7715Service } from '@/services/erc7715Service';
-import { CHAINS } from '@/config';
-import type { ChainIdentifier } from '@/services/bridges/types';
+import type { WalletTypes } from "@/domains/wallet/types";
+import { web3Service } from "@/services/web3Service";
+import { solanaWalletService } from "@/services/solanaWalletService";
+import { bridgeManager } from "@/services/bridges";
+import { megapotService } from "./megapotService";
+import { getERC7715Service } from "@/services/erc7715Service";
+import { CHAINS } from "@/config";
+import type { ChainIdentifier } from "@/services/bridges/types";
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-export type PurchaseChain = 'base' | 'near' | 'solana' | 'stacks' | 'ethereum';
+export type PurchaseChain = "base" | "near" | "solana" | "stacks" | "ethereum";
 
-export type PurchaseMode = 'direct' | 'syndicate' | 'vault';
+export type PurchaseMode = "direct" | "syndicate" | "vault";
 
 export interface PurchaseRequest {
   /** User's wallet address on the source chain */
@@ -52,7 +52,7 @@ export interface PurchaseRequest {
   syndicatePoolId?: string;
 
   /** For vault purchases: vault protocol and amount */
-  vaultProtocol?: 'aave' | 'morpho' | 'spark';
+  vaultProtocol?: "aave" | "morpho" | "spark";
   vaultAmount?: string;
 
   /** Optional: For cross-chain, where to receive tickets (defaults to userAddress on Base) */
@@ -79,16 +79,17 @@ export interface PurchaseResult {
   error?: {
     code: string;
     message: string;
+    suggestedAction?: string;
   };
 }
 
 export type PurchaseStage =
-  | 'connecting'
-  | 'checking-balance'
-  | 'approving'
-  | 'bridging'
-  | 'executing'
-  | 'confirming';
+  | "connecting"
+  | "checking-balance"
+  | "approving"
+  | "bridging"
+  | "executing"
+  | "confirming";
 
 export interface PurchaseProgress {
   stage: PurchaseStage;
@@ -105,10 +106,12 @@ export interface PurchaseProgress {
  * Base EVMPurchaseHandler - handles Base and other EVM chains
  * Supports both direct and delegated (ERC-7715) purchases
  */
-async function executeEVMPurchase(req: PurchaseRequest): Promise<PurchaseResult> {
+async function executeEVMPurchase(
+  req: PurchaseRequest,
+): Promise<PurchaseResult> {
   try {
-    // Initialize web3 service if needed
-    if (!web3Service.isReady()) {
+    // Initialize web3 service if needed - ensure it's in wallet mode for signatures
+    if (!web3Service.isReady() || web3Service.isReadOnlyMode()) {
       await web3Service.initialize();
     }
 
@@ -116,7 +119,9 @@ async function executeEVMPurchase(req: PurchaseRequest): Promise<PurchaseResult>
     const balance = await web3Service.getUserBalance();
     const ticketPrice = await web3Service.getTicketPrice();
     // Convert ticket price from decimal string (e.g., "1.0") to raw units (e.g., "1000000" for USDC)
-    const ticketPriceRaw = BigInt(Math.floor(parseFloat(ticketPrice) * 1_000_000));
+    const ticketPriceRaw = BigInt(
+      Math.floor(parseFloat(ticketPrice) * 1_000_000),
+    );
     const requiredAmount = ticketPriceRaw * BigInt(req.ticketCount);
 
     // Convert balance from decimal string (e.g., "10.0") to raw units before BigInt conversion
@@ -125,7 +130,7 @@ async function executeEVMPurchase(req: PurchaseRequest): Promise<PurchaseResult>
       return {
         success: false,
         error: {
-          code: 'INSUFFICIENT_BALANCE',
+          code: "INSUFFICIENT_BALANCE",
           message: `Insufficient USDC balance. Required: ${requiredAmount}, Available: ${balance.usdc}`,
         },
       };
@@ -144,8 +149,8 @@ async function executeEVMPurchase(req: PurchaseRequest): Promise<PurchaseResult>
         return {
           success: false,
           error: {
-            code: 'INVALID_PERMISSION',
-            message: 'Permission not found or inactive',
+            code: "INVALID_PERMISSION",
+            message: "Permission not found or inactive",
           },
         };
       }
@@ -155,7 +160,7 @@ async function executeEVMPurchase(req: PurchaseRequest): Promise<PurchaseResult>
         return {
           success: false,
           error: {
-            code: 'PERMISSION_EXCEEDED',
+            code: "PERMISSION_EXCEEDED",
             message: `Permission limit (${permission.limit}) exceeded by request (${requiredAmount})`,
           },
         };
@@ -165,17 +170,20 @@ async function executeEVMPurchase(req: PurchaseRequest): Promise<PurchaseResult>
       txHash = await web3Service.purchaseTicketsWithDelegation(
         req.userAddress,
         req.ticketCount,
-        requiredAmount
+        requiredAmount,
       );
     } else {
       // Direct purchase with user signature
-      const result = await web3Service.purchaseTickets(req.ticketCount, req.userAddress);
+      const result = await web3Service.purchaseTickets(
+        req.ticketCount,
+        req.recipientAddress || req.userAddress,
+      );
       if (!result.success || !result.txHash) {
         return {
           success: false,
           error: {
-            code: 'PURCHASE_FAILED',
-            message: result.error || 'Failed to purchase tickets',
+            code: "PURCHASE_FAILED",
+            message: result.error || "Failed to purchase tickets",
           },
         };
       }
@@ -190,8 +198,8 @@ async function executeEVMPurchase(req: PurchaseRequest): Promise<PurchaseResult>
     return {
       success: false,
       error: {
-        code: 'EVM_ERROR',
-        message: error instanceof Error ? error.message : 'EVM purchase failed',
+        code: "EVM_ERROR",
+        message: error instanceof Error ? error.message : "EVM purchase failed",
       },
     };
   }
@@ -199,31 +207,33 @@ async function executeEVMPurchase(req: PurchaseRequest): Promise<PurchaseResult>
 
 /**
  * NEAR Purchase Handler - NEAR intents + chain signatures flow
- * 
+ *
  * NOTE: Full implementation requires NEAR Wallet Selector setup in component
  * This is a placeholder for the orchestrator - actual execution happens in
  * the purchase modal component which has access to wallet selector
  */
-async function executeNEARPurchase(req: PurchaseRequest): Promise<PurchaseResult> {
+async function executeNEARPurchase(
+  req: PurchaseRequest,
+): Promise<PurchaseResult> {
   try {
     // NEAR purchase requires WalletSelector which is only available in React context
     // This should be called from the SimplePurchaseModal component via bridge flow
     // For now, we route through bridgeManager which handles NEAR bridge coordination
 
     const result = await bridgeManager.bridge({
-      sourceChain: 'near' as ChainIdentifier,
-      destinationChain: 'base' as ChainIdentifier,
+      sourceChain: "near" as ChainIdentifier,
+      destinationChain: "base" as ChainIdentifier,
       sourceAddress: req.userAddress,
       destinationAddress: req.recipientAddress || req.userAddress,
-      amount: (req.ticketCount).toString(),
+      amount: req.ticketCount.toString(),
     });
 
     if (!result.success) {
       return {
         success: false,
         error: {
-          code: 'NEAR_ERROR',
-          message: result.error || 'NEAR purchase failed',
+          code: "NEAR_ERROR",
+          message: result.error || "NEAR purchase failed",
         },
       };
     }
@@ -234,8 +244,8 @@ async function executeNEARPurchase(req: PurchaseRequest): Promise<PurchaseResult
       return {
         success: false,
         error: {
-          code: 'PURCHASE_FAILED',
-          message: 'Failed to purchase tickets after NEAR bridge',
+          code: "PURCHASE_FAILED",
+          message: "Failed to purchase tickets after NEAR bridge",
         },
       };
     }
@@ -249,8 +259,9 @@ async function executeNEARPurchase(req: PurchaseRequest): Promise<PurchaseResult
     return {
       success: false,
       error: {
-        code: 'NEAR_ERROR',
-        message: error instanceof Error ? error.message : 'NEAR purchase failed',
+        code: "NEAR_ERROR",
+        message:
+          error instanceof Error ? error.message : "NEAR purchase failed",
       },
     };
   }
@@ -259,11 +270,13 @@ async function executeNEARPurchase(req: PurchaseRequest): Promise<PurchaseResult
 /**
  * Solana Purchase Handler - CCTP bridge + Base execution
  */
-async function executeSolanaPurchase(req: PurchaseRequest): Promise<PurchaseResult> {
+async function executeSolanaPurchase(
+  req: PurchaseRequest,
+): Promise<PurchaseResult> {
   try {
     // Check Solana balance
-    const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC || '';
-    const usdcMint = '4zMMC9srt5Ri5X14Y1jb38J8A5R4oXnc1vDCkKXgQEfJ'; // USDC mint on Solana
+    const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC || "";
+    const usdcMint = "4zMMC9srt5Ri5X14Y1jb38J8A5R4oXnc1vDCkKXgQEfJ"; // USDC mint on Solana
     const balance = await solanaWalletService.getUsdcBalance(rpcUrl, usdcMint);
     const ticketPrice = await web3Service.getTicketPrice();
     const requiredAmount = parseFloat(ticketPrice) * req.ticketCount;
@@ -272,7 +285,7 @@ async function executeSolanaPurchase(req: PurchaseRequest): Promise<PurchaseResu
       return {
         success: false,
         error: {
-          code: 'INSUFFICIENT_BALANCE',
+          code: "INSUFFICIENT_BALANCE",
           message: `Insufficient Solana USDC. Required: ${requiredAmount}, Available: ${balance}`,
         },
       };
@@ -280,8 +293,8 @@ async function executeSolanaPurchase(req: PurchaseRequest): Promise<PurchaseResu
 
     // Bridge from Solana to Base
     const bridgeResult = await bridgeManager.bridge({
-      sourceChain: 'solana' as ChainIdentifier,
-      destinationChain: 'base' as ChainIdentifier,
+      sourceChain: "solana" as ChainIdentifier,
+      destinationChain: "base" as ChainIdentifier,
       sourceAddress: req.userAddress,
       destinationAddress: req.recipientAddress || req.userAddress,
       amount: requiredAmount.toString(),
@@ -291,8 +304,8 @@ async function executeSolanaPurchase(req: PurchaseRequest): Promise<PurchaseResu
       return {
         success: false,
         error: {
-          code: 'BRIDGE_FAILED',
-          message: bridgeResult.error || 'Solana to Base bridge failed',
+          code: "BRIDGE_FAILED",
+          message: bridgeResult.error || "Solana to Base bridge failed",
         },
       };
     }
@@ -303,8 +316,8 @@ async function executeSolanaPurchase(req: PurchaseRequest): Promise<PurchaseResu
       return {
         success: false,
         error: {
-          code: 'PURCHASE_FAILED',
-          message: 'Failed to purchase tickets after bridge',
+          code: "PURCHASE_FAILED",
+          message: "Failed to purchase tickets after bridge",
         },
       };
     }
@@ -318,8 +331,9 @@ async function executeSolanaPurchase(req: PurchaseRequest): Promise<PurchaseResu
     return {
       success: false,
       error: {
-        code: 'SOLANA_ERROR',
-        message: error instanceof Error ? error.message : 'Solana purchase failed',
+        code: "SOLANA_ERROR",
+        message:
+          error instanceof Error ? error.message : "Solana purchase failed",
       },
     };
   }
@@ -328,23 +342,25 @@ async function executeSolanaPurchase(req: PurchaseRequest): Promise<PurchaseResu
 /**
  * Stacks Purchase Handler - Custom bridge + Stacks execution
  */
-async function executeStacksPurchase(req: PurchaseRequest): Promise<PurchaseResult> {
+async function executeStacksPurchase(
+  req: PurchaseRequest,
+): Promise<PurchaseResult> {
   try {
     // Use bridgeManager for Stacks flow which handles orchestration
     const result = await bridgeManager.bridge({
-      sourceChain: 'stacks' as ChainIdentifier,
-      destinationChain: 'base' as ChainIdentifier,
+      sourceChain: "stacks" as ChainIdentifier,
+      destinationChain: "base" as ChainIdentifier,
       sourceAddress: req.userAddress,
       destinationAddress: req.recipientAddress || req.userAddress,
-      amount: (req.ticketCount).toString(),
+      amount: req.ticketCount.toString(),
     });
 
     if (!result.success) {
       return {
         success: false,
         error: {
-          code: 'STACKS_ERROR',
-          message: result.error || 'Stacks purchase failed',
+          code: "STACKS_ERROR",
+          message: result.error || "Stacks purchase failed",
         },
       };
     }
@@ -358,8 +374,9 @@ async function executeStacksPurchase(req: PurchaseRequest): Promise<PurchaseResu
     return {
       success: false,
       error: {
-        code: 'STACKS_ERROR',
-        message: error instanceof Error ? error.message : 'Stacks purchase failed',
+        code: "STACKS_ERROR",
+        message:
+          error instanceof Error ? error.message : "Stacks purchase failed",
       },
     };
   }
@@ -367,48 +384,53 @@ async function executeStacksPurchase(req: PurchaseRequest): Promise<PurchaseResu
 
 /**
  * Syndicate Pool Purchase Handler
- * 
+ *
  * ARCHITECTURE: Base-only syndicates (MVP)
- * 
+ *
  * Rationale:
  * - All SyndicatePool contracts deployed to Base
  * - Megapot lives on Base, not moving to other chains
  * - Users from any chain can join by bridging USDC to Base first
  * - Follows same pattern as individual ticket purchases
- * 
+ *
  * Future (Phase 3):
  * - If user demand warrants, add lightweight mirror contracts on other chains
  * - Mirror contracts track membership locally, settle on Base via bridges
- * 
+ *
  * ENHANCEMENT: Handles batch purchases for syndicate pools on Base
  */
-async function executeSyndicatePurchase(req: PurchaseRequest): Promise<PurchaseResult> {
+async function executeSyndicatePurchase(
+  req: PurchaseRequest,
+): Promise<PurchaseResult> {
   try {
     if (!req.syndicatePoolId) {
       return {
         success: false,
         error: {
-          code: 'INVALID_REQUEST',
-          message: 'Syndicate pool ID required for syndicate purchases',
+          code: "INVALID_REQUEST",
+          message: "Syndicate pool ID required for syndicate purchases",
         },
       };
     }
 
     // CRITICAL: Syndicate pools only exist on Base
     // Users on other chains must bridge USDC to Base first
-    if (req.chain !== 'base') {
+    if (req.chain !== "base") {
       return {
         success: false,
         error: {
-          code: 'SYNDICATE_REQUIRES_BASE',
-          message: 'Syndicate pools are on Base. Please bridge your USDC to Base first.',
-          suggestedAction: 'bridge', // UI will show bridge modal
+          code: "SYNDICATE_REQUIRES_BASE",
+          message:
+            "Syndicate pools are on Base. Please bridge your USDC to Base first.",
+          suggestedAction: "bridge", // UI will show bridge modal
         },
       };
     }
 
     // Import syndicate service dynamically
-    const { syndicateService } = await import('@/domains/syndicate/services/syndicateService');
+    const { syndicateService } = await import(
+      "@/domains/syndicate/services/syndicateService"
+    );
 
     // Execute purchase on SyndicatePool contract
     // This calls SyndicatePool.purchaseTicketsFromPool() which:
@@ -419,20 +441,20 @@ async function executeSyndicatePurchase(req: PurchaseRequest): Promise<PurchaseR
     const result = await syndicateService.executeSyndicatePurchase(
       req.syndicatePoolId,
       req.ticketCount,
-      req.userAddress
+      req.userAddress,
     );
 
     if (!result.success) {
       return {
         success: false,
         error: {
-          code: 'SYNDICATE_PURCHASE_FAILED',
-          message: result.error || 'Failed to execute syndicate purchase',
+          code: "SYNDICATE_PURCHASE_FAILED",
+          message: result.error || "Failed to execute syndicate purchase",
         },
       };
     }
 
-    console.log('[PurchaseOrchestrator] Syndicate purchase executed:', {
+    console.log("[PurchaseOrchestrator] Syndicate purchase executed:", {
       poolId: req.syndicatePoolId,
       ticketCount: req.ticketCount,
       txHash: result.txHash,
@@ -446,8 +468,9 @@ async function executeSyndicatePurchase(req: PurchaseRequest): Promise<PurchaseR
     return {
       success: false,
       error: {
-        code: 'SYNDICATE_ERROR',
-        message: error instanceof Error ? error.message : 'Syndicate purchase failed',
+        code: "SYNDICATE_ERROR",
+        message:
+          error instanceof Error ? error.message : "Syndicate purchase failed",
       },
     };
   }
@@ -457,39 +480,44 @@ async function executeSyndicatePurchase(req: PurchaseRequest): Promise<PurchaseR
  * Vault Yield Purchase Handler
  * ENHANCEMENT: Handles purchases using vault yield
  */
-async function executeVaultYieldPurchase(req: PurchaseRequest): Promise<PurchaseResult> {
+async function executeVaultYieldPurchase(
+  req: PurchaseRequest,
+): Promise<PurchaseResult> {
   try {
     if (!req.vaultProtocol || !req.vaultAmount) {
       return {
         success: false,
         error: {
-          code: 'INVALID_REQUEST',
-          message: 'Vault protocol and amount required for vault purchases',
+          code: "INVALID_REQUEST",
+          message: "Vault protocol and amount required for vault purchases",
         },
       };
     }
 
     // Import yield service dynamically
-    const { yieldToTicketsService } = await import('@/services/yieldToTicketsService');
+    const { yieldToTicketsService } = await import(
+      "@/services/yieldToTicketsService"
+    );
 
     // Purchase tickets from vault yield
     const result = await yieldToTicketsService.purchaseTicketsFromYield(
       req.vaultProtocol,
       req.userAddress,
-      req.vaultAmount
+      req.vaultAmount,
     );
 
     if (!result.success) {
       return {
         success: false,
         error: {
-          code: 'VAULT_PURCHASE_FAILED',
-          message: result.error || 'Failed to purchase tickets from vault yield',
+          code: "VAULT_PURCHASE_FAILED",
+          message:
+            result.error || "Failed to purchase tickets from vault yield",
         },
       };
     }
 
-    console.log('[PurchaseOrchestrator] Vault purchase executed:', {
+    console.log("[PurchaseOrchestrator] Vault purchase executed:", {
       protocol: req.vaultProtocol,
       amount: req.vaultAmount,
       ticketCount: result.ticketCount,
@@ -504,8 +532,9 @@ async function executeVaultYieldPurchase(req: PurchaseRequest): Promise<Purchase
     return {
       success: false,
       error: {
-        code: 'VAULT_ERROR',
-        message: error instanceof Error ? error.message : 'Vault purchase failed',
+        code: "VAULT_ERROR",
+        message:
+          error instanceof Error ? error.message : "Vault purchase failed",
       },
     };
   }
@@ -518,7 +547,7 @@ async function executeVaultYieldPurchase(req: PurchaseRequest): Promise<Purchase
 class PurchaseOrchestrator {
   /**
    * Execute a ticket purchase request on the specified chain
-   * 
+   *
    * CLEAN: Single entry point for all purchase flows
    * Handles routing to appropriate chain handler based on chain parameter
    */
@@ -528,44 +557,44 @@ class PurchaseOrchestrator {
       return {
         success: false,
         error: {
-          code: 'INVALID_REQUEST',
-          message: 'Invalid purchase request',
+          code: "INVALID_REQUEST",
+          message: "Invalid purchase request",
         },
       };
     }
 
     // Route based on purchase mode
-    const mode = req.mode || 'direct';
+    const mode = req.mode || "direct";
 
     switch (mode) {
-      case 'syndicate':
+      case "syndicate":
         return executeSyndicatePurchase(req);
 
-      case 'vault':
+      case "vault":
         return executeVaultYieldPurchase(req);
 
-      case 'direct':
+      case "direct":
       default:
         // Route to chain-specific handler for direct purchases
         switch (req.chain) {
-          case 'base':
-          case 'ethereum':
+          case "base":
+          case "ethereum":
             return executeEVMPurchase(req);
 
-          case 'near':
+          case "near":
             return executeNEARPurchase(req);
 
-          case 'solana':
+          case "solana":
             return executeSolanaPurchase(req);
 
-          case 'stacks':
+          case "stacks":
             return executeStacksPurchase(req);
 
           default:
             return {
               success: false,
               error: {
-                code: 'UNSUPPORTED_CHAIN',
+                code: "UNSUPPORTED_CHAIN",
                 message: `Chain ${req.chain} is not supported`,
               },
             };
@@ -578,32 +607,34 @@ class PurchaseOrchestrator {
    */
   async getPurchaseInfo(chain: PurchaseChain, userAddress: string) {
     try {
-      const ticketPrice = await megapotService.getJackpotStats().then(stats => stats?.ticketPrice.toString() || '1');
+      const ticketPrice = await megapotService
+        .getJackpotStats()
+        .then((stats) => stats?.ticketPrice.toString() || "1");
 
-      let balance: string = '0';
+      let balance: string = "0";
 
       switch (chain) {
-        case 'base':
-        case 'ethereum':
+        case "base":
+        case "ethereum":
           const evmBalance = await web3Service.getUserBalance();
           balance = evmBalance.usdc;
           break;
 
-        case 'near':
+        case "near":
           // Balance will be fetched in NEAR intent service
-          balance = '0'; // Placeholder - service handles it
+          balance = "0"; // Placeholder - service handles it
           break;
 
-        case 'solana': {
-          const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC || '';
-          const usdcMint = '4zMMC9srt5Ri5X14Y1jb38J8A5R4oXnc1vDCkKXgQEfJ';
+        case "solana": {
+          const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC || "";
+          const usdcMint = "4zMMC9srt5Ri5X14Y1jb38J8A5R4oXnc1vDCkKXgQEfJ";
           balance = await solanaWalletService.getUsdcBalance(rpcUrl, usdcMint);
           break;
         }
 
-        case 'stacks':
+        case "stacks":
           // Stacks balance info handled in bridge manager
-          balance = '0'; // Placeholder
+          balance = "0"; // Placeholder
           break;
       }
 
@@ -613,11 +644,11 @@ class PurchaseOrchestrator {
         userBalance: balance,
       };
     } catch (error) {
-      console.error('Failed to get purchase info:', error);
+      console.error("Failed to get purchase info:", error);
       return {
         chain,
-        ticketPrice: '1',
-        userBalance: '0',
+        ticketPrice: "1",
+        userBalance: "0",
       };
     }
   }
@@ -625,7 +656,11 @@ class PurchaseOrchestrator {
   /**
    * Check if user can perform a purchase on a chain
    */
-  async canPurchase(chain: PurchaseChain, userAddress: string, ticketCount: number): Promise<{
+  async canPurchase(
+    chain: PurchaseChain,
+    userAddress: string,
+    ticketCount: number,
+  ): Promise<{
     canPurchase: boolean;
     reason?: string;
   }> {
@@ -645,7 +680,7 @@ class PurchaseOrchestrator {
     } catch (error) {
       return {
         canPurchase: false,
-        reason: 'Failed to check purchase eligibility',
+        reason: "Failed to check purchase eligibility",
       };
     }
   }

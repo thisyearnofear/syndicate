@@ -1,25 +1,30 @@
 /**
  * ADVANCED PERMISSIONS SERVICE (ERC-7715 DELEGATING WRAPPER)
- * 
+ *
  * Core Principles Applied:
  * - ENHANCEMENT FIRST: Delegates to unified erc7715Service
  * - DRY: Single source of truth (erc7715Service)
  * - CLEAN: Maintains backward-compatible API
  * - MODULAR: Thin wrapper, no duplicate logic
  * - ORGANIZED: Keeps domain types, delegates implementation
- * 
+ *
  * This service now delegates all ERC-7715 operations to the unified erc7715Service.
  * It maintains backward compatibility with existing code while using the single
  * source of truth for all permission and session management.
- * 
+ *
  * MIGRATION NOTE: New code should import and use erc7715Service directly.
  * This service exists only for backward compatibility with existing autopurchase flow.
  */
 
-import { WalletClient } from 'viem';
-import { getERC7715Service } from '@/services/erc7715Service';
-import { CONTRACTS, CHAIN_IDS } from '@/config';
-import type { AdvancedPermission, PermissionRequest, PermissionResult, AutoPurchaseConfig } from '../types';
+import { WalletClient } from "viem";
+import { getERC7715Service } from "@/services/erc7715Service";
+import { CONTRACTS, CHAIN_IDS, getUsdcAddressForChain } from "@/config";
+import type {
+  AdvancedPermission,
+  PermissionRequest,
+  PermissionResult,
+  AutoPurchaseConfig,
+} from "../types";
 
 // =============================================================================
 // CONFIGURATION
@@ -29,28 +34,12 @@ import type { AdvancedPermission, PermissionRequest, PermissionResult, AutoPurch
  * Default permission limits for auto-purchase
  */
 const DEFAULT_LIMITS = {
-  DAILY: BigInt(10 * 10 ** 6),      // 10 USDC
-  WEEKLY: BigInt(50 * 10 ** 6),     // 50 USDC
-  MONTHLY: BigInt(200 * 10 ** 6),   // 200 USDC
+  DAILY: BigInt(10 * 10 ** 6), // 10 USDC
+  WEEKLY: BigInt(50 * 10 ** 6), // 50 USDC
+  MONTHLY: BigInt(200 * 10 ** 6), // 200 USDC
 } as const;
 
-/**
- * USDC token addresses by chain
- * Maps chainId to USDC contract address
- */
-const USDC_BY_CHAIN: Record<number, `0x${string}`> = {
-  [CHAIN_IDS.BASE]: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',           // Base mainnet
-  [CHAIN_IDS.BASE_SEPOLIA]: '0x036CbD53842c5426634E7929541eC2318f3dCd01',   // Base Sepolia testnet
-  [CHAIN_IDS.ETHEREUM]: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',       // Ethereum mainnet
-  [CHAIN_IDS.SEPOLIA]: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',       // Ethereum Sepolia testnet
-};
-
-/**
- * Get USDC address for current chain
- */
-export function getUsdcAddressForChain(chainId: number): `0x${string}` {
-  return USDC_BY_CHAIN[chainId] || CONTRACTS.usdc as `0x${string}`;
-}
+export { getUsdcAddressForChain };
 
 // =============================================================================
 // PERMISSION PRESETS
@@ -65,18 +54,20 @@ export function getPermissionPresets(chainId: number) {
   const usdcAddress = getUsdcAddressForChain(chainId);
   return {
     weekly: {
-      scope: 'erc20-token-periodic' as const,
+      scope: "erc20-token-periodic" as const,
       tokenAddress: usdcAddress,
       limit: DEFAULT_LIMITS.WEEKLY,
-      period: 'weekly' as const,
-      description: 'Spend up to 50 USDC per week for automatic ticket purchases',
+      period: "weekly" as const,
+      description:
+        "Spend up to 50 USDC per week for automatic ticket purchases",
     },
     monthly: {
-      scope: 'erc20-token-periodic' as const,
+      scope: "erc20-token-periodic" as const,
       tokenAddress: usdcAddress,
       limit: DEFAULT_LIMITS.MONTHLY,
-      period: 'monthly' as const,
-      description: 'Spend up to 200 USDC per month for automatic ticket purchases',
+      period: "monthly" as const,
+      description:
+        "Spend up to 200 USDC per month for automatic ticket purchases",
     },
   } as const;
 }
@@ -87,7 +78,7 @@ export function getPermissionPresets(chainId: number) {
 
 /**
  * DEPRECATED: Use erc7715Service directly for new code.
- * 
+ *
  * This service now delegates to the unified erc7715Service.
  * Kept for backward compatibility with autopurchase feature.
  */
@@ -108,11 +99,15 @@ class AdvancedPermissionsService {
   /**
    * Request Advanced Permission (delegates to erc7715Service)
    */
-  async requestPermission(request: PermissionRequest, chainId?: number): Promise<PermissionResult> {
+  async requestPermission(
+    request: PermissionRequest,
+    chainId?: number,
+  ): Promise<PermissionResult> {
     if (!this.isInitialized) {
       return {
         success: false,
-        error: 'Advanced Permissions Service not initialized. Connect MetaMask first.',
+        error:
+          "Advanced Permissions Service not initialized. Connect MetaMask first.",
       };
     }
 
@@ -128,21 +123,24 @@ class AdvancedPermissionsService {
       }
 
       // Get token address - use provided address, or get from current chain, or fallback to config
-      const tokenAddress = request.tokenAddress || 
-        (chainId ? getUsdcAddressForChain(chainId) : CONTRACTS.usdc as `0x${string}`);
+      const tokenAddress =
+        request.tokenAddress ||
+        (chainId
+          ? getUsdcAddressForChain(chainId)
+          : (CONTRACTS.usdc as `0x${string}`));
 
       // Convert from old PermissionRequest to erc7715Service format
       const permission = await service.requestAdvancedPermission(
         request.scope,
-        tokenAddress,
+        tokenAddress as `0x${string}`,
         request.limit,
-        request.period
+        request.period,
       );
 
       if (!permission) {
         return {
           success: false,
-          error: 'User rejected permission request',
+          error: "User rejected permission request",
         };
       }
 
@@ -165,7 +163,7 @@ class AdvancedPermissionsService {
         permission: advancedPermission,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = error instanceof Error ? error.message : "Unknown error";
 
       return {
         success: false,
