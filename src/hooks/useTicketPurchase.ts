@@ -803,6 +803,7 @@ export function useTicketPurchase(): TicketPurchaseState &
   const executeSolanaBridgePurchase = useCallback(
     async (
       ticketCount: number,
+      destinationAddress: string,
       onDepositAddressReady?: (address: string, protocol: string) => void,
     ): Promise<TicketPurchaseResult> => {
       const solanaBalance = state.solanaBalance;
@@ -817,15 +818,9 @@ export function useTicketPurchase(): TicketPurchaseState &
         throw new Error("Solana wallet address not connected");
       }
 
-      if (!address) {
+      if (!destinationAddress) {
         throw new Error(
-          "Connect an EVM wallet (MetaMask, Coinbase, etc.) to complete the purchase on Base.",
-        );
-      }
-
-      if (typeof window === "undefined" || !window.ethereum) {
-        throw new Error(
-          "Base purchases require an EVM wallet provider (window.ethereum). Please connect one first.",
+          "Destination EVM address required. Please connect an EVM wallet (MetaMask, Coinbase) to receive tickets on Base.",
         );
       }
 
@@ -852,10 +847,13 @@ export function useTicketPurchase(): TicketPurchaseState &
         sourceChain: "solana",
         destinationChain: "base",
         sourceAddress: address,
-        destinationAddress: address,
+        destinationAddress: destinationAddress,
         amount: bridgeAmount,
         protocol: "auto",
         allowFallback: true,
+        options: {
+          gasDrop: "0.002", // Request gas drop to ensure user has ETH on Base
+        },
         onStatus: (status, data) => {
           setState((prev) => {
             const newStages = prev.bridgeStages.includes(status)
@@ -1272,8 +1270,21 @@ export function useTicketPurchase(): TicketPurchaseState &
         } else if (walletType === WalletTypes.SOLANA) {
           // ENHANCEMENT: Execute Solana bridge flow (Base-Solana Bridge + deBridge fallback)
           try {
+            // Get destination EVM address from window.ethereum
+            if (typeof window === "undefined" || !window.ethereum) {
+              throw new Error(
+                "EVM wallet (MetaMask, Coinbase) required for destination address.",
+              );
+            }
+
+            const { ethers } = await import("ethers");
+            const provider = new ethers.BrowserProvider(window.ethereum as any);
+            const signer = await provider.getSigner();
+            const evmAddress = await signer.getAddress();
+
             result = await executeSolanaBridgePurchase(
               ticketCount,
+              evmAddress,
               (depositAddress: string, protocol: string) => {
                 console.log(
                   `[Bridge] Deposit address ready for ${protocol}:`,
