@@ -26,6 +26,7 @@ import { megapotService } from "./megapotService";
 import { getERC7715Service } from "@/services/erc7715Service";
 import { CHAINS } from "@/config";
 import type { ChainIdentifier } from "@/services/bridges/types";
+import { ethers } from "ethers";
 
 // =============================================================================
 // TYPES
@@ -291,13 +292,61 @@ async function executeSolanaPurchase(
       };
     }
 
+    // Configure bridge options (Gas Drop + Intents)
+    const adapterAddress = process.env.NEXT_PUBLIC_DEBRIDGE_ADAPTER;
+    const recipientAddress = req.recipientAddress || req.userAddress;
+
+    // Default to direct transfer to user (Phase 1)
+    let destinationAddress = recipientAddress;
+    const bridgeOptions: Record<string, unknown> = {
+      gasDrop: "0.002", // Always request gas drop to prevent "Gas Trap"
+    };
+
+    // If adapter is available, upgrade to Phase 2 (Intents)
+    if (adapterAddress) {
+      try {
+        // Construct calldata for the adapter to execute purchase
+        // The adapter receives USDC then calls Megapot.purchaseTickets
+        const abi = ["function executePurchase(uint256,address,bytes32)"];
+        const iface = new ethers.Interface(abi);
+
+        // Set destination to the adapter contract
+        destinationAddress = adapterAddress;
+
+        // Set fallback address to user in case execution fails
+        bridgeOptions.fallbackAddress = recipientAddress;
+
+        // Encode the execution intent
+        // Using 0 for amount/orderId placeholders as they are filled by context
+        // or handled by the specific adapter logic
+        bridgeOptions.externalCall = iface.encodeFunctionData(
+          "executePurchase",
+          [
+            0, // Amount (filled by adapter/solver context)
+            recipientAddress, // Recipient
+            ethers.ZeroHash, // OrderID (filled by adapter/solver context)
+          ],
+        );
+      } catch (e) {
+        console.warn(
+          "Failed to construct intent data, falling back to direct bridge:",
+          e,
+        );
+        destinationAddress = recipientAddress;
+        delete bridgeOptions.externalCall;
+      }
+    }
+
     // Bridge from Solana to Base
     const bridgeResult = await bridgeManager.bridge({
       sourceChain: "solana" as ChainIdentifier,
       destinationChain: "base" as ChainIdentifier,
       sourceAddress: req.userAddress,
-      destinationAddress: req.recipientAddress || req.userAddress,
+      destinationAddress: destinationAddress,
       amount: requiredAmount.toString(),
+      protocol: adapterAddress ? "debridge" : "auto", // Prefer deBridge if using intent
+      allowFallback: true,
+      options: bridgeOptions,
     });
 
     if (!bridgeResult.success) {
