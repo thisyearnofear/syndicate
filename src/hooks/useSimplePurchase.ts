@@ -18,6 +18,8 @@
 import { useState, useCallback } from 'react';
 import { purchaseOrchestrator, type PurchaseRequest, type PurchaseResult } from '@/domains/lottery/services/purchaseOrchestrator';
 import { useWalletConnection } from './useWalletConnection';
+import type { TrackerStatus, SourceChainType } from '@/components/bridge/CrossChainTracker';
+import { usePurchasePolling } from './usePurchasePolling';
 
 export interface UseSimplePurchaseState {
   isPurchasing: boolean;
@@ -26,6 +28,14 @@ export interface UseSimplePurchaseState {
   txHash: string | null;
   sourceTxHash: string | null;
   destinationTxHash: string | null;
+  // Enhanced tracking
+  status: TrackerStatus;
+  sourceChain?: SourceChainType;
+  walletInfo?: {
+    sourceAddress?: string;
+    baseAddress?: string;
+    isLinked?: boolean;
+  };
 }
 
 export interface UseSimplePurchaseActions {
@@ -43,14 +53,50 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
     txHash: null,
     sourceTxHash: null,
     destinationTxHash: null,
+    status: 'idle',
+    sourceChain: undefined,
+    walletInfo: undefined,
+  });
+
+  // Use shared polling hook for cross-chain transactions
+  const { stopPolling } = usePurchasePolling({
+    txId: state.sourceTxHash,
+    currentStatus: state.status,
+    adaptivePolling: true,
+    onStatusChange: (data) => {
+      // Map API status to our tracker status
+      let newStatus: TrackerStatus = state.status;
+      if (data.status === 'confirmed_stacks' || data.status === 'broadcasting') {
+        newStatus = 'confirmed_source';
+      } else if (data.status === 'bridging') {
+        newStatus = 'bridging';
+      } else if (data.status === 'purchasing') {
+        newStatus = 'purchasing';
+      } else if (data.status === 'complete') {
+        newStatus = 'complete';
+      } else if (data.status === 'error') {
+        newStatus = 'error';
+      }
+
+      // Update state
+      setState(prev => ({
+        ...prev,
+        status: newStatus,
+        destinationTxHash: data.baseTxId || prev.destinationTxHash,
+        error: data.error || prev.error,
+        isPurchasing: newStatus !== 'complete' && newStatus !== 'error',
+      }));
+    },
   });
 
   const purchase = useCallback(
     async (request: Partial<PurchaseRequest>, permissionId?: string): Promise<PurchaseResult> => {
+      // Initial state setup
       setState(prev => ({
         ...prev,
         isPurchasing: true,
         error: null,
+        status: 'checking_balance',
       }));
 
       try {
@@ -62,6 +108,7 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
             ...prev,
             isPurchasing: false,
             error: err,
+            status: 'error',
           }));
           return {
             success: false,
@@ -87,6 +134,7 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
             ...prev,
             isPurchasing: false,
             error: err,
+            status: 'error',
           }));
           return {
             success: false,
@@ -96,6 +144,19 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
             },
           };
         }
+
+        // Set source chain and wallet info
+        const isCrossChain = chain !== 'base' && chain !== 'ethereum';
+        setState(prev => ({
+          ...prev,
+          sourceChain: chain as SourceChainType,
+          walletInfo: isCrossChain ? {
+            sourceAddress: userAddress,
+            baseAddress: request.recipientAddress || userAddress,
+            isLinked: true,
+          } : undefined,
+          status: isCrossChain ? 'linking_wallets' : 'signing',
+        }));
 
         // Merge with defaults
         const fullRequest: PurchaseRequest = {
@@ -107,18 +168,49 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
           stacksTokenPrincipal: request.stacksTokenPrincipal,
         };
 
-        // Execute purchase
+        // Update status: signing
+        setState(prev => ({ ...prev, status: 'signing' }));
+
+        // Execute purchase with status tracking
         const result = await purchaseOrchestrator.executePurchase(fullRequest);
 
-        setState(prev => ({
-          ...prev,
-          isPurchasing: false,
-          result,
-          txHash: result.txHash || null,
-          sourceTxHash: result.sourceTxHash || null,
-          destinationTxHash: result.destinationTxHash || null,
-          error: result.error ? result.error.message : null,
-        }));
+        // Update state based on result
+        if (result.success) {
+          if (result.sourceTxHash && isCrossChain) {
+            // Cross-chain: transaction broadcast, start polling
+            setState(prev => ({
+              ...prev,
+              isPurchasing: true, // Keep purchasing true until complete
+              result,
+              txHash: result.txHash || null,
+              sourceTxHash: result.sourceTxHash,
+              destinationTxHash: result.destinationTxHash || null,
+              error: null,
+              status: 'confirmed_source', // Polling will take over from here
+            }));
+          } else {
+            // Direct purchase: complete immediately
+            setState(prev => ({
+              ...prev,
+              isPurchasing: false,
+              result,
+              txHash: result.txHash || null,
+              sourceTxHash: result.sourceTxHash || null,
+              destinationTxHash: result.destinationTxHash || null,
+              error: null,
+              status: 'complete',
+            }));
+          }
+        } else {
+          // Error state
+          setState(prev => ({
+            ...prev,
+            isPurchasing: false,
+            result,
+            error: result.error ? result.error.message : null,
+            status: 'error',
+          }));
+        }
 
         return result;
       } catch (error) {
@@ -127,6 +219,7 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
           ...prev,
           isPurchasing: false,
           error: errorMessage,
+          status: 'error',
         }));
         return {
           success: false,
@@ -145,6 +238,9 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
   }, []);
 
   const reset = useCallback(() => {
+    // Stop polling
+    stopPolling();
+    
     setState({
       isPurchasing: false,
       error: null,
@@ -152,8 +248,11 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
       txHash: null,
       sourceTxHash: null,
       destinationTxHash: null,
+      status: 'idle',
+      sourceChain: undefined,
+      walletInfo: undefined,
     });
-  }, []);
+  }, [stopPolling]);
 
   return {
     ...state,

@@ -22,11 +22,30 @@ import { useERC7715 } from '@/hooks/useERC7715';
 import WalletConnectionManager from '@/components/wallet/WalletConnectionManager';
 import { CompactStack, CompactCard } from '@/shared/components/premium/CompactLayout';
 import { ImprovedAutoPurchaseModal } from './ImprovedAutoPurchaseModal';
+import { CrossChainTracker, type SourceChainType, type TrackerStatus } from '@/components/bridge/CrossChainTracker';
 
 // Lazy load celebration modal
 const CelebrationModal = lazy(() => import('./CelebrationModal'));
 
 type PurchaseStep = 'connect' | 'select' | 'approve' | 'processing' | 'success';
+
+// Helper function to get explorer URLs
+const getExplorerUrl = (chain: SourceChainType, txHash: string): string => {
+  switch (chain) {
+    case 'solana':
+      return `https://solscan.io/tx/${txHash}`;
+    case 'near':
+      return `https://explorer.near.org/transactions/${txHash}`;
+    case 'stacks':
+      return `https://explorer.stacks.co/txid/${txHash}?chain=mainnet`;
+    case 'base':
+      return `https://basescan.org/tx/${txHash}`;
+    case 'ethereum':
+      return `https://etherscan.io/tx/${txHash}`;
+    default:
+      return '#';
+  }
+};
 
 export interface SimplePurchaseModalProps {
   isOpen: boolean;
@@ -35,7 +54,19 @@ export interface SimplePurchaseModalProps {
 
 export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseModalProps) {
   const { isConnected, address, walletType } = useWalletConnection();
-  const { purchase, isPurchasing, error, txHash, clearError, reset } = useSimplePurchase();
+  const { 
+    purchase, 
+    isPurchasing, 
+    error, 
+    txHash, 
+    clearError, 
+    reset,
+    status,
+    sourceChain,
+    sourceTxHash,
+    destinationTxHash,
+    walletInfo 
+  } = useSimplePurchase();
   const { permissions, isSupported } = useERC7715();
   
   const [step, setStep] = useState<PurchaseStep>('connect');
@@ -43,6 +74,9 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
   const [showCelebration, setShowCelebration] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const hasActivePermission = permissions.length > 0 && isSupported;
+  
+  // Show tracker when purchase is in progress
+  const showTracker = isPurchasing || ['confirmed_source', 'bridging', 'purchasing', 'complete', 'error'].includes(status);
 
   // Auto-advance to select step when wallet is connected and modal is open
   useEffect(() => {
@@ -72,12 +106,23 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
     });
 
     if (result.success) {
-      setShowCelebration(true);
+      // Don't show celebration for cross-chain - tracker handles it
+      const isCrossChain = sourceChain && sourceChain !== 'base' && sourceChain !== 'ethereum';
+      if (!isCrossChain) {
+        setShowCelebration(true);
+      }
       setStep('success');
     } else {
       setStep('select');
     }
   };
+  
+  // Auto-advance to success when status is complete
+  useEffect(() => {
+    if (status === 'complete' && step === 'processing') {
+      setStep('success');
+    }
+  }, [status, step]);
 
   // Render step content
   const renderStep = () => {
@@ -226,6 +271,27 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
         );
 
       case 'processing':
+        // Show enhanced tracker during processing
+        if (showTracker && sourceChain) {
+          return (
+            <CrossChainTracker
+              status={status}
+              sourceChain={sourceChain}
+              sourceTxId={sourceTxHash || undefined}
+              baseTxId={destinationTxHash || undefined}
+              error={error}
+              ticketCount={ticketCount}
+              walletInfo={walletInfo}
+              receipt={{
+                sourceExplorer: sourceTxHash ? getExplorerUrl(sourceChain, sourceTxHash) : undefined,
+                baseExplorer: destinationTxHash ? `https://basescan.org/tx/${destinationTxHash}` : undefined,
+                megapotApp: destinationTxHash ? `https://megapot.xyz/my-tickets` : undefined,
+              }}
+            />
+          );
+        }
+        
+        // Fallback to simple loading state
         return (
           <div className="text-center py-12">
             <div className="inline-block mb-6">
@@ -233,7 +299,7 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">Processing Purchase</h2>
             <p className="text-gray-400 mb-4">
-              {walletType === 'stacks' || walletType === 'near'
+              {walletType === 'stacks' || walletType === 'near' || walletType === 'solana'
                 ? 'Bridging across chains...'
                 : 'Executing transaction...'}
             </p>
@@ -244,6 +310,50 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
         );
 
       case 'success':
+        // Show enhanced tracker for cross-chain completions
+        if (showTracker && sourceChain) {
+          return (
+            <div>
+              <CrossChainTracker
+                status={status}
+                sourceChain={sourceChain}
+                sourceTxId={sourceTxHash || undefined}
+                baseTxId={destinationTxHash || undefined}
+                error={error}
+                ticketCount={ticketCount}
+                walletInfo={walletInfo}
+                receipt={{
+                  sourceExplorer: sourceTxHash ? getExplorerUrl(sourceChain, sourceTxHash) : undefined,
+                  baseExplorer: destinationTxHash ? `https://basescan.org/tx/${destinationTxHash}` : undefined,
+                  megapotApp: destinationTxHash ? `https://megapot.xyz/my-tickets` : undefined,
+                }}
+              />
+              <div className="mt-4 flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setTicketCount(1);
+                    setStep('select');
+                    clearError();
+                    reset();
+                  }}
+                >
+                  Buy More
+                </Button>
+                <Button
+                  variant="default"
+                  className="flex-1"
+                  onClick={handleClose}
+                >
+                  Done
+                </Button>
+              </div>
+            </div>
+          );
+        }
+        
+        // Standard success view for direct purchases
         return (
           <CompactStack spacing="md" align="center">
             <div className="text-center">
@@ -258,7 +368,7 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
               </p>
               {txHash && (
                 <a
-                  href={`https://basescan.io/tx/${txHash}`}
+                  href={`https://basescan.org/tx/${txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-blue-400 hover:text-blue-300"
