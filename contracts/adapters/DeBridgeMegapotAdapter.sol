@@ -31,8 +31,10 @@ contract DeBridgeMegapotAdapter is ReentrancyGuard, Ownable {
     IMegapot public immutable megapot;
 
     // Address of the DLN Solver (or deBridge router) authorized to call this contract
-    // In production, this might be open if we rely on the funds being present
     address public dlnSolver;
+
+    // Track processed orders to prevent replay attacks
+    mapping(bytes32 => bool) public processedOrders;
 
     event TicketsPurchased(
         address indexed recipient,
@@ -40,9 +42,16 @@ contract DeBridgeMegapotAdapter is ReentrancyGuard, Ownable {
         bytes32 indexed orderId
     );
 
+    event PurchaseFallback(
+        address indexed recipient,
+        uint256 amount,
+        bytes32 indexed orderId
+    );
+
     error InvalidAmount();
+    error InvalidRecipient();
     error Unauthorized();
-    error PurchaseFailed();
+    error OrderAlreadyProcessed();
 
     constructor(
         address _usdc,
@@ -73,31 +82,37 @@ contract DeBridgeMegapotAdapter is ReentrancyGuard, Ownable {
         address _recipient,
         bytes32 _orderId
     ) external nonReentrant {
-        // Validation (Optional: restrict to authorized solver if needed)
-        // if (msg.sender != dlnSolver && dlnSolver != address(0)) revert Unauthorized();
+        // 1. Strict Access Control
+        if (msg.sender != dlnSolver) revert Unauthorized();
+        if (dlnSolver == address(0)) revert Unauthorized();
 
+        // 2. Input Validation
         if (_amount == 0) revert InvalidAmount();
+        if (_recipient == address(0)) revert InvalidRecipient();
+        if (processedOrders[_orderId]) revert OrderAlreadyProcessed();
 
-        // 1. Verify funds are actually in the contract
-        // The solver should have transferred tokens BEFORE calling this
+        // 3. Mark Order as Processed
+        processedOrders[_orderId] = true;
+
+        // 4. Verify funds (Push Model: Solver sends then calls)
+        // We verify the contract holds enough funds to cover this specific order
         uint256 balance = usdc.balanceOf(address(this));
         if (balance < _amount) revert InvalidAmount();
 
-        // 2. Approve Megapot to spend USDC
+        // 5. Approve Megapot to spend USDC
         usdc.forceApprove(address(megapot), _amount);
 
-        // 3. Purchase Tickets
-        // Referrer is 0x0 for cross-chain automated purchases for now
+        // 6. Execute Purchase with Fallback
         try megapot.purchaseTickets(address(0), _amount, _recipient) {
             emit TicketsPurchased(_recipient, _amount, _orderId);
         } catch {
             // Fallback: If purchase fails, transfer USDC to recipient directly
             // This prevents funds from being stuck in the adapter
             usdc.safeTransfer(_recipient, _amount);
-            emit TicketsPurchased(_recipient, 0, _orderId); // 0 amount indicates fallback transfer
+            emit PurchaseFallback(_recipient, _amount, _orderId);
         }
 
-        // 4. Cleanup approval
+        // 7. Cleanup approval
         usdc.forceApprove(address(megapot), 0);
     }
 
