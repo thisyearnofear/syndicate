@@ -48,8 +48,11 @@ contract DeBridgeMegapotAdapter is ReentrancyGuard, Ownable {
         bytes32 indexed orderId
     );
 
+    event SolverUpdated(address indexed newSolver);
+
     error InvalidAmount();
     error InvalidRecipient();
+    error InvalidAddress();
     error Unauthorized();
     error OrderAlreadyProcessed();
 
@@ -58,6 +61,7 @@ contract DeBridgeMegapotAdapter is ReentrancyGuard, Ownable {
         address _megapot,
         address _owner
     ) Ownable(_owner) {
+        if (_usdc == address(0) || _megapot == address(0)) revert InvalidAddress();
         usdc = IERC20(_usdc);
         megapot = IMegapot(_megapot);
     }
@@ -66,7 +70,9 @@ contract DeBridgeMegapotAdapter is ReentrancyGuard, Ownable {
      * @notice Set the authorized DLN solver/router
      */
     function setDlnSolver(address _solver) external onlyOwner {
+        if (_solver == address(0)) revert InvalidAddress();
         dlnSolver = _solver;
+        emit SolverUpdated(_solver);
     }
 
     /**
@@ -94,10 +100,8 @@ contract DeBridgeMegapotAdapter is ReentrancyGuard, Ownable {
         // 3. Mark Order as Processed
         processedOrders[_orderId] = true;
 
-        // 4. Verify funds (Push Model: Solver sends then calls)
-        // We verify the contract holds enough funds to cover this specific order
-        uint256 balance = usdc.balanceOf(address(this));
-        if (balance < _amount) revert InvalidAmount();
+        // 4. Pull funds (Pull Model: Eliminates race conditions)
+        usdc.safeTransferFrom(msg.sender, address(this), _amount);
 
         // 5. Approve Megapot to spend USDC
         usdc.forceApprove(address(megapot), _amount);
@@ -118,8 +122,10 @@ contract DeBridgeMegapotAdapter is ReentrancyGuard, Ownable {
 
     /**
      * @notice Emergency withdraw in case funds get stuck
+     * @dev WARNING: Only use if contract is deprecated. Could interfere with pending orders.
      */
     function emergencyWithdraw(address _token, address _to) external onlyOwner {
+        if (_to == address(0)) revert InvalidAddress();
         uint256 balance = IERC20(_token).balanceOf(address(this));
         if (balance > 0) {
             IERC20(_token).safeTransfer(_to, balance);
