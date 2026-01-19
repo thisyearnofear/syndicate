@@ -29,6 +29,7 @@ import React, {
   useContext,
   useReducer,
   useEffect,
+  useRef,
   ReactNode,
 } from "react";
 import { useAccount, useDisconnect } from "wagmi";
@@ -353,12 +354,19 @@ export function WalletProvider({ children }: WalletProviderProps) {
    * 
    * This ensures context is always the authoritative wallet state.
    * 
-   * FIX: Removed state.walletType from dependencies to prevent infinite loop
+   * FIX: Use refs to track previous values and prevent infinite loops
    */
+  const prevWagmiConnected = useRef(wagmiConnected);
+  const prevAddress = useRef(address);
+  
   useEffect(() => {
-    if (wagmiConnected && address) {
-      // Only sync if we're not already synced with this address
-      if (state.address !== address || !state.isConnected) {
+    // Only respond to actual wagmi state changes, not our own state changes
+    const wagmiConnectionChanged = prevWagmiConnected.current !== wagmiConnected;
+    const wagmiAddressChanged = prevAddress.current !== address;
+    
+    if (wagmiConnectionChanged || wagmiAddressChanged) {
+      if (wagmiConnected && address) {
+        // Wagmi reports wallet is connected
         dispatch({
           type: "SYNC_WAGMI",
           payload: {
@@ -367,12 +375,16 @@ export function WalletProvider({ children }: WalletProviderProps) {
             isConnected: wagmiConnected,
           },
         });
+      } else if (!wagmiConnected && state.walletType === 'evm') {
+        // Wagmi reports wallet is disconnected and we're tracking an EVM wallet
+        dispatch({ type: "DISCONNECT" });
       }
-    } else if (!wagmiConnected && state.walletType === 'evm' && state.isConnected) {
-      // EVM wallet was disconnected via wagmi/RainbowKit
-      dispatch({ type: "DISCONNECT" });
+      
+      // Update refs
+      prevWagmiConnected.current = wagmiConnected;
+      prevAddress.current = address;
     }
-  }, [wagmiConnected, address, wagmiChainId, state.address, state.isConnected, state.walletType]);
+  }, [wagmiConnected, address, wagmiChainId, state.walletType]);
 
   // RESTORE NON-EVM SESSIONS (NEAR, Stacks, Solana)
   useEffect(() => {
