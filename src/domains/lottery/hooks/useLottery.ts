@@ -28,75 +28,75 @@ export function useLottery() {
   * PERFORMANT: Fetch jackpot data from API (reliable and tested)
   */
   const fetchJackpotData = useCallback(async (showLoading = false) => {
-  if (!mountedRef.current) return;
+    if (!mountedRef.current) return;
 
-  if (showLoading) {
-  setState(prev => ({ ...prev, isLoading: true, error: null }));
-  }
+    if (showLoading) {
+      setState(prev => ({ ...prev, isLoading: true, error: null }));
+    }
 
-  try {
-  // Use reliable API - this is working and tested
-  const jackpotStats = await megapotService.getJackpotStats();
-  if (!jackpotStats?.prizeUsd) {
+    try {
+      // Use reliable API - this is working and tested
+      const jackpotStats = await megapotService.getJackpotStats();
+      if (!jackpotStats?.prizeUsd) {
         throw new Error('Invalid jackpot data from API');
-  }
+      }
 
-  if (!mountedRef.current) return;
+      if (!mountedRef.current) return;
 
-  setState(prev => ({
-  ...prev,
-    jackpotStats,
-  isLoading: false,
-  error: null,
-  lastUpdated: Date.now(),
-  }));
-  } catch (error) {
-  if (!mountedRef.current) return;
+      setState(prev => ({
+        ...prev,
+        jackpotStats,
+        isLoading: false,
+        error: null,
+        lastUpdated: Date.now(),
+      }));
+    } catch (error) {
+      if (!mountedRef.current) return;
 
       console.error('Jackpot fetch failed:', error);
-  setState(prev => ({
-  ...prev,
-  isLoading: false,
-  error: error instanceof Error ? error.message : 'Failed to load jackpot data',
-  }));
-  }
+      setState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Failed to load jackpot data',
+      }));
+    }
   }, []); // No dependencies needed since setState and mountedRef are stable
 
   /**
   * PERFORMANT: Manual refresh with cache clearing
   */
   const refresh = useCallback(async () => {
-  megapotService.clearCache();
-  if (!mountedRef.current) return;
+    megapotService.clearCache();
+    if (!mountedRef.current) return;
 
-  setState(prev => ({ ...prev, isLoading: true, error: null }));
+    setState(prev => ({ ...prev, isLoading: true, error: null }));
 
-  try {
-  // Use reliable API - this is working and tested
-  const jackpotStats = await megapotService.getJackpotStats();
+    try {
+      // Use reliable API - this is working and tested
+      const jackpotStats = await megapotService.getJackpotStats();
       if (!jackpotStats?.prizeUsd) {
-    throw new Error('Invalid jackpot data from API');
-  }
+        throw new Error('Invalid jackpot data from API');
+      }
 
-  if (!mountedRef.current) return;
+      if (!mountedRef.current) return;
 
-  setState(prev => ({
-    ...prev,
-  jackpotStats,
-  isLoading: false,
-  error: null,
-  lastUpdated: Date.now(),
-  }));
-  } catch (error) {
-  if (!mountedRef.current) return;
+      setState(prev => ({
+        ...prev,
+        jackpotStats,
+        isLoading: false,
+        error: null,
+        lastUpdated: Date.now(),
+      }));
+    } catch (error) {
+      if (!mountedRef.current) return;
 
-  console.error('Jackpot refresh failed:', error);
-  setState(prev => ({
-  ...prev,
-  isLoading: false,
-  error: error instanceof Error ? error.message : 'Failed to load jackpot data',
-  }));
-  }
+      console.error('Jackpot refresh failed:', error);
+      setState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Failed to load jackpot data',
+      }));
+    }
   }, []); // No dependencies to avoid circular refs
 
   /**
@@ -132,19 +132,19 @@ export function useLottery() {
 
   const { jackpotStats, isLoading, error, lastUpdated } = state;
 
-  const prizeAmount = useMemo(() => 
-    jackpotStats?.prizeUsd ? parseFloat(jackpotStats.prizeUsd) : 0, 
+  const prizeAmount = useMemo(() =>
+    jackpotStats?.prizeUsd ? parseFloat(jackpotStats.prizeUsd) : 0,
     [jackpotStats?.prizeUsd]
   );
 
-  const formattedPrize = useMemo(() => 
-    jackpotStats?.prizeUsd 
+  const formattedPrize = useMemo(() =>
+    jackpotStats?.prizeUsd
       ? `$${parseInt(jackpotStats.prizeUsd).toLocaleString()}`
       : '$0',
     [jackpotStats?.prizeUsd]
   );
 
-  const isStale = useMemo(() => 
+  const isStale = useMemo(() =>
     lastUpdated ? Date.now() - lastUpdated > performance.cache.jackpotData * 2 : false,
     [lastUpdated]
   );
@@ -173,7 +173,7 @@ export function useLottery() {
 /**
  * MODULAR: Hook for ticket purchase functionality
  */
-export function useTicketPurchase() {
+export function useLotteryPurchase() {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -56,6 +56,7 @@ export function usePurchasePolling({
 }: UsePurchasePollingOptions) {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pollCountRef = useRef(0);
+  const isPollingRef = useRef(false);
   const lastStatusRef = useRef<string | null>(null);
   const onStatusChangeRef = useRef(onStatusChange);
 
@@ -76,8 +77,13 @@ export function usePurchasePolling({
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
       }
+      isPollingRef.current = false;
       return;
     }
+
+    // Don't start another polling chain if one is already active for this effect cycle
+    if (isPollingRef.current) return;
+    isPollingRef.current = true;
 
     // Calculate adaptive polling interval
     const getCurrentInterval = (count: number) => {
@@ -90,6 +96,9 @@ export function usePurchasePolling({
 
     // Polling function
     const pollStatus = async () => {
+      // If the effect was cleaned up, stop the chain
+      if (!isPollingRef.current) return;
+
       try {
         console.log(`[usePurchasePolling] Polling for txId: ${txId} (attempt ${pollCountRef.current + 1})`);
 
@@ -107,11 +116,8 @@ export function usePurchasePolling({
           // Stop polling on terminal states
           if (data.status === 'complete' || data.status === 'error') {
             console.log('[usePurchasePolling] Terminal state reached, stopping poll');
-            if (timeoutRef.current) {
-              clearTimeout(timeoutRef.current);
-              timeoutRef.current = null;
-            }
-            return; // Don't schedule next poll
+            isPollingRef.current = false;
+            return;
           }
         }
 
@@ -121,19 +127,20 @@ export function usePurchasePolling({
         timeoutRef.current = setTimeout(pollStatus, nextInterval);
       } catch (error) {
         console.error('[usePurchasePolling] Polling error:', error);
-        // Retry anyway
-        pollCountRef.current++;
-        timeoutRef.current = setTimeout(pollStatus, getCurrentInterval(pollCountRef.current));
+        // Retry anyway unless stopped
+        if (isPollingRef.current) {
+          pollCountRef.current++;
+          timeoutRef.current = setTimeout(pollStatus, getCurrentInterval(pollCountRef.current));
+        }
       }
     };
 
-    // Start polling if not already started
-    if (!timeoutRef.current) {
-      pollStatus();
-    }
+    // Start the first poll
+    pollStatus();
 
     // Cleanup
     return () => {
+      isPollingRef.current = false;
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
@@ -144,6 +151,7 @@ export function usePurchasePolling({
   // Return cleanup function
   return {
     stopPolling: () => {
+      isPollingRef.current = false;
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
