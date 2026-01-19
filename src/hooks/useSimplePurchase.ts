@@ -58,14 +58,12 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
     walletInfo: undefined,
   });
 
-  // Use shared polling hook for cross-chain transactions
-  const { stopPolling } = usePurchasePolling({
-    txId: state.sourceTxHash,
-    currentStatus: state.status,
-    adaptivePolling: true,
-    onStatusChange: (data) => {
+  // Memoize onStatusChange to prevent infinite polling loops
+  const handleStatusChange = useCallback((data: any) => {
+    // Update state using functional update to get latest status and avoid dependencies
+    setState(prev => {
       // Map API status to our tracker status
-      let newStatus: TrackerStatus = state.status;
+      let newStatus: TrackerStatus = prev.status;
       if (data.status === 'confirmed_stacks' || data.status === 'broadcasting') {
         newStatus = 'confirmed_source';
       } else if (data.status === 'bridging') {
@@ -78,15 +76,22 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
         newStatus = 'error';
       }
 
-      // Update state
-      setState(prev => ({
+      return {
         ...prev,
         status: newStatus,
         destinationTxHash: data.baseTxId || prev.destinationTxHash,
         error: data.error || prev.error,
         isPurchasing: newStatus !== 'complete' && newStatus !== 'error',
-      }));
-    },
+      };
+    });
+  }, []);
+
+  // Use shared polling hook for cross-chain transactions
+  const { stopPolling } = usePurchasePolling({
+    txId: state.sourceTxHash,
+    currentStatus: state.status,
+    adaptivePolling: true,
+    onStatusChange: handleStatusChange,
   });
 
   const purchase = useCallback(
@@ -183,7 +188,7 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
               isPurchasing: true, // Keep purchasing true until complete
               result,
               txHash: result.txHash || null,
-              sourceTxHash: result.sourceTxHash,
+              sourceTxHash: result.sourceTxHash ?? null,
               destinationTxHash: result.destinationTxHash || null,
               error: null,
               status: 'confirmed_source', // Polling will take over from here
@@ -240,7 +245,7 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
   const reset = useCallback(() => {
     // Stop polling
     stopPolling();
-    
+
     setState({
       isPurchasing: false,
       error: null,
