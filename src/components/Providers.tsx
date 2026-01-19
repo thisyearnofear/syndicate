@@ -72,16 +72,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const queryClient = useMemo(() => new QueryClient(), []);
   const config = useMemo(() => getConfig(), []);
 
-  // Hydration safety: Don't render complex providers on server
-  if (!isMounted) {
-    return <div style={{ visibility: 'hidden' }}>{children}</div>;
-  }
-
   // Failsafe: if config is null (shouldn't happen on client), don't render providers
   if (!config) {
     return <>{children}</>;
   }
 
+  // ALWAYS render WagmiProvider (even before mount) so WalletContext can use useAccount
+  // Just hide the children until mounted for hydration safety
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
@@ -93,7 +90,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           }}
         >
           <Web3AuthErrorBoundary>
-            {children}
+            {isMounted ? children : <div style={{ visibility: 'hidden' }}>{children}</div>}
           </Web3AuthErrorBoundary>
         </RainbowKitProvider>
       </QueryClientProvider>
