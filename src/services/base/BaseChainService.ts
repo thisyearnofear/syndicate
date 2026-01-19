@@ -53,7 +53,9 @@ export class BaseChainService {
         return this.initializeReadOnly(undefined, chainId);
       }
 
-      this.provider = new ethers.BrowserProvider(window.ethereum as any);
+      // Create provider and keep reference
+      const provider = new ethers.BrowserProvider(window.ethereum as any);
+      this.provider = provider;
 
       try {
         await this.ensureCorrectNetwork(chainId);
@@ -66,22 +68,31 @@ export class BaseChainService {
         // User might be on a compatible chain or will be prompted later
       }
 
-      if (!this.provider) {
-        throw new Error("Provider lost during initialization");
+      // Double-check provider is still valid (it should be unless something went wrong)
+      if (!this.provider || this.provider !== provider) {
+        console.warn("Provider reference changed during initialization, resetting");
+        this.provider = provider;
       }
 
-      // Test signer availability
-      await this.provider.getSigner();
+      // Test signer availability (may fail if wallet locked)
+      try {
+        await this.provider.getSigner();
+      } catch (signerError) {
+        console.warn("Could not get signer, wallet may be locked:", signerError);
+        // Don't fail completely - provider is still usable for read operations
+      }
+      
       this.isReadOnly = false;
       this.currentChainId = chainId ?? 8453;
 
       console.log("BaseChainService initialized with wallet");
       return true;
     } catch (error) {
-      console.error(
+      console.warn(
         "Failed to initialize BaseChainService with wallet:",
         error,
       );
+      // Don't throw - just return false
       return false;
     } finally {
       this.connectionLock = false;
