@@ -155,7 +155,7 @@ export class ContractDataService {
         this.setCache(cacheKey, formatted, CACHE_CONFIG.JACKPOT);
         return formatted;
       } catch (error) {
-        console.error("Failed to get jackpot:", error);
+        // Silently return fallback - contract may not be deployed or method doesn't exist
         return "0";
       }
     });
@@ -178,7 +178,7 @@ export class ContractDataService {
         this.setCache(cacheKey, formatted, CACHE_CONFIG.TICKET_PRICE);
         return formatted;
       } catch (error) {
-        console.error("Failed to get ticket price:", error);
+        // Silently return fallback - contract may not be deployed or method doesn't exist
         return "1";
       }
     });
@@ -284,12 +284,12 @@ export class ContractDataService {
           this.setCache(cacheKey, result, CACHE_CONFIG.USER_TICKETS);
           return result;
         } catch (error) {
-          console.error("Failed to get ticket info:", error);
+          // Silently return null - contract may not be deployed or methods don't exist
           return null;
         }
       });
     } catch (error) {
-      console.error("Failed to get ticket info wrapper:", error);
+      // Silently return null - contract may not be deployed
       return null;
     }
   }
@@ -409,7 +409,7 @@ export class ContractDataService {
         this.setCache(cacheKey, result, CACHE_CONFIG.ODDS);
         return result;
       } catch (error) {
-        console.error("Failed to calculate odds:", error);
+        // Silently return null - contract may not be deployed or method doesn't exist
         return null;
       }
     });

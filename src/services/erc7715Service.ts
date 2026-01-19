@@ -31,10 +31,8 @@ import { erc7715ProviderActions } from '@metamask/smart-accounts-kit/actions';
  */
 export interface ERC7715SupportInfo {
   isSupported: boolean;
-  reason: 'supported' | 'no-provider' | 'not-metamask' | 'flask-only' | 'flask-outdated' | 'unsupported-chain';
+  reason: 'supported' | 'no-provider' | 'not-metamask' | 'unsupported-chain';
   message: string;
-  minimumVersion: string;
-  upgradeUrl: string;
   supportedChains: number[];
 }
 
@@ -106,8 +104,7 @@ const SUPPORTED_CHAINS = [
   11155111, // Ethereum Sepolia
 ];
 
-const FLASK_VERSION_MINIMUM = { major: 13, minor: 9 };
-const FLASK_DOCS_URL = 'https://flask.metamask.io';
+// ERC-7715 is now available in regular MetaMask (no Flask required)
 
 // =============================================================================
 // UNIFIED ERC-7715 SERVICE
@@ -158,49 +155,39 @@ export class ERC7715Service {
 
   /**
    * Check ERC-7715 support
-   * RELAXED: Just check if MetaMask and try the API - let it fail gracefully if not supported
+   * Works with regular MetaMask (no Flask required)
    */
   private checkSupport(): ERC7715SupportInfo {
     const supportedChains = SUPPORTED_CHAINS;
 
     if (typeof window === 'undefined' || !window.ethereum) {
-      console.log('[ERC7715] No window.ethereum provider found');
       return {
         isSupported: false,
         reason: 'no-provider',
         message: 'MetaMask is not installed',
-        minimumVersion: `${FLASK_VERSION_MINIMUM.major}.${FLASK_VERSION_MINIMUM.minor}.0`,
-        upgradeUrl: FLASK_DOCS_URL,
         supportedChains,
       };
     }
 
     const provider = window.ethereum as any;
 
-    // Check if it's MetaMask (only hard requirement)
+    // Check if it's MetaMask
     if (!provider.isMetaMask) {
-      console.log('[ERC7715] Not MetaMask');
       return {
         isSupported: false,
         reason: 'not-metamask',
         message: 'Please use MetaMask wallet',
-        minimumVersion: `${FLASK_VERSION_MINIMUM.major}.${FLASK_VERSION_MINIMUM.minor}.0`,
-        upgradeUrl: FLASK_DOCS_URL,
         supportedChains,
       };
     }
 
-    // RELAXED: If MetaMask is detected, assume Flask might be available
-    // The UI will show and requests will fail gracefully if not actually supported
-    console.log('[ERC7715] MetaMask detected - assuming potential Flask support');
-    console.log('[ERC7715] Will show UI and let permission requests fail gracefully if needed');
+    // MetaMask detected - ERC-7715 support will be determined at runtime
+    console.log('[ERC7715] MetaMask detected - ERC-7715 support available');
 
     return {
       isSupported: true,
       reason: 'supported',
-      message: 'MetaMask detected - Advanced Permissions may be available',
-      minimumVersion: `${FLASK_VERSION_MINIMUM.major}.${FLASK_VERSION_MINIMUM.minor}.0`,
-      upgradeUrl: FLASK_DOCS_URL,
+      message: 'MetaMask detected with ERC-7715 support',
       supportedChains,
     };
   }

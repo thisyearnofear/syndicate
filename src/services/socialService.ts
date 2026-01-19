@@ -91,13 +91,17 @@ class SocialService {
   private readonly neynarApiKey = process.env.NEXT_PUBLIC_NEYNAR_API_KEY;
   private readonly memoryApiUrl = 'https://api.memoryproto.co';
   private readonly memoryApiKey = process.env.NEXT_PUBLIC_MEMORY_API_KEY;
+  private memoryWarningShown = false;
 
   /**
    * Get user identity graph from Memory Protocol
    */
   async getUserIdentity(walletAddress: string): Promise<MemoryIdentity | null> {
     if (!this.memoryApiKey) {
-      console.warn('Memory API key not configured');
+      if (!this.memoryWarningShown) {
+        this.memoryWarningShown = true;
+        console.info('[Social] Memory API key not configured - social features disabled');
+      }
       return null;
     }
 
