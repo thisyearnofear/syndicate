@@ -208,8 +208,8 @@ export class ContractDataService {
         try {
           // Parallelize requests to reduce latency
           const [usdcBalance, ethBalance] = await Promise.all([
-            this.usdcContract.balanceOf(userAddress),
-            provider.getBalance(userAddress),
+            this.usdcContract.balanceOf(userAddress).catch(() => BigInt(0)),
+            provider.getBalance(userAddress).catch(() => BigInt(0)),
           ]);
 
           const usdcFormatted = ethers.formatUnits(usdcBalance, 6);
@@ -225,8 +225,13 @@ export class ContractDataService {
           this.setCache(cacheKey, result, CACHE_CONFIG.USER_BALANCE);
           return result;
         } catch (error) {
-          console.error("Failed to get user balance:", error);
-          throw error;
+          // Silently return fallback on error
+          return {
+            usdc: "0",
+            eth: "0",
+            hasEnoughUsdc: false,
+            hasEnoughEth: false,
+          };
         }
       });
     } catch (error) {
