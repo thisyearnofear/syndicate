@@ -60,27 +60,27 @@ if (typeof window !== 'undefined') {
   })();
 }
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ children }: { children: ReactNode }) {
   const [isMounted, setIsMounted] = useState(false);
 
-  // Set isMounted to true after hydration
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Create QueryClient and config only on client - lazily initialized
-  const queryClient = useMemo(() => new QueryClient(), []);
+  // Create QueryClient and config - memoized for stability
+  const queryClient = useMemo(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 1000 * 60, // 1 minute
+      },
+    },
+  }), []);
+
   const config = useMemo(() => getConfig(), []);
 
-  // Failsafe: if config is null (shouldn't happen on client), don't render providers
-  if (!config) {
-    return <>{children}</>;
-  }
-
-  // ALWAYS render WagmiProvider (even before mount) so WalletContext can use useAccount
-  // Just hide the children until mounted for hydration safety
-  return (
-    <WagmiProvider config={config}>
+  // Basic provider tree that stays stable between SSR and client
+  const providerTree = (
+    <WagmiProvider config={config || ({} as any)}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
           initialChain={undefined}
@@ -90,10 +90,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
           }}
         >
           <Web3AuthErrorBoundary>
+            {/* 
+                PREVENT HYDRATION ERROR: 
+                On server, we render the tree structure but children might be different.
+                On client, we only show content once mounted.
+            */}
             {isMounted ? children : <div style={{ visibility: 'hidden' }}>{children}</div>}
           </Web3AuthErrorBoundary>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
+
+  return providerTree;
 }
