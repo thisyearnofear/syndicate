@@ -352,22 +352,27 @@ export function WalletProvider({ children }: WalletProviderProps) {
    * 3. Dispatch DISCONNECT → context clears all state
    * 
    * This ensures context is always the authoritative wallet state.
+   * 
+   * FIX: Removed state.walletType from dependencies to prevent infinite loop
    */
   useEffect(() => {
     if (wagmiConnected && address) {
-      dispatch({
-        type: "SYNC_WAGMI",
-        payload: {
-          address,
-          chainId: wagmiChainId,
-          isConnected: wagmiConnected,
-        },
-      });
-    } else if (!wagmiConnected && state.walletType === 'evm') {
+      // Only sync if we're not already synced with this address
+      if (state.address !== address || !state.isConnected) {
+        dispatch({
+          type: "SYNC_WAGMI",
+          payload: {
+            address,
+            chainId: wagmiChainId,
+            isConnected: wagmiConnected,
+          },
+        });
+      }
+    } else if (!wagmiConnected && state.walletType === 'evm' && state.isConnected) {
       // EVM wallet was disconnected via wagmi/RainbowKit
       dispatch({ type: "DISCONNECT" });
     }
-  }, [wagmiConnected, address, wagmiChainId, state.walletType]);
+  }, [wagmiConnected, address, wagmiChainId, state.address, state.isConnected, state.walletType]);
 
   // RESTORE NON-EVM SESSIONS (NEAR, Stacks, Solana)
   useEffect(() => {
