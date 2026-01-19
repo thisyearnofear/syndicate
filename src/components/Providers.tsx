@@ -25,11 +25,11 @@ import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getConfig } from "@/config/wagmi";
 import { Web3AuthErrorBoundary } from "@/components/wallet";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect, ReactNode } from "react";
 
 // Suppress specific console warnings that are not breaking functionality - only on client
 if (typeof window !== 'undefined') {
-  (function() {
+  (function () {
     const originalWarn = console.warn;
     const originalError = console.error;
     const originalLog = console.log;
@@ -44,8 +44,8 @@ if (typeof window !== 'undefined') {
     console.error = (...args) => {
       if (args[0]?.includes?.('indexedDB is not defined') ||
         args[0]?.includes?.('ReferenceError: indexedDB is not defined') ||
-          args[0]?.includes?.('Expected static flag was missing') ||
-          args[0]?.includes?.('Cannot set property ethereum')) {
+        args[0]?.includes?.('Expected static flag was missing') ||
+        args[0]?.includes?.('Cannot set property ethereum')) {
         return; // Suppress known non-critical errors
       }
       originalError.apply(console, args);
@@ -61,9 +61,21 @@ if (typeof window !== 'undefined') {
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Set isMounted to true after hydration
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // Create QueryClient and config only on client - lazily initialized
   const queryClient = useMemo(() => new QueryClient(), []);
   const config = useMemo(() => getConfig(), []);
+
+  // Hydration safety: Don't render complex providers on server
+  if (!isMounted) {
+    return <div style={{ visibility: 'hidden' }}>{children}</div>;
+  }
 
   // Failsafe: if config is null (shouldn't happen on client), don't render providers
   if (!config) {
