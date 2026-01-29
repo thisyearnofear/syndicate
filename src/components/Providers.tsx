@@ -62,9 +62,15 @@ if (typeof window !== 'undefined') {
 
 export function Providers({ children }: { children: ReactNode }) {
   const [isMounted, setIsMounted] = useState(false);
+  const [isWagmiReady, setIsWagmiReady] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
+    // On client side, wagmi should always be ready
+    // The config might be null on server, but that's expected
+    if (typeof window !== 'undefined') {
+      setIsWagmiReady(true);
+    }
   }, []);
 
   // Create QueryClient and config - memoized for stability
@@ -93,9 +99,9 @@ export function Providers({ children }: { children: ReactNode }) {
             {/* 
                 PREVENT HYDRATION ERROR: 
                 On server, we render the tree structure but children might be different.
-                On client, we only show content once mounted.
+                On client, we only show content once mounted and wagmi is ready.
             */}
-            {isMounted ? children : <div style={{ visibility: 'hidden' }}>{children}</div>}
+            {isMounted && isWagmiReady ? children : <div style={{ visibility: 'hidden' }}>{children}</div>}
           </Web3AuthErrorBoundary>
         </RainbowKitProvider>
       </QueryClientProvider>
