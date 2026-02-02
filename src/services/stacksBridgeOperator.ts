@@ -145,11 +145,9 @@ export class StacksBridgeOperator {
 
     /**
      * Main entry point for processing a bridge request received from Chainhook
+     * Returns result for chainhook route to log
      */
-    /**
-     * Main entry point for processing a bridge request received from Chainhook
-     */
-    async processBridgeEvent(txId: string, baseAddress: string, ticketCount: number, amount: bigint, tokenPrincipal: string) {
+    async processBridgeEvent(txId: string, baseAddress: string, ticketCount: number, amount: bigint, tokenPrincipal: string): Promise<{ success: boolean; baseTxHash?: string; error?: string }> {
         console.log(`[StacksBridgeOperator] Processing bridge request: ${txId} (${tokenPrincipal})`);
 
         if (!CONFIG.OPERATOR_PRIVATE_KEY) {
@@ -250,14 +248,17 @@ export class StacksBridgeOperator {
 
             return {
                 success: true,
-                baseTxId: purchaseHash
+                baseTxHash: purchaseHash
             };
 
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
             await this.updateStatus(txId, 'error', { error: message });
             console.error(`[StacksBridgeOperator] ❌ Bridge processing failed:`, error);
-            throw error;
+            return {
+                success: false,
+                error: message,
+            };
         }
     }
 
