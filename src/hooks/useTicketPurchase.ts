@@ -1242,6 +1242,9 @@ export function useTicketPurchase(): TicketPurchaseState &
                               ...prev.nearStages,
                               "purchase_completed",
                             ],
+                            lastTxHash: purchaseResult.txHash || null,
+                            purchaseSuccess: true,
+                            purchasedTicketCount: ticketCount,
                           }));
                           result = {
                             success: true,

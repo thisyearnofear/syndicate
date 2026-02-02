@@ -341,8 +341,14 @@ export class UnifiedBridgeManager {
         }
 
         // 6. Chain-specific preferences
-        if (params.sourceChain === 'solana' && route.protocol === 'wormhole') {
-            score += 5; // Wormhole works well for Solana
+        if (params.sourceChain === 'solana' && route.protocol === 'debridge') {
+            score += 15; // Prefer automated deBridge over manual fallback
+        }
+        if (params.sourceChain === 'solana' && route.protocol === 'base-solana-bridge') {
+            score -= 30; // Penalize manual fallback - only use as last resort
+        }
+        if (params.sourceChain === 'near' && route.protocol === 'near-intents') {
+            score += 10; // Prefer intents over Chain Signatures for NEAR
         }
 
         return Math.max(0, Math.min(100, score));
