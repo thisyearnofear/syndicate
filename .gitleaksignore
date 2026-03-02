@@ -2,5 +2,5 @@
 # Use fingerprints from gitleaks output to ignore false positives
 # Format: <file>:<rule>:<line>
 
-# Example:
-# test-file.txt:generic-api-key:1
+# Documentation examples (not real secrets)
+docs/SECRET_DETECTION.md:generic-api-key:42

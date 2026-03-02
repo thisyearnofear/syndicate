@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
-import { promises as fs } from 'fs';
-import path from 'path';
+import { getCrossChainPurchasesByStacksAddress } from '@/lib/db/repositories/crossChainPurchaseRepository';
 
 const MEGAPOT_API_BASE_URL = 'https://api.megapot.io/api/v1';
 const MEGAPOT_API_KEY = process.env.NEXT_PUBLIC_MEGAPOT_API_KEY;
-const CROSS_CHAIN_DB_PATH = path.join(process.cwd(), 'scripts', 'cross-chain-purchases.json');
 
 // Helper to fetch purchases for a single EVM address
 async function fetchPurchasesForEvmAddress(walletAddress: string) {
@@ -43,17 +41,11 @@ export async function GET(request: NextRequest) {
             if (!isStacksAddress) {
                 return NextResponse.json({ error: 'Invalid Stacks wallet address format' }, { status: 400 });
             }
-            try {
-                const data = await fs.readFile(CROSS_CHAIN_DB_PATH, 'utf-8');
-                const purchases: { stacksAddress: string; evmAddress: string; }[] = JSON.parse(data);
-                const associatedEvmAddrs = purchases
-                    .filter(p => p.stacksAddress === walletAddress)
-                    .map(p => p.evmAddress);
-                evmAddressesToQuery = [...new Set(associatedEvmAddrs)]; // Deduplicate
-            } catch (error) {
-                // DB file might not exist or be empty
-                return NextResponse.json([]);
-            }
+            const purchases = await getCrossChainPurchasesByStacksAddress(walletAddress);
+            const associatedEvmAddrs = purchases
+                .map(p => p.evmAddress)
+                .filter((addr): addr is string => !!addr);
+            evmAddressesToQuery = [...new Set(associatedEvmAddrs)]; // Deduplicate
         } else if (chain === 'solana') {
             // Solana flow
             const isSolanaAddress = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(walletAddress);

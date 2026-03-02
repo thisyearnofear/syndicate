@@ -32,6 +32,29 @@ This directory contains smart contracts for the Syndicate lottery platform.
 - Custom errors for gas efficiency
 - Rounding error prevention (last member gets remainder)
 
+### MegapotAutoPurchaseProxy.sol (Solidity - Base)
+
+**Purpose**: Universal proxy for trustless cross-chain Megapot ticket purchases
+
+**Features**:
+- Pull model: `purchaseTicketsFor(recipient, referrer, amount)` — caller approves USDC first
+- Push model: `executeBridgedPurchase(amount, recipient, referrer, bridgeId)` — bridge deposits USDC first
+- Fail-safe: if Megapot reverts, USDC is sent directly to recipient
+- Replay protection via bridge ID mapping
+- Optional authorized caller enforcement for push model
+- Used by: NEAR Chain Signatures, deBridge externalCall, Stacks bridge relayer
+
+**Deployment**:
+- Network: Base (Chain ID: 8453)
+- USDC: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+- Megapot: 0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95
+
+See `docs/bridges/DECENTRALIZED_ARCHITECTURE.md` for full architecture.
+
+### DeBridgeMegapotAdapter.sol (Solidity - Base)
+
+**Purpose**: deBridge-specific adapter for DLN solver integration (legacy, superseded by AutoPurchaseProxy)
+
 ### stacks-lottery.clar (Clarity - Stacks)
 
 **Purpose**: Stacks blockchain lottery integration

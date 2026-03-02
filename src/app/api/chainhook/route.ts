@@ -79,11 +79,13 @@ export async function POST(req: NextRequest) {
                 // Extract fields from the Clarity tuple
                 // Fields can be keyed with dashes or underscores
                 const baseAddress = extractField(eventData, 'base-address');
+                const stacksUser = extractField(eventData, 'stacks-user');
                 const ticketCount = extractNumericField(eventData, 'ticket-count');
                 const amount = extractBigIntField(eventData, 'sbtc-amount');
+                const purchaseId = extractNumericField(eventData, 'purchase-id');
                 const tokenPrincipal = extractField(eventData, 'token') || 'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token';
 
-                console.log(`[Chainhook] Extracted - baseAddress: "${baseAddress}", ticketCount: ${ticketCount}, amount: ${amount}, token: ${tokenPrincipal}`);
+                console.log(`[Chainhook] Extracted - baseAddress: "${baseAddress}", stacksUser: "${stacksUser}", ticketCount: ${ticketCount}, amount: ${amount}, purchaseId: ${purchaseId}, token: ${tokenPrincipal}`);
 
                 if (baseAddress && ticketCount > 0) {
                   console.log(`[Chainhook] ✅ Valid event data, processing: ${ticketCount} tickets for ${baseAddress}`);
@@ -94,7 +96,9 @@ export async function POST(req: NextRequest) {
                       baseAddress,
                       ticketCount,
                       amount,
-                      tokenPrincipal
+                      tokenPrincipal,
+                      purchaseId,
+                      stacksUser
                     );
                     console.log(`[Chainhook] ✅ Bridge event processing completed:`, result);
                   } catch (processingError) {

@@ -5,7 +5,8 @@
  * 
  * Flow:
  * 1. NEAR Intents SDK bridges USDC from NEAR to Base
- * 2. This service executes Megapot.purchaseTickets() via NEAR Chain Signatures
+ * 2. This service executes AutoPurchaseProxy.purchaseTicketsFor() via NEAR Chain Signatures
+ *    (falls back to direct Megapot.purchaseTickets() if proxy is not configured)
  * 3. Uses the derived address as the ticket recipient
  */
 
@@ -50,16 +51,60 @@ export async function executePurchaseViaChainSignatures(
       };
     }
 
-    // Step 2: Build the Megapot purchase transaction
-    // This creates the encoded function call data for purchaseTickets()
-    const purchaseTx = await web3Service.buildPurchaseTransaction(ticketCount, recipientAddress);
+    // Step 2: Build proxy purchase transactions (approve + purchaseTicketsFor)
+    const proxyAddress = CONTRACTS.autoPurchaseProxy;
+    const isProxyConfigured = proxyAddress && proxyAddress !== '0x0000000000000000000000000000000000000000';
     
-    console.log('Purchase transaction built:', {
-      to: purchaseTx.to,
-      data: purchaseTx.data,
-      ticketCount,
-      recipient: recipientAddress,
-    });
+    let purchaseTx: { to: string; data: string; value: string };
+    
+    if (isProxyConfigured) {
+      // Trustless flow: approve proxy, then call purchaseTicketsFor
+      const ticketPrice = BigInt(1_000_000); // $1 USDC (6 decimals)
+      const usdcAmount = ticketPrice * BigInt(ticketCount);
+      
+      // TODO: Build and send approve tx (USDC → proxy) as a separate Chain Signature tx
+      // once multi-tx support is added to the bridge protocol.
+      // For now, approval must be handled separately or via permit.
+      
+      // Build proxy purchaseTicketsFor tx
+      const proxyIface = new ethers.Interface([
+        'function purchaseTicketsFor(address recipient, address referrer, uint256 amount) external'
+      ]);
+      const purchaseData = proxyIface.encodeFunctionData('purchaseTicketsFor', [
+        recipientAddress,
+        ethers.ZeroAddress, // referrer
+        usdcAmount,
+      ]);
+      
+      // For Chain Signatures, we need to send two transactions
+      // First: approve USDC to proxy
+      // Second: call proxy to purchase
+      // The bridge protocol handles multi-tx via contractCall
+      // For now, encode as a single proxy call (assume approval is done separately or via permit)
+      purchaseTx = {
+        to: proxyAddress,
+        data: purchaseData,
+        value: '0',
+      };
+      
+      console.log('Using Auto-Purchase Proxy for trustless purchase:', {
+        proxy: proxyAddress,
+        recipient: recipientAddress,
+        amount: usdcAmount.toString(),
+        ticketCount,
+      });
+    } else {
+      // Legacy flow: direct Megapot call
+      const legacyTx = await web3Service.buildPurchaseTransaction(ticketCount, recipientAddress);
+      purchaseTx = { to: legacyTx.to, data: legacyTx.data, value: legacyTx.value || '0' };
+      
+      console.log('Purchase transaction built (legacy):', {
+        to: purchaseTx.to,
+        data: purchaseTx.data,
+        ticketCount,
+        recipient: recipientAddress,
+      });
+    }
 
     // Step 3: Use NEAR Chain Signatures to sign and execute the purchase
     // The NearChainSigsProtocol handles the signing via MPC and broadcasting
@@ -142,10 +187,10 @@ export async function executeNearIntentsFullFlow(
   params: NearIntentsPurchaseParams & {
     depositAddress: string; // From NEAR Intents intent
     expectedAmount: string; // Amount expected to arrive
-    maxWaitMs?: number; // Max time to wait for funds (default: 2 minutes)
+    maxWaitMs?: number; // Max time to wait for funds (default: 15 minutes)
   }
 ): Promise<NearIntentsPurchaseResult> {
-  const { depositAddress, expectedAmount, maxWaitMs = 120000, ...purchaseParams } = params;
+  const { depositAddress, expectedAmount, maxWaitMs = 900000, ...purchaseParams } = params;
 
   try {
     purchaseParams.onStatus?.('waiting_bridge', { 

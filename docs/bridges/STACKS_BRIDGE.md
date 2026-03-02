@@ -350,7 +350,7 @@ Scale at 1000 tickets/day → **~$31,500/month profit!**
 
 ```bash
 # Check recent purchases
-cat scripts/purchase-status.json | jq '.[] | select(.status == "complete")'
+psql "$POSTGRES_URL" -c "SELECT * FROM purchase_statuses WHERE status = 'complete' ORDER BY updated_at DESC LIMIT 20;"
 
 # Check Chainhook status (configured in Hiro dashboard)
 # https://dashboard.chainhook.io/
@@ -361,9 +361,8 @@ cat scripts/purchase-status.json | jq '.[] | select(.status == "complete")'
 
 ### Status Files
 
-**Location**: `scripts/`
-- `purchase-status.json` - All purchase statuses
-- `cross-chain-purchases.json` - UI tracking data
+**Primary Status Source**: `purchase_statuses` table in Postgres  
+**Secondary Log**: `cross_chain_purchases` table in Postgres (UI tracking data)
 
 **Status Values**:
 - `confirmed_stacks` - Stacks tx confirmed
@@ -577,7 +576,7 @@ cast balance $OPERATOR_ADDRESS --rpc-url $BASE_RPC
 # - Watch tracker show progress with receipt links
 
 # 4. Inspect transaction record
-cat scripts/purchase-status.json | jq '.[] | {status, stacksTxId, baseTxId}'
+psql "$POSTGRES_URL" -c "SELECT status, stacks_tx_id, base_tx_id FROM purchase_statuses ORDER BY updated_at DESC LIMIT 20;"
 
 # 5. Monitor operator for winnings detection (in another terminal)
 tail -f logs/operator.log | grep -i "win\|record"
@@ -613,6 +612,14 @@ Should show:
 💰 Balance: 50+ USDC
 ✅ Stacks API responding
 ✅ Recent purchases
+```
+
+### DB Setup (Required)
+
+Create the tables before running the operator:
+```bash
+psql "$POSTGRES_URL" -f scripts/sql/create_purchase_statuses.sql
+psql "$POSTGRES_URL" -f scripts/sql/create_cross_chain_purchases.sql
 ```
 
 ## Roadmap

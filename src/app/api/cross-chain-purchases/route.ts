@@ -1,9 +1,9 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { promises as fs } from 'fs';
-import path from 'path';
-
-// IMPORTANT: In a production environment, use a proper database.
-const DB_PATH = path.join(process.cwd(), 'scripts', 'cross-chain-purchases.json');
+import {
+    getAllCrossChainPurchases,
+    getCrossChainPurchasesByStacksAddress,
+    insertCrossChainPurchase,
+} from '@/lib/db/repositories/crossChainPurchaseRepository';
 
 interface CrossChainPurchase {
     sourceChain: 'stacks';
@@ -21,23 +21,12 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const stacksAddress = searchParams.get('stacksAddress');
 
-        let purchases: CrossChainPurchase[] = [];
-        try {
-            const data = await fs.readFile(DB_PATH, 'utf-8');
-            purchases = JSON.parse(data);
-        } catch (error) {
-            if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-                // File doesn't exist, return empty array
-                return NextResponse.json([]);
-            }
-            throw error;
-        }
-
         if (stacksAddress) {
-            const userPurchases = purchases.filter(p => p.stacksAddress === stacksAddress);
+            const userPurchases = await getCrossChainPurchasesByStacksAddress(stacksAddress);
             return NextResponse.json(userPurchases);
         }
 
+        const purchases = await getAllCrossChainPurchases();
         return NextResponse.json(purchases);
 
     } catch (error) {
@@ -67,19 +56,7 @@ export async function POST(request: Request) {
       purchaseTimestamp: new Date().toISOString(),
     };
 
-    let purchases: CrossChainPurchase[] = [];
-    try {
-      const data = await fs.readFile(DB_PATH, 'utf-8');
-      purchases = JSON.parse(data);
-    } catch (error) {
-      if (error instanceof Error && 'code' in error && error.code !== 'ENOENT') {
-        throw error;
-      }
-    }
-
-    purchases.push(newPurchase);
-
-    await fs.writeFile(DB_PATH, JSON.stringify(purchases, null, 2));
+    await insertCrossChainPurchase(newPurchase);
 
     return NextResponse.json({ success: true, purchase: newPurchase });
 

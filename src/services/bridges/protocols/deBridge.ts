@@ -33,6 +33,7 @@ import type {
   BridgeStatus,
 } from "../types";
 import { BridgeErrorCode, BridgeError } from "../types";
+import { CONTRACTS } from "@/config";
 
 // deBridge API endpoints
 const DEBRIDGE_STATS_API = "https://stats-api.dln.trade";
@@ -410,6 +411,35 @@ export class DeBridgeProtocol implements BridgeProtocol {
           // Solana-specific: Enable nonce account for better reliability
           prependOperatingExpenses: "true",
         });
+
+        // Auto-Purchase Proxy: Route bridged USDC through proxy for atomic ticket purchase.
+        // If the proxy call fails, deBridge sends USDC directly to the user (fallback).
+        const proxyAddress = CONTRACTS.autoPurchaseProxy;
+        const isProxyConfigured = proxyAddress && proxyAddress !== '0x0000000000000000000000000000000000000000';
+
+        if (isProxyConfigured && !params.options?.externalCall) {
+          // Route funds to proxy instead of user directly
+          queryParams.set('dstChainTokenOutRecipient', proxyAddress);
+
+          // Set user's address as fallback (receives USDC if proxy call fails)
+          if (!params.options?.fallbackAddress) {
+            queryParams.set('dstChainFallbackAddress', params.destinationAddress);
+          }
+
+          // Encode the proxy's executeBridgedPurchase call
+          const { ethers } = await import('ethers');
+          const proxyIface = new ethers.Interface([
+            'function executeBridgedPurchase(uint256 amount, address recipient, address referrer, bytes32 bridgeId) external'
+          ]);
+          const bridgeId = ethers.keccak256(ethers.toUtf8Bytes(`debridge-${params.sourceAddress}-${Date.now()}`));
+          const callData = proxyIface.encodeFunctionData('executeBridgedPurchase', [
+            amountInSmallestUnits,
+            params.destinationAddress,
+            '0x0000000000000000000000000000000000000000', // referrer
+            bridgeId,
+          ]);
+          queryParams.set('externalCall', callData);
+        }
 
         // ENHANCEMENT: Support for external call execution (cross-chain intents)
         if (params.options?.externalCall) {

@@ -15,7 +15,7 @@
 
 import { useState, Suspense, lazy, useEffect } from 'react';
 import { Button } from '@/shared/components/ui/Button';
-import { Loader, AlertCircle, Check, Zap } from 'lucide-react';
+import { Loader, AlertCircle, Check, Zap, Link2 } from 'lucide-react';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { useSimplePurchase } from '@/hooks/useSimplePurchase';
 import { useERC7715 } from '@/hooks/useERC7715';
@@ -73,6 +73,7 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
   const [ticketCount, setTicketCount] = useState(1);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [statusLinkCopied, setStatusLinkCopied] = useState(false);
   const hasActivePermission = permissions.length > 0 && isSupported;
   
   // Show tracker when purchase is in progress
@@ -115,6 +116,16 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
     } else {
       setStep('select');
     }
+  };
+
+  const handleCopyStatusLink = async () => {
+    if (!sourceTxHash || !sourceChain) return;
+    const url = `${window.location.origin}/purchase-status/${sourceTxHash}?chain=${sourceChain}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setStatusLinkCopied(true);
+      setTimeout(() => setStatusLinkCopied(false), 2000);
+    } catch {}
   };
   
   // Auto-advance to success when status is complete
@@ -185,6 +196,18 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
                     Dismiss
                   </Button>
                 </div>
+              </div>
+            )}
+
+            {walletType === 'solana' && !process.env.NEXT_PUBLIC_DEBRIDGE_ADAPTER && (
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-400" />
+                  <p className="text-amber-300 text-sm font-medium">Solana intent adapter not configured</p>
+                </div>
+                <p className="text-xs text-gray-300">
+                  To complete purchases without an EVM wallet, set `NEXT_PUBLIC_DEBRIDGE_ADAPTER`. Otherwise an EVM wallet will be required to finalize the purchase on Base.
+                </p>
               </div>
             )}
 
@@ -274,20 +297,40 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
         // Show enhanced tracker during processing
         if (showTracker && sourceChain) {
           return (
-            <CrossChainTracker
-              status={status}
-              sourceChain={sourceChain}
-              sourceTxId={sourceTxHash || undefined}
-              baseTxId={destinationTxHash || undefined}
-              error={error}
-              ticketCount={ticketCount}
-              walletInfo={walletInfo}
-              receipt={{
-                sourceExplorer: sourceTxHash ? getExplorerUrl(sourceChain, sourceTxHash) : undefined,
-                baseExplorer: destinationTxHash ? `https://basescan.org/tx/${destinationTxHash}` : undefined,
-                megapotApp: destinationTxHash ? `https://megapot.xyz/my-tickets` : undefined,
-              }}
-            />
+            <div>
+              <CrossChainTracker
+                status={status}
+                sourceChain={sourceChain}
+                sourceTxId={sourceTxHash || undefined}
+                baseTxId={destinationTxHash || undefined}
+                error={error}
+                ticketCount={ticketCount}
+                walletInfo={walletInfo}
+                receipt={{
+                  sourceExplorer: sourceTxHash ? getExplorerUrl(sourceChain, sourceTxHash) : undefined,
+                  baseExplorer: destinationTxHash ? `https://basescan.org/tx/${destinationTxHash}` : undefined,
+                  megapotApp: destinationTxHash ? `https://megapot.xyz/my-tickets` : undefined,
+                }}
+              />
+              {sourceTxHash && (
+                <div className="mt-4 flex items-center gap-3">
+                  <a
+                    href={`/purchase-status/${sourceTxHash}?chain=${sourceChain}`}
+                    className="text-sm text-blue-400 hover:text-blue-300"
+                  >
+                    Open Status Page
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleCopyStatusLink}
+                    className="text-xs text-gray-300 hover:text-white inline-flex items-center gap-1"
+                  >
+                    <Link2 className="w-3 h-3" />
+                    {statusLinkCopied ? 'Copied' : 'Copy Link'}
+                  </button>
+                </div>
+              )}
+            </div>
           );
         }
         
@@ -328,6 +371,14 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
                   megapotApp: destinationTxHash ? `https://megapot.xyz/my-tickets` : undefined,
                 }}
               />
+              {sourceTxHash && (
+                <a
+                  href={`/purchase-status/${sourceTxHash}?chain=${sourceChain}`}
+                  className="mt-4 inline-block text-sm text-blue-400 hover:text-blue-300"
+                >
+                  Open Status Page
+                </a>
+              )}
               <div className="mt-4 flex gap-3">
                 <Button
                   variant="outline"
