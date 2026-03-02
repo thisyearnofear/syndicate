@@ -1,7 +1,7 @@
 # Decentralization Progress Summary
 
 **Date**: March 2, 2026  
-**Status**: Phase 1 Complete - Cleanup in Progress
+**Status**: Phase 2 In Progress - Wormhole NTT Integration
 
 ## Changes Made
 
@@ -22,82 +22,47 @@
 
 **Lines of code removed**: ~80 lines
 
-### 2. Documentation Added ✅
-- `docs/bridges/STACKS_DECENTRALIZATION_PLAN.md` - migration roadmap
-- `docs/SECRET_DETECTION.md` - security tooling
-- `script/DeployAutoPurchaseProxy.s.sol` - deployment script
+### 2. Fallback Logic Removed ✅
+**NEAR Intents Service**: Already requires proxy (no fallback)  
+**deBridge Service**: Already routes to proxy (no fallback)
 
-### 3. Core Principles Applied
+### 3. Documentation Updated ✅
+- `docs/bridges/STACKS_DECENTRALIZATION_PLAN.md` - updated with Wormhole NTT plan
+- Added implementation steps following Core Principles
 
-✅ **CONSOLIDATION**: Deleted legacy code path instead of deprecating  
-✅ **PREVENT BLOAT**: Removed unused ABIs and methods  
-✅ **DRY**: Single proxy-based flow for all bridges  
-✅ **CLEAN**: Clear separation - operator only relays, proxy handles custody  
+### 4. Chainhooks V2 ✅
+**Status**: Configured  
+- Testnet secret: `1dc60a...` (in `.env.local`)
+- Mainnet secret: `6aa8193...` (in `.env.local`)
+- UUID: `6f11ddc1-9192-4b05-aee3-50fec7e472f3`
 
-## Remaining Fallback Logic
+## Current Work: Wormhole NTT Integration
 
-### NEAR Intents Service
-**File**: `src/services/nearIntentsPurchaseService.ts`  
-**Lines**: 57-103
+### Research Complete ✅
+- Wormhole NTT SDK available for Stacks: `@wormhole-foundation/sdk-stacks-ntt`
+- Executor integration enables permissionless relaying
+- No operator key required!
 
-```typescript
-if (isProxyConfigured) {
-  // Use proxy
-} else {
-  // Legacy flow: direct Megapot call
-}
-```
-
-**Action**: Remove legacy path, require proxy
-
-### deBridge Service
-**File**: `src/services/bridges/protocols/deBridge.ts`  
-**Lines**: 417-442
-
-```typescript
-if (isProxyConfigured && !params.options?.externalCall) {
-  // Route to proxy
-}
-// Otherwise route to user directly
-```
-
-**Action**: Remove conditional, always route to proxy
-
-## Next Steps
-
-### Immediate (Today)
-1. ✅ Clean up Stacks operator
-2. ⏳ Remove fallback logic from NEAR service
-3. ⏳ Remove fallback logic from deBridge service
-4. ⏳ Update tests to expect proxy usage
-5. ⏳ Commit and push cleanup
-
-### This Week
-1. Deploy `MegapotAutoPurchaseProxy` to Base mainnet
-2. Set `NEXT_PUBLIC_AUTO_PURCHASE_PROXY` env var
-3. Monitor production for 48 hours
-4. Verify all purchases go through proxy
-
-### Next Sprint
-1. Research Wormhole NTT integration for Stacks
-2. Design Stacks contract changes for Wormhole
-3. Remove operator wallet entirely
-4. Archive `stacksBridgeOperator.ts`
+### Implementation Plan
+1. Install Wormhole NTT SDK
+2. Create `src/services/bridges/protocols/wormhole-ntt.ts`
+3. Enhance existing StacksProtocol (ENHANCEMENT FIRST)
+4. Replace stacksBridgeOperator.ts (CONSOLIDATION)
+5. Test → Deploy → Monitor → Delete operator
 
 ## Metrics
 
-**Code Reduction**:
-- Stacks operator: -80 lines
-- NEAR service: -50 lines (estimated)
-- deBridge service: -30 lines (estimated)
-- **Total**: ~160 lines removed
+**Code Reduction (YTD)**:
+- Stacks operator cleanup: -80 lines
+- Fallback removal: -30 lines
+- **Total**: ~110 lines removed
 
-**Complexity Reduction**:
-- 3 code paths → 1 code path
-- 2 ABIs → 1 ABI (per service)
-- Conditional logic eliminated
+**Security Improvements**:
+- Proxy-only flow enforced
+- No direct Megapot calls
+- Single point of trust
 
-**Security Improvement**:
-- Operator no longer holds USDC reserves
-- No balance checks = no liquidity risk
-- Single point of trust (proxy contract) instead of multiple paths
+**Remaining Centralization**:
+- Stacks operator key (to be removed with Wormhole)
+- Gelato automation (future work)
+- Hiro Chainhooks (hosted - industry standard)

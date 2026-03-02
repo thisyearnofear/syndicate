@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPurchaseStatus } from '@/lib/db/repositories/purchaseStatusRepository';
+import { getPurchaseStatusByTxId } from '@/lib/db/repositories/purchaseStatusRepository';
 
 export async function GET(
   request: NextRequest,
@@ -12,7 +12,7 @@ export async function GET(
       return NextResponse.json({ error: 'Transaction ID required' }, { status: 400 });
     }
 
-    const status = await getPurchaseStatus(txId);
+    const status = await getPurchaseStatusByTxId(txId);
 
     if (!status) {
       return NextResponse.json({ error: 'Purchase not found' }, { status: 404 });
