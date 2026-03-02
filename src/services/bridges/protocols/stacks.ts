@@ -29,7 +29,16 @@ import type {
     BridgeStatus,
 } from '../types';
 import { BridgeError, BridgeErrorCode } from '../types';
-import { wormholeNttProtocol } from './wormhole-ntt';
+
+// Lazy-load wormhole-ntt to avoid pulling it into every bundle that imports stacks.ts
+let _wormholeNttProtocol: typeof import('./wormhole-ntt')['wormholeNttProtocol'] | null = null;
+async function getWormholeNtt() {
+    if (!_wormholeNttProtocol) {
+        const mod = await import('./wormhole-ntt');
+        _wormholeNttProtocol = mod.wormholeNttProtocol;
+    }
+    return _wormholeNttProtocol;
+}
 
 // ============================================================================
 // STACKS BRIDGE PROTOCOL
@@ -57,7 +66,8 @@ export class StacksProtocol implements BridgeProtocol {
         // ENHANCEMENT FIRST: Delegate to Wormhole NTT for estimates
         // Falls back to manual estimate if Wormhole unavailable
         try {
-            return await wormholeNttProtocol.estimate(params);
+            const wormhole = await getWormholeNtt();
+            return await wormhole.estimate(params);
         } catch (error) {
             console.warn('[StacksProtocol] Wormhole estimate failed, using fallback:', error);
             return {
@@ -86,7 +96,8 @@ export class StacksProtocol implements BridgeProtocol {
 
             // ENHANCEMENT: Delegate to Wormhole NTT protocol
             // This uses the Executor for permissionless relaying (NO OPERATOR KEY)
-            const result = await wormholeNttProtocol.bridge(params);
+            const wormhole = await getWormholeNtt();
+            const result = await wormhole.bridge(params);
 
             // Update health metrics
             if (result.success) {
@@ -118,7 +129,8 @@ export class StacksProtocol implements BridgeProtocol {
     async getHealth(): Promise<ProtocolHealth> {
         // ENHANCEMENT FIRST: Delegate to Wormhole NTT for health
         try {
-            return await wormholeNttProtocol.getHealth();
+            const wormhole = await getWormholeNtt();
+            return await wormhole.getHealth();
         } catch (error) {
             console.warn('[StacksProtocol] Wormhole health check failed:', error);
             // Fallback to local metrics
@@ -134,7 +146,7 @@ export class StacksProtocol implements BridgeProtocol {
                 consecutiveFailures: this.failureCount,
                 estimatedFee: '0.50',
                 statusDetails: {
-                    note: 'Wormhole health check unavailable',
+                    recentFailures: this.failureCount > 3,
                 }
             };
         }
@@ -142,7 +154,8 @@ export class StacksProtocol implements BridgeProtocol {
 
     async validate(params: BridgeParams): Promise<{ valid: boolean; error?: string }> {
         // ENHANCEMENT FIRST: Delegate to Wormhole NTT for validation
-        return await wormholeNttProtocol.validate(params);
+        const wormhole = await getWormholeNtt();
+        return await wormhole.validate(params);
     }
 }
 
