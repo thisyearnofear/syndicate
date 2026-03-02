@@ -27,76 +27,74 @@ Stacks User → Stacks Contract → Bridge Protocol → Base Proxy → Megapot
 ## Migration Path
 
 ### Phase 1: Operator as Thin Relayer (Immediate)
-**Status**: ✅ Already implemented via proxy integration
+**Status**: ✅ COMPLETE
 
 Current operator already uses `MegapotAutoPurchaseProxy` when configured:
 - Approves exact amount (not max uint256)
 - Calls `purchaseTicketsFor` instead of direct Megapot
 - No funds held between transactions
 
-**Remaining work**:
-- Deploy proxy to Base mainnet
-- Set `AUTO_PURCHASE_PROXY` env var
-- Monitor for 1 week to ensure stability
+**Completed**:
+- ✅ Proxy deployed to Base mainnet
+- ✅ `AUTO_PURCHASE_PROXY` configured
+- ✅ Fallback logic removed from NEAR/deBridge services
 
-### Phase 2: Remove Operator Wallet Reserves (Next Sprint)
+### Phase 2: Remove Operator Wallet - Wormhole NTT Integration
 **Goal**: Operator doesn't hold USDC, only relays bridge messages
 
-**Option A: Just-in-Time Funding**
-- Remove operator USDC balance checks
-- Operator receives USDC from external source per transaction
-- Still requires operator private key (not ideal)
+**Wormhole NTT for Stacks**:
+- SDK available: `@wormhole-foundation/sdk-stacks-ntt` (beta)
+- Burn-and-mint mode for token transfers
+- Executor integration = permissionless relaying (no operator key!)
+- Status: Core contracts complete, audit pending
 
-**Option B: Gasless Relayer**
-- Operator only submits transactions, doesn't hold USDC
-- USDC comes from bridge protocol directly to proxy
-- Requires bridge integration (CCTP or Wormhole)
+**Implementation Approach (following Core Principles)**:
 
-### Phase 3: Native Bridge Integration (Future)
-**Goal**: Eliminate operator entirely
-
-**Option A: CCTP (Circle's Cross-Chain Transfer Protocol)**
-- Stacks contract burns USDC → CCTP mints on Base
-- Message passing triggers proxy call
-- **Blocker**: CCTP doesn't support Stacks yet
-
-**Option B: Wormhole NTT (Native Token Transfers)**
-- Stacks contract locks tokens → Wormhole mints wrapped on Base
-- Automatic relayer network (no custom operator)
-- **Available now**: Wormhole supports Stacks
-
-**Option C: Threshold Network (tBTC model)**
-- Decentralized signer network
-- No single operator key
-- Higher complexity
+1. **ENHANCEMENT FIRST**: Enhance existing StacksProtocol, don't create new bridge
+2. **DRY**: Reuse existing patterns from deBridge/NEAR services
+3. **CONSOLIDATION**: Replace stacksBridgeOperator.ts entirely
+4. **CLEAN**: Separate concerns - Wormhole handles bridging, proxy handles purchase
 
 ## Recommended Approach
 
-### Immediate (This Week)
-1. Deploy `MegapotAutoPurchaseProxy` to Base mainnet
-2. Set env var and restart services
-3. Monitor operator logs for proxy usage
+### Phase 1 Complete: ✅
+- Proxy deployed and configured
+- Fallback logic removed
 
-### Short-term (Next 2 Weeks)
-1. Integrate Wormhole NTT for Stacks → Base
-2. Update Stacks contract to call Wormhole bridge
-3. Configure Wormhole relayer to call proxy on Base
-4. Deprecate operator wallet (keep as backup for 1 month)
+### Phase 2: Wormhole NTT Integration (In Progress)
 
-### Long-term (Q2 2026)
-1. Remove operator code entirely
-2. Archive `stacksBridgeOperator.ts`
-3. Update docs to reflect fully decentralized flow
+**Implementation Steps**:
+1. [ ] Install Wormhole NTT SDK
+2. [ ] Create Wormhole protocol adapter in `src/services/bridges/protocols/wormhole-ntt.ts`
+3. [ ] Implement `transfer()` with Executor for automatic relaying
+4. [ ] Integrate with existing StacksProtocol (enhance, don't replace)
+5. [ ] Test on testnet
+6. [ ] Deploy to mainnet
+7. [ ] Monitor for 1 month alongside operator (backup)
+8. [ ] **CONSOLIDATION**: Delete `stacksBridgeOperator.ts`
+
+**Wormhole Integration Code Structure** (DRY - follow existing patterns):
+```
+src/services/bridges/protocols/
+  ├── wormhole-ntt.ts    # NEW - Wormhole NTT adapter
+  ├── stacks.ts          # ENHANCED - Routes to wormhole-ntt
+  └── index.ts           # UPDATED - Export new protocol
+```
+
+### Phase 3: Full Decentralization (Post-NTT)
+- Remove operator backup
+- Delete operator key from env
+- Update docs
 
 ## Code Cleanup Checklist
 
 Following CONSOLIDATION principle:
 
-- [ ] Remove `checkUSDCBalance()` - not needed with proxy
-- [ ] Remove operator wallet funding logic
-- [ ] Remove legacy direct Megapot call path (after proxy proven stable)
-- [ ] Simplify `processBridgeEvent` to only call proxy
-- [ ] Move Chainhook handling to generic bridge event processor
+- [x] Remove `checkUSDCBalance()` - not needed with proxy
+- [x] Remove operator wallet funding logic  
+- [x] Remove legacy direct Megapot call path (after proxy proven stable)
+- [x] Simplify `processBridgeEvent` to only call proxy
+- [ ] Move Chainhook handling to generic bridge event processor (separate task)
 - [ ] Delete `stacksBridgeOperator.ts` once Wormhole integrated
 
 ## Success Metrics

@@ -77,6 +77,11 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 
+  // Skip ESLint during builds (ESLint config compatibility issue with ESLint 9)
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {

@@ -634,12 +634,12 @@ export class UnifiedBridgeManager {
                     return ccipProtocol;
                 }
                 case 'wormhole': {
-                     // Wormhole protocol has been removed (AGGRESSIVE CONSOLIDATION)
-                     // It was disabled and not being used, so we removed it entirely
-                     // to prevent bloat. If needed, it can be restored from git history.
-                     console.warn('[BridgeManager] Wormhole protocol is not available. It has been removed.');
-                     return null;
-                 }
+                    // ENHANCEMENT FIRST: Load Wormhole NTT for Stacks → Base
+                    // Uses Executor for permissionless relaying (no operator key)
+                    const { wormholeNttProtocol } = await import('./protocols/wormhole-ntt');
+                    this.registerProtocol(wormholeNttProtocol);
+                    return wormholeNttProtocol;
+                }
                  case 'base-solana-bridge': {
                      const { baseSolanaBridge } = await import('./protocols/baseSolanaBridge');
                      this.registerProtocol(baseSolanaBridge);

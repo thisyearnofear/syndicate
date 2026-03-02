@@ -14,9 +14,11 @@ export async function POST(req: NextRequest) {
   try {
     console.log('[Chainhook] POST received at', new Date().toISOString());
     
-    // Verify authorization
-    const SECRET_TOKEN = process.env.CHAINHOOK_SECRET_TOKEN;
-    if (!SECRET_TOKEN) {
+    // Verify authorization - check both testnet and mainnet secrets
+    const SECRET_TOKEN_TESTNET = process.env.CHAINHOOK_SECRET_TOKEN_TESTNET;
+    const SECRET_TOKEN_MAINNET = process.env.CHAINHOOK_SECRET_TOKEN_MAINNET;
+    
+    if (!SECRET_TOKEN_TESTNET && !SECRET_TOKEN_MAINNET) {
       console.error('[Chainhook] CHAINHOOK_SECRET_TOKEN not configured');
       return NextResponse.json({ error: 'Chainhook not configured' }, { status: 500 });
     }
@@ -24,7 +26,10 @@ export async function POST(req: NextRequest) {
     const authHeader = req.headers.get('authorization');
     const bearer = authHeader?.replace('Bearer ', '');
 
-    if (!authHeader || bearer !== SECRET_TOKEN) {
+    // Accept either testnet or mainnet secret
+    const isAuthorized = bearer === SECRET_TOKEN_TESTNET || bearer === SECRET_TOKEN_MAINNET;
+    
+    if (!authHeader || !isAuthorized) {
       console.warn('[Chainhook] Unauthorized access attempt');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

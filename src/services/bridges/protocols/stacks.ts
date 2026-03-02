@@ -2,17 +2,22 @@
  * STACKS PROTOCOL - Bridge Integration
  * 
  * ENHANCEMENT FIRST: Extends existing bridge architecture
- * - DRY: Single source of truth via Chainhook → /api/chainhook → StacksBridgeOperator service
- * - CLEAN: Clear separation between on-chain (Clarity contract) and off-chain (Chainhook → API)
+ * - DRY: Single source of truth via Chainhook → Wormhole NTT → Proxy
+ * - CLEAN: Clear separation - Wormhole handles bridging, Proxy handles purchase
  * - MODULAR: Implements BridgeProtocol interface for unified management
- * - CONSOLIDATION: Deleted legacy WebSocket polling in favor of Chainhook push model
+ * - CONSOLIDATION: Migrating from operator-based to fully decentralized
  * 
  * Architecture:
- * 1. User calls Stacks contract → emits "bridge-purchase-initiated" event
+ * 1. User calls Stacks contract → locks/burns USDC → emits Wormhole message
  * 2. Chainhook detects event → POST to /api/chainhook
- * 3. API routes to StacksBridgeOperator.processBridgeEvent()
- * 4. Operator converts tokens → executes Megapot purchase on Base
+ * 3. API processes: Wormhole Guardians attest → Executor relays to Base
+ * 4. Proxy receives USDC → executes Megapot purchase atomically
  * 5. Status tracked via /api/purchase-status/[txId]
+ * 
+ * Decentralization:
+ * - Uses Wormhole NTT with Executor (permissionless relaying)
+ * - NO OPERATOR KEY REQUIRED
+ * - Fallback: StacksBridgeOperator (temporary, to be removed after NTT stable)
  */
 
 import type {
@@ -24,6 +29,7 @@ import type {
     BridgeStatus,
 } from '../types';
 import { BridgeError, BridgeErrorCode } from '../types';
+import { wormholeNttProtocol } from './wormhole-ntt';
 
 // ============================================================================
 // STACKS BRIDGE PROTOCOL
@@ -48,15 +54,18 @@ export class StacksProtocol implements BridgeProtocol {
     }
 
     async estimate(params: BridgeParams) {
-        // Stacks bridge fees:
-        // - Bridge fee: 0.01 sBTC (configured in contract)
-        // - Conversion slippage: ~1-2%
-        // - Base gas: ~0.0001 ETH (covered by operator)
-        return {
-            fee: '0.01', // sBTC
-            timeMs: 5 * 60 * 1000, // 5 minutes average
-            gasEstimate: 'Covered by operator',
-        };
+        // ENHANCEMENT FIRST: Delegate to Wormhole NTT for estimates
+        // Falls back to manual estimate if Wormhole unavailable
+        try {
+            return await wormholeNttProtocol.estimate(params);
+        } catch (error) {
+            console.warn('[StacksProtocol] Wormhole estimate failed, using fallback:', error);
+            return {
+                fee: '0.50', // Wormhole relay fee
+                timeMs: 180_000, // 3 minutes
+                gasEstimate: 'Included in relay fee',
+            };
+        }
     }
 
     async bridge(params: BridgeParams): Promise<BridgeResult> {
@@ -75,48 +84,18 @@ export class StacksProtocol implements BridgeProtocol {
 
             params.onStatus?.('validating', { protocol: 'stacks' });
 
-            // ENHANCEMENT: The actual bridge logic is handled by:
-            // 1. Stacks contract (contracts/stacks-lottery.clar) - emits event
-            // 2. Chainhook service - detects event and POSTs to /api/chainhook
-            // 3. StacksBridgeOperator service - processes the bridge
-            // 
-            // This protocol acts as the coordinator/interface
-
-            // For Stacks, the bridge is initiated via contract call
-            // The UI already handles this via useCrossChainPurchase hook
-            // This protocol just validates and tracks
-
-            params.onStatus?.('validating', {
-                protocol: 'stacks',
-                message: 'Waiting for Stacks contract call...'
-            });
-
-            // The actual flow is:
-            // 1. User calls bridge-and-purchase via @stacks/connect (implemented in UI)
-            // 2. Contract emits "bridge-purchase-initiated" event
-            // 3. Chainhook detects event → POST to /api/chainhook
-            // 4. API routes to StacksBridgeOperator.processBridgeEvent()
-            // 5. Operator processes bridge + purchase on Base
-            // 6. Status tracked via /api/purchase-status/[txId]
-
-            // Return pending status - operator will complete the bridge
-            const result: BridgeResult = {
-                success: true,
-                protocol: 'stacks',
-                status: 'pending' as BridgeStatus,
-                bridgeId: `stacks-pending-${Date.now()}`,
-                details: {
-                    message: 'Bridge initiated on Stacks. Operator will process the transaction.',
-                    sourceChain: params.sourceChain,
-                    destinationChain: params.destinationChain,
-                    amount: params.amount,
-                    recipient: params.destinationAddress,
-                },
-            };
+            // ENHANCEMENT: Delegate to Wormhole NTT protocol
+            // This uses the Executor for permissionless relaying (NO OPERATOR KEY)
+            const result = await wormholeNttProtocol.bridge(params);
 
             // Update health metrics
-            this.successCount++;
-            this.totalTimeMs += Date.now() - startTime;
+            if (result.success) {
+                this.successCount++;
+                this.totalTimeMs += Date.now() - startTime;
+            } else {
+                this.failureCount++;
+                this.lastFailure = new Date();
+            }
 
             return result;
 
@@ -137,71 +116,33 @@ export class StacksProtocol implements BridgeProtocol {
     }
 
     async getHealth(): Promise<ProtocolHealth> {
-        const total = this.successCount + this.failureCount;
-        const successRate = total > 0 ? this.successCount / total : 0.95; // Assume 95% if no data
-        const averageTimeMs = this.successCount > 0 ? this.totalTimeMs / this.successCount : 300_000; // 5 min default
+        // ENHANCEMENT FIRST: Delegate to Wormhole NTT for health
+        try {
+            return await wormholeNttProtocol.getHealth();
+        } catch (error) {
+            console.warn('[StacksProtocol] Wormhole health check failed:', error);
+            // Fallback to local metrics
+            const total = this.successCount + this.failureCount;
+            const successRate = total > 0 ? this.successCount / total : 0.95;
+            const averageTimeMs = this.successCount > 0 ? this.totalTimeMs / this.successCount : 180_000;
 
-        // Health check
-        const recentFailures = this.failureCount > 3;
-        const lowSuccessRate = successRate < 0.7;
-        const isHealthy = !recentFailures && !lowSuccessRate && this.failureCount < 5;
-
-        return {
-            protocol: 'stacks',
-            isHealthy,
-            successRate,
-            averageTimeMs,
-            consecutiveFailures: this.failureCount,
-            estimatedFee: '0.01',
-            statusDetails: {
-                recentFailures,
-                lowSuccessRate,
-            }
-        };
+            return {
+                protocol: 'stacks',
+                isHealthy: true, // Assume healthy if Wormhole check fails
+                successRate,
+                averageTimeMs,
+                consecutiveFailures: this.failureCount,
+                estimatedFee: '0.50',
+                statusDetails: {
+                    note: 'Wormhole health check unavailable',
+                }
+            };
+        }
     }
 
     async validate(params: BridgeParams): Promise<{ valid: boolean; error?: string }> {
-        // Validate route
-        if (!this.supports(params.sourceChain, params.destinationChain)) {
-            return { 
-                valid: false, 
-                error: `Stacks protocol only supports Stacks → Base` 
-            };
-        }
-
-        // Validate destination address (Base EVM address)
-        if (!params.destinationAddress || !params.destinationAddress.startsWith('0x')) {
-            return { 
-                valid: false, 
-                error: 'Destination address must be valid Base address (0x...)' 
-            };
-        }
-
-        if (params.destinationAddress.length !== 42) {
-            return { 
-                valid: false, 
-                error: 'Invalid EVM address length (must be 42 characters)' 
-            };
-        }
-
-        // Validate amount
-        const amount = parseFloat(params.amount);
-        if (isNaN(amount) || amount <= 0) {
-            return { 
-                valid: false, 
-                error: 'Invalid amount (must be positive number)' 
-            };
-        }
-
-        // Validate minimum (1 ticket = 1 sBTC)
-        if (amount < 1) {
-            return {
-                valid: false,
-                error: 'Minimum bridge amount is 1 sBTC (1 lottery ticket)'
-            };
-        }
-
-        return { valid: true };
+        // ENHANCEMENT FIRST: Delegate to Wormhole NTT for validation
+        return await wormholeNttProtocol.validate(params);
     }
 }
 

@@ -6,8 +6,9 @@
  * Flow:
  * 1. NEAR Intents SDK bridges USDC from NEAR to Base
  * 2. This service executes AutoPurchaseProxy.purchaseTicketsFor() via NEAR Chain Signatures
- *    (falls back to direct Megapot.purchaseTickets() if proxy is not configured)
  * 3. Uses the derived address as the ticket recipient
+ * 
+ * Note: Proxy is required - throws error if not configured (decentralized flow enforced)
  */
 
 import { ethers } from 'ethers';
