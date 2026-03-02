@@ -21,6 +21,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getGelatoTaskRepository } from '@/lib/db/schema/gelatoTasks';
+import type { Address } from 'viem';
 
 // =============================================================================
 // TYPES
@@ -116,10 +117,10 @@ async function handleTaskExecution(
       transactionHash: payload.transactionHash,
       success: payload.status === 'executed',
       error: payload.error,
-      amountExecuted: payload.amountExecuted ? BigInt(payload.amountExecuted) : undefined,
-      referrer: payload.referrer || '0x0000000000000000000000000000000000000000',
+      amountExecuted: payload.amountExecuted ? BigInt(payload.amountExecuted) : 0n,
+      referrer: (payload.referrer || '0x0000000000000000000000000000000000000000') as Address,
       gelatoExecutionId: payload.taskId,
-      gasUsed: payload.gasUsed ? BigInt(payload.gasUsed) : undefined,
+      gasUsed: payload.gasUsed ? BigInt(payload.gasUsed) : 0n,
       createdAt: Math.floor(Date.now() / 1000),
     };
 
@@ -130,7 +131,7 @@ async function handleTaskExecution(
     await repo.updateTask(taskRecord.taskRecordId, {
       lastExecutedAt: now,
       executionCount: (await repo.getTask(taskRecord.taskRecordId))?.executionCount ?? 0 + 1,
-      lastError: payload.error || null,
+      lastError: payload.error || undefined,
     });
 
     console.log('[Gelato Webhook] Recorded execution for task:', {
@@ -164,6 +165,8 @@ async function handleTaskFailure(
       transactionHash: payload.transactionHash,
       success: false,
       error: payload.error || 'Unknown error',
+      amountExecuted: 0n,
+      referrer: (payload.referrer || '0x0000000000000000000000000000000000000000') as Address,
       createdAt: Math.floor(Date.now() / 1000),
     };
 

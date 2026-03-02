@@ -32,7 +32,8 @@ export function useNetworkInfo(): NetworkInfo {
   const { state } = useWalletContext();
 
   return useMemo(() => {
-    const chainId = state.chainId ?? 8453; // Default to Base mainnet
+    const rawChainId = state.chainId;
+    const chainId = typeof rawChainId === 'number' ? rawChainId : (parseInt(String(rawChainId), 16) || 8453); // Default to Base mainnet
 
     const isTestnet = chainId === CHAIN_IDS.BASE_SEPOLIA || chainId === CHAIN_IDS.SEPOLIA;
     const isBase = chainId === CHAIN_IDS.BASE;

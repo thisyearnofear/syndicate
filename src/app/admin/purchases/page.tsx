@@ -1,5 +1,5 @@
-import { sql } from '@vercel/postgres';
-import { notFound } from 'next/navigation';
+import { sql } from "@vercel/postgres";
+import { notFound } from "next/navigation";
 
 interface PendingRow {
   source_tx_id: string | null;
@@ -21,7 +21,9 @@ interface AdminPurchasesPageProps {
   };
 }
 
-export default async function AdminPurchasesPage({ searchParams }: AdminPurchasesPageProps) {
+export default async function AdminPurchasesPage({
+  searchParams,
+}: AdminPurchasesPageProps) {
   const adminSecret = process.env.ADMIN_SECRET;
   if (adminSecret && searchParams?.token !== adminSecret) {
     notFound();
@@ -44,7 +46,9 @@ export default async function AdminPurchasesPage({ searchParams }: AdminPurchase
     values.push(statusFilter);
     where.push(`status = $${values.length}`);
   } else {
-    where.push(`status IN ('bridging', 'broadcasting', 'confirmed_source', 'confirmed_stacks')`);
+    where.push(
+      `status IN ('bridging', 'broadcasting', 'confirmed_source', 'confirmed_stacks')`,
+    );
   }
 
   values.push(limit);
@@ -60,7 +64,7 @@ export default async function AdminPurchasesPage({ searchParams }: AdminPurchase
       recipient_base_address,
       updated_at
     FROM purchase_statuses
-    ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+    ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
     ORDER BY updated_at DESC
     LIMIT $${values.length - 1}
     OFFSET $${values.length};
@@ -72,7 +76,9 @@ export default async function AdminPurchasesPage({ searchParams }: AdminPurchase
     <div className="min-h-screen px-6 py-10">
       <div className="max-w-5xl mx-auto space-y-6">
         <div>
-          <h1 className="text-3xl font-semibold text-white">Pending Purchases</h1>
+          <h1 className="text-3xl font-semibold text-white">
+            Pending Purchases
+          </h1>
           <p className="text-gray-400 mt-2">
             Admin view. Protect this route with auth in production.
           </p>
@@ -80,13 +86,17 @@ export default async function AdminPurchasesPage({ searchParams }: AdminPurchase
 
         <form className="flex flex-wrap gap-3 items-end" method="get">
           {adminSecret && (
-            <input type="hidden" name="token" value={searchParams?.token || ''} />
+            <input
+              type="hidden"
+              name="token"
+              value={searchParams?.token || ""}
+            />
           )}
           <div className="flex flex-col gap-1">
             <label className="text-xs text-gray-400">Chain</label>
             <input
               name="chain"
-              defaultValue={chain || ''}
+              defaultValue={chain || ""}
               placeholder="stacks / solana / near"
               className="bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white"
             />
@@ -95,7 +105,7 @@ export default async function AdminPurchasesPage({ searchParams }: AdminPurchase
             <label className="text-xs text-gray-400">Status</label>
             <input
               name="status"
-              defaultValue={statusFilter || ''}
+              defaultValue={statusFilter || ""}
               placeholder="bridging / complete"
               className="bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white"
             />
@@ -147,35 +157,98 @@ export default async function AdminPurchasesPage({ searchParams }: AdminPurchase
                 </tr>
               )}
               {result.rows.map((row, idx) => (
-                <tr key={`${row.source_tx_id}-${idx}`} className="text-gray-200">
-                  <td className="px-4 py-3">{row.source_chain || '-'}</td>
+                <tr
+                  key={`${row.source_tx_id}-${idx}`}
+                  className="text-gray-200"
+                >
+                  <td className="px-4 py-3">{row.source_chain || "-"}</td>
                   <td className="px-4 py-3">{row.status}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{row.source_tx_id || '-'}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{row.base_tx_id || '-'}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{row.bridge_id || '-'}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{row.recipient_base_address || '-'}</td>
+                  <td className="px-4 py-3 font-mono text-xs">
+                    {row.source_tx_id || "-"}
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs">
+                    {row.base_tx_id || "-"}
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs">
+                    {row.bridge_id || "-"}
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs">
+                    {row.recipient_base_address || "-"}
+                  </td>
                   <td className="px-4 py-3 text-xs">
-                    {row.updated_at ? new Date(row.updated_at).toLocaleString() : '-'}
+                    {row.updated_at
+                      ? new Date(row.updated_at).toLocaleString()
+                      : "-"}
                   </td>
                   <td className="px-4 py-3">
-                    {row.source_tx_id && row.source_chain && (
-                      <form action="/api/admin/recheck-bridge" method="post">
-                        <input type="hidden" name="sourceTxId" value={row.source_tx_id} />
-                        <input type="hidden" name="sourceChain" value={row.source_chain} />
-                        {row.bridge_id && (
-                          <input type="hidden" name="bridgeId" value={row.bridge_id} />
+                    <div className="flex items-center gap-3">
+                      {row.source_tx_id && row.source_chain && (
+                        <form action="/api/admin/recheck-bridge" method="post">
+                          <input
+                            type="hidden"
+                            name="sourceTxId"
+                            value={row.source_tx_id}
+                          />
+                          <input
+                            type="hidden"
+                            name="sourceChain"
+                            value={row.source_chain}
+                          />
+                          {row.bridge_id && (
+                            <input
+                              type="hidden"
+                              name="bridgeId"
+                              value={row.bridge_id}
+                            />
+                          )}
+                          {adminSecret && (
+                            <input
+                              type="hidden"
+                              name="token"
+                              value={searchParams?.token || ""}
+                            />
+                          )}
+                          <button
+                            type="submit"
+                            className="text-xs text-blue-400 hover:text-blue-300"
+                          >
+                            Recheck
+                          </button>
+                        </form>
+                      )}
+                      {row.source_chain === "stacks" &&
+                        row.source_tx_id &&
+                        row.recipient_base_address && (
+                          <form
+                            action="/api/admin/finalize-stacks"
+                            method="post"
+                          >
+                            <input
+                              type="hidden"
+                              name="stacksTxId"
+                              value={row.source_tx_id}
+                            />
+                            <input
+                              type="hidden"
+                              name="recipientBaseAddress"
+                              value={row.recipient_base_address}
+                            />
+                            {adminSecret && (
+                              <input
+                                type="hidden"
+                                name="authorization"
+                                value={`Bearer ${searchParams?.token || ""}`}
+                              />
+                            )}
+                            <button
+                              type="submit"
+                              className="text-xs text-indigo-400 hover:text-indigo-300"
+                            >
+                              Finalize
+                            </button>
+                          </form>
                         )}
-                        {adminSecret && (
-                          <input type="hidden" name="token" value={searchParams?.token || ''} />
-                        )}
-                        <button
-                          type="submit"
-                          className="text-xs text-blue-400 hover:text-blue-300"
-                        >
-                          Recheck
-                        </button>
-                      </form>
-                    )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -186,7 +259,7 @@ export default async function AdminPurchasesPage({ searchParams }: AdminPurchase
         <div className="flex gap-3 text-sm text-gray-300">
           <a
             href={`?${new URLSearchParams({
-              ...(adminSecret ? { token: searchParams?.token || '' } : {}),
+              ...(adminSecret ? { token: searchParams?.token || "" } : {}),
               ...(chain ? { chain } : {}),
               ...(statusFilter ? { status: statusFilter } : {}),
               limit: String(limit),
@@ -198,7 +271,7 @@ export default async function AdminPurchasesPage({ searchParams }: AdminPurchase
           </a>
           <a
             href={`?${new URLSearchParams({
-              ...(adminSecret ? { token: searchParams?.token || '' } : {}),
+              ...(adminSecret ? { token: searchParams?.token || "" } : {}),
               ...(chain ? { chain } : {}),
               ...(statusFilter ? { status: statusFilter } : {}),
               limit: String(limit),

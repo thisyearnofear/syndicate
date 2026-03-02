@@ -61,12 +61,14 @@ settings.json
 .zencoder
 .zenflow
 .agent
+.junie
 
 # Foundry
 broadcast/
 cache/
 out/
 
-# Local env overrides
-.env*.localbroadcast/
-cache/
+# Lock files (using pnpm)
+package-lock.json
+yarn.lock
+

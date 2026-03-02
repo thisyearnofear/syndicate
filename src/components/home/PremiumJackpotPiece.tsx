@@ -9,7 +9,7 @@ import { LoadingSpinner } from "@/shared/components/LoadingSpinner";
 import { CountUpText } from "@/shared/components/ui/CountUpText";
 import { formatTimeRemaining } from "@/shared/utils";
 
-import type { UserIdentity } from '../../../interfaces';
+import type { UserIdentity } from '@/interfaces';
 
 export function PremiumJackpotPiece({ onBuyClick, userIdentity }: { onBuyClick: () => void; userIdentity?: UserIdentity | null }) {
   const { jackpotStats, isLoading, error, refresh } = useLottery();

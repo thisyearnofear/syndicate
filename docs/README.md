@@ -5,17 +5,14 @@ Syndicate is a cross-chain lottery platform enabling users to purchase Megapot t
 
 ## Quick Links
 
-### Bridge Architecture
-- [Decentralized Architecture](./bridges/DECENTRALIZED_ARCHITECTURE.md) - Technical design and per-chain flows
-- [Deployment Checklist](./bridges/DEPLOYMENT_CHECKLIST.md) - Proxy contract deployment guide
-- [User Flow Analysis](./bridges/USER_FLOW_ANALYSIS.md) - UX analysis and improvements
-- [UX Improvements Summary](./bridges/UX_IMPROVEMENTS_SUMMARY.md) - Current state and metrics
-- [Stacks Decentralization Plan](./bridges/STACKS_DECENTRALIZATION_PLAN.md) - Migration roadmap
-- [Stacks Fast Bridge Plan](./bridges/STACKS_FAST_BRIDGE_PLAN.md) - Wormhole integration design
-- [Decentralization Progress](./bridges/DECENTRALIZATION_PROGRESS.md) - Implementation tracking
-
-### Security
-- [Secret Detection](./SECRET_DETECTION.md) - Gitleaks pre-commit hook setup
+### Core Documentation
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - System architecture and design
+- **[BRIDGES.md](./BRIDGES.md)** - Cross-chain bridge implementation guide
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Contract and application deployment
+- **[AUTOMATION.md](./AUTOMATION.md)** - Recurring purchase automation
+- **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Development guide and testing
+- **[SECURITY.md](./SECURITY.md)** - Security practices and secret detection
+- **[ROADMAP.md](./ROADMAP.md)** - Project roadmap and planning
 
 ### Contracts
 - [MegapotAutoPurchaseProxy](../contracts/MegapotAutoPurchaseProxy.sol) - Trustless cross-chain purchase proxy
@@ -32,17 +29,10 @@ Syndicate is a cross-chain lottery platform enabling users to purchase Megapot t
 
 | Chain | Status | Time | Method |
 |-------|--------|------|--------|
-| **Stacks** | ✅ Live | 30-60s | Chainhook → Operator → Proxy |
-| **NEAR** | ✅ Live | 3-5 min | 1Click + Chain Signatures → Proxy |
+| **Stacks** | ✅ Live | 30-60s | sBTC → CCTP → Proxy |
+| **NEAR** | ✅ Live | 3-5 min | 1Click + Chain Signatures |
 | **Solana** | ✅ Live | 1-3 min | deBridge → Proxy |
 | **Base** | ✅ Native | Instant | Direct purchase |
-
-### Recent Improvements
-- ✅ Proxy contract deployed (eliminates custody)
-- ✅ Real-time status tracking
-- ✅ Cost transparency in UI
-- ✅ Time estimates per chain
-- ✅ Stacks wait time: 10-15 min → 30-60 sec
 
 ### Architecture Principles
 - **Trustless**: Proxy handles all cross-chain purchases atomically
@@ -72,11 +62,6 @@ Syndicate is a cross-chain lottery platform enabling users to purchase Megapot t
 ```bash
 npm test                    # Run all tests
 forge test                  # Test contracts
-```
-
-### Deployment
-```bash
-forge script script/DeployAutoPurchaseProxy.s.sol --broadcast
 ```
 
 ## Support

@@ -15,6 +15,7 @@ import type { BridgeResult } from '@/services/bridges/types';
 import { Button } from '@/shared/components/ui/Button';
 import { savePendingBridge, getSolanaExplorerLink } from '@/utils/bridgeStateManager';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
+import { getStatusMessage, getStatusDescription } from '@/utils/bridgeStatusMessages';
 
 export interface InlineBridgeFlowProps {
     sourceChain: 'solana' | 'ethereum';
@@ -370,69 +371,4 @@ export function InlineBridgeFlow({
             )}
         </div>
     );
-}
-
-function getStatusMessage(status: string, error: string | null): string {
-    if (error) return 'Bridge Failed';
-    if (status === 'complete') return 'Bridge Complete!';
-
-    const messages: Record<string, string> = {
-        'starting': 'Starting Bridge...',
-        'initializing': 'Initializing...',
-        'validating': 'Validating...',
-        'approving': 'Approving Token...',
-        'sending': 'Sending Transaction...',
-        'sent': 'Transaction Sent!',
-        'confirmed': 'Confirmed on Source Chain',
-        'waiting_attestation': 'Waiting for Attestation...',
-        'attestation_fetched': 'Attestation Received',
-        'minting': 'Minting on Destination...',
-
-        // Legacy
-        'solana_bridge:start': 'Initializing Bridge...',
-        'solana_cctp:init': 'Initializing CCTP Bridge...',
-        'solana_cctp:prepare': 'Preparing Transaction...',
-        'solana_cctp:signing': 'Waiting for Signature...',
-        'solana_cctp:sent': 'Transaction Sent!',
-        'solana_cctp:confirmed': 'Confirmed on Solana',
-        'solana_cctp:message_extracted': 'Message Extracted',
-        'solana_cctp:attestation_fetched': 'Attestation Received',
-        'solana_wormhole:init': 'Initializing Wormhole...',
-        'solana_wormhole:prepare': 'Preparing Transfer...',
-        'solana_wormhole:connecting': 'Connecting to Wormhole...',
-        'solana_wormhole:initiating_transfer': 'Creating Transfer...',
-        'solana_wormhole:signing': 'Waiting for Signature...',
-        'solana_wormhole:sent': 'Transfer Initiated!',
-        'solana_wormhole:waiting_for_vaa': 'Waiting for Guardians...',
-        'solana_wormhole:vaa_received': 'VAA Received',
-        'solana_wormhole:relaying': 'Relaying to Base...',
-    };
-
-    return messages[status] || 'Processing...';
-}
-
-function getStatusDescription(status: string, error: string | null): string {
-    if (error) return error;
-    if (status === 'complete') return 'Your USDC has been successfully bridged to Base Network';
-
-    const descriptions: Record<string, string> = {
-        'approving': 'Please approve the transaction in your wallet',
-        'sending': 'Please confirm the transfer in your wallet',
-        'sent': 'Waiting for network confirmation',
-        'waiting_attestation': 'Waiting for Circle to verify the transfer (can take ~15 mins)',
-        'attestation_fetched': 'Ready to mint on Base',
-
-        // Legacy
-        'solana_cctp:signing': 'Please approve the transaction in your Phantom wallet',
-        'solana_cctp:sent': 'Waiting for Solana network confirmation',
-        'solana_cctp:confirmed': 'Fetching attestation from Circle',
-        'solana_cctp:attestation_fetched': 'Ready to mint on Base',
-        'solana_wormhole:signing': 'Please approve the transaction in your Phantom wallet',
-        'solana_wormhole:sent': 'Transaction confirmed on Solana',
-        'solana_wormhole:waiting_for_vaa': 'Wormhole guardians are signing your transfer',
-        'solana_wormhole:vaa_received': 'Transfer approved by guardians',
-        'solana_wormhole:relaying': 'Automatic relaying to Base in progress',
-    };
-
-    return descriptions[status] || 'Please wait while we process your bridge transaction';
 }

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
 import { CompactStack } from '@/shared/components/premium/CompactLayout';
 
-import type { UserIdentity } from '../../../interfaces';
+import type { UserIdentity } from '@/interfaces';
 
 interface Insight {
   icon: string;

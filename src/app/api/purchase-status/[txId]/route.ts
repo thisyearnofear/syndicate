@@ -43,7 +43,7 @@ export async function GET(
       stacksTxId: txId,
       receipt: {
         stacksExplorer: `https://explorer.stacks.co/txid/${txId}?chain=mainnet`,
-        baseExplorer: null,
+        baseExplorer: undefined,
         megapotApp: null,
       }
     });

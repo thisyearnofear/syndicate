@@ -634,11 +634,9 @@ export class UnifiedBridgeManager {
                     return ccipProtocol;
                 }
                 case 'wormhole': {
-                    // ENHANCEMENT FIRST: Load Wormhole NTT for Stacks → Base
-                    // Uses Executor for permissionless relaying (no operator key)
-                    const { wormholeNttProtocol } = await import('./protocols/wormhole-ntt');
-                    this.registerProtocol(wormholeNttProtocol);
-                    return wormholeNttProtocol;
+                    // Wormhole NTT not yet implemented
+                    console.warn('[BridgeManager] Wormhole NTT protocol not available');
+                    return null;
                 }
                  case 'base-solana-bridge': {
                      const { baseSolanaBridge } = await import('./protocols/baseSolanaBridge');

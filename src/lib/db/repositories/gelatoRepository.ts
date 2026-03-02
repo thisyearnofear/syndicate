@@ -111,7 +111,7 @@ export class VercelPostgresGelatoRepository implements IGelatoTaskRepository {
       DELETE FROM gelato_tasks WHERE id = ${id}
     `;
 
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // =============================================================================
@@ -232,7 +232,7 @@ export class VercelPostgresGelatoRepository implements IGelatoTaskRepository {
       transactionHash: row.transaction_hash,
       success: row.success,
       error: row.error,
-      amountExecuted: row.amount_executed ? BigInt(row.amount_executed) : undefined,
+      amountExecuted: row.amount_executed ? BigInt(row.amount_executed) : 0n,
       referrer: row.referrer,
       gelatoExecutionId: row.gelato_execution_id,
       gasUsed: row.gas_used ? BigInt(row.gas_used) : undefined,

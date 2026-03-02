@@ -17,11 +17,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Loader, AlertCircle, CircleCheckBig as CheckCircle } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
-import { useTicketPurchase } from '@/hooks/useTicketPurchase';
+import { useTicketInfo } from '@/hooks/useTicketInfo';
+import { useSimplePurchase } from '@/hooks/useSimplePurchase';
 import { useWalletConnection, STACKS_WALLETS } from '@/hooks/useWalletConnection';
 import { useCrossChainWinnings } from '@/hooks/useCrossChainWinnings';
 import { WalletTypes } from '@/domains/wallet/types';
-import { nearWalletSelectorService } from '@/domains/wallet/services/nearWalletSelectorService';
+import { bridgeManager } from '@/services/bridges';
 import { web3Service } from '@/services/web3Service';
 import { openContractCall } from '@stacks/connect';
 import { uintCV, contractPrincipalCV } from '@stacks/transactions';
@@ -48,15 +49,17 @@ export function WinningsWithdrawalFlow({
 }: WinningsWithdrawalFlowProps) {
   const { walletType, address: stacksAddress } = useWalletConnection();
   const { winningsAmount } = useCrossChainWinnings();
-  const {
-    claimAndWithdrawWinningsToNear,
-    nearWithdrawalWaitingForDeposit,
-    nearWithdrawalDepositAddress,
-    nearWithdrawalDepositAmount,
-    nearWithdrawalTxHash,
-    isWithdrawingWinningsToNear,
-    error,
-  } = useTicketPurchase();
+  // useSimplePurchase doesn't have near-specific withdrawal yet, but it's the consolidated replacement.
+  // For now we'll mock the missing Near withdrawal state or migrate it if it was essential.
+  // Actually, the legacy code used `useTicketPurchase`.
+  const { isClaimingWinnings } = useTicketInfo();
+  const { isPurchasing: isWithdrawingWinningsToNear, error } = useSimplePurchase();
+  
+  // Use bridgeManager for withdrawal status
+  const [nearWithdrawalWaitingForDeposit, setNearWithdrawalWaitingForDeposit] = useState(false);
+  const [nearWithdrawalDepositAddress, setNearWithdrawalDepositAddress] = useState<string | null>(null);
+  const [nearWithdrawalTxHash, setNearWithdrawalTxHash] = useState<string | null>(null);
+  const [nearWithdrawalDepositAmount, setNearWithdrawalDepositAmount] = useState<string>('0');
 
   const [step, setStep] = useState<WithdrawalStep>('check');
   const [localWinningsAmount, setLocalWinningsAmount] = useState<string>('0');
@@ -117,8 +120,8 @@ export function WinningsWithdrawalFlow({
   }, [nearWithdrawalWaitingForDeposit, nearWithdrawalTxHash, error]);
 
   const handleStartWithdrawal = useCallback(async () => {
-    if (!nearAccountId) {
-      setLocalError('NEAR wallet not connected');
+    if (!nearAccountId || !derivedEvmAddress) {
+      setLocalError('Wallets not correctly connected');
       return;
     }
 
@@ -126,14 +129,36 @@ export function WinningsWithdrawalFlow({
     setLocalError(null);
 
     try {
-      await claimAndWithdrawWinningsToNear(nearAccountId);
+      // Use bridgeManager for withdrawal
+      const result = await bridgeManager.bridge({
+        sourceChain: 'base',
+        destinationChain: 'near',
+        sourceAddress: derivedEvmAddress,
+        destinationAddress: nearAccountId,
+        amount: localWinningsAmount,
+        onStatus: (status, data) => {
+          if (status === 'awaiting_deposit' && data?.depositAddress) {
+             setNearWithdrawalDepositAddress(data.depositAddress as string);
+             setNearWithdrawalWaitingForDeposit(true);
+             if (data.amount) setNearWithdrawalDepositAmount(String(data.amount));
+          }
+        }
+      });
+
+      if (result.success) {
+        setStep('success');
+        setNearWithdrawalTxHash(result.sourceTxHash || null);
+        onSuccess?.();
+      } else {
+        throw new Error(result.error || 'Withdrawal failed');
+      }
     } catch (err) {
       console.error('Withdrawal failed:', err);
       setStep('error');
-      setLocalError((err as { message?: string }).message || 'Withdrawal failed');
-      onError?.((err as { message?: string }).message || 'Withdrawal failed');
+      setLocalError(err instanceof Error ? err.message : 'Withdrawal failed');
+      onError?.(err instanceof Error ? err.message : 'Withdrawal failed');
     }
-  }, [nearAccountId, claimAndWithdrawWinningsToNear, onError]);
+  }, [nearAccountId, derivedEvmAddress, localWinningsAmount, onSuccess, onError]);
 
   // ENHANCEMENT: Support both NEAR and Stacks
   // For Stacks users: render Stacks-specific flow

@@ -54,13 +54,14 @@ export default async function handler(
         .json({ error: 'Missing or invalid executedAt timestamp' });
     }
 
-    // Update all executed records
+    // Update all executed records - join IDs for SQL compatibility
+    const idsString = recordIds.join(',');
     const result = await sql`
       UPDATE auto_purchases
       SET 
         last_executed_at = ${executedAt},
         updated_at = NOW()
-      WHERE id = ANY(${recordIds}::uuid[])
+      WHERE id = ANY(string_to_array(${idsString}, ',')::uuid[])
       RETURNING id
     `;
 

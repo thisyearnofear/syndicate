@@ -6,11 +6,12 @@ import {
   WEB3AUTH_NETWORK,
   CHAIN_NAMESPACES,
   SolanaPrivateKeyProvider,
+  type ChainConfig,
 } from '@/stubs/web3auth';
 
 // PHASE 4 MAINNET: Solana mainnet configuration for production
-const solanaChainConfig = {
-  chainNamespace: "solana",
+const solanaChainConfig: ChainConfig = {
+  chainNamespace: CHAIN_NAMESPACES.SOLANA,
   chainId: "0x1", // Please use 0x1 for Mainnet, 0x2 for Testnet, 0x3 for Devnet
   rpcTarget: process.env.NEXT_PUBLIC_SOLANA_RPC || "https://rpc.ankr.com/solana",
   displayName: "Solana Mainnet",

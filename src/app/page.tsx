@@ -13,9 +13,9 @@
 import { useState, useCallback, useEffect, Suspense, lazy } from "react";
 import Link from "next/link";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
-import { useTicketPurchase } from "@/hooks/useTicketPurchase";
+import { useTicketInfo } from "@/hooks/useTicketInfo";
 import { useAutoPurchaseExecutor } from "@/hooks/useAutoPurchaseExecutor";
-import type { UserIdentity } from '../../interfaces';
+import type { UserIdentity } from '@/interfaces';
 import { socialService } from "@/services/socialService";
 
 // Premium UI Components
@@ -57,7 +57,7 @@ export default function PremiumHome() {
   const [identityLoading, setIdentityLoading] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const { isConnected, address } = useWalletConnection();
-  const { userTicketInfo, claimWinnings, isClaimingWinnings } = useTicketPurchase();
+  const { userTicketInfo, claimWinnings, isClaimingWinnings } = useTicketInfo();
   const { isEnabled: autoPurchaseEnabled, nextExecution } = useAutoPurchaseExecutor(true);
 
   // Set mounted state for hydration consistency

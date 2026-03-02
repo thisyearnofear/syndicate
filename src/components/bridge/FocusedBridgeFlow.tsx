@@ -19,6 +19,7 @@ import type { BridgeResult } from "@/services/bridges/types";
 import { Button } from "@/shared/components/ui/Button";
 import { ProtocolSelector, ProtocolOption } from "./ProtocolSelector";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
+import { getStatusMessage, getStatusDescription } from "@/utils/bridgeStatusMessages";
 
 export interface FocusedBridgeFlowProps {
   sourceChain: "solana" | "ethereum" | "near";
@@ -399,71 +400,6 @@ export function FocusedBridgeFlow({
     if (currentStatus === "complete")
       return "border-green-500/30 bg-green-500/5";
     return "border-blue-500/30 bg-blue-500/5";
-  };
-
-  const getStatusMessage = (status: string, error: string | null): string => {
-    if (error) return "Bridge Failed";
-    if (status === "complete") return "Bridge Complete!";
-
-    const messages: Record<string, string> = {
-      starting: "Starting Bridge...",
-      initializing: "Initializing...",
-      validating: "Validating...",
-      approving: "Approving Token...",
-      sending: "Sending Transaction...",
-      sent: "Transaction Sent!",
-      confirmed: "Confirmed on Source Chain",
-      waiting_attestation: "Waiting for Attestation...",
-      attestation_fetched: "Attestation Received",
-      minting: "Minting on Destination...",
-
-      // Legacy
-      "solana_cctp:init": "Initializing CCTP Bridge...",
-      "solana_cctp:prepare": "Preparing Transaction...",
-      "solana_cctp:signing": "Waiting for Signature...",
-      "solana_cctp:sent": "Transaction Sent!",
-      "solana_cctp:confirmed": "Confirmed on Solana",
-      "solana_cctp:message_extracted": "Message Extracted",
-      "solana_cctp:attestation_fetched": "Attestation Received",
-      "solver_waiting_deposit": "Waiting for Deposit...",
-      "solver_completed": "Bridge Complete!",
-      "solver_pending": "Processing...",
-    };
-
-    return messages[status] || "Processing...";
-  };
-
-  const getStatusDescription = (
-    status: string,
-    error: string | null
-  ): string => {
-    if (error) return error;
-    if (status === "complete")
-      return "Your USDC has been successfully bridged to Base Network";
-
-    const descriptions: Record<string, string> = {
-      approving: "Please approve the transaction in your wallet",
-      sending: "Please confirm the transfer in your wallet",
-      sent: "Waiting for network confirmation",
-      waiting_attestation:
-        "Waiting for Circle to verify the transfer (can take ~15 mins)",
-      attestation_fetched: "Ready to mint on Base",
-
-      // Legacy
-      "solana_cctp:signing":
-        "Please approve the transaction in your Phantom wallet",
-      "solana_cctp:sent": "Waiting for Solana network confirmation",
-      "solana_cctp:confirmed": "Fetching attestation from Circle",
-      "solana_cctp:attestation_fetched": "Ready to mint on Base",
-      "solver_waiting_deposit": "Please send USDC to the deposit address shown in your wallet",
-      "solver_completed": "Funds have arrived on Base!",
-      "solver_pending": "Solvers are fulfilling your order...",
-    };
-
-    return (
-      descriptions[status] ||
-      "Please wait while we process your bridge transaction"
-    );
   };
 
   // Render protocol selection stage

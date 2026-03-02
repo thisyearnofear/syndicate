@@ -1,9 +1,8 @@
 # Recurring Purchase Automation
 
-**Status:** ✅ Production-ready  
-**Updated:** January 2025  
-**Cost:** $0/month (Vercel Cron)  
-**Principles:** All 8 core principles applied
+**Last Updated**: March 2, 2026  
+**Status**: ✅ Production-ready  
+**Cost**: $0/month (Vercel Cron free tier)
 
 ---
 
@@ -11,14 +10,14 @@
 
 Automated recurring ticket purchases using **Vercel's native cron service** (included free with your plan). No external services, no costs, production-ready.
 
-## Architecture
+### Architecture
 
 ```
-User grants permission (MetaMask)
+User grants permission (MetaMask Flask)
           ↓
 Frontend stores in database
           ↓
-Vercel Cron (hourly)
+Vercel Cron (hourly: 0 * * * *)
           ↓
 /api/crons/recurring-purchases
    ├─ Query due purchases
@@ -28,6 +27,19 @@ Vercel Cron (hourly)
           ↓
 User has tickets (fully automated)
 ```
+
+### Core Principles
+
+- **ENHANCEMENT FIRST**: Extended existing services and endpoints
+- **AGGRESSIVE CONSOLIDATION**: Single cron endpoint, no external services (until needed)
+- **PREVENT BLOAT**: Minimal code, zero new dependencies
+- **DRY**: Reuses permission validation and contract logic
+- **CLEAN**: Clear responsibility: cron orchestrates existing services
+- **MODULAR**: Each endpoint independent, easy to test and swap
+- **PERFORMANT**: Vercel handles scheduling, efficient database queries
+- **ORGANIZED**: Cron in `api/crons/`, automation in `api/automation/`
+
+---
 
 ## How It Works
 
@@ -74,7 +86,7 @@ User has tickets (fully automated)
 
 1. **Query database**
    ```sql
-   SELECT * FROM auto_purchases 
+   SELECT * FROM auto_purchases
    WHERE is_active = true
    AND last_executed_at + interval_seconds <= now
    ```
@@ -97,6 +109,8 @@ User has tickets (fully automated)
 **Logging:** All steps logged to Vercel Function logs with `[Cron]` prefix
 
 **Result:** User's USDC transferred, tickets minted. No user action needed.
+
+---
 
 ## Implementation
 
@@ -148,7 +162,11 @@ User has tickets (fully automated)
 - `src/services/erc7715Service.ts` - MetaMask Advanced Permissions (ERC-7715)
 - `src/services/automation/gelatoService.ts` - Task management (optional, for future Gelato upgrade)
 
-### Database Schema
+---
+
+## Database Schema
+
+### Auto Purchases Table
 
 ```sql
 CREATE TABLE auto_purchases (
@@ -164,6 +182,51 @@ CREATE TABLE auto_purchases (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 ```
+
+### Gelato Tasks Table (Optional Upgrade)
+
+```sql
+CREATE TABLE gelato_tasks (
+  id UUID PRIMARY KEY,
+  task_id VARCHAR(255) NOT NULL UNIQUE,
+  user_id VARCHAR(255) NOT NULL,
+  permission_id VARCHAR NOT NULL,
+  user_address VARCHAR(42) NOT NULL,
+  frequency VARCHAR(20) NOT NULL,
+  amount_per_period NUMERIC(78) NOT NULL,
+  status VARCHAR(20) NOT NULL,
+  execution_count INTEGER DEFAULT 0,
+  last_executed_at BIGINT,
+  next_execution_time BIGINT NOT NULL,
+  last_error TEXT,
+  gelato_status VARCHAR(20),
+  created_at BIGINT NOT NULL,
+  updated_at BIGINT NOT NULL,
+  expires_at BIGINT
+);
+```
+
+### Gelato Executions Table
+
+```sql
+CREATE TABLE gelato_executions (
+  id UUID PRIMARY KEY,
+  task_id VARCHAR(255) NOT NULL,
+  task_record_id UUID NOT NULL,
+  user_id VARCHAR(255) NOT NULL,
+  executed_at BIGINT NOT NULL,
+  transaction_hash VARCHAR(255),
+  success BOOLEAN NOT NULL,
+  error TEXT,
+  amount_executed NUMERIC(78),
+  referrer VARCHAR(42),
+  gelato_execution_id VARCHAR(255),
+  gas_used NUMERIC(78),
+  created_at BIGINT NOT NULL
+);
+```
+
+---
 
 ## Testing
 
@@ -231,9 +294,12 @@ curl -X POST http://localhost:3000/api/crons/recurring-purchases
 [Cron] Starting recurring purchases check at 2025-01-10T12:00:00Z
 [Cron] Found 5 active purchases
 [Cron] 2 purchases are due for execution
+[Cron] Permission verification passed for perm_xyz
 [Cron] ✅ Executed purchase abc123 for 0xUser...
 [Cron] Completed: 2/2 purchases executed successfully
 ```
+
+---
 
 ## Deployment
 
@@ -254,32 +320,16 @@ git push origin main
 
 No additional configuration needed.
 
-## Configuration
-
-### Schedule
-
-**File:** `vercel.json`
-```json
-{
-  "crons": [
-    {
-      "path": "/api/crons/recurring-purchases",
-      "schedule": "0 * * * *"
-    }
-  ]
-}
-```
-
-- `0 * * * *` = Every hour at minute 0
-- Can adjust to different schedule as needed
-
 ### Environment Variables
 
 All existing variables work:
-```env
+```bash
 GELATO_INTERNAL_API_KEY=...          # For permission verification
 NEXT_PUBLIC_API_BASE_URL=...         # Optional
+POSTGRES_URL=...                     # Database connection
 ```
+
+---
 
 ## Monitoring
 
@@ -308,6 +358,23 @@ NEXT_PUBLIC_API_BASE_URL=...         # Optional
 [Cron] Completed: 2/2 purchases executed successfully
 ```
 
+### Database Queries
+
+```sql
+-- Get active auto-purchases
+SELECT * FROM auto_purchases WHERE is_active = true;
+
+-- Get recent executions
+SELECT * FROM gelato_executions ORDER BY executed_at DESC LIMIT 20;
+
+-- Get tasks due for execution
+SELECT * FROM gelato_tasks 
+WHERE status = 'active' 
+AND next_execution_time <= EXTRACT(EPOCH FROM NOW());
+```
+
+---
+
 ## Troubleshooting
 
 | Issue | Cause | Fix |
@@ -318,16 +385,7 @@ NEXT_PUBLIC_API_BASE_URL=...         # Optional
 | Execution fails | Contract call error | Check Megapot contract and ABI |
 | Database error | Connection issue | Verify Neon Postgres connection string |
 
-## Core Principles
-
-✅ **ENHANCEMENT FIRST** - Extended existing services and endpoints  
-✅ **AGGRESSIVE CONSOLIDATION** - Single cron endpoint, no external services (until needed)  
-✅ **PREVENT BLOAT** - Minimal code, zero new dependencies  
-✅ **DRY** - Reuses permission validation and contract logic  
-✅ **CLEAN** - Clear responsibility: cron orchestrates existing services  
-✅ **MODULAR** - Each endpoint independent, easy to test and swap  
-✅ **PERFORMANT** - Vercel handles scheduling, efficient database queries  
-✅ **ORGANIZED** - Cron in `api/crons/`, automation in `api/automation/`
+---
 
 ## Future: Upgrade to Gelato ($99/month)
 
@@ -339,55 +397,34 @@ When you need advanced features:
 - Better monitoring
 - Longer timeout (30s vs 15s)
 
-**Migration path:**
+### Migration Path
+
 1. Delete Vercel cron (remove from `vercel.json`)
 2. Deploy Gelato Web3 Function (same API endpoints work)
 3. Register in Gelato Dashboard
 4. Done (business logic unchanged)
 
-## File Structure
+### Gelato Webhook Integration
 
-```
-src/
-├── pages/api/crons/
-│   └── recurring-purchases.ts        ← Main cron endpoint
-├── pages/api/automation/
-│   ├── due-purchases.ts              ← Query database
-│   ├── mark-executed.ts              ← Update database
-│   └── execute-purchase-tickets.ts   ← Execute on-chain
-├── pages/api/permissions/
-│   └── verify.ts                     ← Validate permission
-└── services/automation/
-    └── erc7715Service.ts             ← Permission logic
+The webhook endpoint (`/api/gelato/webhook`) handles:
 
-vercel.json                           ← Cron configuration
-docs/
-├── GELATO_SETUP.md                   ← Setup guide
-└── GELATO_AUTOMATION_PLAN.md         ← This file
-```
+- **task.executed**: Successful execution
+  - Records execution history
+  - Updates execution count
+  - Stores transaction hash
 
-## Cron Endpoint Details
+- **task.failed**: Execution failed
+  - Records error details
+  - Updates `lastError` field
+  - Alerts user (future: email/push notification)
 
-**File:** `src/pages/api/crons/recurring-purchases.ts`
+- **task.cancelled**: Task was cancelled
+  - Updates status to cancelled
+  - No future executions
 
-**Flow:**
-1. Query `auto_purchases` WHERE `is_active = true`
-2. For each purchase:
-   - Calculate if due based on `last_executed_at` + frequency
-   - Verify permission hasn't expired or run out of budget
-   - Execute purchase on Megapot contract
-   - Update `last_executed_at` timestamp
-3. Return execution summary
+**Webhook Security**: HMAC-SHA256 signature verification
 
-**Response:**
-```typescript
-interface CronResponse {
-  success: boolean;
-  executed: number;      // Successful purchases
-  attempted: number;     // Total purchases tried
-  errors: string[];      // Error messages
-}
-```
+---
 
 ## Timeline
 
@@ -398,6 +435,8 @@ interface CronResponse {
 | Weekly auto-purchases | Every 7 days | Automatic |
 | User sees tickets | Realtime | On Megapot |
 
+---
+
 ## Security
 
 - Permissions validated on every execution
@@ -405,6 +444,8 @@ interface CronResponse {
 - Cron only runs on Vercel infrastructure
 - Execution logged and auditable
 - Failed purchases don't block others
+
+---
 
 ## Performance
 
@@ -418,10 +459,51 @@ interface CronResponse {
 
 ---
 
-**Next Steps:**
-1. Deploy to Vercel
-2. Create test purchase
-3. Wait for next hour (or check logs)
-4. Monitor in Vercel dashboard
+## File Structure
 
-**Questions?** See `docs/GELATO_SETUP.md` for detailed setup guide.
+```
+src/
+├── pages/api/crons/
+│   └── recurring-purchases.ts        ← Main cron endpoint
+├── pages/api/automation/
+│   ├── create-purchase.ts            ← Create record
+│   ├── due-purchases.ts              ← Query database
+│   ├── mark-executed.ts              ← Update database
+│   └── execute-purchase-tickets.ts   ← Execute on-chain
+├── pages/api/permissions/
+│   └── verify.ts                     ← Validate permission
+├── pages/api/gelato/
+│   └── webhook/route.ts              ← Gelato webhook handler
+├── components/settings/
+│   └── AutoPurchaseSettings.tsx      ← Automation dashboard
+├── components/modal/
+│   ├── AutoPurchasePermissionModal.tsx
+│   └── ImprovedAutoPurchaseModal.tsx
+└── hooks/
+    ├── useAdvancedPermissions.ts
+    └── useGelatoAutomation.ts
+
+vercel.json                           ← Cron configuration
+docs/
+└── AUTOMATION.md                     ← This file
+```
+
+---
+
+## Next Steps
+
+1. **Deploy to Vercel**
+2. **Create test purchase**
+3. **Wait for next hour** (or check logs)
+4. **Monitor in Vercel dashboard**
+
+**Questions?** See [DEPLOYMENT.md](./DEPLOYMENT.md) for deployment guide.
+
+---
+
+## References
+
+- **Architecture**: [ARCHITECTURE.md](./ARCHITECTURE.md)
+- **Deployment**: [DEPLOYMENT.md](./DEPLOYMENT.md)
+- **Bridges**: [BRIDGES.md](./BRIDGES.md)
+- **Development**: [DEVELOPMENT.md](./DEVELOPMENT.md)

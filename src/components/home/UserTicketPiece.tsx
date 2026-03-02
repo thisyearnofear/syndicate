@@ -16,7 +16,7 @@ interface UserTicketInfo {
   */
 export function UserTicketPiece({ userTicketInfo, claimWinnings, isClaimingWinnings }: {
   userTicketInfo: UserTicketInfo | null;
-  claimWinnings: () => Promise<void | string>;
+  claimWinnings: () => Promise<string | null>;
   isClaimingWinnings: boolean;
 }) {
   if (!userTicketInfo) {

@@ -1,51 +1,58 @@
 /**
  * SIMPLIFIED PURCHASE MODAL
- * 
+ *
  * Core Principles Applied:
  * - ENHANCEMENT FIRST: Replaces 418-line PurchaseModal with streamlined version
  * - CLEAN: Single responsibility - purchase UX flow
  * - MODULAR: Uses useSimplePurchase hook + orchestrator
- * 
+ *
  * Replaces: PurchaseModal.tsx (418 lines)
  * Consolidates: ModeStep, SelectStep, ProcessingStep, SuccessStep
- * 
+ *
  * Flow: Connect → Select Chain/Amount → Execute → Success
  * No yield/syndicate features in MVP
  */
 
-import { useState, Suspense, lazy, useEffect } from 'react';
-import { Button } from '@/shared/components/ui/Button';
-import { Loader, AlertCircle, Check, Zap, Link2 } from 'lucide-react';
-import { useWalletConnection } from '@/hooks/useWalletConnection';
-import { useSimplePurchase } from '@/hooks/useSimplePurchase';
-import { useERC7715 } from '@/hooks/useERC7715';
-import WalletConnectionManager from '@/components/wallet/WalletConnectionManager';
-import { CompactStack, CompactCard } from '@/shared/components/premium/CompactLayout';
-import { ImprovedAutoPurchaseModal } from './ImprovedAutoPurchaseModal';
-import { CrossChainTracker, type SourceChainType, type TrackerStatus } from '@/components/bridge/CrossChainTracker';
-import { CostBreakdown } from '@/components/bridge/CostBreakdown';
-import { TimeEstimate } from '@/components/bridge/TimeEstimate';
+import { useState, Suspense, lazy, useEffect } from "react";
+import { Button } from "@/shared/components/ui/Button";
+import { Loader, AlertCircle, Check, Zap, Link2 } from "lucide-react";
+import { useWalletConnection } from "@/hooks/useWalletConnection";
+import { useSimplePurchase } from "@/hooks/useSimplePurchase";
+import { useERC7715 } from "@/hooks/useERC7715";
+import WalletConnectionManager from "@/components/wallet/WalletConnectionManager";
+import {
+  CompactStack,
+  CompactCard,
+} from "@/shared/components/premium/CompactLayout";
+import { AutoPurchaseModal } from "./AutoPurchaseModal";
+import {
+  CrossChainTracker,
+  type SourceChainType,
+  type TrackerStatus,
+} from "@/components/bridge/CrossChainTracker";
+import { CostBreakdown } from "@/components/bridge/CostBreakdown";
+import { TimeEstimate } from "@/components/bridge/TimeEstimate";
 
 // Lazy load celebration modal
-const CelebrationModal = lazy(() => import('./CelebrationModal'));
+const CelebrationModal = lazy(() => import("./CelebrationModal"));
 
-type PurchaseStep = 'connect' | 'select' | 'approve' | 'processing' | 'success';
+type PurchaseStep = "connect" | "select" | "approve" | "processing" | "success";
 
 // Helper function to get explorer URLs
 const getExplorerUrl = (chain: SourceChainType, txHash: string): string => {
   switch (chain) {
-    case 'solana':
+    case "solana":
       return `https://solscan.io/tx/${txHash}`;
-    case 'near':
+    case "near":
       return `https://explorer.near.org/transactions/${txHash}`;
-    case 'stacks':
+    case "stacks":
       return `https://explorer.stacks.co/txid/${txHash}?chain=mainnet`;
-    case 'base':
+    case "base":
       return `https://basescan.org/tx/${txHash}`;
-    case 'ethereum':
+    case "ethereum":
       return `https://etherscan.io/tx/${txHash}`;
     default:
-      return '#';
+      return "#";
   }
 };
 
@@ -54,37 +61,48 @@ export interface SimplePurchaseModalProps {
   onClose: () => void;
 }
 
-export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseModalProps) {
+export default function SimplePurchaseModal({
+  isOpen,
+  onClose,
+}: SimplePurchaseModalProps) {
   const { isConnected, address, walletType } = useWalletConnection();
-  const { 
-    purchase, 
-    isPurchasing, 
-    error, 
-    txHash, 
-    clearError, 
+  const {
+    purchase,
+    isPurchasing,
+    error,
+    txHash,
+    clearError,
     reset,
     status,
     sourceChain,
     sourceTxHash,
     destinationTxHash,
-    walletInfo 
+    walletInfo,
   } = useSimplePurchase();
   const { permissions, isSupported } = useERC7715();
-  
-  const [step, setStep] = useState<PurchaseStep>('connect');
+
+  const [step, setStep] = useState<PurchaseStep>("connect");
   const [ticketCount, setTicketCount] = useState(1);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [statusLinkCopied, setStatusLinkCopied] = useState(false);
   const hasActivePermission = permissions.length > 0 && isSupported;
-  
+
   // Show tracker when purchase is in progress
-  const showTracker = isPurchasing || ['confirmed_source', 'bridging', 'purchasing', 'complete', 'error'].includes(status);
+  const showTracker =
+    isPurchasing ||
+    [
+      "confirmed_source",
+      "bridging",
+      "purchasing",
+      "complete",
+      "error",
+    ].includes(status);
 
   // Auto-advance to select step when wallet is connected and modal is open
   useEffect(() => {
-    if (isOpen && isConnected && address && step === 'connect') {
-      setStep('select');
+    if (isOpen && isConnected && address && step === "connect") {
+      setStep("select");
     }
   }, [isOpen, isConnected, address, step]);
 
@@ -92,17 +110,17 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
 
   const handleClose = () => {
     reset();
-    setStep('connect');
+    setStep("connect");
     onClose();
   };
 
   const handlePurchaseClick = async () => {
     if (!isConnected || !address) {
-      setStep('connect');
+      setStep("connect");
       return;
     }
 
-    setStep('processing');
+    setStep("processing");
     const result = await purchase({
       ticketCount,
       userAddress: address,
@@ -110,13 +128,14 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
 
     if (result.success) {
       // Don't show celebration for cross-chain - tracker handles it
-      const isCrossChain = sourceChain && sourceChain !== 'base' && sourceChain !== 'ethereum';
+      const isCrossChain =
+        sourceChain && sourceChain !== "base" && sourceChain !== "ethereum";
       if (!isCrossChain) {
         setShowCelebration(true);
       }
-      setStep('success');
+      setStep("success");
     } else {
-      setStep('select');
+      setStep("select");
     }
   };
 
@@ -129,43 +148,46 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
       setTimeout(() => setStatusLinkCopied(false), 2000);
     } catch {}
   };
-  
+
   // Auto-advance to success when status is complete
   useEffect(() => {
-    if (status === 'complete' && step === 'processing') {
-      setStep('success');
+    if (status === "complete" && step === "processing") {
+      setStep("success");
     }
   }, [status, step]);
 
   // Render step content
   const renderStep = () => {
     switch (step) {
-      case 'connect':
+      case "connect":
         return (
           <CompactStack spacing="md" align="center">
             <div className="text-center">
               <h2 className="text-2xl font-bold text-white mb-2">Let's Play</h2>
-              <p className="text-gray-400">Connect your wallet to purchase lottery tickets</p>
+              <p className="text-gray-400">
+                Connect your wallet to purchase lottery tickets
+              </p>
             </div>
             <WalletConnectionManager />
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleClose}
-            >
+            <Button variant="outline" className="w-full" onClick={handleClose}>
               Close
             </Button>
           </CompactStack>
         );
 
-      case 'select':
-      case 'approve':
+      case "select":
+      case "approve":
         return (
           <CompactStack spacing="md">
             <div className="text-center">
-              <h2 className="text-2xl font-bold text-white mb-2">Buy Tickets</h2>
+              <h2 className="text-2xl font-bold text-white mb-2">
+                Buy Tickets
+              </h2>
               <p className="text-gray-400 text-sm">
-                Connected: <span className="text-green-400">{walletType?.toUpperCase()}</span>
+                Connected:{" "}
+                <span className="text-green-400">
+                  {walletType?.toUpperCase()}
+                </span>
               </p>
             </div>
 
@@ -175,9 +197,12 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
                 <div className="flex items-center gap-2">
                   <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
                   <div>
-                    <p className="text-green-300 font-medium text-sm">✓ Auto-Purchase Enabled</p>
+                    <p className="text-green-300 font-medium text-sm">
+                      ✓ Auto-Purchase Enabled
+                    </p>
                     <p className="text-xs text-green-200 mt-1">
-                      Tickets will be automatically purchased on your scheduled frequency without requiring signatures.
+                      Tickets will be automatically purchased on your scheduled
+                      frequency without requiring signatures.
                     </p>
                   </div>
                 </div>
@@ -201,27 +226,36 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
               </div>
             )}
 
-            {walletType === 'solana' && !process.env.NEXT_PUBLIC_DEBRIDGE_ADAPTER && (
-              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 space-y-2">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-400" />
-                  <p className="text-amber-300 text-sm font-medium">Solana intent adapter not configured</p>
+            {walletType === "solana" &&
+              !process.env.NEXT_PUBLIC_DEBRIDGE_ADAPTER && (
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-400" />
+                    <p className="text-amber-300 text-sm font-medium">
+                      Solana intent adapter not configured
+                    </p>
+                  </div>
+                  <p className="text-xs text-gray-300">
+                    To complete purchases without an EVM wallet, set
+                    `NEXT_PUBLIC_DEBRIDGE_ADAPTER`. Otherwise an EVM wallet will
+                    be required to finalize the purchase on Base.
+                  </p>
                 </div>
-                <p className="text-xs text-gray-300">
-                  To complete purchases without an EVM wallet, set `NEXT_PUBLIC_DEBRIDGE_ADAPTER`. Otherwise an EVM wallet will be required to finalize the purchase on Base.
-                </p>
-              </div>
-            )}
+              )}
 
             {/* ENHANCEMENT: Auto-purchase setup (expanded by default, Base/EVM only, chain-aware) */}
-            {!hasActivePermission && isSupported && walletType === 'evm' && (
+            {!hasActivePermission && isSupported && walletType === "evm" && (
               <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-lg p-4 space-y-3">
                 <div className="flex items-start gap-3">
                   <Zap className="w-5 h-5 text-indigo-400 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-indigo-300 mb-1">Enable Auto-Purchase</p>
+                    <p className="text-sm font-medium text-indigo-300 mb-1">
+                      Enable Auto-Purchase
+                    </p>
                     <p className="text-xs text-gray-300">
-                      Set up automatic weekly or monthly ticket purchases using MetaMask Advanced Permissions. No signing required after setup.
+                      Set up automatic weekly or monthly ticket purchases using
+                      MetaMask Advanced Permissions. No signing required after
+                      setup.
                     </p>
                   </div>
                 </div>
@@ -239,7 +273,9 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
 
             {/* Ticket count selector */}
             <div className="space-y-3">
-              <label className="block text-sm font-medium text-gray-300">Number of Tickets</label>
+              <label className="block text-sm font-medium text-gray-300">
+                Number of Tickets
+              </label>
               <div className="flex items-center gap-4 bg-gray-700/50 rounded-lg p-4">
                 <button
                   onClick={() => setTicketCount(Math.max(1, ticketCount - 1))}
@@ -251,7 +287,9 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
                 <input
                   type="number"
                   value={ticketCount}
-                  onChange={(e) => setTicketCount(Math.max(1, parseInt(e.target.value) || 1))}
+                  onChange={(e) =>
+                    setTicketCount(Math.max(1, parseInt(e.target.value) || 1))
+                  }
                   className="flex-1 text-center text-2xl font-bold text-white bg-transparent focus:outline-none"
                   min="1"
                   disabled={isPurchasing}
@@ -267,17 +305,23 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
             </div>
 
             {/* Cost Breakdown */}
-            {sourceChain && sourceChain !== 'ethereum' && (
-              <CostBreakdown 
-                ticketCount={ticketCount} 
-                sourceChain={sourceChain as 'stacks' | 'near' | 'solana' | 'base'} 
+            {sourceChain && sourceChain !== "ethereum" && (
+              <CostBreakdown
+                ticketCount={ticketCount}
+                sourceChain={
+                  sourceChain as "stacks" | "near" | "solana" | "base"
+                }
               />
             )}
 
             {/* Time Estimate */}
-            {sourceChain && sourceChain !== 'base' && sourceChain !== 'ethereum' && (
-              <TimeEstimate sourceChain={sourceChain as 'stacks' | 'near' | 'solana'} />
-            )}
+            {sourceChain &&
+              sourceChain !== "base" &&
+              sourceChain !== "ethereum" && (
+                <TimeEstimate
+                  sourceChain={sourceChain as "stacks" | "near" | "solana"}
+                />
+              )}
 
             <div className="flex gap-3">
               <Button
@@ -300,14 +344,14 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
                     Processing...
                   </>
                 ) : (
-                  'Buy Tickets'
+                  "Buy Tickets"
                 )}
               </Button>
             </div>
           </CompactStack>
         );
 
-      case 'processing':
+      case "processing":
         // Show enhanced tracker during processing
         if (showTracker && sourceChain) {
           return (
@@ -321,9 +365,15 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
                 ticketCount={ticketCount}
                 walletInfo={walletInfo}
                 receipt={{
-                  sourceExplorer: sourceTxHash ? getExplorerUrl(sourceChain, sourceTxHash) : undefined,
-                  baseExplorer: destinationTxHash ? `https://basescan.org/tx/${destinationTxHash}` : undefined,
-                  megapotApp: destinationTxHash ? `https://megapot.xyz/my-tickets` : undefined,
+                  sourceExplorer: sourceTxHash
+                    ? getExplorerUrl(sourceChain, sourceTxHash)
+                    : undefined,
+                  baseExplorer: destinationTxHash
+                    ? `https://basescan.org/tx/${destinationTxHash}`
+                    : undefined,
+                  megapotApp: destinationTxHash
+                    ? `https://megapot.xyz/my-tickets`
+                    : undefined,
                 }}
               />
               {sourceTxHash && (
@@ -342,33 +392,39 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
                     className="text-xs text-gray-300 hover:text-white inline-flex items-center gap-1"
                   >
                     <Link2 className="w-3 h-3" />
-                    {statusLinkCopied ? 'Copied' : 'Copy Link'}
+                    {statusLinkCopied ? "Copied" : "Copy Link"}
                   </button>
                 </div>
               )}
             </div>
           );
         }
-        
+
         // Fallback to simple loading state
         return (
           <div className="text-center py-12">
             <div className="inline-block mb-6">
               <Loader className="w-12 h-12 text-blue-400 animate-spin" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Processing Purchase</h2>
+            <h2 className="text-2xl font-bold text-white mb-2">
+              Processing Purchase
+            </h2>
             <p className="text-gray-400 mb-4">
-              {walletType === 'stacks' || walletType === 'near' || walletType === 'solana'
-                ? 'Bridging across chains...'
-                : 'Executing transaction...'}
+              {walletType === "stacks" ||
+              walletType === "near" ||
+              walletType === "solana"
+                ? "Bridging across chains..."
+                : "Executing transaction..."}
             </p>
             {txHash && (
-              <p className="text-xs text-gray-500 font-mono break-all">{txHash}</p>
+              <p className="text-xs text-gray-500 font-mono break-all">
+                {txHash}
+              </p>
             )}
           </div>
         );
 
-      case 'success':
+      case "success":
         // Show enhanced tracker for cross-chain completions
         if (showTracker && sourceChain) {
           return (
@@ -382,9 +438,15 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
                 ticketCount={ticketCount}
                 walletInfo={walletInfo}
                 receipt={{
-                  sourceExplorer: sourceTxHash ? getExplorerUrl(sourceChain, sourceTxHash) : undefined,
-                  baseExplorer: destinationTxHash ? `https://basescan.org/tx/${destinationTxHash}` : undefined,
-                  megapotApp: destinationTxHash ? `https://megapot.xyz/my-tickets` : undefined,
+                  sourceExplorer: sourceTxHash
+                    ? getExplorerUrl(sourceChain, sourceTxHash)
+                    : undefined,
+                  baseExplorer: destinationTxHash
+                    ? `https://basescan.org/tx/${destinationTxHash}`
+                    : undefined,
+                  megapotApp: destinationTxHash
+                    ? `https://megapot.xyz/my-tickets`
+                    : undefined,
                 }}
               />
               {sourceTxHash && (
@@ -401,7 +463,7 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
                   className="flex-1"
                   onClick={() => {
                     setTicketCount(1);
-                    setStep('select');
+                    setStep("select");
                     clearError();
                     reset();
                   }}
@@ -419,7 +481,7 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
             </div>
           );
         }
-        
+
         // Standard success view for direct purchases
         return (
           <CompactStack spacing="md" align="center">
@@ -429,9 +491,11 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
                   <Check className="w-8 h-8 text-green-400" />
                 </div>
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">Purchase Successful!</h2>
+              <h2 className="text-2xl font-bold text-white mb-2">
+                Purchase Successful!
+              </h2>
               <p className="text-gray-400 mb-4">
-                You purchased {ticketCount} ticket{ticketCount !== 1 ? 's' : ''}
+                You purchased {ticketCount} ticket{ticketCount !== 1 ? "s" : ""}
               </p>
               {txHash && (
                 <a
@@ -446,12 +510,15 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
             </div>
 
             {/* ENHANCEMENT: Auto-purchase upsell (Base/EVM only, chain-aware, success momentum) */}
-            {!hasActivePermission && isSupported && walletType === 'evm' && (
+            {!hasActivePermission && isSupported && walletType === "evm" && (
               <div className="w-full bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 space-y-3">
                 <div>
-                  <p className="text-sm font-medium text-blue-300 mb-1">Never sign again</p>
+                  <p className="text-sm font-medium text-blue-300 mb-1">
+                    Never sign again
+                  </p>
                   <p className="text-xs text-gray-300">
-                    Enable auto-purchase to buy tickets daily without signing. Powered by MetaMask Advanced Permissions.
+                    Enable auto-purchase to buy tickets daily without signing.
+                    Powered by MetaMask Advanced Permissions.
                   </p>
                 </div>
                 <Button
@@ -472,7 +539,7 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
                 className="flex-1"
                 onClick={() => {
                   setTicketCount(1);
-                  setStep('select');
+                  setStep("select");
                   clearError();
                 }}
               >
@@ -497,10 +564,7 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
   return (
     <>
       {/* Modal overlay */}
-      <div
-        className="fixed inset-0 bg-black/50 z-40"
-        onClick={handleClose}
-      />
+      <div className="fixed inset-0 bg-black/50 z-40" onClick={handleClose} />
 
       {/* Modal content */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -519,16 +583,16 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
           isOpen={showCelebration}
           onClose={() => setShowCelebration(false)}
           achievement={{
-            title: 'Purchase Successful!',
-            message: `You've purchased ${ticketCount} lottery ticket${ticketCount !== 1 ? 's' : ''}. Good luck!`,
-            icon: '🎉',
+            title: "Purchase Successful!",
+            message: `You've purchased ${ticketCount} lottery ticket${ticketCount !== 1 ? "s" : ""}. Good luck!`,
+            icon: "🎉",
             tickets: ticketCount,
           }}
         />
       </Suspense>
 
       {/* Auto-purchase permission modal */}
-      <ImprovedAutoPurchaseModal
+      <AutoPurchaseModal
         isOpen={showPermissionModal}
         onClose={() => setShowPermissionModal(false)}
         onSuccess={() => {
