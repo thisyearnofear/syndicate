@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
@@ -228,7 +228,7 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
      * @param _usdc USDC token address on Base (0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913)
      * @param _megapot Megapot contract address on Base (0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95)
      */
-    constructor(address _usdc, address _megapot) {
+    constructor(address _usdc, address _megapot) Ownable(msg.sender) {
         if (_usdc == address(0) || _megapot == address(0)) {
             revert InvalidContractAddress();
         }

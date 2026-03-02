@@ -122,6 +122,9 @@ export const CONTRACTS = {
 
   // USDC token on Base
   usdc: process.env.NEXT_PUBLIC_USDC_TOKEN_ADDRESS || "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+
+  // Auto-Purchase Proxy for trustless cross-chain ticket purchases
+  autoPurchaseProxy: process.env.NEXT_PUBLIC_AUTO_PURCHASE_PROXY || "0x0000000000000000000000000000000000000000",
 } as const;
 
 /**

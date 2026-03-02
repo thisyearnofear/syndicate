@@ -301,6 +301,7 @@ async function executeSolanaPurchase(
     const bridgeOptions: Record<string, unknown> = {
       gasDrop: "0.002", // Always request gas drop to prevent "Gas Trap"
     };
+    let hasIntentExecution = false;
 
     // If adapter is available, upgrade to Phase 2 (Intents)
     if (adapterAddress) {
@@ -327,6 +328,7 @@ async function executeSolanaPurchase(
             ethers.ZeroHash, // OrderID (filled by adapter/solver context)
           ],
         );
+        hasIntentExecution = true;
       } catch (e) {
         console.warn(
           "Failed to construct intent data, falling back to direct bridge:",
@@ -359,7 +361,52 @@ async function executeSolanaPurchase(
       };
     }
 
-    // Execute ticket purchase on Base
+    // Persist bridge status for non-Stacks flows (best effort)
+    if (bridgeResult.sourceTxHash && typeof window !== "undefined") {
+      try {
+        await fetch("/api/purchase-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sourceTxId: bridgeResult.sourceTxHash,
+            sourceChain: "solana",
+            status: bridgeResult.destinationTxHash ? "complete" : "bridging",
+            baseTxId: bridgeResult.destinationTxHash || null,
+            bridgeId: bridgeResult.bridgeId || null,
+            recipientBaseAddress: req.recipientAddress || req.userAddress,
+          }),
+        });
+      } catch (err) {
+        console.warn("[purchaseOrchestrator] Failed to persist Solana bridge status:", err);
+      }
+    }
+
+    // If intent-based adapter handled execution, we're done
+    if (hasIntentExecution) {
+      return {
+        success: true,
+        sourceTxHash: bridgeResult.sourceTxHash,
+        destinationTxHash: bridgeResult.destinationTxHash,
+      };
+    }
+
+    // Execute ticket purchase on Base (requires EVM signer)
+    if (!web3Service.isReady() || web3Service.isReadOnlyMode()) {
+      const initialized = await web3Service.initialize();
+      if (!initialized || web3Service.isReadOnlyMode()) {
+        return {
+          success: false,
+          error: {
+            code: "EVM_WALLET_REQUIRED",
+            message:
+              "EVM wallet required to finalize purchase on Base. Connect an EVM wallet or configure the deBridge adapter for intent-based execution.",
+            suggestedAction:
+              "Connect an EVM wallet or set NEXT_PUBLIC_DEBRIDGE_ADAPTER to enable intent execution.",
+          },
+        };
+      }
+    }
+
     const purchaseResult = await web3Service.purchaseTickets(req.ticketCount);
     if (!purchaseResult.success || !purchaseResult.txHash) {
       return {

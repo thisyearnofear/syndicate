@@ -946,7 +946,7 @@ export function useTicketPurchase(): TicketPurchaseState &
             sourceChain: "solana",
             destinationChain: "base",
             sourceAddress: address,
-            destinationAddress: address,
+            destinationAddress: destinationAddress,
             amount: bridgeAmount,
             protocol: bridgeResult.protocol, // Stay with the same protocol
             options: {
@@ -969,6 +969,19 @@ export function useTicketPurchase(): TicketPurchaseState &
           }));
           throw signError;
         }
+      }
+
+      if (
+        bridgeResult.status === "manual_action_required" ||
+        bridgeResult.details?.redirectUrl
+      ) {
+        const redirectUrl =
+          bridgeResult.details?.redirectUrl || bridgeResult.redirectUrl;
+        throw new Error(
+          redirectUrl
+            ? `Manual bridge required. Complete the bridge at ${redirectUrl}, then return to purchase.`
+            : "Manual bridge required. Complete the bridge, then return to purchase.",
+        );
       }
 
       if (!bridgeResult.success) {
@@ -1121,6 +1134,23 @@ export function useTicketPurchase(): TicketPurchaseState &
                         error: intentRes.error || "Intent execution failed",
                       };
                     } else {
+                      // Persist initial NEAR intent status (best effort)
+                      try {
+                        await fetch("/api/purchase-status", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            sourceTxId: String(intentRes.intentHash),
+                            sourceChain: "near",
+                            status: "bridging",
+                            bridgeId: String(intentRes.depositAddress),
+                            recipientBaseAddress: destinationAddress,
+                          }),
+                        });
+                      } catch (err) {
+                        console.warn("[useTicketPurchase] Failed to persist NEAR intent status:", err);
+                      }
+
                       // Intent submitted - now transfer USDC to deposit address
                       setState((prev) => ({
                         ...prev,
@@ -1173,7 +1203,7 @@ export function useTicketPurchase(): TicketPurchaseState &
                             recipientAddress: destinationAddress,
                             depositAddress: String(intentRes.depositAddress),
                             expectedAmount: totalCost,
-                            maxWaitMs: 300000, // 5 minutes to wait for bridge completion
+                            maxWaitMs: 900000, // 15 minutes to wait for bridge completion
                             onStatus: (
                               status: string,
                               details?: Record<string, unknown>,

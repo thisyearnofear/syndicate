@@ -20,6 +20,7 @@ import { purchaseOrchestrator, type PurchaseRequest, type PurchaseResult } from 
 import { useWalletConnection } from './useWalletConnection';
 import type { TrackerStatus, SourceChainType } from '@/components/bridge/CrossChainTracker';
 import { usePurchasePolling } from './usePurchasePolling';
+import { mapPurchaseStatusToTracker } from '@/domains/lottery/utils/mapPurchaseStatus';
 
 export interface UseSimplePurchaseState {
   isPurchasing: boolean;
@@ -59,23 +60,10 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
   });
 
   // Memoize onStatusChange to prevent infinite polling loops
-  const handleStatusChange = useCallback((data: any) => {
+  const handleStatusChange = useCallback((data: { status?: string; baseTxId?: string; error?: string }) => {
     // Update state using functional update to get latest status and avoid dependencies
     setState(prev => {
-      // Map API status to our tracker status
-      let newStatus: TrackerStatus = prev.status;
-      if (data.status === 'confirmed_stacks' || data.status === 'broadcasting') {
-        newStatus = 'confirmed_source';
-      } else if (data.status === 'bridging') {
-        newStatus = 'bridging';
-      } else if (data.status === 'purchasing') {
-        newStatus = 'purchasing';
-      } else if (data.status === 'complete') {
-        newStatus = 'complete';
-      } else if (data.status === 'error') {
-        newStatus = 'error';
-      }
-
+      const newStatus = mapPurchaseStatusToTracker(data.status);
       return {
         ...prev,
         status: newStatus,
@@ -182,16 +170,37 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
         // Update state based on result
         if (result.success) {
           if (result.sourceTxHash && isCrossChain) {
-            // Cross-chain: transaction broadcast, start polling
+            const hasDestination = !!result.destinationTxHash;
+            const nextStatus: TrackerStatus = hasDestination ? 'complete' : 'confirmed_source';
+
+            // Persist initial status for non-Stacks chains
+            if (chain !== 'stacks') {
+              try {
+                await fetch('/api/purchase-status', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    sourceTxId: result.sourceTxHash,
+                    sourceChain: chain,
+                    status: hasDestination ? 'complete' : 'bridging',
+                    baseTxId: result.destinationTxHash || null,
+                    recipientBaseAddress: request.recipientAddress || userAddress,
+                  }),
+                });
+              } catch (err) {
+                console.warn('[useSimplePurchase] Failed to persist initial status:', err);
+              }
+            }
+
             setState(prev => ({
               ...prev,
-              isPurchasing: true, // Keep purchasing true until complete
+              isPurchasing: !hasDestination,
               result,
               txHash: result.txHash || null,
               sourceTxHash: result.sourceTxHash ?? null,
               destinationTxHash: result.destinationTxHash || null,
               error: null,
-              status: 'confirmed_source', // Polling will take over from here
+              status: nextStatus,
             }));
           } else {
             // Direct purchase: complete immediately

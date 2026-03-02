@@ -16,8 +16,8 @@ import {
     principalCV,
     stringAsciiCV,
 } from '@stacks/transactions';
-import { promises as fs } from 'fs';
-import * as path from 'path';
+import { upsertPurchaseStatus } from '@/lib/db/repositories/purchaseStatusRepository';
+import { insertCrossChainPurchase } from '@/lib/db/repositories/crossChainPurchaseRepository';
 
 // ============================================================================
 // CONFIGURATION
@@ -33,6 +33,7 @@ const CONFIG = {
     BASE_RPC_URL: process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://base-mainnet.g.alchemy.com/v2/demo',
     MEGAPOT_CONTRACT: (process.env.NEXT_PUBLIC_MEGAPOT_CONTRACT || '0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95') as `0x${string}`,
     USDC_CONTRACT: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as `0x${string}`,
+    AUTO_PURCHASE_PROXY: (process.env.NEXT_PUBLIC_AUTO_PURCHASE_PROXY || '0x0000000000000000000000000000000000000000') as `0x${string}`,
 
     // Operator wallet
     OPERATOR_PRIVATE_KEY: process.env.STACKS_BRIDGE_OPERATOR_KEY || '',
@@ -40,8 +41,6 @@ const CONFIG = {
     // Bridge configuration
     MAX_RETRY_ATTEMPTS: 3,
     RETRY_DELAY_MS: 5000,
-    STATUS_FILE_PATH: path.join(process.cwd(), 'scripts', 'purchase-status.json'),
-    CROSS_CHAIN_PURCHASES_FILE: path.join(process.cwd(), 'scripts', 'cross-chain-purchases.json'),
 };
 
 // ============================================================================
@@ -56,6 +55,20 @@ const MEGAPOT_ABI: Abi = [
             { name: 'recipient', type: 'address' }
         ],
         name: 'purchaseTickets',
+        outputs: [],
+        stateMutability: 'nonpayable',
+        type: 'function'
+    }
+];
+
+const AUTO_PURCHASE_PROXY_ABI: Abi = [
+    {
+        inputs: [
+            { name: 'recipient', type: 'address' },
+            { name: 'referrer', type: 'address' },
+            { name: 'amount', type: 'uint256' }
+        ],
+        name: 'purchaseTicketsFor',
         outputs: [],
         stateMutability: 'nonpayable',
         type: 'function'
@@ -119,27 +132,20 @@ export class StacksBridgeOperator {
      */
     private async updateStatus(txId: string, status: any, updates: any = {}) {
         try {
-            let statuses: any = {};
-            try {
-                const data = await fs.readFile(CONFIG.STATUS_FILE_PATH, 'utf-8');
-                statuses = JSON.parse(data);
-            } catch (e) {
-                // Initialize if file doesn't exist
-            }
-
             const normalizedId = this.normalizeTxId(txId);
-            statuses[normalizedId] = {
-                ...(statuses[normalizedId] || {}),
+            await upsertPurchaseStatus({
+                sourceTxId: normalizedId,
+                sourceChain: 'stacks',
                 stacksTxId: normalizedId,
                 status,
-                ...updates,
-                updatedAt: new Date().toISOString()
-            };
-
-            await fs.writeFile(CONFIG.STATUS_FILE_PATH, JSON.stringify(statuses, null, 2));
-            console.log(`[StacksBridgeOperator] Status updated: ${normalizedId} → ${status}`);
+                baseTxId: updates.baseTxId,
+                recipientBaseAddress: updates.recipientBaseAddress,
+                purchaseId: updates.purchaseId,
+                error: updates.error,
+            });
+            console.log(`[StacksBridgeOperator] Status updated (DB): ${normalizedId} → ${status}`);
         } catch (error) {
-            console.error('[StacksBridgeOperator] Failed to update status file:', error);
+            console.error('[StacksBridgeOperator] Failed to update status:', error);
         }
     }
 
@@ -147,7 +153,7 @@ export class StacksBridgeOperator {
      * Main entry point for processing a bridge request received from Chainhook
      * Returns result for chainhook route to log
      */
-    async processBridgeEvent(txId: string, baseAddress: string, ticketCount: number, amount: bigint, tokenPrincipal: string): Promise<{ success: boolean; baseTxHash?: string; error?: string }> {
+    async processBridgeEvent(txId: string, baseAddress: string, ticketCount: number, amount: bigint, tokenPrincipal: string, purchaseId?: number, stacksAddress?: string): Promise<{ success: boolean; baseTxHash?: string; error?: string }> {
         console.log(`[StacksBridgeOperator] Processing bridge request: ${txId} (${tokenPrincipal})`);
 
         if (!CONFIG.OPERATOR_PRIVATE_KEY) {
@@ -191,38 +197,82 @@ export class StacksBridgeOperator {
             }
 
             // 2. Approve & Purchase on Base
-            await this.updateStatus(txId, 'bridging');
+            await this.updateStatus(txId, 'bridging', {
+                purchaseId,
+                recipientBaseAddress: baseAddress,
+            });
             console.log(`[StacksBridgeOperator] Purchasing ${finalTicketCount} tickets for ${baseAddress}...`);
 
-            // Approve - use max uint256 to avoid allowance issues
-            const maxUint256 = BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935');
-            const approveHash = await this.baseWalletClient.writeContract({
-                address: CONFIG.USDC_CONTRACT,
-                abi: ERC20_ABI,
-                functionName: 'approve',
-                args: [CONFIG.MEGAPOT_CONTRACT, maxUint256],
-                chain: base,
-            } as any);
+            const isProxyConfigured = CONFIG.AUTO_PURCHASE_PROXY !== '0x0000000000000000000000000000000000000000';
+            
+            let purchaseHash: string;
+            
+            if (isProxyConfigured) {
+                // Trustless flow: approve proxy, then call purchaseTicketsFor
+                const approveHash = await this.baseWalletClient.writeContract({
+                    address: CONFIG.USDC_CONTRACT,
+                    abi: ERC20_ABI,
+                    functionName: 'approve',
+                    args: [CONFIG.AUTO_PURCHASE_PROXY, requiredUSDC],
+                    chain: base,
+                } as any);
 
-            const approveReceipt = await this.basePublicClient.waitForTransactionReceipt({ hash: approveHash });
-            if (approveReceipt.status !== 'success') {
-                await this.updateStatus(txId, 'error', { error: 'USDC approval failed' });
-                throw new Error('USDC approval failed');
+                const approveReceipt = await this.basePublicClient.waitForTransactionReceipt({ hash: approveHash });
+                if (approveReceipt.status !== 'success') {
+                    await this.updateStatus(txId, 'error', { error: 'USDC approval failed' });
+                    throw new Error('USDC approval failed');
+                }
+
+                await this.updateStatus(txId, 'purchasing', {
+                    purchaseId,
+                    recipientBaseAddress: baseAddress,
+                });
+
+                purchaseHash = await this.baseWalletClient.writeContract({
+                    address: CONFIG.AUTO_PURCHASE_PROXY,
+                    abi: AUTO_PURCHASE_PROXY_ABI,
+                    functionName: 'purchaseTicketsFor',
+                    args: [
+                        baseAddress as `0x${string}`,
+                        this.operatorAccount.address, // referrer
+                        requiredUSDC,
+                    ],
+                    chain: base,
+                } as any);
+            } else {
+                // Legacy flow: direct Megapot call
+                const maxUint256 = BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935');
+                const approveHash = await this.baseWalletClient.writeContract({
+                    address: CONFIG.USDC_CONTRACT,
+                    abi: ERC20_ABI,
+                    functionName: 'approve',
+                    args: [CONFIG.MEGAPOT_CONTRACT, maxUint256],
+                    chain: base,
+                } as any);
+
+                const approveReceipt = await this.basePublicClient.waitForTransactionReceipt({ hash: approveHash });
+                if (approveReceipt.status !== 'success') {
+                    await this.updateStatus(txId, 'error', { error: 'USDC approval failed' });
+                    throw new Error('USDC approval failed');
+                }
+
+                await this.updateStatus(txId, 'purchasing', {
+                    purchaseId,
+                    recipientBaseAddress: baseAddress,
+                });
+
+                purchaseHash = await this.baseWalletClient.writeContract({
+                    address: CONFIG.MEGAPOT_CONTRACT,
+                    abi: MEGAPOT_ABI,
+                    functionName: 'purchaseTickets',
+                    args: [
+                        this.operatorAccount.address,
+                        requiredUSDC,
+                        baseAddress as `0x${string}`
+                    ],
+                    chain: base,
+                } as any);
             }
-
-            // Purchase
-            await this.updateStatus(txId, 'purchasing');
-            const purchaseHash = await this.baseWalletClient.writeContract({
-                address: CONFIG.MEGAPOT_CONTRACT,
-                abi: MEGAPOT_ABI,
-                functionName: 'purchaseTickets',
-                args: [
-                    this.operatorAccount.address, // referrer (operator earns 10% fee)
-                    requiredUSDC,
-                    baseAddress as `0x${string}`
-                ],
-                chain: base,
-            } as any);
 
             const receipt = await this.basePublicClient.waitForTransactionReceipt({ hash: purchaseHash });
 
@@ -236,15 +286,31 @@ export class StacksBridgeOperator {
             // 3. Record for UI tracking
             await this.updateStatus(txId, 'complete', {
                 baseTxId: purchaseHash,
-                error: null
+                error: null,
+                purchaseId,
+                recipientBaseAddress: baseAddress,
             });
-            await this.recordCrossChainPurchase({
-                stacksAddress: 'unknown',
+            if (!stacksAddress) {
+                console.warn('[StacksBridgeOperator] No stacksAddress provided for cross-chain purchase record');
+            }
+            await insertCrossChainPurchase({
+                sourceChain: 'stacks',
+                stacksAddress: stacksAddress || 'unknown',
                 evmAddress: baseAddress,
                 stacksTxId: txId,
                 baseTxId: purchaseHash,
                 ticketCount: finalTicketCount,
+                purchaseTimestamp: new Date().toISOString(),
             });
+
+            // 4. Confirm purchase on Stacks (best-effort)
+            if (purchaseId && purchaseId > 0) {
+                try {
+                    await this.confirmPurchaseProcessed(purchaseId, purchaseHash);
+                } catch (confirmError) {
+                    console.error('[StacksBridgeOperator] Failed to confirm purchase on Stacks:', confirmError);
+                }
+            }
 
             return {
                 success: true,
@@ -260,6 +326,32 @@ export class StacksBridgeOperator {
                 error: message,
             };
         }
+    }
+
+    private async confirmPurchaseProcessed(purchaseId: number, baseTxHash: string): Promise<void> {
+        if (!CONFIG.OPERATOR_PRIVATE_KEY) {
+            throw new Error('STACKS_BRIDGE_OPERATOR_KEY not set');
+        }
+
+        const tx = await makeContractCall({
+            contractAddress: CONFIG.LOTTERY_CONTRACT_ADDRESS.split('.')[0],
+            contractName: CONFIG.LOTTERY_CONTRACT_NAME,
+            functionName: 'confirm-purchase-processed',
+            functionArgs: [
+                uintCV(purchaseId),
+                stringAsciiCV(baseTxHash),
+            ],
+            senderKey: CONFIG.OPERATOR_PRIVATE_KEY,
+            network: 'mainnet',
+            fee: 10000,
+        });
+
+        const txResponse = await broadcastTransaction({
+            transaction: tx,
+            network: 'mainnet'
+        });
+
+        console.log(`[StacksBridgeOperator] ✅ Confirmed purchase on Stacks: ${txResponse.txid}`);
     }
 
     async recordWinningsOnStacks(data: {
@@ -306,37 +398,6 @@ export class StacksBridgeOperator {
         } catch (error) {
             console.error('[StacksBridgeOperator] Failed to record winnings on Stacks:', error);
             return false;
-        }
-    }
-
-    async recordCrossChainPurchase(data: {
-        stacksAddress: string;
-        evmAddress: string;
-        stacksTxId: string;
-        baseTxId: string;
-        ticketCount: number;
-    }) {
-        try {
-            let purchases: any[] = [];
-            try {
-                const content = await fs.readFile(CONFIG.CROSS_CHAIN_PURCHASES_FILE, 'utf-8');
-                purchases = JSON.parse(content);
-            } catch {
-                // Ignore if file doesn't exist
-            }
-
-            purchases.push({
-                ...data,
-                sourceChain: 'stacks',
-                purchaseTimestamp: new Date().toISOString(),
-            });
-
-            await fs.writeFile(
-                CONFIG.CROSS_CHAIN_PURCHASES_FILE,
-                JSON.stringify(purchases, null, 2)
-            );
-        } catch (error) {
-            console.error('[StacksBridgeOperator] Failed to record purchase:', error);
         }
     }
 
