@@ -23,6 +23,8 @@ import WalletConnectionManager from '@/components/wallet/WalletConnectionManager
 import { CompactStack, CompactCard } from '@/shared/components/premium/CompactLayout';
 import { ImprovedAutoPurchaseModal } from './ImprovedAutoPurchaseModal';
 import { CrossChainTracker, type SourceChainType, type TrackerStatus } from '@/components/bridge/CrossChainTracker';
+import { CostBreakdown } from '@/components/bridge/CostBreakdown';
+import { TimeEstimate } from '@/components/bridge/TimeEstimate';
 
 // Lazy load celebration modal
 const CelebrationModal = lazy(() => import('./CelebrationModal'));
@@ -120,7 +122,7 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
 
   const handleCopyStatusLink = async () => {
     if (!sourceTxHash || !sourceChain) return;
-    const url = `${window.location.origin}/purchase-status/${sourceTxHash}?chain=${sourceChain}`;
+    const url = `${window.location.origin}/purchase-status/${sourceTxHash}/track`;
     try {
       await navigator.clipboard.writeText(url);
       setStatusLinkCopied(true);
@@ -262,8 +264,20 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
                   +
                 </button>
               </div>
-              <p className="text-xs text-gray-400">Cost: ${ticketCount} USD</p>
             </div>
+
+            {/* Cost Breakdown */}
+            {sourceChain && sourceChain !== 'ethereum' && (
+              <CostBreakdown 
+                ticketCount={ticketCount} 
+                sourceChain={sourceChain as 'stacks' | 'near' | 'solana' | 'base'} 
+              />
+            )}
+
+            {/* Time Estimate */}
+            {sourceChain && sourceChain !== 'base' && sourceChain !== 'ethereum' && (
+              <TimeEstimate sourceChain={sourceChain as 'stacks' | 'near' | 'solana'} />
+            )}
 
             <div className="flex gap-3">
               <Button
@@ -315,10 +329,12 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
               {sourceTxHash && (
                 <div className="mt-4 flex items-center gap-3">
                   <a
-                    href={`/purchase-status/${sourceTxHash}?chain=${sourceChain}`}
-                    className="text-sm text-blue-400 hover:text-blue-300"
+                    href={`/purchase-status/${sourceTxHash}/track`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1"
                   >
-                    Open Status Page
+                    Open Live Tracker →
                   </a>
                   <button
                     type="button"
