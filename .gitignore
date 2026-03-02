@@ -60,4 +60,5 @@ settings.json
 .trae
 .env*.local
 .zencoder
-.zenflow
+.zenflowbroadcast/
+cache/
