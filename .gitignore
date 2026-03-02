@@ -51,14 +51,22 @@ scripts/get-consumer-secret.ts
 next-env.d.ts
 .npmrc
 
-/.qoder/settings.json
+# AI tool configs (deprecated)
+/.qoder
 .qoder/settings.json
 .qoder.json
 .qodo
 settings.json
-.qoder
 .trae
-.env*.local
 .zencoder
-.zenflowbroadcast/
+.zenflow
+.agent
+
+# Foundry
+broadcast/
+cache/
+out/
+
+# Local env overrides
+.env*.localbroadcast/
 cache/
