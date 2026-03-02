@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stacksBridgeOperator } from '@/services/stacksBridgeOperator';
+import { stacksDecentralizedBridge } from '@/services/bridges/stacksDecentralizedBridge';
 
 /**
- * Chainhooks 2.0 Payload Handler
+ * Chainhooks 2.0 Payload Handler - DECENTRALIZED
  * 
- * Chainhooks 2.0 uses a different structure than v1:
+ * CONSOLIDATION: Removed operator dependency
+ * CLEAN: Only tracks status, attestation + CCTP handles actual bridging
+ * 
+ * Flow:
+ * 1. Chainhook detects Stacks contract event
+ * 2. This handler records status in DB
+ * 3. Circle xReserve/CCTP bridges tokens automatically (no operator key)
+ * 4. Base proxy receives USDC → purchases tickets automatically
+ * 
+ * Chainhooks 2.0 structure:
  * - Transactions have `operations` array instead of `metadata.receipt.events`
  * - Print events are `contract_log` operations with type `contract_log`
  * - Clarity values are in `value` field with `repr` string representation
@@ -93,10 +102,11 @@ export async function POST(req: NextRequest) {
                 console.log(`[Chainhook] Extracted - baseAddress: "${baseAddress}", stacksUser: "${stacksUser}", ticketCount: ${ticketCount}, amount: ${amount}, purchaseId: ${purchaseId}, token: ${tokenPrincipal}`);
 
                 if (baseAddress && ticketCount > 0) {
-                  console.log(`[Chainhook] ✅ Valid event data, processing: ${ticketCount} tickets for ${baseAddress}`);
+                  console.log(`[Chainhook] ✅ Valid event data, recording status: ${ticketCount} tickets for ${baseAddress}`);
+                  console.log(`[Chainhook] 🌉 Wormhole NTT will handle bridging automatically`);
 
                   try {
-                    const result = await stacksBridgeOperator.processBridgeEvent(
+                    const result = await stacksDecentralizedBridge.processBridgeEvent(
                       txId,
                       baseAddress,
                       ticketCount,
@@ -105,9 +115,9 @@ export async function POST(req: NextRequest) {
                       purchaseId,
                       stacksUser
                     );
-                    console.log(`[Chainhook] ✅ Bridge event processing completed:`, result);
+                    console.log(`[Chainhook] ✅ Status recorded:`, result);
                   } catch (processingError) {
-                    console.error(`[Chainhook] ❌ Error processing bridge event:`, processingError);
+                    console.error(`[Chainhook] ❌ Error recording status:`, processingError);
                     throw processingError;
                   }
                 } else {

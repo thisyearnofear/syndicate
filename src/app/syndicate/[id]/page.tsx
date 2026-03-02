@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
 import { Users, Heart, TrendingUp, Share2, Trophy, Gift, Award, ArrowLeft } from "lucide-react";
 import type { SyndicateInfo } from "@/domains/lottery/types";
-import PurchaseModal from "@/components/modal/PurchaseModal"; // Import the modal
+import { SimplePurchaseModal as PurchaseModal } from "@/components/modal"; // Import the modal
 
 export default function SyndicateDetailPage() {
    const params = useParams<{ id: string }>();

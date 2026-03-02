@@ -128,6 +128,7 @@ export interface SyndicateInfo {
   vaultStrategy?: 'spark' | 'morpho' | 'octant' | 'aave' | 'uniswap';
   membersCount: number;
   ticketsPooled: number;
+  ticketsPurchased: number;
   totalImpact: number;
   isActive: boolean;
   isTrending: boolean;

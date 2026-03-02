@@ -265,10 +265,10 @@ export async function web3Function(
 
     // STEP 3: Encode transaction calls
     const calls = executablePurchases.map(({ record, context: ctx }) => {
-      const iface = new ethers.utils.Interface(MEGAPOT_ABI);
+      const iface = new ethers.Interface(MEGAPOT_ABI);
       const encoded = iface.encodeFunctionData('purchaseTickets', [
         ctx.referrer,
-        ethers.utils.parseUnits(ctx.amountUsdc, 6), // USDC has 6 decimals
+        ethers.parseUnits(ctx.amountUsdc, 6), // USDC has 6 decimals
         ctx.userAddress,
       ]);
 

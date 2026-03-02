@@ -23,7 +23,7 @@ interface PurchaseStatus {
 
 export default function PurchaseStatusPage() {
   const params = useParams();
-  const txId = params.txId as string;
+  const txId = params?.txId as string | undefined;
   const [status, setStatus] = useState<PurchaseStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
 

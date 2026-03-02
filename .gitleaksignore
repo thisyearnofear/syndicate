@@ -4,3 +4,5 @@
 
 # Documentation examples (not real secrets)
 docs/SECRET_DETECTION.md:generic-api-key:42
+docs/SECURITY.md:generic-api-key:48
+docs/BRIDGES.md:generic-api-key:237

@@ -12,7 +12,6 @@
  */
 
 import { web3Service } from './web3Service';
-import type { PoolWinningsEvent } from '@/domains/lottery/types';
 
 // Minimal Megapot ABI - just the events we listen to
 const MEGAPOT_ABI = [

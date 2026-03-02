@@ -33,7 +33,7 @@ export default async function handler(
 ) {
   // Only allow POST
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
   try {
@@ -42,11 +42,11 @@ export default async function handler(
 
     // Validate inputs
     if (!userAddress || !permissionId || !frequency || !amountPerPeriod) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(400).json({ success: false, error: 'Missing required fields' });
     }
 
-    if (!['daily', 'weekly', 'monthly'].includes(frequency)) {
-      return res.status(400).json({ error: 'Invalid frequency' });
+    if (!['weekly', 'monthly'].includes(frequency)) {
+      return res.status(400).json({ success: false, error: 'Invalid frequency' });
     }
 
     const currentTimestamp = Math.floor(Date.now() / 1000);
@@ -82,7 +82,7 @@ export default async function handler(
     const purchaseId = result.rows[0]?.id;
 
     if (!purchaseId) {
-      return res.status(500).json({ error: 'Failed to create purchase record' });
+      return res.status(500).json({ success: false, error: 'Failed to create purchase record' });
     }
 
     console.log('[API] Auto-purchase created:', {
@@ -104,6 +104,7 @@ export default async function handler(
       error instanceof Error ? error.message : 'Failed to create purchase record';
 
     return res.status(500).json({
+      success: false,
       error: errorMessage,
     });
   }

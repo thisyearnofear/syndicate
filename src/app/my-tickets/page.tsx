@@ -11,7 +11,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
-import { useTicketPurchase } from "@/hooks/useTicketPurchase";
+import { useTicketInfo } from "@/hooks/useTicketInfo";
 import { useTicketHistory } from "@/hooks/useTicketHistory";
 import { Button } from "@/shared/components/ui/Button";
 import { LoadingSpinner } from "@/shared/components/LoadingSpinner";
@@ -98,11 +98,11 @@ function TicketHistoryCard({ ticket }: { ticket: TicketPurchaseHistory }) {
     );
 }
 
-function TicketStats({ userTicketInfo, ticketHistory, onClaimWinnings, isClaiming }: {
+function TicketStats({ userTicketInfo, ticketHistory, onClaimWinnings, isClaimingWinnings }: {
     userTicketInfo: UserTicketInfo | null;
     ticketHistory: TicketPurchaseHistory[];
     onClaimWinnings: () => void;
-    isClaiming: boolean;
+    isClaimingWinnings: boolean;
 }) {
 // Calculate total tickets from history
     const totalTickets = ticketHistory.reduce((sum, ticket) => sum + ticket.ticketCount, 0);
@@ -145,10 +145,10 @@ return (
 variant="default"
 size="lg"
 onClick={onClaimWinnings}
-    disabled={isClaiming}
+    disabled={isClaimingWinnings}
 className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white disabled:opacity-50"
 >
-                            {isClaiming ? 'Claiming...' : 'Claim Winnings'}
+                            {isClaimingWinnings ? 'Claiming...' : 'Claim Winnings'}
                         </Button>
                 </div>
                 )}
@@ -159,10 +159,9 @@ className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 
 
 export default function MyTicketsPage() {
     const { isConnected } = useWalletConnection();
-    const { userTicketInfo, getCurrentTicketInfo, claimWinnings } = useTicketPurchase();
+    const { userTicketInfo, refresh: getCurrentTicketInfo, claimWinnings, isClaimingWinnings } = useTicketInfo();
     const { purchases: ticketHistory, isLoading, refreshHistory } = useTicketHistory();
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [isClaiming, setIsClaiming] = useState(false);
 
 const loadTicketData = useCallback(async () => {
         try {
@@ -192,7 +191,6 @@ const loadTicketData = useCallback(async () => {
     const handleClaimWinnings = async () => {
         if (!userTicketInfo || parseFloat(userTicketInfo.winningsClaimable || '0') <= 0) return;
 
-        setIsClaiming(true);
         try {
             const txHash = await claimWinnings();
             // Refresh data after claiming
@@ -204,8 +202,6 @@ const loadTicketData = useCallback(async () => {
         } catch (error) {
             console.error('Failed to claim winnings:', error);
             alert('Failed to claim winnings. Please try again.');
-        } finally {
-            setIsClaiming(false);
         }
     };
 
@@ -289,7 +285,7 @@ const loadTicketData = useCallback(async () => {
                         userTicketInfo={userTicketInfo}
                         ticketHistory={ticketHistory}
                         onClaimWinnings={handleClaimWinnings}
-                        isClaiming={isClaiming}
+                        isClaimingWinnings={isClaimingWinnings}
                     />
 
                     {/* Ticket History */}

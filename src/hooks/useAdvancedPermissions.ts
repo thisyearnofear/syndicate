@@ -118,7 +118,8 @@ export function useAdvancedPermissions(): UseAdvancedPermissionsState & UseAdvan
   const requestPresetPermission = useCallback(
     async (preset: 'weekly' | 'monthly'): Promise<boolean> => {
       if (!chainId) return false;
-      const presets = getPermissionPresets(chainId);
+      const numericChainId = typeof chainId === 'string' ? parseInt(chainId, 16) : chainId;
+      const presets = getPermissionPresets(numericChainId);
       const presetConfig = presets[preset];
       if (!presetConfig) return false;
 

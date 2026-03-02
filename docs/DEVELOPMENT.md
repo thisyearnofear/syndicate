@@ -98,6 +98,108 @@ npm run dev
    - Monitor sBTC bridge status
    - Test fallback if needed
 
+### Automated Tests
+
+**File**: `tests/bridgeImprovements.test.ts`
+
+**Test Categories**:
+1. **Error Classification** (3 tests)
+   - Timeout error classification
+   - Nonce error classification
+   - Insufficient funds classification
+
+2. **Fallback Trigger Logic** (5 tests)
+   - Attestation timeout fallback
+   - Transaction timeout fallback
+   - Nonce error fallback
+   - User rejection (should NOT fallback)
+   - Insufficient funds (should NOT fallback)
+
+3. **Health Monitoring** (1 test)
+   - Conservative health checks
+
+4. **Error Code Coverage** (1 test)
+   - Required error codes present
+
+### Manual Test Cases
+
+#### 🔴 Critical Tests (Must Pass)
+
+**Test 1: MetaMask Connection**
+- **Steps**: Click "Connect Wallet" → Select MetaMask → Approve
+- **Expected**: Wallet connected, address displayed, network shown
+
+**Test 2: EVM → Base Purchase (Happy Path)**
+- **Steps**: Connect MetaMask (Ethereum) → Purchase ticket → Confirm transaction
+- **Expected**: Transaction succeeds, ticket purchased, USDC bridged
+
+**Test 3: CCTP Bridge (Ethereum → Base)**
+- **Steps**: Navigate to /bridge → Select CCTP → Enter amount → Confirm
+- **Expected**: Bridge initiated, attestation monitored, funds arrive
+
+**Test 4: NEAR Wallet Connection**
+- **Steps**: Connect NEAR wallet → Verify address derivation
+- **Expected**: Wallet connected, EVM address derived deterministically
+
+**Test 5: NEAR → Base Purchase**
+- **Steps**: Connect NEAR → Purchase ticket → Monitor bridge
+- **Expected**: Intent submitted, funds bridged, tickets purchased
+
+#### 🟡 High Priority Tests
+
+**Test 6: Phantom Connection**
+- **Steps**: Connect Phantom → Check balance display
+- **Expected**: Wallet detected, Solana address shown
+
+**Test 7: Network Switching**
+- **Steps**: Connect MetaMask → Switch Ethereum → Base
+- **Expected**: Network switch successful, UI updates
+
+**Test 8: Insufficient Funds Handling**
+- **Steps**: Try purchase with insufficient USDC
+- **Expected**: Clear error message, transaction rejected
+
+**Test 9: Wormhole Fallback**
+- **Steps**: Initiate bridge → Trigger fallback → Use Wormhole
+- **Expected**: Fallback works, funds arrive via Wormhole (5-10 min)
+
+**Test 10: Transaction Rejection**
+- **Steps**: Initiate transaction → Reject in wallet
+- **Expected**: Clear rejection message, no retry loop
+
+### Advanced Permissions Testing
+
+#### Test Case 1: Permission Request Modal
+- **Steps**: After purchase, click "Enable Auto-Purchase" button
+- **Expected**: Modal opens with preset selection (Weekly $50 / Monthly $200)
+
+#### Test Case 2: localStorage Persistence
+- **Steps**: Grant permission, reload page, verify state restored
+- **Expected**: Permission remains active after page reload
+
+#### Test Case 3: Settings Component
+- **Steps**: Navigate to settings after enabling auto-purchase
+- **Expected**: View current permission, execution schedule, revoke option
+
+#### Test Case 4: MetaMask Flask Compatibility
+- **Prerequisites**: MetaMask Flask v13.5.0+ installed
+- **Expected**: Advanced Permissions prompt appears (not regular approval)
+
+### Test Success Criteria
+
+#### Minimum Viable Testing (Required)
+- [ ] 90%+ success rate on wallet connections
+- [ ] 80%+ success rate on ticket purchases
+- [ ] 70%+ success rate on bridge operations
+- [ ] Clear error messages for all failure scenarios
+- [ ] No critical bugs blocking core functionality
+
+#### Comprehensive Testing (Recommended)
+- [ ] 95%+ success rate on all flows
+- [ ] Comprehensive error recovery
+- [ ] Excellent mobile experience
+- [ ] Fast transaction times (< 2 minutes for bridges)
+
 ### Known Issues
 - **CCTP Timeouts**: 15-20 minutes, may need manual fallback
 - **Phantom Balance**: Occasionally timeout (RPC issues)

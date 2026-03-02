@@ -56,6 +56,7 @@ export type BridgeStatus =
     | 'waiting_attestation'
     | 'pending_signature' // Waiting for user wallet signature (deBridge)
     | 'solver_waiting_deposit' // deBridge solver waiting for deposit
+    | 'awaiting_deposit'  // Waiting for user to deposit (NEAR intents)
     | 'manual_action_required' // Manual user action required (e.g. external bridge)
     | 'minting'
     | 'complete'

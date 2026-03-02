@@ -83,3 +83,31 @@ export async function getAllCrossChainPurchases(): Promise<CrossChainPurchaseRec
     purchaseTimestamp: row.purchase_timestamp,
   }));
 }
+
+export async function getCrossChainPurchaseByStacksTxId(stacksTxId: string): Promise<CrossChainPurchaseRecord | null> {
+  const normalized = stacksTxId.startsWith('0x') ? stacksTxId.slice(2) : stacksTxId;
+  const result = await sql`
+    SELECT
+      source_chain,
+      stacks_address,
+      evm_address,
+      stacks_tx_id,
+      base_tx_id,
+      ticket_count,
+      purchase_timestamp
+    FROM cross_chain_purchases
+    WHERE stacks_tx_id = ${normalized}
+    LIMIT 1;
+  `;
+  if (!result.rows.length) return null;
+  const row = result.rows[0];
+  return {
+    sourceChain: row.source_chain,
+    stacksAddress: row.stacks_address,
+    evmAddress: row.evm_address,
+    stacksTxId: row.stacks_tx_id,
+    baseTxId: row.base_tx_id,
+    ticketCount: Number(row.ticket_count),
+    purchaseTimestamp: row.purchase_timestamp,
+  };
+}

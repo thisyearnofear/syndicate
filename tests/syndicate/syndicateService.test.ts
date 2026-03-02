@@ -28,8 +28,8 @@ jest.mock('@/services/distributionService', () => ({
             causeAmount: (parseFloat(total) * percent / 100).toFixed(6),
             remainderAmount: (parseFloat(total) * (100 - percent) / 100).toFixed(6),
         })),
-        calculateProportionalShares: jest.fn((total, weights) =>
-            weights.map(w => ({
+        calculateProportionalShares: jest.fn((total: string, weights: { address: string; weightBps: number }[]) =>
+            weights.map((w: { address: string; weightBps: number }) => ({
                 address: w.address,
                 amount: (parseFloat(total) * w.weightBps / 10000).toFixed(6),
                 weightBps: w.weightBps,

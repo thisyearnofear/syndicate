@@ -1,12 +1,12 @@
 /**
  * AUTO-PURCHASE SETTINGS COMPONENT
- * 
+ *
  * Core Principles Applied:
  * - ENHANCEMENT FIRST: New settings panel for managing auto-purchases
  * - CLEAN: Display permission status and execution history
  * - MODULAR: Can be embedded in user settings page
  * - ORGANIZED: Clear sections for different concerns
- * 
+ *
  * Displays:
  * - Current permission status
  * - Auto-purchase frequency and amount
@@ -14,16 +14,27 @@
  * - Option to revoke or pause
  */
 
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { AlertCircle, AlertCircle as CheckCircle, Clock, Trash2, ToggleLeft, ToggleRight, Loader } from 'lucide-react';
-import { Button } from '@/shared/components/ui/Button';
-import { useAdvancedPermissions, useAutoPurchaseState } from '@/hooks/useAdvancedPermissions';
-import { useGelatoAutomation } from '@/hooks/useGelatoAutomation';
-import { ImprovedAutoPurchaseModal } from '../modal/ImprovedAutoPurchaseModal';
-import type { AutoPurchaseConfig } from '@/domains/wallet/types';
-import { useAccount } from 'wagmi';
+import React, { useState, useEffect } from "react";
+import {
+  AlertCircle,
+  CircleCheck,
+  Clock,
+  Trash2,
+  ToggleLeft,
+  ToggleRight,
+  Loader,
+} from "lucide-react";
+import { Button } from "@/shared/components/ui/Button";
+import {
+  useAdvancedPermissions,
+  useAutoPurchaseState,
+} from "@/hooks/useAdvancedPermissions";
+import { useGelatoAutomation } from "@/hooks/useGelatoAutomation";
+import { AutoPurchaseModal } from "../modal/AutoPurchaseModal";
+import type { AutoPurchaseConfig } from "@/domains/wallet/types";
+import { useAccount } from "wagmi";
 
 // =============================================================================
 // COMPONENT
@@ -53,10 +64,24 @@ export function AutoPurchaseSettings() {
     if (!gelato.activeTask && permission) {
       (async () => {
         setIsCreatingTask(true);
-        const frequency = autoPurchaseState.config?.frequency || 'weekly';
-        const success = await gelato.createTask(permission, frequency);
+        const frequency =
+          autoPurchaseState.config?.frequency === "monthly"
+            ? "monthly"
+            : "weekly";
+        const grant = {
+          id: permission.permissionId,
+          type: permission.scope,
+          target: permission.token,
+          limit: permission.limit,
+          spent: permission.limit - permission.remaining,
+          period: permission.period,
+          grantedAt: permission.grantedAt,
+          expiresAt: permission.expiresAt,
+          isActive: permission.isActive,
+        };
+        const success = await gelato.createTask(grant as any, frequency);
         if (!success) {
-          console.warn('Failed to create Gelato task');
+          console.warn("Failed to create Gelato task");
         }
         setIsCreatingTask(false);
       })();
@@ -70,25 +95,30 @@ export function AutoPurchaseSettings() {
     // ENHANCEMENT FIRST: Create database record for Vercel Cron automation
     if (address && config.permission) {
       try {
-        const response = await fetch('/api/automation/create-purchase', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const response = await fetch("/api/automation/create-purchase", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             userAddress: address,
-            permissionId: config.permission.id,
+            permissionId: config.permission.permissionId,
             frequency: config.frequency,
             amountPerPeriod: config.amountPerPeriod.toString(),
           }),
         });
 
         if (!response.ok) {
-          console.error('[AutoPurchaseSettings] Failed to create database record');
+          console.error(
+            "[AutoPurchaseSettings] Failed to create database record",
+          );
         } else {
           const data = (await response.json()) as { purchaseId?: string };
-          console.log('[AutoPurchaseSettings] Database record created:', data.purchaseId);
+          console.log(
+            "[AutoPurchaseSettings] Database record created:",
+            data.purchaseId,
+          );
         }
       } catch (err) {
-        console.error('[AutoPurchaseSettings] Database creation error:', err);
+        console.error("[AutoPurchaseSettings] Database creation error:", err);
         // Don't block on database error - automation still works via localStorage
       }
     }
@@ -104,7 +134,7 @@ export function AutoPurchaseSettings() {
       if (gelato.activeTask?.taskId) {
         await gelato.cancelTask();
       }
-      
+
       // Revoke permission
       revokePermission();
       setShowRevokeConfirm(false);
@@ -120,7 +150,7 @@ export function AutoPurchaseSettings() {
     setIsCreatingTask(true);
     try {
       const isEnabled = autoPurchaseConfig.enabled;
-      
+
       if (isEnabled) {
         // Pause task in Gelato
         await gelato.pauseTask();
@@ -151,18 +181,17 @@ export function AutoPurchaseSettings() {
                 💡 Never Miss a Ticket
               </h3>
               <p className="text-sm text-gray-700 mb-4">
-                Enable automatic weekly or monthly purchases. Just set it once and forget it.
+                Enable automatic weekly or monthly purchases. Just set it once
+                and forget it.
               </p>
-              <Button
-                onClick={() => setShowPermissionModal(true)}
-              >
+              <Button onClick={() => setShowPermissionModal(true)}>
                 Enable Auto-Purchase
               </Button>
             </div>
           </div>
         </div>
 
-        <ImprovedAutoPurchaseModal
+        <AutoPurchaseModal
           isOpen={showPermissionModal}
           onClose={() => setShowPermissionModal(false)}
           onSuccess={handlePermissionGranted}
@@ -178,22 +207,20 @@ export function AutoPurchaseSettings() {
       <div className="bg-green-50 border border-green-200 rounded-lg p-6">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3">
-            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-1" />
+            <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0 mt-1" />
             <div>
               <h3 className="font-semibold text-gray-900">
                 Auto-Purchase Enabled
               </h3>
               <p className="text-sm text-gray-700 mt-1">
-                Syndicate will automatically purchase lottery tickets on your behalf
+                Syndicate will automatically purchase lottery tickets on your
+                behalf
               </p>
             </div>
           </div>
           <div className="flex gap-2">
             {isCreatingTask ? (
-              <button
-                disabled
-                className="p-2 cursor-not-allowed"
-              >
+              <button disabled className="p-2 cursor-not-allowed">
                 <Loader className="w-5 h-5 text-gray-400 animate-spin" />
               </button>
             ) : autoPurchaseState.isEnabled ? (
@@ -226,7 +253,7 @@ export function AutoPurchaseSettings() {
               Frequency
             </p>
             <p className="text-sm font-semibold text-gray-900 mt-1 capitalize">
-              {autoPurchaseState.config?.frequency || 'weekly'}
+              {autoPurchaseState.config?.frequency || "weekly"}
             </p>
           </div>
           <div>
@@ -234,7 +261,10 @@ export function AutoPurchaseSettings() {
               Amount per Period
             </p>
             <p className="text-sm font-semibold text-gray-900 mt-1">
-              ${Number(autoPurchaseState.config?.amountPerPeriod || BigInt(0)) / 10 ** 6} USDC
+              $
+              {Number(autoPurchaseState.config?.amountPerPeriod || BigInt(0)) /
+                10 ** 6}{" "}
+              USDC
             </p>
           </div>
           <div>
@@ -270,7 +300,10 @@ export function AutoPurchaseSettings() {
               </p>
               {autoPurchaseState.config?.lastExecuted && (
                 <p className="text-xs text-gray-600 mt-2">
-                  Last executed: {new Date(autoPurchaseState.config.lastExecuted).toLocaleString()}
+                  Last executed:{" "}
+                  {new Date(
+                    autoPurchaseState.config.lastExecuted,
+                  ).toLocaleString()}
                 </p>
               )}
             </div>
@@ -288,8 +321,8 @@ export function AutoPurchaseSettings() {
                 Low Allowance
               </p>
               <p className="text-sm text-gray-700 mt-1">
-                Your permission has less than $10 USDC remaining.
-                Request a new permission to continue auto-purchases.
+                Your permission has less than $10 USDC remaining. Request a new
+                permission to continue auto-purchases.
               </p>
               <Button
                 onClick={() => setShowPermissionModal(true)}
@@ -320,7 +353,9 @@ export function AutoPurchaseSettings() {
         ) : (
           <div className="space-y-2">
             <p className="text-sm text-gray-700">
-              Are you sure you want to revoke auto-purchase permission? This will also cancel your Gelato automation task. You'll need to grant a new permission to re-enable auto-purchase.
+              Are you sure you want to revoke auto-purchase permission? This
+              will also cancel your Gelato automation task. You'll need to grant
+              a new permission to re-enable auto-purchase.
             </p>
             <div className="flex gap-2">
               <Button
@@ -343,7 +378,7 @@ export function AutoPurchaseSettings() {
                     Revoking...
                   </>
                 ) : (
-                  'Confirm Revoke'
+                  "Confirm Revoke"
                 )}
               </Button>
             </div>
@@ -352,7 +387,7 @@ export function AutoPurchaseSettings() {
       </div>
 
       {/* MODAL */}
-      <ImprovedAutoPurchaseModal
+      <AutoPurchaseModal
         isOpen={showPermissionModal}
         onClose={() => setShowPermissionModal(false)}
         onSuccess={handlePermissionGranted}
