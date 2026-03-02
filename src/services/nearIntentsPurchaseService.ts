@@ -51,60 +51,45 @@ export async function executePurchaseViaChainSignatures(
       };
     }
 
-    // Step 2: Build proxy purchase transactions (approve + purchaseTicketsFor)
+    // Step 2: Build proxy purchase transaction
     const proxyAddress = CONTRACTS.autoPurchaseProxy;
-    const isProxyConfigured = proxyAddress && proxyAddress !== '0x0000000000000000000000000000000000000000';
     
-    let purchaseTx: { to: string; data: string; value: string };
-    
-    if (isProxyConfigured) {
-      // Trustless flow: approve proxy, then call purchaseTicketsFor
-      const ticketPrice = BigInt(1_000_000); // $1 USDC (6 decimals)
-      const usdcAmount = ticketPrice * BigInt(ticketCount);
-      
-      // TODO: Build and send approve tx (USDC → proxy) as a separate Chain Signature tx
-      // once multi-tx support is added to the bridge protocol.
-      // For now, approval must be handled separately or via permit.
-      
-      // Build proxy purchaseTicketsFor tx
-      const proxyIface = new ethers.Interface([
-        'function purchaseTicketsFor(address recipient, address referrer, uint256 amount) external'
-      ]);
-      const purchaseData = proxyIface.encodeFunctionData('purchaseTicketsFor', [
-        recipientAddress,
-        ethers.ZeroAddress, // referrer
-        usdcAmount,
-      ]);
-      
-      // For Chain Signatures, we need to send two transactions
-      // First: approve USDC to proxy
-      // Second: call proxy to purchase
-      // The bridge protocol handles multi-tx via contractCall
-      // For now, encode as a single proxy call (assume approval is done separately or via permit)
-      purchaseTx = {
-        to: proxyAddress,
-        data: purchaseData,
-        value: '0',
+    if (!proxyAddress || proxyAddress === '0x0000000000000000000000000000000000000000') {
+      return {
+        success: false,
+        error: 'Auto-purchase proxy not configured - decentralized flow required',
       };
-      
-      console.log('Using Auto-Purchase Proxy for trustless purchase:', {
-        proxy: proxyAddress,
-        recipient: recipientAddress,
-        amount: usdcAmount.toString(),
-        ticketCount,
-      });
-    } else {
-      // Legacy flow: direct Megapot call
-      const legacyTx = await web3Service.buildPurchaseTransaction(ticketCount, recipientAddress);
-      purchaseTx = { to: legacyTx.to, data: legacyTx.data, value: legacyTx.value || '0' };
-      
-      console.log('Purchase transaction built (legacy):', {
-        to: purchaseTx.to,
-        data: purchaseTx.data,
-        ticketCount,
-        recipient: recipientAddress,
-      });
     }
+    
+    // Build approve + purchaseTicketsFor call
+    const ticketPrice = BigInt(1_000_000); // $1 USDC (6 decimals)
+    const usdcAmount = ticketPrice * BigInt(ticketCount);
+    
+    // TODO: Build and send approve tx (USDC → proxy) as a separate Chain Signature tx
+    // once multi-tx support is added to the bridge protocol.
+    // For now, approval must be handled separately or via permit.
+    
+    const proxyIface = new ethers.Interface([
+      'function purchaseTicketsFor(address recipient, address referrer, uint256 amount) external'
+    ]);
+    const purchaseData = proxyIface.encodeFunctionData('purchaseTicketsFor', [
+      recipientAddress,
+      ethers.ZeroAddress, // referrer
+      usdcAmount,
+    ]);
+    
+    const purchaseTx = {
+      to: proxyAddress,
+      data: purchaseData,
+      value: '0',
+    };
+    
+    console.log('Using Auto-Purchase Proxy for trustless purchase:', {
+      proxy: proxyAddress,
+      recipient: recipientAddress,
+      amount: usdcAmount.toString(),
+      ticketCount,
+    });
 
     // Step 3: Use NEAR Chain Signatures to sign and execute the purchase
     // The NearChainSigsProtocol handles the signing via MPC and broadcasting

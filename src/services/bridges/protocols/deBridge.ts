@@ -412,12 +412,14 @@ export class DeBridgeProtocol implements BridgeProtocol {
           prependOperatingExpenses: "true",
         });
 
-        // Auto-Purchase Proxy: Route bridged USDC through proxy for atomic ticket purchase.
-        // If the proxy call fails, deBridge sends USDC directly to the user (fallback).
+        // Auto-Purchase Proxy: Route bridged USDC through proxy for atomic ticket purchase
         const proxyAddress = CONTRACTS.autoPurchaseProxy;
-        const isProxyConfigured = proxyAddress && proxyAddress !== '0x0000000000000000000000000000000000000000';
+        
+        if (!proxyAddress || proxyAddress === '0x0000000000000000000000000000000000000000') {
+          throw new Error('Auto-purchase proxy not configured - decentralized flow required');
+        }
 
-        if (isProxyConfigured && !params.options?.externalCall) {
+        if (!params.options?.externalCall) {
           // Route funds to proxy instead of user directly
           queryParams.set('dstChainTokenOutRecipient', proxyAddress);
 
@@ -439,14 +441,9 @@ export class DeBridgeProtocol implements BridgeProtocol {
             bridgeId,
           ]);
           queryParams.set('externalCall', callData);
-        }
-
-        // ENHANCEMENT: Support for external call execution (cross-chain intents)
-        if (params.options?.externalCall) {
-          queryParams.append(
-            "externalCall",
-            params.options.externalCall as string,
-          );
+        } else {
+          // Custom external call provided
+          queryParams.append("externalCall", params.options.externalCall as string);
         }
 
         if (params.options?.fallbackAddress) {

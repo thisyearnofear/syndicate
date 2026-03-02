@@ -31,11 +31,10 @@ const CONFIG = {
 
     // Base
     BASE_RPC_URL: process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://base-mainnet.g.alchemy.com/v2/demo',
-    MEGAPOT_CONTRACT: (process.env.NEXT_PUBLIC_MEGAPOT_CONTRACT || '0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95') as `0x${string}`,
     USDC_CONTRACT: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as `0x${string}`,
     AUTO_PURCHASE_PROXY: (process.env.NEXT_PUBLIC_AUTO_PURCHASE_PROXY || '0x0000000000000000000000000000000000000000') as `0x${string}`,
 
-    // Operator wallet
+    // Operator wallet (temporary - will be removed when Wormhole integrated)
     OPERATOR_PRIVATE_KEY: process.env.STACKS_BRIDGE_OPERATOR_KEY || '',
 
     // Bridge configuration
@@ -46,20 +45,6 @@ const CONFIG = {
 // ============================================================================
 // ABIs
 // ============================================================================
-
-const MEGAPOT_ABI: Abi = [
-    {
-        inputs: [
-            { name: 'referrer', type: 'address' },
-            { name: 'value', type: 'uint256' },
-            { name: 'recipient', type: 'address' }
-        ],
-        name: 'purchaseTickets',
-        outputs: [],
-        stateMutability: 'nonpayable',
-        type: 'function'
-    }
-];
 
 const AUTO_PURCHASE_PROXY_ABI: Abi = [
     {
@@ -84,13 +69,6 @@ const ERC20_ABI: Abi = [
         name: 'approve',
         outputs: [{ name: '', type: 'bool' }],
         stateMutability: 'nonpayable',
-        type: 'function'
-    },
-    {
-        inputs: [{ name: 'account', type: 'address' }],
-        name: 'balanceOf',
-        outputs: [{ name: '', type: 'uint256' }],
-        stateMutability: 'view',
         type: 'function'
     }
 ];
@@ -189,90 +167,51 @@ export class StacksBridgeOperator {
             }
 
             const requiredUSDC = parseUnits(finalTicketCount.toString(), 6);
-            const balance = await this.checkUSDCBalance();
 
-            if (balance < requiredUSDC) {
-                await this.updateStatus(txId, 'error', { error: 'Insufficient bridge liquidity' });
-                throw new Error(`Insufficient USDC reserve. Have: ${formatUnits(balance, 6)}, Need: ${formatUnits(requiredUSDC, 6)}`);
-            }
-
-            // 2. Approve & Purchase on Base
+            // 2. Approve & Purchase via Proxy
             await this.updateStatus(txId, 'bridging', {
                 purchaseId,
                 recipientBaseAddress: baseAddress,
             });
-            console.log(`[StacksBridgeOperator] Purchasing ${finalTicketCount} tickets for ${baseAddress}...`);
+            console.log(`[StacksBridgeOperator] Purchasing ${finalTicketCount} tickets for ${baseAddress} via proxy...`);
 
-            const isProxyConfigured = CONFIG.AUTO_PURCHASE_PROXY !== '0x0000000000000000000000000000000000000000';
-            
-            let purchaseHash: string;
-            
-            if (isProxyConfigured) {
-                // Trustless flow: approve proxy, then call purchaseTicketsFor
-                const approveHash = await this.baseWalletClient.writeContract({
-                    address: CONFIG.USDC_CONTRACT,
-                    abi: ERC20_ABI,
-                    functionName: 'approve',
-                    args: [CONFIG.AUTO_PURCHASE_PROXY, requiredUSDC],
-                    chain: base,
-                } as any);
-
-                const approveReceipt = await this.basePublicClient.waitForTransactionReceipt({ hash: approveHash });
-                if (approveReceipt.status !== 'success') {
-                    await this.updateStatus(txId, 'error', { error: 'USDC approval failed' });
-                    throw new Error('USDC approval failed');
-                }
-
-                await this.updateStatus(txId, 'purchasing', {
-                    purchaseId,
-                    recipientBaseAddress: baseAddress,
-                });
-
-                purchaseHash = await this.baseWalletClient.writeContract({
-                    address: CONFIG.AUTO_PURCHASE_PROXY,
-                    abi: AUTO_PURCHASE_PROXY_ABI,
-                    functionName: 'purchaseTicketsFor',
-                    args: [
-                        baseAddress as `0x${string}`,
-                        this.operatorAccount.address, // referrer
-                        requiredUSDC,
-                    ],
-                    chain: base,
-                } as any);
-            } else {
-                // Legacy flow: direct Megapot call
-                const maxUint256 = BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935');
-                const approveHash = await this.baseWalletClient.writeContract({
-                    address: CONFIG.USDC_CONTRACT,
-                    abi: ERC20_ABI,
-                    functionName: 'approve',
-                    args: [CONFIG.MEGAPOT_CONTRACT, maxUint256],
-                    chain: base,
-                } as any);
-
-                const approveReceipt = await this.basePublicClient.waitForTransactionReceipt({ hash: approveHash });
-                if (approveReceipt.status !== 'success') {
-                    await this.updateStatus(txId, 'error', { error: 'USDC approval failed' });
-                    throw new Error('USDC approval failed');
-                }
-
-                await this.updateStatus(txId, 'purchasing', {
-                    purchaseId,
-                    recipientBaseAddress: baseAddress,
-                });
-
-                purchaseHash = await this.baseWalletClient.writeContract({
-                    address: CONFIG.MEGAPOT_CONTRACT,
-                    abi: MEGAPOT_ABI,
-                    functionName: 'purchaseTickets',
-                    args: [
-                        this.operatorAccount.address,
-                        requiredUSDC,
-                        baseAddress as `0x${string}`
-                    ],
-                    chain: base,
-                } as any);
+            if (CONFIG.AUTO_PURCHASE_PROXY === '0x0000000000000000000000000000000000000000') {
+                await this.updateStatus(txId, 'error', { error: 'Auto-purchase proxy not configured' });
+                throw new Error('AUTO_PURCHASE_PROXY not configured - decentralized flow required');
             }
+
+            // Approve exact amount to proxy
+            const approveHash = await this.baseWalletClient.writeContract({
+                address: CONFIG.USDC_CONTRACT,
+                abi: ERC20_ABI,
+                functionName: 'approve',
+                args: [CONFIG.AUTO_PURCHASE_PROXY, requiredUSDC],
+                chain: base,
+            } as any);
+
+            const approveReceipt = await this.basePublicClient.waitForTransactionReceipt({ hash: approveHash });
+            if (approveReceipt.status !== 'success') {
+                await this.updateStatus(txId, 'error', { error: 'USDC approval failed' });
+                throw new Error('USDC approval failed');
+            }
+
+            await this.updateStatus(txId, 'purchasing', {
+                purchaseId,
+                recipientBaseAddress: baseAddress,
+            });
+
+            // Call proxy to purchase tickets for user
+            const purchaseHash = await this.baseWalletClient.writeContract({
+                address: CONFIG.AUTO_PURCHASE_PROXY,
+                abi: AUTO_PURCHASE_PROXY_ABI,
+                functionName: 'purchaseTicketsFor',
+                args: [
+                    baseAddress as `0x${string}`,
+                    this.operatorAccount.address, // referrer
+                    requiredUSDC,
+                ],
+                chain: base,
+            } as any);
 
             const receipt = await this.basePublicClient.waitForTransactionReceipt({ hash: purchaseHash });
 
@@ -399,15 +338,6 @@ export class StacksBridgeOperator {
             console.error('[StacksBridgeOperator] Failed to record winnings on Stacks:', error);
             return false;
         }
-    }
-
-    private async checkUSDCBalance(): Promise<bigint> {
-        return await this.basePublicClient.readContract({
-            address: CONFIG.USDC_CONTRACT,
-            abi: ERC20_ABI,
-            functionName: 'balanceOf',
-            args: [this.operatorAccount.address],
-        } as any) as bigint;
     }
 }
 
