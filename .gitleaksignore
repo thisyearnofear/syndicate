@@ -1,0 +1,6 @@
+# Gitleaks ignore patterns
+# Use fingerprints from gitleaks output to ignore false positives
+# Format: <file>:<rule>:<line>
+
+# Example:
+# test-file.txt:generic-api-key:1
