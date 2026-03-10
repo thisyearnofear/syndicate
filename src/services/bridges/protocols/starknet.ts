@@ -66,6 +66,10 @@ const CONTRACTS_STARKNET = {
     STRK: STRK_STARKNET,
     ETH: '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7',
     
+    // Megapot Starknet Contract (for ticket tracking and auto-purchases)
+    // Deployed on Starknet Mainnet after successful declare+deploy
+    MEGAPOT: '', // TODO: Deploy MegapotStarknet and fill in address
+    
     // Bridges
     STARKGATE_ETH: '0xae0Ee0A63A2cE6BAb6951e7f6d2d5aCaD0d7B25C', // StarkGate ETH
     STARKGATE_USDC: '0x05D7A50B5D9a2Ad4a87e13Fe7C8a4E0b8e7D8f8A', // StarkGate USDC (example)
