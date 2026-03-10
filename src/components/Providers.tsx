@@ -62,15 +62,9 @@ if (typeof window !== 'undefined') {
 
 export function Providers({ children }: { children: ReactNode }) {
   const [isMounted, setIsMounted] = useState(false);
-  const [isWagmiReady, setIsWagmiReady] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
-    // On client side, wagmi should always be ready
-    // The config might be null on server, but that's expected
-    if (typeof window !== 'undefined') {
-      setIsWagmiReady(true);
-    }
   }, []);
 
   // Create QueryClient and config - memoized for stability
@@ -84,7 +78,8 @@ export function Providers({ children }: { children: ReactNode }) {
 
   const config = useMemo(() => getConfig(), []);
 
-  // Basic provider tree that stays stable between SSR and client
+  // FIX: Use CSS to hide content until mounted, avoiding hydration mismatch
+  // Server and client render the same DOM structure, but client hides until ready
   const providerTree = (
     <WagmiProvider config={config || ({} as any)}>
       <QueryClientProvider client={queryClient}>
@@ -96,17 +91,21 @@ export function Providers({ children }: { children: ReactNode }) {
           }}
         >
           <Web3AuthErrorBoundary>
-            {/* 
-                PREVENT HYDRATION ERROR: 
-                On server, we render the tree structure but children might be different.
-                On client, we only show content once mounted and wagmi is ready.
-            */}
-            {isMounted && isWagmiReady ? children : <div style={{ visibility: 'hidden' }}>{children}</div>}
+            {children}
           </Web3AuthErrorBoundary>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
+
+  // Return empty fragment during SSR to avoid hydration issues with wagmi
+  if (!isMounted) {
+    return (
+      <div suppressHydrationWarning style={{ display: 'none' }}>
+        {providerTree}
+      </div>
+    );
+  }
 
   return providerTree;
 }
