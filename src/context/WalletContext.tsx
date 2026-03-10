@@ -30,6 +30,7 @@ import React, {
   useReducer,
   useEffect,
   useRef,
+  useState,
   ReactNode,
 } from "react";
 import { useAccount, useDisconnect } from "wagmi";
@@ -261,6 +262,12 @@ interface WalletProviderProps {
 
 export function WalletProvider({ children }: WalletProviderProps) {
   const [state, dispatch] = useReducer(walletReducer, defaultWalletState);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Only call wagmi hooks after mount to avoid hydration issues
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const {
     address,
@@ -272,6 +279,9 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
   // Enhanced disconnect function that handles all wallet types
   const disconnectWallet = useCallback(async () => {
+    // Skip during SSR
+    if (!isMounted) return;
+    
     try {
       // First disconnect from wagmi (EVM wallets, WalletConnect, etc.)
       if (
@@ -316,7 +326,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
       // Still clear our state even if underlying wallet disconnect fails
       dispatch({ type: "DISCONNECT" });
     }
-  }, [wagmiConnected, wagmiDisconnect, state.walletType]);
+  }, [isMounted, wagmiConnected, wagmiDisconnect, state.walletType]);
 
   // Persist state to localStorage (Only for non-EVM wallets)
   useEffect(() => {
@@ -360,6 +370,9 @@ export function WalletProvider({ children }: WalletProviderProps) {
   const prevAddress = useRef(address);
   
   useEffect(() => {
+    // Skip wagmi sync during SSR
+    if (!isMounted) return;
+    
     // Only respond to actual wagmi state changes, not our own state changes
     const wagmiConnectionChanged = prevWagmiConnected.current !== wagmiConnected;
     const wagmiAddressChanged = prevAddress.current !== address;
@@ -384,7 +397,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
       prevWagmiConnected.current = wagmiConnected;
       prevAddress.current = address;
     }
-  }, [wagmiConnected, address, wagmiChainId, state.walletType]);
+  }, [isMounted, wagmiConnected, address, wagmiChainId, state.walletType]);
 
   // RESTORE NON-EVM SESSIONS (NEAR, Stacks, Solana)
   useEffect(() => {
@@ -438,7 +451,8 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
   return (
     <WalletContext.Provider value={{ state, dispatch, disconnectWallet }}>
-      {children}
+      {/* Don't render children until mounted to avoid hydration mismatch */}
+      {isMounted ? children : null}
     </WalletContext.Provider>
   );
 }

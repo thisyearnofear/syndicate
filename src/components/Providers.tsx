@@ -7,12 +7,10 @@
  * 1. WagmiProvider: Manages EVM wallet connections (from wagmi)
  * 2. RainbowKitProvider: UI for EVM wallet selection (from @rainbow-me/rainbowkit)
  * 3. QueryClientProvider: React Query for async state
- * 4. WalletProvider: Unified wallet state for ALL wallet types
  * 
  * Order matters:
  * - WagmiProvider must wrap RainbowKitProvider (wagmi provides the config)
  * - RainbowKitProvider wraps QueryClientProvider
- * - WalletProvider is in ClientProviders (after hydration)
  * 
  * This setup allows:
  * - EVM wallets: Handled by wagmi/RainbowKit, synced to WalletContext via SYNC_WAGMI
@@ -24,8 +22,7 @@ import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getConfig } from "@/config/wagmi";
-import { Web3AuthErrorBoundary } from "@/components/wallet";
-import { useMemo, useState, useEffect, ReactNode } from "react";
+import { useMemo, ReactNode } from "react";
 
 // Suppress specific console warnings that are not breaking functionality - only on client
 if (typeof window !== 'undefined') {
@@ -61,12 +58,6 @@ if (typeof window !== 'undefined') {
 }
 
 export function Providers({ children }: { children: ReactNode }) {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
   // Create QueryClient and config - memoized for stability
   const queryClient = useMemo(() => new QueryClient({
     defaultOptions: {
@@ -78,18 +69,6 @@ export function Providers({ children }: { children: ReactNode }) {
 
   const config = useMemo(() => getConfig(), []);
 
-  // FIX: Don't render wagmi providers until client-side to avoid hydration mismatch
-  // wagmi/RainbowKit use browser APIs that cause server/client differences
-  if (!isMounted) {
-    // Return a placeholder with same structure to avoid layout shift
-    // The actual providers will render on client after hydration
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="animate-pulse text-gray-400">Loading...</div>
-      </div>
-    );
-  }
-
   return (
     <WagmiProvider config={config || ({} as any)}>
       <QueryClientProvider client={queryClient}>
@@ -100,9 +79,7 @@ export function Providers({ children }: { children: ReactNode }) {
             learnMoreUrl: 'https://docs.megapot.io',
           }}
         >
-          <Web3AuthErrorBoundary>
-            {children}
-          </Web3AuthErrorBoundary>
+          {children}
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
