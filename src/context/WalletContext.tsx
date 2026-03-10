@@ -202,31 +202,31 @@ export const walletReducer = (
        * Why needed:
        * - wagmi manages EVM connections independently via RainbowKit
        * - We need context to reflect these changes for unified state
-       * - But we don't want wagmi to overwrite non-EVM wallet state
-       * 
-       * Logic:
-       * 1. If non-EVM wallet is connected, ignore wagmi state (prevent overwrite)
-       * 2. If EVM wallet is newly connected, sync it to context
-       * 3. Otherwise, just track wagmi connection status
-       * 
-       * Flow:
-       * EVM Connection → RainbowKit/wagmi updates → useAccount hook fires
-       * → Effect calls dispatch(SYNC_WAGMI) → context updates → subscribers notified
        */
+      
+      // LOGGING: Helpful for diagnosing "not recognized" issues
+      console.log("[WalletContext] SYNC_WAGMI:", {
+        incoming: action.payload,
+        currentType: state.walletType,
+        currentConnected: state.isConnected
+      });
+
       if (
         action.payload.isConnected &&
         action.payload.address &&
+        state.walletType && 
         state.walletType !== 'evm' &&
         state.address
       ) {
         // Non-EVM wallet already connected, don't sync wagmi state
-        return { ...state, isWagmiConnected: false };
+        // This prevents Solana/Stacks from being overwritten by auto-connecting EVM wallets
+        return { ...state, isWagmiConnected: true };
       }
 
       if (
         action.payload.isConnected &&
         action.payload.address &&
-        (!state.isConnected || state.address !== action.payload.address)
+        (!state.isConnected || state.address !== action.payload.address || state.walletType !== 'evm')
       ) {
         // EVM wallet connected via wagmi, sync it to context
         return {
@@ -238,6 +238,15 @@ export const walletReducer = (
           chainId: action.payload.chainId || null,
           isWagmiConnected: true,
           lastConnectedAt: Date.now(),
+        };
+      }
+
+      // If wagmi reports disconnected but we are currently 'evm', 
+      // only disconnect if it's a definitive disconnection (no address)
+      if (!action.payload.isConnected && !action.payload.address && state.walletType === 'evm' && state.isConnected) {
+        return {
+          ...defaultWalletState,
+          isWagmiConnected: false
         };
       }
 
@@ -388,9 +397,17 @@ export function WalletProvider({ children }: WalletProviderProps) {
             isConnected: wagmiConnected,
           },
         });
-      } else if (!wagmiConnected && state.walletType === 'evm') {
-        // Wagmi reports wallet is disconnected and we're tracking an EVM wallet
-        dispatch({ type: "DISCONNECT" });
+      } else if (!wagmiConnected && !address && state.walletType === 'evm') {
+        // Only disconnect if BOTH wagmiConnected and address are gone, 
+        // preventing race conditions during provider switches
+        dispatch({
+          type: "SYNC_WAGMI",
+          payload: {
+            address: null,
+            chainId: undefined,
+            isConnected: false,
+          },
+        });
       }
       
       // Update refs

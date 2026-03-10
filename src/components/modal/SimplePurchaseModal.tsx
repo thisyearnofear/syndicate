@@ -371,9 +371,7 @@ export default function SimplePurchaseModal({
                   baseExplorer: destinationTxHash
                     ? `https://basescan.org/tx/${destinationTxHash}`
                     : undefined,
-                  megapotApp: destinationTxHash
-                    ? `https://megapot.xyz/my-tickets`
-                    : undefined,
+                  megapotApp: `/my-tickets`,
                 }}
               />
               {sourceTxHash && (
@@ -427,6 +425,8 @@ export default function SimplePurchaseModal({
       case "success":
         // Show enhanced tracker for cross-chain completions
         if (showTracker && sourceChain) {
+          const isCrossChain = sourceChain !== "base" && sourceChain !== "ethereum";
+          
           return (
             <div>
               <CrossChainTracker
@@ -444,12 +444,10 @@ export default function SimplePurchaseModal({
                   baseExplorer: destinationTxHash
                     ? `https://basescan.org/tx/${destinationTxHash}`
                     : undefined,
-                  megapotApp: destinationTxHash
-                    ? `https://megapot.xyz/my-tickets`
-                    : undefined,
+                  megapotApp: `/my-tickets`,
                 }}
               />
-              {sourceTxHash && (
+              {sourceTxHash && isCrossChain && (
                 <a
                   href={`/purchase-status/${sourceTxHash}?chain=${sourceChain}`}
                   className="mt-4 inline-block text-sm text-blue-400 hover:text-blue-300"
