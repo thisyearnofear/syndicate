@@ -35,17 +35,18 @@ export default function SyndicateCard({
   // Use real data if available, otherwise fall back to syndicate data
   const displayPool = realPool || {
     id: syndicate.id,
-    name: syndicate.name,
-    description: syndicate.description,
-    memberCount: syndicate.membersCount,
-    totalTickets: syndicate.ticketsPurchased,
-    causeAllocation: syndicate.causePercentage,
+    name: syndicate.name || "Unknown",
+    description: syndicate.description || "",
+    memberCount: syndicate.membersCount || 0,
+    totalTickets: syndicate.ticketsPurchased || 0,
+    causeAllocation: syndicate.causePercentage || 0,
     isActive: true,
   };
 
-  // Calculate impact per member for display
+  // Calculate impact per member for display (with null safety)
+  const totalImpact = syndicate.totalImpact || 0;
   const impactPerMember =
-    syndicate.totalImpact / Math.max(displayPool.memberCount, 1);
+    totalImpact / Math.max(displayPool.memberCount, 1);
 
   // Show loading state
   if (poolId && isLoading) {
@@ -177,7 +178,7 @@ export default function SyndicateCard({
             <span className="text-xs text-gray-400">Impact</span>
           </div>
           <p className="font-bold text-white">
-            ${syndicate.totalImpact.toLocaleString()}
+            ${(totalImpact).toLocaleString()}
             {realPool && (
               <span className="text-xs text-gray-400 ml-1 block">
                 ${(parseFloat(stats?.totalPooled || "0") / 1000).toFixed(1)}k
@@ -193,7 +194,7 @@ export default function SyndicateCard({
             <span className="text-xs text-gray-400">Tickets</span>
           </div>
           <p className="font-bold text-white">
-            {syndicate.ticketsPurchased.toLocaleString()}
+            {(syndicate.ticketsPurchased || 0).toLocaleString()}
             {realPool && (
               <span className="text-xs text-gray-400 ml-1 block">
                 {displayPool.totalTickets.toLocaleString()} total
