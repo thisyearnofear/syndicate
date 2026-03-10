@@ -26,10 +26,11 @@ async function handleBalanceRequest(address: string, chainId?: number) {
   const isEvmAddress = /^0x[a-fA-F0-9]{40}$/.test(address);
   const isSolanaAddress = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address); // More flexible Solana address detection
   const isNearAddress = address.endsWith('.near') || /^[0-9a-f]{64}$/.test(address);
+  const isStarknetAddress = /^0x[a-fA-F0-9]{50,66}$/.test(address); // Starknet addresses are longer than EVM
 
-  if (!isEvmAddress && !isSolanaAddress && !isNearAddress) {
+  if (!isEvmAddress && !isSolanaAddress && !isNearAddress && !isStarknetAddress) {
     return NextResponse.json(
-      { error: 'Invalid address format - must be EVM (0x...), Solana, or NEAR address' },
+      { error: 'Invalid address format - must be EVM (0x...), Solana, NEAR, or Starknet address' },
       { status: 400 }
     );
   }
@@ -37,8 +38,16 @@ async function handleBalanceRequest(address: string, chainId?: number) {
   // Route based on address type
   if (isSolanaAddress) {
     return await getSolanaBalance(address);
-  } else if (isNearAddress) {
+  } else if (isNearAddress && !isEvmAddress) {
     return await getNearBalance(address);
+  } else if (isStarknetAddress && !isEvmAddress) {
+    // Starknet balance currently returns 0 placeholder as it's handled via bridge estimation
+    return NextResponse.json({
+      usdc: '0',
+      balance: '0',
+      wallet: address,
+      chain: 'starknet'
+    });
   } else {
     // For EVM, use provided chainId or default to Base
     const targetChainId = chainId || 8453;
