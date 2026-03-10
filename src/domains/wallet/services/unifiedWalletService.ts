@@ -750,18 +750,28 @@ async function connectStacksWalletWithConnect(): Promise<{
 
     // @stacks/connect.request() uses pattern: request(method, params)
     // For stx_getAddresses, no params are needed
-    // Wrap the call to ensure proper JSON serialization
+    // Wrap the call to ensure proper JSON serialization and handle non-serializable properties
     const response = await (async () => {
       try {
         const res = await request("stx_getAddresses");
-        // Force re-serialization to clean any non-serializable properties
-        return JSON.parse(JSON.stringify(res));
-      } catch (e) {
-        // If serialization fails, try to extract just the data we need
-        const res = await request("stx_getAddresses");
-        if (res?.addresses && Array.isArray(res.addresses)) {
-          return { addresses: res.addresses };
+        
+        // Fix for "setImmediate... is not valid JSON" error:
+        // Some wallet extensions return a response with non-serializable properties (functions, symbols)
+        // We manually extract only the serializable data we need
+        if (res && typeof res === 'object') {
+          return {
+            addresses: (res.addresses || []).map((addr: any) => ({
+              address: String(addr.address || ''),
+              publicKey: String(addr.publicKey || ''),
+              symbol: String(addr.symbol || '')
+            }))
+          };
         }
+        return res;
+      } catch (e) {
+        console.warn("Stacks request failed, attempting minimal data extraction:", e);
+        // If the above fails, it might be because the provider returned something unexpected
+        // Attempt a direct call if possible or re-throw
         throw e;
       }
     })();
