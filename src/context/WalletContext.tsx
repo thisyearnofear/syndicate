@@ -451,8 +451,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
   return (
     <WalletContext.Provider value={{ state, dispatch, disconnectWallet }}>
-      {/* Don't render children until mounted to avoid hydration mismatch */}
-      {isMounted ? children : null}
+      {children}
     </WalletContext.Provider>
   );
 }
