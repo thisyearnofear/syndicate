@@ -202,6 +202,19 @@ export const USDC_ADDRESSES: Record<ChainIdentifier, string | undefined> = {
     near: 'a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.factory.bridge.near',
 };
 
+// STRK - Starknet's native gas token (can be used for bridging/gas)
+export const STRK_ADDRESSES: Record<ChainIdentifier, string | undefined> = {
+    starknet: '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d', // STRK on Starknet mainnet
+    base: undefined,
+    ethereum: undefined,
+    polygon: undefined,
+    avalanche: undefined,
+    solana: undefined,
+    stacks: undefined,
+    zcash: undefined,
+    near: undefined,
+};
+
 // ============================================================================
 // Protocol Health & Monitoring
 // ============================================================================
