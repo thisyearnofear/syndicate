@@ -19,7 +19,7 @@
  */
 
 import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
-import { WagmiProvider, safeHydrate } from "wagmi";
+import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getConfig } from "@/config/wagmi";
 import { useMemo, useState, useEffect, ReactNode } from "react";

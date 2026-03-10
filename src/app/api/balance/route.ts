@@ -49,7 +49,6 @@ if (isSolanaAddress) {
     chain: 'stacks'
   });
 } else if (isStarknetAddress && !isEvmAddress) {
-...
     // Starknet balance currently returns 0 placeholder as it's handled via bridge estimation
     return NextResponse.json({
       usdc: '0',

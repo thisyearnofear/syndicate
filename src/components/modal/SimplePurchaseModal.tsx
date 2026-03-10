@@ -15,7 +15,7 @@
 
 import { useState, Suspense, lazy, useEffect } from "react";
 import { Button } from "@/shared/components/ui/Button";
-import { Loader, AlertCircle, Check, Zap, Link2 } from "lucide-react";
+import { Loader, AlertCircle, Check, Zap, Link2, ChevronDown } from "lucide-react";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { useSimplePurchase } from "@/hooks/useSimplePurchase";
 import { useERC7715 } from "@/hooks/useERC7715";
@@ -32,6 +32,7 @@ import {
 } from "@/components/bridge/CrossChainTracker";
 import { CostBreakdown } from "@/components/bridge/CostBreakdown";
 import { TimeEstimate } from "@/components/bridge/TimeEstimate";
+import { CONTRACTS } from "@/services/bridges/protocols/stacks";
 
 // Lazy load celebration modal
 const CelebrationModal = lazy(() => import("./CelebrationModal"));
@@ -86,6 +87,7 @@ export default function SimplePurchaseModal({
   const [showCelebration, setShowCelebration] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [statusLinkCopied, setStatusLinkCopied] = useState(false);
+  const [stacksToken, setStacksToken] = useState<'usdcx' | 'sbtc'>('usdcx');
   const hasActivePermission = permissions.length > 0 && isSupported;
 
   // Show tracker when purchase is in progress
@@ -131,6 +133,10 @@ export default function SimplePurchaseModal({
     const result = await purchase({
       ticketCount,
       userAddress: address,
+      // Pass token principal for Stacks - determines USDCx vs sBTC
+      stacksTokenPrincipal: sourceChain === 'stacks' 
+        ? (stacksToken === 'sbtc' ? CONTRACTS.sBTC : CONTRACTS.USDCx)
+        : undefined,
     });
 
     if (result.success) {
@@ -268,6 +274,46 @@ export default function SimplePurchaseModal({
                   <Zap className="w-3 h-3 mr-1" />
                   Set Up Auto-Purchase
                 </Button>
+              </div>
+            )}
+
+            {/* Stacks Token Selector - USDCx vs sBTC */}
+            {sourceChain === 'stacks' && (
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-300">
+                  Payment Token
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setStacksToken('usdcx')}
+                    disabled={isPurchasing}
+                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                      stacksToken === 'usdcx'
+                        ? 'border-indigo-500 bg-indigo-500/20'
+                        : 'border-gray-600 hover:border-gray-500 bg-gray-700/30'
+                    }`}
+                  >
+                    <div className="font-semibold text-white text-sm">USDCx</div>
+                    <div className="text-xs text-gray-400 mt-1">Native USDC</div>
+                  </button>
+                  <button
+                    onClick={() => setStacksToken('sbtc')}
+                    disabled={isPurchasing}
+                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                      stacksToken === 'sbtc'
+                        ? 'border-orange-500 bg-orange-500/20'
+                        : 'border-gray-600 hover:border-gray-500 bg-gray-700/30'
+                    }`}
+                  >
+                    <div className="font-semibold text-white text-sm">sBTC</div>
+                    <div className="text-xs text-gray-400 mt-1">Bitcoin-backed</div>
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500">
+                  {stacksToken === 'usdcx' 
+                    ? 'Circle-native USDC. Faster bridging via CCTP.'
+                    : 'Bitcoin-backed asset. Bridge via Syndicate Pool.'}
+                </p>
               </div>
             )}
 

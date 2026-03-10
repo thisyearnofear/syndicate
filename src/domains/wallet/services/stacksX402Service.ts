@@ -275,9 +275,9 @@ class StacksX402Service {
 
       // Request signature from wallet
       // Note: @stacks/connect uses 'stx_signMessage' for structured messages
+      // SIP-018 uses a specific message format that includes domain
       const signatureResponse = await request('stx_signMessage', {
         message,
-        domain: payload.domain,
       });
 
       // Extract signature
@@ -503,6 +503,90 @@ class StacksX402Service {
         return { maxPerPurchase: DEFAULT_LIMITS.WEEKLY / BigInt(10), maxTotal: DEFAULT_LIMITS.WEEKLY };
       case 'monthly':
         return { maxPerPurchase: DEFAULT_LIMITS.MONTHLY / BigInt(20), maxTotal: DEFAULT_LIMITS.MONTHLY };
+    }
+  }
+
+  /**
+   * Simplified authorization for recurring payments
+   * 
+   * This is a convenience method that wraps the full authorization flow
+   * for use in the AutoPurchaseModal.
+   */
+  async authorizeRecurringPayment(params: {
+    beneficiary: string;
+    token: string;
+    maxAmount: bigint;
+    frequency: 'weekly' | 'monthly';
+  }): Promise<{ success: boolean; authorizationId?: string; signature?: string; error?: string }> {
+    try {
+      // Check support first
+      const support = await this.checkSupport();
+      if (!support.isSupported) {
+        return { success: false, error: support.message };
+      }
+
+      // Generate a challenge for the authorization
+      const challenge = await this.generateChallenge();
+
+      // Get current user address (from wallet)
+      const userAddress = await this.getCurrentUserAddress();
+      if (!userAddress) {
+        return { success: false, error: 'Could not get user address from wallet' };
+      }
+
+      // Calculate max total based on frequency
+      const days = params.frequency === 'weekly' ? 7 : 30;
+      const maxTotal = params.maxAmount * BigInt(days / 7); // Approximate monthly total
+
+      // Request authorization
+      const result = await this.requestAuthorization(
+        userAddress,
+        '0x0000000000000000000000000000000000000000', // EVM address (would be derived)
+        params.maxAmount,
+        maxTotal,
+        params.frequency === 'weekly' ? 'weekly' : 'monthly',
+        1 // tickets per purchase
+      );
+
+      if (result.success && result.auth) {
+        return {
+          success: true,
+          authorizationId: result.auth.id,
+          signature: result.auth.signature,
+        };
+      }
+
+      return { success: false, error: result.error };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Get current user's Stacks address from wallet
+   */
+  private async getCurrentUserAddress(): Promise<string | null> {
+    try {
+      // Try to get address from Leather
+      if ((window as any).LeatherProvider) {
+        const provider = (window as any).LeatherProvider;
+        const result = await provider.getAddresses();
+        if (result && result.addresses && result.addresses.length > 0) {
+          return result.addresses[0].address;
+        }
+      }
+      // Try Xverse
+      if ((window as any).XverseProviders) {
+        const provider = (window as any).XverseProviders;
+        const result = await provider.getAddress('stacks');
+        if (result) return result;
+      }
+      return null;
+    } catch {
+      return null;
     }
   }
 }
