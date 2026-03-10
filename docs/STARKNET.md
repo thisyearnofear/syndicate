@@ -217,15 +217,15 @@ struct CommitmentRevealed {
 
 | Field | Value |
 |-------|-------|
-| **Contract Address** | `0x03973de0e8327336b14981b2897afc0eeb075764d3c28409f5c02177d5e9085b` |
-| **Class Hash** | `0x220f5415c7e7a2e560263134990edb444550c700d61b867ef4f8322e039124f` |
+| **Contract Address** | `0x04031300bdb712cd214f78a115c5f6cde39fe5eb2f8caa9621625338e7b726f4` |
+| **Class Hash** | `0x5bcf8f53c37dfcefec9f1885d4aa6dc37169d62ab4e297373eba2c819348222` |
 | **Network** | Starknet Sepolia Testnet |
 | **Owner** | `0x23e62ffc2122b734cb6df18d9920001ccb5acde8a775592820049b9e27855df` |
-| **Deploy Tx** | `0x0735a56de1805138f650816eed32a691822a01b9e33a2b2f66a9428f3bea5ff6` |
+| **Deploy Tx** | `0x06b3f1288986a083c0c89043bfe5dddecc2fce25eaaaf9b6fbeb27adf7ffff58` |
 
 **Voyager Links:**
-- [Contract](https://sepolia.voyager.online/contract/0x03973de0e8327336b14981b2897afc0eeb075764d3c28409f5c02177d5e9085b)
-- [Transaction](https://sepolia.voyager.online/tx/0x0735a56de1805138f650816eed32a691822a01b9e33a2b2f66a9428f3bea5ff6)
+- [Contract](https://sepolia.voyager.online/contract/0x04031300bdb712cd214f78a115c5f6cde39fe5eb2f8caa9621625338e7b726f4)
+- [Transaction](https://sepolia.voyager.online/tx/0x06b3f1288986a083c0c89043bfe5dddecc2fce25eaaaf9b6fbeb27adf7ffff58)
 
 ```bash
 # Compile
