@@ -1,14 +1,9 @@
 [sncast]
 account = "sonicguardian"
 accounts-file = "~/.starknet_accounts/starknet_open_zeppelin_accounts.json"
-url = "https://api.starknet.io"
-
-[sncast.sepolia]
-account = "sonicguardian"
-accounts-file = "~/.starknet_accounts/starknet_open_zeppelin_accounts.json"
 url = "https://api.starknet-sepolia.starknet.io"
 
-[sncast.alpha-sepolia]
+[sncast.sepolia]
 account = "sonicguardian"
 accounts-file = "~/.starknet_accounts/starknet_open_zeppelin_accounts.json"
 url = "https://api.starknet-sepolia.starknet.io"
