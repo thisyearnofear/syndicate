@@ -240,19 +240,31 @@ export function useUnifiedWallet(): {
             try {
               if (window.ethereum) {
                 const descriptor = Object.getOwnPropertyDescriptor(window, 'ethereum');
-                if (descriptor && (descriptor.configurable || descriptor.writable)) {
+                if (descriptor && (descriptor.configurable || (descriptor.set && descriptor.get))) {
                   const originalProvider = window.ethereum as unknown;
-                  (window as unknown as { ethereum?: unknown }).ethereum = null;
+                  
+                  // Use defineProperty to handle getters gracefully
+                  Object.defineProperty(window, 'ethereum', {
+                    value: null,
+                    configurable: true,
+                    writable: true,
+                    enumerable: true
+                  });
+
                   setTimeout(() => {
                     try {
-                      (window as unknown as { ethereum?: unknown }).ethereum =
-                        originalProvider;
+                      Object.defineProperty(window, 'ethereum', {
+                        value: originalProvider,
+                        configurable: true,
+                        writable: true,
+                        enumerable: true
+                      });
                     } catch (e) {
                       console.warn("Could not restore window.ethereum:", e);
                     }
                   }, 1000);
                 } else {
-                  console.warn("window.ethereum is not configurable or writable, skipping nulling");
+                  console.warn("window.ethereum is not configurable or has no setter, skipping nulling");
                 }
               }
             } catch (error) {
@@ -401,18 +413,30 @@ export function useUnifiedWallet(): {
               try {
                 if (typeof window !== "undefined" && (window as any).ethereum) {
                   const descriptor = Object.getOwnPropertyDescriptor(window, 'ethereum');
-                  if (descriptor && (descriptor.configurable || descriptor.writable)) {
+                  if (descriptor && (descriptor.configurable || (descriptor.set && descriptor.get))) {
                     const originalProvider = (window as any).ethereum;
-                    (window as any).ethereum = null;
+                    
+                    Object.defineProperty(window, 'ethereum', {
+                      value: null,
+                      configurable: true,
+                      writable: true,
+                      enumerable: true
+                    });
+
                     setTimeout(() => {
                       try {
-                        (window as any).ethereum = originalProvider;
+                        Object.defineProperty(window, 'ethereum', {
+                          value: originalProvider,
+                          configurable: true,
+                          writable: true,
+                          enumerable: true
+                        });
                       } catch (e) {
                         console.warn("Could not restore window.ethereum for Stacks:", e);
                       }
                     }, 1000);
                   } else {
-                    console.warn("window.ethereum is not configurable or writable for Stacks, skipping nulling");
+                    console.warn("window.ethereum is not configurable or has no setter for Stacks, skipping nulling");
                   }
                 }
               } catch (error) {

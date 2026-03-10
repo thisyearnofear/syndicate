@@ -119,6 +119,7 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
           else if (walletType === 'near') chain = 'near';
           else if (walletType === 'solana') chain = 'solana';
           else if (walletType === 'stacks') chain = 'stacks';
+          else if (walletType === 'starknet') chain = 'starknet';
         }
 
         if (!chain) {
