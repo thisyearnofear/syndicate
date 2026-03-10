@@ -423,10 +423,10 @@ export default function SimplePurchaseModal({
         );
 
       case "success":
-        // Show enhanced tracker for cross-chain completions
-        if (showTracker && sourceChain) {
-          const isCrossChain = sourceChain !== "base" && sourceChain !== "ethereum";
-          
+        // Show enhanced tracker ONLY for cross-chain completions
+        const isCrossChain = sourceChain && sourceChain !== "base" && sourceChain !== "ethereum";
+        
+        if (showTracker && sourceChain && isCrossChain) {
           return (
             <div>
               <CrossChainTracker
@@ -539,6 +539,7 @@ export default function SimplePurchaseModal({
                   setTicketCount(1);
                   setStep("select");
                   clearError();
+                  reset();
                 }}
               >
                 Buy More
