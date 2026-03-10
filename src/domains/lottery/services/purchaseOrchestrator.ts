@@ -27,6 +27,7 @@ import { getERC7715Service } from "@/services/erc7715Service";
 import { CHAINS } from "@/config";
 import type { ChainIdentifier } from "@/services/bridges/types";
 import { ethers } from "ethers";
+import { CONTRACTS } from "@/services/bridges/protocols/stacks";
 
 // =============================================================================
 // TYPES
@@ -442,6 +443,10 @@ async function executeStacksPurchase(
   req: PurchaseRequest,
 ): Promise<PurchaseResult> {
   try {
+    // Determine which token to use for bridging
+    // Default to USDCx (native Circle USDC), but allow sBTC if specified
+    const tokenAddress = req.stacksTokenPrincipal || CONTRACTS.USDCx;
+
     // Use bridgeManager for Stacks flow which handles orchestration
     const result = await bridgeManager.bridge({
       sourceChain: "stacks" as ChainIdentifier,
@@ -449,6 +454,7 @@ async function executeStacksPurchase(
       sourceAddress: req.userAddress,
       destinationAddress: req.recipientAddress || req.userAddress,
       amount: req.ticketCount.toString(),
+      tokenAddress, // Pass the token contract address
     });
 
     if (!result.success) {

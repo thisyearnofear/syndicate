@@ -89,8 +89,10 @@ export class StacksProtocol implements BridgeProtocol {
 
             params.onStatus?.('validating', { protocol: 'stacks' });
 
-            const isNativeUsdc = params.tokenAddress === CONTRACTS.USDCx;
-            const isSbtc = params.tokenAddress === CONTRACTS.sBTC;
+            // Use tokenAddress from params if provided, otherwise default to USDCx
+            const tokenAddress = params.tokenAddress || CONTRACTS.USDCx;
+            const isNativeUsdc = tokenAddress === CONTRACTS.USDCx;
+            const isSbtc = tokenAddress === CONTRACTS.sBTC;
 
             const result: BridgeResult = {
                 success: true,
