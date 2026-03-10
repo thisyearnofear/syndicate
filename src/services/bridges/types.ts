@@ -117,6 +117,7 @@ export interface BridgeParams {
     destinationAddress: string;
     amount: string; // Amount to bridge (in base units or token decimals)
     token?: string;  // Token address/symbol
+    tokenAddress?: string; // Full token contract address (e.g., USDCx or sBTC on Stacks)
 
     // Optional parameters
     wallet?: any;    // Wallet/signer instance
