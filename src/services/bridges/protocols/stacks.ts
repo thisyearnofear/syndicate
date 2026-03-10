@@ -35,7 +35,7 @@ import { BridgeError, BridgeErrorCode } from '../types';
 // ============================================================================
 
 // CONTRACT ADDRESSES
-const CONTRACTS = {
+export const CONTRACTS = {
     // Megapot Syndicate Pool on Stacks
     LOTTERY: 'SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3',
     

@@ -20,9 +20,10 @@ import {
 } from "lucide-react";
 import { useERC7715 } from "@/hooks/useERC7715";
 import { AdvancedPermissionsTooltip } from "@/components/common/InfoTooltip";
-import { CONTRACTS } from "@/config";
+import { CONTRACTS } from "@/services/bridges/protocols/stacks";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { getPermissionPresets } from "@/domains/wallet/services/advancedPermissionsService";
+import { stacksX402Service } from "@/domains/wallet/services/stacksX402Service";
 
 type Step = "configure" | "review" | "approving" | "success" | "error";
 
@@ -31,6 +32,7 @@ interface PurchaseConfig {
   frequency: "weekly" | "monthly";
   ticketCount: number;
   totalAmount: number;
+  paymentToken?: 'usdcx' | 'sbtc';
 }
 
 interface AutoPurchaseModalProps {
@@ -53,7 +55,7 @@ export function AutoPurchaseModal({
   });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const { address, chainId } = useWalletConnection();
+  const { address, chainId, walletType } = useWalletConnection();
   const {
     isRequesting,
     error,
@@ -64,7 +66,15 @@ export function AutoPurchaseModal({
     createAutoPurchaseSession,
   } = useERC7715();
 
-  const permission = permissions[0] || null;
+  // Check for Stacks wallet and x402 eligibility
+  const isStacksWallet = walletType === 'stacks';
+  const isEvmWallet = walletType === 'evm';
+  
+  // For Stacks wallets, we don't need ERC7715 - use x402 instead
+  const effectiveLoading = isStacksWallet ? false : isLoading;
+  const effectivePermissions = isStacksWallet ? [] : permissions;
+
+  const permission = effectivePermissions[0] || null;
 
   const requestPresetPermission = async (preset: 'weekly' | 'monthly'): Promise<boolean> => {
     if (!chainId) return false;
@@ -117,6 +127,63 @@ export function AutoPurchaseModal({
   const handleApprove = async () => {
     setStep("approving");
     setErrorMessage(null);
+
+    // Handle Stacks x402 flow
+    if (isStacksWallet) {
+      try {
+        const paymentToken = (config as any).paymentToken || 'usdcx';
+        const tokenAddress = paymentToken === 'sbtc' 
+          ? CONTRACTS.sBTC 
+          : CONTRACTS.USDCx;
+
+        // Create x402 authorization via SIP-018 signature
+        const result = await stacksX402Service.authorizeRecurringPayment({
+          beneficiary: CONTRACTS.LOTTERY,
+          token: tokenAddress,
+          maxAmount: BigInt(config.amount * (config.frequency === 'weekly' ? 7 : 30) * 10 ** 6),
+          frequency: config.frequency,
+        });
+
+        if (result.success) {
+          // Store the authorization for future auto-purchases
+          const executorConfig = {
+            authorizationId: result.authorizationId,
+            signature: result.signature,
+            paymentToken,
+            frequency: config.frequency,
+            ticketCount: config.ticketCount,
+            amount: config.amount,
+            nextExecutionTime: Date.now() + (config.frequency === 'weekly' ? 7 : 30) * 24 * 60 * 60 * 1000,
+          };
+          localStorage.setItem(
+            'syndicate_stacks_autopurchase',
+            JSON.stringify(executorConfig),
+          );
+
+          setStep("success");
+          if (onSuccess) {
+            setTimeout(() => onSuccess(executorConfig), 2000);
+          }
+        } else {
+          throw new Error(result.error || 'Failed to authorize recurring payment');
+        }
+      } catch (err) {
+        let friendlyMessage = "Unable to set up auto-purchase on Stacks.";
+        if (err instanceof Error) {
+          const errMsg = err.message.toLowerCase();
+          if (errMsg.includes('user rejected') || errMsg.includes('cancelled')) {
+            friendlyMessage = "You cancelled the signature request. No problem - you can enable auto-purchase anytime!";
+          } else if (errMsg.includes('not supported')) {
+            friendlyMessage = "Your wallet doesn't support SIP-018 signatures. Please use a compatible Stacks wallet.";
+          }
+        }
+        setErrorMessage(friendlyMessage);
+        setStep("error");
+      }
+      return;
+    }
+
+    // Handle EVM ERC-7715 flow (original logic)
     try {
       let limit;
       switch (config.frequency) {
@@ -130,9 +197,9 @@ export function AutoPurchaseModal({
           limit = BigInt(config.amount * 7 * 10 ** 6);
       }
 
-      const request = {
+      const erc20Request = {
         scope: "erc20-token-periodic",
-        tokenAddress: CONTRACTS.usdc,
+        tokenAddress: CONTRACTS.USDC,
         limit,
         period: config.frequency,
       };
@@ -149,7 +216,7 @@ export function AutoPurchaseModal({
           permission,
           frequency,
           amountPerPeriod,
-          tokenAddress: CONTRACTS.usdc,
+          tokenAddress: CONTRACTS.USDC,
           lastExecuted: undefined,
           nextExecution:
             Date.now() +
@@ -266,7 +333,9 @@ export function AutoPurchaseModal({
                 Enable Auto-Purchase
               </DialogTitle>
               <DialogDescription className="text-gray-300">
-                Set up automatic lottery ticket purchases with custom amounts
+                {isStacksWallet 
+                  ? 'Set up automatic purchases using SIP-018 signatures on Stacks'
+                  : 'Set up automatic lottery ticket purchases with custom amounts'}
               </DialogDescription>
             </DialogHeader>
 
@@ -348,6 +417,48 @@ export function AutoPurchaseModal({
                 </div>
               </div>
 
+              {/* Stacks-specific: Token and x402 info */}
+              {isStacksWallet && (
+                <div className="bg-purple-900/30 border border-purple-700/50 rounded-lg p-4 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <Zap className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-purple-300 mb-1">
+                        x402 Auto-Purchase on Stacks
+                      </p>
+                      <ul className="text-xs text-purple-200 space-y-1">
+                        <li>• Authorize recurring purchases with SIP-018 signature</li>
+                        <li>• No manual signing required after setup</li>
+                        <li>• Works with USDCx or sBTC</li>
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 pt-2 border-t border-purple-700/30">
+                    <label className="block text-xs font-medium text-purple-300">
+                      Payment Token
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(['usdcx', 'sbtc'] as const).map((token) => (
+                        <button
+                          key={token}
+                          onClick={() => setConfig(prev => ({ ...prev, paymentToken: token }))}
+                          className={`py-2 px-3 rounded-lg border text-xs font-medium transition-all ${
+                            (config as any).paymentToken === token || !(config as any).paymentToken
+                              ? "bg-purple-600 border-purple-500 text-white"
+                              : "bg-purple-900/30 border-purple-700/50 text-purple-200 hover:bg-purple-800/30"
+                          }`}
+                        >
+                          {token.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* EVM-specific info */}
+              {!isStacksWallet && (
               <div className="bg-blue-900/30 border border-blue-700/50 rounded-lg p-4">
                 <div className="flex items-start gap-2">
                   <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
@@ -369,6 +480,7 @@ export function AutoPurchaseModal({
                   </div>
                 </div>
               </div>
+              )}
             </div>
 
             <Button
@@ -400,14 +512,18 @@ export function AutoPurchaseModal({
                 Review Your Setup
               </DialogTitle>
               <DialogDescription className="text-gray-300">
-                Confirm the auto-purchase details before approving
+                {isStacksWallet 
+                  ? 'Confirm the auto-purchase details before signing'
+                  : 'Confirm the auto-purchase details before approving'}
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-6">
               <div className="bg-slate-800/50 border border-slate-600 rounded-xl p-5 space-y-4">
                 <div className="flex justify-between items-center pb-3 border-b border-slate-700">
-                  <h3 className="font-semibold text-lg">Permission Details</h3>
+                  <h3 className="font-semibold text-lg">
+                    {isStacksWallet ? 'x402 Authorization Details' : 'Permission Details'}
+                  </h3>
                   <div className="px-3 py-1 bg-green-900/30 text-green-400 rounded-full text-xs font-medium">
                     Active
                   </div>
@@ -434,7 +550,9 @@ export function AutoPurchaseModal({
                   <div className="flex justify-between">
                     <span className="text-gray-400">Token:</span>
                     <span className="font-mono text-sm text-white">
-                      USDC (Base)
+                      {isStacksWallet 
+                        ? ((config as any).paymentToken || 'usdcx').toUpperCase() + ' (Stacks)'
+                        : 'USDC (Base)'}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -445,6 +563,22 @@ export function AutoPurchaseModal({
                   </div>
                 </div>
               </div>
+
+              {/* Different warning/info for Stacks vs EVM */}
+              {isStacksWallet ? (
+              <div className="bg-purple-900/30 border border-purple-700/50 rounded-lg p-4">
+                <div className="flex items-start gap-2">
+                  <Zap className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-purple-200">
+                      You will sign this authorization with your Stacks wallet. 
+                      Your x402 permission enables automatic ticket purchases without 
+                      signing each transaction.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              ) : (
               <div className="bg-blue-900/30 border border-blue-700/50 rounded-lg p-4">
                 <div className="flex items-start gap-2">
                   <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
@@ -456,6 +590,7 @@ export function AutoPurchaseModal({
                   </div>
                 </div>
               </div>
+              )}
             </div>
 
             <div className="flex gap-3 mt-4">
@@ -474,10 +609,10 @@ export function AutoPurchaseModal({
                 {isRequesting ? (
                   <span className="flex items-center">
                     <Loader className="w-4 h-4 mr-2 animate-spin" />
-                    Approving...
+                    {isStacksWallet ? 'Signing...' : 'Approving...'}
                   </span>
                 ) : (
-                  "Approve in MetaMask"
+                  isStacksWallet ? 'Sign with Stacks Wallet' : 'Approve in MetaMask'
                 )}
               </Button>
             </div>
@@ -518,18 +653,22 @@ export function AutoPurchaseModal({
               </div>
               <DialogTitle className="text-2xl font-bold">Success!</DialogTitle>
               <DialogDescription className="text-gray-300">
-                Auto-purchase is now enabled
+                {isStacksWallet 
+                  ? 'x402 authorization is now active'
+                  : 'Auto-purchase is now enabled'}
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col items-center justify-center py-4 space-y-4">
               <div className="text-center space-y-3">
                 <p className="text-lg font-semibold text-white">
-                  Permission granted successfully
+                  {isStacksWallet 
+                    ? 'x402 Authorization Granted'
+                    : 'Permission granted successfully'}
                 </p>
                 <p className="text-gray-300 max-w-sm">
-                  Your auto-purchase is now active. Tickets will be purchased
-                  automatically according to your schedule. You can manage this
-                  in Settings.
+                  {isStacksWallet 
+                    ? `Your ${(config.paymentToken || 'usdcx').toUpperCase()} is now authorized for automatic ticket purchases. No manual signing required for recurring buys.`
+                    : 'Your auto-purchase is now active. Tickets will be purchased automatically according to your schedule. You can manage this in Settings.'}
                 </p>
               </div>
             </div>
