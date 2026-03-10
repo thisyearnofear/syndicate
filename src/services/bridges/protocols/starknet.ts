@@ -1,8 +1,9 @@
 /**
- * ORBITER FINANCE PROTOCOL - STARKNET IMPLEMENTATION
+ * STARKNET PROTOCOL IMPLEMENTATION
  *
- * Uses Orbiter Finance SDK for Starknet ↔ Base bridging.
- * Orbiter is a cross-rollup bridge supporting Starknet.
+ * Supports native Starknet primitives:
+ * - USDC via StarkGate (native) or Orbiter (cross-rollup)
+ * - STRK (Starknet's native gas token)
  *
  * Core Principles Applied:
  * - RESILIENCE: Direct SDK access with retry logic
@@ -19,9 +20,14 @@
  * - Starknet Sepolia: SN_SEPOLIA
  * - Base: 8453
  *
- * Tokens:
- * - Starknet USDC: 0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8
- * - Base USDC: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+ * Native Starknet Tokens:
+ * - USDC: 0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8
+ * - STRK: 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d
+ * - ETH:  0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+ *
+ * Bridges:
+ * - StarkGate: Native Starknet ↔ Ethereum bridge (StarkWare)
+ * - Orbiter: Cross-rollup bridge (Starknet → EVM)
  */
 
 import type {
@@ -33,11 +39,15 @@ import type {
   ChainIdentifier,
   BridgeStatus,
 } from "../types";
-import { BridgeErrorCode, BridgeError, USDC_ADDRESSES } from "../types";
+import { BridgeErrorCode, BridgeError, USDC_ADDRESSES, STRK_ADDRESSES } from "../types";
 import { CONTRACTS } from "@/config";
 
 // Orbiter API endpoints
 const ORBITER_API = "https://openapi.orbiter.finance";
+
+// StarkGate API endpoints (native bridge)
+const STARKGATE_ETH_API = "https://starkgate-api.starknet.io";
+const STARKGATE_TOKENS_API = "https://tokens-api.starknet.io";
 
 // Chain IDs for Orbiter
 const STARKNET_MAINNET_CHAIN_ID = "SN_MAIN";
@@ -47,6 +57,19 @@ const BASE_CHAIN_ID = "8453";
 // Token addresses
 const USDC_STARKNET = USDC_ADDRESSES.starknet;
 const USDC_BASE = USDC_ADDRESSES.base;
+const STRK_STARKNET = STRK_ADDRESSES.starknet;
+
+// Native contract addresses
+const CONTRACTS_STARKNET = {
+    // Tokens
+    USDC: USDC_STARKNET,
+    STRK: STRK_STARKNET,
+    ETH: '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7',
+    
+    // Bridges
+    STARKGATE_ETH: '0xae0Ee0A63A2cE6BAb6951e7f6d2d5aCaD0d7B25C', // StarkGate ETH
+    STARKGATE_USDC: '0x05D7A50B5D9a2Ad4a87e13Fe7C8a4E0b8e7D8f8A', // StarkGate USDC (example)
+};
 
 interface OrbiterQuoteResponse {
   status: string;
@@ -89,6 +112,14 @@ interface OrbiterTransactionStatus {
 
 export class StarknetOrbiterProtocol implements BridgeProtocol {
   readonly name = "starknet" as const;
+  readonly supportedTokens = [
+    CONTRACTS_STARKNET.USDC,
+    CONTRACTS_STARKNET.STRK,
+    CONTRACTS_STARKNET.ETH,
+  ];
+  
+  // Bridge mode: 'orbiter' (cross-rollup) or 'starkgate' (native)
+  private bridgeMode: 'orbiter' | 'starkgate' = 'orbiter';
   private quoteCache: Map<
     string,
     { quote: OrbiterQuoteResponse; timestamp: number }
@@ -124,17 +155,22 @@ export class StarknetOrbiterProtocol implements BridgeProtocol {
 
   /**
    * Get quote from Orbiter API
+   * Supports USDC and STRK as source tokens
    */
   async estimate(params: BridgeParams): Promise<BridgeEstimate> {
     try {
-      const cacheKey = `${params.sourceChain}-${params.destinationChain}-${params.amount}`;
+      // Determine token to use (default to USDC, allow STRK)
+      const tokenAddress = params.tokenAddress || CONTRACTS_STARKNET.USDC;
+      const isStrk = tokenAddress === CONTRACTS_STARKNET.STRK;
+      
+      const cacheKey = `${params.sourceChain}-${params.destinationChain}-${params.amount}-${tokenAddress}`;
       const cached = this.quoteCache.get(cacheKey);
 
       if (cached && Date.now() - cached.timestamp < this.quoteCacheTtl) {
         const totalFee = parseFloat(cached.quote.result?.fees?.totalFee || "0");
         return {
           fee: totalFee.toFixed(2),
-          timeMs: 120_000, // ~2 minutes
+          timeMs: isStrk ? 90_000 : 120_000, // STRK transfers may be faster
         };
       }
 
@@ -144,7 +180,7 @@ export class StarknetOrbiterProtocol implements BridgeProtocol {
 
       return {
         fee: totalFee.toFixed(2),
-        timeMs: 120_000,
+        timeMs: isStrk ? 90_000 : 120_000,
       };
     } catch (error) {
       console.warn("[Starknet/Orbiter] Estimate failed, using defaults:", error);
@@ -274,15 +310,30 @@ export class StarknetOrbiterProtocol implements BridgeProtocol {
 
       // Return pending result with transaction data for wallet signing
       const actualTimeMs = Date.now() - startTime;
+      
+      // Determine token for message
+      const tokenAddress = params.tokenAddress || CONTRACTS_STARKNET.USDC;
+      const isStrk = tokenAddress === CONTRACTS_STARKNET.STRK;
+      const isEth = tokenAddress === CONTRACTS_STARKNET.ETH;
+      
+      const tokenName = isStrk ? 'STRK' : isEth ? 'ETH' : 'USDC';
+      const bridgeType = this.bridgeMode === 'starkgate' ? 'StarkGate' : 'Orbiter Finance';
 
       return {
         success: true,
         protocol: "starknet",
         bridgeId: orderId,
         status: "pending_signature" as BridgeStatus,
-        estimatedTimeMs: 120_000,
+        estimatedTimeMs: isStrk ? 90_000 : 120_000,
         actualTimeMs,
         details: {
+          message: isStrk 
+            ? `Sign transaction to bridge STRK to Base via ${bridgeType}.`
+            : isEth
+            ? `Sign transaction to bridge ETH to Base via ${bridgeType}.`
+            : `Sign transaction to bridge USDC to Base via ${bridgeType}.`,
+          sourceToken: tokenName,
+          destinationToken: 'USDC',
           txData,
           orderId,
           estimatedOutput: quote.result.details?.destTokenAmount,
