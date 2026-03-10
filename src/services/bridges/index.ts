@@ -86,6 +86,12 @@ export class UnifiedBridgeManager {
                 );
             }
 
+            // ENHANCEMENT: Preload all potential protocols to ensure they are registered
+            // This is critical because protocols are registered lazily on load
+            if (params.protocol === 'auto' || !params.protocol) {
+                await this.estimateAllRoutes(params);
+            }
+
             // 2. Select protocol (user preference or auto-select)
             const protocolName = params.protocol === 'auto' || !params.protocol
                 ? await this.selectBestProtocol(params)
