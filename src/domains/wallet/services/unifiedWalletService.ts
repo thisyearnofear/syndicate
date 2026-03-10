@@ -54,6 +54,15 @@ export function getAvailableWallets(): WalletType[] {
     }
   }
 
+  // Check for Starknet wallets (ArgentX or Braavos)
+  if (typeof window !== "undefined") {
+    const hasStarknetWallet =
+      (window as any).starknet_argentX || (window as any).starknet_braavos || (window as any).starknet;
+    if (hasStarknetWallet) {
+      available.push(WalletTypes.STARKNET);
+    }
+  }
+
   // Social login is always available
   available.push(WalletTypes.SOCIAL);
 
@@ -100,6 +109,18 @@ export function getWalletStatus(walletType: WalletType): {
         isAvailable: hasStacksWallet,
         isInstalled: hasStacksWallet,
         downloadUrl: "https://leather.io/install",
+      };
+
+    case WalletTypes.STARKNET:
+      const hasStarknetWallet =
+        typeof window !== "undefined" &&
+        (!!(window as any).starknet_argentX ||
+          !!(window as any).starknet_braavos ||
+          !!(window as any).starknet);
+      return {
+        isAvailable: hasStarknetWallet,
+        isInstalled: hasStarknetWallet,
+        downloadUrl: "https://www.argent.xyz/argent-x/",
       };
 
     case WalletTypes.SOCIAL:
@@ -427,6 +448,53 @@ export function useUnifiedWallet(): {
               throw createError(
                 "CONNECTION_FAILED",
                 `Failed to connect Stacks wallet: ${message || "Unknown error"}`,
+              );
+            }
+            break;
+
+          case WalletTypes.STARKNET:
+            try {
+              // Dynamically import starknet wallet connector to avoid bundling when unused
+              const starknetProvider =
+                (window as any).starknet_argentX ||
+                (window as any).starknet_braavos ||
+                (window as any).starknet;
+
+              if (!starknetProvider) {
+                throw createError(
+                  "WALLET_NOT_FOUND",
+                  "No Starknet wallet detected. Please install ArgentX or Braavos.",
+                );
+              }
+
+              await starknetProvider.enable();
+              const starknetAddress = starknetProvider.selectedAddress || starknetProvider.account?.address;
+
+              if (!starknetAddress) {
+                throw createError(
+                  "CONNECTION_FAILED",
+                  "Failed to get Starknet address from wallet.",
+                );
+              }
+
+              address = starknetAddress;
+              chainId = 0; // Non-EVM sentinel
+
+              console.log("Starknet wallet connected:", address);
+            } catch (error: unknown) {
+              const message = (error as { message?: string }).message || "";
+              console.error("Starknet wallet connection error:", error);
+
+              if (message.includes("rejected") || message.includes("cancelled")) {
+                throw createError(
+                  "CONNECTION_REJECTED",
+                  "Starknet wallet connection was cancelled.",
+                );
+              }
+
+              throw createError(
+                "CONNECTION_FAILED",
+                `Failed to connect Starknet wallet: ${message || "Unknown error"}`,
               );
             }
             break;

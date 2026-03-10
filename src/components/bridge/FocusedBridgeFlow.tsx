@@ -22,7 +22,7 @@ import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { getStatusMessage, getStatusDescription } from "@/utils/bridgeStatusMessages";
 
 export interface FocusedBridgeFlowProps {
-  sourceChain: "solana" | "ethereum" | "near";
+  sourceChain: "solana" | "ethereum" | "near" | "starknet";
   destinationChain: "base";
   amount: string;
   recipient: string; // Destination EVM address

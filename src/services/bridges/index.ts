@@ -668,6 +668,11 @@ export class UnifiedBridgeManager {
                     this.registerProtocol(stacksProtocol);
                     return stacksProtocol;
                 }
+                case 'starknet': {
+                    const { starknetOrbiterProtocol } = await import('./protocols/starknet');
+                    this.registerProtocol(starknetOrbiterProtocol);
+                    return starknetOrbiterProtocol;
+                }
                 default:
                     console.warn(`[BridgeManager] Unknown protocol: ${name}`);
                     return null;
@@ -897,6 +902,8 @@ export class UnifiedBridgeManager {
             'near',
             'near-intents',
             'zcash',
+            'stacks',
+            'starknet',
         ].map(async (name) => {
             try {
                 await this.loadProtocol(name as BridgeProtocolType);

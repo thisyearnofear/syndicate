@@ -3,7 +3,7 @@
  * Single source of truth for cross-chain bridge metadata
  */
 
-export type SupportedChain = 'stacks' | 'near' | 'solana' | 'base';
+export type SupportedChain = 'stacks' | 'near' | 'solana' | 'starknet' | 'base';
 
 export interface BridgeConfig {
   name: string;
@@ -65,6 +65,21 @@ export const BRIDGE_CONFIG: Record<SupportedChain, BridgeConfig> = {
     explorer: {
       name: 'Solscan',
       txUrl: (txHash) => `https://solscan.io/tx/${txHash}`,
+    },
+  },
+  starknet: {
+    name: 'Starknet',
+    fees: {
+      bridge: 0.40,
+      gas: 0.02,
+    },
+    timing: {
+      estimate: '2-5 minutes',
+      description: 'Starknet bridge + Base execution',
+    },
+    explorer: {
+      name: 'Starkscan',
+      txUrl: (txHash) => `https://starkscan.co/tx/${txHash}`,
     },
   },
   base: {

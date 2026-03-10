@@ -331,6 +331,9 @@ delete localStorage.debug
 
 ## Production Readiness
 
+**Audit**: March 10, 2026. See `docs/PRODUCTION_READINESS_AUDIT.md`.
+**Status Note**: Repo-based checks currently fail (lint, typecheck, jest). Details in the audit report.
+
 ### Current Status: 🔄 Active Development
 - ✅ Core wallet connections working
 - ✅ Bridge architecture implemented  

@@ -93,6 +93,12 @@ export function ProtocolSelector({
                   "Fast, solver-based bridging via Defuse Protocol.";
                 icon = "⚡";
                 break;
+              case "starknet":
+                name = "Starknet Bridge";
+                description =
+                  "Cross-rollup bridge via Orbiter Finance. Fast & secure.";
+                icon = "⚡";
+                break;
               default:
                 name = estimate.protocol;
                 description = `Bridging via ${estimate.protocol}`;

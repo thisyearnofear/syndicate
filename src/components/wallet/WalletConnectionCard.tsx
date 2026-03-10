@@ -77,6 +77,14 @@ const WALLET_SECTIONS: WalletSection[] = [
         gradient: "from-amber-600 to-orange-600",
         bgColor: "bg-amber-600/10 border-amber-600/20",
       },
+      {
+        name: "Starknet",
+        type: "starknet" as WalletType,
+        icon: "⚡",
+        description: "ArgentX or Braavos wallet",
+        gradient: "from-blue-600 to-indigo-600",
+        bgColor: "bg-blue-600/10 border-blue-600/20",
+      },
     ],
   },
 ];

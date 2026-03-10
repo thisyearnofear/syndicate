@@ -20,7 +20,7 @@
  * - User sets limit (e.g., 10 USDC/week) and Syndicate executes purchases automatically
  */
 
-export type WalletType = 'evm' | 'solana' | 'social' | 'near' | 'stacks';
+export type WalletType = 'evm' | 'solana' | 'social' | 'near' | 'stacks' | 'starknet';
 
 export const WalletTypes = {
     EVM: 'evm' as const,           // MetaMask, WalletConnect, etc.
@@ -28,6 +28,7 @@ export const WalletTypes = {
     SOCIAL: 'social' as const,
     NEAR: 'near' as const,
     STACKS: 'stacks' as const,      // Leather, Xverse, Asigna, Fordefi, etc.
+    STARKNET: 'starknet' as const,  // ArgentX, Braavos
 };
 
 /**
@@ -76,6 +77,13 @@ export function getWalletRouting(walletType: WalletType): {
                 bridgeProtocol: 'Chain Signatures',
                 destination: 'Base (Derived)',
                 description: 'MPC-derived account, no storage needed'
+            };
+        case WalletTypes.STARKNET:
+            return {
+                nativeChain: 'Starknet',
+                bridgeProtocol: 'Starknet Bridge',
+                destination: 'Base',
+                description: 'ZK-rollup bridge via Orbiter/LayerSwap'
             };
         case WalletTypes.SOCIAL:
             return {

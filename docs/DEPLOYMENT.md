@@ -232,6 +232,9 @@ npx tsx scripts/register-chainhook-v2.ts
 
 ## Production Checklist
 
+**Audit**: March 10, 2026. See `docs/PRODUCTION_READINESS_AUDIT.md`.
+**Status Note**: Checklist items require infra or chain verification and are not verifiable from the repo alone.
+
 ### Pre-Deployment
 
 - [ ] Foundry installed and tested
