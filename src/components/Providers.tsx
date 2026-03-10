@@ -78,9 +78,19 @@ export function Providers({ children }: { children: ReactNode }) {
 
   const config = useMemo(() => getConfig(), []);
 
-  // FIX: Use CSS to hide content until mounted, avoiding hydration mismatch
-  // Server and client render the same DOM structure, but client hides until ready
-  const providerTree = (
+  // FIX: Don't render wagmi providers until client-side to avoid hydration mismatch
+  // wagmi/RainbowKit use browser APIs that cause server/client differences
+  if (!isMounted) {
+    // Return a placeholder with same structure to avoid layout shift
+    // The actual providers will render on client after hydration
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="animate-pulse text-gray-400">Loading...</div>
+      </div>
+    );
+  }
+
+  return (
     <WagmiProvider config={config || ({} as any)}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
@@ -97,15 +107,4 @@ export function Providers({ children }: { children: ReactNode }) {
       </QueryClientProvider>
     </WagmiProvider>
   );
-
-  // Return empty fragment during SSR to avoid hydration issues with wagmi
-  if (!isMounted) {
-    return (
-      <div suppressHydrationWarning style={{ display: 'none' }}>
-        {providerTree}
-      </div>
-    );
-  }
-
-  return providerTree;
 }
