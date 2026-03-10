@@ -33,6 +33,7 @@ import {
 import { CostBreakdown } from "@/components/bridge/CostBreakdown";
 import { TimeEstimate } from "@/components/bridge/TimeEstimate";
 import { CONTRACTS } from "@/services/bridges/protocols/stacks";
+import { STRK_ADDRESSES } from "@/services/bridges/types";
 
 // Lazy load celebration modal
 const CelebrationModal = lazy(() => import("./CelebrationModal"));
@@ -88,6 +89,7 @@ export default function SimplePurchaseModal({
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [statusLinkCopied, setStatusLinkCopied] = useState(false);
   const [stacksToken, setStacksToken] = useState<'usdcx' | 'sbtc'>('usdcx');
+  const [starknetToken, setStarknetToken] = useState<'usdc' | 'strk'>('usdc');
   const hasActivePermission = permissions.length > 0 && isSupported;
 
   // Show tracker when purchase is in progress
@@ -136,6 +138,10 @@ export default function SimplePurchaseModal({
       // Pass token principal for Stacks - determines USDCx vs sBTC
       stacksTokenPrincipal: sourceChain === 'stacks' 
         ? (stacksToken === 'sbtc' ? CONTRACTS.sBTC : CONTRACTS.USDCx)
+        : undefined,
+      // Pass token address for Starknet - determines USDC vs STRK
+      starknetTokenAddress: sourceChain === 'starknet'
+        ? (starknetToken === 'strk' ? STRK_ADDRESSES.starknet : undefined)
         : undefined,
     });
 
@@ -313,6 +319,46 @@ export default function SimplePurchaseModal({
                   {stacksToken === 'usdcx' 
                     ? 'Circle-native USDC. Faster bridging via CCTP.'
                     : 'Bitcoin-backed asset. Bridge via Syndicate Pool.'}
+                </p>
+              </div>
+            )}
+
+            {/* Starknet Token Selector - USDC vs STRK */}
+            {sourceChain === 'starknet' && (
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-300">
+                  Payment Token
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setStarknetToken('usdc')}
+                    disabled={isPurchasing}
+                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                      starknetToken === 'usdc'
+                        ? 'border-indigo-500 bg-indigo-500/20'
+                        : 'border-gray-600 hover:border-gray-500 bg-gray-700/30'
+                    }`}
+                  >
+                    <div className="font-semibold text-white text-sm">USDC</div>
+                    <div className="text-xs text-gray-400 mt-1">ERC-20 USDC</div>
+                  </button>
+                  <button
+                    onClick={() => setStarknetToken('strk')}
+                    disabled={isPurchasing}
+                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                      starknetToken === 'strk'
+                        ? 'border-purple-500 bg-purple-500/20'
+                        : 'border-gray-600 hover:border-gray-500 bg-gray-700/30'
+                    }`}
+                  >
+                    <div className="font-semibold text-white text-sm">STRK</div>
+                    <div className="text-xs text-gray-400 mt-1">Native Gas Token</div>
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500">
+                  {starknetToken === 'strk' 
+                    ? 'STRK - Starknet native token. Lower fees, faster bridging.'
+                    : 'USDC on Starknet via Orbiter cross-rollup bridge.'}
                 </p>
               </div>
             )}
