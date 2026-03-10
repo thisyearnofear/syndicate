@@ -19,10 +19,10 @@
  */
 
 import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
-import { WagmiProvider } from "wagmi";
+import { WagmiProvider, safeHydrate } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getConfig } from "@/config/wagmi";
-import { useMemo, ReactNode } from "react";
+import { useMemo, useState, useEffect, ReactNode } from "react";
 
 // Suppress specific console warnings that are not breaking functionality - only on client
 if (typeof window !== 'undefined') {
@@ -58,6 +58,12 @@ if (typeof window !== 'undefined') {
 }
 
 export function Providers({ children }: { children: ReactNode }) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // Create QueryClient and config - memoized for stability
   const queryClient = useMemo(() => new QueryClient({
     defaultOptions: {
@@ -68,6 +74,16 @@ export function Providers({ children }: { children: ReactNode }) {
   }), []);
 
   const config = useMemo(() => getConfig(), []);
+
+  // Don't render children until client-side to avoid hydration mismatch
+  // wagmi/RainbowKit use browser APIs that cause server/client differences
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+        <div className="text-gray-400 animate-pulse">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <WagmiProvider config={config || ({} as any)}>
