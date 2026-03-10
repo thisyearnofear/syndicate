@@ -27,7 +27,7 @@ import {
 import { nearIntentsService } from "@/services/nearIntentsService";
 import { nearWalletSelectorService } from "@/domains/wallet/services/nearWalletSelectorService";
 
-type SourceChain = "solana" | "near" | "ethereum";
+type SourceChain = "solana" | "near" | "ethereum" | "starknet";
 
 interface ChainOption {
   id: SourceChain;
@@ -112,6 +112,15 @@ export default function BridgePage() {
       walletTypes: ["MetaMask", "WalletConnect", "Rainbow"],
       features: ["Native CCTP", "Secure", "~15-20 min"],
     },
+    {
+      id: "starknet",
+      name: "Starknet",
+      icon: "⚡",
+      description: "ZK-rollup on Ethereum",
+      gradient: "from-blue-600 to-indigo-600",
+      walletTypes: ["ArgentX", "Braavos"],
+      features: ["Orbiter Bridge", "Fast", "~2-5 min"],
+    },
   ], []);
 
   const selectedChainConfig = useMemo(
@@ -126,6 +135,8 @@ export default function BridgePage() {
        return !isConnected || walletType !== "solana";
      } else if (sourceChain === "near") {
        return !isConnected || walletType !== "near";
+     } else if (sourceChain === "starknet") {
+       return !isConnected || walletType !== "starknet";
      } else if (sourceChain === "ethereum") {
        return !isEvmConnected;
      }

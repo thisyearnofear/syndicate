@@ -2,6 +2,8 @@
 
 **Last Updated**: March 2, 2026
 
+**Audit**: March 10, 2026. See `docs/PRODUCTION_READINESS_AUDIT.md`.
+
 ---
 
 ## Secret Detection
@@ -279,7 +281,7 @@ Set up alerts for:
 ### Pre-Deployment
 
 - [ ] All secrets in secrets manager
-- [ ] Gitleaks pre-commit hook installed
+- [x] Gitleaks pre-commit hook installed (local hook present)
 - [ ] Contract audit completed
 - [ ] Multi-sig configured for owner
 - [ ] Monitoring/alerting setup

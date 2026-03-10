@@ -1,0 +1,1 @@
+{"version":1,"contracts":[{"id":"hf52nqjuif7lo","package_name":"syndicate_starknet","contract_name":"PrivateTicketCommitment","module_path":"syndicate_starknet::PrivateTicketCommitment","artifacts":{"sierra":"syndicate_starknet_PrivateTicketCommitment.contract_class.json","casm":"syndicate_starknet_PrivateTicketCommitment.compiled_contract_class.json"}}]}

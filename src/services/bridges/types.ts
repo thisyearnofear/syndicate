@@ -23,9 +23,10 @@ export type ChainIdentifier =
     | 'polygon'
     | 'avalanche'
     | 'solana'
-    | 'stacks'   // Stacks Bitcoin L2
-    | 'zcash'    // NEW - Zcash support
-    | 'near';    // NEAR as orchestration layer
+    | 'stacks'    // Stacks Bitcoin L2
+    | 'starknet'  // Starknet ZK-rollup
+    | 'zcash'     // Zcash support
+    | 'near';     // NEAR as orchestration layer
 
 /**
  * Bridge protocols - each protocol is a separate module
@@ -39,6 +40,7 @@ export type BridgeProtocolType =
     | 'near'      // NEAR Chain Signatures
     | 'near-intents' // NEAR Intents (Solver-based)
     | 'stacks'    // Stacks → Base bridge (sBTC → USDC)
+    | 'starknet'  // Starknet → Base bridge (via Orbiter/LayerSwap)
     | 'zcash'     // Zcash-specific (uses NEAR as orchestrator)
     | 'auto';     // Automatic selection
 
@@ -67,9 +69,10 @@ export type BridgeStatus =
  */
 export type AddressType = {
     evm?: string;      // 0x... format
-    solana?: string;  // Base58 format
-    near?: string;    // NEAR account format
-    zcash?: string;   // Zcash address format
+    solana?: string;   // Base58 format
+    near?: string;     // NEAR account format
+    starknet?: string; // 0x... format (felt252)
+    zcash?: string;    // Zcash address format
 };
 
 /**
@@ -193,6 +196,7 @@ export const USDC_ADDRESSES: Record<ChainIdentifier, string | undefined> = {
     avalanche: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E',
     solana: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyB7bF',
     stacks: undefined, // sBTC, not USDC
+    starknet: '0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8', // USDC on Starknet
     zcash: undefined,
     near: 'a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.factory.bridge.near',
 };

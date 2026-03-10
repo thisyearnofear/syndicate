@@ -154,6 +154,9 @@ Consider adding to proxy:
 - Unified cross-chain purchase API
 - **Result**: Seamless multi-chain experience
 
+### 4. Starknet Integration
+See [STARKNET.md](./STARKNET.md) for full plan.
+
 ---
 
 ## 📊 Success Metrics
@@ -250,9 +253,9 @@ Consider adding to proxy:
 
 ---
 
-## 🏆 Historical: Hackathon Strategy (ZecLottery)
+## 🏆 Historical: Hackathon Strategy
 
-### Target: NEAR $20k Bounty - Cross-Chain Privacy Solutions
+### NEAR $20k Bounty - Cross-Chain Privacy Solutions
 
 **Status**: ⏸ On hold (focus on production deployment)
 
@@ -262,6 +265,12 @@ Consider adding to proxy:
 - Multi-chain access to lottery
 
 **Prize Target**: Top 2 ($5k-$10k range)
+
+### Starknet Re{define} Hackathon
+
+**Status**: 🔥 Deadline extended to March 10, 2026 (11:59 PM UTC)  
+**Track**: Privacy ($9,675 STRK) — private ticket purchases via Cairo Pedersen commitments  
+**Details**: [STARKNET.md](./STARKNET.md)
 
 ---
 

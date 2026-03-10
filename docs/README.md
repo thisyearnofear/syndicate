@@ -13,6 +13,7 @@ Syndicate is a cross-chain lottery platform enabling users to purchase Megapot t
 - **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Development guide and testing
 - **[SECURITY.md](./SECURITY.md)** - Security practices and secret detection
 - **[ROADMAP.md](./ROADMAP.md)** - Project roadmap and planning
+- **[STARKNET.md](./STARKNET.md)** - Starknet integration plan (hackathon strategy)
 
 ### Contracts
 - [MegapotAutoPurchaseProxy](../contracts/MegapotAutoPurchaseProxy.sol) - Trustless cross-chain purchase proxy
