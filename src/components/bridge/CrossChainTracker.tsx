@@ -33,7 +33,8 @@ export type SourceChainType =
   | "solana"
   | "near"
   | "stacks"
-  | "ethereum";
+  | "ethereum"
+  | "starknet";
 
 interface CrossChainTrackerProps {
   status: TrackerStatus;

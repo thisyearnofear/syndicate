@@ -33,7 +33,7 @@ import { CONTRACTS } from "@/services/bridges/protocols/stacks";
 // TYPES
 // =============================================================================
 
-export type PurchaseChain = "base" | "near" | "solana" | "stacks" | "ethereum";
+export type PurchaseChain = "base" | "near" | "solana" | "stacks" | "ethereum" | "starknet";
 
 export type PurchaseMode = "direct" | "syndicate" | "vault";
 
@@ -65,6 +65,9 @@ export interface PurchaseRequest {
 
   /** Optional: For Stacks, which token to use */
   stacksTokenPrincipal?: string;
+
+  /** Optional: For Starknet, which token to use */
+  starknetTokenAddress?: string;
 }
 
 export interface PurchaseResult {
@@ -736,6 +739,11 @@ class PurchaseOrchestrator {
 
         case "stacks":
           // Stacks balance info handled in bridge manager
+          balance = "0"; // Placeholder
+          break;
+
+        case "starknet":
+          // Starknet balance info handled in bridge manager
           balance = "0"; // Placeholder
           break;
       }
