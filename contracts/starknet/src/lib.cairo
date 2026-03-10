@@ -112,3 +112,6 @@ mod PrivateTicketCommitment {
         }
     }
 }
+
+mod MegapotStarknet;
+
