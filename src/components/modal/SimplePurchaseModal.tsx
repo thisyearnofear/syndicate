@@ -106,6 +106,13 @@ export default function SimplePurchaseModal({
     }
   }, [isOpen, isConnected, address, step]);
 
+  // Auto-advance to success when status is complete
+  useEffect(() => {
+    if (status === "complete" && step === "processing") {
+      setStep("success");
+    }
+  }, [status, step]);
+
   if (!isOpen) return null;
 
   const handleClose = () => {
@@ -148,13 +155,6 @@ export default function SimplePurchaseModal({
       setTimeout(() => setStatusLinkCopied(false), 2000);
     } catch {}
   };
-
-  // Auto-advance to success when status is complete
-  useEffect(() => {
-    if (status === "complete" && step === "processing") {
-      setStep("success");
-    }
-  }, [status, step]);
 
   // Render step content
   const renderStep = () => {

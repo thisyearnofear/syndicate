@@ -239,12 +239,21 @@ export function useUnifiedWallet(): {
             // This prevents wagmi from interfering with Solana wallet connections
             try {
               if (window.ethereum) {
-                const originalProvider = window.ethereum as unknown;
-                (window as unknown as { ethereum?: unknown }).ethereum = null;
-                setTimeout(() => {
-                  (window as unknown as { ethereum?: unknown }).ethereum =
-                    originalProvider;
-                }, 1000);
+                const descriptor = Object.getOwnPropertyDescriptor(window, 'ethereum');
+                if (descriptor && (descriptor.configurable || descriptor.writable)) {
+                  const originalProvider = window.ethereum as unknown;
+                  (window as unknown as { ethereum?: unknown }).ethereum = null;
+                  setTimeout(() => {
+                    try {
+                      (window as unknown as { ethereum?: unknown }).ethereum =
+                        originalProvider;
+                    } catch (e) {
+                      console.warn("Could not restore window.ethereum:", e);
+                    }
+                  }, 1000);
+                } else {
+                  console.warn("window.ethereum is not configurable or writable, skipping nulling");
+                }
               }
             } catch (error) {
               console.warn("Could not disable MetaMask auto-connect:", error);
@@ -391,11 +400,20 @@ export function useUnifiedWallet(): {
               // This prevents wagmi from interfering with Stacks wallet connections (like Leather)
               try {
                 if (typeof window !== "undefined" && (window as any).ethereum) {
-                  const originalProvider = (window as any).ethereum;
-                  (window as any).ethereum = null;
-                  setTimeout(() => {
-                    (window as any).ethereum = originalProvider;
-                  }, 1000);
+                  const descriptor = Object.getOwnPropertyDescriptor(window, 'ethereum');
+                  if (descriptor && (descriptor.configurable || descriptor.writable)) {
+                    const originalProvider = (window as any).ethereum;
+                    (window as any).ethereum = null;
+                    setTimeout(() => {
+                      try {
+                        (window as any).ethereum = originalProvider;
+                      } catch (e) {
+                        console.warn("Could not restore window.ethereum for Stacks:", e);
+                      }
+                    }, 1000);
+                  } else {
+                    console.warn("window.ethereum is not configurable or writable for Stacks, skipping nulling");
+                  }
                 }
               } catch (error) {
                 console.warn(

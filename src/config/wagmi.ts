@@ -20,7 +20,7 @@ export function getConfig(): ReturnType<typeof getDefaultConfig> | null {
           appName: 'Syndicate',
           projectId: 'server-placeholder',
           chains: [base, baseSepolia],
-          ssr: false,
+          ssr: true, // Enable SSR mode for Next.js - prevents hydration mismatch
         });
       } catch {
         // Silently fail on server - this config won't be used anyway
