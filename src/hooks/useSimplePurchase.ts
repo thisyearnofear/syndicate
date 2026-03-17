@@ -160,6 +160,8 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
           recipientAddress: request.recipientAddress,
           permissionId: request.permissionId || permissionId,
           stacksTokenPrincipal: request.stacksTokenPrincipal,
+          // P0.4 FIX: Forward starknet token address
+          starknetTokenAddress: request.starknetTokenAddress,
         };
 
         // Update status: signing

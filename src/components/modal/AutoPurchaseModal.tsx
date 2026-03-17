@@ -32,13 +32,13 @@ interface PurchaseConfig {
   frequency: "weekly" | "monthly";
   ticketCount: number;
   totalAmount: number;
-  paymentToken?: 'usdcx' | 'sbtc';
+  paymentToken: 'usdcx' | 'sbtc'; // P0.2 FIX: Made required, not optional
 }
 
 interface AutoPurchaseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (config: any) => void;
+  onSuccess?: (config: PurchaseConfig) => void; // P0.2 FIX: Typed properly instead of any
 }
 
 export function AutoPurchaseModal({
@@ -52,6 +52,7 @@ export function AutoPurchaseModal({
     frequency: "weekly",
     ticketCount: 10,
     totalAmount: 50,
+    paymentToken: 'usdcx', // P0.2 FIX: Initialize with default
   });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -131,7 +132,7 @@ export function AutoPurchaseModal({
     // Handle Stacks x402 flow
     if (isStacksWallet) {
       try {
-        const paymentToken = (config as any).paymentToken || 'usdcx';
+        const paymentToken = config.paymentToken || 'usdcx'; // P0.2 FIX: Use typed config
         const tokenAddress = paymentToken === 'sbtc' 
           ? CONTRACTS.sBTC 
           : CONTRACTS.USDCx;
@@ -444,7 +445,7 @@ export function AutoPurchaseModal({
                           key={token}
                           onClick={() => setConfig(prev => ({ ...prev, paymentToken: token }))}
                           className={`py-2 px-3 rounded-lg border text-xs font-medium transition-all ${
-                            (config as any).paymentToken === token || !(config as any).paymentToken
+                            config.paymentToken === token
                               ? "bg-purple-600 border-purple-500 text-white"
                               : "bg-purple-900/30 border-purple-700/50 text-purple-200 hover:bg-purple-800/30"
                           }`}
@@ -551,7 +552,7 @@ export function AutoPurchaseModal({
                     <span className="text-gray-400">Token:</span>
                     <span className="font-mono text-sm text-white">
                       {isStacksWallet 
-                        ? ((config as any).paymentToken || 'usdcx').toUpperCase() + ' (Stacks)'
+                        ? config.paymentToken.toUpperCase() + ' (Stacks)'
                         : 'USDC (Base)'}
                     </span>
                   </div>
@@ -632,11 +633,13 @@ export function AutoPurchaseModal({
               </div>
               <div className="text-center space-y-3">
                 <p className="text-xl font-semibold text-white">
-                  Confirm in MetaMask
+                  {/* P0.3 FIX: Wallet-aware copy for Stacks vs EVM */}
+                  {isStacksWallet ? 'Sign SIP-018 Authorization' : 'Confirm in MetaMask'}
                 </p>
                 <p className="text-gray-300 max-w-md">
-                  Please approve the permission request in your MetaMask wallet.
-                  This allows Syndicate to purchase tickets automatically.
+                  {isStacksWallet
+                    ? 'Please sign the SIP-018 authorization in your Stacks wallet. This enables recurring ticket purchases.'
+                    : 'Please approve the permission request in your MetaMask wallet. This allows Syndicate to purchase tickets automatically.'}
                 </p>
               </div>
             </div>
