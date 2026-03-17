@@ -92,6 +92,24 @@ export default function SimplePurchaseModal({
   const [starknetToken, setStarknetToken] = useState<'usdc' | 'strk'>('usdc');
   const hasActivePermission = permissions.length > 0 && isSupported;
 
+  // P0.1 FIX: Derive selectedChain from walletType BEFORE purchase
+  // This fixes the bug where sourceChain is only set during/after purchase
+  // but is needed for token selectors, estimates, and request params
+  const selectedChain = (() => {
+    if (sourceChain) return sourceChain; // Use result after purchase
+    if (walletType === 'evm') return 'base';
+    if (walletType === 'stacks') return 'stacks';
+    if (walletType === 'solana') return 'solana';
+    if (walletType === 'near') return 'near';
+    if (walletType === 'starknet') return 'starknet';
+    return undefined;
+  })();
+
+  // Show token selectors for relevant chains
+  const showStacksTokenSelector = selectedChain === 'stacks';
+  const showStarknetTokenSelector = selectedChain === 'starknet';
+  const showCrossChainUI = selectedChain && selectedChain !== 'base' && selectedChain !== 'ethereum';
+
   // Show tracker when purchase is in progress
   const showTracker =
     isPurchasing ||
@@ -132,23 +150,28 @@ export default function SimplePurchaseModal({
     }
 
     setStep("processing");
+    
+    // P0.1 FIX: Pass selectedChain explicitly to purchase() 
+    // This ensures token selectors, estimates, and request params work correctly
     const result = await purchase({
       ticketCount,
       userAddress: address,
+      chain: selectedChain,
       // Pass token principal for Stacks - determines USDCx vs sBTC
-      stacksTokenPrincipal: sourceChain === 'stacks' 
+      stacksTokenPrincipal: selectedChain === 'stacks' 
         ? (stacksToken === 'sbtc' ? CONTRACTS.sBTC : CONTRACTS.USDCx)
         : undefined,
       // Pass token address for Starknet - determines USDC vs STRK
-      starknetTokenAddress: sourceChain === 'starknet'
+      starknetTokenAddress: selectedChain === 'starknet'
         ? (starknetToken === 'strk' ? STRK_ADDRESSES.starknet : undefined)
         : undefined,
     });
 
     if (result.success) {
-      // Don't show celebration for cross-chain - tracker handles it
+      // P0.1 FIX: Use result.sourceTxHash + selectedChain to determine cross-chain
+      // instead of sourceChain which may not be set yet
       const isCrossChain =
-        sourceChain && sourceChain !== "base" && sourceChain !== "ethereum";
+        result.sourceTxHash && selectedChain && selectedChain !== "base" && selectedChain !== "ethereum";
       if (!isCrossChain) {
         setShowCelebration(true);
       }
@@ -284,7 +307,7 @@ export default function SimplePurchaseModal({
             )}
 
             {/* Stacks Token Selector - USDCx vs sBTC */}
-            {sourceChain === 'stacks' && (
+            {showStacksTokenSelector && (
               <div className="space-y-3">
                 <label className="block text-sm font-medium text-gray-300">
                   Payment Token
@@ -324,7 +347,7 @@ export default function SimplePurchaseModal({
             )}
 
             {/* Starknet Token Selector - USDC vs STRK */}
-            {sourceChain === 'starknet' && (
+            {showStarknetTokenSelector && (
               <div className="space-y-3">
                 <label className="block text-sm font-medium text-gray-300">
                   Payment Token
@@ -397,21 +420,19 @@ export default function SimplePurchaseModal({
             </div>
 
             {/* Cost Breakdown */}
-            {sourceChain && sourceChain !== "ethereum" && (
+            {selectedChain && selectedChain !== "ethereum" && (
               <CostBreakdown
                 ticketCount={ticketCount}
-                sourceChain={
-                  sourceChain as "stacks" | "near" | "solana" | "base"
-                }
+                sourceChain={selectedChain}
               />
             )}
 
             {/* Time Estimate */}
-            {sourceChain &&
-              sourceChain !== "base" &&
-              sourceChain !== "ethereum" && (
+            {selectedChain &&
+              selectedChain !== "base" &&
+              selectedChain !== "ethereum" && (
                 <TimeEstimate
-                  sourceChain={sourceChain as "stacks" | "near" | "solana"}
+                  sourceChain={selectedChain}
                 />
               )}
 
@@ -445,12 +466,14 @@ export default function SimplePurchaseModal({
 
       case "processing":
         // Show enhanced tracker during processing
-        if (showTracker && sourceChain) {
+        // P0.1 FIX: Use effectiveChain for display when sourceChain not yet available
+        const processingChain = sourceChain || selectedChain;
+        if (showTracker && processingChain) {
           return (
             <div>
               <CrossChainTracker
                 status={status}
-                sourceChain={sourceChain}
+                sourceChain={processingChain}
                 sourceTxId={sourceTxHash || undefined}
                 baseTxId={destinationTxHash || undefined}
                 error={error}
@@ -458,7 +481,7 @@ export default function SimplePurchaseModal({
                 walletInfo={walletInfo}
                 receipt={{
                   sourceExplorer: sourceTxHash
-                    ? getExplorerUrl(sourceChain, sourceTxHash)
+                    ? getExplorerUrl(processingChain, sourceTxHash)
                     : undefined,
                   baseExplorer: destinationTxHash
                     ? `https://basescan.org/tx/${destinationTxHash}`
@@ -515,15 +538,17 @@ export default function SimplePurchaseModal({
         );
 
       case "success":
-        // Show enhanced tracker ONLY for cross-chain completions
-        const isCrossChain = sourceChain && sourceChain !== "base" && sourceChain !== "ethereum";
+        // P0.1 FIX: Use selectedChain for cross-chain determination when sourceChain not yet set
+        // Once purchase completes, sourceChain will be available and used
+        const effectiveChain = sourceChain || selectedChain;
+        const isCrossChain = effectiveChain && effectiveChain !== "base" && effectiveChain !== "ethereum";
         
-        if (showTracker && sourceChain && isCrossChain) {
+        if (showTracker && effectiveChain && isCrossChain) {
           return (
             <div>
               <CrossChainTracker
                 status={status}
-                sourceChain={sourceChain}
+                sourceChain={effectiveChain}
                 sourceTxId={sourceTxHash || undefined}
                 baseTxId={destinationTxHash || undefined}
                 error={error}
@@ -531,7 +556,7 @@ export default function SimplePurchaseModal({
                 walletInfo={walletInfo}
                 receipt={{
                   sourceExplorer: sourceTxHash
-                    ? getExplorerUrl(sourceChain, sourceTxHash)
+                    ? getExplorerUrl(effectiveChain, sourceTxHash)
                     : undefined,
                   baseExplorer: destinationTxHash
                     ? `https://basescan.org/tx/${destinationTxHash}`
@@ -541,7 +566,7 @@ export default function SimplePurchaseModal({
               />
               {sourceTxHash && isCrossChain && (
                 <a
-                  href={`/purchase-status/${sourceTxHash}?chain=${sourceChain}`}
+                  href={`/purchase-status/${sourceTxHash}?chain=${effectiveChain}`}
                   className="mt-4 inline-block text-sm text-blue-400 hover:text-blue-300"
                 >
                   Open Status Page

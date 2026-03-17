@@ -695,6 +695,17 @@ class PurchaseOrchestrator {
           case "stacks":
             return executeStacksPurchase(req);
 
+          case "starknet":
+            // TODO: Implement starknet purchase - requires starknet wallet integration
+            // Will route through bridge manager for native starknet bridging
+            return {
+              success: false,
+              error: {
+                code: "CHAIN_NOT_READY",
+                message: "Starknet purchases are coming soon",
+              },
+            };
+
           default:
             return {
               success: false,
