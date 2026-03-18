@@ -20,11 +20,11 @@ interface CacheEntry<T> {
  * Cache configuration for different data types
  */
 const CACHE_CONFIG = {
-  JACKPOT: 60000, // 60 seconds - reduce frequency
-  TICKET_PRICE: 600000, // 10 minutes - rarely changes
-  USER_BALANCE: 15000, // 15 seconds - changes with transactions
-  USER_TICKETS: 20000, // 20 seconds - changes with purchases
-  ODDS: 60000, // 60 seconds - derived from jackpot
+  JACKPOT: 120000,      // 2 minutes
+  TICKET_PRICE: 3600000, // 1 hour
+  USER_BALANCE: 30000,   // 30 seconds
+  USER_TICKETS: 60000,   // 60 seconds
+  ODDS: 120000,          // 2 minutes
 } as const;
 
 export interface UserTicketInfo {

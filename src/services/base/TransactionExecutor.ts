@@ -59,7 +59,9 @@ export class TransactionExecutor {
         this.megapotAddress,
         approvalAmount,
       );
-      const receipt = await tx.wait();
+      
+      // Wait for 1 confirmation to ensure RPC state is updated
+      const receipt = await tx.wait(1);
 
       // Invalidate balance cache after approval
       this.dataService.invalidateCache(`balance:${address}`);
@@ -106,10 +108,18 @@ export class TransactionExecutor {
       const signer = await this.baseChain.getFreshSigner();
       const signerAddress = await signer.getAddress();
 
-      const hasAllowance = await this.dataService.checkUsdcAllowance(
-        ticketCount,
-        this.megapotAddress,
-      );
+      // Retry allowance check to handle RPC latency/rate limits
+      let hasAllowance = false;
+      let retries = 0;
+      while (retries < 2) {
+        hasAllowance = await this.dataService.checkUsdcAllowance(
+          ticketCount,
+          this.megapotAddress,
+        );
+        if (hasAllowance) break;
+        retries++;
+        if (retries < 2) await new Promise(r => setTimeout(r, 1000));
+      }
 
       if (!hasAllowance) {
         console.log("Approving USDC spending...");
