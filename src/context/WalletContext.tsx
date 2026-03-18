@@ -388,15 +388,34 @@ export function WalletProvider({ children }: WalletProviderProps) {
     
     if (wagmiConnectionChanged || wagmiAddressChanged) {
       if (wagmiConnected && address) {
-        // Wagmi reports wallet is connected
-        dispatch({
-          type: "SYNC_WAGMI",
-          payload: {
-            address,
-            chainId: wagmiChainId,
-            isConnected: wagmiConnected,
-          },
-        });
+        // Before syncing wagmi EVM state, check for a persisted non-EVM session.
+        // This prevents MetaMask from overwriting a Phantom/Stacks/NEAR session
+        // during the brief window before the restore effect has run.
+        let hasPersistedNonEvmSession = false;
+        try {
+          if (typeof localStorage !== 'undefined') {
+            const saved = localStorage.getItem('wallet_state');
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              const isRecent = parsed.lastConnectedAt && Date.now() - parsed.lastConnectedAt < 24 * 60 * 60 * 1000;
+              if (isRecent && parsed.walletType && parsed.walletType !== 'evm' && parsed.address) {
+                hasPersistedNonEvmSession = true;
+              }
+            }
+          }
+        } catch { /* ignore storage errors */ }
+
+        if (!hasPersistedNonEvmSession) {
+          // Wagmi reports wallet is connected and no non-EVM session to protect
+          dispatch({
+            type: "SYNC_WAGMI",
+            payload: {
+              address,
+              chainId: wagmiChainId,
+              isConnected: wagmiConnected,
+            },
+          });
+        }
       } else if (!wagmiConnected && !address && state.walletType === 'evm') {
         // Only disconnect if BOTH wagmiConnected and address are gone, 
         // preventing race conditions during provider switches
@@ -416,6 +435,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
     }
   }, [isMounted, wagmiConnected, address, wagmiChainId, state.walletType]);
 
+
   // RESTORE NON-EVM SESSIONS (NEAR, Stacks, Solana)
   useEffect(() => {
     const restoreState = async () => {
@@ -428,8 +448,28 @@ export function WalletProvider({ children }: WalletProviderProps) {
           if (savedStateStr) {
             const savedState = JSON.parse(savedStateStr) as WalletState;
 
+            // Handle Solana (Phantom) Persistence  
+            if (savedState.walletType === "solana" && savedState.address) {
+              const solanaWindow = window as Window & typeof globalThis & { solana?: { isConnected?: boolean; publicKey?: { toString: () => string } } };
+              const phantomConnected = solanaWindow.solana?.isConnected && solanaWindow.solana?.publicKey;
+              
+              if (phantomConnected) {
+                console.log("WalletContext: Restoring Solana/Phantom session", savedState.address);
+                dispatch({
+                  type: "RESTORE_STATE",
+                  payload: {
+                    ...savedState,
+                    isConnected: true,
+                  },
+                });
+              } else {
+                // Phantom is not connected any more — clear stale state
+                localStorage.removeItem("wallet_state");
+              }
+            }
+
             // Handle NEAR Persistence
-            if (savedState.walletType === "near") {
+            else if (savedState.walletType === "near") {
               console.log(
                 "WalletContext: Attempting to restore NEAR session..."
               );
@@ -465,6 +505,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
     restoreState();
   }, []);
+
 
   return (
     <WalletContext.Provider value={{ state, dispatch, disconnectWallet }}>

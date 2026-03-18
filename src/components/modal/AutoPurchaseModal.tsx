@@ -25,6 +25,7 @@ import { CONTRACTS } from "@/services/bridges/protocols/stacks";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { getPermissionPresets } from "@/domains/wallet/services/advancedPermissionsService";
 import { stacksX402Service } from "@/domains/wallet/services/stacksX402Service";
+import type { AutoPurchaseConfig } from "@/domains/wallet/types";
 
 type Step = "configure" | "review" | "approving" | "success" | "error";
 
@@ -47,7 +48,7 @@ interface PurchaseConfig {
 interface AutoPurchaseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (config: PurchaseConfig) => void; // P0.2 FIX: Typed properly instead of any
+  onSuccess?: (config: PurchaseConfig | AutoPurchaseConfig) => void;
 }
 
 export function AutoPurchaseModal({

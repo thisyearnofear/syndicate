@@ -192,10 +192,8 @@ export class ContractDataService {
    */
   async getUserBalance(address?: string): Promise<UserBalance> {
     try {
-      const provider = this.baseChain.getProvider();
-      if (!provider) throw new Error("Provider not initialized");
-
       let userAddress = address;
+      
       if (!userAddress) {
         if (!this.baseChain.isReady()) {
           return { usdc: "0", eth: "0", hasEnoughUsdc: false, hasEnoughEth: false };
@@ -208,47 +206,65 @@ export class ContractDataService {
         }
       }
 
-      if (!userAddress || !userAddress.startsWith("0x") || userAddress.length !== 42) {
-        return { usdc: "0", eth: "0", hasEnoughUsdc: false, hasEnoughEth: false };
-      }
-      const cacheKey = "balance:" + userAddress;
-      const cached = this.getCached<UserBalance>(cacheKey);
-      if (cached !== null) {
-        return cached;
-      }
+      // Check if EVM address
+      if (userAddress && userAddress.startsWith("0x") && userAddress.length === 42) {
+        const provider = this.baseChain.getProvider();
+        if (!provider) throw new Error("Provider not initialized");
 
-      return this.deduplicateRequest(cacheKey, async () => {
-        try {
-          // Parallelize requests to reduce latency
-          const [usdcBalance, ethBalance] = await Promise.all([
-            this.usdcContract.balanceOf(userAddress).catch(() => BigInt(0)),
-            provider.getBalance(userAddress).catch(() => BigInt(0)),
-          ]);
-
-          const usdcFormatted = ethers.formatUnits(usdcBalance, 6);
-          const ethFormatted = ethers.formatEther(ethBalance);
-
-          const result: UserBalance = {
-            usdc: usdcFormatted,
-            eth: ethFormatted,
-            hasEnoughUsdc: parseFloat(usdcFormatted) >= 1,
-            hasEnoughEth: parseFloat(ethFormatted) >= 0.001,
-          };
-
-          this.setCache(cacheKey, result, CACHE_CONFIG.USER_BALANCE);
-          return result;
-        } catch (error) {
-          // Silently return fallback on error
-          return {
-            usdc: "0",
-            eth: "0",
-            hasEnoughUsdc: false,
-            hasEnoughEth: false,
-          };
+        const cacheKey = "balance:" + userAddress;
+        const cached = this.getCached<UserBalance>(cacheKey);
+        if (cached !== null) {
+          return cached;
         }
-      });
+
+        return this.deduplicateRequest(cacheKey, async () => {
+          try {
+            // Parallelize requests to reduce latency
+            const [usdcBalance, ethBalance] = await Promise.all([
+              this.usdcContract.balanceOf(userAddress).catch(() => BigInt(0)),
+              provider.getBalance(userAddress).catch(() => BigInt(0)),
+            ]);
+
+            const usdcFormatted = ethers.formatUnits(usdcBalance, 6);
+            const ethFormatted = ethers.formatEther(ethBalance);
+
+            const result: UserBalance = {
+              usdc: usdcFormatted,
+              eth: ethFormatted,
+              hasEnoughUsdc: parseFloat(usdcFormatted) >= 1,
+              hasEnoughEth: parseFloat(ethFormatted) >= 0.001,
+            };
+
+            this.setCache(cacheKey, result, CACHE_CONFIG.USER_BALANCE);
+            return result;
+          } catch (error) {
+            return {
+              usdc: "0",
+              eth: "0",
+              hasEnoughUsdc: false,
+              hasEnoughEth: false,
+            };
+          }
+        });
+      }
+      
+      // Check if Solana address
+      if (userAddress && !userAddress.startsWith("0x") && userAddress.length >= 32 && userAddress.length <= 44) {
+        try {
+          const solanaUsdc = await this.getSolanaBalance(userAddress, "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+          return {
+            usdc: solanaUsdc,
+            eth: "0",
+            hasEnoughUsdc: parseFloat(solanaUsdc) >= 1,
+            hasEnoughEth: false
+          };
+        } catch (error) {
+          return { usdc: "0", eth: "0", hasEnoughUsdc: false, hasEnoughEth: false };
+        }
+      }
+
+      return { usdc: "0", eth: "0", hasEnoughUsdc: false, hasEnoughEth: false };
     } catch (error) {
-      // Fallback return only after retry logic fails
       return {
         usdc: "0",
         eth: "0",

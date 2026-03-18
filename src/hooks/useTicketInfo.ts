@@ -28,7 +28,7 @@ export interface TicketInfoActions {
 }
 
 export function useTicketInfo(): TicketInfoState & TicketInfoActions {
-  const { isConnected, address } = useWalletConnection();
+  const { isConnected, address, walletType } = useWalletConnection();
   const [state, setState] = useState<TicketInfoState>({
     userTicketInfo: null,
     oddsInfo: null,
@@ -46,24 +46,56 @@ export function useTicketInfo(): TicketInfoState & TicketInfoActions {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      // Initialize web3Service if needed
-      await web3Service.initialize();
+      const isSolana = walletType === 'solana';
 
-      const [userInfo, odds, balance] = await Promise.all([
-        web3Service.getCurrentTicketInfo(address),
-        web3Service.getOddsInfo(),
-        web3Service.getUserBalance(address),
-      ]);
+      if (isSolana) {
+        // For Solana wallets: fetch balance via API (no MetaMask interaction)
+        // Use a public read-only Base RPC for jackpot/odds — no signer needed
+        const BASE_READ_ONLY_RPC = 'https://mainnet.base.org';
+        const [balanceRes, odds] = await Promise.all([
+          fetch(`/api/balance?address=${address}`).then(r => r.json()).catch(() => ({ solana: '0' })),
+          web3Service.initialize(BASE_READ_ONLY_RPC)
+            .then(() => web3Service.getOddsInfo())
+            .catch(() => null),
+        ]);
 
-      if (!mountedRef.current) return;
+        if (!mountedRef.current) return;
 
-      setState(prev => ({
-        ...prev,
-        userTicketInfo: userInfo,
-        oddsInfo: odds,
-        userBalance: balance,
-        isLoading: false,
-      }));
+        // /api/balance returns { solana, total } for Solana addresses
+        const solanaUsdc = balanceRes?.solana || balanceRes?.total || balanceRes?.usdc || '0';
+
+        setState(prev => ({
+          ...prev,
+          userTicketInfo: null, // Solana users don't have Base ticket history yet
+          oddsInfo: odds,
+          userBalance: {
+            usdc: solanaUsdc,
+            eth: '0',
+            hasEnoughUsdc: parseFloat(solanaUsdc) >= 1,
+            hasEnoughEth: false,
+          },
+          isLoading: false,
+        }));
+      } else {
+        // EVM wallets: full web3Service flow
+        await web3Service.initialize();
+
+        const [userInfo, odds, balance] = await Promise.all([
+          web3Service.getCurrentTicketInfo(address),
+          web3Service.getOddsInfo(),
+          web3Service.getUserBalance(address),
+        ]);
+
+        if (!mountedRef.current) return;
+
+        setState(prev => ({
+          ...prev,
+          userTicketInfo: userInfo,
+          oddsInfo: odds,
+          userBalance: balance,
+          isLoading: false,
+        }));
+      }
     } catch (err) {
       if (!mountedRef.current) return;
       console.error('[useTicketInfo] Error fetching info:', err);
@@ -73,7 +105,7 @@ export function useTicketInfo(): TicketInfoState & TicketInfoActions {
         error: err instanceof Error ? err.message : 'Failed to fetch ticket info',
       }));
     }
-  }, [isConnected, address]);
+  }, [isConnected, address, walletType]);
 
   const claimWinnings = useCallback(async (): Promise<string | null> => {
     if (!isConnected || !address) return null;

@@ -194,7 +194,7 @@ export function AutoPurchaseSettings() {
         <AutoPurchaseModal
           isOpen={showPermissionModal}
           onClose={() => setShowPermissionModal(false)}
-          onSuccess={handlePermissionGranted}
+          onSuccess={handlePermissionGranted as any}
         />
       </div>
     );
@@ -390,7 +390,7 @@ export function AutoPurchaseSettings() {
       <AutoPurchaseModal
         isOpen={showPermissionModal}
         onClose={() => setShowPermissionModal(false)}
-        onSuccess={handlePermissionGranted}
+        onSuccess={handlePermissionGranted as any}
       />
     </div>
   );
