@@ -1,14 +1,49 @@
 import React from 'react';
 import { CompactCard, CompactStack } from '@/shared/components/premium/CompactLayout';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
-import { TrendingUp, Wallet, Heart, Trophy, Zap } from 'lucide-react';
+import { TrendingUp, Wallet, Heart, Trophy, Zap, ShieldAlert, BadgeCheck } from 'lucide-react';
 import { YieldPerformanceDisplay } from '@/components/yield/YieldPerformanceDisplay';
+import { useToast, useErrorToast, useSuccessToast } from '@/shared/components/ui/Toast';
+import { vaultManager } from '@/services/vaults';
+import { Button } from '@/shared/components/ui/Button';
 
 interface YieldDashboardProps {
   className?: string;
 }
 
 export function YieldDashboard({ className = '' }: YieldDashboardProps) {
+  const { addToast } = useToast();
+  const successToast = useSuccessToast();
+  const errorToast = useErrorToast();
+
+  const handleWithdrawPrincipal = async () => {
+    try {
+      // DRIFT PREMIUM strategy is selected by default in this context
+      // We manually fetch user address from context in the real service
+      addToast({
+        type: "info",
+        title: "Initiating Withdrawal",
+        message: "Checking strategy lockup status..."
+      });
+
+      // Simulation of principal status check
+      const isPremiumStrategy = true; 
+      if (isPremiumStrategy) {
+        errorToast(
+          "Principal Locked", 
+          "Drift Premium JLP strategy requires 3 months of activity to maintain yield coverage. Status: ~82 days remaining."
+        );
+        return;
+      }
+
+      // Default withdrawal path (for non-premium strategies or expired locks)
+      // await vaultManager.withdraw('drift', '2450.00', 'USER_ADDRESS_HERE');
+      successToast("Principal Withdrawn", "Your capital has been successfully moved back to your main wallet.");
+    } catch (err: any) {
+      errorToast("Withdrawal Failed", err.message || "An unexpected error occurred.");
+    }
+  };
+
   return (
     <div className={`w-full ${className}`}>
       <div className="mb-6">
@@ -78,6 +113,8 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
           totalYield={128.45}
           ticketsGenerated={128}
           causesFunded={85.30}
+          isLocked={true}
+          onWithdrawPrincipal={handleWithdrawPrincipal}
         />
         
         {/* Strategy Allocation */}
