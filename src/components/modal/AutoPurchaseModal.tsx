@@ -464,7 +464,7 @@ export function AutoPurchaseModal({
                       window.location.href = '/yield-strategies';
                     }}
                   >
-                    Set Up Yield-to-Tickets
+                    Try Yield-to-Tickets
                   </Button>
                 </div>
               )}

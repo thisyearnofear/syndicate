@@ -292,3 +292,6 @@ export class BaseChainService {
     return typeof window !== "undefined" && typeof document !== "undefined";
   }
 }
+
+// CLEAN: Export singleton instance
+export const baseChainService = new BaseChainService();
