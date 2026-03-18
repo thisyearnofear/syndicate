@@ -14,8 +14,9 @@
  */
 
 import { useState, Suspense, lazy, useEffect } from "react";
+import type { ReactNode } from "react";
 import { Button } from "@/shared/components/ui/Button";
-import { Loader, AlertCircle, Check, Zap, Link2, ChevronDown } from "lucide-react";
+import { Loader, AlertCircle, Check, Zap, Link2, ChevronDown, TrendingUp } from "lucide-react";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { useSimplePurchase } from "@/hooks/useSimplePurchase";
 import { useERC7715 } from "@/hooks/useERC7715";
@@ -56,6 +57,89 @@ const getExplorerUrl = (chain: SourceChainType, txHash: string): string => {
     default:
       return "#";
   }
+};
+
+// P1.1: DRY helper for CrossChainTracker section
+const renderTrackerSection = ({
+  chain,
+  sourceTxHash,
+  destinationTxHash,
+  status,
+  error,
+  ticketCount,
+  walletInfo,
+  showActions = true,
+  statusLinkCopied = false,
+  onCopyLink,
+  customLink,
+  customButtons,
+}: {
+  chain: SourceChainType;
+  sourceTxHash?: string | null;
+  destinationTxHash?: string | null;
+  status: TrackerStatus;
+  error?: string | null;
+  ticketCount: number;
+  walletInfo?: { sourceAddress?: string; baseAddress?: string; isLinked?: boolean };
+  showActions?: boolean;
+  statusLinkCopied?: boolean;
+  onCopyLink?: () => void;
+  customLink?: React.ReactNode;
+  customButtons?: React.ReactNode;
+}) => {
+  // Convert null to undefined for CrossChainTracker props
+  const txId = sourceTxHash ?? undefined;
+  const destTxId = destinationTxHash ?? undefined;
+  const txError = error ?? undefined;
+  const explorerUrl = txId ? getExplorerUrl(chain, txId) : undefined;
+  
+  return (
+    <div>
+      <CrossChainTracker
+        status={status}
+        sourceChain={chain}
+        sourceTxId={txId}
+        baseTxId={destTxId}
+        error={txError}
+        ticketCount={ticketCount}
+        walletInfo={walletInfo}
+        receipt={{
+          sourceExplorer: explorerUrl,
+          baseExplorer: destTxId
+            ? `https://basescan.org/tx/${destTxId}`
+            : undefined,
+          megapotApp: `/my-tickets`,
+        }}
+      />
+      {showActions && (
+        <div className="mt-4">
+          {customLink || (sourceTxHash && (
+            <div className="flex items-center gap-3">
+              <a
+                href={`/purchase-status/${sourceTxHash}/track`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1"
+              >
+                Open Live Tracker →
+              </a>
+              {onCopyLink && (
+                <button
+                  type="button"
+                  onClick={onCopyLink}
+                  className="text-xs text-gray-300 hover:text-white inline-flex items-center gap-1"
+                >
+                  <Link2 className="w-3 h-3" />
+                  {statusLinkCopied ? "Copied" : "Copy Link"}
+                </button>
+              )}
+            </div>
+          ))}
+          {customButtons}
+        </div>
+      )}
+    </div>
+  );
 };
 
 export interface SimplePurchaseModalProps {
@@ -419,20 +503,53 @@ export default function SimplePurchaseModal({
               </div>
             </div>
 
+            {/* ENHANCEMENT: Reusable Gamified Yield Upsell (Drift Vault) */}
+            {ticketCount >= 1 && (
+              <div className="bg-gradient-to-r from-indigo-500/20 to-purple-500/10 border border-indigo-500/30 rounded-lg p-4 space-y-3 relative overflow-hidden mt-4">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+                <div className="flex items-start gap-3 relative z-10">
+                  <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0 border border-indigo-500/40">
+                    <TrendingUp className="w-4 h-4 text-indigo-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white mb-1 tracking-tight">
+                      Play for free forever? ♾️
+                    </h4>
+                    <p className="text-xs text-indigo-200 leading-relaxed">
+                      Instead of spending capital, deposit into the <span className="text-indigo-300 font-semibold">Drift Lossless Vault</span>. You keep your principal and get auto-routed tickets from ~22.5% APY yield.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full text-xs bg-indigo-500/20 hover:bg-indigo-500/30 border-indigo-500/30 text-indigo-100 transition-colors"
+                  onClick={() => {
+                    handleClose();
+                    window.location.href = '/yield-strategies';
+                  }}
+                >
+                  Explore Lossless Lottery
+                </Button>
+              </div>
+            )}
+
             {/* Cost Breakdown */}
+            {/* P0.4 FIX: Now includes starknet since execution path is wired */}
             {selectedChain && selectedChain !== "ethereum" && (
               <CostBreakdown
                 ticketCount={ticketCount}
-                sourceChain={selectedChain}
+                sourceChain={selectedChain as 'stacks' | 'near' | 'solana' | 'base' | 'starknet'}
               />
             )}
 
             {/* Time Estimate */}
+            {/* P0.4 FIX: Now includes starknet since execution path is wired */}
             {selectedChain &&
               selectedChain !== "base" &&
               selectedChain !== "ethereum" && (
                 <TimeEstimate
-                  sourceChain={selectedChain}
+                  sourceChain={selectedChain as 'stacks' | 'near' | 'solana' | 'starknet'}
                 />
               )}
 
@@ -466,51 +583,21 @@ export default function SimplePurchaseModal({
 
       case "processing":
         // Show enhanced tracker during processing
-        // P0.1 FIX: Use effectiveChain for display when sourceChain not yet available
+        // P0.1 FIX: Use selectedChain for display when sourceChain not yet available
         const processingChain = sourceChain || selectedChain;
         if (showTracker && processingChain) {
-          return (
-            <div>
-              <CrossChainTracker
-                status={status}
-                sourceChain={processingChain}
-                sourceTxId={sourceTxHash || undefined}
-                baseTxId={destinationTxHash || undefined}
-                error={error}
-                ticketCount={ticketCount}
-                walletInfo={walletInfo}
-                receipt={{
-                  sourceExplorer: sourceTxHash
-                    ? getExplorerUrl(processingChain, sourceTxHash)
-                    : undefined,
-                  baseExplorer: destinationTxHash
-                    ? `https://basescan.org/tx/${destinationTxHash}`
-                    : undefined,
-                  megapotApp: `/my-tickets`,
-                }}
-              />
-              {sourceTxHash && (
-                <div className="mt-4 flex items-center gap-3">
-                  <a
-                    href={`/purchase-status/${sourceTxHash}/track`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1"
-                  >
-                    Open Live Tracker →
-                  </a>
-                  <button
-                    type="button"
-                    onClick={handleCopyStatusLink}
-                    className="text-xs text-gray-300 hover:text-white inline-flex items-center gap-1"
-                  >
-                    <Link2 className="w-3 h-3" />
-                    {statusLinkCopied ? "Copied" : "Copy Link"}
-                  </button>
-                </div>
-              )}
-            </div>
-          );
+          return renderTrackerSection({
+            chain: processingChain,
+            sourceTxHash,
+            destinationTxHash,
+            status,
+            error,
+            ticketCount,
+            walletInfo,
+            showActions: true,
+            statusLinkCopied,
+            onCopyLink: handleCopyStatusLink,
+          });
         }
 
         // Fallback to simple loading state
@@ -544,35 +631,25 @@ export default function SimplePurchaseModal({
         const isCrossChain = effectiveChain && effectiveChain !== "base" && effectiveChain !== "ethereum";
         
         if (showTracker && effectiveChain && isCrossChain) {
-          return (
-            <div>
-              <CrossChainTracker
-                status={status}
-                sourceChain={effectiveChain}
-                sourceTxId={sourceTxHash || undefined}
-                baseTxId={destinationTxHash || undefined}
-                error={error}
-                ticketCount={ticketCount}
-                walletInfo={walletInfo}
-                receipt={{
-                  sourceExplorer: sourceTxHash
-                    ? getExplorerUrl(effectiveChain, sourceTxHash)
-                    : undefined,
-                  baseExplorer: destinationTxHash
-                    ? `https://basescan.org/tx/${destinationTxHash}`
-                    : undefined,
-                  megapotApp: `/my-tickets`,
-                }}
-              />
-              {sourceTxHash && isCrossChain && (
-                <a
-                  href={`/purchase-status/${sourceTxHash}?chain=${effectiveChain}`}
-                  className="mt-4 inline-block text-sm text-blue-400 hover:text-blue-300"
-                >
-                  Open Status Page
-                </a>
-              )}
-              <div className="mt-4 flex gap-3">
+          return renderTrackerSection({
+            chain: effectiveChain,
+            sourceTxHash,
+            destinationTxHash,
+            status,
+            error,
+            ticketCount,
+            walletInfo,
+            showActions: true,
+            customLink: sourceTxHash && isCrossChain ? (
+              <a
+                href={`/purchase-status/${sourceTxHash}?chain=${effectiveChain}`}
+                className="inline-block text-sm text-blue-400 hover:text-blue-300"
+              >
+                Open Status Page
+              </a>
+            ) : undefined,
+            customButtons: (
+              <div className="flex gap-3 mt-3">
                 <Button
                   variant="outline"
                   className="flex-1"
@@ -593,8 +670,8 @@ export default function SimplePurchaseModal({
                   Done
                 </Button>
               </div>
-            </div>
-          );
+            ),
+          });
         }
 
         // Standard success view for direct purchases

@@ -17,6 +17,7 @@ import {
   DollarSign,
   Calendar,
   RotateCcw,
+  TrendingUp,
 } from "lucide-react";
 import { useERC7715 } from "@/hooks/useERC7715";
 import { AdvancedPermissionsTooltip } from "@/components/common/InfoTooltip";
@@ -33,6 +34,14 @@ interface PurchaseConfig {
   ticketCount: number;
   totalAmount: number;
   paymentToken: 'usdcx' | 'sbtc'; // P0.2 FIX: Made required, not optional
+  // Extended fields for internal use (persisted to localStorage)
+  permission?: {
+    permissionId: string;
+    auth: string;
+    signature: string;
+  };
+  enabled?: boolean;
+  tokenAddress?: string;
 }
 
 interface AutoPurchaseModalProps {
@@ -147,6 +156,7 @@ export function AutoPurchaseModal({
 
         if (result.success) {
           // Store the authorization for future auto-purchases
+          // Note: Extended type with auth info for localStorage, but onSuccess uses PurchaseConfig
           const executorConfig = {
             authorizationId: result.authorizationId,
             signature: result.signature,
@@ -154,6 +164,7 @@ export function AutoPurchaseModal({
             frequency: config.frequency,
             ticketCount: config.ticketCount,
             amount: config.amount,
+            totalAmount: config.totalAmount,
             nextExecutionTime: Date.now() + (config.frequency === 'weekly' ? 7 : 30) * 24 * 60 * 60 * 1000,
           };
           localStorage.setItem(
@@ -163,7 +174,15 @@ export function AutoPurchaseModal({
 
           setStep("success");
           if (onSuccess) {
-            setTimeout(() => onSuccess(executorConfig), 2000);
+            // Pass PurchaseConfig without auth fields (onSuccess callback expects PurchaseConfig)
+            const successConfig: PurchaseConfig = {
+              amount: config.amount,
+              frequency: config.frequency,
+              ticketCount: config.ticketCount,
+              totalAmount: config.totalAmount,
+              paymentToken: config.paymentToken,
+            };
+            setTimeout(() => onSuccess(successConfig), 2000);
           }
         } else {
           throw new Error(result.error || 'Failed to authorize recurring payment');
@@ -309,6 +328,7 @@ export function AutoPurchaseModal({
       frequency: "weekly",
       ticketCount: 10,
       totalAmount: 50,
+      paymentToken: 'usdcx', // P0.2 FIX: Include paymentToken in reset
     });
     setErrorMessage(null);
     clearError();
@@ -417,6 +437,37 @@ export function AutoPurchaseModal({
                   </div>
                 </div>
               </div>
+
+              {/* ENHANCEMENT: Reusable Gamified Yield Upsell (Drift Vault) */}
+              {config.totalAmount > 0 && (
+                <div className="bg-gradient-to-r from-indigo-500/20 to-purple-500/10 border border-indigo-500/30 rounded-lg p-4 space-y-3 relative overflow-hidden mt-4">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+                  <div className="flex items-start gap-3 relative z-10">
+                    <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0 border border-indigo-500/40">
+                      <TrendingUp className="w-4 h-4 text-indigo-400" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white mb-1 tracking-tight">
+                        Why drain your wallet? ♾️
+                      </h4>
+                      <p className="text-xs text-indigo-200 leading-relaxed">
+                        Instead of spending ${config.totalAmount} a {config.frequency}, deposit ${Math.round((config.totalAmount * 12) / 0.225)} into the <span className="text-indigo-300 font-semibold">Drift Lossless Vault</span>. Let the ~22.5% APY yield fund these tickets forever while you keep your principal.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="w-full text-xs bg-indigo-500/20 hover:bg-indigo-500/30 border-indigo-500/30 text-indigo-100 transition-colors"
+                    onClick={() => {
+                      onClose();
+                      window.location.href = '/yield-strategies';
+                    }}
+                  >
+                    Set Up Yield-to-Tickets
+                  </Button>
+                </div>
+              )}
 
               {/* Stacks-specific: Token and x402 info */}
               {isStacksWallet && (

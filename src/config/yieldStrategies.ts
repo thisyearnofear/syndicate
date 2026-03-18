@@ -60,6 +60,14 @@ export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
     risk: 'Low',
     isOctant: true,
   },
+  {
+    id: 'drift',
+    name: 'Drift Delta Neutral',
+    description: 'JLP Delta Neutral Vault (Solana, 3-Month Lock). Earns >10% APY USDC with automated yield routing.',
+    icon: '⛵',
+    color: 'bg-gradient-to-br from-sky-400 to-blue-600',
+    risk: 'Medium',
+  },
 ];
 
 export function getStrategyById(id: SyndicateInfo['vaultStrategy']): YieldStrategyConfig | undefined {

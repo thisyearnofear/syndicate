@@ -173,8 +173,8 @@ const formatAddress = (address?: string): string => {
 
 export function CrossChainTracker({
   status,
-  sourceChain = "stacks", // Default to stacks for backward compatibility
-  stacksTxId,
+  sourceChain, // No default - require explicit chain
+  stacksTxId, // DEPRECATED: Kept for API compatibility only
   sourceTxId,
   baseTxId,
   ticketCount = 1,
@@ -185,7 +185,11 @@ export function CrossChainTracker({
   const steps = getStepsForChain(sourceChain);
   const isCrossChain =
     sourceChain && sourceChain !== "base" && sourceChain !== "ethereum";
-  const txId = sourceTxId || stacksTxId; // Support both props
+  // P1.2: Prefer new prop, fallback to deprecated only for compatibility
+  const txId = sourceTxId || stacksTxId;
+  
+  // P1.2: Use sourceExplorer (new), fallback to stacksExplorer (deprecated) for compatibility
+  const sourceExplorer = receipt?.sourceExplorer || receipt?.stacksExplorer;
 
   const getStepStatus = (
     stepId: string,

@@ -22,6 +22,7 @@ import type {
 } from './vaultProvider';
 import { VaultError, VaultErrorCode } from './vaultProvider';
 import { aaveProvider } from './aaveProvider';
+import { driftProvider } from './driftProvider';
 
 /**
  * Vault information for UI display
@@ -62,6 +63,9 @@ export class VaultManager {
 
         // Register Aave provider (Week 2)
         this.providers.set('aave', aaveProvider);
+
+        // Register Drift provider (Build-a-Bear Hackathon)
+        this.providers.set('drift', driftProvider);
 
         // TODO: Register Morpho provider (Week 8)
         // this.providers.set('morpho', morphoProvider);
@@ -243,6 +247,7 @@ export class VaultManager {
             aave: 'Aave V3',
             morpho: 'Morpho Blue',
             spark: 'Spark Protocol',
+            drift: 'Drift Delta Neutral (Hackathon)',
         };
         return names[protocol];
     }
@@ -252,6 +257,7 @@ export class VaultManager {
             aave: 'Decentralized lending protocol with proven track record',
             morpho: 'Optimized lending with better rates than Aave',
             spark: 'MakerDAO lending protocol with DAI integration',
+            drift: 'Solana USDC yield via Drift Protocol with automated ticket routing',
         };
         return descriptions[protocol];
     }
@@ -263,3 +269,4 @@ export const vaultManager = new VaultManager();
 // Re-export types and providers
 export * from './vaultProvider';
 export { aaveProvider } from './aaveProvider';
+export { driftProvider } from './driftProvider';
