@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
 import { JsonRpcProvider } from '@near-js/providers';
 
-const SOLANA_RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://rpc.ankr.com/solana';
+const SOLANA_RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC || '/api/solana-rpc';
 const BASE_RPC_URL = process.env.BASE_RPC_URL || 'https://mainnet.base.org';
 const NEAR_RPC_URL = process.env.NEXT_PUBLIC_NEAR_RPC_URL || 'https://rpc.mainnet.near.org';
 
@@ -14,7 +14,7 @@ const NEAR_USDC_ID = '17208628f84f5d6ad33f0558bac3802d3bbdd174726366e1.factory.b
 /**
  * Internal function to handle balance fetching
  */
-async function handleBalanceRequest(address: string, chainId?: number) {
+async function handleBalanceRequest(address: string, chainId?: number, rpcUrl?: string) {
   if (!address) {
     return NextResponse.json(
       { error: 'Missing address parameter' },
@@ -37,7 +37,7 @@ if (!isEvmAddress && !isSolanaAddress && !isNearAddress && !isStarknetAddress &&
 
 // Route based on address type
 if (isSolanaAddress) {
-  return await getSolanaBalance(address);
+  return await getSolanaBalance(address, rpcUrl);
 } else if (isNearAddress && !isEvmAddress) {
   return await getNearBalance(address);
 } else if (isStacksAddress) {
@@ -68,7 +68,15 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const address = searchParams.get('address');
     const chainId = searchParams.get('chainId') ? parseInt(searchParams.get('chainId')!) : undefined;
-    return handleBalanceRequest(address || '', chainId);
+    
+    // Resolve absolute URL for relative RPC paths
+    let rpcUrl = SOLANA_RPC_URL;
+    if (rpcUrl.startsWith('/')) {
+      const url = new URL(request.url);
+      rpcUrl = `${url.origin}${rpcUrl}`;
+    }
+
+    return handleBalanceRequest(address || '', chainId, rpcUrl);
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error('Balance API error:', error);
@@ -83,7 +91,15 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { address, chainId } = body;
-    return handleBalanceRequest(address, chainId);
+    
+    // Resolve absolute URL for relative RPC paths
+    let rpcUrl = SOLANA_RPC_URL;
+    if (rpcUrl.startsWith('/')) {
+      const url = new URL(request.url);
+      rpcUrl = `${url.origin}${rpcUrl}`;
+    }
+
+    return handleBalanceRequest(address, chainId, rpcUrl);
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error('Balance API error:', error);
@@ -94,10 +110,11 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function getSolanaBalance(walletAddress: string): Promise<NextResponse> {
+async function getSolanaBalance(walletAddress: string, rpcOverride?: string): Promise<NextResponse> {
   try {
+    const rpcUrl = rpcOverride || SOLANA_RPC_URL;
     // Fetch token accounts for the wallet
-    const response = await fetch(SOLANA_RPC_URL, {
+    const response = await fetch(rpcUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

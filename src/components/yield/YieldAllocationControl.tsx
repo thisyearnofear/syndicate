@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
+import { Button } from '@/shared/components/ui/Button';
 import { Heart, Trophy } from 'lucide-react';
 
 interface YieldAllocationControlProps {
@@ -29,9 +30,9 @@ export function YieldAllocationControl({
 
   return (
     <div className={`w-full ${className}`}>
-      <h3 className="text-lg font-bold text-white mb-4">Yield Allocation</h3>
+      <h3 className="text-lg font-bold text-white mb-4">Auto-Route Configuration</h3>
       <p className="text-gray-400 text-sm mb-6">
-        How should your yield be allocated? More tickets = more chances to win, more causes = direct impact
+        Configure how your yield is harvested. <span className="text-indigo-400 font-semibold">Generate Tickets</span> to play for free, or <span className="text-red-400 font-semibold">Direct Impact</span> to fund causes.
       </p>
       
       <PuzzlePiece variant="secondary" size="md" shape="rounded" className="relative">
@@ -68,10 +69,19 @@ export function YieldAllocationControl({
           
           {/* Slider Control */}
           <div className="space-y-4">
-            <label className="flex items-center justify-between text-sm text-gray-300">
-              Ticket Amplification Focus
-              <span className="text-yellow-400 font-bold">{localTickets}%</span>
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-sm text-gray-300">
+                Ticket Generation Bias
+              </label>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 text-[10px] uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
+                onClick={() => handleSliderChange(100)}
+              >
+                100% Lossless Play
+              </Button>
+            </div>
             
             <input
               type="range"
@@ -79,15 +89,13 @@ export function YieldAllocationControl({
               max="100"
               value={localTickets}
               onChange={(e) => handleSliderChange(parseInt(e.target.value))}
-              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer 
-                        [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 
-                        [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full 
-                        [&::-webkit-slider-thumb]:bg-yellow-400"
+              className="w-full h-2 bg-slate-700/50 rounded-lg appearance-none cursor-pointer 
+                        accent-indigo-500 shadow-inner"
             />
             
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>Conservative Impact</span>
-              <span>Max Amplification</span>
+            <div className="flex justify-between text-[10px] text-gray-500 mt-1 uppercase tracking-widest">
+              <span>Pure Impact</span>
+              <span>Max Tickets</span>
             </div>
           </div>
         </div>
@@ -101,10 +109,10 @@ export function YieldAllocationControl({
                 <span className="text-xs text-gray-400">Ticket Impact</span>
               </div>
               <p className="text-sm font-bold text-yellow-400">
-                {localTickets}% yield → lottery tickets
+                {localTickets}% → Automated Buy
               </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Amplifies your participation in draws
+              <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                Sweeps yield into new entries. Principal remains safe.
               </p>
             </div>
             
