@@ -15,15 +15,16 @@ Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, A
 |-------|----------|-------|
 | Base | CCTP + ERC-7715 | Native USDC, Advanced Permissions |
 | Stacks | USDCx + sBTC + x402 | Native Circle USDC, SIP-018 signatures |
-| Solana | Proxy | Token accounts |
+| Solana | Drift Vaults + Proxy | Delta-neutral JLP yield, Lossless Lottery |
 | NEAR | Intents | Cross-chain intents |
 | Starknet | Cairo contracts | Native bridging |
 
 ### Key Files
 - `src/services/bridges/protocols/stacks.ts` - Stacks bridge with USDCx/sBTC support
-- `src/domains/wallet/services/stacksX402Service.ts` - x402 auto-purchase for Stacks
-- `src/components/modal/AutoPurchaseModal.tsx` - Auto-purchase UI (EVM + Stacks)
-- `src/components/modal/SimplePurchaseModal.tsx` - Direct purchase with token selector
+- `src/services/vaults/driftProvider.ts` - Drift Delta-Neutral Vault (Solana)
+- `src/services/yieldToTicketsService.ts` - Orchestrator for Yield -> Ticket conversion
+- `src/components/modal/AutoPurchaseModal.tsx` - Auto-purchase + Yield upsell UI
+- `src/components/modal/SimplePurchaseModal.tsx` - Direct purchase + Yield upsell UI
 
 ## Tech Stack
 - **Framework**: Next.js 14 (App Router)
@@ -38,6 +39,14 @@ npm run dev    # Development server
 npm run build  # Production build
 npm run lint   # Lint (note: may have config issues)
 ```
+
+## Lossless Lottery (Yield-to-Tickets) Flow
+1. User deposits USDC into **Drift JLP Vault** (Solana) via `DriftVaultProvider`.
+2. Principal is locked for 3 months to normalize yield (~20%+ APY).
+3. `YieldToTicketsService` monitors accrued yield.
+4. On-chain orchestrator (or relayer) triggers `withdrawYield()`.
+5. Yield is auto-routed to `PurchaseOrchestrator` to mint lottery tickets.
+6. User enters lottery for "free" while maintaining 100% of their base capital.
 
 ## x402 Auto-Purchase Flow
 1. User configures frequency (weekly/monthly), amount, ticket count

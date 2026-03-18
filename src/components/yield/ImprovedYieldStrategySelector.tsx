@@ -164,6 +164,9 @@ export function ImprovedYieldStrategySelector({
                         )}
                       </div>
                     </div>
+                    <p className="font-bold text-indigo-400">
+                      {selectedStrategy === 'drift' ? 'Premium Strategy 🚀' : 'Coming Soon'}
+                    </p>
                     <p className="text-xs text-gray-400 mt-1">
                       {strategy.description}
                       {octantVault && (
@@ -237,8 +240,8 @@ export function ImprovedYieldStrategySelector({
                 <div className="mt-4 p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex gap-3 text-sm">
                   <span className="text-indigo-400 text-xl">ℹ️</span>
                   <div className="text-indigo-200">
-                    <p className="font-semibold text-indigo-300 mb-1">Ranger Finance Hackathon Strategy</p>
-                    <p>This JLP Delta Neutral vault executes on Solana and requires a strict 3-month rolling lockup on your principal deposit. Yields (&gt;10% APY USDC) can be claimed or automatically routed to Megapot tickets at any time.</p>
+                    <p className="font-semibold text-indigo-300 mb-1">Premium JLP Strategy</p>
+                    <p>This JLP Delta Neutral vault executes on Solana and requires a strict 3-month rolling lockup on your principal deposit. Yields (&gt;20% APY USDC) can be claimed or automatically routed to Megapot tickets at any time.</p>
                   </div>
                 </div>
               )}

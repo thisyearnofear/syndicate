@@ -136,15 +136,21 @@ export default function YieldStrategiesPage() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div className="glass-premium p-4 rounded-lg border border-white/10">
                             <p className="text-sm text-gray-400 mb-1">Risk Level</p>
-                            <p className="font-bold text-white">Low to Medium</p>
+                            <p className="font-bold text-white">
+                              {selectedStrategy === 'drift' ? 'Medium (Hedged)' : 'Low to Medium'}
+                            </p>
                           </div>
                           <div className="glass-premium p-4 rounded-lg border border-white/10">
                             <p className="text-sm text-gray-400 mb-1">Expected APY</p>
-                            <p className="font-bold text-white">3-6%</p>
+                            <p className="font-bold text-white">
+                              {selectedStrategy === 'drift' ? '~22.5%' : '3-6%'}
+                            </p>
                           </div>
                           <div className="glass-premium p-4 rounded-lg border border-white/10">
-                            <p className="text-sm text-gray-400 mb-1">Security</p>
-                            <p className="font-bold text-white">Audited</p>
+                            <p className="text-sm text-gray-400 mb-1">Status</p>
+                            <p className="font-bold text-indigo-400">
+                              {selectedStrategy === 'drift' ? 'Hackathon Ready 🚀' : 'Coming Soon'}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -177,9 +183,9 @@ export default function YieldStrategiesPage() {
                         1
                       </div>
                       <div>
-                        <h4 className="font-bold text-white">Deposit Your Tickets</h4>
+                        <h4 className="font-bold text-white">Deposit Into Vaults</h4>
                         <p className="text-gray-400">
-                          When you purchase tickets for syndicates, the capital goes into yield-generating vaults
+                          Transfer USDC into premium delta-neutral or lending vaults (like Drift JLP or Aave).
                         </p>
                       </div>
                     </div>
@@ -201,9 +207,9 @@ export default function YieldStrategiesPage() {
                         3
                       </div>
                       <div>
-                        <h4 className="font-bold text-white">Allocate Yield</h4>
+                        <h4 className="font-bold text-white">Auto-Route Yield</h4>
                         <p className="text-gray-400">
-                          Yield splits according to your preferences: tickets for more chances, causes for impact
+                          Our smart orchestrator sweeps your yield to buy lottery tickets automatically. Principal stays locked and safe.
                         </p>
                       </div>
                     </div>
