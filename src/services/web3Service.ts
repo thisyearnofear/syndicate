@@ -19,7 +19,7 @@ import {
   getMegapotAddressForChain,
   getUsdcAddressForChain,
 } from "@/config";
-import { BaseChainService } from "./base/BaseChainService";
+import { baseChainService, BaseChainService } from "./base/BaseChainService";
 import { ContractDataService } from "./base/ContractDataService";
 import { TransactionExecutor } from "./base/TransactionExecutor";
 import type {
@@ -75,7 +75,7 @@ class Web3Service {
   private isInitialized: boolean = false;
 
   constructor() {
-    this.baseChain = new BaseChainService();
+    this.baseChain = baseChainService;
   }
 
   /**

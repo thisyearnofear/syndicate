@@ -529,7 +529,7 @@ export default function SimplePurchaseModal({
                     window.location.href = '/yield-strategies';
                   }}
                 >
-                  Explore Lossless Lottery
+                  Try Yield-to-Tickets
                 </Button>
               </div>
             )}

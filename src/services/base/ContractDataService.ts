@@ -9,6 +9,9 @@
 
 import { ethers } from "ethers";
 import type { BaseChainService } from "./BaseChainService";
+import { getSolanaRpcUrls, executeWithRpcFallback } from "@/utils/rpcFallback";
+import { Connection, PublicKey } from "@solana/web3.js";
+import { getAssociatedTokenAddress } from "@solana/spl-token";
 
 interface CacheEntry<T> {
   value: T;
@@ -194,11 +197,21 @@ export class ContractDataService {
 
       let userAddress = address;
       if (!userAddress) {
-        const signer = await this.baseChain.getFreshSigner();
-        userAddress = await signer.getAddress();
+        if (!this.baseChain.isReady()) {
+          return { usdc: "0", eth: "0", hasEnoughUsdc: false, hasEnoughEth: false };
+        }
+        try {
+          const signer = await this.baseChain.getFreshSigner();
+          userAddress = await signer.getAddress();
+        } catch {
+          return { usdc: "0", eth: "0", hasEnoughUsdc: false, hasEnoughEth: false };
+        }
       }
 
-      const cacheKey = `balance:${userAddress}`;
+      if (!userAddress || !userAddress.startsWith("0x") || userAddress.length !== 42) {
+        return { usdc: "0", eth: "0", hasEnoughUsdc: false, hasEnoughEth: false };
+      }
+      const cacheKey = "balance:" + userAddress;
       const cached = this.getCached<UserBalance>(cacheKey);
       if (cached !== null) {
         return cached;
@@ -252,11 +265,18 @@ export class ContractDataService {
     try {
       let userAddress = address;
       if (!userAddress) {
-        const signer = await this.baseChain.getFreshSigner();
-        userAddress = await signer.getAddress();
+        if (!this.baseChain.isReady()) return null;
+        try {
+          const signer = await this.baseChain.getFreshSigner();
+          userAddress = await signer.getAddress();
+        } catch { return null; }
       }
 
-      const cacheKey = `tickets:${userAddress}`;
+      if (!userAddress || !userAddress.startsWith("0x") || userAddress.length !== 42) {
+        return null;
+      }
+
+      const cacheKey = "tickets:" + userAddress;
       const cached = this.getCached<UserTicketInfo>(cacheKey);
       if (cached !== null) {
         return cached;
@@ -416,6 +436,40 @@ export class ContractDataService {
       } catch (error) {
         // Silently return null - contract may not be deployed or method doesn't exist
         return null;
+      }
+    });
+  }
+
+  /**
+   * Get Solana USDC balance with RPC fallback
+   */
+  async getSolanaBalance(address: string, usdcMint: string): Promise<string> {
+    const cacheKey = `solana:balance:${address}`;
+    const cached = this.getCached<string>(cacheKey);
+    if (cached !== null) return cached;
+
+    return this.deduplicateRequest(cacheKey, async () => {
+      const rpcUrls = getSolanaRpcUrls();
+      const owner = new PublicKey(address);
+      const mint = new PublicKey(usdcMint);
+
+      try {
+        const balance = await executeWithRpcFallback(
+          async (url) => {
+            const connection = new Connection(url, "confirmed");
+            const ata = await getAssociatedTokenAddress(mint, owner);
+            const info = await connection.getTokenAccountBalance(ata);
+            return info.value.uiAmountString || "0";
+          },
+          rpcUrls,
+          10000
+        );
+
+        this.setCache(cacheKey, balance, CACHE_CONFIG.USER_BALANCE);
+        return balance;
+      } catch (error) {
+        console.error("Failed to fetch Solana balance with fallback:", error);
+        return "0";
       }
     });
   }
