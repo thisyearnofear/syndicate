@@ -125,7 +125,7 @@ export interface SyndicateInfo {
   // Yield allocation preferences
   yieldToTicketsPercentage?: number;  // 80-90% of yield used to buy more tickets
   yieldToCausesPercentage?: number;   // 10-20% of yield directly funds causes
-  vaultStrategy?: 'spark' | 'morpho' | 'octant' | 'aave' | 'uniswap';
+  vaultStrategy?: 'spark' | 'morpho' | 'octant' | 'aave' | 'uniswap' | 'drift';
   membersCount: number;
   ticketsPooled: number;
   ticketsPurchased: number;
@@ -193,7 +193,7 @@ export type PurchaseResult = {
   syndicateImpact?: SyndicateImpact;
   mode?: 'individual' | 'syndicate';
   // NEW: Yield strategy fields
-  vaultStrategy?: 'spark' | 'morpho' | 'octant' | 'aave' | 'uniswap';
+  vaultStrategy?: 'spark' | 'morpho' | 'octant' | 'aave' | 'uniswap' | 'drift';
   yieldToTicketsPercentage?: number;
   yieldToCausesPercentage?: number;
 };

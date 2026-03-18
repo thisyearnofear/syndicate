@@ -26,6 +26,7 @@ import { megapotService } from "./megapotService";
 import { getERC7715Service } from "@/services/erc7715Service";
 import { CHAINS } from "@/config";
 import type { ChainIdentifier } from "@/services/bridges/types";
+import type { VaultProtocol } from "@/services/vaults/vaultProvider";
 import { ethers } from "ethers";
 import { CONTRACTS } from "@/services/bridges/protocols/stacks";
 
@@ -54,7 +55,7 @@ export interface PurchaseRequest {
   syndicatePoolId?: string;
 
   /** For vault purchases: vault protocol and amount */
-  vaultProtocol?: "aave" | "morpho" | "spark";
+  vaultProtocol?: VaultProtocol;
   vaultAmount?: string;
 
   /** Optional: For cross-chain, where to receive tickets (defaults to userAddress on Base) */
@@ -488,6 +489,122 @@ async function executeStacksPurchase(
 }
 
 /**
+ * Starknet Purchase Handler - Starknet → Base via Orbiter/LayerSwap
+ * 
+ * Uses starknetOrbiterProtocol for bridging from Starknet to Base,
+ * then executes ticket purchase on Base Megapot contract.
+ */
+async function executeStarknetPurchase(
+  req: PurchaseRequest,
+): Promise<PurchaseResult> {
+  try {
+    // Determine which token to use for bridging
+    // Default to USDC on Starknet, allow STRK if specified
+    const tokenAddress = req.starknetTokenAddress || '0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8'; // USDC
+
+    // Use bridgeManager for Starknet flow which handles Orbiter orchestration
+    const result = await bridgeManager.bridge({
+      sourceChain: "starknet" as ChainIdentifier,
+      destinationChain: "base" as ChainIdentifier,
+      sourceAddress: req.userAddress,
+      destinationAddress: req.recipientAddress || req.userAddress,
+      amount: req.ticketCount.toString(),
+      tokenAddress, // Pass the token contract address
+    });
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: {
+          code: "STARKNET_ERROR",
+          message: result.error || "Starknet purchase failed",
+        },
+      };
+    }
+
+    // Persist bridge status (best effort)
+    if (result.sourceTxHash && typeof window !== "undefined") {
+      try {
+        await fetch("/api/purchase-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sourceTxId: result.sourceTxHash,
+            sourceChain: "starknet",
+            status: result.destinationTxHash ? "complete" : "bridging",
+            baseTxId: result.destinationTxHash || null,
+            bridgeId: result.bridgeId || null,
+            recipientBaseAddress: req.recipientAddress || req.userAddress,
+          }),
+        });
+      } catch (err) {
+        console.warn("[purchaseOrchestrator] Failed to persist Starknet bridge status:", err);
+      }
+    }
+
+    // If bridge includes automatic execution (via external call), we're done
+    if (result.destinationTxHash) {
+      return {
+        success: true,
+        sourceTxHash: result.sourceTxHash,
+        destinationTxHash: result.destinationTxHash,
+      };
+    }
+
+    // Otherwise, execute ticket purchase on Base (requires EVM signer)
+    // Initialize EVM web3 service if needed
+    if (!web3Service.isReady() || web3Service.isReadOnlyMode()) {
+      const initialized = await web3Service.initialize();
+      if (!initialized || web3Service.isReadOnlyMode()) {
+        return {
+          success: false,
+          error: {
+            code: "EVM_INIT_FAILED",
+            message: "Failed to initialize EVM wallet for Base purchase",
+          },
+        };
+      }
+    }
+
+    // Get ticket price and execute purchase
+    const ticketPrice = await web3Service.getTicketPrice();
+    const requiredAmount = BigInt(
+      Math.floor(parseFloat(ticketPrice) * 1_000_000 * req.ticketCount),
+    );
+
+    const purchaseResult = await web3Service.purchaseTickets(
+      req.ticketCount,
+      req.recipientAddress || req.userAddress,
+    );
+
+    if (!purchaseResult.success || !purchaseResult.txHash) {
+      return {
+        success: false,
+        error: {
+          code: "PURCHASE_FAILED",
+          message: purchaseResult.error || "Failed to purchase tickets on Base",
+        },
+      };
+    }
+
+    return {
+      success: true,
+      sourceTxHash: result.sourceTxHash,
+      destinationTxHash: purchaseResult.txHash,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: {
+        code: "STARKNET_ERROR",
+        message:
+          error instanceof Error ? error.message : "Starknet purchase failed",
+      },
+    };
+  }
+}
+
+/**
  * Syndicate Pool Purchase Handler
  *
  * ARCHITECTURE: Base-only syndicates (MVP)
@@ -696,15 +813,8 @@ class PurchaseOrchestrator {
             return executeStacksPurchase(req);
 
           case "starknet":
-            // TODO: Implement starknet purchase - requires starknet wallet integration
-            // Will route through bridge manager for native starknet bridging
-            return {
-              success: false,
-              error: {
-                code: "CHAIN_NOT_READY",
-                message: "Starknet purchases are coming soon",
-              },
-            };
+            // P0.4 FIX: Now fully implemented - routes through bridge manager for Orbiter bridging
+            return executeStarknetPurchase(req);
 
           default:
             return {

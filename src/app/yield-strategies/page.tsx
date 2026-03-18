@@ -23,7 +23,7 @@ import Link from "next/link";
 export default function YieldStrategiesPage() {
   const { address } = useWalletConnection();
   const [activeTab, setActiveTab] = useState<'overview' | 'strategies' | 'allocation'>('overview');
-  const [selectedStrategy, setSelectedStrategy] = useState<'aave' | 'morpho' | 'spark' | 'uniswap' | 'octant' | null>(null);
+  const [selectedStrategy, setSelectedStrategy] = useState<'aave' | 'morpho' | 'spark' | 'uniswap' | 'octant' | 'drift' | null>(null);
   const [yieldToTickets, setYieldToTickets] = useState(85);
   const [yieldToCauses, setYieldToCauses] = useState(15);
 

@@ -27,8 +27,10 @@
   "dependencies": {
     "@bonfida/spl-name-service": "^3.0.16",
     "@coordinationlabs/megapot-ui-kit": "^0.0.49",
+    "@coral-xyz/anchor": "0.32.1",
     "@defuse-protocol/intents-sdk": "0.33.0",
     "@defuse-protocol/one-click-sdk-typescript": "0.1.14",
+    "@drift-labs/sdk": "2.160.0-beta.1",
     "@hirosystems/chainhooks-client": "^1.0.0",
     "@metamask/delegation-toolkit": "^0.11.0",
     "@metamask/smart-accounts-kit": "^0.3.0",
