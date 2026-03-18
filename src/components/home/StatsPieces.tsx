@@ -10,8 +10,8 @@ import { CountUpText } from '@/shared/components/ui/CountUpText';
 export function StatsPieces() {
   const stats = [
     { label: "Total Raised", value: 2100000, prefix: "$", color: "green" },
+    { label: "Drift Vault APY", value: 22.5, prefix: "", suffix: "%", color: "indigo" },
     { label: "Members", value: 4929, prefix: "", color: "blue" },
-    { label: "Syndicates", value: 12, prefix: "", color: "purple" },
     { label: "Donated", value: 47000, prefix: "$", color: "yellow" },
   ];
 
@@ -31,6 +31,7 @@ export function StatsPieces() {
               <CountUpText
                 value={stat.value}
                 prefix={stat.prefix}
+                suffix={stat.suffix || ''}
                 className={`text-2xl font-black text-${stat.color}-400`}
               />
               <p className="text-xs text-center text-gray-400 leading-relaxed">

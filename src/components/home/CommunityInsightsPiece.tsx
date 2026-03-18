@@ -80,12 +80,20 @@ export function CommunityInsightsPiece({ userIdentity }: { userIdentity: UserIde
           });
         }
 
+        // Add high-yield insight
+        userInsights.push({
+          icon: "💰",
+          title: "High-Yield Participant",
+          description: "Engaged with high-yield opportunities like Drift Vault",
+          color: "text-green-500"
+        });
+
         // Add lottery/web3 relevance insight
         userInsights.push({
-          icon: "🎫",
-          title: "Lottery Enthusiast",
-          description: "Part of the growing lottery community",
-          color: "text-orange-400"
+          icon: "🚀",
+          title: "Yield Maximizer",
+          description: "Optimizing entries via Drift Lossless Vault",
+          color: "text-indigo-400"
         });
 
         setInsights(userInsights);

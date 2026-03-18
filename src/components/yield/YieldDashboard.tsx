@@ -73,8 +73,8 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
         
         {/* Performance Display */}
         <YieldPerformanceDisplay 
-          strategy="Aave V3"
-          yieldRate={4.2}
+          strategy="Drift Premium JLP"
+          yieldRate={22.5}
           totalYield={128.45}
           ticketsGenerated={128}
           causesFunded={85.30}

@@ -111,7 +111,7 @@ export function PremiumJackpotPiece({ onBuyClick, userIdentity }: { onBuyClick: 
             className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white shadow-2xl hover:shadow-yellow-500/30 border border-yellow-400/30 animate-pulse-glow"
             onClick={onBuyClick}
           >
-            🎫 Buy Tickets Now - $1 Each
+            ⚡ Generate Lossless Tickets
           </Button>
 
           {/* Social proof with personalization */}

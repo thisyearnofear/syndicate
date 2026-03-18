@@ -24,9 +24,10 @@ export function ActivityFeedPiece() {
     useEffect(() => {
         const defaultActivities = [
             { text: "Sarah joined Ocean Warriors", icon: "🌊", time: "2m ago" },
+            { text: "User deposited 5k into Drift JLP", icon: "⚡", time: "3m ago" },
             { text: "Climate Network won $500", icon: "🌍", time: "5m ago" },
+            { text: "Drift Vault generated 45 tickets", icon: "🎰", time: "7m ago" },
             { text: "Education Alliance milestone", icon: "📚", time: "8m ago" },
-            { text: "Food Security raised $1.2K", icon: "🌾", time: "12m ago" },
         ];
 
         const loadPersonalizedActivities = async () => {
