@@ -12,6 +12,7 @@ import type { BaseChainService } from "./BaseChainService";
 import { getSolanaRpcUrls, executeWithRpcFallback } from "@/utils/rpcFallback";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { getAssociatedTokenAddress } from "@solana/spl-token";
+import { CONTRACTS } from "@/config";
 
 interface CacheEntry<T> {
   value: T;
@@ -235,7 +236,7 @@ export class ContractDataService {
               hasEnoughEth: parseFloat(ethFormatted) >= 0.001,
             };
 
-            this.setCache(cacheKey, result, CACHE_CONFIG.USER_BALANCE);
+        this.setCache(cacheKey, result, CACHE_CONFIG.USER_BALANCE);
             return result;
           } catch (error) {
             return {
@@ -246,6 +247,53 @@ export class ContractDataService {
             };
           }
         });
+      }
+
+      // Check if Stacks address
+      if (userAddress && (userAddress.startsWith("SP") || userAddress.startsWith("ST"))) {
+        try {
+          // Use centralized config for Stacks tokens
+          const tokenPrincipal = CONTRACTS.stacks.usdcx;
+          const stacksUsdc = await this.getStacksBalance(userAddress, tokenPrincipal);
+          return {
+            usdc: stacksUsdc,
+            eth: "0",
+            hasEnoughUsdc: parseFloat(stacksUsdc) >= 1,
+            hasEnoughEth: false
+          };
+        } catch (error) {
+          return { usdc: "0", eth: "0", hasEnoughUsdc: false, hasEnoughEth: false };
+        }
+      }
+
+      // Check if NEAR address
+      if (userAddress && (userAddress.endsWith(".near") || /^[0-9a-f]{64}$/.test(userAddress))) {
+        try {
+          const nearUsdc = await this.getNearBalance(userAddress);
+          return {
+            usdc: nearUsdc,
+            eth: "0",
+            hasEnoughUsdc: parseFloat(nearUsdc) >= 1,
+            hasEnoughEth: false
+          };
+        } catch (error) {
+          return { usdc: "0", eth: "0", hasEnoughUsdc: false, hasEnoughEth: false };
+        }
+      }
+
+      // Check if Starknet address
+      if (userAddress && userAddress.startsWith("0x") && userAddress.length >= 64) {
+        try {
+          const starknetUsdc = await this.getStarknetBalance(userAddress);
+          return {
+            usdc: starknetUsdc,
+            eth: "0",
+            hasEnoughUsdc: parseFloat(starknetUsdc) >= 1,
+            hasEnoughEth: false
+          };
+        } catch (error) {
+          return { usdc: "0", eth: "0", hasEnoughUsdc: false, hasEnoughEth: false };
+        }
       }
       
       // Check if Solana address
@@ -505,6 +553,88 @@ export class ContractDataService {
         return balance;
       } catch (error) {
         console.error("Failed to fetch Solana balance with fallback:", error);
+        return "0";
+      }
+    });
+  }
+
+  /**
+   * Get Stacks USDC/sBTC balance with proxy API
+   */
+  async getStacksBalance(address: string, tokenPrincipal: string): Promise<string> {
+    const cacheKey = `stacks:balance:${address}:${tokenPrincipal}`;
+    const cached = this.getCached<string>(cacheKey);
+    if (cached !== null) return cached;
+
+    return this.deduplicateRequest(cacheKey, async () => {
+      try {
+        const response = await fetch(`/api/stacks-lottery?endpoint=/extended/v1/address/${address}/balances`);
+        if (!response.ok) return "0";
+        const data = await response.json();
+        
+        // Stacks balances response structure contains fungible_tokens
+        const fungibleTokens = (data as any).fungible_tokens || {};
+        const tokenData = fungibleTokens[tokenPrincipal];
+        const tokenBalance = tokenData?.balance || "0";
+        
+        // Stacks tokens: USDCx (6 decimals), sBTC (8 decimals)
+        const decimals = tokenPrincipal.toLowerCase().includes("sbtc") ? 8 : 6; 
+        return (parseFloat(tokenBalance) / Math.pow(10, decimals)).toString();
+      } catch (error) {
+        console.error("Failed to fetch Stacks balance:", error);
+        return "0";
+      }
+    });
+  }
+
+  /**
+   * Get NEAR USDC balance
+   */
+  async getNearBalance(accountId: string): Promise<string> {
+    const cacheKey = `near:balance:${accountId}`;
+    const cached = this.getCached<string>(cacheKey);
+    if (cached !== null) return cached;
+
+    return this.deduplicateRequest(cacheKey, async () => {
+      try {
+        const response = await fetch('/api/near-queries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            operation: 'balanceOf',
+            accountId,
+            tokenContract: 'base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near',
+          }),
+        });
+
+        if (!response.ok) return "0";
+        const data = await response.json();
+        return data.balance || "0";
+      } catch (error) {
+        console.error("Failed to fetch NEAR balance:", error);
+        return "0";
+      }
+    });
+  }
+
+  /**
+   * Get Starknet USDC balance
+   */
+  async getStarknetBalance(address: string): Promise<string> {
+    const cacheKey = `starknet:balance:${address}`;
+    const cached = this.getCached<string>(cacheKey);
+    if (cached !== null) return cached;
+
+    return this.deduplicateRequest(cacheKey, async () => {
+      try {
+        // Starknet balance currently returns 0 placeholder in API
+        // In a real implementation, we would use a Starknet RPC
+        const response = await fetch(`/api/balance?address=${address}&chain=starknet`);
+        if (!response.ok) return "0";
+        const data = await response.json();
+        return data.usdc || "0";
+      } catch (error) {
+        console.error("Failed to fetch Starknet balance:", error);
         return "0";
       }
     });

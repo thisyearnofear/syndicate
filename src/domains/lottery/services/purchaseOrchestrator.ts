@@ -82,7 +82,7 @@ export interface PurchaseResult {
   txHash?: string;
 
   // Purchase status for multi-step flows
-  status?: 'pending_signature' | 'bridging' | 'complete' | 'failed';
+  status?: 'pending_signature' | 'bridging' | 'complete' | 'failed' | 'awaiting_deposit';
 
   // Bridge tracking
   bridgeId?: string;
@@ -115,6 +115,56 @@ export interface PurchaseProgress {
   progress: number; // 0-100
   message: string;
   txHash?: string;
+}
+
+// =============================================================================
+// PERSISTENCE HELPERS
+// =============================================================================
+
+/**
+ * Save pending purchase state to survive page refresh
+ */
+export function savePendingPurchase(bridgeId: string, sourceTxHash: string, chain: PurchaseChain) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('syndicate_pending_purchase', JSON.stringify({
+      bridgeId,
+      sourceTxHash,
+      chain,
+      timestamp: Date.now()
+    }));
+    console.log(`[purchaseOrchestrator] Saved pending purchase: ${bridgeId} on ${chain}`);
+  }
+}
+
+/**
+ * Get persisted purchase state
+ */
+export function getPersistedPurchase(): { bridgeId: string; sourceTxHash: string; chain: PurchaseChain; timestamp: number } | null {
+  if (typeof window !== 'undefined') {
+    const data = localStorage.getItem('syndicate_pending_purchase');
+    if (data) {
+      try {
+        const parsed = JSON.parse(data);
+        // Expire after 24 hours
+        if (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
+          return parsed;
+        }
+        localStorage.removeItem('syndicate_pending_purchase');
+      } catch (e) {
+        localStorage.removeItem('syndicate_pending_purchase');
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Clear persisted purchase state
+ */
+export function clearPersistedPurchase() {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('syndicate_pending_purchase');
+  }
 }
 
 // =============================================================================
@@ -235,6 +285,65 @@ async function executeNEARPurchase(
   req: PurchaseRequest,
 ): Promise<PurchaseResult> {
   try {
+    // Handle resume after wallet signing or bridge deposit
+    if (req.resume) {
+      clearPersistedPurchase();
+      // Check bridge status for the resumed purchase
+      const ticketPrice = await web3Service.getTicketPrice();
+      const resumeResult = await bridgeManager.bridge({
+        sourceChain: "near" as ChainIdentifier,
+        destinationChain: "base" as ChainIdentifier,
+        sourceAddress: req.userAddress,
+        destinationAddress: req.recipientAddress || req.userAddress,
+        amount: (parseFloat(ticketPrice) * req.ticketCount).toString(),
+        options: {
+          bridgeId: req.resume.bridgeId,
+          signedTxHash: req.resume.sourceTxHash,
+        },
+      });
+
+      if (resumeResult.success && resumeResult.status === 'complete') {
+        // If bridge is now complete, try to finalize purchase on Base if not atomic
+        if (!resumeResult.destinationTxHash) {
+          const purchaseResult = await web3Service.purchaseTickets(req.ticketCount);
+          return {
+            success: true,
+            status: 'complete',
+            sourceTxHash: resumeResult.sourceTxHash,
+            destinationTxHash: purchaseResult.txHash,
+          };
+        }
+        return {
+          success: true,
+          status: 'complete',
+          sourceTxHash: resumeResult.sourceTxHash,
+          destinationTxHash: resumeResult.destinationTxHash,
+        };
+      }
+
+      return {
+        success: true,
+        status: 'bridging',
+        sourceTxHash: req.resume.sourceTxHash,
+        bridgeId: req.resume.bridgeId,
+      };
+    }
+
+    // Check balance
+    const balance = await web3Service.getUserBalance(req.userAddress);
+    const ticketPrice = await web3Service.getTicketPrice();
+    const requiredAmount = parseFloat(ticketPrice) * req.ticketCount;
+
+    if (parseFloat(balance.usdc) < requiredAmount) {
+      return {
+        success: false,
+        error: {
+          code: "INSUFFICIENT_BALANCE",
+          message: `Insufficient NEAR USDC. Required: ${requiredAmount}, Available: ${balance.usdc}`,
+        },
+      };
+    }
+
     // NEAR purchase requires WalletSelector which is only available in React context
     // This should be called from the SimplePurchaseModal component via bridge flow
     // For now, we route through bridgeManager which handles NEAR bridge coordination
@@ -245,6 +354,7 @@ async function executeNEARPurchase(
       sourceAddress: req.userAddress,
       destinationAddress: req.recipientAddress || req.userAddress,
       amount: req.ticketCount.toString(),
+      wallet: (req as any).wallet, // Pass wallet if provided in request
     });
 
     if (!result.success) {
@@ -257,20 +367,44 @@ async function executeNEARPurchase(
       };
     }
 
-    // After bridge completes, purchase on Base
+    // If bridge needs wallet signature or deposit, return pending state
+    if (result.status === 'pending_signature' || result.status === 'awaiting_deposit') {
+      if (result.bridgeId && result.sourceTxHash) {
+        savePendingPurchase(result.bridgeId, result.sourceTxHash, "near");
+      }
+      return {
+        success: true,
+        status: result.status,
+        bridgeId: result.bridgeId,
+        details: result.details,
+      };
+    }
+
+    // If we have destinationTxHash, it means the bridge was atomic
+    if (result.destinationTxHash) {
+      return {
+        success: true,
+        status: 'complete',
+        sourceTxHash: result.sourceTxHash,
+        destinationTxHash: result.destinationTxHash,
+      };
+    }
+
+    // After bridge completes (if not already handled), purchase on Base
+    // Note: In Phase 1, we might need a manual step here if the bridge is not atomic
     const purchaseResult = await web3Service.purchaseTickets(req.ticketCount);
     if (!purchaseResult.success || !purchaseResult.txHash) {
       return {
-        success: false,
-        error: {
-          code: "PURCHASE_FAILED",
-          message: "Failed to purchase tickets after NEAR bridge",
-        },
+        success: true,
+        status: 'bridging', // Transitioned from signing to bridging
+        sourceTxHash: result.sourceTxHash,
+        bridgeId: result.bridgeId,
       };
     }
 
     return {
       success: true,
+      status: 'complete',
       sourceTxHash: result.sourceTxHash,
       destinationTxHash: purchaseResult.txHash,
     };
@@ -436,6 +570,9 @@ async function executeSolanaPurchase(
 
     // If bridge needs wallet signature, return pending state
     if (bridgeResult.status === 'pending_signature') {
+      if (bridgeResult.bridgeId && bridgeResult.sourceTxHash) {
+        savePendingPurchase(bridgeResult.bridgeId, bridgeResult.sourceTxHash, "solana");
+      }
       return {
         success: true,
         status: 'pending_signature',
@@ -527,6 +664,7 @@ async function executeStacksPurchase(
   try {
     // Handle resume after wallet signing
     if (req.resume) {
+      clearPersistedPurchase();
       return {
         success: true,
         status: 'bridging',
@@ -536,8 +674,23 @@ async function executeStacksPurchase(
     }
 
     // Determine which token to use for bridging
-    // Default to USDCx (native Circle USDC), but allow sBTC if specified
-    const tokenAddress = req.stacksTokenPrincipal || CONTRACTS.USDCx;
+    // Default to USDCx (native Circle USDC)
+    const tokenAddress = req.stacksTokenPrincipal || (typeof CONTRACTS !== 'undefined' ? (CONTRACTS as any).USDCx : undefined);
+
+    // Check balance using the enhanced web3Service (via ContractDataService)
+    const balance = await web3Service.getUserBalance(req.userAddress);
+    const ticketPriceStr = await web3Service.getTicketPrice();
+    const requiredAmountNum = parseFloat(ticketPriceStr) * req.ticketCount;
+
+    if (parseFloat(balance.usdc) < requiredAmountNum) {
+      return {
+        success: false,
+        error: {
+          code: "INSUFFICIENT_BALANCE",
+          message: `Insufficient Stacks balance. Required: ${requiredAmountNum}, Available: ${balance.usdc}`,
+        },
+      };
+    }
 
     // Use bridgeManager for Stacks flow which handles orchestration
     const result = await bridgeManager.bridge({
@@ -546,7 +699,7 @@ async function executeStacksPurchase(
       sourceAddress: req.userAddress,
       destinationAddress: req.recipientAddress || req.userAddress,
       amount: req.ticketCount.toString(),
-      tokenAddress, // Pass the token contract address
+      tokenAddress: req.stacksTokenPrincipal || undefined,
     });
 
     if (!result.success) {
@@ -561,6 +714,9 @@ async function executeStacksPurchase(
 
     // If bridge needs wallet signature, return pending state
     if (result.status === 'pending_signature') {
+      if (result.bridgeId && result.sourceTxHash) {
+        savePendingPurchase(result.bridgeId, result.sourceTxHash, "stacks");
+      }
       return {
         success: true,
         status: 'pending_signature',
@@ -571,6 +727,7 @@ async function executeStacksPurchase(
 
     return {
       success: true,
+      status: 'complete',
       sourceTxHash: result.sourceTxHash,
       destinationTxHash: result.destinationTxHash,
     };
@@ -596,9 +753,63 @@ async function executeStarknetPurchase(
   req: PurchaseRequest,
 ): Promise<PurchaseResult> {
   try {
-    // Determine which token to use for bridging
-    // Default to USDC on Starknet, allow STRK if specified
-    const tokenAddress = req.starknetTokenAddress || '0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8'; // USDC
+    // Handle resume after wallet signing
+    if (req.resume) {
+      clearPersistedPurchase();
+      const ticketPrice = await web3Service.getTicketPrice();
+      const resumeResult = await bridgeManager.bridge({
+        sourceChain: "starknet" as ChainIdentifier,
+        destinationChain: "base" as ChainIdentifier,
+        sourceAddress: req.userAddress,
+        destinationAddress: req.recipientAddress || req.userAddress,
+        amount: req.ticketCount.toString(),
+        options: {
+          bridgeId: req.resume.bridgeId,
+          signedTxHash: req.resume.sourceTxHash,
+        },
+      });
+
+      if (resumeResult.success && resumeResult.status === 'complete') {
+        // If bridge is now complete, try to finalize purchase on Base if not atomic
+        if (!resumeResult.destinationTxHash) {
+          const purchaseResult = await web3Service.purchaseTickets(req.ticketCount);
+          return {
+            success: true,
+            status: 'complete',
+            sourceTxHash: resumeResult.sourceTxHash,
+            destinationTxHash: purchaseResult.txHash,
+          };
+        }
+        return {
+          success: true,
+          status: 'complete',
+          sourceTxHash: resumeResult.sourceTxHash,
+          destinationTxHash: resumeResult.destinationTxHash,
+        };
+      }
+
+      return {
+        success: true,
+        status: 'bridging',
+        sourceTxHash: req.resume.sourceTxHash,
+        bridgeId: req.resume.bridgeId,
+      };
+    }
+
+    // Check balance
+    const balance = await web3Service.getUserBalance(req.userAddress);
+    const ticketPrice = await web3Service.getTicketPrice();
+    const requiredAmount = parseFloat(ticketPrice) * req.ticketCount;
+
+    if (parseFloat(balance.usdc) < requiredAmount) {
+      return {
+        success: false,
+        error: {
+          code: "INSUFFICIENT_BALANCE",
+          message: `Insufficient Starknet USDC. Required: ${requiredAmount}, Available: ${balance.usdc}`,
+        },
+      };
+    }
 
     // Use bridgeManager for Starknet flow which handles Orbiter orchestration
     const result = await bridgeManager.bridge({
@@ -607,7 +818,7 @@ async function executeStarknetPurchase(
       sourceAddress: req.userAddress,
       destinationAddress: req.recipientAddress || req.userAddress,
       amount: req.ticketCount.toString(),
-      tokenAddress, // Pass the token contract address
+      tokenAddress: req.starknetTokenAddress || undefined,
     });
 
     if (!result.success) {
@@ -617,6 +828,19 @@ async function executeStarknetPurchase(
           code: "STARKNET_ERROR",
           message: result.error || "Starknet purchase failed",
         },
+      };
+    }
+
+    // If bridge needs wallet signature, return pending state
+    if (result.status === 'pending_signature') {
+      if (result.bridgeId && result.sourceTxHash) {
+        savePendingPurchase(result.bridgeId, result.sourceTxHash, "starknet");
+      }
+      return {
+        success: true,
+        status: 'pending_signature',
+        bridgeId: result.bridgeId,
+        details: result.details,
       };
     }
 
@@ -664,12 +888,7 @@ async function executeStarknetPurchase(
       }
     }
 
-    // Get ticket price and execute purchase
-    const ticketPrice = await web3Service.getTicketPrice();
-    const requiredAmount = BigInt(
-      Math.floor(parseFloat(ticketPrice) * 1_000_000 * req.ticketCount),
-    );
-
+    // Reuse ticketPrice and requiredAmount or recalculate if needed (already calculated above)
     const purchaseResult = await web3Service.purchaseTickets(
       req.ticketCount,
       req.recipientAddress || req.userAddress,
@@ -931,46 +1150,13 @@ class PurchaseOrchestrator {
    */
   async getPurchaseInfo(chain: PurchaseChain, userAddress: string) {
     try {
-      const ticketPrice = await megapotService
-        .getJackpotStats()
-        .then((stats) => stats?.ticketPrice.toString() || "1");
-
-      let balance: string = "0";
-
-      switch (chain) {
-        case "base":
-        case "ethereum":
-          const evmBalance = await web3Service.getUserBalance();
-          balance = evmBalance.usdc;
-          break;
-
-        case "near":
-          // Balance will be fetched in NEAR intent service
-          balance = "0"; // Placeholder - service handles it
-          break;
-
-        case "solana": {
-          const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC || "";
-          const usdcMint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"; // Circle USDC mainnet mint
-          balance = await solanaWalletService.getUsdcBalance(rpcUrl, usdcMint, userAddress);
-          break;
-        }
-
-        case "stacks":
-          // Stacks balance info handled in bridge manager
-          balance = "0"; // Placeholder
-          break;
-
-        case "starknet":
-          // Starknet balance info handled in bridge manager
-          balance = "0"; // Placeholder
-          break;
-      }
-
+      const ticketPrice = await web3Service.getTicketPrice();
+      const balanceInfo = await web3Service.getUserBalance(userAddress);
+      
       return {
         chain,
         ticketPrice,
-        userBalance: balance,
+        userBalance: balanceInfo.usdc,
       };
     } catch (error) {
       console.error("Failed to get purchase info:", error);

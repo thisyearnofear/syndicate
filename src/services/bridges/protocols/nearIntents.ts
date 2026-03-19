@@ -138,23 +138,28 @@ export class NearIntentsProtocol implements BridgeProtocol {
 
             // Monitor status
             if (result.intentHash) {
-                // Poll for completion
-                // TODO: Add polling logic if needed, or rely on the result returning immediately if it waits
-                // purchaseViaIntent seems to wait for initial submission but maybe not final settlement?
-                // Let's assume it returns when submitted.
+                // Return awaiting_deposit status with the deposit address
+                // The UI will then handle the transfer from NEAR wallet
+                return {
+                    success: true,
+                    protocol: 'near-intents',
+                    status: 'awaiting_deposit',
+                    sourceTxHash: result.txHash,
+                    bridgeId: result.intentHash,
+                    details: { 
+                        intentHash: result.intentHash,
+                        depositAddress: result.depositAddress,
+                        requiresDeposit: true
+                    },
+                };
             }
-
-            onStatus?.('complete', { txHash: result.txHash });
-
-            this.successCount++;
-            this.totalTimeMs += Date.now() - startTime;
 
             return {
                 success: true,
                 protocol: 'near-intents',
                 status: 'complete',
                 sourceTxHash: result.txHash,
-                destinationTxHash: result.destinationTx as string, // Cast safely
+                destinationTxHash: result.destinationTx as string,
                 bridgeId: result.intentHash,
                 details: { intentHash: result.intentHash },
             };
