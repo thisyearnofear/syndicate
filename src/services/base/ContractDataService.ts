@@ -473,9 +473,29 @@ export class ContractDataService {
         const balance = await executeWithRpcFallback(
           async (url) => {
             const connection = new Connection(url, "confirmed");
-            const ata = await getAssociatedTokenAddress(mint, owner);
-            const info = await connection.getTokenAccountBalance(ata);
-            return info.value.uiAmountString || "0";
+            
+            try {
+              // Priority 1: Direct ATA lookup (fastest)
+              const ata = await getAssociatedTokenAddress(mint, owner);
+              const info = await connection.getTokenAccountBalance(ata);
+              return info.value.uiAmountString || "0";
+            } catch (ataError) {
+              // Priority 2: Full account scan for this mint (robust)
+              const accounts = await connection.getTokenAccountsByOwner(owner, { mint });
+              let totalRaw = 0n;
+              for (const account of accounts.value) {
+                const info = await connection.getTokenAccountBalance(account.pubkey);
+                const raw = info?.value?.amount ? BigInt(info.value.amount) : 0n;
+                totalRaw += raw;
+              }
+              
+              if (totalRaw === 0n) return "0";
+              
+              // Format with 6 decimals (USDC)
+              const integerPart = totalRaw / 1_000_000n;
+              const fractionalPart = (totalRaw % 1_000_000n).toString().padStart(6, '0');
+              return `${integerPart}.${fractionalPart}`;
+            }
           },
           rpcUrls,
           10000
