@@ -429,6 +429,7 @@ async function executeSolanaPurchase(
   try {
     // Handle resume after wallet signing
     if (req.resume) {
+      clearPersistedPurchase();
       const ticketPrice = await web3Service.getTicketPrice();
       const resumeResult = await bridgeManager.bridge({
         sourceChain: "solana" as ChainIdentifier,
@@ -438,7 +439,7 @@ async function executeSolanaPurchase(
         amount: (parseFloat(ticketPrice) * req.ticketCount).toString(),
         protocol: "debridge",
         options: {
-          orderId: req.resume.bridgeId,
+          bridgeId: req.resume.bridgeId,
           signedTxHash: req.resume.sourceTxHash,
         },
       });
@@ -665,6 +666,28 @@ async function executeStacksPurchase(
     // Handle resume after wallet signing
     if (req.resume) {
       clearPersistedPurchase();
+      const ticketPrice = await web3Service.getTicketPrice();
+      const resumeResult = await bridgeManager.bridge({
+        sourceChain: "stacks" as ChainIdentifier,
+        destinationChain: "base" as ChainIdentifier,
+        sourceAddress: req.userAddress,
+        destinationAddress: req.recipientAddress || req.userAddress,
+        amount: (parseFloat(ticketPrice) * req.ticketCount).toString(),
+        options: {
+          bridgeId: req.resume.bridgeId,
+          signedTxHash: req.resume.sourceTxHash,
+        },
+      });
+
+      if (resumeResult.success && resumeResult.status === 'complete') {
+        return {
+          success: true,
+          status: 'complete',
+          sourceTxHash: resumeResult.sourceTxHash,
+          destinationTxHash: resumeResult.destinationTxHash,
+        };
+      }
+
       return {
         success: true,
         status: 'bridging',
