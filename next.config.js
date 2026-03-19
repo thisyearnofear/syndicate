@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const path = require('path');
+const webpack = require('webpack');
 
 const nextConfig = {
   // Basic optimizations for better performance
@@ -94,6 +95,16 @@ const nextConfig = {
     }
     config.externals.push('pino-pretty', 'lokijs', 'encoding');
 
+    // Replace ALL viem test decorator/action imports (any version, any pnpm path)
+    // with empty module stubs. This catches both the top-level and nested copies.
+    const viemTestStub = path.resolve(__dirname, 'empty-module/viem-test.js');
+    config.plugins.push(
+      new webpack.NormalModuleReplacementPlugin(
+        /viem\/_esm\/(clients\/decorators\/test|actions\/test\/)\.?/,
+        viemTestStub
+      )
+    );
+
     // Add warnings to ignore EISDIR errors from problematic imports
     config.ignoreWarnings = config.ignoreWarnings || [];
     config.ignoreWarnings.push({
@@ -105,50 +116,14 @@ const nextConfig = {
       message: /EISDIR/,
     });
 
-    // Alias problematic modules and test directories to the empty module
+    // Alias problematic modules
     config.resolve = {
       ...config.resolve,
       alias: {
         ...config.resolve.alias,
-        // Fix for MetaMask SDK trying to import react-native module
         '@react-native-async-storage/async-storage': path.resolve(__dirname, 'empty-module/index.js'),
-        // Explicitly ignore test files that may be imported
         'thread-stream/test': path.resolve(__dirname, 'empty-module/index.js'),
         'thread-stream/test/': path.resolve(__dirname, 'empty-module/index.js'),
-        // Viem test decorators - use empty module to avoid build errors
-        'viem/_esm/clients/decorators/test.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_cjs/clients/decorators/test.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        // Also alias specific test action imports
-        'viem/_esm/actions/test/dropTransaction.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/dumpState.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/getAutomine.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/getTxpoolContent.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/getTxpoolStatus.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/impersonateAccount.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/increaseTime.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/inspectTxpool.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/loadState.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/mine.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/removeBlockTimestampInterval.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/reset.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/revert.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/sendUnsignedTransaction.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/setAutomine.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/setBalance.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/setBlockGasLimit.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/setBlockTimestampInterval.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/setCode.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/setCoinbase.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/setIntervalMining.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/setLoggingEnabled.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/setMinGasPrice.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/setNextBlockBaseFeePerGas.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/setNextBlockTimestamp.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/setNonce.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/setRpcUrl.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/setStorageAt.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/snapshot.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
-        'viem/_esm/actions/test/stopImpersonatingAccount.js': path.resolve(__dirname, 'empty-module/viem-test.js'),
       },
     };
 

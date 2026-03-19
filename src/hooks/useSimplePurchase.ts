@@ -21,6 +21,7 @@ import { useWalletConnection } from './useWalletConnection';
 import type { TrackerStatus, SourceChainType } from '@/components/bridge/CrossChainTracker';
 import { usePurchasePolling } from './usePurchasePolling';
 import { mapPurchaseStatusToTracker } from '@/domains/lottery/utils/mapPurchaseStatus';
+import { solanaWalletService } from '@/services/solanaWalletService';
 
 export interface UseSimplePurchaseState {
   isPurchasing: boolean;
@@ -168,7 +169,55 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
         setState(prev => ({ ...prev, status: 'signing' }));
 
         // Execute purchase with status tracking
-        const result = await purchaseOrchestrator.executePurchase(fullRequest);
+        let result = await purchaseOrchestrator.executePurchase(fullRequest);
+
+        // Handle pending_signature: wallet signing happens here in the UI layer
+        if (result.success && result.status === 'pending_signature') {
+          try {
+            let sourceTxHash: string;
+
+            if (chain === 'solana') {
+              sourceTxHash = await handleSolanaWalletSign(result);
+            } else if (chain === 'stacks') {
+              sourceTxHash = await handleStacksWalletSign(result);
+            } else {
+              throw new Error(`Unsupported chain for wallet signing: ${chain}`);
+            }
+
+            // Resume the orchestrator with the signed tx hash
+            setState(prev => ({ ...prev, status: 'confirmed_source' as TrackerStatus }));
+
+            const resumedResult = await purchaseOrchestrator.executePurchase({
+              ...fullRequest,
+              resume: {
+                bridgeId: result.bridgeId!,
+                sourceTxHash,
+              },
+            });
+
+            // Merge source tx into resumed result
+            result = {
+              ...resumedResult,
+              sourceTxHash: sourceTxHash,
+            };
+          } catch (signError) {
+            const msg = signError instanceof Error ? signError.message : 'Wallet signing failed';
+            const isCancel = msg.includes('cancel') || msg.includes('reject') || msg.includes('denied');
+            setState(prev => ({
+              ...prev,
+              isPurchasing: false,
+              error: isCancel ? 'Transaction cancelled' : msg,
+              status: 'error',
+            }));
+            return {
+              success: false,
+              error: {
+                code: isCancel ? 'USER_CANCELLED' : 'SIGNING_FAILED',
+                message: isCancel ? 'Transaction cancelled' : msg,
+              },
+            };
+          }
+        }
 
         // Update state based on result
         if (result.success) {
@@ -176,23 +225,21 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
             const hasDestination = !!result.destinationTxHash;
             const nextStatus: TrackerStatus = hasDestination ? 'complete' : 'confirmed_source';
 
-            // Persist initial status for non-Stacks chains
-            if (chain !== 'stacks') {
-              try {
-                await fetch('/api/purchase-status', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    sourceTxId: result.sourceTxHash,
-                    sourceChain: chain,
-                    status: hasDestination ? 'complete' : 'bridging',
-                    baseTxId: result.destinationTxHash || null,
-                    recipientBaseAddress: request.recipientAddress || userAddress,
-                  }),
-                });
-              } catch (err) {
-                console.warn('[useSimplePurchase] Failed to persist initial status:', err);
-              }
+            // Persist initial status
+            try {
+              await fetch('/api/purchase-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  sourceTxId: result.sourceTxHash,
+                  sourceChain: chain,
+                  status: hasDestination ? 'complete' : 'bridging',
+                  baseTxId: result.destinationTxHash || null,
+                  recipientBaseAddress: request.recipientAddress || userAddress,
+                }),
+              });
+            } catch (err) {
+              console.warn('[useSimplePurchase] Failed to persist initial status:', err);
             }
 
             setState(prev => ({
@@ -277,4 +324,82 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
     clearError,
     reset,
   };
+}
+
+// =============================================================================
+// Wallet signing helpers (browser-only, chain-specific)
+// =============================================================================
+
+/**
+ * Sign and submit a Solana transaction via Phantom wallet.
+ * deBridge returns base64-encoded transaction data that needs to be deserialized,
+ * signed, and submitted.
+ */
+async function handleSolanaWalletSign(result: PurchaseResult): Promise<string> {
+  const txData = result.details?.txData as { data?: string } | undefined;
+  if (!txData?.data) {
+    throw new Error('No transaction data returned from bridge');
+  }
+
+  // Ensure Phantom is connected
+  if (!solanaWalletService.isReady()) {
+    const pk = await solanaWalletService.connectPhantom();
+    if (!pk) throw new Error('Failed to connect Phantom wallet');
+  }
+
+  // Deserialize the base64 transaction from deBridge
+  const { VersionedTransaction } = await import('@solana/web3.js');
+  const txBytes = Buffer.from(txData.data, 'base64');
+  const transaction = VersionedTransaction.deserialize(txBytes);
+
+  // Sign and send via Phantom
+  const signature = await solanaWalletService.signAndSendTransaction(transaction);
+  return signature;
+}
+
+/**
+ * Sign a Stacks contract call via openContractCall (@stacks/connect).
+ * Returns a promise that resolves with the txId when the user signs.
+ */
+async function handleStacksWalletSign(result: PurchaseResult): Promise<string> {
+  const walletAction = result.details?.walletAction as {
+    contractAddress: string;
+    contractName: string;
+    functionName: string;
+    functionArgs: {
+      amount: string;
+      recipient: string;
+      tokenPrincipal: string;
+    };
+  } | undefined;
+
+  if (!walletAction) {
+    throw new Error('No wallet action returned from bridge');
+  }
+
+  const { openContractCall } = await import('@stacks/connect');
+  const { uintCV, standardPrincipalCV, contractPrincipalCV } = await import('@stacks/transactions');
+  const { StacksMainnet } = await import('@stacks/network');
+
+  const [tokenAddr, tokenName] = walletAction.functionArgs.tokenPrincipal.split('.');
+
+  return new Promise<string>((resolve, reject) => {
+    openContractCall({
+      contractAddress: walletAction.contractAddress,
+      contractName: walletAction.contractName,
+      functionName: walletAction.functionName,
+      functionArgs: [
+        uintCV(parseInt(walletAction.functionArgs.amount)),
+        standardPrincipalCV(walletAction.functionArgs.recipient),
+        contractPrincipalCV(tokenAddr, tokenName),
+      ],
+      network: new StacksMainnet(),
+      onFinish: (data: { txId: string }) => {
+        resolve(data.txId);
+      },
+      onCancel: () => {
+        reject(new Error('User cancelled Stacks transaction'));
+      },
+    });
+  });
 }

@@ -69,11 +69,24 @@ export interface PurchaseRequest {
 
   /** Optional: For Starknet, which token to use */
   starknetTokenAddress?: string;
+
+  /** For resuming after wallet signature */
+  resume?: {
+    bridgeId: string;
+    sourceTxHash: string;
+  };
 }
 
 export interface PurchaseResult {
   success: boolean;
   txHash?: string;
+
+  // Purchase status for multi-step flows
+  status?: 'pending_signature' | 'bridging' | 'complete' | 'failed';
+
+  // Bridge tracking
+  bridgeId?: string;
+  details?: Record<string, unknown>;
 
   // For cross-chain bridges
   sourceTxHash?: string;
@@ -280,10 +293,65 @@ async function executeSolanaPurchase(
   req: PurchaseRequest,
 ): Promise<PurchaseResult> {
   try {
+    // Handle resume after wallet signing
+    if (req.resume) {
+      const ticketPrice = await web3Service.getTicketPrice();
+      const resumeResult = await bridgeManager.bridge({
+        sourceChain: "solana" as ChainIdentifier,
+        destinationChain: "base" as ChainIdentifier,
+        sourceAddress: req.userAddress,
+        destinationAddress: req.recipientAddress || req.userAddress,
+        amount: (parseFloat(ticketPrice) * req.ticketCount).toString(),
+        protocol: "debridge",
+        options: {
+          orderId: req.resume.bridgeId,
+          signedTxHash: req.resume.sourceTxHash,
+        },
+      });
+
+      if (!resumeResult.success) {
+        return {
+          success: false,
+          error: {
+            code: "BRIDGE_FAILED",
+            message: resumeResult.error || "Bridge fulfillment failed",
+          },
+        };
+      }
+
+      // Persist status
+      if (resumeResult.sourceTxHash && typeof window !== "undefined") {
+        try {
+          await fetch("/api/purchase-status", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sourceTxId: resumeResult.sourceTxHash,
+              sourceChain: "solana",
+              status: resumeResult.destinationTxHash ? "complete" : "bridging",
+              baseTxId: resumeResult.destinationTxHash || null,
+              bridgeId: resumeResult.bridgeId || null,
+              recipientBaseAddress: req.recipientAddress || req.userAddress,
+            }),
+          });
+        } catch (err) {
+          console.warn("[purchaseOrchestrator] Failed to persist Solana bridge status:", err);
+        }
+      }
+
+      return {
+        success: true,
+        status: resumeResult.status === 'complete' ? 'complete' : 'bridging',
+        sourceTxHash: resumeResult.sourceTxHash,
+        destinationTxHash: resumeResult.destinationTxHash,
+        bridgeId: resumeResult.bridgeId,
+      };
+    }
+
     // Check Solana balance
     const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC || "";
-    const usdcMint = "4zMMC9srt5Ri5X14Y1jb38J8A5R4oXnc1vDCkKXgQEfJ"; // USDC mint on Solana
-    const balance = await solanaWalletService.getUsdcBalance(rpcUrl, usdcMint);
+    const usdcMint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"; // Circle USDC mainnet mint
+    const balance = await solanaWalletService.getUsdcBalance(rpcUrl, usdcMint, req.userAddress);
     const ticketPrice = await web3Service.getTicketPrice();
     const requiredAmount = parseFloat(ticketPrice) * req.ticketCount;
 
@@ -363,6 +431,16 @@ async function executeSolanaPurchase(
           code: "BRIDGE_FAILED",
           message: bridgeResult.error || "Solana to Base bridge failed",
         },
+      };
+    }
+
+    // If bridge needs wallet signature, return pending state
+    if (bridgeResult.status === 'pending_signature') {
+      return {
+        success: true,
+        status: 'pending_signature',
+        bridgeId: bridgeResult.bridgeId,
+        details: bridgeResult.details,
       };
     }
 
@@ -447,6 +525,16 @@ async function executeStacksPurchase(
   req: PurchaseRequest,
 ): Promise<PurchaseResult> {
   try {
+    // Handle resume after wallet signing
+    if (req.resume) {
+      return {
+        success: true,
+        status: 'bridging',
+        sourceTxHash: req.resume.sourceTxHash,
+        bridgeId: req.resume.bridgeId,
+      };
+    }
+
     // Determine which token to use for bridging
     // Default to USDCx (native Circle USDC), but allow sBTC if specified
     const tokenAddress = req.stacksTokenPrincipal || CONTRACTS.USDCx;
@@ -468,6 +556,16 @@ async function executeStacksPurchase(
           code: "STACKS_ERROR",
           message: result.error || "Stacks purchase failed",
         },
+      };
+    }
+
+    // If bridge needs wallet signature, return pending state
+    if (result.status === 'pending_signature') {
+      return {
+        success: true,
+        status: 'pending_signature',
+        bridgeId: result.bridgeId,
+        details: result.details,
       };
     }
 
@@ -853,8 +951,8 @@ class PurchaseOrchestrator {
 
         case "solana": {
           const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC || "";
-          const usdcMint = "4zMMC9srt5Ri5X14Y1jb38J8A5R4oXnc1vDCkKXgQEfJ";
-          balance = await solanaWalletService.getUsdcBalance(rpcUrl, usdcMint);
+          const usdcMint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"; // Circle USDC mainnet mint
+          balance = await solanaWalletService.getUsdcBalance(rpcUrl, usdcMint, userAddress);
           break;
         }
 

@@ -195,7 +195,7 @@ export const USDC_ADDRESSES: Record<ChainIdentifier, string | undefined> = {
     base: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
     polygon: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
     avalanche: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E',
-    solana: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyB7bF',
+    solana: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
     stacks: undefined, // sBTC, not USDC
     starknet: '0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8', // USDC on Starknet
     zcash: undefined,
