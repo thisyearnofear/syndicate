@@ -13,6 +13,7 @@ import { getSolanaRpcUrls, executeWithRpcFallback } from "@/utils/rpcFallback";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { getAssociatedTokenAddress } from "@solana/spl-token";
 import { CONTRACTS } from "@/config";
+import { RpcProvider, uint256 } from "starknet";
 
 interface CacheEntry<T> {
   value: T;
@@ -627,12 +628,33 @@ export class ContractDataService {
 
     return this.deduplicateRequest(cacheKey, async () => {
       try {
-        // Starknet balance currently returns 0 placeholder in API
-        // In a real implementation, we would use a Starknet RPC
-        const response = await fetch(`/api/balance?address=${address}&chain=starknet`);
-        if (!response.ok) return "0";
-        const data = await response.json();
-        return data.usdc || "0";
+        // Starknet USDC contract (Mainnet)
+        const USDC_STARKNET = "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8";
+        
+        // Initialize public provider if none in env
+        const nodeUrl = process.env.NEXT_PUBLIC_STARKNET_RPC_URL || "https://starknet-mainnet.public.blastapi.io";
+        const provider = new RpcProvider({ nodeUrl });
+
+        // Call balanceOf (selector is handled by starknet.js callContract)
+        // returns string[] representing [low, high]
+        const response = await provider.callContract({
+          contractAddress: USDC_STARKNET,
+          entrypoint: "balanceOf",
+          calldata: [address]
+        });
+
+        // Starknet returns uint256 as [low, high]
+        if (!response || response.length < 2) return "0";
+        
+        const balanceBN = uint256.uint256ToBN({
+          low: response[0],
+          high: response[1]
+        });
+
+        // USDC is 6 decimals
+        const balance = (Number(balanceBN) / 1000000).toString();
+        this.setCache(cacheKey, balance, CACHE_CONFIG.USER_BALANCE);
+        return balance;
       } catch (error) {
         console.error("Failed to fetch Starknet balance:", error);
         return "0";
