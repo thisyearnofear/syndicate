@@ -15,13 +15,15 @@
  * await purchase({ chain: 'base', userAddress, ticketCount: 5 });
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { purchaseOrchestrator, type PurchaseRequest, type PurchaseResult } from '@/domains/lottery/services/purchaseOrchestrator';
 import { useWalletConnection } from './useWalletConnection';
 import type { TrackerStatus, SourceChainType } from '@/components/bridge/CrossChainTracker';
 import { usePurchasePolling } from './usePurchasePolling';
 import { mapPurchaseStatusToTracker } from '@/domains/lottery/utils/mapPurchaseStatus';
 import { solanaWalletService } from '@/services/solanaWalletService';
+
+const PENDING_PURCHASE_KEY = 'pending_cross_chain_purchase';
 
 export interface UseSimplePurchaseState {
   isPurchasing: boolean;
@@ -65,6 +67,11 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
     // Update state using functional update to get latest status and avoid dependencies
     setState(prev => {
       const newStatus = mapPurchaseStatusToTracker(data.status);
+      if (newStatus === 'complete' || newStatus === 'error') {
+        if (typeof window !== 'undefined') {
+          try { localStorage.removeItem(PENDING_PURCHASE_KEY); } catch {}
+        }
+      }
       return {
         ...prev,
         status: newStatus,
@@ -82,6 +89,31 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
     adaptivePolling: true,
     onStatusChange: handleStatusChange,
   });
+
+  // Restore pending cross-chain purchase on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const saved = localStorage.getItem(PENDING_PURCHASE_KEY);
+      if (!saved) return;
+      const pending = JSON.parse(saved);
+      // Only restore if less than 1 hour old
+      if (Date.now() - pending.timestamp > 3600_000) {
+        localStorage.removeItem(PENDING_PURCHASE_KEY);
+        return;
+      }
+      // Restore tracking state so polling resumes
+      setState(prev => ({
+        ...prev,
+        isPurchasing: true,
+        sourceTxHash: pending.sourceTxHash,
+        sourceChain: pending.chain,
+        status: 'confirmed_source' as TrackerStatus,
+      }));
+    } catch {
+      localStorage.removeItem(PENDING_PURCHASE_KEY);
+    }
+  }, []);
 
   const purchase = useCallback(
     async (request: Partial<PurchaseRequest>, permissionId?: string): Promise<PurchaseResult> => {
@@ -184,6 +216,19 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
               throw new Error(`Unsupported chain for wallet signing: ${chain}`);
             }
 
+            // Persist pending purchase before resuming
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem(PENDING_PURCHASE_KEY, JSON.stringify({
+                  sourceTxHash,
+                  chain,
+                  bridgeId: result.bridgeId,
+                  ticketCount: request.ticketCount || 1,
+                  timestamp: Date.now(),
+                }));
+              } catch {}
+            }
+
             // Resume the orchestrator with the signed tx hash
             setState(prev => ({ ...prev, status: 'confirmed_source' as TrackerStatus }));
 
@@ -203,6 +248,9 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
           } catch (signError) {
             const msg = signError instanceof Error ? signError.message : 'Wallet signing failed';
             const isCancel = msg.includes('cancel') || msg.includes('reject') || msg.includes('denied');
+            if (typeof window !== 'undefined') {
+              try { localStorage.removeItem(PENDING_PURCHASE_KEY); } catch {}
+            }
             setState(prev => ({
               ...prev,
               isPurchasing: false,
@@ -254,6 +302,9 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
             }));
           } else {
             // Direct purchase: complete immediately
+            if (typeof window !== 'undefined') {
+              try { localStorage.removeItem(PENDING_PURCHASE_KEY); } catch {}
+            }
             setState(prev => ({
               ...prev,
               isPurchasing: false,
@@ -267,6 +318,9 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
           }
         } else {
           // Error state
+          if (typeof window !== 'undefined') {
+            try { localStorage.removeItem(PENDING_PURCHASE_KEY); } catch {}
+          }
           setState(prev => ({
             ...prev,
             isPurchasing: false,
@@ -279,6 +333,9 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
         return result;
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Purchase failed';
+        if (typeof window !== 'undefined') {
+          try { localStorage.removeItem(PENDING_PURCHASE_KEY); } catch {}
+        }
         setState(prev => ({
           ...prev,
           isPurchasing: false,

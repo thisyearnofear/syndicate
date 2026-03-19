@@ -124,7 +124,13 @@ export const CONTRACTS = {
   usdc: process.env.NEXT_PUBLIC_USDC_TOKEN_ADDRESS || "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
 
   // Auto-Purchase Proxy for trustless cross-chain ticket purchases
-  autoPurchaseProxy: process.env.NEXT_PUBLIC_AUTO_PURCHASE_PROXY || "0x0000000000000000000000000000000000000000",
+  autoPurchaseProxy: process.env.NEXT_PUBLIC_AUTO_PURCHASE_PROXY || "0x707043a8c35254876b8ed48f6537703f7736905c",
+
+  // Stacks Tokens (Public Contract Principals)
+  stacks: {
+    usdcx: "SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE" + ".usdcx",
+    sbtc: "SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token",
+  }
 } as const;
 
 /**
