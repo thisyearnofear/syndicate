@@ -455,6 +455,12 @@ export function WalletProvider({ children }: WalletProviderProps) {
               
               if (phantomConnected) {
                 console.log("WalletContext: Restoring Solana/Phantom session", savedState.address);
+                
+                // Sync solanaWalletService singleton state
+                import("@/services/solanaWalletService").then(({ solanaWalletService }) => {
+                  solanaWalletService.setPublicKey(savedState.address || null);
+                });
+
                 dispatch({
                   type: "RESTORE_STATE",
                   payload: {

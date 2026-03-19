@@ -64,7 +64,7 @@ export class VaultManager {
         // Register Aave provider (Week 2)
         this.providers.set('aave', aaveProvider);
 
-        // Register Drift provider (Build-a-Bear Hackathon)
+        // Register Drift provider (JLP Delta Neutral)
         this.providers.set('drift', driftProvider);
 
         // TODO: Register Morpho provider (Week 8)
@@ -247,7 +247,7 @@ export class VaultManager {
             aave: 'Aave V3',
             morpho: 'Morpho Blue',
             spark: 'Spark Protocol',
-            drift: 'Drift Delta Neutral (Hackathon)',
+            drift: 'Drift Delta Neutral',
         };
         return names[protocol];
     }
