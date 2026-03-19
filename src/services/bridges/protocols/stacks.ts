@@ -110,6 +110,19 @@ export class StacksProtocol implements BridgeProtocol {
                     destinationChain: params.destinationChain,
                     amount: params.amount,
                     recipient: params.destinationAddress,
+                    walletAction: {
+                        type: 'stacks_contract_call',
+                        contractAddress: CONTRACTS.LOTTERY.split('.')[0],
+                        contractName: CONTRACTS.LOTTERY.split('.')[1],
+                        functionName: 'bridge-and-purchase',
+                        functionArgs: {
+                            amount: params.amount,
+                            recipient: params.destinationAddress,
+                            tokenPrincipal: tokenAddress,
+                        },
+                        tokenAddress: tokenAddress,
+                        network: 'mainnet',
+                    },
                     steps: isNativeUsdc ? [
                         '1. Sign Stacks transaction (burns USDCx)',
                         '2. Circle generates attestation',

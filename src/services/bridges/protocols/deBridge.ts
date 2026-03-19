@@ -19,7 +19,7 @@
  * - Base: 8453
  *
  * Tokens:
- * - Solana USDC: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyB7bF
+ * - Solana USDC: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
  * - Base USDC: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
  */
 
@@ -42,7 +42,7 @@ const DEBRIDGE_API = "https://dln.debridge.finance/v1.0";
 // Chain constants
 const SOLANA_CHAIN_ID = 7565164;
 const BASE_CHAIN_ID = 8453;
-const USDC_SOLANA = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyB7bF";
+const USDC_SOLANA = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 const USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 
 interface DeBridgeQuoteResponse {
@@ -237,12 +237,49 @@ export class DeBridgeProtocol implements BridgeProtocol {
     const startTime = Date.now();
 
     try {
+      // Check for resume state FIRST - skip getting new quote
+      if (params.options?.signedTxHash && params.options?.orderId) {
+        const signedTxHash = params.options.signedTxHash as string;
+        const orderId = params.options.orderId as string;
+
+        params.onStatus?.("burning", {
+          protocol: "debridge",
+          message: "Transaction submitted. Waiting for solver fulfillment...",
+          txHash: signedTxHash,
+        });
+
+        const pollResult = await this.pollOrderStatus(
+          orderId,
+          120_000,
+          params,
+        );
+
+        if (!pollResult.success) {
+          throw new BridgeError(
+            BridgeErrorCode.TRANSACTION_TIMEOUT,
+            `Bridge order not fulfilled: ${pollResult.error}`,
+            "debridge",
+          );
+        }
+
+        return {
+          success: true,
+          protocol: "debridge",
+          bridgeId: orderId,
+          sourceTxHash: signedTxHash,
+          destinationTxHash: pollResult.fulfillTxHash,
+          status: "complete" as BridgeStatus,
+          estimatedTimeMs: 30_000,
+          actualTimeMs: Date.now() - startTime,
+        };
+      }
+
+      // Fresh quote flow
       params.onStatus?.("approve", {
         protocol: "debridge",
         message: "Getting deBridge quote and transaction...",
       });
 
-      // Step 1: Get quote with transaction data
       const quote = await this.getQuoteWithTx(params);
 
       if (!quote.tx || !quote.orderId) {
@@ -259,54 +296,6 @@ export class DeBridgeProtocol implements BridgeProtocol {
         message: "Transaction ready. Please sign with your Solana wallet.",
         txData: quote.tx,
       });
-
-      // Step 2: The transaction signing happens in the wallet hook
-      // We return the transaction data for the frontend to handle
-      // The frontend will use Phantom/Solflare to sign and submit
-
-      // Step 3: If signedTx is provided (from retry), submit and poll
-      if (params.options?.signedTxHash) {
-        const signedTxHash = params.options.signedTxHash as string;
-        params.onStatus?.("burning", {
-          protocol: "debridge",
-          message: "Transaction submitted. Waiting for solver fulfillment...",
-          txHash: signedTxHash,
-        });
-
-        // Poll for completion
-        const pollResult = await this.pollOrderStatus(
-          quote.orderId,
-          120_000,
-          params,
-        );
-
-        if (!pollResult.success) {
-          throw new BridgeError(
-            BridgeErrorCode.TRANSACTION_TIMEOUT,
-            `Bridge order not fulfilled: ${pollResult.error}`,
-            "debridge",
-          );
-        }
-
-        const actualTimeMs = Date.now() - startTime;
-
-        return {
-          success: true,
-          protocol: "debridge",
-          bridgeId: quote.orderId,
-          sourceTxHash: signedTxHash,
-          destinationTxHash: pollResult.fulfillTxHash,
-          status: "complete" as BridgeStatus,
-          estimatedTimeMs:
-            (quote.order?.approximateFulfillmentDelay || 30) * 1000,
-          actualTimeMs,
-          details: {
-            amountReceived:
-              quote.estimation?.dstChainTokenOut?.recommendedAmount,
-            solver: "DLN Solver Network",
-          },
-        };
-      }
 
       // Return pending result with transaction data for wallet signing
       const actualTimeMs = Date.now() - startTime;

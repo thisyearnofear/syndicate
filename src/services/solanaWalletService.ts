@@ -99,15 +99,25 @@ class SolanaWalletService {
     return this.state.publicKey;
   }
 
+  setPublicKey(pk: string | null): void {
+    if (pk) {
+      this.state = { connected: true, publicKey: pk };
+    } else {
+      this.state = { connected: false, publicKey: null };
+    }
+  }
+
   /**
    * Get USDC token account balance on Solana (formatted string with 6 decimals)
+   * Accepts an optional ownerAddress to decouple from Phantom connection state.
    */
-  async getUsdcBalance(rpcUrl: string, usdcMint: string): Promise<string> {
-    if (!this.state.publicKey) return '0';
+  async getUsdcBalance(rpcUrl: string, usdcMint: string, address?: string): Promise<string> {
+    const userAddress = address || this.state.publicKey;
+    if (!userAddress) return '0';
 
     const endpoint = rpcUrl || this.getRpcEndpoint();
     const connection = new Connection(endpoint, DEFAULT_COMMITMENT);
-    const owner = new PublicKey(this.state.publicKey);
+    const owner = new PublicKey(userAddress);
     const mint = new PublicKey(usdcMint);
 
     try {

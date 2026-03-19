@@ -149,7 +149,7 @@ export default function YieldStrategiesPage() {
                           <div className="glass-premium p-4 rounded-lg border border-white/10">
                             <p className="text-sm text-gray-400 mb-1">Status</p>
                             <p className="font-bold text-indigo-400">
-                              {selectedStrategy === 'drift' ? 'Hackathon Ready 🚀' : 'Coming Soon'}
+                              {selectedStrategy === 'drift' ? 'Live & Active ⚡' : 'Coming Soon'}
                             </p>
                           </div>
                         </div>
