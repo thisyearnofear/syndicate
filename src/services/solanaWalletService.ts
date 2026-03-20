@@ -9,6 +9,7 @@ import {
   Commitment,
 } from '@solana/web3.js';
 import { getAssociatedTokenAddress } from '@solana/spl-token';
+import { getSolanaRpcUrls } from '@/utils/rpcFallback';
 
 export type SolanaWalletState = {
   connected: boolean;
@@ -37,11 +38,8 @@ class SolanaWalletService {
   }
 
   private getRpcEndpoint(): string {
-    return (
-      process.env.NEXT_PUBLIC_SOLANA_RPC ||
-      process.env.SOLANA_ALCHEMY_API_KEY && `https://solana-mainnet.g.alchemy.com/v2/${process.env.SOLANA_ALCHEMY_API_KEY}` ||
-      clusterApiUrl('mainnet-beta')
-    );
+    const urls = getSolanaRpcUrls();
+    return urls[0] || clusterApiUrl('mainnet-beta');
   }
 
   private ensureConnection(): Connection {
