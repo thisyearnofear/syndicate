@@ -208,9 +208,9 @@ class Web3Service {
     return this.dataService?.getTicketPrice() ?? "1";
   }
 
-  async getUserBalance(address?: string): Promise<UserBalance> {
+  async getUserBalance(address?: string, options?: { tokenPrincipal?: string }): Promise<UserBalance> {
     if (!this.dataService) throw new Error("Service not initialized");
-    return this.dataService.getUserBalance(address);
+    return this.dataService.getUserBalance(address, options);
   }
 
   async getCurrentTicketInfo(address?: string): Promise<UserTicketInfo | null> {

@@ -212,6 +212,8 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
               sourceTxHash = await handleSolanaWalletSign(result);
             } else if (chain === 'stacks') {
               sourceTxHash = await handleStacksWalletSign(result);
+            } else if (chain === 'starknet') {
+              sourceTxHash = await handleStarknetWalletSign(result);
             } else {
               throw new Error(`Unsupported chain for wallet signing: ${chain}`);
             }
@@ -424,8 +426,8 @@ async function handleStacksWalletSign(result: PurchaseResult): Promise<string> {
     contractName: string;
     functionName: string;
     functionArgs: {
-      amount: string;
-      recipient: string;
+      ticketCount: string;
+      baseAddress: string;
       tokenPrincipal: string;
     };
   } | undefined;
@@ -435,7 +437,7 @@ async function handleStacksWalletSign(result: PurchaseResult): Promise<string> {
   }
 
   const { openContractCall } = await import('@stacks/connect');
-  const { uintCV, standardPrincipalCV, contractPrincipalCV } = await import('@stacks/transactions');
+  const { uintCV, stringAsciiCV, contractPrincipalCV } = await import('@stacks/transactions');
   const { StacksMainnet } = await import('@stacks/network');
 
   const [tokenAddr, tokenName] = walletAction.functionArgs.tokenPrincipal.split('.');
@@ -446,8 +448,8 @@ async function handleStacksWalletSign(result: PurchaseResult): Promise<string> {
       contractName: walletAction.contractName,
       functionName: walletAction.functionName,
       functionArgs: [
-        uintCV(parseInt(walletAction.functionArgs.amount)),
-        standardPrincipalCV(walletAction.functionArgs.recipient),
+        uintCV(parseInt(walletAction.functionArgs.ticketCount)),
+        stringAsciiCV(walletAction.functionArgs.baseAddress),
         contractPrincipalCV(tokenAddr, tokenName),
       ],
       network: new StacksMainnet(),
@@ -459,4 +461,29 @@ async function handleStacksWalletSign(result: PurchaseResult): Promise<string> {
       },
     });
   });
+}
+/**
+ * Sign and submit a Starknet transaction via ArgentX/Braavos.
+ * Expects 'calls' array in result.details for account.execute().
+ */
+async function handleStarknetWalletSign(result: PurchaseResult): Promise<string> {
+  const calls = result.details?.calls as any[];
+  if (!calls || !Array.isArray(calls)) {
+    throw new Error('No Starknet calls returned from bridge');
+  }
+
+  // Get the active Starknet account from the window object (standard for Starknet discovery)
+  // We use getStarknet from the starknet-kit or discovery
+  const { connect } = await import('starknetkit');
+  const { wallet } = await connect({ modalMode: 'neverAsk' }); // Use already connected wallet
+
+  if (!wallet || !(wallet as any).account) {
+    throw new Error('Starknet wallet not connected or account not found');
+  }
+
+  // Execute the transaction
+  const response = await (wallet as any).account.execute(calls);
+  
+  // Starknet response contains transaction_hash
+  return response.transaction_hash;
 }

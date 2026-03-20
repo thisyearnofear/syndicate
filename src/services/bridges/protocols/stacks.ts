@@ -116,8 +116,8 @@ export class StacksProtocol implements BridgeProtocol {
                         contractName: CONTRACTS.LOTTERY.split('.')[1],
                         functionName: 'bridge-and-purchase',
                         functionArgs: {
-                            amount: params.amount,
-                            recipient: params.destinationAddress,
+                            ticketCount: params.amount,
+                            baseAddress: params.destinationAddress,
                             tokenPrincipal: tokenAddress,
                         },
                         tokenAddress: tokenAddress,

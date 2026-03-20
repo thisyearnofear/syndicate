@@ -244,33 +244,9 @@ export class StarknetOrbiterProtocol implements BridgeProtocol {
     startTime: number,
   ): Promise<BridgeResult> {
     try {
-      params.onStatus?.("approve", {
-        protocol: "starknet",
-        message: "Getting Orbiter quote and transaction...",
-      });
+      const orderId = (params.options?.bridgeId as string) || this.generateOrderId(params);
 
-      // Step 1: Get quote with transaction data
-      const quote = await this.getQuoteWithTx(params);
-
-      if (!quote.result?.steps?.[0]?.tx) {
-        throw new BridgeError(
-          BridgeErrorCode.ESTIMATION_FAILED,
-          "Orbiter did not return transaction data. Please try again.",
-          "starknet",
-        );
-      }
-
-      const txData = quote.result.steps[0].tx;
-      const orderId = this.generateOrderId(params);
-
-      params.onStatus?.("approved", {
-        protocol: "starknet",
-        orderId,
-        message: "Transaction ready. Please sign with your Starknet wallet.",
-        txData,
-      });
-
-      // Step 2: If signedTxHash provided (from retry), poll for completion
+      // Step 1: Check for resume state FIRST - skip getting new quote
       if (params.options?.signedTxHash) {
         const signedTxHash = params.options.signedTxHash as string;
         params.onStatus?.("burning", {
@@ -306,11 +282,36 @@ export class StarknetOrbiterProtocol implements BridgeProtocol {
           estimatedTimeMs: 120_000,
           actualTimeMs,
           details: {
-            amountReceived: quote.result.details?.destTokenAmount,
+            amountReceived: params.amount, // Using amount from params as fallback
             solver: "Orbiter Finance",
           },
         };
       }
+
+      params.onStatus?.("approve", {
+        protocol: "starknet",
+        message: "Getting Orbiter quote and transaction...",
+      });
+
+      // Step 2: Get quote with transaction data (fresh flow)
+      const quote = await this.getQuoteWithTx(params);
+
+      if (!quote.result?.steps?.[0]?.tx) {
+        throw new BridgeError(
+          BridgeErrorCode.ESTIMATION_FAILED,
+          "Orbiter did not return transaction data. Please try again.",
+          "starknet",
+        );
+      }
+
+      const txData = quote.result.steps[0].tx;
+
+      params.onStatus?.("approved", {
+        protocol: "starknet",
+        orderId,
+        message: "Transaction ready. Please sign with your Starknet wallet.",
+        txData,
+      });
 
       // Return pending result with transaction data for wallet signing
       const actualTimeMs = Date.now() - startTime;

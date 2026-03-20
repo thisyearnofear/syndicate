@@ -192,7 +192,7 @@ export class ContractDataService {
   /**
    * Get user balance with caching
    */
-  async getUserBalance(address?: string): Promise<UserBalance> {
+  async getUserBalance(address?: string, options?: { tokenPrincipal?: string }): Promise<UserBalance> {
     try {
       let userAddress = address;
       
@@ -237,7 +237,7 @@ export class ContractDataService {
               hasEnoughEth: parseFloat(ethFormatted) >= 0.001,
             };
 
-        this.setCache(cacheKey, result, CACHE_CONFIG.USER_BALANCE);
+            this.setCache(cacheKey, result, CACHE_CONFIG.USER_BALANCE);
             return result;
           } catch (error) {
             return {
@@ -253,13 +253,13 @@ export class ContractDataService {
       // Check if Stacks address
       if (userAddress && (userAddress.startsWith("SP") || userAddress.startsWith("ST"))) {
         try {
-          // Use centralized config for Stacks tokens
-          const tokenPrincipal = CONTRACTS.stacks.usdcx;
-          const stacksUsdc = await this.getStacksBalance(userAddress, tokenPrincipal);
+          // Use provided token principal or default to USDCx
+          const tokenPrincipal = options?.tokenPrincipal || CONTRACTS.stacks.usdcx;
+          const balance = await this.getStacksBalance(userAddress, tokenPrincipal);
           return {
-            usdc: stacksUsdc,
+            usdc: balance,
             eth: "0",
-            hasEnoughUsdc: parseFloat(stacksUsdc) >= 1,
+            hasEnoughUsdc: parseFloat(balance) >= 1,
             hasEnoughEth: false
           };
         } catch (error) {
