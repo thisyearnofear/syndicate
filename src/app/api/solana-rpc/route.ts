@@ -3,18 +3,46 @@ export async function POST(request: Request): Promise<Response> {
   if (!target) {
     return Response.json({ error: 'SOLANA_RPC_TARGET not configured' }, { status: 500 });
   }
-  try {
-    const body = await request.text();
-    const resp = await fetch(target, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body,
-    });
-    const text = await resp.text();
-    return new Response(text, { status: resp.status, headers: { 'content-type': 'application/json' } });
-  } catch {
-    return Response.json({ error: 'Proxy request failed' }, { status: 502 });
+  if (!target) {
+    return Response.json({ error: 'SOLANA_RPC_TARGET not configured' }, { status: 500 });
   }
+
+  // Backup targets for the proxy to try if the primary fails/403s
+  const backupTargets = [
+    target,
+    'https://rpc.ankr.com/solana',
+    'https://solana-mainnet.g.alchemy.com/v2/7zTVPzH-zVHz_zXzVHz_zXzVHz_zXzVH', // Placeholder/Public
+    'https://api.mainnet-beta.solana.com'
+  ];
+
+  const body = await request.text();
+
+  for (const t of backupTargets) {
+    try {
+      const resp = await fetch(t, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body,
+        signal: AbortSignal.timeout(10000), // 10s timeout per target
+      });
+      
+      if (resp.status === 403 || resp.status === 429) {
+        console.warn(`[SolanaProxy] Target ${t} returned ${resp.status}, trying backup...`);
+        continue;
+      }
+
+      const text = await resp.text();
+      return new Response(text, { 
+        status: resp.status, 
+        headers: { 'content-type': 'application/json' } 
+      });
+    } catch (e) {
+      console.warn(`[SolanaProxy] Target ${t} failed: ${e instanceof Error ? e.message : String(e)}`);
+      continue;
+    }
+  }
+
+  return Response.json({ error: 'All proxy targets failed' }, { status: 502 });
 }
 
 export async function GET(): Promise<Response> {

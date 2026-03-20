@@ -8,6 +8,9 @@
 export function getSolanaRpcUrls(): string[] {
   const urls: string[] = [];
 
+  // Priority 0: Local Proxy (avoids CORS and direct 403s)
+  urls.push('/api/solana-rpc');
+
   // Priority 1: Alchemy with API key (most reliable)
   if (process.env.SOLANA_ALCHEMY_API_KEY) {
     urls.push(
@@ -25,6 +28,7 @@ export function getSolanaRpcUrls(): string[] {
   const defaultFallbacks = [
     'https://rpc.ankr.com/solana',
     'https://solana-api.projectserum.com',
+    'https://api.mainnet-beta.solana.com', // Added as last resort
   ];
   
   const configuredFallbacks = (process.env.NEXT_PUBLIC_SOLANA_RPC_FALLBACKS || '')
