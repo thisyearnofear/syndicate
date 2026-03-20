@@ -1,11 +1,11 @@
 # System Architecture
 
-**Last Updated**: March 2, 2026  
+**Last Updated**: March 20, 2026
 **Status**: Production
 
 ## Overview
 
-Syndicate is a cross-chain lottery platform enabling users to purchase Megapot tickets from any blockchain. The architecture is designed to be **trustless**, **fast**, and **transparent**.
+Syndicate is a cross-chain lottery platform enabling users to purchase Megapot tickets from any blockchain. The platform features a **Lossless Lottery** mechanism powered by the Drift delta-neutral JLP vault on Solana, with KYC/AML compliance via Civic Pass. The architecture is designed to be **trustless**, **fast**, **transparent**, and **compliant**.
 
 ### Core Principles
 
@@ -27,6 +27,14 @@ Syndicate is a cross-chain lottery platform enabling users to purchase Megapot t
      │   - Wallet connection
      │   - Purchase UI
      │   - Status tracking
+     │   - Yield strategies
+     └──────┬─────────────┘
+            │
+     ┌──────▼─────────────┐
+     │   Compliance Layer │
+     │   - Civic Pass     │
+     │   - KYC/AML Gate   │
+     │   - Attestation    │
      └──────┬─────────────┘
             │
      ┌──────▼──────────┐
@@ -40,14 +48,16 @@ Syndicate is a cross-chain lottery platform enabling users to purchase Megapot t
   │                                   │
   ▼                                   ▼
 ┌──────────────────┐          ┌──────────────────┐
-│ Bridge Protocols │          │  Automation      │
-│ - sBTC → CCTP    │          │  - Vercel Cron   │
-│ - deBridge       │          │  - Gelato (opt)  │
-│ - NEAR Intents   │          │  - ERC-7715      │
-│ - CCIP           │          └──────────────────┘
-└────────┬─────────┘
-         │
-         ▼
+│ Bridge Protocols │          │  Yield Vaults    │
+│ - sBTC → CCTP    │          │  - Drift JLP     │
+│ - deBridge       │          │  - Aave (TODO)   │
+│ - NEAR Intents   │          │  - Morpho (TODO) │
+│ - CCIP           │          └────────┬─────────┘
+└────────┬─────────┘                  │
+         │                            │
+         └────────────┬───────────────┘
+                      │
+                      ▼
 ┌─────────────────────────────────────────┐
 │     MegapotAutoPurchaseProxy (Base)     │
 │  - Receives bridged USDC                │
@@ -61,6 +71,126 @@ Syndicate is a cross-chain lottery platform enabling users to purchase Megapot t
 │  - Issues lottery tickets               │
 │  - Manages rounds & drawings            │
 └─────────────────────────────────────────┘
+```
+
+---
+
+## Lossless Lottery Architecture
+
+### Overview
+
+The Lossless Lottery converts yield from productive DeFi assets into lottery tickets, allowing users to maintain 100% of their principal while gaining prize exposure. This is analogous to UK Premium Bonds (NS&I manages £120B+), reimagined on-chain.
+
+### Drift JLP Vault Flow
+
+```
+User (Solana Wallet)
+   │
+   ├─[1] Civic Pass Verification (if not verified)
+   │     └─> Complete KYC/AML (CAPTCHA demo or ID_VERIFICATION production)
+   │
+   ├─[2] Deposit USDC to Drift JLP Vault
+   │     ├─> Principal locked for 3 months
+   │     └─> Earning ~22.5% APY (delta-neutral strategy)
+   │
+   ├─[3] Yield Accrual (continuous)
+   │     └─> YieldToTicketsService monitors accrued yield
+   │
+   ├─[4] Withdraw Yield (on-chain orchestrator or relayer)
+   │     └─> withdrawYield() triggered periodically
+   │
+   └─[5] Auto-Purchase Tickets
+         ├─> Yield routed to PurchaseOrchestrator
+         ├─> Megapot.purchaseTickets() called
+         └─> User receives lottery tickets for free
+```
+
+### Key Properties
+
+- **Principal Safety**: 100% of initial deposit maintained (delta-neutral strategy)
+- **Yield Generation**: ~22.5% APY from Drift JLP perpetual futures strategy
+- **Automatic Conversion**: Yield automatically converted to lottery tickets
+- **No Friction**: User doesn't need to manually claim or purchase
+- **Compliance**: KYC/AML via Civic Pass gates vault deposits
+
+### Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| **DriftVaultProvider** | `src/services/vaults/driftProvider.ts` | Solana vault interactions, deposit/withdraw logic |
+| **YieldToTicketsService** | `src/services/yieldToTicketsService.ts` | Orchestrates yield → ticket conversion |
+| **YieldDashboard** | `src/components/yield/YieldDashboard.tsx` | User view of principal, yield, tickets generated |
+| **YieldPerformanceDisplay** | `src/components/yield/YieldPerformanceDisplay.tsx` | APY visualization, performance metrics |
+| **ImprovedYieldStrategySelector** | `src/components/yield/ImprovedYieldStrategySelector.tsx` | Strategy selection UI with lockup warnings |
+
+### Lockup Mechanics
+
+- **Duration**: 3 months (90 days)
+- **Purpose**: Normalize yield, prevent gaming
+- **Early Withdrawal**: Not permitted (principal locked)
+- **Yield Withdrawal**: Automatic via orchestrator
+- **After Lockup**: User can withdraw principal or continue earning
+
+---
+
+## Civic Pass Compliance Architecture
+
+### Overview
+
+Civic Pass provides on-chain KYC/AML attestation for permissioned vault access. The compliance model is:
+- **KYC gates deposits** (vault entry requires verification)
+- **Prize claims are permissionless** (lottery payouts don't need KYC)
+
+This is the "Premium Bonds" model: institutional-grade compliance for deposit-taking, frictionless prize distribution.
+
+### Gatekeeper Networks
+
+| Network | Use Case | Friction | Production Ready |
+|---------|----------|----------|------------------|
+| **CAPTCHA** | Hackathon demo | Low | ❌ Demo only |
+| **Liveness** | Anti-spoofing | Medium | ⚠️ Beta |
+| **ID_VERIFICATION** | Full KYC/AML | High | ✅ Production |
+
+### Verification Flow
+
+```
+User
+ │
+ ├─[1] Click "Verify with Civic"
+ │
+ ├─[2] Civic Pass modal opens
+ │     ├─> Select verification method
+ │     └─> Complete verification (CAPTCHA or ID)
+ │
+ ├─[3] On-chain attestation minted
+ │     └─> GatewayCredential stored on-chain
+ │
+ └─[4] Verification status available
+       ├─> isVerified = true
+       └─> User can access permissioned vaults
+```
+
+### Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| **CivicGateProvider** | `src/components/civic/CivicGateProvider.tsx` | Wraps Solana components with GatewayProvider |
+| **useCivicGate** | `src/hooks/useCivicGate.ts` | Hook for verification status and actions |
+| **CivicVerificationGate** | `src/components/civic/CivicVerificationGate.tsx` | Drop-in gate UI with compliance badges |
+
+### Integration Points
+
+- **Yield Strategies Page**: Wrapped in `CivicGateProvider`
+- **Drift Vault Deposit Card**: Gated behind `CivicVerificationGate`
+- **Unverified Users**: See compliance gate UI
+- **Verified Users**: See deposit UI with "Civic Pass Verified ✓" badge
+
+### Configuration
+
+```typescript
+// src/components/civic/CivicGateProvider.tsx
+const ACTIVE_NETWORK = CIVIC_NETWORKS.CAPTCHA; // Demo
+// const ACTIVE_NETWORK = CIVIC_NETWORKS.ID_VERIFICATION; // Production
 ```
 
 ---

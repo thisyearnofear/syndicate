@@ -1,6 +1,6 @@
 # Cross-Chain Bridge Guide
 
-**Last Updated**: March 2, 2026  
+**Last Updated**: March 20, 2026
 **Status**: Production
 
 ## Quick Reference
@@ -12,6 +12,23 @@
 | **Solana** | 1-3 min | deBridge DLN → Proxy | ✅ Live | `deBridge DLN` + `BASEdeScGmh2FSGnH79gPSN8oV3krmxrPMsLFHvJLEkL` |
 | **Base** | Instant | Direct purchase | ✅ Live | Native |
 | **EVM** | 1-5 min | CCIP/CCTP → Proxy | ✅ Live | Varies by chain |
+
+## Lossless Lottery (Solana → Base Yield Routing)
+
+The Drift JLP Vault on Solana generates ~22.5% APY yield that is automatically converted to lottery tickets on Base. This creates a "no-loss" lottery where users maintain 100% of their principal while gaining prize exposure.
+
+**Flow**:
+```
+Solana Wallet → Civic KYC → Drift JLP Vault → Yield Accrual → Base Lottery Tickets
+```
+
+**Key Properties**:
+- Principal locked for 3 months (90 days)
+- Delta-neutral strategy (no impermanent loss)
+- Yield automatically converted to tickets
+- KYC required via Civic Pass before deposit
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md#lossless-lottery-architecture) for full details.
 
 ---
 

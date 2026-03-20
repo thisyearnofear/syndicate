@@ -61,8 +61,50 @@ npm run lint   # Lint (note: may have config issues)
 - **sBTC**: `SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token`
 - **Lottery**: `SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3`
 
+## Civic Pass Integration (KYC/AML Compliance)
+Permissioned vault access via Civic's on-chain attestation system. KYC gates deposits, not prize claims.
+
+### Civic Components
+| File | Purpose |
+|------|---------|
+| `src/components/civic/CivicGateProvider.tsx` | Wraps Solana components with Civic GatewayProvider. Supports 3 gatekeeper networks |
+| `src/hooks/useCivicGate.ts` | Hook exposing `isVerified`, `isChecking`, `isInProgress`, `isRejected`, `requestVerification`, `statusText` |
+| `src/components/civic/CivicVerificationGate.tsx` | Drop-in gate UI with shield icon, compliance badges (KYC, AML, Sanctions), privacy notice |
+
+### Gatekeeper Networks
+- **CAPTCHA** (default): Low-friction hackathon demo
+- **Liveness**: Anti-spoofing verification
+- **ID_VERIFICATION**: Full institutional KYC (production)
+
+### Configuration
+Switch from demo to production KYC in `CivicGateProvider.tsx`:
+```typescript
+const ACTIVE_NETWORK = CIVIC_NETWORKS.ID_VERIFICATION; // or CIVIC_NETWORKS.CAPTCHA
+```
+
+### Integration Points
+- **Yield Strategies page** (`src/app/yield-strategies/page.tsx`): Content wrapped in `CivicGateProvider`
+- **Drift Vault deposits**: Gated behind `CivicVerificationGate`. Unverified users see compliance gate; verified users see deposit UI with "Civic Pass Verified ✓" badge
+
+## Drift Vault (Premium JLP Strategy) Deposit Flow
+The Drift Lossless Vault is a delta-neutral yield strategy on Solana. Principal is locked for 3 months to normalize yield (~22.5% APY), with yield auto-converted to lottery tickets.
+
+### UI Flow
+1. **Upsell**: `SimplePurchaseModal` and `AutoPurchaseModal` feature "Play for free forever" upsell linking to Drift vault
+2. **Strategy Selection**: `/yield-strategies` page with `ImprovedYieldStrategySelector` handles Drift strategy selection (identifier: `drift`)
+3. **Deposit Execution**: `vaultManager.deposit('drift', amount, userAddress)` → `DriftVaultProvider`
+
+### Key Files
+| Category | Files |
+|----------|-------|
+| **UI Components** | `src/components/modal/SimplePurchaseModal.tsx#L506-L535` (retail upsell)<br>`src/components/modal/AutoPurchaseModal.tsx#L442-L471` (recurring upsell)<br>`src/components/yield/ImprovedYieldStrategySelector.tsx#L160-L247` (strategy detail + 3mo lockup warning)<br>`src/app/yield-strategies/page.tsx#L110-L160` (main page) |
+| **Services** | `src/services/vaults/driftProvider.ts#L134-L145` (deposit implementation)<br>`src/services/vaults/index.ts#L187-L205` (VaultManager orchestration) |
+| **Monitoring** | `src/components/yield/YieldDashboard.tsx#L19-L45` (principal + yield view)<br>`src/components/yield/YieldPerformanceDisplay.tsx` (APY visualization + tickets generated) |
+
 ## Development Notes
 - Token selector in SimplePurchaseModal supports USDCx/sBTC selection
 - AutoPurchaseModal shows different UI for Stacks (x402) vs EVM (ERC-7715)
 - Balance API supports EVM, Solana, NEAR, Starknet, Stacks address formats
 - Use `CONTRACTS` object from stacks.ts for contract addresses
+- **Civic**: Default gate is CAPTCHA for demos; switch to ID_VERIFICATION for production compliance
+- **Drift Vault**: 3-month lockup required; yield withdrawn automatically to purchase tickets

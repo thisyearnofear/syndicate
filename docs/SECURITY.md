@@ -1,6 +1,6 @@
 # Security Guide
 
-**Last Updated**: March 2, 2026
+**Last Updated**: March 20, 2026
 
 **Audit**: March 10, 2026. See `docs/PRODUCTION_READINESS_AUDIT.md`.
 
@@ -265,6 +265,34 @@ Set up alerts for:
 - Right to deletion (off-chain data only)
 - Data portability (export on request)
 - Privacy policy required
+
+### KYC/AML (Civic Pass)
+
+**Compliance Model**:
+- **KYC gates vault deposits**: Users must verify identity before accessing Drift JLP vault
+- **Prize claims permissionless**: Lottery payouts don't require KYC
+- **On-chain attestation**: Civic GatewayCredential stored on-chain
+- **Three verification tiers**: CAPTCHA (demo), Liveness (beta), ID_VERIFICATION (production)
+
+**Civic Integration Security**:
+- Civic App ID stored in environment variables
+- GatewayProvider wraps permissioned components
+- Verification status checked before allowing deposits
+- No sensitive user data stored by application (Civic handles KYC data)
+
+**Configuration**:
+```typescript
+// src/components/civic/CivicGateProvider.tsx
+const ACTIVE_NETWORK = CIVIC_NETWORKS.CAPTCHA; // Demo (hackathon)
+// const ACTIVE_NETWORK = CIVIC_NETWORKS.ID_VERIFICATION; // Production
+```
+
+**Best Practices**:
+- Use CAPTCHA network for development/testing only
+- Switch to ID_VERIFICATION for production compliance
+- Display compliance badges (KYC, AML, Sanctions) clearly
+- Provide privacy notice explaining data usage
+- Never store or transmit Civic verification data off-chain
 
 ### Terms of Service
 
