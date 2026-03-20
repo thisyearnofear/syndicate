@@ -18,6 +18,8 @@ import { ComingSoonBanner } from '@/components/ui/ComingSoonBanner';
 import { ImprovedYieldStrategySelector } from '@/components/yield/ImprovedYieldStrategySelector';
 import { YieldAllocationControl } from '@/components/yield/YieldAllocationControl';
 import { YieldDashboard } from '@/components/yield/YieldDashboard';
+import { CivicGateProvider } from '@/components/civic/CivicGateProvider';
+import { CivicVerificationGate } from '@/components/civic/CivicVerificationGate';
 import Link from "next/link";
 
 export default function YieldStrategiesPage() {
@@ -108,56 +110,62 @@ export default function YieldStrategiesPage() {
             )}
             
             {activeTab === 'strategies' && (
-              <CompactStack spacing="lg">
-                <ImprovedYieldStrategySelector 
-                  selectedStrategy={selectedStrategy} 
-                  onStrategySelect={(strategy) => setSelectedStrategy(strategy || null)}
-                  ticketsAllocation={85}
-                  causesAllocation={15}
-                  onAllocationChange={() => {}}  // Not used in this context
-                  userAddress={address || undefined}
-                />
-                
-                {selectedStrategy && (
-                  <CompactCard variant="premium" padding="lg">
-                    <div className="flex items-start gap-4">
-                      <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
-                        <Shield className="w-8 h-8 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-white mb-2">
-                          {selectedStrategy.toUpperCase()} Strategy
-                        </h3>
-                        <p className="text-gray-300 mb-4">
-                          Detailed information about the {selectedStrategy} yield strategy, 
-                          including risk factors, expected returns, and integration details.
-                        </p>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="glass-premium p-4 rounded-lg border border-white/10">
-                            <p className="text-sm text-gray-400 mb-1">Risk Level</p>
-                            <p className="font-bold text-white">
-                              {selectedStrategy === 'drift' ? 'Medium (Hedged)' : 'Low to Medium'}
-                            </p>
+              <CivicGateProvider>
+                <CompactStack spacing="lg">
+                  <ImprovedYieldStrategySelector 
+                    selectedStrategy={selectedStrategy} 
+                    onStrategySelect={(strategy) => setSelectedStrategy(strategy || null)}
+                    ticketsAllocation={85}
+                    causesAllocation={15}
+                    onAllocationChange={() => {}}  // Not used in this context
+                    userAddress={address || undefined}
+                  />
+                  
+                  {selectedStrategy && (
+                    <CivicVerificationGate
+                      message="Civic Pass verification is required to deposit into institutional-grade vaults. This ensures KYC/AML compliance for all vault participants."
+                    >
+                      <CompactCard variant="premium" padding="lg">
+                        <div className="flex items-start gap-4">
+                          <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                            <Shield className="w-8 h-8 text-white" />
                           </div>
-                          <div className="glass-premium p-4 rounded-lg border border-white/10">
-                            <p className="text-sm text-gray-400 mb-1">Expected APY</p>
-                            <p className="font-bold text-white">
-                              {selectedStrategy === 'drift' ? '~22.5%' : '3-6%'}
+                          <div className="flex-1">
+                            <h3 className="text-xl font-bold text-white mb-2">
+                              {selectedStrategy.toUpperCase()} Strategy
+                            </h3>
+                            <p className="text-gray-300 mb-4">
+                              Detailed information about the {selectedStrategy} yield strategy, 
+                              including risk factors, expected returns, and integration details.
                             </p>
-                          </div>
-                          <div className="glass-premium p-4 rounded-lg border border-white/10">
-                            <p className="text-sm text-gray-400 mb-1">Status</p>
-                            <p className="font-bold text-indigo-400">
-                              {selectedStrategy === 'drift' ? 'Live & Active ⚡' : 'Coming Soon'}
-                            </p>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div className="glass-premium p-4 rounded-lg border border-white/10">
+                                <p className="text-sm text-gray-400 mb-1">Risk Level</p>
+                                <p className="font-bold text-white">
+                                  {selectedStrategy === 'drift' ? 'Medium (Hedged)' : 'Low to Medium'}
+                                </p>
+                              </div>
+                              <div className="glass-premium p-4 rounded-lg border border-white/10">
+                                <p className="text-sm text-gray-400 mb-1">Expected APY</p>
+                                <p className="font-bold text-white">
+                                  {selectedStrategy === 'drift' ? '~22.5%' : '3-6%'}
+                                </p>
+                              </div>
+                              <div className="glass-premium p-4 rounded-lg border border-white/10">
+                                <p className="text-sm text-gray-400 mb-1">Compliance</p>
+                                <p className="font-bold text-green-400">
+                                  Civic Pass Verified ✓
+                                </p>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  </CompactCard>
-                )}
-              </CompactStack>
+                      </CompactCard>
+                    </CivicVerificationGate>
+                  )}
+                </CompactStack>
+              </CivicGateProvider>
             )}
             
             {activeTab === 'allocation' && (

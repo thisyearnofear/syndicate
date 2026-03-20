@@ -574,8 +574,11 @@ export class ContractDataService {
         const data = await response.json();
         
         // Stacks balances response structure contains fungible_tokens
+        // Hiro API keys are "contractPrincipal::assetName" (e.g., "SP...usdcx::usdcx")
+        // Match by prefix since we only store the contract principal
         const fungibleTokens = (data as any).fungible_tokens || {};
-        const tokenData = fungibleTokens[tokenPrincipal];
+        const matchingKey = Object.keys(fungibleTokens).find(key => key.startsWith(tokenPrincipal));
+        const tokenData = matchingKey ? fungibleTokens[matchingKey] : undefined;
         const tokenBalance = tokenData?.balance || "0";
         
         // Stacks tokens: USDCx (6 decimals), sBTC (8 decimals)

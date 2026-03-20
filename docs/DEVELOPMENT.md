@@ -1,7 +1,7 @@
 # Development Guide
 
-**Last Updated**: December 31, 2025  
-**Status**: Active Development (Wallet State Management + Cross-Chain Bridge)
+**Last Updated**: March 20, 2026
+**Status**: Active Development (Wallet State Management + Cross-Chain Bridge + Lossless Lottery)
 
 ## Quick Start
 
@@ -13,6 +13,7 @@
 - Phantom wallet (optional, for Solana testing)
 - NEAR wallet (optional)
 - Stacks wallet (optional, for Bitcoin L2 testing): Leather, Xverse, Asigna, or Fordefi
+- Civic Pass account (optional, for KYC testing): Sign up at https://www.civic.com/
 
 ### Setup
 ```bash
@@ -25,6 +26,9 @@ cp .env.example .env.local
 # Add for Advanced Permissions automation (optional)
 # AUTOMATION_API_KEY=your-secret-key-for-cron-jobs
 
+# Add for Civic Pass integration (optional)
+# NEXT_PUBLIC_CIVIC_APP_ID=your-civic-app-id
+
 # Start development server
 npm run dev
 ```
@@ -32,7 +36,7 @@ npm run dev
 ## Core Architecture
 
 ### Single Wallet, Any Chain Origin (User Value Prop)
-**Status**: ✅ Fully Implemented  
+**Status**: ✅ Fully Implemented
 **Design Pattern**: Single active wallet connection at a time, but system automatically routes based on wallet type
 
 **How It Works:**
@@ -46,6 +50,22 @@ npm run dev
 - **Solana Wallet (Phantom)**: Route via CCTP bridge to Base
 - **NEAR Wallet**: Route via NEAR Intents + Chain Signatures (deterministic MPC-derived Base address, no storage)
 - **EVM Wallets (MetaMask/WalletConnect)**: Direct Base or bridge from any EVM chain via CCIP/CCTP
+
+### Lossless Lottery (Yield-to-Tickets)
+**Status**: ✅ Live (Drift JLP Vault on Solana)
+**Compliance**: ✅ Civic Pass KYC/AML integration
+
+**How It Works:**
+- User deposits USDC into Drift delta-neutral JLP vault (Solana)
+- Principal locked for 3 months, earning ~22.5% APY
+- Yield automatically converted to lottery tickets via YieldToTicketsService
+- User maintains 100% of principal while playing for free
+
+**KYC Requirement:**
+- Civic Pass verification required before vault deposit
+- Default: CAPTCHA network (hackathon demo)
+- Production: ID_VERIFICATION network (full KYC/AML)
+- Verification gates deposits, not prize claims
 
 ### Bridge System (Unified Architecture)
 **Status**: ✅ Complete System
@@ -98,6 +118,22 @@ npm run dev
    - Monitor sBTC bridge status
    - Test fallback if needed
 
+5. **Civic Pass Verification** (KYC for Yield Vaults)
+   - Navigate to /yield-strategies
+   - Click "Verify with Civic" (if not verified)
+   - Complete CAPTCHA verification (demo mode)
+   - Verify "Civic Pass Verified ✓" badge appears
+   - Access Drift vault deposit UI
+
+6. **Drift Vault Deposit** (Lossless Lottery)
+   - Complete Civic verification first
+   - Navigate to /yield-strategies
+   - Select Drift JLP strategy
+   - Enter deposit amount (min: varies by vault)
+   - Confirm 3-month lockup warning
+   - Execute deposit
+   - Verify principal shown in YieldDashboard
+
 ### Automated Tests
 
 **File**: `tests/bridgeImprovements.test.ts`
@@ -145,27 +181,43 @@ npm run dev
 - **Steps**: Connect NEAR → Purchase ticket → Monitor bridge
 - **Expected**: Intent submitted, funds bridged, tickets purchased
 
+**Test 6: Civic Pass Verification**
+- **Steps**: Navigate to /yield-strategies → Click "Verify with Civic" → Complete CAPTCHA
+- **Expected**: Verification complete, badge appears, vault UI unlocked
+
+**Test 7: Drift Vault Deposit**
+- **Steps**: Verify with Civic → Select Drift strategy → Deposit USDC → Confirm lockup
+- **Expected**: Deposit succeeds, principal displayed, lockup timer starts
+
 #### 🟡 High Priority Tests
 
-**Test 6: Phantom Connection**
+**Test 8: Phantom Connection**
 - **Steps**: Connect Phantom → Check balance display
 - **Expected**: Wallet detected, Solana address shown
 
-**Test 7: Network Switching**
+**Test 9: Network Switching**
 - **Steps**: Connect MetaMask → Switch Ethereum → Base
 - **Expected**: Network switch successful, UI updates
 
-**Test 8: Insufficient Funds Handling**
+**Test 10: Insufficient Funds Handling**
 - **Steps**: Try purchase with insufficient USDC
 - **Expected**: Clear error message, transaction rejected
 
-**Test 9: Wormhole Fallback**
+**Test 11: Wormhole Fallback**
 - **Steps**: Initiate bridge → Trigger fallback → Use Wormhole
 - **Expected**: Fallback works, funds arrive via Wormhole (5-10 min)
 
-**Test 10: Transaction Rejection**
+**Test 12: Transaction Rejection**
 - **Steps**: Initiate transaction → Reject in wallet
 - **Expected**: Clear rejection message, no retry loop
+
+**Test 13: Civic ID_VERIFICATION Mode**
+- **Steps**: Switch ACTIVE_NETWORK to ID_VERIFICATION → Complete full KYC
+- **Expected**: Full identity verification flow, production-ready compliance
+
+**Test 14: Yield Withdrawal & Ticket Purchase**
+- **Steps**: Wait for yield accrual → Trigger withdrawYield → Verify tickets minted
+- **Expected**: Yield withdrawn automatically, tickets credited to user
 
 ### Advanced Permissions Testing
 
@@ -541,6 +593,26 @@ try {
 const { switchChain } = useWalletConnection();
 await switchChain(CHAIN_IDS.BASE); // Works for EVM
 await switchChain(8453); // Throws BRIDGE_REQUIRED for non-EVM
+```
+
+### Testing Civic Pass & Drift Vault
+
+```typescript
+// Test Civic verification status
+const { isVerified, requestVerification, statusText } = useCivicGate();
+
+// Request verification
+await requestVerification();
+expect(statusText).toBe('Verification in progress');
+
+// After verification completes
+expect(isVerified).toBe(true);
+expect(statusText).toBe('Verified');
+
+// Test Drift vault deposit
+const { deposit, getVaultBalance } = useDriftVault();
+await deposit('1000', userAddress); // 1000 USDC
+expect(getVaultBalance(userAddress)).toBe('1000');
 ```
 
 ---

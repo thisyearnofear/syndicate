@@ -1,7 +1,7 @@
 # Project Roadmap
 
-**Last Updated**: March 2, 2026  
-**Status**: Production - Decentralized Bridge Architecture Complete
+**Last Updated**: March 20, 2026
+**Status**: Production - Lossless Lottery Live with Civic Compliance
 
 ---
 
@@ -18,15 +18,35 @@
 | **Stacks → Base Bridge** | ✅ Complete | Multi-token (USDCx, sUSDT, aeUSDC) |
 | **Auto-Purchase Proxy** | ✅ Deployed | `0x707043a8c35254876B8ed48F6537703F7736905c` |
 | **Recurring Automation** | ✅ Working | Vercel Cron (hourly) |
-| **Yield Strategies** | ⏸ Backlog | Aave/Morpho integration |
+| **Drift JLP Vault (Lossless Lottery)** | ✅ Live | ~22.5% APY, 3-month lockup |
+| **Civic Pass KYC/AML** | ✅ Live | 3 networks: CAPTCHA, Liveness, ID_VERIFICATION |
+| **Yield-to-Tickets Orchestrator** | ✅ Live | Automatic yield → ticket conversion |
+| **Aave/Morpho Integration** | ⏸ Backlog | Additional yield strategies |
 | **Syndicates (Pooling)** | ⏸ Backlog | Governance not implemented |
 
 ---
 
 ## ✅ Completed (Q4 2025 - Q1 2026)
 
-### Security Infrastructure
+### Security & Compliance Infrastructure
 - ✅ Pre-commit hook with gitleaks for secret detection
+- ✅ `.gitleaksignore` for managing false positives
+- ✅ Security documentation
+- ✅ Civic Pass integration (KYC/AML compliance)
+- ✅ Three gatekeeper networks: CAPTCHA, Liveness, ID_VERIFICATION
+- ✅ Permissioned vault access (KYC gates deposits, not prize claims)
+
+### Lossless Lottery (Drift JLP Vault)
+- ✅ DriftVaultProvider for Solana vault interactions
+- ✅ YieldToTicketsService for automatic yield → ticket conversion
+- ✅ YieldDashboard for principal and yield tracking
+- ✅ YieldPerformanceDisplay for APY visualization
+- ✅ 3-month lockup mechanism (90 days)
+- ✅ ~22.5% APY delta-neutral strategy
+- ✅ Integration with purchase flow (SimplePurchaseModal, AutoPurchaseModal)
+
+### Security Infrastructure
+- ✅ Pre-commit hook with gitleaks for secret detection (already listed above)
 - ✅ `.gitleaksignore` for managing false positives
 - ✅ Security documentation
 
@@ -166,18 +186,25 @@ See [STARKNET.md](./STARKNET.md) for full plan.
 - [ ] Zero operator wallet USDC balance changes
 - [ ] No failed transactions due to proxy issues
 - [ ] Gas costs within expected range
+- [ ] Civic Pass verification working (CAPTCHA mode)
+- [ ] Drift vault deposits successful (post-KYC)
+- [ ] Yield accrual tracking accurate
 
 ### Month 1
 - [ ] Operator wallet can be deprecated
 - [ ] All three bridges (Stacks, Solana, NEAR) using proxy
 - [ ] Documentation complete and accurate
 - [ ] Monitoring dashboards in place
+- [ ] Civic ID_VERIFICATION mode tested (production KYC)
+- [ ] First yield-to-tickets conversion completed
 
 ### Quarter 1
 - [ ] Wormhole integration complete
 - [ ] Operator code archived
 - [ ] Zero custodial trust points
 - [ ] Multi-chain support expanded
+- [ ] Lossless Lottery TVL > $1M
+- [ ] Additional yield strategies (Aave, Morpho)
 
 ---
 
@@ -188,12 +215,17 @@ See [STARKNET.md](./STARKNET.md) for full plan.
 - [ ] Implement event logging in proxy
 - [ ] Add monitoring/alerting for proxy transactions
 - [ ] Document gas optimization opportunities
+- [ ] Add unit tests for Civic Pass integration
+- [ ] Add integration tests for yield-to-tickets flow
+- [ ] Monitor Drift vault performance metrics
 
 ### Medium Priority
 - [ ] Refactor Chainhook handling (generic bridge events)
 - [ ] Consolidate bridge status tracking
 - [ ] Unify error handling across services
 - [ ] Add retry logic for failed proxy calls
+- [ ] Add yield withdrawal automation (relayer or keeper network)
+- [ ] Implement ticket purchase batching for gas efficiency
 
 ### Low Priority
 - [ ] Consider batch purchase support
@@ -210,12 +242,23 @@ See [STARKNET.md](./STARKNET.md) for full plan.
 - Single source of truth for purchases (DRY)
 - Clear separation of concerns (CLEAN)
 - Fail-fast error handling (ROBUST)
+- Yield-to-tickets orchestration (AUTOMATION)
+- Compliance layer abstraction (MODULAR)
 
 ### Security
 - Eliminated custodial risk on Stacks
 - Reduced operator wallet exposure
 - Secret detection prevents leaks
 - Trustless cross-chain purchases
+- KYC/AML compliance via Civic Pass
+- Permissioned vault access (institutional-grade)
+
+### Compliance
+- Civic Pass integration (3 gatekeeper networks)
+- On-chain attestation (GatewayCredential)
+- KYC gates deposits, not prize claims
+- Configurable verification tiers (demo → production)
+- Privacy-preserving (no PII stored)
 
 ### Maintainability
 - Simpler codebase (1 path vs 3)
@@ -228,6 +271,13 @@ See [STARKNET.md](./STARKNET.md) for full plan.
 - Improved security guarantees
 - Foundation for multi-chain expansion
 - Faster future feature development
+- Lossless Lottery (play for free with yield)
+
+### Business Model
+- Institutional-grade compliance (Premium Bonds analogy)
+- Permissioned DeFi vaults (KYC required)
+- Yield-based revenue (performance fees)
+- Cross-chain settlement (Base, Solana, Stacks, NEAR)
 
 ---
 
@@ -238,18 +288,27 @@ See [STARKNET.md](./STARKNET.md) for full plan.
 - Understand proxy contract design
 - Know how to deploy and verify contracts
 - Familiar with Foundry tooling
+- Understand Civic Pass integration (useCivicGate hook)
+- Know Drift vault mechanics (lockup, yield, tickets)
+- Review yield-to-tickets orchestration flow
 
 ### For Operators
 - Understand proxy monitoring
 - Know rollback procedures
 - Familiar with emergency response
 - Can interpret contract events
+- Monitor Civic verification status
+- Track Drift vault performance (APY, TVL)
+- Manage yield withdrawal automation
 
 ### For Product
 - Understand decentralization benefits
 - Know user-facing changes (if any)
 - Can explain trustless architecture
 - Aware of future roadmap
+- Understand Premium Bonds analogy (institutional model)
+- Know compliance requirements (KYC/AML via Civic)
+- Can articulate Lossless Lottery value prop
 
 ---
 
