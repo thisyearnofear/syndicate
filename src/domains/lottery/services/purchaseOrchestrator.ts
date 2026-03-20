@@ -369,8 +369,8 @@ async function executeNEARPurchase(
 
     // If bridge needs wallet signature or deposit, return pending state
     if (result.status === 'pending_signature' || result.status === 'awaiting_deposit') {
-      if (result.bridgeId && result.sourceTxHash) {
-        savePendingPurchase(result.bridgeId, result.sourceTxHash, "near");
+      if (result.bridgeId) {
+        savePendingPurchase(result.bridgeId, result.sourceTxHash || "", "near");
       }
       return {
         success: true,
@@ -701,7 +701,9 @@ async function executeStacksPurchase(
     const tokenAddress = req.stacksTokenPrincipal || (typeof CONTRACTS !== 'undefined' ? (CONTRACTS as any).USDCx : undefined);
 
     // Check balance using the enhanced web3Service (via ContractDataService)
-    const balance = await web3Service.getUserBalance(req.userAddress);
+    const balance = await web3Service.getUserBalance(req.userAddress as string, { 
+      tokenPrincipal: req.stacksTokenPrincipal 
+    });
     const ticketPriceStr = await web3Service.getTicketPrice();
     const requiredAmountNum = parseFloat(ticketPriceStr) * req.ticketCount;
 
@@ -856,8 +858,8 @@ async function executeStarknetPurchase(
 
     // If bridge needs wallet signature, return pending state
     if (result.status === 'pending_signature') {
-      if (result.bridgeId && result.sourceTxHash) {
-        savePendingPurchase(result.bridgeId, result.sourceTxHash, "starknet");
+      if (result.bridgeId) {
+        savePendingPurchase(result.bridgeId, result.sourceTxHash || "", "starknet");
       }
       return {
         success: true,
