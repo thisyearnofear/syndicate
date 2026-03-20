@@ -113,34 +113,47 @@ class SolanaWalletService {
     const userAddress = address || this.state.publicKey;
     if (!userAddress) return '0';
 
-    const endpoint = rpcUrl || this.getRpcEndpoint();
-    const connection = new Connection(endpoint, DEFAULT_COMMITMENT);
     const owner = new PublicKey(userAddress);
     const mint = new PublicKey(usdcMint);
 
-    try {
-      const associatedAddress = await getAssociatedTokenAddress(mint, owner, false);
-      const balanceInfo = await connection.getTokenAccountBalance(associatedAddress);
-      return balanceInfo?.value?.uiAmountString || '0';
-    } catch (err) {
-      // Fall back to aggregating all token accounts if ATA lookup fails
+    // Build ordered list of RPC endpoints to try
+    const endpoints = [
+      ...(rpcUrl ? [rpcUrl] : []),
+      ...getSolanaRpcUrls(),
+    ].filter((u, i, a) => u && a.indexOf(u) === i);
+
+    for (const endpoint of endpoints) {
       try {
-        const accounts = await connection.getTokenAccountsByOwner(owner, { mint });
-        let total = 0n;
-        for (const account of accounts.value) {
-          const info = await connection.getTokenAccountBalance(account.pubkey);
-          const raw = info?.value?.amount ? BigInt(info.value.amount) : 0n;
-          total += raw;
+        const connection = new Connection(endpoint, DEFAULT_COMMITMENT);
+        const associatedAddress = await getAssociatedTokenAddress(mint, owner, false);
+        const balanceInfo = await connection.getTokenAccountBalance(associatedAddress);
+        return balanceInfo?.value?.uiAmountString || '0';
+      } catch (err) {
+        const msg = String((err as { message?: string })?.message || err);
+        if (msg.includes('403') || msg.includes('429')) continue;
+        // ATA lookup failed — try aggregating token accounts on this endpoint
+        try {
+          const connection = new Connection(endpoint, DEFAULT_COMMITMENT);
+          const accounts = await connection.getTokenAccountsByOwner(owner, { mint });
+          let total = 0n;
+          for (const account of accounts.value) {
+            const info = await connection.getTokenAccountBalance(account.pubkey);
+            const raw = info?.value?.amount ? BigInt(info.value.amount) : 0n;
+            total += raw;
+          }
+          if (total === 0n) return '0';
+          const integer = total / (10n ** USDC_DECIMALS);
+          const fractional = (total % (10n ** USDC_DECIMALS)).toString().padStart(Number(USDC_DECIMALS), '0');
+          return `${integer}.${fractional}`;
+        } catch (fallbackError) {
+          console.warn('Failed to aggregate Solana USDC balance:', fallbackError);
+          continue;
         }
-        if (total === 0n) return '0';
-        const integer = total / (10n ** USDC_DECIMALS);
-        const fractional = (total % (10n ** USDC_DECIMALS)).toString().padStart(Number(USDC_DECIMALS), '0');
-        return `${integer}.${fractional}`;
-      } catch (fallbackError) {
-        console.warn('Failed to aggregate Solana USDC balance:', fallbackError);
-        return '0';
       }
     }
+
+    console.warn('All Solana RPC endpoints failed for USDC balance');
+    return '0';
   }
 
   /**
