@@ -1,26 +1,15 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { getAssociatedTokenAddress } from '@solana/spl-token';
+import { getSolanaRpcUrls } from '@/utils/rpcFallback';
 
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 
 const cache: Record<string, { ts: number; balance: string }> = {};
 
 function selectRpcUrls(): string[] {
-  const primary = process.env.NEXT_PUBLIC_SOLANA_RPC || '/api/solana-rpc';
-  const fallbacks = (process.env.NEXT_PUBLIC_SOLANA_RPC_FALLBACKS || '')
-    .split(',')
-    .map(s => s.trim())
-    .filter(Boolean);
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const urls = [primary, ...fallbacks]
+  return getSolanaRpcUrls()
     .map(u => (u && u.startsWith('/') && origin ? origin + u : u));
-  const seen = new Set<string>();
-  return urls.filter(u => {
-    const key = (u || '').toLowerCase();
-    if (!key || seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
 }
 
 async function fetchBalanceFromRpc(url: string, ata: PublicKey): Promise<string> {

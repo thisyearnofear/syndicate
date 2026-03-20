@@ -1,18 +1,11 @@
 export async function POST(request: Request): Promise<Response> {
   const target = process.env.SOLANA_RPC_TARGET;
-  if (!target) {
-    return Response.json({ error: 'SOLANA_RPC_TARGET not configured' }, { status: 500 });
-  }
-  if (!target) {
-    return Response.json({ error: 'SOLANA_RPC_TARGET not configured' }, { status: 500 });
-  }
 
-  // Backup targets for the proxy to try if the primary fails/403s
+  // Build target list — work even without SOLANA_RPC_TARGET configured
   const backupTargets = [
-    target,
+    ...(target ? [target] : []),
     'https://rpc.ankr.com/solana',
-    'https://solana-mainnet.g.alchemy.com/v2/7zTVPzH-zVHz_zXzVHz_zXzVHz_zXzVH', // Placeholder/Public
-    'https://api.mainnet-beta.solana.com'
+    'https://api.mainnet-beta.solana.com',
   ];
 
   const body = await request.text();
