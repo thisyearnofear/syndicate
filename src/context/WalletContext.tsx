@@ -204,13 +204,6 @@ export const walletReducer = (
        * - We need context to reflect these changes for unified state
        */
       
-      // LOGGING: Helpful for diagnosing "not recognized" issues
-      console.log("[WalletContext] SYNC_WAGMI:", {
-        incoming: action.payload,
-        currentType: state.walletType,
-        currentConnected: state.isConnected
-      });
-
       if (
         action.payload.isConnected &&
         action.payload.address &&
@@ -269,8 +262,27 @@ interface WalletProviderProps {
   children: ReactNode;
 }
 
+// Synchronously read persisted non-EVM wallet state from localStorage so the
+// SYNC_WAGMI guard has the correct walletType on the very first render, before
+// any effects run. This prevents MetaMask/wagmi from overwriting a
+// Solana/Stacks/NEAR session during the initial render cycle.
+function getInitialWalletState(): WalletState {
+  if (typeof window === 'undefined') return defaultWalletState;
+  try {
+    const saved = localStorage.getItem('wallet_state');
+    if (saved) {
+      const parsed = JSON.parse(saved) as WalletState;
+      const isRecent = parsed.lastConnectedAt && Date.now() - parsed.lastConnectedAt < 24 * 60 * 60 * 1000;
+      if (isRecent && parsed.walletType && parsed.walletType !== 'evm' && parsed.address) {
+        return { ...parsed, isModalOpen: false, isConnecting: false };
+      }
+    }
+  } catch { /* ignore */ }
+  return defaultWalletState;
+}
+
 export function WalletProvider({ children }: WalletProviderProps) {
-  const [state, dispatch] = useReducer(walletReducer, defaultWalletState);
+  const [state, dispatch] = useReducer(walletReducer, defaultWalletState, getInitialWalletState);
   const [isMounted, setIsMounted] = useState(false);
 
   // Only call wagmi hooks after mount to avoid hydration issues
