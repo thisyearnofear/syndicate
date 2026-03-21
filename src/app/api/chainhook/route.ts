@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stacksDecentralizedBridge } from '@/services/bridges/stacksDecentralizedBridge';
+import { getPurchaseStatusByTxId } from '@/lib/db/repositories/purchaseStatusRepository';
+import { enqueueJob, jobExistsForTxId, ensurePurchaseJobsTable } from '@/lib/db/repositories/purchaseJobRepository';
 
 /**
  * Chainhooks 2.0 Payload Handler - DECENTRALIZED
@@ -22,6 +23,9 @@ import { stacksDecentralizedBridge } from '@/services/bridges/stacksDecentralize
 export async function POST(req: NextRequest) {
   try {
     console.log('[Chainhook] POST received at', new Date().toISOString());
+
+    // Ensure job queue table exists (idempotent)
+    await ensurePurchaseJobsTable();
     
     // Verify authorization - check both testnet and mainnet secrets
     const SECRET_TOKEN_TESTNET = process.env.CHAINHOOK_SECRET_TOKEN_TESTNET;
@@ -49,7 +53,6 @@ export async function POST(req: NextRequest) {
     const blocks = body.event?.apply || [];
     
     console.log(`[Chainhook] Received payload with ${blocks.length} blocks`);
-    console.log(`[Chainhook] Full payload (first 2000 chars):`, JSON.stringify(body, null, 2).substring(0, 2000));
 
     // Process each block
     for (const block of blocks) {
@@ -64,9 +67,22 @@ export async function POST(req: NextRequest) {
         const txId = tx.transaction_identifier?.hash;
         console.log(`[Chainhook] Processing tx ${txId}`);
 
+        // Idempotency: skip if this txId was already enqueued or processed
+        if (txId) {
+          const alreadyQueued = await jobExistsForTxId(txId);
+          if (alreadyQueued) {
+            console.log(`[Chainhook] Skipping already-queued tx ${txId}`);
+            continue;
+          }
+          const existing = await getPurchaseStatusByTxId(txId);
+          if (existing && existing.status !== 'error') {
+            console.log(`[Chainhook] Skipping already-processed tx ${txId} (status: ${existing.status})`);
+            continue;
+          }
+        }
+
         // Operations array contains all state changes (contract calls, logs, transfers, etc)
         const operations = tx.operations || [];
-        console.log(`[Chainhook] Tx has ${operations.length} operations`);
 
         // Look for contract_log operations (print statements)
         for (const op of operations) {
@@ -75,7 +91,6 @@ export async function POST(req: NextRequest) {
           // In Chainhooks 2.0, print events are contract_log operations
           if (op.type === 'contract_log') {
             const logValue = op.data?.value?.repr || '';
-            console.log(`[Chainhook] Contract log repr: ${logValue.substring(0, 100)}...`);
 
             // Check if this is our bridge event
             if (logValue.includes('bridge-purchase-initiated')) {
@@ -87,9 +102,6 @@ export async function POST(req: NextRequest) {
               const eventData = op.data?.value?.data;
               
               if (eventData) {
-                console.log(`[Chainhook] Event data keys: ${Object.keys(eventData).join(', ')}`);
-                console.log(`[Chainhook] Event data structure:`, JSON.stringify(eventData, null, 2).substring(0, 1000));
-
                 // Extract fields from the Clarity tuple
                 // Fields can be keyed with dashes or underscores
                 const baseAddress = extractField(eventData, 'base-address');
@@ -99,32 +111,29 @@ export async function POST(req: NextRequest) {
                 const purchaseId = extractNumericField(eventData, 'purchase-id');
                 const tokenPrincipal = extractField(eventData, 'token') || 'SP3Y2ZSH8P7D50B0VB0PVXAD455SCSY5A2JSTX9C9.usdc-token';
 
-                console.log(`[Chainhook] Extracted - baseAddress: "${baseAddress}", stacksUser: "${stacksUser}", ticketCount: ${ticketCount}, amount: ${amount}, purchaseId: ${purchaseId}, token: ${tokenPrincipal}`);
-
                 if (baseAddress && ticketCount > 0) {
-                  console.log(`[Chainhook] ✅ Valid event data, recording status: ${ticketCount} tickets for ${baseAddress}`);
-                  console.log(`[Chainhook] 🌉 Wormhole NTT will handle bridging automatically`);
 
                   try {
-                    const result = await stacksDecentralizedBridge.processBridgeEvent(
+                    // Enqueue durable job — protects against server restarts
+                    const jobId = await enqueueJob('process_bridge_event', {
                       txId,
                       baseAddress,
                       ticketCount,
-                      amount,
+                      amount: amount.toString(),
                       tokenPrincipal,
                       purchaseId,
-                      stacksUser
-                    );
-                    console.log(`[Chainhook] ✅ Status recorded:`, result);
+                      stacksAddress: stacksUser,
+                    });
+                    console.log(`[Chainhook] ✅ Enqueued job ${jobId} for tx ${txId}`);
                   } catch (processingError) {
-                    console.error(`[Chainhook] ❌ Error recording status:`, processingError);
+                    console.error(`[Chainhook] ❌ Error enqueuing job:`, processingError);
                     throw processingError;
                   }
                 } else {
-                  console.log(`[Chainhook] ⚠️  Invalid event data - baseAddress: "${baseAddress}" (empty=${!baseAddress}), ticketCount: ${ticketCount} (<=0=${ticketCount <= 0})`);
+                  console.warn(`[Chainhook] ⚠️  Invalid event data in tx ${txId} - missing baseAddress or ticketCount`);
                 }
               } else {
-                console.log(`[Chainhook] ⚠️  Event data is undefined`);
+                console.warn(`[Chainhook] ⚠️  Event data undefined in tx ${txId}`);
               }
             }
           }

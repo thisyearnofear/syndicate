@@ -98,8 +98,9 @@ export class StacksProtocol implements BridgeProtocol {
             const isNativeUsdc = tokenAddress === CONTRACTS.USDCx;
             const isSbtc = tokenAddress === CONTRACTS.sBTC;
 
+            // Return pending_signature — not yet successful until user signs and tx confirms
             const result: BridgeResult = {
-                success: true,
+                success: false,
                 protocol: 'stacks',
                 status: 'pending_signature' as BridgeStatus,
                 bridgeId: `stacks-${isNativeUsdc ? 'cctp' : 'attestation'}-${Date.now()}`,
@@ -141,14 +142,8 @@ export class StacksProtocol implements BridgeProtocol {
                 },
             };
 
-            // Update health metrics
-            if (result.success) {
-                this.successCount++;
-                this.totalTimeMs += Date.now() - startTime;
-            } else {
-                this.failureCount++;
-                this.lastFailure = new Date();
-            }
+            // pending_signature is not a failure — don't penalise health metrics yet
+            // Health is updated externally once the tx is confirmed via chainhook
 
             return result;
 
