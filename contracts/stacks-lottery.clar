@@ -20,8 +20,8 @@
 ;; Contract owner
 (define-constant CONTRACT_OWNER tx-sender)
 
-;; Bridge operator (can be different from owner, handles off-chain operations)
-(define-constant BRIDGE_OPERATOR tx-sender)
+;; Bridge operator (mutable, can be rotated by owner)
+(define-data-var bridge-operator principal tx-sender)
 
 ;; Bridge Address for cross-chain to Base - now configurable
 (define-data-var bridge-address principal tx-sender)
@@ -35,6 +35,7 @@
 (define-constant ERR_ALREADY_CLAIMED (err u1007))
 (define-constant ERR_INVALID_AMOUNT (err u1008))
 (define-constant ERR_PURCHASE_ALREADY_PROCESSED (err u1009))
+(define-constant ERR_OPERATOR_SAME (err u1010))
 
 ;; Configuration
 (define-data-var ticket-price uint u1000000) ;; 1 USDC per ticket (6 decimals)
@@ -66,6 +67,16 @@
     total-winnings: uint,
     claimed: bool,
     megapot-round: uint,
+    base-tx-hash: (string-ascii 66),
+    token: principal,
+  }
+)
+
+;; Winnings history - preserves individual win records per user per round
+(define-map winnings-history
+  { stacks-user: principal, megapot-round: uint }
+  {
+    amount: uint,
     base-tx-hash: (string-ascii 66),
     token: principal,
   }
@@ -142,7 +153,7 @@
   (let (
     (purchase (unwrap! (map-get? purchases { purchase-id: purchase-id }) ERR_PURCHASE_NOT_FOUND))
   )
-    (asserts! (is-eq tx-sender BRIDGE_OPERATOR) ERR_NOT_AUTHORIZED)
+    (asserts! (is-eq tx-sender (var-get bridge-operator)) ERR_NOT_AUTHORIZED)
     (asserts! (not (get processed purchase)) ERR_PURCHASE_ALREADY_PROCESSED)
     
     ;; Update purchase status
@@ -177,9 +188,19 @@
   (token-principal principal)
 )
   (begin
-    (asserts! (is-eq tx-sender BRIDGE_OPERATOR) ERR_NOT_AUTHORIZED)
+    (asserts! (is-eq tx-sender (var-get bridge-operator)) ERR_NOT_AUTHORIZED)
     (asserts! (> amount u0) ERR_INVALID_AMOUNT)
     
+    ;; Preserve individual win in history before updating aggregate
+    (map-set winnings-history
+      { stacks-user: winner, megapot-round: round }
+      {
+        amount: amount,
+        base-tx-hash: base-tx-hash,
+        token: token-principal
+      }
+    )
+
     ;; Check if winnings already exist, if so add to them
     (match (map-get? winnings { stacks-user: winner })
       existing-winnings
@@ -266,6 +287,14 @@
   (map-get? winnings { stacks-user: user })
 )
 
+(define-read-only (get-winnings-for-round (user principal) (round uint))
+  (map-get? winnings-history { stacks-user: user, megapot-round: round })
+)
+
+(define-read-only (get-bridge-operator)
+  (var-get bridge-operator)
+)
+
 (define-read-only (get-bridge-address)
   (var-get bridge-address)
 )
@@ -342,6 +371,20 @@
     (asserts! (is-eq tx-sender CONTRACT_OWNER) ERR_NOT_AUTHORIZED)
     (var-set service-enabled (not (var-get service-enabled)))
     (ok (var-get service-enabled))
+  )
+)
+
+;; Rotate bridge operator (only owner)
+(define-public (set-bridge-operator (new-operator principal))
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT_OWNER) ERR_NOT_AUTHORIZED)
+    (asserts! (not (is-eq new-operator (var-get bridge-operator))) ERR_OPERATOR_SAME)
+    (var-set bridge-operator new-operator)
+    (print {
+      event: "bridge-operator-rotated",
+      new-operator: new-operator
+    })
+    (ok true)
   )
 )
 

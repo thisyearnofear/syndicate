@@ -174,7 +174,9 @@ export default function SimplePurchaseModal({
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [statusLinkCopied, setStatusLinkCopied] = useState(false);
   const [stacksToken, setStacksToken] = useState<'usdcx' | 'sbtc'>('usdcx');
+  const [showAdvancedToken, setShowAdvancedToken] = useState(false);
   const [starknetToken, setStarknetToken] = useState<'usdc' | 'strk'>('usdc');
+  // Task 3: Load saved Base address from localStorage (user preference)
   const [baseAddress, setBaseAddress] = useState(() =>
     typeof window !== 'undefined' ? localStorage.getItem('syndicate_base_address') || '' : ''
   );
@@ -221,6 +223,15 @@ export default function SimplePurchaseModal({
       setBaseAddressSource('auto');
     }
   }, [needsBaseAddress, mirrorAddress, baseAddress]);
+
+  // Task 3: Persist Base address to localStorage when user manually enters it
+  const handleBaseAddressChange = (val: string) => {
+    setBaseAddress(val);
+    setBaseAddressSource('manual');
+    if (/^0x[a-fA-F0-9]{40}$/.test(val)) {
+      try { localStorage.setItem('syndicate_base_address', val); } catch {}
+    }
+  };
 
   // Fetch Stacks token balance
   useEffect(() => {
@@ -533,9 +544,8 @@ export default function SimplePurchaseModal({
                     type="text"
                     value={baseAddress}
                     onChange={(e) => {
-                      setBaseAddress(e.target.value.trim());
+                      handleBaseAddressChange(e.target.value.trim());
                       setBaseAddressError('');
-                      setBaseAddressSource('manual');
                     }}
                     placeholder="0x... (your Base/EVM wallet address)"
                     disabled={isPurchasing}
@@ -573,57 +583,85 @@ export default function SimplePurchaseModal({
               </div>
             )}
 
-            {/* Stacks Token Selector - USDCx vs sBTC */}
+            {/* Stacks Token Selector - USDCx default, sBTC behind Advanced toggle */}
             {showStacksTokenSelector && (
-              <div className="space-y-3">
-                <label className="flex items-center gap-1.5 text-sm font-medium text-gray-300">
-                  <DollarSign className="w-3.5 h-3.5 text-green-400" />
-                  Payment Token
-                </label>
-                <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-1.5 text-sm font-medium text-gray-300">
+                    <DollarSign className="w-3.5 h-3.5 text-green-400" />
+                    Payment Token
+                  </label>
                   <button
-                    onClick={() => setStacksToken('usdcx')}
-                    disabled={isPurchasing}
-                    className={`p-4 rounded-lg border-2 transition-all text-left relative overflow-hidden ${
-                      stacksToken === 'usdcx'
-                        ? 'border-indigo-500 bg-indigo-500/20 shadow-lg shadow-indigo-500/10'
-                        : 'border-gray-600 hover:border-gray-500 bg-gray-700/30'
-                    }`}
+                    onClick={() => {
+                      setShowAdvancedToken(v => !v);
+                      if (showAdvancedToken) setStacksToken('usdcx');
+                    }}
+                    className="text-xs text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1"
                   >
-                    {stacksToken === 'usdcx' && (
-                      <div className="absolute top-2 right-2">
-                        <Check className="w-3.5 h-3.5 text-indigo-400" />
-                      </div>
-                    )}
-                    <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center mb-2">
-                      <DollarSign className="w-4 h-4 text-blue-400" />
-                    </div>
-                    <div className="font-semibold text-white text-sm">USDCx</div>
-                    <div className="text-xs text-gray-400 mt-1">Circle-native USDC</div>
-                    <div className="text-[10px] text-indigo-400/70 mt-1.5 font-medium">⚡ Faster via CCTP</div>
-                  </button>
-                  <button
-                    onClick={() => setStacksToken('sbtc')}
-                    disabled={isPurchasing}
-                    className={`p-4 rounded-lg border-2 transition-all text-left relative overflow-hidden ${
-                      stacksToken === 'sbtc'
-                        ? 'border-orange-500 bg-orange-500/20 shadow-lg shadow-orange-500/10'
-                        : 'border-gray-600 hover:border-gray-500 bg-gray-700/30'
-                    }`}
-                  >
-                    {stacksToken === 'sbtc' && (
-                      <div className="absolute top-2 right-2">
-                        <Check className="w-3.5 h-3.5 text-orange-400" />
-                      </div>
-                    )}
-                    <div className="w-8 h-8 rounded-full bg-orange-500/20 border border-orange-500/30 flex items-center justify-center mb-2">
-                      <Bitcoin className="w-4 h-4 text-orange-400" />
-                    </div>
-                    <div className="font-semibold text-white text-sm">sBTC</div>
-                    <div className="text-xs text-gray-400 mt-1">Bitcoin-backed</div>
-                    <div className="text-[10px] text-orange-400/70 mt-1.5 font-medium">₿ Secured by Bitcoin</div>
+                    <ChevronDown className={`w-3 h-3 transition-transform ${showAdvancedToken ? 'rotate-180' : ''}`} />
+                    {showAdvancedToken ? 'Hide advanced' : 'Advanced'}
                   </button>
                 </div>
+                {/* Default: USDCx pill */}
+                {!showAdvancedToken && (
+                  <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-indigo-500/50 bg-indigo-500/10">
+                    <div className="w-7 h-7 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
+                      <DollarSign className="w-3.5 h-3.5 text-blue-400" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-white text-sm">USDCx <span className="text-[10px] text-indigo-400/80 font-normal ml-1">⚡ Faster via CCTP</span></div>
+                      <div className="text-xs text-gray-400">Circle-native USDC on Stacks</div>
+                    </div>
+                    <Check className="w-4 h-4 text-indigo-400 ml-auto" />
+                  </div>
+                )}
+                {/* Advanced: show both cards */}
+                {showAdvancedToken && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setStacksToken('usdcx')}
+                      disabled={isPurchasing}
+                      className={`p-4 rounded-lg border-2 transition-all text-left relative overflow-hidden ${
+                        stacksToken === 'usdcx'
+                          ? 'border-indigo-500 bg-indigo-500/20 shadow-lg shadow-indigo-500/10'
+                          : 'border-gray-600 hover:border-gray-500 bg-gray-700/30'
+                      }`}
+                    >
+                      {stacksToken === 'usdcx' && (
+                        <div className="absolute top-2 right-2">
+                          <Check className="w-3.5 h-3.5 text-indigo-400" />
+                        </div>
+                      )}
+                      <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center mb-2">
+                        <DollarSign className="w-4 h-4 text-blue-400" />
+                      </div>
+                      <div className="font-semibold text-white text-sm">USDCx</div>
+                      <div className="text-xs text-gray-400 mt-1">Circle-native USDC</div>
+                      <div className="text-[10px] text-indigo-400/70 mt-1.5 font-medium">⚡ Faster via CCTP</div>
+                    </button>
+                    <button
+                      onClick={() => setStacksToken('sbtc')}
+                      disabled={isPurchasing}
+                      className={`p-4 rounded-lg border-2 transition-all text-left relative overflow-hidden ${
+                        stacksToken === 'sbtc'
+                          ? 'border-orange-500 bg-orange-500/20 shadow-lg shadow-orange-500/10'
+                          : 'border-gray-600 hover:border-gray-500 bg-gray-700/30'
+                      }`}
+                    >
+                      {stacksToken === 'sbtc' && (
+                        <div className="absolute top-2 right-2">
+                          <Check className="w-3.5 h-3.5 text-orange-400" />
+                        </div>
+                      )}
+                      <div className="w-8 h-8 rounded-full bg-orange-500/20 border border-orange-500/30 flex items-center justify-center mb-2">
+                        <Bitcoin className="w-4 h-4 text-orange-400" />
+                      </div>
+                      <div className="font-semibold text-white text-sm">sBTC</div>
+                      <div className="text-xs text-gray-400 mt-1">Bitcoin-backed</div>
+                      <div className="text-[10px] text-orange-400/70 mt-1.5 font-medium">₿ Secured by Bitcoin</div>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
