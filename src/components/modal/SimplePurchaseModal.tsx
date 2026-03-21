@@ -21,6 +21,7 @@ import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { useSimplePurchase } from "@/hooks/useSimplePurchase";
 import { useERC7715 } from "@/hooks/useERC7715";
 import { usePoolTogetherDeposit } from "@/hooks/usePoolTogetherDeposit";
+import { useDriftDeposit } from "@/hooks/useDriftDeposit";
 import WalletConnectionManager from "@/components/wallet/WalletConnectionManager";
 import {
   CompactStack,
@@ -170,11 +171,13 @@ export default function SimplePurchaseModal({
   } = useSimplePurchase();
   const { permissions, isSupported } = useERC7715();
   const ptDeposit = usePoolTogetherDeposit();
+  const driftDeposit = useDriftDeposit();
 
   const [step, setStep] = useState<PurchaseStep>("connect");
   const [selectedProtocol, setSelectedProtocol] = useState<PurchaseProtocol>("megapot");
   const [ticketCount, setTicketCount] = useState(1);
   const [ptDepositAmount, setPtDepositAmount] = useState(10);
+  const [driftDepositAmount, setDriftDepositAmount] = useState(25);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [statusLinkCopied, setStatusLinkCopied] = useState(false);
@@ -294,11 +297,19 @@ export default function SimplePurchaseModal({
     }
   }, [ptDeposit.status, step]);
 
+  // Auto-advance to success when Drift deposit completes
+  useEffect(() => {
+    if (driftDeposit.status === 'complete' && step === "processing") {
+      setStep("success");
+    }
+  }, [driftDeposit.status, step]);
+
   if (!isOpen) return null;
 
   const handleClose = () => {
     reset();
     ptDeposit.reset();
+    driftDeposit.reset();
     setStep("connect");
     onClose();
   };
@@ -339,7 +350,6 @@ export default function SimplePurchaseModal({
     }
 
     if (selectedProtocol === 'drift') {
-      // Drift: Yield-powered lottery - handle deposit directly
       if (walletType !== 'solana') {
         // Non-Solana wallets need to use yield-strategies page
         handleClose();
@@ -347,10 +357,11 @@ export default function SimplePurchaseModal({
         return;
       }
       
-      // For Solana wallets, redirect to yield-strategies page for Drift deposit
-      // (Full in-modal deposit requires more complex contract integration)
-      handleClose();
-      window.location.href = '/yield-strategies?protocol=drift';
+      // Solana wallets: in-modal deposit flow
+      await driftDeposit.deposit({
+        amountUsdc: driftDepositAmount,
+        userAddress: address,
+      });
       return;
     }
 
@@ -634,6 +645,87 @@ export default function SimplePurchaseModal({
                     <div>
                       <p className="text-red-400 font-medium text-sm">Deposit failed</p>
                       <p className="text-xs text-red-300 mt-1">{ptDeposit.error}</p>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Drift: Deposit amount + lockup warning */}
+            {selectedProtocol === 'drift' && (
+              <>
+                {/* 3-month lockup warning */}
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 space-y-2">
+                  <div className="flex items-start gap-3">
+                    <Coins className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-amber-300 mb-1">
+                        ⚠️ 3-Month Lockup Period
+                      </p>
+                      <p className="text-xs text-gray-300 leading-relaxed">
+                        Your principal is locked for 90 days to normalize yield (~22.5% APY). 
+                        Yield is automatically converted to lottery tickets. You keep 100% of your capital after lockup.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* APY highlight */}
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-400">Estimated APY</span>
+                    <span className="text-sm font-bold text-blue-400">~22.5%</span>
+                  </div>
+                </div>
+
+                {/* Deposit amount input */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-300">
+                    Deposit Amount (USDC)
+                  </label>
+                  <div className="flex items-center gap-4 bg-gray-700/50 rounded-lg p-4">
+                    <button
+                      onClick={() => setDriftDepositAmount(Math.max(5, driftDepositAmount - 5))}
+                      className="w-10 h-10 rounded-lg bg-gray-600 hover:bg-gray-500 flex items-center justify-center text-white font-bold transition-colors"
+                    >
+                      −
+                    </button>
+                    <div className="flex-1 text-center">
+                      <span className="text-3xl font-bold text-white">${driftDepositAmount}</span>
+                      <p className="text-xs text-gray-500 mt-1">USDC on Solana</p>
+                    </div>
+                    <button
+                      onClick={() => setDriftDepositAmount(driftDepositAmount + 5)}
+                      className="w-10 h-10 rounded-lg bg-gray-600 hover:bg-gray-500 flex items-center justify-center text-white font-bold transition-colors"
+                    >
+                      +
+                    </button>
+                  </div>
+                  {/* Quick amount buttons */}
+                  <div className="flex gap-2">
+                    {[25, 50, 100, 250].map((amt) => (
+                      <button
+                        key={amt}
+                        onClick={() => setDriftDepositAmount(amt)}
+                        className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
+                          driftDepositAmount === amt
+                            ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
+                            : 'bg-gray-700/50 text-gray-400 border border-gray-600 hover:border-gray-500'
+                        }`}
+                      >
+                        ${amt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Drift error display */}
+                {driftDeposit.error && (
+                  <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-red-400 font-medium text-sm">Deposit failed</p>
+                      <p className="text-xs text-red-300 mt-1">{driftDeposit.error}</p>
                     </div>
                   </div>
                 )}

@@ -1,6 +1,6 @@
 # Project Roadmap
 
-**Last Updated**: March 20, 2026
+**Last Updated**: March 21, 2026
 **Status**: Production - Lossless Lottery Live with Civic Compliance
 
 ---
@@ -83,9 +83,28 @@
 
 ---
 
+### In-Modal Deposit Flows
+- ✅ PoolTogether deposit UI (EVM/Base) — amount selector, progress steps, success view
+- ✅ usePoolTogetherDeposit hook for EVM deposits
+- 🔨 Drift Vault deposit UI (Solana) — hook scaffolded, amount selector integrated, action button wiring in progress
+- ✅ Wallet-type guards for protocol selection (EVM vs Solana)
+- ✅ Suspense wrapper and URL parameter support on yield-strategies page
+
+---
+
 ## 🎯 Immediate Next Steps (This Week)
 
-### 1. Deploy Proxy Contract
+### 1. Complete Drift Deposit Modal
+**Priority**: HIGH | **Time**: 1-2 hours
+
+- Wire main action button to handle Drift deposit state
+- Add processing view with transaction progress
+- Add success view with vault position details
+- Test end-to-end with Phantom wallet
+
+**Deliverable**: Fully functional in-modal Drift vault deposits
+
+### 2. Deploy Proxy Contract
 **Priority**: HIGH | **Time**: 1 hour
 
 ```bash
@@ -186,9 +205,11 @@ See [STARKNET.md](./STARKNET.md) for full plan.
 - [ ] Zero operator wallet USDC balance changes
 - [ ] No failed transactions due to proxy issues
 - [ ] Gas costs within expected range
-- [ ] Civic Pass verification working (CAPTCHA mode)
-- [ ] Drift vault deposits successful (post-KYC)
+- [x] Civic Pass verification working (CAPTCHA mode)
+- [ ] Drift vault deposits successful (post-KYC) — UI 70% complete
 - [ ] Yield accrual tracking accurate
+- [x] PoolTogether in-modal deposit flow complete
+- [ ] Drift in-modal deposit flow complete (in progress)
 
 ### Month 1
 - [ ] Operator wallet can be deprecated
