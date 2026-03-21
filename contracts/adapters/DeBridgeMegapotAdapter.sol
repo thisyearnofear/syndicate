@@ -36,17 +36,9 @@ contract DeBridgeMegapotAdapter is ReentrancyGuard, Ownable {
     // Track processed orders to prevent replay attacks
     mapping(bytes32 => bool) public processedOrders;
 
-    event TicketsPurchased(
-        address indexed recipient,
-        uint256 amount,
-        bytes32 indexed orderId
-    );
+    event TicketsPurchased(address indexed recipient, uint256 amount, bytes32 indexed orderId);
 
-    event PurchaseFallback(
-        address indexed recipient,
-        uint256 amount,
-        bytes32 indexed orderId
-    );
+    event PurchaseFallback(address indexed recipient, uint256 amount, bytes32 indexed orderId);
 
     event SolverUpdated(address indexed newSolver);
 
@@ -56,11 +48,7 @@ contract DeBridgeMegapotAdapter is ReentrancyGuard, Ownable {
     error Unauthorized();
     error OrderAlreadyProcessed();
 
-    constructor(
-        address _usdc,
-        address _megapot,
-        address _owner
-    ) Ownable(_owner) {
+    constructor(address _usdc, address _megapot, address _owner) Ownable(_owner) {
         if (_usdc == address(0) || _megapot == address(0)) revert InvalidAddress();
         usdc = IERC20(_usdc);
         megapot = IMegapot(_megapot);
@@ -83,11 +71,7 @@ contract DeBridgeMegapotAdapter is ReentrancyGuard, Ownable {
      * @param _recipient User to receive the tickets
      * @param _orderId Unique order ID from deBridge for tracking
      */
-    function executePurchase(
-        uint256 _amount,
-        address _recipient,
-        bytes32 _orderId
-    ) external nonReentrant {
+    function executePurchase(uint256 _amount, address _recipient, bytes32 _orderId) external nonReentrant {
         // 1. Strict Access Control
         if (msg.sender != dlnSolver) revert Unauthorized();
         if (dlnSolver == address(0)) revert Unauthorized();
