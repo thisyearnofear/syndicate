@@ -20,6 +20,7 @@ import { Loader, AlertCircle, Check, Zap, Link2, ChevronDown, TrendingUp, ArrowR
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { useSimplePurchase } from "@/hooks/useSimplePurchase";
 import { useERC7715 } from "@/hooks/useERC7715";
+import { usePoolTogetherDeposit } from "@/hooks/usePoolTogetherDeposit";
 import WalletConnectionManager from "@/components/wallet/WalletConnectionManager";
 import {
   CompactStack,
@@ -168,10 +169,12 @@ export default function SimplePurchaseModal({
     walletInfo,
   } = useSimplePurchase();
   const { permissions, isSupported } = useERC7715();
+  const ptDeposit = usePoolTogetherDeposit();
 
   const [step, setStep] = useState<PurchaseStep>("connect");
   const [selectedProtocol, setSelectedProtocol] = useState<PurchaseProtocol>("megapot");
   const [ticketCount, setTicketCount] = useState(1);
+  const [ptDepositAmount, setPtDepositAmount] = useState(10);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [statusLinkCopied, setStatusLinkCopied] = useState(false);
@@ -279,15 +282,23 @@ export default function SimplePurchaseModal({
 
   // Auto-advance to success when status is complete
   useEffect(() => {
-    if (status === "complete" && step === "processing") {
+    if (status === "complete" && step === "processing" && selectedProtocol === 'megapot') {
       setStep("success");
     }
-  }, [status, step]);
+  }, [status, step, selectedProtocol]);
+
+  // Auto-advance to success when PoolTogether deposit completes
+  useEffect(() => {
+    if (ptDeposit.status === 'complete' && step === "processing") {
+      setStep("success");
+    }
+  }, [ptDeposit.status, step]);
 
   if (!isOpen) return null;
 
   const handleClose = () => {
     reset();
+    ptDeposit.reset();
     setStep("connect");
     onClose();
   };
@@ -312,16 +323,32 @@ export default function SimplePurchaseModal({
 
     // Route to different protocols based on selection
     if (selectedProtocol === 'pooltogether') {
-      // PoolTogether: No-loss prize savings
-      // For now, redirect to yield-strategies page for PoolTogether deposit
-      handleClose();
-      window.location.href = '/yield-strategies?protocol=pooltogether';
+      if (walletType !== 'evm') {
+        // Non-EVM wallets need to use yield-strategies page
+        handleClose();
+        window.location.href = '/yield-strategies?protocol=pooltogether';
+        return;
+      }
+      
+      // EVM wallets: in-modal deposit flow
+      await ptDeposit.deposit({
+        amountUsdc: ptDepositAmount,
+        userAddress: address as `0x${string}`,
+      });
       return;
     }
 
     if (selectedProtocol === 'drift') {
-      // Drift: Yield-powered lottery
-      // For now, redirect to yield-strategies page for Drift deposit
+      // Drift: Yield-powered lottery - handle deposit directly
+      if (walletType !== 'solana') {
+        // Non-Solana wallets need to use yield-strategies page
+        handleClose();
+        window.location.href = '/yield-strategies?protocol=drift';
+        return;
+      }
+      
+      // For Solana wallets, redirect to yield-strategies page for Drift deposit
+      // (Full in-modal deposit requires more complex contract integration)
       handleClose();
       window.location.href = '/yield-strategies?protocol=drift';
       return;
@@ -393,7 +420,7 @@ export default function SimplePurchaseModal({
           <CompactStack spacing="md">
             <div className="text-center">
               <h2 className="text-2xl font-bold text-white mb-2">
-                Buy Tickets
+                {selectedProtocol === 'pooltogether' ? 'Deposit to PoolTogether' : 'Buy Tickets'}
               </h2>
               <p className="text-gray-400 text-sm">
                 Connected:{" "}
@@ -540,7 +567,81 @@ export default function SimplePurchaseModal({
               </div>
             )}
 
+            {/* PoolTogether: Deposit amount + No-Loss info */}
+            {selectedProtocol === 'pooltogether' && (
+              <>
+                {/* No-Loss info banner */}
+                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 space-y-2">
+                  <div className="flex items-start gap-3">
+                    <Shield className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-emerald-300 mb-1">
+                        Your USDC is safe — guaranteed
+                      </p>
+                      <p className="text-xs text-gray-300 leading-relaxed">
+                        You deposit USDC into a PrizeVault on Base. Your principal is never spent — 
+                        it earns yield which funds the prize pool. Withdraw anytime, no lockup.
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
+                {/* Deposit amount input */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-300">
+                    Deposit Amount (USDC)
+                  </label>
+                  <div className="flex items-center gap-4 bg-gray-700/50 rounded-lg p-4">
+                    <button
+                      onClick={() => setPtDepositAmount(Math.max(1, ptDepositAmount - 5))}
+                      className="w-10 h-10 rounded-lg bg-gray-600 hover:bg-gray-500 flex items-center justify-center text-white font-bold transition-colors"
+                    >
+                      −
+                    </button>
+                    <div className="flex-1 text-center">
+                      <span className="text-3xl font-bold text-white">${ptDepositAmount}</span>
+                      <p className="text-xs text-gray-500 mt-1">USDC</p>
+                    </div>
+                    <button
+                      onClick={() => setPtDepositAmount(ptDepositAmount + 5)}
+                      className="w-10 h-10 rounded-lg bg-gray-600 hover:bg-gray-500 flex items-center justify-center text-white font-bold transition-colors"
+                    >
+                      +
+                    </button>
+                  </div>
+                  {/* Quick amount buttons */}
+                  <div className="flex gap-2">
+                    {[10, 25, 50, 100].map((amt) => (
+                      <button
+                        key={amt}
+                        onClick={() => setPtDepositAmount(amt)}
+                        className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
+                          ptDepositAmount === amt
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                            : 'bg-gray-700/50 text-gray-400 border border-gray-600 hover:border-gray-500'
+                        }`}
+                      >
+                        ${amt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* PoolTogether error display */}
+                {ptDeposit.error && (
+                  <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-red-400 font-medium text-sm">Deposit failed</p>
+                      <p className="text-xs text-red-300 mt-1">{ptDeposit.error}</p>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Megapot-only UI sections */}
+            {selectedProtocol === 'megapot' && (<>
             {/* ENHANCEMENT: Auto-purchase setup (expanded by default, Base/EVM only, chain-aware) */}
             {!hasActivePermission && isSupported && walletType === "evm" && (
               <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-lg p-4 space-y-3">
@@ -594,9 +695,10 @@ export default function SimplePurchaseModal({
                 </Button>
               </div>
             )}
+            </>)}
 
             {/* Cross-Chain Flow Indicator */}
-            {showCrossChainUI && selectedChain && (
+            {showCrossChainUI && selectedChain && selectedProtocol === 'megapot' && (
               <div className="bg-gradient-to-r from-gray-800/80 to-gray-700/50 border border-gray-600/50 rounded-lg p-3">
                 <div className="flex items-center justify-center gap-3">
                   <div className="flex items-center gap-2">
@@ -629,8 +731,8 @@ export default function SimplePurchaseModal({
               </div>
             )}
 
-            {/* Base Address Input for Cross-Chain Purchases */}
-            {needsBaseAddress && (
+            {/* Base Address Input for Cross-Chain Purchases (Megapot only) */}
+            {needsBaseAddress && selectedProtocol === 'megapot' && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="flex items-center gap-1.5 text-sm font-medium text-gray-300">
@@ -690,8 +792,8 @@ export default function SimplePurchaseModal({
               </div>
             )}
 
-            {/* Stacks Token Selector - USDCx default, sBTC behind Advanced toggle */}
-            {showStacksTokenSelector && (
+            {/* Stacks Token Selector - USDCx default, sBTC behind Advanced toggle (Megapot only) */}
+            {showStacksTokenSelector && selectedProtocol === 'megapot' && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="flex items-center gap-1.5 text-sm font-medium text-gray-300">
@@ -786,7 +888,7 @@ export default function SimplePurchaseModal({
               </div>
             )}
 
-            {showStacksTokenSelector && (
+            {showStacksTokenSelector && selectedProtocol === 'megapot' && (
               <BalanceDisplay
                 walletType="stacks"
                 balance={stacksBalance}
@@ -796,8 +898,8 @@ export default function SimplePurchaseModal({
               />
             )}
 
-            {/* Starknet Token Selector - USDC vs STRK */}
-            {showStarknetTokenSelector && (
+            {/* Starknet Token Selector - USDC vs STRK (Megapot only) */}
+            {showStarknetTokenSelector && selectedProtocol === 'megapot' && (
               <div className="space-y-3">
                 <label className="block text-sm font-medium text-gray-300">
                   Payment Token
@@ -836,7 +938,8 @@ export default function SimplePurchaseModal({
               </div>
             )}
 
-            {/* Ticket count selector */}
+            {/* Ticket count selector (Megapot only) */}
+            {selectedProtocol === 'megapot' && (
             <div className="space-y-3">
               <label className="block text-sm font-medium text-gray-300">
                 Number of Tickets
@@ -868,9 +971,10 @@ export default function SimplePurchaseModal({
                 </button>
               </div>
             </div>
+            )}
 
-            {/* ENHANCEMENT: Reusable Gamified Yield Upsell (Drift Vault) */}
-            {ticketCount >= 1 && (
+            {/* ENHANCEMENT: Reusable Gamified Yield Upsell (Drift Vault) - Megapot only */}
+            {selectedProtocol === 'megapot' && ticketCount >= 1 && (
               <div className="bg-gradient-to-r from-indigo-500/20 to-purple-500/10 border border-indigo-500/30 rounded-lg p-4 space-y-3 relative overflow-hidden mt-4">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
                 <div className="flex items-start gap-3 relative z-10">
@@ -900,18 +1004,18 @@ export default function SimplePurchaseModal({
               </div>
             )}
 
-            {/* Cost Breakdown */}
+            {/* Cost Breakdown (Megapot only) */}
             {/* P0.4 FIX: Now includes starknet since execution path is wired */}
-            {selectedChain && selectedChain !== "ethereum" && (
+            {selectedProtocol === 'megapot' && selectedChain && selectedChain !== "ethereum" && (
               <CostBreakdown
                 ticketCount={ticketCount}
                 sourceChain={selectedChain as 'stacks' | 'near' | 'solana' | 'base' | 'starknet'}
               />
             )}
 
-            {/* Time Estimate */}
+            {/* Time Estimate (Megapot only) */}
             {/* P0.4 FIX: Now includes starknet since execution path is wired */}
-            {selectedChain &&
+            {selectedProtocol === 'megapot' && selectedChain &&
               selectedChain !== "base" &&
               selectedChain !== "ethereum" && (
                 <TimeEstimate
@@ -924,21 +1028,35 @@ export default function SimplePurchaseModal({
                 variant="outline"
                 className="flex-1"
                 onClick={handleClose}
-                disabled={isPurchasing}
+                disabled={isPurchasing || ptDeposit.status === 'approving' || ptDeposit.status === 'depositing'}
               >
                 Cancel
               </Button>
               <Button
                 variant="default"
                 className={`flex-1 transition-all ${
-                  needsBaseAddress && !isValidBaseAddress
+                  selectedProtocol === 'pooltogether'
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-lg shadow-emerald-500/20'
+                    : needsBaseAddress && !isValidBaseAddress
                     ? 'bg-gray-600 hover:bg-gray-500 cursor-not-allowed'
                     : 'bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 shadow-lg shadow-green-500/20'
                 }`}
                 onClick={handlePurchaseClick}
-                disabled={isPurchasing || (needsBaseAddress && !isValidBaseAddress)}
+                disabled={
+                  isPurchasing ||
+                  ptDeposit.status === 'approving' ||
+                  ptDeposit.status === 'depositing' ||
+                  (selectedProtocol === 'megapot' && needsBaseAddress && !isValidBaseAddress)
+                }
               >
-                {isPurchasing ? (
+                {ptDeposit.status === 'approving' || ptDeposit.status === 'depositing' ? (
+                  <>
+                    <Loader className="w-4 h-4 mr-2 animate-spin" />
+                    {ptDeposit.status === 'approving' ? 'Approving USDC...' : 'Depositing...'}
+                  </>
+                ) : selectedProtocol === 'pooltogether' ? (
+                  `Deposit $${ptDepositAmount} USDC`
+                ) : isPurchasing ? (
                   <>
                     <Loader className="w-4 h-4 mr-2 animate-spin" />
                     Processing...
@@ -957,7 +1075,85 @@ export default function SimplePurchaseModal({
         );
 
       case "processing":
-        // Show enhanced tracker during processing
+        // PoolTogether: show deposit progress steps
+        if (selectedProtocol === 'pooltogether') {
+          const ptSteps = [
+            { label: 'Checking USDC allowance', done: ptDeposit.status === 'approving' || ptDeposit.status === 'depositing' || ptDeposit.status === 'complete' },
+            { label: 'Approving USDC spend', done: ptDeposit.status === 'depositing' || ptDeposit.status === 'complete', active: ptDeposit.status === 'approving' },
+            { label: 'Depositing to PrizeVault', done: ptDeposit.status === 'complete', active: ptDeposit.status === 'depositing' },
+          ];
+
+          return (
+            <CompactStack spacing="md" align="center">
+              <div className="text-center">
+                <div className="inline-block mb-4">
+                  <div className="w-16 h-16 rounded-full bg-emerald-400/20 flex items-center justify-center">
+                    {ptDeposit.status === 'error' ? (
+                      <AlertCircle className="w-8 h-8 text-red-400" />
+                    ) : (
+                      <Loader className="w-8 h-8 text-emerald-400 animate-spin" />
+                    )}
+                  </div>
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  {ptDeposit.status === 'error' ? 'Deposit Failed' : 'Depositing to PoolTogether'}
+                </h2>
+                <p className="text-gray-400 text-sm">
+                  Depositing ${ptDepositAmount} USDC into the PrizeVault
+                </p>
+              </div>
+
+              {ptDeposit.status !== 'error' && (
+                <div className="text-left space-y-3 w-full max-w-xs">
+                  {ptSteps.map((s, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      {s.done ? (
+                        <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
+                      ) : s.active ? (
+                        <Loader className="w-4 h-4 text-emerald-400 flex-shrink-0 animate-spin" />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full border-2 border-gray-600 flex-shrink-0" />
+                      )}
+                      <span className={`text-sm ${s.done ? 'text-green-300' : s.active ? 'text-emerald-300' : 'text-gray-500'}`}>
+                        {s.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {ptDeposit.error && (
+                <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 w-full">
+                  <p className="text-red-400 text-sm">{ptDeposit.error}</p>
+                </div>
+              )}
+
+              <div className="flex gap-3 w-full">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    ptDeposit.reset();
+                    setStep('select');
+                  }}
+                >
+                  Back
+                </Button>
+                {ptDeposit.status === 'error' && (
+                  <Button
+                    variant="default"
+                    className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500"
+                    onClick={handlePurchaseClick}
+                  >
+                    Retry
+                  </Button>
+                )}
+              </div>
+            </CompactStack>
+          );
+        }
+
+        // Megapot: Show enhanced tracker during processing
         // P0.1 FIX: Use selectedChain for display when sourceChain not yet available
         const processingChain = sourceChain || selectedChain;
         if (showTracker && processingChain) {
@@ -1021,6 +1217,70 @@ export default function SimplePurchaseModal({
         );
 
       case "success":
+        // PoolTogether deposit success
+        if (selectedProtocol === 'pooltogether') {
+          return (
+            <CompactStack spacing="md" align="center">
+              <div className="text-center">
+                <div className="inline-block mb-4">
+                  <div className="w-16 h-16 rounded-full bg-emerald-400/20 flex items-center justify-center">
+                    <Check className="w-8 h-8 text-emerald-400" />
+                  </div>
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  Deposit Successful! 🎰
+                </h2>
+                <p className="text-gray-400 mb-2">
+                  You deposited <span className="text-emerald-400 font-semibold">${ptDepositAmount} USDC</span> into PoolTogether
+                </p>
+                <p className="text-xs text-gray-500">
+                  Your principal is safe. You're now eligible for the next prize draw!
+                </p>
+                {ptDeposit.txHash && (
+                  <a
+                    href={`https://basescan.org/tx/${ptDeposit.txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block text-sm text-blue-400 hover:text-blue-300 mt-3"
+                  >
+                    View Transaction →
+                  </a>
+                )}
+              </div>
+
+              {/* What happens next info */}
+              <div className="w-full bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 space-y-2">
+                <p className="text-sm font-medium text-emerald-300">What happens next?</p>
+                <ul className="text-xs text-gray-300 space-y-1.5 list-disc list-inside">
+                  <li>Your USDC earns yield in the PrizeVault</li>
+                  <li>Yield funds the prize pool — drawn every ~24 hours</li>
+                  <li>Withdraw your full principal anytime on Base</li>
+                </ul>
+              </div>
+
+              <div className="flex gap-3 w-full">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    ptDeposit.reset();
+                    setStep("select");
+                  }}
+                >
+                  Deposit More
+                </Button>
+                <Button
+                  variant="default"
+                  className="flex-1"
+                  onClick={handleClose}
+                >
+                  Done
+                </Button>
+              </div>
+            </CompactStack>
+          );
+        }
+
         // P0.1 FIX: Use selectedChain for cross-chain determination when sourceChain not yet set
         // Once purchase completes, sourceChain will be available and used
         const effectiveChain = sourceChain || selectedChain;

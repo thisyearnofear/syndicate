@@ -3,7 +3,7 @@
 import { memo } from "react";
 import { useMultiLottery } from "@/domains/lottery/hooks/useMultiLottery";
 import { Button } from "@/shared/components/ui/Button";
-import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { LoadingSpinner } from "@/shared/components/LoadingSpinner";
 import { CountUpText } from "@/shared/components/ui/CountUpText";
 
 interface MultiLotteryPrizesProps {
@@ -113,15 +113,3 @@ export function MultiLotteryPrizes({ onBuyClick }: MultiLotteryPrizesProps) {
 }
 
 export default memo(MultiLotteryPrizes);
-</path>
-<task_progress>
-- [x] Investigate why only Megapot is shown on frontend
-- [x] Check PremiumJackpotPiece component
-- [x] Check useLottery hook
-- [x] Check PoolTogether service for prize data
-- [x] Add prize fetching to PoolTogetherService
-- [x] Create useMultiLottery hook
-- [x] Create MultiLotteryPrizes component
-- [ ] Add component to main page
-</task_progress>
-</write_to_file>

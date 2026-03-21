@@ -125,7 +125,7 @@ export interface SyndicateInfo {
   // Yield allocation preferences
   yieldToTicketsPercentage?: number;  // 80-90% of yield used to buy more tickets
   yieldToCausesPercentage?: number;   // 10-20% of yield directly funds causes
-  vaultStrategy?: 'spark' | 'morpho' | 'octant' | 'aave' | 'uniswap' | 'drift';
+  vaultStrategy?: 'spark' | 'morpho' | 'octant' | 'aave' | 'uniswap' | 'drift' | 'pooltogether';
   membersCount: number;
   ticketsPooled: number;
   ticketsPurchased: number;

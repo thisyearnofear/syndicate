@@ -68,6 +68,14 @@ export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
     color: 'bg-gradient-to-br from-sky-400 to-blue-600',
     risk: 'Medium',
   },
+  {
+    id: 'pooltogether',
+    name: 'PoolTogether V5',
+    description: 'No-loss prize savings on EVM. Deposit USDC, keep your principal, win prizes every draw.',
+    icon: '🎰',
+    color: 'bg-gradient-to-br from-yellow-400 to-amber-600',
+    risk: 'Low',
+  },
 ];
 
 export function getStrategyById(id: SyndicateInfo['vaultStrategy']): YieldStrategyConfig | undefined {
