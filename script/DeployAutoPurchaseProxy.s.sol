@@ -13,11 +13,7 @@ contract DeployAutoPurchaseProxy is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        MegapotAutoPurchaseProxy proxy = new MegapotAutoPurchaseProxy(
-            usdcAddress,
-            megapotAddress,
-            owner
-        );
+        MegapotAutoPurchaseProxy proxy = new MegapotAutoPurchaseProxy(usdcAddress, megapotAddress, owner);
 
         console.log("MegapotAutoPurchaseProxy deployed to:", address(proxy));
         console.log("USDC:", usdcAddress);

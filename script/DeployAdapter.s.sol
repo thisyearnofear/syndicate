@@ -36,11 +36,7 @@ contract DeployAdapter is Script {
 
         // 1. Deploy the Adapter
         console.log("Deploying DeBridgeMegapotAdapter...");
-        DeBridgeMegapotAdapter adapter = new DeBridgeMegapotAdapter(
-            USDC_BASE,
-            MEGAPOT_BASE,
-            owner
-        );
+        DeBridgeMegapotAdapter adapter = new DeBridgeMegapotAdapter(USDC_BASE, MEGAPOT_BASE, owner);
 
         console.log("Adapter deployed at:", address(adapter));
 
