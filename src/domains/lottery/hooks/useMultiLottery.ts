@@ -159,14 +159,3 @@ export function useMultiLottery() {
     noLossLotteries,
   }), [state, refresh, totalPrizeUsd, noLossLotteries]);
 }
-</path>
-<task_progress>
-- [x] Investigate why only Megapot is shown on frontend
-- [x] Check PremiumJackpotPiece component
-- [x] Check useLottery hook
-- [x] Check PoolTogether service for prize data
-- [x] Add prize fetching to PoolTogetherService
-- [x] Create useMultiLottery hook
-- [ ] Create multi-lottery display component
-</task_progress>
-</write_to_file>

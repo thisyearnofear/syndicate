@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
 import { 
   TrendingUp, 
@@ -22,12 +23,26 @@ import { CivicGateProvider } from '@/components/civic/CivicGateProvider';
 import { CivicVerificationGate } from '@/components/civic/CivicVerificationGate';
 import Link from "next/link";
 
-export default function YieldStrategiesPage() {
+function YieldStrategiesContent() {
   const { address } = useWalletConnection();
-  const [activeTab, setActiveTab] = useState<'overview' | 'strategies' | 'allocation'>('overview');
-  const [selectedStrategy, setSelectedStrategy] = useState<'aave' | 'morpho' | 'spark' | 'uniswap' | 'octant' | 'drift' | null>(null);
+  const searchParams = useSearchParams();
+  const protocolParam = searchParams?.get('protocol');
+  
+  const [activeTab, setActiveTab] = useState<'overview' | 'strategies' | 'allocation'>('strategies');
+  const [selectedStrategy, setSelectedStrategy] = useState<'aave' | 'morpho' | 'spark' | 'uniswap' | 'octant' | 'drift' | 'pooltogether' | null>(null);
   const [yieldToTickets, setYieldToTickets] = useState(85);
   const [yieldToCauses, setYieldToCauses] = useState(15);
+
+  // Pre-select strategy based on URL parameter
+  useEffect(() => {
+    if (protocolParam === 'pooltogether') {
+      setSelectedStrategy('pooltogether');
+      setActiveTab('strategies');
+    } else if (protocolParam === 'drift') {
+      setSelectedStrategy('drift');
+      setActiveTab('strategies');
+    }
+  }, [protocolParam]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
@@ -241,5 +256,17 @@ export default function YieldStrategiesPage() {
         </CompactSection>
       </CompactContainer>
     </div>
+  );
+}
+
+export default function YieldStrategiesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+      </div>
+    }>
+      <YieldStrategiesContent />
+    </Suspense>
   );
 }
