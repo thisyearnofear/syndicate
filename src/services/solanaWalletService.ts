@@ -38,7 +38,10 @@ class SolanaWalletService {
   }
 
   private getRpcEndpoint(): string {
-    const urls = getSolanaRpcUrls();
+    const origin = this.isBrowser() ? window.location.origin : '';
+    const urls = getSolanaRpcUrls()
+      .map(u => (u && u.startsWith('/') && origin ? origin + u : u))
+      .filter(u => /^https?:\/\//.test(u));
     return urls[0] || clusterApiUrl('mainnet-beta');
   }
 
@@ -117,10 +120,13 @@ class SolanaWalletService {
     const mint = new PublicKey(usdcMint);
 
     // Build ordered list of RPC endpoints to try
+    const origin = this.isBrowser() ? window.location.origin : '';
     const endpoints = [
       ...(rpcUrl ? [rpcUrl] : []),
       ...getSolanaRpcUrls(),
-    ].filter((u, i, a) => u && a.indexOf(u) === i);
+    ]
+      .map(u => (u && u.startsWith('/') && origin ? origin + u : u))
+      .filter((u, i, a) => u && /^https?:\/\//.test(u) && a.indexOf(u) === i);
 
     for (const endpoint of endpoints) {
       try {

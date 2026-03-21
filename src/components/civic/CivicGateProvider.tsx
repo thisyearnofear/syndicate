@@ -47,7 +47,10 @@ export function CivicGateProvider({
   const { publicKey, signTransaction } = useSolanaWallet();
 
   const connection = useMemo(() => {
-    const urls = getSolanaRpcUrls();
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const urls = getSolanaRpcUrls()
+      .map(u => (u && u.startsWith('/') && origin ? origin + u : u))
+      .filter(u => /^https?:\/\//.test(u));
     return new Connection(urls[0] || 'https://api.mainnet-beta.solana.com', 'confirmed');
   }, []);
 
