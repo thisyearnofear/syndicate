@@ -35,6 +35,7 @@ import WalletConnectionManager from "@/components/wallet/WalletConnectionManager
 // Lazy load heavy components
 const SimplePurchaseModal = lazy(() => import("@/components/modal/SimplePurchaseModal"));
 const SocialFeed = lazy(() => import("@/components/SocialFeed"));
+const MultiLotteryPrizes = lazy(() => import("@/components/home/MultiLotteryPrizes"));
 
 
 // =============================================================================
@@ -229,6 +230,11 @@ export default function PremiumHome() {
                  />
                  {isMounted && userIdentity && <CommunityInsightsPiece userIdentity={userIdentity} />}
               </CompactStack>
+
+              {/* Multi-Lottery Prizes */}
+              <Suspense fallback={<div className="glass-premium p-6 rounded-xl h-48 animate-pulse bg-gray-700/50 w-full max-w-4xl" />}>
+                <MultiLotteryPrizes onBuyClick={handlePurchaseAction} />
+              </Suspense>
 
               {/* Vertical Stats */}
               <div className="mt-12 w-full">
