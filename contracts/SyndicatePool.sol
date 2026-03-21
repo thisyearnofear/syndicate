@@ -107,95 +107,41 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
     // Emergency withdraw requests
     mapping(bytes32 => mapping(address => uint256)) public emergencyWithdrawRequests;
 
-
-
     // =============================================================================
     // EVENTS
     // =============================================================================
 
-    event PoolCreated(
-        bytes32 indexed poolId,
-        address indexed coordinator,
-        string name,
-        uint8 causeAllocationPercent
-    );
+    event PoolCreated(bytes32 indexed poolId, address indexed coordinator, string name, uint8 causeAllocationPercent);
 
-    event MemberJoined(
-        bytes32 indexed poolId,
-        address indexed member,
-        uint256 amount
-    );
+    event MemberJoined(bytes32 indexed poolId, address indexed member, uint256 amount);
 
-    event MemberExited(
-        bytes32 indexed poolId,
-        address indexed member,
-        uint256 amountWithdrawn
-    );
+    event MemberExited(bytes32 indexed poolId, address indexed member, uint256 amountWithdrawn);
 
-    event TicketsPurchased(
-        bytes32 indexed poolId,
-        uint256 amount,
-        uint256 ticketCount
-    );
+    event TicketsPurchased(bytes32 indexed poolId, uint256 amount, uint256 ticketCount);
 
-    event WinningsDistributionStarted(
-        bytes32 indexed poolId,
-        uint256 totalAmount
-    );
+    event WinningsDistributionStarted(bytes32 indexed poolId, uint256 totalAmount);
 
     event WinningsDistributionBatch(
-        bytes32 indexed poolId,
-        uint256 batchIndex,
-        uint256 membersProcessed,
-        uint256 totalDistributed
+        bytes32 indexed poolId, uint256 batchIndex, uint256 membersProcessed, uint256 totalDistributed
     );
 
     event WinningsDistributionCompleted(
-        bytes32 indexed poolId,
-        uint256 totalAmount,
-        uint256 causeAmount,
-        uint256 membersAmount
+        bytes32 indexed poolId, uint256 totalAmount, uint256 causeAmount, uint256 membersAmount
     );
 
-    event PoolStatusChanged(
-        bytes32 indexed poolId,
-        bool isActive
-    );
+    event PoolStatusChanged(bytes32 indexed poolId, bool isActive);
 
-    event DistributionApproved(
-        bytes32 indexed poolId,
-        address indexed approver
-    );
+    event DistributionApproved(bytes32 indexed poolId, address indexed approver);
 
-    event WinningsClaimed(
-        bytes32 indexed poolId,
-        uint256 amount,
-        uint256 ticketId
-    );
+    event WinningsClaimed(bytes32 indexed poolId, uint256 amount, uint256 ticketId);
 
-    event WinningsAllocated(
-        bytes32 indexed poolId,
-        address indexed member,
-        uint256 amount
-    );
+    event WinningsAllocated(bytes32 indexed poolId, address indexed member, uint256 amount);
 
-    event WinningsWithdrawn(
-        bytes32 indexed poolId,
-        address indexed member,
-        uint256 amount
-    );
+    event WinningsWithdrawn(bytes32 indexed poolId, address indexed member, uint256 amount);
 
-    event EmergencyWithdrawRequested(
-        bytes32 indexed poolId,
-        address indexed member,
-        uint256 timestamp
-    );
+    event EmergencyWithdrawRequested(bytes32 indexed poolId, address indexed member, uint256 timestamp);
 
-    event EmergencyWithdrawExecuted(
-        bytes32 indexed poolId,
-        address indexed member,
-        uint256 amount
-    );
+    event EmergencyWithdrawExecuted(bytes32 indexed poolId, address indexed member, uint256 amount);
 
     // =============================================================================
     // ERRORS
@@ -273,19 +219,12 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
      * @param causeAllocationPercent Percentage allocated to cause (0-100)
      * @return poolId Unique identifier for the pool
      */
-    function createPool(
-        string calldata name,
-        uint8 causeAllocationPercent
-    ) external returns (bytes32 poolId) {
+    function createPool(string calldata name, uint8 causeAllocationPercent) external returns (bytes32 poolId) {
         if (causeAllocationPercent > 100) revert InvalidCauseAllocation();
         if (msg.sender == address(0)) revert InvalidContractAddress();
 
         // Generate unique pool ID
-        poolId = keccak256(abi.encodePacked(
-            msg.sender,
-            block.timestamp,
-            name
-        ));
+        poolId = keccak256(abi.encodePacked(msg.sender, block.timestamp, name));
 
         pools[poolId] = Pool({
             coordinator: msg.sender,
@@ -387,10 +326,7 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
      * @param poolId Pool that is purchasing
      * @param ticketCount Number of tickets to purchase
      */
-    function purchaseTicketsFromPool(
-        bytes32 poolId,
-        uint256 ticketCount
-    ) external nonReentrant {
+    function purchaseTicketsFromPool(bytes32 poolId, uint256 ticketCount) external nonReentrant {
         Pool storage pool = pools[poolId];
         if (pool.coordinator == address(0)) revert PoolNotFound();
         if (!pool.isActive) revert PoolNotActive();
@@ -452,11 +388,10 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
      * @param totalAmount Total USDC winnings to distribute
      * @param causeWallet Address to send cause allocation
      */
-    function startWinningsDistribution(
-        bytes32 poolId,
-        uint256 totalAmount,
-        address causeWallet
-    ) external nonReentrant {
+    function startWinningsDistribution(bytes32 poolId, uint256 totalAmount, address causeWallet)
+        external
+        nonReentrant
+    {
         Pool storage pool = pools[poolId];
         if (pool.coordinator == address(0)) revert PoolNotFound();
         if (msg.sender != pool.coordinator) revert OnlyCoordinator();
@@ -500,10 +435,7 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
      * @param poolId Pool to continue distribution for
      * @param batchSize Number of members to process in this batch
      */
-    function continueWinningsDistribution(
-        bytes32 poolId,
-        uint256 batchSize
-    ) external nonReentrant {
+    function continueWinningsDistribution(bytes32 poolId, uint256 batchSize) external nonReentrant {
         DistributionState storage dist = distributionStates[poolId];
         if (dist.completed) revert InvalidDistributionState();
 
@@ -514,16 +446,16 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
         uint256 distributed = 0;
         uint256 startIdx = dist.lastProcessedIndex;
         uint256 memberCount = memberAddresses.length;
-        uint256 endIdx = startIdx + batchSize > memberCount
-            ? memberCount
-            : startIdx + batchSize;
+        uint256 endIdx = startIdx + batchSize > memberCount ? memberCount : startIdx + batchSize;
 
         for (uint256 i = startIdx; i < endIdx;) {
             address memberAddr = memberAddresses[i];
             Member storage member = members[poolId][memberAddr];
 
             if (member.hasExited || member.amount == 0) {
-                unchecked { ++i; }
+                unchecked {
+                    ++i;
+                }
                 continue;
             }
 
@@ -541,7 +473,9 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
             }
 
             distributed += memberShare;
-            unchecked { ++i; }
+            unchecked {
+                ++i;
+            }
 
             if (memberShare > 0) {
                 // Allocate winnings to member (withdrawal pattern)
@@ -565,7 +499,9 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
                     dist.remainderAmount = 0;
                     break;
                 }
-                unchecked { ++i; }
+                unchecked {
+                    ++i;
+                }
             }
         }
 
@@ -574,19 +510,9 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
         // Mark complete if all members processed
         if (endIdx >= memberCount) {
             dist.completed = true;
-            emit WinningsDistributionCompleted(
-                poolId,
-                dist.totalAmount,
-                dist.causeAmount,
-                dist.membersAmount
-            );
+            emit WinningsDistributionCompleted(poolId, dist.totalAmount, dist.causeAmount, dist.membersAmount);
         } else {
-            emit WinningsDistributionBatch(
-                poolId,
-                startIdx / batchSize,
-                endIdx - startIdx,
-                distributed
-            );
+            emit WinningsDistributionBatch(poolId, startIdx / batchSize, endIdx - startIdx, distributed);
         }
     }
 
@@ -740,19 +666,23 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
     /**
      * @notice Get pool information
      */
-    function getPool(bytes32 poolId) external view returns (
-        address coordinator,
-        uint256 totalPooled,
-        uint256 originalTotalPooled,
-        uint256 membersCount,
-        uint8 causeAllocationPercent,
-        bool isActive,
-        bool privacyEnabled,
-        bool isDrawn,
-        uint256 createdAt,
-        uint256 ticketsPurchased,
-        bool ticketsPurchasedFlag
-    ) {
+    function getPool(bytes32 poolId)
+        external
+        view
+        returns (
+            address coordinator,
+            uint256 totalPooled,
+            uint256 originalTotalPooled,
+            uint256 membersCount,
+            uint8 causeAllocationPercent,
+            bool isActive,
+            bool privacyEnabled,
+            bool isDrawn,
+            uint256 createdAt,
+            uint256 ticketsPurchased,
+            bool ticketsPurchasedFlag
+        )
+    {
         Pool storage pool = pools[poolId];
         return (
             pool.coordinator,
@@ -772,15 +702,11 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
     /**
      * @notice Get member contribution and status
      */
-    function getMemberContribution(
-        bytes32 poolId,
-        address member
-    ) external view returns (
-        uint256 amount,
-        uint256 winningsWithdrawable,
-        uint256 joinedAt,
-        bool hasExited
-    ) {
+    function getMemberContribution(bytes32 poolId, address member)
+        external
+        view
+        returns (uint256 amount, uint256 winningsWithdrawable, uint256 joinedAt, bool hasExited)
+    {
         Member storage m = members[poolId][member];
         return (m.amount, m.winningsWithdrawable, m.joinedAt, m.hasExited);
     }
@@ -795,11 +721,11 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
     /**
      * @notice Get pool members paginated
      */
-    function getPoolMembersPaginated(
-        bytes32 poolId,
-        uint256 offset,
-        uint256 limit
-    ) external view returns (address[] memory) {
+    function getPoolMembersPaginated(bytes32 poolId, uint256 offset, uint256 limit)
+        external
+        view
+        returns (address[] memory)
+    {
         address[] storage allMembers = poolMembers[poolId];
         uint256 totalMembers = allMembers.length;
 
@@ -817,7 +743,9 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
         uint256 allMembersLength = allMembers.length;
         for (uint256 i = 0; i < resultLength;) {
             result[i] = allMembers[offset + i];
-            unchecked { ++i; }
+            unchecked {
+                ++i;
+            }
         }
 
         return result;
@@ -826,11 +754,11 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
     /**
      * @notice Calculate member's share of winnings
      */
-    function calculateMemberShare(
-        bytes32 poolId,
-        address member,
-        uint256 totalWinnings
-    ) external view returns (uint256 memberShare) {
+    function calculateMemberShare(bytes32 poolId, address member, uint256 totalWinnings)
+        external
+        view
+        returns (uint256 memberShare)
+    {
         Pool storage pool = pools[poolId];
         if (pool.totalPooled == 0) return 0;
 
@@ -844,21 +772,19 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
     /**
      * @notice Get distribution state for a pool
      */
-    function getDistributionState(bytes32 poolId) external view returns (
-        uint256 totalAmount,
-        uint256 causeAmount,
-        uint256 membersAmount,
-        uint256 lastProcessedIndex,
-        bool completed
-    ) {
+    function getDistributionState(bytes32 poolId)
+        external
+        view
+        returns (
+            uint256 totalAmount,
+            uint256 causeAmount,
+            uint256 membersAmount,
+            uint256 lastProcessedIndex,
+            bool completed
+        )
+    {
         DistributionState storage dist = distributionStates[poolId];
-        return (
-            dist.totalAmount,
-            dist.causeAmount,
-            dist.membersAmount,
-            dist.lastProcessedIndex,
-            dist.completed
-        );
+        return (dist.totalAmount, dist.causeAmount, dist.membersAmount, dist.lastProcessedIndex, dist.completed);
     }
 
     // =============================================================================
@@ -902,11 +828,7 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
      *     commitment_proof: bytes   // Proof that commitment matches
      * }
      */
-    function joinPoolPrivate(
-        bytes32 poolId,
-        bytes calldata amountCommitment,
-        bytes calldata proof
-    ) external {
+    function joinPoolPrivate(bytes32 poolId, bytes calldata amountCommitment, bytes calldata proof) external {
         Pool storage pool = pools[poolId];
         if (pool.coordinator == address(0)) revert PoolNotFound();
         if (!pool.privacyEnabled) revert PoolNotActive();

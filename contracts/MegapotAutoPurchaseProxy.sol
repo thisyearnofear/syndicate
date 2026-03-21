@@ -13,7 +13,7 @@ interface IMegapot {
 /**
  * @title MegapotAutoPurchaseProxy
  * @notice Universal proxy for trustless cross-chain Megapot ticket purchases.
- * 
+ *
  * CORE PRINCIPLES APPLIED:
  * - ENHANCEMENT FIRST: Enhanced to support multiple tokens (USD₮, USDC, etc.)
  * - CONSOLIDATION: Replaces specialized token proxies with one universal contract
@@ -41,19 +41,10 @@ contract MegapotAutoPurchaseProxy is ReentrancyGuard, Ownable {
     // =========================================================================
 
     event TicketsPurchased(
-        address indexed token,
-        address indexed recipient,
-        address indexed referrer,
-        uint256 amount,
-        bytes32 bridgeId
+        address indexed token, address indexed recipient, address indexed referrer, uint256 amount, bytes32 bridgeId
     );
 
-    event PurchaseFallback(
-        address indexed token,
-        address indexed recipient,
-        uint256 amount,
-        bytes32 bridgeId
-    );
+    event PurchaseFallback(address indexed token, address indexed recipient, uint256 amount, bytes32 bridgeId);
 
     event TokenSupportUpdated(address indexed token, bool supported);
     event AuthorizedCallerUpdated(address indexed caller, bool authorized);
@@ -73,10 +64,7 @@ contract MegapotAutoPurchaseProxy is ReentrancyGuard, Ownable {
     // CONSTRUCTOR
     // =========================================================================
 
-    constructor(
-        address _megapot,
-        address _owner
-    ) Ownable(_owner) {
+    constructor(address _megapot, address _owner) Ownable(_owner) {
         if (_megapot == address(0)) revert InvalidAddress();
         megapot = IMegapot(_megapot);
     }
@@ -93,12 +81,10 @@ contract MegapotAutoPurchaseProxy is ReentrancyGuard, Ownable {
      * @param referrer Referrer address for Megapot referral fees
      * @param amount Amount of tokens (6 decimals) to spend on tickets
      */
-    function purchaseTicketsFor(
-        address token,
-        address recipient,
-        address referrer,
-        uint256 amount
-    ) external nonReentrant {
+    function purchaseTicketsFor(address token, address recipient, address referrer, uint256 amount)
+        external
+        nonReentrant
+    {
         if (!supportedTokens[token]) revert TokenNotSupported();
         if (amount == 0) revert InvalidAmount();
         if (recipient == address(0)) revert InvalidRecipient();
@@ -153,13 +139,9 @@ contract MegapotAutoPurchaseProxy is ReentrancyGuard, Ownable {
     // INTERNAL
     // =========================================================================
 
-    function _executePurchase(
-        address token,
-        uint256 amount,
-        address recipient,
-        address referrer,
-        bytes32 bridgeId
-    ) internal {
+    function _executePurchase(address token, uint256 amount, address recipient, address referrer, bytes32 bridgeId)
+        internal
+    {
         // Approve Megapot to spend tokens
         IERC20(token).forceApprove(address(megapot), amount);
 
