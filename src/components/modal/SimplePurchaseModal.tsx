@@ -1120,7 +1120,7 @@ export default function SimplePurchaseModal({
                 variant="outline"
                 className="flex-1"
                 onClick={handleClose}
-                disabled={isPurchasing || ptDeposit.status === 'approving' || ptDeposit.status === 'depositing'}
+                disabled={isPurchasing || ptDeposit.status === 'approving' || ptDeposit.status === 'depositing' || driftDeposit.status === 'preparing' || driftDeposit.status === 'signing' || driftDeposit.status === 'confirming'}
               >
                 Cancel
               </Button>
@@ -1129,6 +1129,8 @@ export default function SimplePurchaseModal({
                 className={`flex-1 transition-all ${
                   selectedProtocol === 'pooltogether'
                     ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-lg shadow-emerald-500/20'
+                    : selectedProtocol === 'drift'
+                    ? 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 shadow-lg shadow-blue-500/20'
                     : needsBaseAddress && !isValidBaseAddress
                     ? 'bg-gray-600 hover:bg-gray-500 cursor-not-allowed'
                     : 'bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 shadow-lg shadow-green-500/20'
@@ -1138,6 +1140,9 @@ export default function SimplePurchaseModal({
                   isPurchasing ||
                   ptDeposit.status === 'approving' ||
                   ptDeposit.status === 'depositing' ||
+                  driftDeposit.status === 'preparing' ||
+                  driftDeposit.status === 'signing' ||
+                  driftDeposit.status === 'confirming' ||
                   (selectedProtocol === 'megapot' && needsBaseAddress && !isValidBaseAddress)
                 }
               >
@@ -1146,8 +1151,15 @@ export default function SimplePurchaseModal({
                     <Loader className="w-4 h-4 mr-2 animate-spin" />
                     {ptDeposit.status === 'approving' ? 'Approving USDC...' : 'Depositing...'}
                   </>
+                ) : driftDeposit.status === 'preparing' || driftDeposit.status === 'signing' || driftDeposit.status === 'confirming' ? (
+                  <>
+                    <Loader className="w-4 h-4 mr-2 animate-spin" />
+                    {driftDeposit.status === 'preparing' ? 'Preparing...' : driftDeposit.status === 'signing' ? 'Sign in Phantom...' : 'Confirming...'}
+                  </>
                 ) : selectedProtocol === 'pooltogether' ? (
                   `Deposit $${ptDepositAmount} USDC`
+                ) : selectedProtocol === 'drift' ? (
+                  `Deposit $${driftDepositAmount} USDC`
                 ) : isPurchasing ? (
                   <>
                     <Loader className="w-4 h-4 mr-2 animate-spin" />
@@ -1167,6 +1179,84 @@ export default function SimplePurchaseModal({
         );
 
       case "processing":
+        // Drift: show deposit progress steps
+        if (selectedProtocol === 'drift') {
+          const driftSteps = [
+            { label: 'Preparing deposit transaction', done: driftDeposit.status === 'signing' || driftDeposit.status === 'confirming' || driftDeposit.status === 'complete' },
+            { label: 'Sign transaction in Phantom', done: driftDeposit.status === 'confirming' || driftDeposit.status === 'complete', active: driftDeposit.status === 'signing' },
+            { label: 'Confirming on Solana', done: driftDeposit.status === 'complete', active: driftDeposit.status === 'confirming' },
+          ];
+
+          return (
+            <CompactStack spacing="md" align="center">
+              <div className="text-center">
+                <div className="inline-block mb-4">
+                  <div className="w-16 h-16 rounded-full bg-blue-400/20 flex items-center justify-center">
+                    {driftDeposit.status === 'error' ? (
+                      <AlertCircle className="w-8 h-8 text-red-400" />
+                    ) : (
+                      <Loader className="w-8 h-8 text-blue-400 animate-spin" />
+                    )}
+                  </div>
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  {driftDeposit.status === 'error' ? 'Deposit Failed' : 'Depositing to Drift Vault'}
+                </h2>
+                <p className="text-gray-400 text-sm">
+                  Depositing ${driftDepositAmount} USDC into the JLP Delta-Neutral Vault
+                </p>
+              </div>
+
+              {driftDeposit.status !== 'error' && (
+                <div className="text-left space-y-3 w-full max-w-xs">
+                  {driftSteps.map((s, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      {s.done ? (
+                        <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
+                      ) : s.active ? (
+                        <Loader className="w-4 h-4 text-blue-400 flex-shrink-0 animate-spin" />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full border-2 border-gray-600 flex-shrink-0" />
+                      )}
+                      <span className={`text-sm ${s.done ? 'text-green-300' : s.active ? 'text-blue-300' : 'text-gray-500'}`}>
+                        {s.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {driftDeposit.error && (
+                <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 w-full">
+                  <p className="text-red-400 text-sm">{driftDeposit.error}</p>
+                </div>
+              )}
+
+              <div className="flex gap-3 w-full">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    driftDeposit.reset();
+                    setStep('select');
+                  }}
+                >
+                  Back
+                </Button>
+                {driftDeposit.status === 'error' && (
+                  <Button
+                    variant="default"
+                    className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-500"
+                    onClick={handlePurchaseClick}
+                  >
+                    Retry
+                  </Button>
+                )}
+              </div>
+            </CompactStack>
+          );
+        }
+
         // PoolTogether: show deposit progress steps
         if (selectedProtocol === 'pooltogether') {
           const ptSteps = [
@@ -1309,6 +1399,70 @@ export default function SimplePurchaseModal({
         );
 
       case "success":
+        // Drift deposit success
+        if (selectedProtocol === 'drift') {
+          return (
+            <CompactStack spacing="md" align="center">
+              <div className="text-center">
+                <div className="inline-block mb-4">
+                  <div className="w-16 h-16 rounded-full bg-blue-400/20 flex items-center justify-center">
+                    <Check className="w-8 h-8 text-blue-400" />
+                  </div>
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  Deposit Successful! 🚀
+                </h2>
+                <p className="text-gray-400 mb-2">
+                  You deposited <span className="text-blue-400 font-semibold">${driftDepositAmount} USDC</span> into Drift JLP Vault
+                </p>
+                <p className="text-xs text-gray-500">
+                  Your principal is locked for 90 days. Yield will auto-convert to lottery tickets!
+                </p>
+                {driftDeposit.txSignature && (
+                  <a
+                    href={`https://solscan.io/tx/${driftDeposit.txSignature}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block text-sm text-blue-400 hover:text-blue-300 mt-3"
+                  >
+                    View Transaction →
+                  </a>
+                )}
+              </div>
+
+              {/* What happens next info */}
+              <div className="w-full bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 space-y-2">
+                <p className="text-sm font-medium text-blue-300">What happens next?</p>
+                <ul className="text-xs text-gray-300 space-y-1.5 list-disc list-inside">
+                  <li>Your USDC earns ~22.5% APY in the JLP vault</li>
+                  <li>Yield is automatically withdrawn to buy lottery tickets</li>
+                  <li>After 90 days, withdraw your full principal</li>
+                </ul>
+              </div>
+
+              <div className="flex gap-3 w-full">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    driftDeposit.reset();
+                    setStep("select");
+                  }}
+                >
+                  Deposit More
+                </Button>
+                <Button
+                  variant="default"
+                  className="flex-1"
+                  onClick={handleClose}
+                >
+                  Done
+                </Button>
+              </div>
+            </CompactStack>
+          );
+        }
+
         // PoolTogether deposit success
         if (selectedProtocol === 'pooltogether') {
           return (
