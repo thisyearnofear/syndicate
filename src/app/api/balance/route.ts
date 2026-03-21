@@ -5,6 +5,8 @@ import { JsonRpcProvider } from '@near-js/providers';
 const SOLANA_RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC || '/api/solana-rpc';
 const BASE_RPC_URL = process.env.BASE_RPC_URL || 'https://mainnet.base.org';
 const NEAR_RPC_URL = process.env.NEXT_PUBLIC_NEAR_RPC_URL || 'https://rpc.mainnet.near.org';
+const STACKS_API_BASE_URL = process.env.NEXT_PUBLIC_STACKS_API_URL || 'https://api.mainnet.hiro.so';
+const STACKS_API_KEY = process.env.NEXT_PUBLIC_STACKS_API_KEY;
 
 // USDC contract addresses
 const SOLANA_USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
@@ -41,13 +43,7 @@ if (isSolanaAddress) {
 } else if (isNearAddress && !isEvmAddress) {
   return await getNearBalance(address);
 } else if (isStacksAddress) {
-  // Stacks balance placeholder
-  return NextResponse.json({
-    usdc: '0',
-    balance: '0',
-    wallet: address,
-    chain: 'stacks'
-  });
+   return await getStacksBalance(address);
 } else if (isStarknetAddress && !isEvmAddress) {
     // Starknet balance currently returns 0 placeholder as it's handled via bridge estimation
     return NextResponse.json({
@@ -204,6 +200,56 @@ async function getEvmBalance(walletAddress: string, chainId: number): Promise<Ne
     console.error('Failed to fetch EVM balance:', error);
     return NextResponse.json(
       { usdc: '0', balance: '0', error: msg },
+      { status: 200 }
+    );
+  }
+}
+
+async function getStacksBalance(address: string): Promise<NextResponse> {
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (STACKS_API_KEY) {
+      headers['x-hiro-api-key'] = STACKS_API_KEY;
+    }
+
+    const response = await fetch(
+      `${STACKS_API_BASE_URL}/extended/v1/address/${address}/balances`,
+      { headers }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Stacks API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const fungibleTokens = data.fungible_tokens || {};
+
+    // USDCx (6 decimals)
+    const usdcxKey = Object.keys(fungibleTokens).find(key =>
+      key.startsWith('SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx')
+    );
+    const usdcxRaw = usdcxKey ? fungibleTokens[usdcxKey]?.balance || '0' : '0';
+    const usdcx = (parseFloat(usdcxRaw) / Math.pow(10, 6)).toString();
+
+    // sBTC (8 decimals)
+    const sbtcKey = Object.keys(fungibleTokens).find(key =>
+      key.startsWith('SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token')
+    );
+    const sbtcRaw = sbtcKey ? fungibleTokens[sbtcKey]?.balance || '0' : '0';
+    const sbtc = (parseFloat(sbtcRaw) / Math.pow(10, 8)).toString();
+
+    return NextResponse.json({
+      usdcx,
+      sbtc,
+      balance: usdcx,
+      wallet: address,
+      chain: 'stacks'
+    });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('Failed to fetch Stacks balance:', error);
+    return NextResponse.json(
+      { usdcx: '0', sbtc: '0', balance: '0', error: msg },
       { status: 200 }
     );
   }
