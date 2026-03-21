@@ -16,7 +16,7 @@
 import { useState, Suspense, lazy, useEffect } from "react";
 import type { ReactNode } from "react";
 import { Button } from "@/shared/components/ui/Button";
-import { Loader, AlertCircle, Check, Zap, Link2, ChevronDown, TrendingUp, ArrowRight, Wallet, Shield, DollarSign, Bitcoin } from "lucide-react";
+import { Loader, AlertCircle, Check, Zap, Link2, ChevronDown, TrendingUp, ArrowRight, Wallet, Shield, DollarSign, Bitcoin, Trophy, Coins } from "lucide-react";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { useSimplePurchase } from "@/hooks/useSimplePurchase";
 import { useERC7715 } from "@/hooks/useERC7715";
@@ -41,6 +41,7 @@ import { STRK_ADDRESSES } from "@/services/bridges/types";
 const CelebrationModal = lazy(() => import("./CelebrationModal"));
 
 type PurchaseStep = "connect" | "select" | "approve" | "processing" | "success";
+type PurchaseProtocol = "megapot" | "pooltogether" | "drift";
 
 // Helper function to get explorer URLs
 const getExplorerUrl = (chain: SourceChainType, txHash: string): string => {
@@ -169,6 +170,7 @@ export default function SimplePurchaseModal({
   const { permissions, isSupported } = useERC7715();
 
   const [step, setStep] = useState<PurchaseStep>("connect");
+  const [selectedProtocol, setSelectedProtocol] = useState<PurchaseProtocol>("megapot");
   const [ticketCount, setTicketCount] = useState(1);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
@@ -308,6 +310,24 @@ export default function SimplePurchaseModal({
     }
     setBaseAddressError('');
 
+    // Route to different protocols based on selection
+    if (selectedProtocol === 'pooltogether') {
+      // PoolTogether: No-loss prize savings
+      // For now, redirect to yield-strategies page for PoolTogether deposit
+      handleClose();
+      window.location.href = '/yield-strategies?protocol=pooltogether';
+      return;
+    }
+
+    if (selectedProtocol === 'drift') {
+      // Drift: Yield-powered lottery
+      // For now, redirect to yield-strategies page for Drift deposit
+      handleClose();
+      window.location.href = '/yield-strategies?protocol=drift';
+      return;
+    }
+
+    // Default: Megapot direct purchase
     const result = await purchase({
       ticketCount,
       userAddress: address,
@@ -400,6 +420,108 @@ export default function SimplePurchaseModal({
                 </div>
               </div>
             )}
+
+            {/* PROTOCOL SELECTOR */}
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-gray-300">
+                Choose Your Lottery
+              </label>
+              <div className="grid grid-cols-1 gap-3">
+                {/* MEGAPOT */}
+                <button
+                  onClick={() => setSelectedProtocol("megapot")}
+                  disabled={isPurchasing}
+                  className={`relative p-4 rounded-lg border-2 transition-all text-left ${
+                    selectedProtocol === "megapot"
+                      ? "border-yellow-500 bg-yellow-500/20"
+                      : "border-gray-600 hover:border-gray-500 bg-gray-700/30"
+                  }`}
+                >
+                  {selectedProtocol === "megapot" && (
+                    <div className="absolute top-2 right-2">
+                      <Check className="w-3.5 h-3.5 text-yellow-400" />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+                      <Trophy className="w-5 h-5 text-yellow-400" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-white text-sm">Megapot</h4>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Direct lottery tickets • $1 per ticket
+                      </p>
+                    </div>
+                  </div>
+                </button>
+
+                {/* POOLTOGETHER */}
+                <button
+                  onClick={() => setSelectedProtocol("pooltogether")}
+                  disabled={isPurchasing}
+                  className={`relative p-4 rounded-lg border-2 transition-all text-left ${
+                    selectedProtocol === "pooltogether"
+                      ? "border-emerald-500 bg-emerald-500/20"
+                      : "border-gray-600 hover:border-gray-500 bg-gray-700/30"
+                  }`}
+                >
+                  {selectedProtocol === "pooltogether" && (
+                    <div className="absolute top-2 right-2">
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    </div>
+                  )}
+                  <div className="absolute top-2 left-2">
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full">
+                      No Loss
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                      <Shield className="w-5 h-5 text-emerald-400" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-white text-sm">PoolTogether v5</h4>
+                      <p className="text-xs text-gray-400 mt-1">
+                        No-loss prize savings • Keep your principal
+                      </p>
+                    </div>
+                  </div>
+                </button>
+
+                {/* DRIFT */}
+                <button
+                  onClick={() => setSelectedProtocol("drift")}
+                  disabled={isPurchasing}
+                  className={`relative p-4 rounded-lg border-2 transition-all text-left ${
+                    selectedProtocol === "drift"
+                      ? "border-blue-500 bg-blue-500/20"
+                      : "border-gray-600 hover:border-gray-500 bg-gray-700/30"
+                  }`}
+                >
+                  {selectedProtocol === "drift" && (
+                    <div className="absolute top-2 right-2">
+                      <Check className="w-3.5 h-3.5 text-blue-400" />
+                    </div>
+                  )}
+                  <div className="absolute top-2 left-2">
+                    <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-full">
+                      ~22.5% APY
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                      <Coins className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-white text-sm">Drift JLP Vault</h4>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Yield-powered lottery • 3-month lockup
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
 
             {error && (
               <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 flex items-start gap-3">
