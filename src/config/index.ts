@@ -155,17 +155,24 @@ export const CONTRACT_EVENTS = {
 } as const;
 
 // =============================================================================
-
-// LOTTERY CONFIGURATION
-
+// REFERRAL CONFIGURATION
 // =============================================================================
 
+export const REFERRALS = {
+  treasury: (process.env.NEXT_PUBLIC_TREASURY_ADDRESS || '0x0000000000000000000000000000000000000000') as `0x${string}`,
+  megapotReferrer: (process.env.NEXT_PUBLIC_MEGAPOT_REFERRER || '0x0000000000000000000000000000000000000000') as `0x${string}`,
+  poolTogetherHook: (process.env.NEXT_PUBLIC_POOLTOGETHER_HOOK || '0x0000000000000000000000000000000000000000') as `0x${string}`,
+  driftAffiliate: process.env.NEXT_PUBLIC_DRIFT_AFFILIATE || 'syndicate_hq',
+} as const;
 
+// =============================================================================
+// LOTTERY CONFIGURATION
+// =============================================================================
 
 export const LOTTERY = {
   ticketPriceUsd: 1, // $1 per ticket
   ticketPriceWei: BigInt(1 * 10 ** 6), // 1 USDC in wei (6 decimals)
-  referrerAddress: process.env.NEXT_PUBLIC_REFERRER_ADDRESS || "0x0000000000000000000000000000000000000000",
+  referrerAddress: REFERRALS.megapotReferrer, // Use consolidated referral
 } as const;
 
 

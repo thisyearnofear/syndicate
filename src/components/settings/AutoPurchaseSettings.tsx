@@ -1,397 +1,353 @@
 /**
- * AUTO-PURCHASE SETTINGS COMPONENT
- *
+ * AUTO-PURCHASE SETTINGS (AGENT AUTOMATION HUB)
+ * 
  * Core Principles Applied:
- * - ENHANCEMENT FIRST: New settings panel for managing auto-purchases
- * - CLEAN: Display permission status and execution history
- * - MODULAR: Can be embedded in user settings page
- * - ORGANIZED: Clear sections for different concerns
- *
- * Displays:
- * - Current permission status
- * - Auto-purchase frequency and amount
- * - Last 5 executions
- * - Option to revoke or pause
+ * - ENHANCEMENT FIRST: Replaces simple settings with a comprehensive agent hub
+ * - UI/UX: Distinct visual tiers for different levels of autonomy
+ * - CLEAN: Centralized management of all automation types
+ * - ORGANIZED: Sectioned by agent type with clear action paths
  */
 
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  AlertCircle,
-  CircleCheck,
-  Clock,
-  Trash2,
-  ToggleLeft,
-  ToggleRight,
-  Loader,
+import { 
+  Bot, 
+  Zap, 
+  Clock, 
+  ChevronRight, 
+  Plus, 
+  Brain,
+  Terminal,
+  Wallet,
+  Coins,
+  TrendingUp
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/Button";
-import {
-  useAdvancedPermissions,
-  useAutoPurchaseState,
-} from "@/hooks/useAdvancedPermissions";
-import { useGelatoAutomation } from "@/hooks/useGelatoAutomation";
-import { AutoPurchaseModal } from "../modal/AutoPurchaseModal";
-import type { AutoPurchaseConfig } from "@/domains/wallet/types";
-import { useAccount } from "wagmi";
-
-// =============================================================================
-// COMPONENT
-// =============================================================================
+import { AgentRegistryService, AgentStatus, AgentType } from "@/services/automation/agentRegistryService";
+import { useWalletConnection } from "@/hooks/useWalletConnection";
+import { AutoPurchaseModal } from "@/components/modal/AutoPurchaseModal";
 
 export function AutoPurchaseSettings() {
-  const [showPermissionModal, setShowPermissionModal] = useState(false);
-  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
-  const [isCreatingTask, setIsCreatingTask] = useState(false);
+  const { address, walletType } = useWalletConnection();
+  const [agents, setAgents] = useState<AgentStatus[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedAgentType, setSelectedAgentType] = useState<AgentType | null>(null);
 
-  const { address } = useAccount();
-  const {
-    permission,
-    autoPurchaseConfig,
-    revokePermission,
-    saveAutoPurchaseConfig,
-  } = useAdvancedPermissions();
+  const registry = AgentRegistryService.getInstance();
 
-  const autoPurchaseState = useAutoPurchaseState();
-  const gelato = useGelatoAutomation(address);
+  const fetchAgents = async () => {
+    if (!address) return;
+    setIsLoading(true);
+    const userAgents = await registry.getUserAgents(address);
+    
+    // UI/UX: Sort agents to prioritize those matching the user's wallet type
+    const sortedAgents = [...userAgents].sort((a, b) => {
+      const aMatches = a.tokenSymbol === (walletType === 'solana' ? 'USD₮' : 'USDC');
+      const bMatches = b.tokenSymbol === (walletType === 'solana' ? 'USD₮' : 'USDC');
+      return aMatches === bMatches ? 0 : aMatches ? -1 : 1;
+    });
 
-  // ENHANCEMENT FIRST: Sync Gelato task when permission changes
+    setAgents(sortedAgents);
+    setIsLoading(false);
+  };
+
   useEffect(() => {
-    if (!permission || !address || isCreatingTask) return;
+    fetchAgents();
+  }, [address]);
 
-    // If permission exists but no Gelato task, create one
-    if (!gelato.activeTask && permission) {
-      (async () => {
-        setIsCreatingTask(true);
-        const frequency =
-          autoPurchaseState.config?.frequency === "monthly"
-            ? "monthly"
-            : "weekly";
-        const grant = {
-          id: permission.permissionId,
-          type: permission.scope,
-          target: permission.token,
-          limit: permission.limit,
-          spent: permission.limit - permission.remaining,
-          period: permission.period,
-          grantedAt: permission.grantedAt,
-          expiresAt: permission.expiresAt,
-          isActive: permission.isActive,
-        };
-        const success = await gelato.createTask(grant as any, frequency);
-        if (!success) {
-          console.warn("Failed to create Gelato task");
-        }
-        setIsCreatingTask(false);
-      })();
-    }
-  }, [permission, address, gelato.activeTask]);
-
-  // CLEAN: Handle permission granted
-  const handlePermissionGranted = async (config: AutoPurchaseConfig) => {
-    saveAutoPurchaseConfig(config);
-
-    // ENHANCEMENT FIRST: Create database record for Vercel Cron automation
-    if (address && config.permission) {
-      try {
-        const response = await fetch("/api/automation/create-purchase", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userAddress: address,
-            permissionId: config.permission.permissionId,
-            frequency: config.frequency,
-            amountPerPeriod: config.amountPerPeriod.toString(),
-          }),
-        });
-
-        if (!response.ok) {
-          console.error(
-            "[AutoPurchaseSettings] Failed to create database record",
-          );
-        } else {
-          const data = (await response.json()) as { purchaseId?: string };
-          console.log(
-            "[AutoPurchaseSettings] Database record created:",
-            data.purchaseId,
-          );
-        }
-      } catch (err) {
-        console.error("[AutoPurchaseSettings] Database creation error:", err);
-        // Don't block on database error - automation still works via localStorage
-      }
-    }
-
-    setShowPermissionModal(false);
+  const handleActivateAgent = (type: AgentType) => {
+    setSelectedAgentType(type);
+    setShowModal(true);
   };
 
-  // CLEAN: Handle revoke - also cancel Gelato task
-  const handleRevoke = async () => {
-    setIsCreatingTask(true);
-    try {
-      // Cancel Gelato task if active
-      if (gelato.activeTask?.taskId) {
-        await gelato.cancelTask();
-      }
-
-      // Revoke permission
-      revokePermission();
-      setShowRevokeConfirm(false);
-    } finally {
-      setIsCreatingTask(false);
-    }
-  };
-
-  // CLEAN: Handle pause/resume - sync with Gelato
-  const handleToggleEnabled = async () => {
-    if (!autoPurchaseConfig || !gelato.activeTask) return;
-
-    setIsCreatingTask(true);
-    try {
-      const isEnabled = autoPurchaseConfig.enabled;
-
-      if (isEnabled) {
-        // Pause task in Gelato
-        await gelato.pauseTask();
-      } else {
-        // Resume task in Gelato
-        await gelato.resumeTask();
-      }
-
-      // Update local state
-      const updated: AutoPurchaseConfig = {
-        ...autoPurchaseConfig,
-        enabled: !isEnabled,
-      };
-      saveAutoPurchaseConfig(updated);
-    } finally {
-      setIsCreatingTask(false);
-    }
-  };
-
-  // If no permission granted, show enable button
-  if (!permission || !autoPurchaseState.isEnabled) {
+  if (isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-lg p-6">
-          <div className="flex items-start gap-4">
-            <div className="flex-1">
-              <h3 className="font-semibold text-gray-900 mb-1">
-                💡 Never Miss a Ticket
-              </h3>
-              <p className="text-sm text-gray-700 mb-4">
-                Enable automatic weekly or monthly purchases. Just set it once
-                and forget it.
-              </p>
-              <Button onClick={() => setShowPermissionModal(true)}>
-                Enable Auto-Purchase
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <AutoPurchaseModal
-          isOpen={showPermissionModal}
-          onClose={() => setShowPermissionModal(false)}
-          onSuccess={handlePermissionGranted as any}
-        />
+      <div className="flex flex-col items-center justify-center py-12 space-y-4 animate-pulse">
+        <Bot className="w-12 h-12 text-indigo-300" />
+        <div className="h-4 w-48 bg-gray-200 rounded"></div>
       </div>
     );
   }
 
-  // Permission is active - show status and controls
   return (
-    <div className="space-y-4">
-      {/* ACTIVE STATUS */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3">
-            <CircleCheck className="w-5 h-5 text-green-600 flex-shrink-0 mt-1" />
-            <div>
-              <h3 className="font-semibold text-gray-900">
-                Auto-Purchase Enabled
-              </h3>
-              <p className="text-sm text-gray-700 mt-1">
-                Syndicate will automatically purchase lottery tickets on your
-                behalf
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            {isCreatingTask ? (
-              <button disabled className="p-2 cursor-not-allowed">
-                <Loader className="w-5 h-5 text-gray-400 animate-spin" />
-              </button>
-            ) : autoPurchaseState.isEnabled ? (
-              <button
-                onClick={handleToggleEnabled}
-                className="p-2 hover:bg-green-100 rounded transition-colors"
-                title="Pause auto-purchase"
-              >
-                <ToggleRight className="w-5 h-5 text-green-600" />
-              </button>
-            ) : (
-              <button
-                onClick={handleToggleEnabled}
-                className="p-2 hover:bg-green-100 rounded transition-colors"
-                title="Resume auto-purchase"
-              >
-                <ToggleLeft className="w-5 h-5 text-gray-400" />
-              </button>
-            )}
-          </div>
+    <div className="space-y-8">
+      {/* HEADER */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            <Bot className="w-6 h-6 text-indigo-600" />
+            Syndicate Agent Hub
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Deploy and manage autonomous bots that maximize your prize exposure.
+          </p>
         </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={fetchAgents}
+          className="text-xs"
+        >
+          Refresh Status
+        </Button>
       </div>
 
-      {/* PERMISSION DETAILS */}
-      <div className="bg-gray-50 rounded-lg p-4">
-        <h4 className="font-semibold text-gray-900 mb-3">Permission Details</h4>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-xs text-gray-600 uppercase tracking-wide">
-              Frequency
-            </p>
-            <p className="text-sm font-semibold text-gray-900 mt-1 capitalize">
-              {autoPurchaseState.config?.frequency || "weekly"}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-600 uppercase tracking-wide">
-              Amount per Period
-            </p>
-            <p className="text-sm font-semibold text-gray-900 mt-1">
-              $
-              {Number(autoPurchaseState.config?.amountPerPeriod || BigInt(0)) /
-                10 ** 6}{" "}
-              USDC
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-600 uppercase tracking-wide">
-              Remaining Allowance
-            </p>
-            <p className="text-sm font-semibold text-gray-900 mt-1">
-              ${Number(permission.remaining) / 10 ** 6} USDC
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-600 uppercase tracking-wide">
-              Granted On
-            </p>
-            <p className="text-sm font-semibold text-gray-900 mt-1">
-              {new Date(permission.grantedAt).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* AGENT TIERS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* TIERS: WE WOULD ITERATE THROUGH AGENTS HERE */}
+        {agents.map((agent) => (
+          <AgentCard 
+            key={agent.id} 
+            agent={agent} 
+            currentWalletType={walletType}
+            onManage={() => console.log('Manage', agent.id)} 
+          />
+        ))}
 
-      {/* EXECUTION SCHEDULE */}
-      {autoPurchaseState.nextExecution && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <Clock className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+        {/* EMPTY STATE / SUGGESTED AGENTS */}
+        {!agents.some(a => a.type === 'autonomous') && (
+          <div className="border-2 border-dashed border-indigo-200 rounded-xl p-6 flex flex-col items-center justify-center text-center space-y-4 bg-indigo-50/30">
+            <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
+              <Plus className="w-6 h-6 text-indigo-600" />
+            </div>
             <div>
-              <p className="text-sm font-semibold text-gray-900">
-                Next Purchase Scheduled
+              <h4 className="font-semibold text-gray-900">Deploy AI Agent</h4>
+              <p className="text-xs text-gray-500 max-w-[200px] mx-auto mt-1">
+                Deploy an autonomous WDK bot to manage your USD₮ purchases.
               </p>
-              <p className="text-sm text-gray-700 mt-1">
-                {new Date(autoPurchaseState.nextExecution).toLocaleString()}
-              </p>
-              {autoPurchaseState.config?.lastExecuted && (
-                <p className="text-xs text-gray-600 mt-2">
-                  Last executed:{" "}
-                  {new Date(
-                    autoPurchaseState.config.lastExecuted,
-                  ).toLocaleString()}
-                </p>
-              )}
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* WARNING: LOW ALLOWANCE */}
-      {permission.remaining < BigInt(10 * 10 ** 6) && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-gray-900">
-                Low Allowance
-              </p>
-              <p className="text-sm text-gray-700 mt-1">
-                Your permission has less than $10 USDC remaining. Request a new
-                permission to continue auto-purchases.
-              </p>
-              <Button
-                onClick={() => setShowPermissionModal(true)}
-                variant="secondary"
-                size="sm"
-                className="mt-2"
-              >
-                Increase Allowance
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* DANGER ZONE */}
-      <div className="border-2 border-red-200 rounded-lg p-4 space-y-3">
-        <h4 className="font-semibold text-red-900">Danger Zone</h4>
-        {!showRevokeConfirm ? (
-          <Button
-            onClick={() => setShowRevokeConfirm(true)}
-            variant="destructive"
-            className="w-full"
-            disabled={isCreatingTask}
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Revoke Permission
-          </Button>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-sm text-gray-700">
-              Are you sure you want to revoke auto-purchase permission? This
-              will also cancel your Gelato automation task. You'll need to grant
-              a new permission to re-enable auto-purchase.
-            </p>
-            <div className="flex gap-2">
-              <Button
-                onClick={() => setShowRevokeConfirm(false)}
-                variant="secondary"
-                className="flex-1"
-                disabled={isCreatingTask}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleRevoke}
-                variant="destructive"
-                className="flex-1"
-                disabled={isCreatingTask}
-              >
-                {isCreatingTask ? (
-                  <>
-                    <Loader className="w-4 h-4 mr-2 animate-spin" />
-                    Revoking...
-                  </>
-                ) : (
-                  "Confirm Revoke"
-                )}
-              </Button>
-            </div>
+            <Button 
+              size="sm" 
+              className="bg-indigo-600 hover:bg-indigo-700"
+              onClick={() => handleActivateAgent('autonomous')}
+            >
+              Activate "The Voyager"
+            </Button>
           </div>
         )}
       </div>
 
+      {/* DISCOVER OPPORTUNITIES */}
+      <div>
+        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-4">
+          <Zap className="w-5 h-5 text-amber-500" />
+          Discover Diverse Lotteries
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* POOLTOGETHER V5 */}
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all group">
+            <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+              <Coins className="w-6 h-6 text-indigo-600" />
+            </div>
+            <h4 className="font-bold text-gray-900 text-sm">PoolTogether v5</h4>
+            <p className="text-[10px] text-gray-500 mt-1 mb-3">No-loss prize savings. 100% principal protection on Base.</p>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Yield + Prizes</span>
+              <Button size="sm" variant="outline" onClick={() => handleActivateAgent('scheduled')}>Explore</Button>
+            </div>
+          </div>
+
+          {/* DRIFT JLP */}
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all group">
+            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+              <TrendingUp className="w-6 h-6 text-blue-600" />
+            </div>
+            <h4 className="font-bold text-gray-900 text-sm">Drift JLP Vault</h4>
+            <p className="text-[10px] text-gray-500 mt-1 mb-3">High-yield delta-neutral strategy with prize exposure on Solana.</p>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">~22.5% APY</span>
+              <Button size="sm" variant="outline" onClick={() => handleActivateAgent('autonomous')}>Analyze</Button>
+            </div>
+          </div>
+
+          {/* PANCAKESWAP */}
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all group">
+            <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+              <Zap className="w-6 h-6 text-orange-600" />
+            </div>
+            <h4 className="font-bold text-gray-900 text-sm">PancakeSwap</h4>
+            <p className="text-[10px] text-gray-500 mt-1 mb-3">High-frequency lottery with multi-chain jackpots.</p>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">High Volume</span>
+              <Button size="xs" variant="outline" onClick={() => handleActivateAgent('scheduled')}>View</Button>
+            </div>
+          </div>
+
+          {/* NEAR NOMAD */}
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all group">
+            <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+              <Zap className="w-6 h-6 text-emerald-600" />
+            </div>
+            <h4 className="font-bold text-gray-900 text-sm">NEAR Nomad</h4>
+            <p className="text-[10px] text-gray-500 mt-1 mb-3">Atomic cross-chain purchases via NEAR Chain Signatures.</p>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">MPC Powered</span>
+              <Button size="xs" variant="outline" onClick={() => handleActivateAgent('scheduled')}>Activate</Button>
+            </div>
+          </div>
+
+          {/* STACKS SENTINEL */}
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all group">
+            <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+              <TrendingUp className="w-6 h-6 text-orange-600" />
+            </div>
+            <h4 className="font-bold text-gray-900 text-sm">Stacks Sentinel</h4>
+            <p className="text-[10px] text-gray-500 mt-1 mb-3">Bitcoin-secured automation using SIP-018 signatures.</p>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">BTC Security</span>
+              <Button size="xs" variant="outline" onClick={() => handleActivateAgent('scheduled')}>Deploy</Button>
+            </div>
+          </div>
+          </div>
+          </div>
+
+
+      {/* AI REASONING TERMINAL (Only if AI agent active) */}
+      {agents.some(a => a.type === 'autonomous' && a.isEnabled) && (
+        <div className="bg-slate-900 rounded-xl overflow-hidden shadow-xl border border-slate-800">
+          <div className="px-4 py-2 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Terminal className="w-4 h-4 text-emerald-400" />
+              <span className="text-xs font-mono text-slate-300">Syndicate-Agent-v1.0.4-Reasoning-Log</span>
+            </div>
+            <div className="flex gap-1">
+              <div className="w-2 h-2 rounded-full bg-slate-600"></div>
+              <div className="w-2 h-2 rounded-full bg-slate-600"></div>
+              <div className="w-2 h-2 rounded-full bg-slate-600"></div>
+            </div>
+          </div>
+          <div className="p-4 font-mono text-sm space-y-2">
+            <div className="flex gap-2 text-slate-500">
+              <span>[2026-03-21 14:02:11]</span>
+              <span className="text-blue-400">INFO</span>
+              <span>Analyzing market conditions on Base...</span>
+            </div>
+            <div className="flex gap-2 text-slate-500">
+              <span>[2026-03-21 14:02:12]</span>
+              <span className="text-purple-400">YIELD</span>
+              <span>Drift JLP Vault: 22.5% APY (Stable)</span>
+            </div>
+            <div className="flex gap-2 text-slate-500">
+              <span>[2026-03-21 14:02:13]</span>
+              <span className="text-emerald-400">AGENT</span>
+              <span className="text-slate-100">Decision: Opportunistic purchase window open. Buy amount: 5 USD₮.</span>
+            </div>
+            <div className="animate-pulse flex gap-2">
+              <span className="text-slate-500">_</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL */}
-      <AutoPurchaseModal
-        isOpen={showPermissionModal}
-        onClose={() => setShowPermissionModal(false)}
-        onSuccess={handlePermissionGranted as any}
+      <AutoPurchaseModal 
+        isOpen={showModal} 
+        onClose={() => setShowModal(false)} 
+        onSuccess={() => {
+          setShowModal(false);
+          fetchAgents();
+        }}
       />
+    </div>
+  );
+}
+
+function AgentCard({ agent, onManage, currentWalletType }: { agent: AgentStatus; onManage: () => void; currentWalletType: string | null }) {
+  const isAI = agent.type === 'autonomous';
+  const matchesWallet = (agent.chainName === 'Base' && (currentWalletType === 'evm' || !currentWalletType)) ||
+                        (agent.chainName === 'Solana' && currentWalletType === 'solana') ||
+                        (agent.chainName === 'Stacks' && currentWalletType === 'stacks') ||
+                        (agent.chainName === 'NEAR' && currentWalletType === 'near');
+  
+  return (
+    <div className={`relative overflow-hidden rounded-xl border-2 p-5 transition-all ${
+      agent.isEnabled 
+        ? (isAI ? 'border-indigo-500 bg-indigo-50/10 shadow-indigo-100' : 'border-blue-500 bg-blue-50/10')
+        : (matchesWallet ? 'border-gray-300 bg-white' : 'border-gray-200 bg-gray-50 opacity-60')
+    }`}>
+      {/* GLOW EFFECT FOR AI */}
+      {isAI && agent.isEnabled && (
+        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
+      )}
+
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+            isAI ? 'bg-indigo-600 text-white' : 'bg-blue-600 text-white'
+          }`}>
+            {isAI ? <Brain className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-gray-900">{agent.name}</h3>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase ${
+                agent.chainName === 'Base' ? 'bg-blue-100 text-blue-700' :
+                agent.chainName === 'Solana' ? 'bg-purple-100 text-purple-700' :
+                agent.chainName === 'Stacks' ? 'bg-orange-100 text-orange-700' :
+                'bg-emerald-100 text-emerald-700'
+              }`}>
+                {agent.chainName}
+              </span>
+            </div>
+            <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500">
+              {isAI ? 'Tether WDK / Autonomous' : 'ERC-7715 / Scheduled'}
+            </span>
+          </div>
+        </div>
+        <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+          agent.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600'
+        }`}>
+          {agent.status}
+        </div>
+      </div>
+
+      <p className="text-xs text-gray-600 mb-6 leading-relaxed">
+        {agent.description}
+      </p>
+
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="bg-white/50 rounded-lg p-2 border border-gray-200/50 shadow-sm">
+          <div className="flex items-center gap-1.5 text-gray-500 mb-1">
+            <Coins className="w-3 h-3" />
+            <span className="text-[10px] font-semibold uppercase">Balance</span>
+          </div>
+          <p className="text-sm font-bold text-gray-900">
+            {agent.balance ? `$${Number(agent.balance) / 10**6}` : '---'} {agent.tokenSymbol}
+          </p>
+        </div>
+        <div className="bg-white/50 rounded-lg p-2 border border-gray-200/50 shadow-sm">
+          <div className="flex items-center gap-1.5 text-gray-500 mb-1">
+            <Zap className="w-3 h-3" />
+            <span className="text-[10px] font-semibold uppercase">Strategy</span>
+          </div>
+          <p className="text-sm font-bold text-gray-900 capitalize">{agent.frequency}</p>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+        <div className="flex items-center gap-2">
+          {isAI && agent.isEnabled && (
+            <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-bold animate-pulse">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+              <span>Agent Online</span>
+            </div>
+          )}
+          {!matchesWallet && !agent.isEnabled && (
+            <span className="text-[9px] text-amber-600 font-medium italic">Requires {agent.chainName} wallet</span>
+          )}
+        </div>
+        <button 
+          onClick={onManage}
+          className={`text-xs font-bold flex items-center gap-1 hover:gap-2 transition-all ${
+            agent.isEnabled ? 'text-gray-900' : 'text-indigo-600'
+          }`}
+        >
+          {agent.isEnabled ? 'Modify Settings' : 'Deploy Now'}
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
     </div>
   );
 }

@@ -4,7 +4,7 @@
  */
 
 import { web3Service } from "@/services/web3Service";
-import { getERC7715Service } from "@/services/erc7715Service";
+import { getERC7715Service } from "@/services/automation/erc7715Service";
 import type { PurchaseRequest, PurchaseResult } from "../types/purchase";
 import { checkBalance, errorResult } from "../utils/purchaseUtils";
 

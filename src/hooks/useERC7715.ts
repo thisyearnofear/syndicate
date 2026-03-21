@@ -14,7 +14,7 @@ import {
   AdvancedPermissionGrant,
   SmartSessionGrant,
   SessionPermissionScope,
-} from '@/services/erc7715Service';
+} from '@/services/automation/erc7715Service';
 import { FEATURES } from '@/config';
 
 /**

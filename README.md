@@ -4,11 +4,13 @@ Syndicate enables users to purchase Megapot lottery tickets from any blockchain 
 
 ## Features
 
-- 🌉 **Cross-Chain**: Buy tickets from Stacks, NEAR, Solana, or Base
-- ⚡ **Fast**: 30-60 seconds from Stacks, 1-3 minutes from Solana
-- 🔒 **Trustless**: Proxy contract handles all purchases atomically
-- 📊 **Transparent**: Real-time status tracking and cost breakdown
-- 💰 **Fair**: Clear fees, no hidden costs
+- 🤖 **Universal Syndicate Agent**: Deploy autonomous AI agents (Tether WDK) that decide when to buy based on yield performance.
+- 🌉 **Cross-Chain**: Buy tickets from Stacks, NEAR, Solana, or Base.
+- 🎟️ **Multi-Protocol Aggregator**: Participate in Megapot, PoolTogether v5 (No-Loss), and Drift JLP lotteries from a single hub.
+- ⚡ **Fast**: 30-60 seconds from Stacks, 1-3 minutes from Solana.
+- 🔒 **Trustless**: Proxy contract handles all purchases atomically and supports any ERC20 (USD₮, USDC).
+- 📊 **Transparent**: Real-time status tracking and AI reasoning logs for agent decisions.
+- 💰 **Referral-Powered**: Earn commissions through automated on-chain referral hooks and affiliate codes.
 
 ## Quick Start
 

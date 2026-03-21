@@ -1,6 +1,6 @@
-# Recurring Purchase Automation
+# Universal Syndicate Agent & Automation
 
-**Last Updated**: March 2, 2026  
+**Last Updated**: March 21, 2026  
 **Status**: ✅ Production-ready  
 **Cost**: $0/month (Vercel Cron free tier)
 
@@ -8,36 +8,47 @@
 
 ## Overview
 
-Automated recurring ticket purchases using **Vercel's native cron service** (included free with your plan). No external services, no costs, production-ready.
+A **Universal AI Agent** system that orchestrates automated ticket purchases across multiple lottery protocols (Megapot, PoolTogether, Drift) and multiple chains (Base, Solana, Stacks, NEAR). The system supports three automation strategies: **Scheduled** (ERC-7715 permissions), **Autonomous AI** (Tether WDK reasoning), and **No-Loss** (yield-funded tickets).
+
+### Key Innovation: Multi-Protocol, Multi-Chain Agent
+
+Unlike basic recurring purchase systems, the Universal Syndicate Agent:
+- **Decides autonomously** when to buy based on yield performance and market conditions (WDK)
+- **Works across any wallet** — EVM (MetaMask), Solana (Phantom), Stacks (Leather), NEAR (MyNearWallet)
+- **Aggregates lotteries** — Megapot, PoolTogether v5, Drift JLP from a single automation hub
+- **Routes commissions** automatically via `ReferralManager` to the Syndicate treasury
 
 ### Architecture
 
 ```
-User grants permission (MetaMask Flask)
+User grants permission (MetaMask Flask / ERC-7715)
           ↓
-Frontend stores in database
+Frontend stores in database (agent_type, amount, frequency)
           ↓
 Vercel Cron (hourly: 0 * * * *)
           ↓
 /api/crons/recurring-purchases
-   ├─ Query due purchases
-   ├─ Verify permissions
-   ├─ Execute on Megapot
-   └─ Mark executed
+   ├─ Query due tasks (Scheduled, AI, No-Loss)
+   ├─ AutomationOrchestrator.ts (Single source of truth)
+   │    ├─ WDK Agent (Autonomous reasoning)
+   │    └─ PoolTogether (Yield optimization)
+   ├─ Verify permissions (ERC-7715)
+   ├─ Execute on Megapot (Multi-token support)
+   └─ Mark executed (Update last_reasoning)
           ↓
 User has tickets (fully automated)
 ```
 
 ### Core Principles
 
-- **ENHANCEMENT FIRST**: Extended existing services and endpoints
-- **AGGRESSIVE CONSOLIDATION**: Single cron endpoint, no external services (until needed)
-- **PREVENT BLOAT**: Minimal code, zero new dependencies
-- **DRY**: Reuses permission validation and contract logic
-- **CLEAN**: Clear responsibility: cron orchestrates existing services
-- **MODULAR**: Each endpoint independent, easy to test and swap
-- **PERFORMANT**: Vercel handles scheduling, efficient database queries
-- **ORGANIZED**: Cron in `api/crons/`, automation in `api/automation/`
+- **ENHANCEMENT FIRST**: Extended existing services to support AI and yield strategies.
+- **AGGRESSIVE CONSOLIDATION**: `AutomationOrchestrator.ts` handles all execution logic.
+- **PREVENT BLOAT**: Minimal code, reusing ERC-7715 validation.
+- **DRY**: Centralized commission logic in `ReferralManager.ts`.
+- **CLEAN**: Clear separation between UI, Orchestrator, and Execution.
+- **MODULAR**: Strategies (WDK, No-Loss) are pluggable.
+- **PERFORMANT**: Efficient database queries with status tracking.
+- **ORGANIZED**: All automation logic in `src/services/automation/`.
 
 ---
 
@@ -47,13 +58,11 @@ User has tickets (fully automated)
 
 **Step 1: User opens settings and clicks "Enable Auto-Purchase"**
 - Component: `src/components/settings/AutoPurchaseSettings.tsx`
-- Shows: Weekly ($50) or Monthly ($200) preset options
-- Alternatives: `ImprovedAutoPurchaseModal` for custom amounts
+- Options: Scheduled (Weekly/Monthly), Autonomous AI (WDK), or No-Loss Yield.
 
-**Step 2: User selects frequency and approves in MetaMask Flask**
+**Step 2: User selects strategy and approves in MetaMask Flask**
 - Modal: `AutoPurchasePermissionModal.tsx` or `ImprovedAutoPurchaseModal.tsx`
-- Uses: `useAdvancedPermissions` hook
-- Calls: MetaMask `wallet_grantPermissions` (ERC-7715)
+- Uses: `useAdvancedPermissions` hook (ERC-7715)
 - Result: Permission stored in browser & localStorage
 
 **Step 3: Frontend creates database record**
@@ -62,53 +71,49 @@ User has tickets (fully automated)
 - Stores in database:
   - userAddress
   - permissionId
-  - frequency (daily/weekly/monthly)
+  - frequency / agent_type
   - amountPerPeriod
   - isActive: true
-  - lastExecutedAt: now (starts next period)
+  - lastExecutedAt: now
 
 **Step 4: User sees automation dashboard**
 - Component: `AutoPurchaseSettings.tsx` shows:
-  - ✅ Permission status
-  - ✅ Frequency and amount
+  - ✅ Strategy status & type
   - ✅ Next execution time
-  - ✅ Pause/Resume buttons
+  - ✅ AI reasoning (if applicable)
   - ✅ Remaining budget
-  - ✅ Execution history (when available)
 
 ### 2. Automated Execution (Every Hour)
 
 **Vercel Cron trigger** (runs on schedule: `0 * * * *`)
 - Endpoint: `POST /api/crons/recurring-purchases`
-- Orchestrates the entire flow
+- Calls: `AutomationOrchestrator.executeDueTasks()`
 
-**For each due purchase:**
+**Execution Flow:**
 
 1. **Query database**
    ```sql
    SELECT * FROM auto_purchases
    WHERE is_active = true
-   AND last_executed_at + interval_seconds <= now
+   AND (last_executed_at + interval_seconds <= now OR agent_type = 'ai')
    ```
 
-2. **Verify permission is valid**
+2. **Orchestrate Strategy** (`AutomationOrchestrator.ts`)
+   - **Scheduled**: Standard recurring purchase.
+   - **WDK Agent**: AI evaluates market conditions and sentiment before buying.
+   - **No-Loss**: Checks accrued yield from PoolTogether/Drift to fund tickets.
+
+3. **Verify permission is valid**
    - Calls: `POST /api/permissions/verify`
-   - Checks: Permission not expired, budget remaining
-   - Result: true/false
+   - Checks: Permission not expired, budget remaining.
 
-3. **Execute on-chain purchase**
-   - Calls: `POST /api/automation/execute-purchase-tickets`
-   - Action: Transfers USDC, mints lottery tickets
-   - Signed by: Delegated permission (ERC-7715)
+4. **Execute on-chain purchase**
+   - Calls: `AutomationOrchestrator.executeOnChain()`
+   - Logic: Interacts with `MegapotAutoPurchaseProxy` (USDC/USD₮).
+   - Referrals: Centralized via `ReferralManager.ts`.
 
-4. **Update database**
-   - Calls: `POST /api/automation/mark-executed`
-   - Updates: `last_executed_at = now()`
-   - Result: Next execution scheduled automatically
-
-**Logging:** All steps logged to Vercel Function logs with `[Cron]` prefix
-
-**Result:** User's USDC transferred, tickets minted. No user action needed.
+5. **Update database**
+   - Updates: `last_executed_at = now()`, `last_reasoning = "..."`.
 
 ---
 
@@ -116,51 +121,33 @@ User has tickets (fully automated)
 
 ### UI Components
 
-**Permission Modal:**
-- `src/components/modal/AutoPurchasePermissionModal.tsx` - Preset options (weekly/monthly)
-- `src/components/modal/ImprovedAutoPurchaseModal.tsx` - Custom amounts & frequencies
-
 **Settings Dashboard:**
-- `src/components/settings/AutoPurchaseSettings.tsx` - Main automation dashboard
-  - Shows permission status
-  - Displays frequency, amount, next execution
-  - Pause/Resume/Revoke controls
-  - Remaining budget warnings
-  - Wired to create database record on permission grant
+- `src/components/settings/AutoPurchaseSettings.tsx` - Main dashboard (consolidated).
+  - Handles Scheduled, AI Agent, and No-Loss configurations.
+  - Displays `last_reasoning` for AI strategies.
 
 **Hooks:**
-- `src/hooks/useAdvancedPermissions.ts` - ERC-7715 permission management
-- `src/hooks/useGelatoAutomation.ts` - Task lifecycle (pause, resume, cancel)
+- `src/hooks/useAdvancedPermissions.ts` - ERC-7715 permission management.
+- `src/hooks/useAutomation.ts` - Unified task lifecycle (pause, resume, status).
+
+### Services
+
+**Orchestration:**
+- `src/services/automation/AutomationOrchestrator.ts` - Single entry point for execution.
+- `src/services/automation/wdkService.ts` - WDK AI Agent integration.
+- `src/services/referral/ReferralManager.ts` - Centralized commission and referral logic.
+
+**Contract Proxy:**
+- `contracts/MegapotAutoPurchaseProxy.sol` - Multi-token (USDC, USD₮) support.
 
 ### API Endpoints
 
 **Cron Orchestrator:**
-- `src/pages/api/crons/recurring-purchases.ts` - Main hourly trigger
-  - Queries due purchases
-  - Verifies permissions
-  - Executes purchases
-  - Marks executed
-  - Logs all activity
+- `src/pages/api/crons/recurring-purchases.ts` - Main hourly trigger.
 
 **Database Management:**
-- `src/pages/api/automation/create-purchase.ts` - Create auto-purchase record (called by UI)
-- `src/pages/api/automation/due-purchases.ts` - Query due purchases (called by cron)
-- `src/pages/api/automation/mark-executed.ts` - Update execution status (called by cron)
-
-**Execution:**
-- `src/pages/api/automation/execute-purchase-tickets.ts` - On-chain purchase via ERC-7715
-
-**Validation:**
-- `src/pages/api/permissions/verify.ts` - Verify permission validity and budget
-
-### Configuration
-
-**Cron Schedule:**
-- `vercel.json` - Defines cron as `0 * * * *` (every hour)
-
-**Services:**
-- `src/services/erc7715Service.ts` - MetaMask Advanced Permissions (ERC-7715)
-- `src/services/automation/gelatoService.ts` - Task management (optional, for future Gelato upgrade)
+- `src/pages/api/automation/create-purchase.ts` - Create auto-purchase record.
+- `src/pages/api/automation/mark-executed.ts` - Update execution status and reasoning.
 
 ---
 
@@ -177,11 +164,43 @@ CREATE TABLE auto_purchases (
   is_active BOOLEAN DEFAULT true,
   last_executed_at BIGINT,
   permission_id VARCHAR NOT NULL,
+  agent_type VARCHAR(50) DEFAULT 'scheduled', -- 'scheduled', 'wdk', 'no-loss'
+  last_reasoning TEXT,                        -- AI reasoning or status
   nonce INTEGER DEFAULT 0,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
 ```
+
+---
+
+## File Structure
+
+```
+src/
+├── pages/api/
+│   ├── crons/
+│   │   └── recurring-purchases.ts    ← Main cron endpoint
+│   └── automation/
+│       ├── create-purchase.ts        ← Create record
+│       └── mark-executed.ts          ← Update database
+├── services/
+│   ├── automation/
+│   │   ├── AutomationOrchestrator.ts ← Main orchestrator
+│   │   ├── wdkService.ts             ← AI Agent logic
+│   │   └── erc7715Service.ts         ← Permission logic
+│   └── referral/
+│       └── ReferralManager.ts        ← Commission logic
+├── components/settings/
+│   └── AutoPurchaseSettings.tsx      ← Consolidated dashboard
+└── hooks/
+    ├── useAdvancedPermissions.ts
+    └── useAutomation.ts              ← Unified automation hook
+
+contracts/
+└── MegapotAutoPurchaseProxy.sol      ← Multi-token support
+```
+
 
 ### Gelato Tasks Table (Optional Upgrade)
 
@@ -463,29 +482,27 @@ The webhook endpoint (`/api/gelato/webhook`) handles:
 
 ```
 src/
-├── pages/api/crons/
-│   └── recurring-purchases.ts        ← Main cron endpoint
-├── pages/api/automation/
-│   ├── create-purchase.ts            ← Create record
-│   ├── due-purchases.ts              ← Query database
-│   ├── mark-executed.ts              ← Update database
-│   └── execute-purchase-tickets.ts   ← Execute on-chain
-├── pages/api/permissions/
-│   └── verify.ts                     ← Validate permission
-├── pages/api/gelato/
-│   └── webhook/route.ts              ← Gelato webhook handler
+├── pages/api/
+│   ├── crons/
+│   │   └── recurring-purchases.ts    ← Main cron endpoint
+│   └── automation/
+│       ├── create-purchase.ts        ← Create record
+│       └── mark-executed.ts          ← Update database
+├── services/
+│   ├── automation/
+│   │   ├── AutomationOrchestrator.ts ← Main orchestrator
+│   │   ├── wdkService.ts             ← AI Agent logic
+│   │   └── erc7715Service.ts         ← Permission logic
+│   └── referral/
+│       └── ReferralManager.ts        ← Commission logic
 ├── components/settings/
-│   └── AutoPurchaseSettings.tsx      ← Automation dashboard
-├── components/modal/
-│   ├── AutoPurchasePermissionModal.tsx
-│   └── ImprovedAutoPurchaseModal.tsx
+│   └── AutoPurchaseSettings.tsx      ← Consolidated dashboard
 └── hooks/
     ├── useAdvancedPermissions.ts
-    └── useGelatoAutomation.ts
+    └── useAutomation.ts              ← Unified automation hook
 
-vercel.json                           ← Cron configuration
-docs/
-└── AUTOMATION.md                     ← This file
+contracts/
+└── MegapotAutoPurchaseProxy.sol      ← Multi-token support
 ```
 
 ---

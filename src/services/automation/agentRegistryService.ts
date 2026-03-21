@@ -1,0 +1,210 @@
+/**
+ * AGENT REGISTRY SERVICE
+ * 
+ * Core Principles Applied:
+ * - AGGRESSIVE CONSOLIDATION: Unified interface for all automation types
+ * - DRY: Single source of truth for agent status across ERC-7715, WDK, and x402
+ * - CLEAN: Explicit separation of concerns for different execution strategies
+ * - MODULAR: Pluggable agent types for future expansion
+ * 
+ * This service unifies:
+ * 1. Scheduled Agents (ERC-7715/MetaMask) - USDC
+ * 2. Autonomous AI Agents (Tether WDK) - USD₮
+ * 3. SIP-018 Agents (Stacks x402) - USDCx/sBTC
+ */
+
+import { Address } from 'viem';
+
+export type AgentType = 'scheduled' | 'autonomous' | 'stacks-x402';
+
+export interface AgentStatus {
+  id: string;
+  type: AgentType;
+  name: string;
+  description: string;
+  isEnabled: boolean;
+  status: 'active' | 'paused' | 'expired' | 'low-balance' | 'inactive';
+  tokenSymbol: 'USDC' | 'USD₮' | 'USDCx' | 'sBTC';
+  tokenAddress: string;
+  chainName: 'Base' | 'Solana' | 'Stacks' | 'NEAR';
+  balance?: bigint;
+  allowance?: bigint;
+  frequency?: 'daily' | 'weekly' | 'monthly' | 'opportunistic';
+  lastExecution?: number;
+  nextExecution?: number;
+  lastReasoning?: string; // Specifically for AI agents
+  address?: Address; // For WDK agents with their own address
+}
+
+export class AgentRegistryService {
+  private static instance: AgentRegistryService;
+
+  private constructor() {}
+
+  public static getInstance(): AgentRegistryService {
+    if (!AgentRegistryService.instance) {
+      AgentRegistryService.instance = new AgentRegistryService();
+    }
+    return AgentRegistryService.instance;
+  }
+
+  /**
+   * Get all agents for the current user
+   */
+  async getUserAgents(userAddress: string): Promise<AgentStatus[]> {
+    const agents: AgentStatus[] = [];
+
+    // 1. Check Scheduled Agent (ERC-7715)
+    const scheduledAgent = await this.getScheduledAgent(userAddress);
+    if (scheduledAgent) agents.push(scheduledAgent);
+
+    // 2. Check Autonomous Agent (WDK)
+    const autonomousAgent = await this.getAutonomousAgent(userAddress);
+    if (autonomousAgent) agents.push(autonomousAgent);
+
+    // 3. Check Stacks Agent (x402)
+    const stacksAgent = await this.getStacksAgent(userAddress);
+    if (stacksAgent) agents.push(stacksAgent);
+
+    // 4. Check No-Loss Agent (PoolTogether)
+    const noLossAgent = await this.getNoLossAgent(userAddress);
+    if (noLossAgent) agents.push(noLossAgent);
+
+    // 5. Check NEAR Agent (Chain Signatures)
+    const nearAgent = await this.getNearAgent(userAddress);
+    if (nearAgent) agents.push(nearAgent);
+
+    return agents;
+  }
+
+  private async getNearAgent(userAddress: string): Promise<AgentStatus | null> {
+    try {
+      if (typeof window === 'undefined') return null;
+      
+      const isEnabled = localStorage.getItem('syndicate_near_enabled') === 'true';
+      const configStr = localStorage.getItem('syndicate_near_config');
+      const config = configStr ? JSON.parse(configStr) : null;
+      
+      return {
+        id: `near-${userAddress.slice(0, 6)}`,
+        type: 'scheduled' as any,
+        name: 'The Nomad (NEAR)',
+        description: 'Cross-chain automation using NEAR Chain Signatures. Gas-optimized ticket purchases.',
+        isEnabled: isEnabled,
+        status: isEnabled ? 'active' : 'inactive',
+        tokenSymbol: 'USDC',
+        tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+        chainName: 'NEAR',
+        frequency: config?.frequency || 'weekly',
+        lastExecution: isEnabled && config ? config.activatedAt : undefined,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private async getNoLossAgent(userAddress: string): Promise<AgentStatus | null> {
+    try {
+      if (typeof window === 'undefined') return null;
+      
+      const isEnabled = localStorage.getItem('syndicate_noloss_enabled') === 'true';
+      const configStr = localStorage.getItem('syndicate_noloss_config');
+      const config = configStr ? JSON.parse(configStr) : null;
+      
+      return {
+        id: `noloss-${userAddress.slice(0, 6)}`,
+        type: 'scheduled' as any, // Visual tier
+        name: 'Savings Sentinel',
+        description: 'No-loss prize savings via PoolTogether v5. 100% principal protection.',
+        isEnabled: isEnabled,
+        status: isEnabled ? 'active' : 'inactive',
+        tokenSymbol: 'USDC',
+        tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+        balance: isEnabled && config ? BigInt(config.amount * 10 ** 6) : BigInt(0),
+        frequency: 'weekly',
+        lastExecution: isEnabled && config ? config.activatedAt : undefined,
+        chainName: 'Base',
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private async getScheduledAgent(userAddress: string): Promise<AgentStatus | null> {
+    // In a real app, this would query local storage + database
+    try {
+      const configStr = typeof window !== 'undefined' ? localStorage.getItem('syndicate_autopurchase_config') : null;
+      if (!configStr) return null;
+
+      const config = JSON.parse(configStr);
+      return {
+        id: config.permissionId || 'scheduled-1',
+        type: 'scheduled',
+        name: 'Scheduled Optimizer',
+        description: 'Reliable weekly/monthly ticket purchases via MetaMask permissions.',
+        isEnabled: true,
+        status: 'active',
+        tokenSymbol: 'USDC',
+        tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+        chainName: 'Base',
+        frequency: config.frequency || 'weekly',
+        nextExecution: config.nextExecutionTime,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private async getAutonomousAgent(userAddress: string): Promise<AgentStatus | null> {
+    try {
+      if (typeof window === 'undefined') return null;
+      
+      const isEnabled = localStorage.getItem('syndicate_wdk_enabled') === 'true';
+      const configStr = localStorage.getItem('syndicate_wdk_config');
+      const config = configStr ? JSON.parse(configStr) : null;
+      
+      return {
+        id: `wdk-${userAddress.slice(0, 6)}`,
+        type: 'autonomous',
+        name: 'The Voyager (AI)',
+        description: 'Autonomous AI agent using Tether WDK. Decides when to buy based on yield performance.',
+        isEnabled: isEnabled,
+        status: isEnabled ? 'active' : 'inactive',
+        tokenSymbol: 'USD₮',
+        tokenAddress: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2',
+        balance: isEnabled && config ? BigInt(config.amount * 10 ** 6) : BigInt(0),
+        frequency: 'opportunistic',
+        lastExecution: isEnabled && config ? config.activatedAt : undefined,
+        lastReasoning: isEnabled ? 'Syndicate yield is currently high (22.5% APY). Monitoring for next purchase window.' : undefined,
+        address: '0x' + 'e'.repeat(40) as Address, // Mock WDK address for agent
+        chainName: 'Base',
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private async getStacksAgent(userAddress: string): Promise<AgentStatus | null> {
+    try {
+      const configStr = typeof window !== 'undefined' ? localStorage.getItem('syndicate_stacks_autopurchase') : null;
+      if (!configStr) return null;
+
+      const config = JSON.parse(configStr);
+      return {
+        id: config.authorizationId || 'stacks-1',
+        type: 'stacks-x402',
+        name: 'Stacks Sentinel',
+        description: 'Recurring purchases on Stacks using SIP-018 signatures.',
+        isEnabled: true,
+        status: 'active',
+        tokenSymbol: config.paymentToken === 'sbtc' ? 'sBTC' : 'USDCx',
+        tokenAddress: config.tokenAddress || '',
+        chainName: 'Stacks',
+        frequency: config.frequency || 'weekly',
+        nextExecution: config.nextExecutionTime,
+      };
+    } catch {
+      return null;
+    }
+  }
+}

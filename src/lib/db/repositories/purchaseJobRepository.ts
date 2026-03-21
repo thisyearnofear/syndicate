@@ -11,7 +11,7 @@
 import { sql } from '@vercel/postgres';
 
 export type JobStatus = 'pending' | 'processing' | 'complete' | 'failed';
-export type JobType = 'process_bridge_event' | 'cctp_relay' | 'mint_tickets';
+export type JobType = 'process_bridge_event' | 'mint_tickets';
 
 export interface PurchaseJob {
   id?: number;

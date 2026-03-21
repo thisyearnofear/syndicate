@@ -17,7 +17,7 @@
  */
 
 import { WalletClient } from "viem";
-import { getERC7715Service } from "@/services/erc7715Service";
+import { getERC7715Service } from "@/services/automation/erc7715Service";
 import { CONTRACTS, CHAIN_IDS, getUsdcAddressForChain } from "@/config";
 import type {
   AdvancedPermission,
@@ -151,7 +151,7 @@ class AdvancedPermissionsService {
         token: permission.target,
         spender: CONTRACTS.syndicate,
         limit: permission.limit,
-        remaining: permission.limit - permission.spent,
+        remaining: BigInt(permission.limit) - BigInt(permission.spent),
         period: permission.period,
         grantedAt: permission.grantedAt,
         expiresAt: permission.expiresAt,

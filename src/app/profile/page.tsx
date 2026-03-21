@@ -29,7 +29,7 @@ import {
 } from "@/shared/components/premium/PuzzlePiece";
 
 // Icons
-import { Ticket, History, Trophy, Wallet, TrendingUp, Twitter, MessageCircle, User, CircleCheck } from "lucide-react";
+import { Ticket, History, Trophy, Wallet, TrendingUp, Twitter, MessageCircle, User, CircleCheck, Settings, ExternalLink } from "lucide-react";
 
 export default function ProfilePage() {
   const { state: walletState } = useWalletContext();
@@ -38,6 +38,26 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [identityLoading, setIdentityLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [baseAddress, setBaseAddress] = useState<string>('');
+  const [baseAddressSaved, setBaseAddressSaved] = useState(false);
+  const [baseAddressInput, setBaseAddressInput] = useState<string>('');
+
+  // Load saved Base address from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('syndicate_base_address') ?? '';
+    setBaseAddress(saved);
+    setBaseAddressInput(saved);
+  }, []);
+
+  const isValidEvmAddress = (addr: string) => /^0x[0-9a-fA-F]{40}$/.test(addr);
+
+  const handleSaveBaseAddress = () => {
+    if (!isValidEvmAddress(baseAddressInput)) return;
+    localStorage.setItem('syndicate_base_address', baseAddressInput);
+    setBaseAddress(baseAddressInput);
+    setBaseAddressSaved(true);
+    setTimeout(() => setBaseAddressSaved(false), 2000);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -155,6 +175,57 @@ export default function ProfilePage() {
             </CompactStack>
           </PuzzlePiece>
         )}
+
+        {/* Base Address Settings */}
+        <PuzzlePiece variant="secondary" size="md" shape="rounded">
+          <CompactStack spacing="md">
+            <div className="flex items-center gap-2">
+              <Settings className="w-5 h-5 text-gray-400" />
+              <h3 className="font-semibold text-white">Base Address</h3>
+              <span className="text-xs text-gray-500 ml-auto">Where tickets &amp; prizes are delivered</span>
+            </div>
+            <p className="text-xs text-gray-400">
+              Cross-chain purchases (Stacks, Solana, NEAR) deliver lottery tickets to this Base address.
+              Set a permanent address — e.g. a hardware wallet — instead of relying on auto-detection.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={baseAddressInput}
+                onChange={(e) => { setBaseAddressInput(e.target.value); setBaseAddressSaved(false); }}
+                placeholder="0x..."
+                className={`flex-1 bg-gray-800 border rounded-lg px-3 py-2 text-sm font-mono text-white placeholder-gray-500 outline-none transition-colors ${
+                  baseAddressInput && !isValidEvmAddress(baseAddressInput)
+                    ? 'border-red-500/60 focus:border-red-400'
+                    : baseAddressInput && isValidEvmAddress(baseAddressInput)
+                    ? 'border-green-500/60 focus:border-green-400'
+                    : 'border-gray-600 focus:border-blue-500'
+                }`}
+              />
+              <button
+                onClick={handleSaveBaseAddress}
+                disabled={!isValidEvmAddress(baseAddressInput) || baseAddressInput === baseAddress}
+                className="px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-500 text-white"
+              >
+                {baseAddressSaved ? '✓ Saved' : 'Save'}
+              </button>
+            </div>
+            {baseAddress && isValidEvmAddress(baseAddress) && (
+              <div className="flex items-center gap-2 text-xs text-gray-400">
+                <CircleCheck className="w-3.5 h-3.5 text-green-400" />
+                <span>Active: <span className="font-mono text-gray-300">{baseAddress.slice(0, 10)}...{baseAddress.slice(-6)}</span></span>
+                <a
+                  href={`https://basescan.org/address/${baseAddress}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-auto flex items-center gap-1 text-blue-400 hover:text-blue-300"
+                >
+                  View on Basescan <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            )}
+          </CompactStack>
+        </PuzzlePiece>
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
