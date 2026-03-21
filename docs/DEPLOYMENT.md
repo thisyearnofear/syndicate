@@ -127,7 +127,6 @@ POSTGRES_URLCONNECTION_STRING=postgresql://...
 # Bridge Configuration
 STACKS_LOTTERY_CONTRACT=SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3
 NEXT_PUBLIC_STACKS_API_URL=https://api.mainnet.hiro.so
-STACKS_BRIDGE_OPERATOR_KEY=0x...
 
 # Gelato Automation
 GELATO_API_KEY=your_gelato_api_key
@@ -450,7 +449,7 @@ ORDER BY next_execution_time ASC;
 
 ### Key Management
 
-- **Operator Key**: Store in secrets manager (AWS Secrets Manager, Vercel Secrets)
+- **No Operator Key**: CCTP relay is permissionless — user pays ~$0.01 gas on Base directly
 - **Webhook Secrets**: Never commit, use environment variables
 - **Deployer Key**: Use hardware wallet for production deployments
 
@@ -473,10 +472,8 @@ See [SECURITY.md](./SECURITY.md) for details.
 - ✅ Use hardware wallet for production
 - ✅ Enable 2FA on all infrastructure
 - ✅ Rotate secrets quarterly
-- ✅ Monitor operator wallet balance
 - ✅ Set up alerts for failed transactions
 - ❌ NEVER commit private keys to git
-- ❌ NEVER share operator key
 
 ---
 

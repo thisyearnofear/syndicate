@@ -1,18 +1,21 @@
 # System Architecture
 
-**Last Updated**: March 20, 2026
+**Last Updated**: March 21, 2026
 **Status**: Production
 
 ## Overview
 
-Syndicate is a cross-chain lottery platform enabling users to purchase Megapot tickets from any blockchain. The platform features a **Lossless Lottery** mechanism powered by the Drift delta-neutral JLP vault on Solana, with KYC/AML compliance via Civic Pass. The architecture is designed to be **trustless**, **fast**, **transparent**, and **compliant**.
+Syndicate is a **Multi-Protocol Lottery Aggregator** powered by a **Universal AI Agent**. Users can participate in Megapot, PoolTogether v5 (No-Loss), and Drift JLP lotteries from any blockchain (Stacks, NEAR, Solana, Base, EVM). The platform features autonomous AI agents (Tether WDK), lossless yield strategies, and KYC/AML compliance via Civic Pass.
 
 ### Core Principles
 
-- **Trustless**: No custodial intermediaries; proxy handles all cross-chain purchases atomically
+- **Universal Agent**: Deploy autonomous AI agents that decide when to buy based on yield and market conditions
+- **Multi-Protocol**: Aggregate Megapot, PoolTogether, and Drift lotteries from a single hub
+- **Cross-Chain**: Buy tickets from Stacks, NEAR, Solana, or Base
+- **Trustless**: No custodial intermediaries; proxy handles all purchases atomically (USDC + USD₮)
 - **Fast**: Stacks 30-60s, Solana 1-3 min, NEAR 3-5 min, Base instant
-- **Transparent**: Real-time status tracking, clear cost breakdown
-- **Decentralized**: Operator is thin relayer (no custody)
+- **Transparent**: Real-time status tracking, AI reasoning logs for agent decisions
+- **Referral-Powered**: Earn commissions through automated on-chain referral hooks and affiliate codes
 
 ### High-Level Architecture
 
@@ -37,6 +40,13 @@ Syndicate is a cross-chain lottery platform enabling users to purchase Megapot t
      │   - Attestation    │
      └──────┬─────────────┘
             │
+     ┌──────▼──────────────────────────┐
+     │   Universal Syndicate Agent     │
+     │   - AutomationOrchestrator      │
+     │   - WDK AI Agent (Reasoning)    │
+     │   - ReferralManager (Commissions)│
+     └──────┬──────────────────────────┘
+            │
      ┌──────▼──────────┐
      │   Bridge Layer
      │   - Unified Bridge Manager
@@ -60,7 +70,8 @@ Syndicate is a cross-chain lottery platform enabling users to purchase Megapot t
                       ▼
 ┌─────────────────────────────────────────┐
 │     MegapotAutoPurchaseProxy (Base)     │
-│  - Receives bridged USDC                │
+│  - Receives bridged USDC / USD₮         │
+│  - Multi-token support (USDC, USD₮)     │
 │  - Atomically purchases tickets         │
 │  - No custody, stateless                │
 └──────────────┬──────────────────────────┘
@@ -315,9 +326,9 @@ EVM Wallet (MetaMask)
 
 ---
 
-## Automation Architecture
+## Automation & Agent Architecture
 
-### Recurring Purchase System
+### Recurring Purchase & AI Agent System
 
 **Status**: ✅ Production-ready  
 **Cost**: $0/month (Vercel Cron free tier)
@@ -325,17 +336,20 @@ EVM Wallet (MetaMask)
 #### Architecture
 
 ```
-User grants permission (MetaMask Flask)
+User grants permission (MetaMask Flask / ERC-7715)
           ↓
-Frontend stores in database
+Frontend stores in database (agent_type, amount, frequency)
           ↓
 Vercel Cron (hourly: 0 * * * *)
           ↓
 /api/crons/recurring-purchases
-   ├─ Query due purchases
-   ├─ Verify permissions
-   ├─ Execute on Megapot
-   └─ Mark executed
+   ├─ AutomationOrchestrator (Single source of truth)
+   │    ├─ WDK Agent (AI reasoning)
+   │    └─ PoolTogether (No-Loss strategy)
+   ├─ ReferralManager (Commission logic)
+   ├─ Verify permissions (ERC-7715)
+   ├─ Execute on Megapot (Multi-token proxy)
+   └─ Mark executed (Update reasoning)
           ↓
 User has tickets (fully automated)
 ```
@@ -345,10 +359,20 @@ User has tickets (fully automated)
 | Component | File | Purpose |
 |-----------|------|---------|
 | **Cron Orchestrator** | `src/pages/api/crons/recurring-purchases.ts` | Hourly trigger |
-| **Permission Modal** | `src/components/modal/AutoPurchasePermissionModal.tsx` | ERC-7715 grant |
-| **Settings Dashboard** | `src/components/settings/AutoPurchaseSettings.tsx` | Management UI |
-| **Hook** | `src/hooks/useAdvancedPermissions.ts` | Permission lifecycle |
-| **Database** | `gelato_tasks`, `gelato_executions` | Persistent storage |
+| **AutomationOrchestrator** | `src/services/automation/AutomationOrchestrator.ts` | Task execution logic |
+| **ReferralManager** | `src/services/referral/ReferralManager.ts` | Centralized commissions |
+| **Settings Dashboard** | `src/components/settings/AutoPurchaseSettings.tsx` | Consolidated AI & Auto-purchase UI |
+| **Hook** | `src/hooks/useAutomation.ts` | Unified automation lifecycle |
+| **AI Agent** | `src/services/automation/wdkService.ts` | WDK Autonomous reasoning |
+
+#### Database Schema (Extensions)
+
+```sql
+-- Recurring purchases & AI tasks
+ALTER TABLE auto_purchases 
+ADD COLUMN agent_type VARCHAR(50) DEFAULT 'scheduled',
+ADD COLUMN last_reasoning TEXT;
+```
 
 #### Database Schema
 
@@ -457,14 +481,18 @@ src/
 │   │       ├── stacks.ts                 # Stacks bridge
 │   │       ├── deBridge.ts               # Solana bridge
 │   │       └── nearIntents.ts            # NEAR bridge
-│   └── automation/
-│       ├── gelatoService.ts              # Gelato API client
-│       └── erc7715Service.ts             # MetaMask permissions
+│   ├── automation/
+│   │   ├── AutomationOrchestrator.ts     # Main orchestrator
+│   │   ├── wdkService.ts                 # AI Agent logic
+│   │   └── erc7715Service.ts             # MetaMask ERC-7715 permissions
+│   ├── referral/
+│   │   └── ReferralManager.ts            # Centralized commissions
+│   └── vaults/                           # Yield strategies
 ├── hooks/
 │   ├── useWalletConnection.ts            # Wallet state
 │   ├── useTicketPurchase.ts              # Purchase logic
 │   ├── useAdvancedPermissions.ts         # ERC-7715 hook
-│   └── useGelatoAutomation.ts            # Task lifecycle
+│   └── useAutomation.ts                  # Unified automation hook
 └── lib/db/
     ├── schema/gelatoTasks.ts             # Types & mock repo
     └── repositories/gelatoRepository.ts  # Vercel Postgres impl
@@ -487,7 +515,7 @@ src/
 
 ### Key Management
 
-- **Operator Key**: Thin relayer only, minimal funds (gas only)
+- **No Operator Key**: CCTP relay is permissionless — user pays ~$0.01 gas on Base
 - **Webhook Secrets**: HMAC-SHA256 verification
 - **Environment Variables**: Never commit, use secrets manager
 

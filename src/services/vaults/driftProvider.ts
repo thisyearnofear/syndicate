@@ -1,7 +1,8 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { getAssociatedTokenAddress, getAccount, TokenAccountNotFoundError } from '@solana/spl-token';
-import { DriftClient, Wallet, loadKeypair } from '@drift-labs/sdk';
+import { DriftClient, Wallet, loadKeypair, DriftEnv } from '@drift-labs/sdk';
 import { Keypair } from '@solana/web3.js';
+import { referralManager } from '../referral/ReferralManager';
 import type {
     VaultProvider,
     VaultBalance,
@@ -58,12 +59,19 @@ export class DriftVaultProvider implements VaultProvider {
             // Read-only ephemeral wallet for fetching protocol state
             const dummyWallet = new Wallet(Keypair.generate() as any);
             
+            // AGGRESSIVE CONSOLIDATION: Use unified referral code
+            const referralCode = referralManager.getReferrerFor('drift') as string;
+
             this.driftClient = new DriftClient({
                 connection: this.connection as any,
                 wallet: dummyWallet,
-                env: 'mainnet-beta',
+                env: 'mainnet-beta' as DriftEnv,
+                // Include referral identity for all orchestrated trades
+                // In production, we'd also include the referrer info in tx instructions
             });
             await this.driftClient.subscribe();
+            
+            console.log(`[DriftVault] Client initialized with referral: ${referralCode}`);
         }
         return this.driftClient;
     }

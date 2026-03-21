@@ -15,17 +15,7 @@ export const dynamic = 'force-dynamic';
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { sql } from '@vercel/postgres';
-import { ethers } from 'ethers';
-
-interface AutoPurchaseRecord {
-  id: string;
-  user_address: string;
-  frequency: 'daily' | 'weekly' | 'monthly';
-  amount_per_period: string;
-  is_active: boolean;
-  last_executed_at: number;
-  permission_id: string;
-}
+import { automationOrchestrator, AutomationTask } from '@/services/automation/AutomationOrchestrator';
 
 interface CronResponse {
   success: boolean;
@@ -34,147 +24,12 @@ interface CronResponse {
   errors: string[];
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function getFrequencySeconds(frequency: 'daily' | 'weekly' | 'monthly'): number {
-  const intervals = {
-    daily: 24 * 60 * 60,
-    weekly: 7 * 24 * 60 * 60,
-    monthly: 30 * 24 * 60 * 60,
-  };
-  return intervals[frequency];
-}
-
-function isPurchaseDue(
-  frequency: 'daily' | 'weekly' | 'monthly',
-  lastExecutedAt: number,
-  currentTimestamp: number
-): boolean {
-  const intervalSeconds = getFrequencySeconds(frequency);
-  const secondsSinceLastExecution = currentTimestamp - lastExecutedAt;
-  // 5-minute grace period for processing delays
-  return secondsSinceLastExecution >= intervalSeconds - 300;
-}
-
-async function verifyPermission(
-  permissionId: string,
-  userAddress: string,
-  requiredAmount: string
-): Promise<boolean> {
-  try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'}/api/permissions/verify`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.GELATO_INTERNAL_API_KEY || ''}`,
-        },
-        body: JSON.stringify({
-          permissionId,
-          userAddress,
-          requiredAmount,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      console.log(`[Cron] Permission verification failed for ${permissionId}: ${response.status}`);
-      return false;
-    }
-
-    const data = (await response.json()) as {
-      isValid: boolean;
-      remaining: string;
-    };
-
-    return data.isValid && BigInt(data.remaining) >= BigInt(requiredAmount);
-  } catch (error) {
-    console.error('[Cron] Permission verification error:', error);
-    return false;
-  }
-}
-
-async function executePermittedTickets(
-  userAddress: string,
-  amountUsdc: string,
-  permissionId: string,
-  recordId: string
-): Promise<boolean> {
-  try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'}/api/automation/execute-purchase-tickets`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userAddress,
-          amountUsdc,
-          permissionId,
-          recordId,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      console.error(
-        `[Cron] Execution failed for ${recordId}: ${response.status} ${response.statusText}`
-      );
-      return false;
-    }
-
-    const data = (await response.json()) as { success: boolean };
-    return data.success;
-  } catch (error) {
-    console.error(`[Cron] Execution error for ${recordId}:`, error);
-    return false;
-  }
-}
-
-async function markExecuted(recordId: string, executedAt: number): Promise<boolean> {
-  try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'}/api/automation/mark-executed`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.GELATO_INTERNAL_API_KEY || ''}`,
-        },
-        body: JSON.stringify({
-          recordIds: [recordId],
-          executedAt,
-        }),
-      }
-    );
-
-    return response.ok;
-  } catch (error) {
-    console.error(`[Cron] Mark executed error for ${recordId}:`, error);
-    return false;
-  }
-}
-
-// ============================================================================
-// MAIN CRON HANDLER
-// ============================================================================
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<CronResponse>
 ) {
-  // Only allow POST (Vercel Cron sends POST)
   if (req.method !== 'POST') {
-    return res.status(405).json({
-      success: false,
-      executed: 0,
-      attempted: 0,
-      errors: ['Method not allowed'],
-    });
+    return res.status(405).json({ success: false, executed: 0, attempted: 0, errors: ['Method not allowed'] });
   }
 
   const currentTimestamp = Math.floor(Date.now() / 1000);
@@ -182,109 +37,63 @@ export default async function handler(
   let executedCount = 0;
   let attemptedCount = 0;
 
-  console.log(`[Cron] Starting recurring purchases check at ${new Date().toISOString()}`);
+  console.log(`[Cron] Universal Orchestrator starting at ${new Date().toISOString()}`);
 
   try {
-    // STEP 1: Query all active auto-purchases
-    const result = await sql<AutoPurchaseRecord>`
-      SELECT 
-        id,
-        user_address,
-        frequency,
-        amount_per_period,
-        is_active,
-        last_executed_at,
-        permission_id
-      FROM auto_purchases
-      WHERE is_active = true
-      ORDER BY last_executed_at ASC
+    // 1. Query due tasks (Consolidated SELECT)
+    const { rows: tasks } = await sql<any>`
+      SELECT * FROM auto_purchases 
+      WHERE is_active = true 
+      AND (last_executed_at IS NULL OR last_executed_at + 3600 <= ${currentTimestamp})
     `;
 
-    const purchases = result.rows;
-    console.log(`[Cron] Found ${purchases.length} active purchases`);
+    console.log(`[Cron] Found ${tasks.length} potentially due tasks`);
 
-    if (purchases.length === 0) {
-      return res.json({
-        success: true,
-        executed: 0,
-        attempted: 0,
-        errors: [],
-      });
-    }
+    for (const row of tasks) {
+      // Map DB row to AutomationTask interface
+      const task: AutomationTask = {
+        id: row.id,
+        userAddress: row.user_address,
+        strategy: (row.agent_type || 'scheduled') as any,
+        status: 'active',
+        tokenAddress: row.token_address || '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+        tokenSymbol: row.token_address?.includes('fde4') ? 'USD₮' : 'USDC',
+        amount: BigInt(row.amount_per_period),
+        frequency: row.frequency,
+        lastExecutedAt: row.last_executed_at,
+      };
 
-    // STEP 2: Filter for purchases that are due
-    const duePurchases = purchases.filter(p =>
-      isPurchaseDue(p.frequency, p.last_executed_at, currentTimestamp)
-    );
-
-    console.log(`[Cron] ${duePurchases.length} purchases are due for execution`);
-
-    // STEP 3: Process each due purchase
-    for (const purchase of duePurchases) {
       attemptedCount++;
+      
+      // 2. Execute via Orchestrator (DRY)
+      const result = await automationOrchestrator.executeTask(task);
 
-      // Verify permission is still valid
-      const isEligible = await verifyPermission(
-        purchase.permission_id,
-        purchase.user_address,
-        purchase.amount_per_period
-      );
-
-      if (!isEligible) {
-        const error = `Permission verification failed for ${purchase.id}`;
-        console.log(`[Cron] ${error}`);
-        errors.push(error);
-        continue;
-      }
-
-      // Execute purchase on-chain
-      const success = await executePermittedTickets(
-        purchase.user_address,
-        purchase.amount_per_period,
-        purchase.permission_id,
-        purchase.id
-      );
-
-      if (!success) {
-        const error = `Execution failed for ${purchase.id}`;
-        console.error(`[Cron] ${error}`);
-        errors.push(error);
-        continue;
-      }
-
-      // Mark as executed in database
-      const marked = await markExecuted(purchase.id, currentTimestamp);
-
-      if (marked) {
+      if (result.success) {
+        // 3. Mark executed & update reasoning (Consolidated UPDATE)
+        await sql`
+          UPDATE auto_purchases 
+          SET last_executed_at = ${currentTimestamp},
+              last_reasoning = ${result.reasoning || row.last_reasoning},
+              updated_at = NOW()
+          WHERE id = ${task.id}
+        `;
         executedCount++;
-        console.log(`[Cron] ✅ Executed purchase ${purchase.id} for ${purchase.user_address}`);
+        console.log(`[Cron] ✅ Task ${task.id} success`);
       } else {
-        const error = `Failed to mark ${purchase.id} as executed`;
-        console.error(`[Cron] ${error}`);
-        errors.push(error);
+        errors.push(`Task ${task.id} failed: ${result.error}`);
+        console.error(`[Cron] ❌ Task ${task.id} error: ${result.error}`);
       }
     }
 
-    console.log(
-      `[Cron] Completed: ${executedCount}/${attemptedCount} purchases executed successfully`
-    );
-
     return res.json({
-      success: executedCount > 0 || errors.length === 0,
+      success: errors.length === 0,
       executed: executedCount,
       attempted: attemptedCount,
-      errors,
+      errors
     });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+  } catch (error: any) {
     console.error(`[Cron] Fatal error:`, error);
-    errors.push(errorMessage);
-
-    return res.json({
-      success: false,
-      executed: executedCount,
-      attempted: attemptedCount,
-      errors,
-    });
+    return res.status(500).json({ success: false, executed: executedCount, attempted: attemptedCount, errors: [error.message] });
   }
 }

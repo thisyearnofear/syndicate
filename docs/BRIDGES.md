@@ -34,24 +34,25 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md#lossless-lottery-architecture) for full 
 
 ## Architecture Overview
 
-All cross-chain purchases route through the **MegapotAutoPurchaseProxy** on Base:
+All cross-chain and autonomous purchases route through the **MegapotAutoPurchaseProxy** on Base:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                  MegapotAutoPurchaseProxy (Base)            │
 │                                                             │
-│  • Receives bridged USDC from any chain                     │
+│  • Receives bridged USDC/USD₮ from any chain                │
+│  • Supports Pull (EOA/Agent) and Push (Bridge) models       │
 │  • Atomically purchases Megapot tickets                     │
-│  • No custody, stateless, replay-protected                  │
-│  • Fail-safe: If purchase reverts, USDC → recipient         │
+│  • Universal: Any IERC20 token support (Multi-stablecoin)   │
+│  • Fail-safe: If purchase reverts, tokens → recipient       │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **Key Properties**:
-- **Trustless**: No operator wallet custody
-- **Atomic**: Bridge + purchase in single transaction
-- **Permissionless**: Anyone can call
-- **Replay-protected**: Unique bridge IDs tracked
+- **Universal**: Supports both USDC and USD₮, enabling integration with Tether WDK.
+- **Dual-Model**: Handles direct agent-led "Pull" purchases and bridge-triggered "Push" purchases.
+- **Trustless**: No operator wallet custody; proxy remains stateless.
+- **Atomic**: Bridge/Agent interaction + purchase in single execution path.
 
 ---
 
@@ -79,13 +80,13 @@ User (Leather/Xverse/Asigna/Fordefi)
    ├─[4] Chainhook 2.0 (Hiro Platform) detects event
    │     └─> POST to /api/chainhook
    │
-   ├─[5] Attestation + CCTP bridge
-   │     ├─> Burn on Stacks
-   │     └─> Mint USDC on Base to proxy
+   ├─[5] Circle Iris API issues CCTP attestation (permissionless)
+   │     └─> Frontend polls /api/cctp-attestation/[messageHash]
    │
-   └─[6] Operator calls: executeBridgedPurchase()
-         ├─> Proxy approves USDC
-         ├─> Proxy calls Megapot.purchaseTickets()
+   └─[6] User's EVM wallet calls receiveMessage() on Base (~$0.01 gas)
+         ├─> useCctpRelay hook submits attestation via wagmi
+         ├─> USDC minted on Base
+         ├─> executeBridgedPurchase() called on AutoPurchaseProxy
          └─> Tickets credited to user's Base address
 ```
 
@@ -106,15 +107,12 @@ User (Leather/Xverse/Asigna/Fordefi)
 | sUSDT | `SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.susdt` | USD-backed |
 | aeUSDC | `SP3Y2ZSHBKS5W5W7W5W5W5W5W5W5W5W5W5W5W5W5.aeusdc` | USD-backed |
 
-#### Operator Setup
+#### Configuration
 
-**Environment Variables**:
+**Environment Variables** (no private keys required — user pays gas):
 ```bash
-# Operator private key (NEVER commit!)
-STACKS_BRIDGE_OPERATOR_KEY=0x...
-
 # Stacks configuration
-STACKS_LOTTERY_CONTRACT=SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3
+STACKS_LOTTERY_CONTRACT=SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v4
 NEXT_PUBLIC_STACKS_API_URL=https://api.mainnet.hiro.so
 
 # Base configuration
@@ -127,23 +125,11 @@ NEXT_PUBLIC_MEGAPOT_CONTRACT=0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95
 - **Status**: `streaming` (actively monitoring)
 - **Dashboard**: https://platform.hiro.so
 
-**Liquidity Management**:
-- Operator maintains USDC reserve on Base (~1000 USDC recommended)
-- Manual refills when balance < 100 USDC
-- Monitor: `cast balance --erc20 $USDC $OPERATOR`
-
 #### Testing
 
 ```bash
-# Health check
-./scripts/health-check-operator.sh
-
 # Check recent purchases
 psql "$POSTGRES_URL" -c "SELECT * FROM purchase_statuses ORDER BY updated_at DESC LIMIT 20;"
-
-# Check operator balance
-cast balance --erc20 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 \
-  $OPERATOR_ADDRESS --rpc-url $NEXT_PUBLIC_BASE_RPC_URL
 ```
 
 #### Troubleshooting
@@ -151,8 +137,9 @@ cast balance --erc20 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 \
 | Issue | Cause | Fix |
 |-------|-------|-----|
 | Chainhook not detecting events | Service down | Check Hiro Platform dashboard |
-| Insufficient USDC balance | Operator needs refill | Transfer USDC to operator address |
+| Attestation polling timeout | Circle Iris API slow | User can retry; attestation is idempotent |
 | Purchase failed on Base | Megapot paused or invalid recipient | Check Megapot status, verify recipient address |
+| User has no ETH on Base | Insufficient gas | User needs ~$0.01 ETH on Base for `receiveMessage()` |
 
 ---
 

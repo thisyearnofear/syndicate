@@ -13,28 +13,22 @@ interface IMegapot {
 /**
  * @title MegapotAutoPurchaseProxy
  * @notice Universal proxy for trustless cross-chain Megapot ticket purchases.
- *
- * Supports two call patterns:
- *
- * 1. PULL MODEL — `purchaseTicketsFor(recipient, referrer, amount)`
- *    Caller approves USDC to this contract first, then calls.
- *    Used by: NEAR Chain Signatures, direct EOA/contract calls.
- *
- * 2. PUSH MODEL — `executeBridgedPurchase(amount, recipient, referrer, bridgeId)`
- *    Bridge protocol deposits USDC to this contract first, then calls.
- *    Used by: deBridge externalCall, CCTP message hooks, relayers.
- *    Replay-protected via bridgeId.
- *
- * Fail-safe: If Megapot.purchaseTickets reverts, USDC is sent directly to the recipient.
+ * 
+ * CORE PRINCIPLES APPLIED:
+ * - ENHANCEMENT FIRST: Enhanced to support multiple tokens (USD₮, USDC, etc.)
+ * - CONSOLIDATION: Replaces specialized token proxies with one universal contract
+ * - PREVENT BLOAT: Single logic path for all token types
  */
 contract MegapotAutoPurchaseProxy is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
 
-    IERC20 public immutable usdc;
     IMegapot public immutable megapot;
 
     /// @notice Tracks processed bridge IDs to prevent replay attacks
     mapping(bytes32 => bool) public processedBridgeIds;
+
+    /// @notice Whitelist of supported tokens (USD₮, USDC)
+    mapping(address => bool) public supportedTokens;
 
     /// @notice Optional authorized callers for the push model (address(0) = permissionless)
     mapping(address => bool) public authorizedCallers;
@@ -47,18 +41,21 @@ contract MegapotAutoPurchaseProxy is ReentrancyGuard, Ownable {
     // =========================================================================
 
     event TicketsPurchased(
+        address indexed token,
         address indexed recipient,
         address indexed referrer,
         uint256 amount,
-        bytes32 indexed bridgeId
+        bytes32 bridgeId
     );
 
     event PurchaseFallback(
+        address indexed token,
         address indexed recipient,
         uint256 amount,
-        bytes32 indexed bridgeId
+        bytes32 bridgeId
     );
 
+    event TokenSupportUpdated(address indexed token, bool supported);
     event AuthorizedCallerUpdated(address indexed caller, bool authorized);
 
     // =========================================================================
@@ -68,6 +65,7 @@ contract MegapotAutoPurchaseProxy is ReentrancyGuard, Ownable {
     error InvalidAmount();
     error InvalidRecipient();
     error InvalidAddress();
+    error TokenNotSupported();
     error BridgeIdAlreadyProcessed();
     error CallerNotAuthorized();
 
@@ -76,65 +74,66 @@ contract MegapotAutoPurchaseProxy is ReentrancyGuard, Ownable {
     // =========================================================================
 
     constructor(
-        address _usdc,
         address _megapot,
         address _owner
     ) Ownable(_owner) {
-        if (_usdc == address(0) || _megapot == address(0)) revert InvalidAddress();
-        usdc = IERC20(_usdc);
+        if (_megapot == address(0)) revert InvalidAddress();
         megapot = IMegapot(_megapot);
     }
 
     // =========================================================================
-    // PULL MODEL — Caller approves USDC first, then calls
+    // PULL MODEL — Caller approves tokens first, then calls
     // =========================================================================
 
     /**
      * @notice Purchase Megapot tickets on behalf of a recipient (pull model).
-     * @dev Caller must have approved `amount` of USDC to this contract.
-     *      Anyone can call — no access control. The caller pays the USDC.
+     * @dev Caller must have approved `amount` of `token` to this contract.
+     * @param token Address of the token to use (USD₮, USDC)
      * @param recipient Address to receive the lottery tickets
-     * @param referrer Referrer address for Megapot referral fees (address(0) for none)
-     * @param amount Amount of USDC (6 decimals) to spend on tickets
+     * @param referrer Referrer address for Megapot referral fees
+     * @param amount Amount of tokens (6 decimals) to spend on tickets
      */
     function purchaseTicketsFor(
+        address token,
         address recipient,
         address referrer,
         uint256 amount
     ) external nonReentrant {
+        if (!supportedTokens[token]) revert TokenNotSupported();
         if (amount == 0) revert InvalidAmount();
         if (recipient == address(0)) revert InvalidRecipient();
 
-        // Pull USDC from caller
-        usdc.safeTransferFrom(msg.sender, address(this), amount);
+        // Pull tokens from caller
+        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
 
         // Execute purchase
-        _executePurchase(amount, recipient, referrer, bytes32(0));
+        _executePurchase(token, amount, recipient, referrer, bytes32(0));
     }
 
     // =========================================================================
-    // PUSH MODEL — Bridge deposits USDC first, then calls
+    // PUSH MODEL — Bridge deposits tokens first, then calls
     // =========================================================================
 
     /**
-     * @notice Execute a ticket purchase using USDC already deposited to this contract.
-     * @dev Called by bridge protocols (deBridge externalCall, CCTP hooks, relayers)
-     *      after transferring USDC to this contract.
-     *      Replay-protected via bridgeId.
-     * @param amount Amount of USDC to use for purchase
+     * @notice Execute a ticket purchase using tokens already deposited to this contract.
+     * @dev Called by bridge protocols after transferring tokens to this contract.
+     * @param token Address of the token being bridged
+     * @param amount Amount of tokens to use for purchase
      * @param recipient Address to receive the lottery tickets
      * @param referrer Referrer address for Megapot referral fees
-     * @param bridgeId Unique identifier from the bridge protocol (prevents replay)
+     * @param bridgeId Unique identifier from the bridge protocol
      */
     function executeBridgedPurchase(
+        address token,
         uint256 amount,
         address recipient,
         address referrer,
         bytes32 bridgeId
     ) external nonReentrant {
+        if (!supportedTokens[token]) revert TokenNotSupported();
         if (amount == 0) revert InvalidAmount();
         if (recipient == address(0)) revert InvalidRecipient();
-        if (processedBridgeIds[bridgeId]) revert BridgeIdAlreadyProcessed();
+        if (bridgeId != bytes32(0) && processedBridgeIds[bridgeId]) revert BridgeIdAlreadyProcessed();
 
         // Optional access control for push model
         if (requireAuthorizedCaller && !authorizedCallers[msg.sender]) {
@@ -142,10 +141,12 @@ contract MegapotAutoPurchaseProxy is ReentrancyGuard, Ownable {
         }
 
         // Mark as processed before execution (CEI pattern)
-        processedBridgeIds[bridgeId] = true;
+        if (bridgeId != bytes32(0)) {
+            processedBridgeIds[bridgeId] = true;
+        }
 
-        // Execute purchase using contract's USDC balance
-        _executePurchase(amount, recipient, referrer, bridgeId);
+        // Execute purchase using contract's token balance
+        _executePurchase(token, amount, recipient, referrer, bridgeId);
     }
 
     // =========================================================================
@@ -153,49 +154,47 @@ contract MegapotAutoPurchaseProxy is ReentrancyGuard, Ownable {
     // =========================================================================
 
     function _executePurchase(
+        address token,
         uint256 amount,
         address recipient,
         address referrer,
         bytes32 bridgeId
     ) internal {
-        // Approve Megapot to spend USDC
-        usdc.forceApprove(address(megapot), amount);
+        // Approve Megapot to spend tokens
+        IERC20(token).forceApprove(address(megapot), amount);
 
-        // Attempt purchase — fail-safe sends USDC to recipient on revert
+        // Attempt purchase — fail-safe sends tokens to recipient on revert
         try megapot.purchaseTickets(referrer, amount, recipient) {
-            emit TicketsPurchased(recipient, referrer, amount, bridgeId);
+            emit TicketsPurchased(token, recipient, referrer, amount, bridgeId);
         } catch {
-            usdc.safeTransfer(recipient, amount);
-            emit PurchaseFallback(recipient, amount, bridgeId);
+            IERC20(token).safeTransfer(recipient, amount);
+            emit PurchaseFallback(token, recipient, amount, bridgeId);
         }
 
         // Cleanup approval
-        usdc.forceApprove(address(megapot), 0);
+        IERC20(token).forceApprove(address(megapot), 0);
     }
 
     // =========================================================================
     // ADMIN
     // =========================================================================
 
-    /**
-     * @notice Add or remove an authorized caller for the push model
-     */
+    function setTokenSupport(address token, bool supported) external onlyOwner {
+        if (token == address(0)) revert InvalidAddress();
+        supportedTokens[token] = supported;
+        emit TokenSupportUpdated(token, supported);
+    }
+
     function setAuthorizedCaller(address caller, bool authorized) external onlyOwner {
         if (caller == address(0)) revert InvalidAddress();
         authorizedCallers[caller] = authorized;
         emit AuthorizedCallerUpdated(caller, authorized);
     }
 
-    /**
-     * @notice Toggle whether executeBridgedPurchase requires an authorized caller
-     */
     function setRequireAuthorizedCaller(bool required) external onlyOwner {
         requireAuthorizedCaller = required;
     }
 
-    /**
-     * @notice Emergency withdraw stuck tokens
-     */
     function emergencyWithdraw(address token, address to) external onlyOwner {
         if (to == address(0)) revert InvalidAddress();
         uint256 balance = IERC20(token).balanceOf(address(this));

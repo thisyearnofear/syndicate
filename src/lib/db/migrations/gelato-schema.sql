@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS gelato_tasks (
   last_executed_at BIGINT,
   next_execution_time BIGINT NOT NULL,
   last_error TEXT,
+  last_reasoning TEXT,
+  agent_type VARCHAR(50) DEFAULT 'scheduled',
   gelato_status VARCHAR(20),
   created_at BIGINT NOT NULL,
   updated_at BIGINT NOT NULL,

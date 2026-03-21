@@ -56,18 +56,6 @@ git commit -m "test"  # Should be blocked
 
 ## Key Management
 
-### Operator Keys
-
-**Storage**:
-- Use secrets manager (AWS Secrets Manager, Vercel Secrets)
-- Never commit to git
-- Rotate quarterly
-
-**Usage**:
-- Minimum funds required (gas only for relayer)
-- Monitor balance alerts
-- Multi-sig recommended for production
-
 ### Webhook Secrets
 
 **Configuration**:
@@ -84,7 +72,6 @@ git commit -m "test"  # Should be blocked
 
 **Production**:
 - Use hardware wallet (Ledger, Trezor)
-- Separate from operator keys
 - Multi-sig for contract ownership
 
 **Testing**:
@@ -175,8 +162,7 @@ git commit -m "test"  # Should be blocked
 **Required Secrets**:
 ```bash
 # Never commit these
-PRIVATE_KEY=0x...              # Deployer/operator key
-STACKS_BRIDGE_OPERATOR_KEY=0x... # Operator key
+PRIVATE_KEY=0x...              # Deployer key (contract deployment only)
 GELATO_WEBHOOK_SECRET=...       # Webhook verification
 POSTGRES_URL=...                # Database connection
 ```

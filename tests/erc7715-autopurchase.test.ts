@@ -9,7 +9,7 @@
  */
 
 // Jest tests - run with: npm test
-import { ERC7715Service } from '@/services/erc7715Service';
+import { ERC7715Service } from '@/services/automation/erc7715Service';
 import { permittedTicketExecutor } from '@/services/automation/permittedTicketExecutor';
 import type { AutoPurchaseConfig, AdvancedPermission } from '@/domains/wallet/types';
 

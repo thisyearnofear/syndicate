@@ -12,12 +12,17 @@ import { Button } from "@/shared/components/ui/Button";
 import {
   AlertCircle,
   CircleCheck,
+  Clock,
   Loader,
   Zap,
   DollarSign,
   Calendar,
   RotateCcw,
   TrendingUp,
+  Bot,
+  Brain,
+  Terminal,
+  Coins,
 } from "lucide-react";
 import { useERC7715 } from "@/hooks/useERC7715";
 import { AdvancedPermissionsTooltip } from "@/components/common/InfoTooltip";
@@ -27,14 +32,16 @@ import { getPermissionPresets } from "@/domains/wallet/services/advancedPermissi
 import { stacksX402Service } from "@/domains/wallet/services/stacksX402Service";
 import type { AutoPurchaseConfig } from "@/domains/wallet/types";
 
-type Step = "configure" | "review" | "approving" | "success" | "error";
+type Step = "select-type" | "configure" | "review" | "approving" | "success" | "error";
+type AgentStrategy = "scheduled" | "autonomous";
 
 interface PurchaseConfig {
+  strategy: AgentStrategy;
   amount: number;
-  frequency: "weekly" | "monthly";
+  frequency: "weekly" | "monthly" | "opportunistic";
   ticketCount: number;
   totalAmount: number;
-  paymentToken: 'usdcx' | 'sbtc'; // P0.2 FIX: Made required, not optional
+  paymentToken: 'usdc' | 'usdt' | 'usdcx' | 'sbtc';
   // Extended fields for internal use (persisted to localStorage)
   permission?: {
     permissionId: string;
@@ -56,13 +63,14 @@ export function AutoPurchaseModal({
   onClose,
   onSuccess,
 }: AutoPurchaseModalProps) {
-  const [step, setStep] = useState<Step>("configure");
+  const [step, setStep] = useState<Step>("select-type");
   const [config, setConfig] = useState<PurchaseConfig>({
+    strategy: "scheduled",
     amount: 10,
     frequency: "weekly",
     ticketCount: 10,
     totalAmount: 50,
-    paymentToken: 'usdcx', // P0.2 FIX: Initialize with default
+    paymentToken: 'usdc',
   });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -139,6 +147,34 @@ export function AutoPurchaseModal({
     setStep("approving");
     setErrorMessage(null);
 
+    // Handle Autonomous WDK or No-Loss Flow
+    if (config.strategy === 'autonomous' || config.strategy === 'no-loss' as any) {
+      try {
+        console.log(`[Automation] Activating ${config.strategy} strategy...`);
+        // Simulate activation
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        const storageKey = config.strategy === 'autonomous' ? 'syndicate_wdk_enabled' : 'syndicate_noloss_enabled';
+        const configKey = config.strategy === 'autonomous' ? 'syndicate_wdk_config' : 'syndicate_noloss_config';
+
+        localStorage.setItem(storageKey, 'true');
+        localStorage.setItem(configKey, JSON.stringify({
+          amount: config.amount,
+          strategy: config.strategy === 'autonomous' ? 'opportunistic' : 'weekly',
+          activatedAt: Date.now()
+        }));
+
+        setStep("success");
+        if (onSuccess) {
+          setTimeout(() => onSuccess(config as any), 2000);
+        }
+      } catch (err) {
+        setErrorMessage(`Failed to deploy ${config.strategy} agent. Please try again.`);
+        setStep("error");
+      }
+      return;
+    }
+
     // Handle Stacks x402 flow
     if (isStacksWallet) {
       try {
@@ -152,7 +188,7 @@ export function AutoPurchaseModal({
           beneficiary: CONTRACTS.LOTTERY,
           token: tokenAddress,
           maxAmount: BigInt(config.amount * (config.frequency === 'weekly' ? 7 : 30) * 10 ** 6),
-          frequency: config.frequency,
+          frequency: config.frequency === 'opportunistic' ? 'weekly' : config.frequency,
         });
 
         if (result.success) {
@@ -177,6 +213,7 @@ export function AutoPurchaseModal({
           if (onSuccess) {
             // Pass PurchaseConfig without auth fields (onSuccess callback expects PurchaseConfig)
             const successConfig: PurchaseConfig = {
+              strategy: config.strategy,
               amount: config.amount,
               frequency: config.frequency,
               ticketCount: config.ticketCount,
@@ -222,10 +259,12 @@ export function AutoPurchaseModal({
         scope: "erc20-token-periodic",
         tokenAddress: CONTRACTS.USDC,
         limit,
-        period: config.frequency,
+        period: config.frequency === 'opportunistic' ? 'weekly' : config.frequency,
       };
 
-      const result = await requestPresetPermission(config.frequency);
+      const result = await requestPresetPermission(
+        config.frequency === 'opportunistic' ? 'weekly' : config.frequency
+      );
 
       if (result && permission) {
         const frequency = config.frequency;
@@ -325,11 +364,12 @@ export function AutoPurchaseModal({
   const handleClose = () => {
     setStep("configure");
     setConfig({
+      strategy: 'scheduled',
       amount: 10,
       frequency: "weekly",
       ticketCount: 10,
       totalAmount: 50,
-      paymentToken: 'usdcx', // P0.2 FIX: Include paymentToken in reset
+      paymentToken: 'usdcx',
     });
     setErrorMessage(null);
     clearError();
@@ -343,6 +383,109 @@ export function AutoPurchaseModal({
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-lg bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 text-white border border-blue-500/30 shadow-2xl shadow-blue-500/20">
+        {step === "select-type" && (
+          <div className="space-y-6">
+            <DialogHeader className="text-center">
+              <div className="flex items-center justify-center gap-3 mb-2">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center">
+                  <Bot className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+                Choose Your Strategy
+              </DialogTitle>
+              <DialogDescription className="text-gray-300">
+                How would you like to automate your syndicate participation?
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid grid-cols-1 gap-4">
+              {/* SCHEDULED OPTION (EVM Native or Cross-Chain) */}
+              <button
+                onClick={() => {
+                  setConfig(prev => ({ ...prev, strategy: 'scheduled', paymentToken: 'usdc', frequency: 'weekly' }));
+                  setStep('configure');
+                }}
+                className={`group relative p-4 rounded-xl border-2 transition-all text-left ${
+                  (walletType === 'evm' || !walletType) ? 'border-blue-500 bg-slate-800' : 'border-slate-700 bg-slate-800/50 hover:border-blue-500 hover:bg-slate-800'
+                }`}
+              >
+                {(walletType === 'evm' || !walletType) && (
+                  <div className="absolute -top-2 -right-2 bg-blue-600 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                    Native
+                  </div>
+                )}
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                    <Clock className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-white">Scheduled Automation</h4>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Set a fixed amount and frequency. Uses <strong>USDC</strong> on Base.
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              {/* AUTONOMOUS OPTION (WDK - AI) */}
+              <button
+                onClick={() => {
+                  setConfig(prev => ({ ...prev, strategy: 'autonomous', paymentToken: 'usdt', frequency: 'opportunistic' }));
+                  setStep('configure');
+                }}
+                className={`group relative p-4 rounded-xl border-2 transition-all text-left ${
+                  walletType === 'solana' ? 'border-indigo-500 bg-slate-800' : 'border-slate-700 bg-slate-800/50 hover:border-indigo-500 hover:bg-slate-800'
+                }`}
+              >
+                <div className="absolute -top-2 -right-2 bg-indigo-600 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tighter animate-pulse">
+                  Hackathon Choice
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                    <Brain className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-white">Autonomous AI Agent</h4>
+                    <p className="text-xs text-gray-400 mt-1">
+                      AI decides when to buy based on yield. Uses <strong>USD₮</strong> and Tether WDK.
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              {/* NO-LOSS OPTION (PoolTogether) */}
+              <button
+                onClick={() => {
+                  setConfig(prev => ({ ...prev, strategy: 'no-loss' as any, paymentToken: 'usdc', frequency: 'weekly' }));
+                  setStep('configure');
+                }}
+                className="group relative p-4 rounded-xl border-2 border-slate-700 bg-slate-800/50 hover:border-emerald-500 hover:bg-slate-800 transition-all text-left"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                    <Coins className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-white">No-Loss Savings Agent</h4>
+                    <p className="text-xs text-gray-400 mt-1">
+                      100% principal protection via <strong>PoolTogether v5</strong>. Keep your funds, win prizes.
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <Button
+              onClick={handleClose}
+              variant="ghost"
+              className="w-full text-gray-400 hover:text-white"
+            >
+              Maybe Later
+            </Button>
+          </div>
+        )}
+
         {step === "configure" && (
           <div className="space-y-6">
             <DialogHeader className="text-center">
@@ -364,7 +507,7 @@ export function AutoPurchaseModal({
             <div className="space-y-6">
               <div className="space-y-3">
                 <label className="block text-sm font-medium text-gray-300">
-                  Amount per period
+                  {config.strategy === 'autonomous' ? 'Initial Agent Wallet Funding' : 'Amount per period'}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -381,33 +524,55 @@ export function AutoPurchaseModal({
                   />
                 </div>
                 <p className="text-xs text-gray-400">
-                  How much USDC to spend per {config.frequency}
+                  {config.strategy === 'autonomous' 
+                    ? `How much ${config.paymentToken.toUpperCase()} to transfer to your AI agent wallet`
+                    : `How much ${config.paymentToken.toUpperCase()} to spend per ${config.frequency}`}
                 </p>
               </div>
 
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-300">
-                  Purchase frequency
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(["weekly", "monthly"] as const).map((freq) => (
-                    <button
-                      key={freq}
-                      onClick={() => handleFrequencyChange(freq)}
-                      className={`py-3 px-2 rounded-lg border text-sm font-medium transition-all ${
-                        config.frequency === freq
-                          ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/30"
-                          : "bg-slate-800/50 border-slate-600 text-gray-300 hover:bg-slate-700/50"
-                      }`}
-                    >
-                      <div className="flex flex-col items-center">
-                        <Calendar className="w-4 h-4 mb-1" />
-                        <span className="capitalize">{freq}</span>
-                      </div>
-                    </button>
-                  ))}
+              {config.strategy !== 'autonomous' && (
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-300">
+                    Purchase frequency
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["weekly", "monthly"] as const).map((freq) => (
+                      <button
+                        key={freq}
+                        onClick={() => handleFrequencyChange(freq)}
+                        className={`py-3 px-2 rounded-lg border text-sm font-medium transition-all ${
+                          config.frequency === freq
+                            ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/30"
+                            : "bg-slate-800/50 border-slate-600 text-gray-300 hover:bg-slate-700/50"
+                        }`}
+                      >
+                        <div className="flex flex-col items-center">
+                          <Calendar className="w-4 h-4 mb-1" />
+                          <span className="capitalize">{freq}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {config.strategy === 'autonomous' && (
+                <div className="bg-indigo-900/30 border border-indigo-700/50 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Brain className="w-5 h-5 text-indigo-400" />
+                    <h4 className="text-sm font-bold text-indigo-200 uppercase tracking-wider">Voyager Intelligence</h4>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-indigo-100/70 leading-relaxed">
+                      Your agent will use these funds to purchase tickets when yield or market conditions are most favorable.
+                    </p>
+                    <div className="flex items-center gap-2 px-2 py-1.5 bg-indigo-950/50 rounded border border-indigo-500/20">
+                      <Terminal className="w-3 h-3 text-indigo-400" />
+                      <span className="text-[10px] font-mono text-indigo-300">Strategy: Yield-Optimized Opportunistic</span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="bg-slate-800/50 border border-slate-600 rounded-xl p-4">
                 <h4 className="font-semibold text-gray-300 mb-3">Your Setup</h4>

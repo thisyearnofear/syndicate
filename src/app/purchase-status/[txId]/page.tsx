@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { CrossChainTracker } from "@/components/bridge/CrossChainTracker";
 import type { TrackerStatus } from "@/components/bridge/CrossChainTracker";
-import { usePurchasePolling } from "@/hooks/usePurchasePolling";
+import { usePurchaseSSE } from "@/hooks/usePurchaseSSE";
 import { mapPurchaseStatusToTracker } from "@/domains/lottery/utils/mapPurchaseStatus";
 
 interface PurchaseStatusResponse {
@@ -85,12 +85,7 @@ export default function PurchaseStatusPage() {
     fetchInitial();
   }, [txId, updateFromResponse]);
 
-  usePurchasePolling({
-    txId,
-    currentStatus: status,
-    adaptivePolling: true,
-    onStatusChange: updateFromResponse,
-  });
+  usePurchaseSSE({ txId, onStatusChange: updateFromResponse });
 
   return (
     <div className="min-h-screen px-4 py-10">

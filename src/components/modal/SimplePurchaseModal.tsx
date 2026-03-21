@@ -175,6 +175,7 @@ export default function SimplePurchaseModal({
   const [statusLinkCopied, setStatusLinkCopied] = useState(false);
   const [stacksToken, setStacksToken] = useState<'usdcx' | 'sbtc'>('usdcx');
   const [showAdvancedToken, setShowAdvancedToken] = useState(false);
+  const [btcUsdPrice, setBtcUsdPrice] = useState<number | null>(null);
   const [starknetToken, setStarknetToken] = useState<'usdc' | 'strk'>('usdc');
   // Task 3: Load saved Base address from localStorage (user preference)
   const [baseAddress, setBaseAddress] = useState(() =>
@@ -593,8 +594,16 @@ export default function SimplePurchaseModal({
                   </label>
                   <button
                     onClick={() => {
-                      setShowAdvancedToken(v => !v);
-                      if (showAdvancedToken) setStacksToken('usdcx');
+                      const next = !showAdvancedToken;
+                      setShowAdvancedToken(next);
+                      if (!next) setStacksToken('usdcx');
+                      // Fetch BTC price once when Advanced is first opened
+                      if (next && btcUsdPrice === null) {
+                        fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd')
+                          .then(r => r.json())
+                          .then(d => setBtcUsdPrice(d?.bitcoin?.usd ?? null))
+                          .catch(() => {/* price fetch is best-effort */});
+                      }
                     }}
                     className="text-xs text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1"
                   >
@@ -658,7 +667,13 @@ export default function SimplePurchaseModal({
                       </div>
                       <div className="font-semibold text-white text-sm">sBTC</div>
                       <div className="text-xs text-gray-400 mt-1">Bitcoin-backed</div>
-                      <div className="text-[10px] text-orange-400/70 mt-1.5 font-medium">₿ Secured by Bitcoin</div>
+                      {btcUsdPrice !== null && (
+                        <div className="text-[10px] text-gray-400 mt-1">
+                          ≈ {(ticketCount / btcUsdPrice).toFixed(8)} BTC
+                          <span className="text-gray-500 ml-1">(${ticketCount} USD)</span>
+                        </div>
+                      )}
+                      <div className="text-[10px] text-orange-400/70 mt-1 font-medium">₿ Secured by Bitcoin</div>
                     </button>
                   </div>
                 )}

@@ -21,8 +21,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Address, createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
-import { getGelatoService } from '@/services/automation/gelatoService';
-import { getERC7715Service } from '@/services/erc7715Service';
+import { automationOrchestrator } from '@/services/automation/AutomationOrchestrator';
+import { getERC7715Service } from '@/services/automation/erc7715Service';
+import type { ERC7715Grant } from '@/services/automation/erc7715Service';
 import { MEGAPOT } from '@/config/contracts';
 import {
   verifyGelatoSignature,
@@ -124,7 +125,6 @@ export default async function handler(
 
     // Get services
     const erc7715Service = getERC7715Service();
-    const gelatoService = getGelatoService();
     const taskRepository = getGelatoTaskRepository();
 
     // Fetch task from database
@@ -161,9 +161,9 @@ export default async function handler(
     const erc7715Service2 = getERC7715Service();
     const permissions = erc7715Service2.getActiveGrants();
     const userPermission = permissions
-      .filter(g => g.type === 'advanced-permission')
-      .map(g => g.permission!)
-      .find(p => p.id === permissionId);
+      .filter((g: ERC7715Grant) => g.type === 'advanced-permission')
+      .map((g: ERC7715Grant) => g.permission!)
+      .find((p: ERC7715Grant['permission']) => p!.id === permissionId);
 
     if (!userPermission) {
       console.error('[Execution] Permission not found:', { permissionId, userAddress });
@@ -262,7 +262,7 @@ export default async function handler(
 
       // Update task in database
       try {
-        const nextExecution = gelatoService.calculateNextExecutionTime(taskRecord.frequency);
+        const nextExecution = automationOrchestrator.calculateNextExecution(taskRecord.frequency);
         await taskRepository.updateTask(taskRecord.id, {
           executionCount: taskRecord.executionCount + 1,
           lastExecutedAt: Math.floor(Date.now() / 1000),

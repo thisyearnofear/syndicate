@@ -5,9 +5,11 @@
  * Called by the /api/crons/process-jobs endpoint (Vercel Cron).
  *
  * Job types:
- * - process_bridge_event: record chainhook event in DB + enqueue cctp_relay
- * - cctp_relay: poll Circle attestation + submit to Base MessageTransmitter
+ * - process_bridge_event: record chainhook event in DB
  * - mint_tickets: (future) explicit ticket minting after USDC arrives on Base
+ *
+ * Note: CCTP attestation + receiveMessage() is handled client-side via
+ * the useCctpRelay hook — no server-side relayer key required.
  */
 
 import {
@@ -19,7 +21,7 @@ import {
   type PurchaseJob,
 } from '@/lib/db/repositories/purchaseJobRepository';
 import { stacksDecentralizedBridge } from '@/services/bridges/stacksDecentralizedBridge';
-import { relayCctpAttestation, isAlreadyRelayed } from '@/services/bridges/cctpAttestationRelay';
+import { captureError } from '@/lib/monitoring/captureError';
 
 // How many jobs to process per cron invocation
 const BATCH_SIZE = 10;
@@ -42,11 +44,19 @@ export async function drainJobQueue(): Promise<{ processed: number; errors: numb
       processed++;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error(`[JobProcessor] Job ${job.id} (${job.jobType}) failed:`, message);
       // Exponential-ish backoff: 30s, 60s, 120s, 240s, 480s
       const delay = Math.min(30 * Math.pow(2, job.attempts - 1), 480);
       await failJob(job.id!, message, delay);
       errors++;
+
+      // Alert via Sentry only when the job has exhausted all retries
+      if (job.attempts >= job.maxAttempts) {
+        await captureError(err instanceof Error ? err : new Error(message), {
+          level: 'fatal',
+          tags: { jobType: job.jobType, jobId: String(job.id) },
+          extra: { payload: job.payload, attempts: job.attempts },
+        });
+      }
     }
   }
 
@@ -61,9 +71,6 @@ async function processJob(job: PurchaseJob): Promise<void> {
   switch (job.jobType) {
     case 'process_bridge_event':
       await handleProcessBridgeEvent(job);
-      break;
-    case 'cctp_relay':
-      await handleCctpRelay(job);
       break;
     case 'mint_tickets':
       // Placeholder — ticket minting is currently handled by the Base proxy
@@ -109,48 +116,7 @@ async function handleProcessBridgeEvent(job: PurchaseJob): Promise<void> {
     p.stacksAddress
   );
 
-  // If we have CCTP message data, enqueue the relay job
-  if (p.messageHash && p.messageBytes) {
-    await enqueueJob('cctp_relay', {
-      stacksTxId: p.txId,
-      messageHash: p.messageHash,
-      messageBytes: p.messageBytes,
-      recipientBaseAddress: p.baseAddress,
-    });
-    console.log(`[JobProcessor] Enqueued cctp_relay for ${p.txId}`);
-  }
+  // CCTP relay (receiveMessage on Base) is handled client-side via useCctpRelay hook.
+  // messageHash/messageBytes are stored in the purchase status record for the client to pick up.
 }
 
-// ---------------------------------------------------------------------------
-// cctp_relay handler
-// ---------------------------------------------------------------------------
-
-interface CctpRelayPayload {
-  stacksTxId: string;
-  messageHash: string;
-  messageBytes: string;
-  recipientBaseAddress: string;
-}
-
-async function handleCctpRelay(job: PurchaseJob): Promise<void> {
-  const p = job.payload as unknown as CctpRelayPayload;
-
-  // Idempotency: check if already relayed on-chain
-  if (await isAlreadyRelayed(p.messageHash)) {
-    console.log(`[JobProcessor] CCTP message ${p.messageHash} already relayed — skipping`);
-    return;
-  }
-
-  const result = await relayCctpAttestation({
-    stacksTxId: p.stacksTxId,
-    messageHash: p.messageHash,
-    messageBytes: p.messageBytes,
-    recipientBaseAddress: p.recipientBaseAddress,
-  });
-
-  if (!result.success) {
-    throw new Error(result.error || 'CCTP relay failed');
-  }
-
-  console.log(`[JobProcessor] ✅ CCTP relay complete for ${p.stacksTxId}: ${result.baseTxHash}`);
-}

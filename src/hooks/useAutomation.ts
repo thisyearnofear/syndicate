@@ -1,36 +1,47 @@
 /**
- * USE GELATO AUTOMATION HOOK
+ * UNIFIED AUTOMATION HOOK
  *
  * Core Principles Applied:
- * - ENHANCEMENT FIRST: Bridges ERC-7715 permissions with Gelato task management
+ * - ENHANCEMENT FIRST: Bridges ERC-7715 permissions with unified automation orchestration
  * - MODULAR: Independent of UI, can be used anywhere in app
- * - CLEAN: Single responsibility - manage Gelato task lifecycle
- * - DRY: Uses unified ERC-7715 service for permissions
+ * - CLEAN: Single responsibility - manage automation task lifecycle
+ * - DRY: Uses AutomationOrchestrator for all strategies
  *
  * Manages:
- * 1. Creating Gelato tasks from ERC-7715 permissions
+ * 1. Creating automation tasks from ERC-7715 permissions
  * 2. Monitoring task status and execution
  * 3. Pausing/resuming/canceling tasks
- * 4. Tracking execution history
  */
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Address } from 'viem';
 import { useERC7715 } from './useERC7715';
 import {
-  getGelatoService,
+  automationOrchestrator,
   type GelatoTaskResponse,
-  type GelatoTaskConfig,
-} from '@/services/automation/gelatoService';
-import type { AdvancedPermissionGrant } from '@/services/erc7715Service';
+} from '@/services/automation/AutomationOrchestrator';
+import type { AdvancedPermissionGrant } from '@/services/automation/erc7715Service';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-export interface UseGelatoAutomationState {
+export interface AutomationTaskConfig {
+  id: string;
+  taskId?: string;
+  userAddress: Address;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  amountPerPeriod: bigint;
+  nextExecutionTime: number;
+  status: 'active' | 'paused' | 'disabled' | 'cancelled';
+  createdAt: number;
+  lastExecutedAt?: number;
+  executionCount: number;
+}
+
+export interface UseAutomationState {
   // Task management
-  activeTask: GelatoTaskConfig | null;
+  activeTask: AutomationTaskConfig | null;
   taskStatus: GelatoTaskResponse | null;
   isLoading: boolean;
   isUpdating: boolean;
@@ -43,7 +54,7 @@ export interface UseGelatoAutomationState {
   isHealthy: boolean;
 }
 
-export interface UseGelatoAutomationActions {
+export interface UseAutomationActions {
   // Task lifecycle
   createTask: (
     permission: AdvancedPermissionGrant,
@@ -62,20 +73,19 @@ export interface UseGelatoAutomationActions {
 // HOOK IMPLEMENTATION
 // =============================================================================
 
-const STORAGE_KEY = 'syndicate_gelato_task';
+const STORAGE_KEY = 'syndicate_automation_task';
 
-export function useGelatoAutomation(
+export function useAutomation(
   userAddress?: Address
-): UseGelatoAutomationState & UseGelatoAutomationActions {
-  const { permissions, isSupported } = useERC7715();
+): UseAutomationState & UseAutomationActions {
+  const { isSupported } = useERC7715();
 
   // Local state
-  const [activeTask, setActiveTask] = useState<GelatoTaskConfig | null>(null);
+  const [activeTask, setActiveTask] = useState<AutomationTaskConfig | null>(null);
   const [taskStatus, setTaskStatus] = useState<GelatoTaskResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [executionCount, setExecutionCount] = useState(0);
 
   // Load task from storage on mount
   useEffect(() => {
@@ -84,45 +94,40 @@ export function useGelatoAutomation(
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        const task = JSON.parse(stored) as GelatoTaskConfig;
+        const task = JSON.parse(stored) as AutomationTaskConfig;
         setActiveTask(task);
 
-        // Try to load task status from Gelato if we have a taskId
+        // Try to load task status if we have a taskId
         if (task.taskId && isSupported) {
           refreshTaskStatus(task.taskId);
         }
       }
     } catch (err) {
-      console.error('Failed to load Gelato task from storage:', err);
+      console.error('Failed to load automation task from storage:', err);
     }
   }, [isSupported]);
 
-  // Get service instance
-  const gelatoService = getGelatoService();
-
-  // Refresh task status from Gelato
+  // Refresh task status
   const refreshTaskStatus = useCallback(
     async (taskId: string) => {
-      if (!gelatoService) return;
-
       try {
         setIsLoading(true);
-        const status = await gelatoService.getTaskStatus(taskId);
+        const status = await automationOrchestrator.getGelatoTaskStatus(taskId);
         if (status) {
           setTaskStatus(status);
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Failed to fetch task status';
-        console.error('[Gelato] Error refreshing task status:', err);
+        console.error('[Automation] Error refreshing task status:', err);
         setError(msg);
       } finally {
         setIsLoading(false);
       }
     },
-    [gelatoService]
+    []
   );
 
-  // Create a new Gelato task
+  // Create a new automation task
   const createTask = useCallback(
     async (
       permission: AdvancedPermissionGrant,
@@ -133,23 +138,18 @@ export function useGelatoAutomation(
         return false;
       }
 
-      if (!gelatoService) {
-        setError('Gelato service not initialized');
-        return false;
-      }
-
       setIsUpdating(true);
       setError(null);
 
       try {
-        console.log('[UseGelatoAutomation] Creating task for permission:', {
+        console.log('[UseAutomation] Creating task for permission:', {
           permissionId: permission.id,
           frequency,
           amount: permission.limit.toString(),
         });
 
-        // Create task in Gelato
-        const response = await gelatoService.createAutoPurchaseTask(
+        // Create task via Orchestrator
+        const response = await automationOrchestrator.createGelatoTask(
           userAddress,
           frequency,
           permission.limit,
@@ -157,12 +157,12 @@ export function useGelatoAutomation(
         );
 
         if (!response) {
-          setError('Failed to create Gelato task');
+          setError('Failed to create automation task');
           return false;
         }
 
         // Create local task config
-        const newTask: GelatoTaskConfig = {
+        const newTask: AutomationTaskConfig = {
           id: `task_${Date.now()}`,
           taskId: response.taskId,
           userAddress,
@@ -179,18 +179,18 @@ export function useGelatoAutomation(
         setTaskStatus(response);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(newTask));
 
-        console.log('[UseGelatoAutomation] Task created:', newTask.id);
+        console.log('[UseAutomation] Task created:', newTask.id);
         return true;
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Failed to create task';
         setError(msg);
-        console.error('[UseGelatoAutomation] Error creating task:', err);
+        console.error('[UseAutomation] Error creating task:', err);
         return false;
       } finally {
         setIsUpdating(false);
       }
     },
-    [isSupported, userAddress, gelatoService]
+    [isSupported, userAddress]
   );
 
   // Pause current task
@@ -204,13 +204,13 @@ export function useGelatoAutomation(
     setError(null);
 
     try {
-      const success = await gelatoService.pauseTask(activeTask.taskId);
+      const success = await automationOrchestrator.pauseGelatoTask(activeTask.taskId);
 
       if (success) {
         const updatedTask = { ...activeTask, status: 'paused' as const };
         setActiveTask(updatedTask);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedTask));
-        console.log('[UseGelatoAutomation] Task paused:', activeTask.taskId);
+        console.log('[UseAutomation] Task paused:', activeTask.taskId);
       } else {
         setError('Failed to pause task');
       }
@@ -223,7 +223,7 @@ export function useGelatoAutomation(
     } finally {
       setIsUpdating(false);
     }
-  }, [activeTask, gelatoService]);
+  }, [activeTask]);
 
   // Resume paused task
   const resumeTask = useCallback(async (): Promise<boolean> => {
@@ -236,13 +236,13 @@ export function useGelatoAutomation(
     setError(null);
 
     try {
-      const success = await gelatoService.resumeTask(activeTask.taskId);
+      const success = await automationOrchestrator.resumeGelatoTask(activeTask.taskId);
 
       if (success) {
         const updatedTask = { ...activeTask, status: 'active' as const };
         setActiveTask(updatedTask);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedTask));
-        console.log('[UseGelatoAutomation] Task resumed:', activeTask.taskId);
+        console.log('[UseAutomation] Task resumed:', activeTask.taskId);
       } else {
         setError('Failed to resume task');
       }
@@ -255,7 +255,7 @@ export function useGelatoAutomation(
     } finally {
       setIsUpdating(false);
     }
-  }, [activeTask, gelatoService]);
+  }, [activeTask]);
 
   // Cancel task permanently
   const cancelTask = useCallback(async (): Promise<boolean> => {
@@ -268,13 +268,13 @@ export function useGelatoAutomation(
     setError(null);
 
     try {
-      const success = await gelatoService.cancelTask(activeTask.taskId);
+      const success = await automationOrchestrator.cancelGelatoTask(activeTask.taskId);
 
       if (success) {
         setActiveTask(null);
         setTaskStatus(null);
         localStorage.removeItem(STORAGE_KEY);
-        console.log('[UseGelatoAutomation] Task cancelled:', activeTask.taskId);
+        console.log('[UseAutomation] Task cancelled:', activeTask.taskId);
       } else {
         setError('Failed to cancel task');
       }
@@ -287,7 +287,7 @@ export function useGelatoAutomation(
     } finally {
       setIsUpdating(false);
     }
-  }, [activeTask, gelatoService]);
+  }, [activeTask]);
 
   // Refresh status
   const refreshStatus = useCallback(async () => {
@@ -336,7 +336,6 @@ export function useGelatoAutomation(
       isLoading,
       isUpdating,
       error,
-      executionCount,
       isHealthy,
       createTask,
       pauseTask,

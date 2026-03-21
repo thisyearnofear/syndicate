@@ -6,3 +6,10 @@
 docs/SECRET_DETECTION.md:generic-api-key:42
 docs/SECURITY.md:generic-api-key:48
 docs/BRIDGES.md:generic-api-key:237
+
+# Public contract addresses (Base mainnet) - not secrets
+src/services/lotteries/PoolTogetherService.ts:generic-api-key:25
+src/services/automation/agentRegistryService.ts:generic-api-key:96
+src/services/automation/agentRegistryService.ts:generic-api-key:122
+src/services/automation/agentRegistryService.ts:generic-api-key:148
+src/services/automation/agentRegistryService.ts:generic-api-key:174

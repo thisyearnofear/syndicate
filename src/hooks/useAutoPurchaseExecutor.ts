@@ -18,7 +18,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useERC7715 } from './useERC7715';
 import { useSimplePurchase } from './useSimplePurchase';
-import type { AdvancedPermissionGrant } from '@/services/erc7715Service';
+import type { AdvancedPermissionGrant } from '@/services/automation/erc7715Service';
 
 export interface AutoPurchaseExecution {
   timestamp: number;

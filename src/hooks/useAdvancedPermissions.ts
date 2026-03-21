@@ -87,7 +87,7 @@ export function useAdvancedPermissions(): UseAdvancedPermissionsState & UseAdvan
       token: p.target,
       spender: '0x0000000000000000000000000000000000000000', // Placeholder
       limit: p.limit,
-      remaining: p.limit - p.spent,
+      remaining: BigInt(p.limit) - BigInt(p.spent),
       period: p.period,
       grantedAt: p.grantedAt,
       expiresAt: p.expiresAt,
