@@ -66,10 +66,14 @@ export class StacksProtocol implements BridgeProtocol {
     }
 
     async estimate(params: BridgeParams) {
+        const amount = Number(params.amount) || 0;
+        const fee = Math.min(Math.max(amount * 0.005, 0.10), 5.00).toFixed(2);
+        const isUSDCx = params.tokenAddress === CONTRACTS.USDCx;
+
         return {
-            fee: '0.50',
-            timeMs: 180_000,
-            gasEstimate: 'Included in attestation/CCTP',
+            fee,
+            timeMs: isUSDCx ? 120_000 : 180_000,
+            gasEstimate: isUSDCx ? 'Included in CCTP relay' : 'Included in attestation relay',
         };
     }
 
