@@ -165,6 +165,13 @@ export class UnifiedBridgeManager {
                 return result;
             }
 
+            // IMPORTANT: pending_signature is NOT a failure - return to UI for user signing
+            // Do NOT attempt recovery or fallback for pending_signature status
+            if (result.status === 'pending_signature') {
+                console.log(`[BridgeManager] ${primaryProtocol.name} returned pending_signature - returning to UI for signing`);
+                return result;
+            }
+
             // Enhanced fallback logic - check if protocol suggests fallback
             const shouldFallback = result.suggestFallback ||
                 (result.errorCode && this.shouldTriggerFallback(result.errorCode as BridgeErrorCode));
