@@ -48,8 +48,16 @@ export function useDriftDeposit(): UseDriftDepositResult {
     amountUsdc: number;
     userAddress: string;
   }) => {
-    if (!solanaWalletService.state.connected) {
+    if (!solanaWalletService.isReady()) {
       setError('No Solana wallet connected. Please connect Phantom.');
+      setStatus('error');
+      return;
+    }
+
+    // Use provided userAddress or get from wallet service
+    const walletAddress = userAddress || solanaWalletService.getPublicKey();
+    if (!walletAddress) {
+      setError('No wallet address available.');
       setStatus('error');
       return;
     }
@@ -69,7 +77,7 @@ export function useDriftDeposit(): UseDriftDepositResult {
       // In production, this would call an API endpoint that returns serialized tx data
       // For now, the provider returns a stub response indicating backend is not ready
       const { driftProvider } = await import('@/services/vaults/driftProvider');
-      const result = await driftProvider.deposit(String(amountUsdc), userAddress);
+      const result = await driftProvider.deposit(String(amountUsdc), walletAddress);
 
       if (result.error && !result.success) {
         // Backend deposit is not yet implemented — surface clearly
