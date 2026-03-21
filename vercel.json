@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/crons/process-jobs",
-      "schedule": "* * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
