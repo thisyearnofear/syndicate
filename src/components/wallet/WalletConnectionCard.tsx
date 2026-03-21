@@ -160,8 +160,16 @@ export function WalletConnectionCard({
     return null; // Don't render on server
   }
 
+  // If a non-EVM wallet is already connected, don't render EVM options at all.
+  // This prevents RainbowKit's ConnectButton from triggering MetaMask detection
+  // and prompting Solana/Stacks/NEAR users with an unwanted EVM wallet popup.
+  const activeNonEvmWallet = state.isConnected && state.walletType && state.walletType !== 'evm';
+
   // Helper: Render individual wallet button (DRY)
   const renderWalletButton = (wallet: WalletConfig) => {
+    // Hide EVM/WalletConnect option when a non-EVM wallet is already active
+    if (wallet.isWalletConnect && activeNonEvmWallet) return null;
+
     if (wallet.isWalletConnect) {
       return (
         <div

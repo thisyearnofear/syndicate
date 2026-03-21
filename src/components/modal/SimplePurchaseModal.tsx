@@ -418,22 +418,6 @@ export default function SimplePurchaseModal({
               </div>
             )}
 
-            {walletType === "solana" &&
-              !process.env.NEXT_PUBLIC_DEBRIDGE_ADAPTER && (
-                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-amber-400" />
-                    <p className="text-amber-300 text-sm font-medium">
-                      Solana intent adapter not configured
-                    </p>
-                  </div>
-                  <p className="text-xs text-gray-300">
-                    To complete purchases without an EVM wallet, set
-                    `NEXT_PUBLIC_DEBRIDGE_ADAPTER`. Otherwise an EVM wallet will
-                    be required to finalize the purchase on Base.
-                  </p>
-                </div>
-              )}
 
             {/* ENHANCEMENT: Auto-purchase setup (expanded by default, Base/EVM only, chain-aware) */}
             {!hasActivePermission && isSupported && walletType === "evm" && (

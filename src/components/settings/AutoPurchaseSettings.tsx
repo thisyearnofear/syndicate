@@ -171,7 +171,7 @@ export function AutoPurchaseSettings() {
             <p className="text-[10px] text-gray-500 mt-1 mb-3">High-frequency lottery with multi-chain jackpots.</p>
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">High Volume</span>
-              <Button size="xs" variant="outline" onClick={() => handleActivateAgent('scheduled')}>View</Button>
+              <Button size="sm" variant="outline" onClick={() => handleActivateAgent('scheduled')}>View</Button>
             </div>
           </div>
 
@@ -184,7 +184,7 @@ export function AutoPurchaseSettings() {
             <p className="text-[10px] text-gray-500 mt-1 mb-3">Atomic cross-chain purchases via NEAR Chain Signatures.</p>
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">MPC Powered</span>
-              <Button size="xs" variant="outline" onClick={() => handleActivateAgent('scheduled')}>Activate</Button>
+              <Button size="sm" variant="outline" onClick={() => handleActivateAgent('scheduled')}>Activate</Button>
             </div>
           </div>
 
@@ -197,7 +197,7 @@ export function AutoPurchaseSettings() {
             <p className="text-[10px] text-gray-500 mt-1 mb-3">Bitcoin-secured automation using SIP-018 signatures.</p>
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">BTC Security</span>
-              <Button size="xs" variant="outline" onClick={() => handleActivateAgent('scheduled')}>Deploy</Button>
+              <Button size="sm" variant="outline" onClick={() => handleActivateAgent('scheduled')}>Deploy</Button>
             </div>
           </div>
           </div>
