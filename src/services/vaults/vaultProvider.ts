@@ -24,6 +24,7 @@ export interface VaultBalance {
 export interface VaultDepositResult {
     success: boolean;
     txHash?: string;
+    txData?: string; // Serialized transaction for client-side signing (Solana)
     error?: string;
     vaultId?: string;
 }
