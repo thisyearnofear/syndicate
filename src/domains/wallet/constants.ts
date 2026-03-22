@@ -23,6 +23,7 @@ export const CHAIN_IDS = {
   SOLANA: 'solana',
   STACKS: 'stacks',
   NEAR: 'near',
+  TON: 'ton',
 } as const;
 
 export type ChainId = typeof CHAIN_IDS[keyof typeof CHAIN_IDS];
@@ -54,6 +55,7 @@ export const WALLET_NATIVE_CHAINS = {
   solana: [CHAIN_IDS.SOLANA] as const,
   stacks: [CHAIN_IDS.STACKS] as const,
   near: [CHAIN_IDS.NEAR] as const,
+  ton: [CHAIN_IDS.TON] as const,
   social: [] as const, // TBD
 } as const;
 
@@ -61,7 +63,7 @@ export const WALLET_NATIVE_CHAINS = {
  * Check if a wallet can operate on a given chain
  */
 export function canWalletOperateOnChain(
-  walletType: 'evm' | 'solana' | 'stacks' | 'near' | 'social',
+  walletType: 'evm' | 'solana' | 'stacks' | 'near' | 'ton' | 'social',
   chainId: ChainId | number | string
 ): boolean {
   const nativeChains = WALLET_NATIVE_CHAINS[walletType];

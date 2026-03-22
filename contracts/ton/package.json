@@ -1,0 +1,17 @@
+{
+  "name": "syndicate-lottery-ton",
+  "version": "1.0.0",
+  "description": "Syndicate Lottery TON payment receiver for Megapot ticket purchases",
+  "main": "lottery.fc",
+  "scripts": {
+    "build": "npx blueprint build lottery",
+    "deploy:testnet": "npx blueprint run lottery --testnet",
+    "deploy:mainnet": "npx blueprint run lottery --mainnet",
+    "test": "npx blueprint test"
+  },
+  "dependencies": {
+    "@ton/core": "^0.60.0",
+    "@ton/blueprint": "^0.30.0",
+    "@ton/ton": "^15.0.0"
+  }
+}

@@ -338,6 +338,17 @@ export function WalletProvider({ children }: WalletProviderProps) {
         }
       }
 
+      // Handle TON disconnection
+      if (state.walletType === "ton") {
+        try {
+          // TON Connect handles its own disconnection via TonConnectUI
+          // Just clear our state
+          console.log("TON wallet disconnected");
+        } catch (tonError) {
+          console.warn("TON disconnect failed:", tonError);
+        }
+      }
+
       // Always clear our internal state
       dispatch({ type: "DISCONNECT" });
 

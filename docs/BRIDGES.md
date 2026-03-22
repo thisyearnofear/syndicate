@@ -11,6 +11,7 @@
 | **Solana** | 1-3 min | deBridge DLN → Proxy | ✅ Live |
 | **Base** | Instant | Direct purchase | ✅ Live |
 | **EVM** | 1-5 min | CCIP/CCTP → Proxy | ✅ Live |
+| **TON** | ~60s | USDT/TON → CCTP → Proxy | ✅ Code Ready |
 
 ---
 
