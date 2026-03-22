@@ -132,14 +132,14 @@ export function ImprovedYieldStrategySelector({
                 shape="rounded"
                 glow={selectedStrategy === strategy.id}
               >
-                <div className="flex items-start gap-3">
-                  <div className={`${strategy.color} w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold`}>
+                <div className="flex items-start gap-3 p-1">
+                  <div className={`${strategy.color} w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0`}>
                     {strategy.icon}
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-semibold text-white">{strategy.name}</h4>
-                      <div className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="font-semibold text-white text-sm md:text-base truncate">{strategy.name}</h4>
+                      <div className="flex flex-wrap items-center gap-1 md:gap-2">
                         {octantVault && (
                           <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full">
                             {octantVault.apy.toFixed(1)}% APY
