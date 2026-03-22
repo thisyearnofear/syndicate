@@ -27,15 +27,14 @@ export default function SyndicateDetailPage() {
     const fetchSyndicate = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/syndicates');
-        if (!response.ok) throw new Error('Failed to fetch syndicates');
-        const data: SyndicateInfo[] = await response.json();
-        const found = data.find(s => s.id === id);
-        if (!found) throw new Error('Syndicate not found');
-        setSyndicate(found);
+        const response = await fetch(`/api/syndicates?id=${encodeURIComponent(id)}`);
+        if (response.status === 404) throw new Error('Syndicate not found');
+        if (!response.ok) throw new Error('Failed to fetch syndicate');
+        const data: SyndicateInfo = await response.json();
+        setSyndicate(data);
       } catch (err) {
         console.error('Error fetching syndicate:', err);
-        setError('Failed to load syndicate');
+        setError(err instanceof Error ? err.message : 'Failed to load syndicate');
       } finally {
         setLoading(false);
       }

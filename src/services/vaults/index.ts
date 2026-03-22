@@ -23,6 +23,7 @@ import type {
 import { VaultError, VaultErrorCode } from './vaultProvider';
 import { aaveProvider } from './aaveProvider';
 import { driftProvider } from './driftProvider';
+import { poolTogetherProvider } from './poolTogetherProvider';
 
 /**
  * Vault information for UI display
@@ -61,16 +62,19 @@ export class VaultManager {
     constructor() {
         this.providers = new Map();
 
-        // Register Aave provider (Week 2)
+        // Register Aave provider
         this.providers.set('aave', aaveProvider);
 
         // Register Drift provider (JLP Delta Neutral)
         this.providers.set('drift', driftProvider);
 
-        // TODO: Register Morpho provider (Week 8)
+        // Register PoolTogether provider (Prize Savings)
+        this.providers.set('pooltogether', poolTogetherProvider);
+
+        // TODO: Register Morpho provider
         // this.providers.set('morpho', morphoProvider);
 
-        // TODO: Register Spark provider (Phase 2.5 - optional)
+        // TODO: Register Spark provider
         // this.providers.set('spark', sparkProvider);
     }
 
@@ -248,6 +252,7 @@ export class VaultManager {
             morpho: 'Morpho Blue',
             spark: 'Spark Protocol',
             drift: 'Drift Delta Neutral',
+            pooltogether: 'PoolTogether V5',
         };
         return names[protocol];
     }
@@ -258,6 +263,7 @@ export class VaultManager {
             morpho: 'Optimized lending with better rates than Aave',
             spark: 'MakerDAO lending protocol with DAI integration',
             drift: 'Solana USDC yield via Drift Protocol with automated ticket routing',
+            pooltogether: 'No-loss prize savings on Base - keep principal, win prizes',
         };
         return descriptions[protocol];
     }
@@ -270,3 +276,4 @@ export const vaultManager = new VaultManager();
 export * from './vaultProvider';
 export { aaveProvider } from './aaveProvider';
 export { driftProvider } from './driftProvider';
+export { poolTogetherProvider } from './poolTogetherProvider';

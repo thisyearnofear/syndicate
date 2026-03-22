@@ -46,7 +46,7 @@ export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
   {
     id: 'pooltogether',
     name: 'PoolTogether V5',
-    description: 'No-loss prize savings on Base (coming soon)',
+    description: 'No-loss prize savings on Base. Keep 100% principal, win prizes every draw.',
     icon: '🎰',
     color: 'bg-gradient-to-br from-yellow-400 to-amber-600',
     risk: 'Low',
