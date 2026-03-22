@@ -117,6 +117,18 @@ class PermittedTicketExecutor {
             },
           };
         }
+      } else if (config.nextExecution && now < config.nextExecution) {
+        // No existing state yet — check config's scheduled time
+        return {
+          success: false,
+          userId,
+          nextScheduledTime: config.nextExecution,
+          error: {
+            code: 'NOT_YET_SCHEDULED',
+            message: `Purchase scheduled for ${new Date(config.nextExecution).toISOString()}`,
+            isRetryable: false,
+          },
+        };
       }
 
       // CLEAN: Verify permission is still active and valid
@@ -134,6 +146,20 @@ class PermittedTicketExecutor {
 
       // Check if permission has sufficient remaining allowance
       if (config.permission.remaining < config.amountPerPeriod) {
+        // Track as failure so TOO_MANY_FAILURES can trigger
+        const newState = state || {
+          userId,
+          permissionId: config.permission.permissionId,
+          lastExecutionTime: now,
+          nextScheduledTime: 0,
+          executionCount: 0,
+          failureCount: 0,
+        };
+        newState.failureCount++;
+        newState.lastExecutionTime = now;
+        newState.lastError = 'Insufficient allowance';
+        this.executionStates.set(executionStateKey, newState);
+
         return {
           success: false,
           userId,
@@ -250,6 +276,13 @@ class PermittedTicketExecutor {
       }
     }
     return undefined;
+  }
+
+  /**
+   * CLEAN: Clear all execution states (for testing and manual reset)
+   */
+  clearAllStates(): void {
+    this.executionStates.clear();
   }
 
   /**

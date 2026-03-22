@@ -18,6 +18,7 @@ describe('ERC-7715 Auto-Purchase Flow', () => {
 
   beforeEach(() => {
     service = new ERC7715Service();
+    permittedTicketExecutor.clearAllStates();
   });
 
   describe('Permission Management', () => {
