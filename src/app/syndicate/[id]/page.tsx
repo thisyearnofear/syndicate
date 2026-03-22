@@ -352,6 +352,10 @@ export default function SyndicateDetailPage() {
                     <span className="text-gray-400">Management</span>
                     <span className="text-blue-400 font-medium">Multi-signature</span>
                   </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Security</span>
+                    <span className="text-green-400 font-medium">Threshold Approval</span>
+                  </div>
                 </div>
               </div>
               <div>
@@ -363,11 +367,15 @@ export default function SyndicateDetailPage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-blue-400">2.</span>
-                    <span>Coordinator purchases tickets with pooled funds</span>
+                    <span>Coordinator creates transaction proposal</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-blue-400">3.</span>
-                    <span>Prizes distributed proportionally to members</span>
+                    <span>Owners sign until threshold is met</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-400">4.</span>
+                    <span>Transaction executes automatically</span>
                   </li>
                 </ul>
                 <a 
@@ -376,7 +384,7 @@ export default function SyndicateDetailPage() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 mt-3"
                 >
-                  View on Safe <ExternalLink className="w-3 h-3" />
+                  Manage on Safe Wallet <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
             </div>
