@@ -185,7 +185,7 @@ export async function POST(request: Request) {
     }
 
     if (action === 'create') {
-      const { name, description, coordinatorAddress, causeAllocationPercent, lotteryId } = body;
+      const { name, description, coordinatorAddress, causeAllocationPercent, lotteryId, poolType, members } = body;
       
       // Validation
       if (!name || !coordinatorAddress || causeAllocationPercent === undefined) {
@@ -195,12 +195,22 @@ export async function POST(request: Request) {
         );
       }
 
-      const poolId = await syndicateRepository.createPool({
+      // Validate pool type if provided
+      const validPoolTypes = ['safe', 'splits', 'pooltogether'];
+      if (poolType && !validPoolTypes.includes(poolType)) {
+        return NextResponse.json(
+          { error: `Invalid pool type. Must be one of: ${validPoolTypes.join(', ')}` },
+          { status: 400, headers: corsHeaders }
+        );
+      }
+
+      const poolId = await syndicateService.createPool({
         name,
         description,
         coordinatorAddress,
         causeAllocationPercent,
-        lotteryId,
+        poolType: poolType || 'safe',
+        members,
       });
 
       return NextResponse.json({ id: poolId, success: true }, { headers: corsHeaders });

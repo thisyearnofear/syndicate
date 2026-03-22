@@ -26,6 +26,7 @@
     "postinstall": "bash scripts/patch-viem.sh"
   },
   "dependencies": {
+    "@0xsplits/splits-sdk": "6.5.0",
     "@bonfida/spl-name-service": "^3.0.16",
     "@civic/solana-gateway-react": "1.2.4",
     "@coordinationlabs/megapot-ui-kit": "^0.0.49",
@@ -58,6 +59,8 @@
     "@radix-ui/react-progress": "1.1.8",
     "@radix-ui/react-slot": "^1.2.3",
     "@rainbow-me/rainbowkit": "^2.2.8",
+    "@safe-global/api-kit": "4.0.1",
+    "@safe-global/protocol-kit": "6.1.2",
     "@solana/spl-token": "^0.4.14",
     "@solana/wallet-adapter-base": "^0.9.27",
     "@solana/wallet-adapter-react": "^0.15.39",

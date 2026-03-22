@@ -1,20 +1,46 @@
 /**
  * useSyndicateDeposit — On-chain USDC approve + transfer for syndicate join flow
  *
- * Pattern mirrors usePoolTogetherDeposit:
- * 1. Check current USDC allowance for the pool coordinator address
+ * Supports multiple pool types:
+ * - Safe: Direct transfer to Safe multisig address
+ * - Splits: Transfer to 0xSplits contract
+ * - PoolTogether: Transfer to PT vault with delegation
+ *
+ * Flow:
+ * 1. Check current USDC allowance for the pool address
  * 2. Approve if needed
- * 3. Transfer USDC to the pool coordinator address
- * 4. Return txHash for recording in the DB
+ * 3. Transfer USDC to the pool address
+ * 4. For PoolTogether, also execute delegation
+ * 5. Return txHash for recording in the DB
  */
 
 import { useState, useCallback } from 'react';
 import { useWalletClient, usePublicClient } from 'wagmi';
 import { base } from 'wagmi/chains';
-import { parseUnits } from 'viem';
+import { parseUnits, encodeFunctionData } from 'viem';
 
 // USDC on Base (6 decimals)
 const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
+
+// PoolTogether TwabDelegator on Base
+const PT_TWAB_DELEGATOR = '0x2d3DaECD9F5502b533Ff72CDb1e1367481F2aEa6' as const;
+
+// PoolTogether TwabDelegator ABI (partial)
+const TWAB_DELEGATOR_ABI = [
+  {
+    name: 'delegate',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: '_vault', type: 'address' },
+      { name: '_delegate', type: 'address' },
+      { name: '_tickets', type: 'uint256' },
+    ],
+    outputs: [],
+  },
+] as const;
+
+export type PoolType = 'safe' | 'splits' | 'pooltogether';
 
 const ERC20_ABI = [
   {
@@ -54,6 +80,7 @@ export type SyndicateDepositStatus =
   | 'checking_allowance'
   | 'approving'
   | 'transferring'
+  | 'delegating'
   | 'complete'
   | 'error';
 
@@ -61,11 +88,14 @@ export interface UseSyndicateDepositResult {
   status: SyndicateDepositStatus;
   txHash?: string;
   approveTxHash?: string;
+  delegationTxHash?: string;
   error?: string;
   deposit: (params: {
     amountUsdc: number;
     userAddress: `0x${string}`;
     poolAddress: `0x${string}`;
+    poolType?: PoolType;
+    ptVaultAddress?: `0x${string}`;
   }) => Promise<string | null>;
   reset: () => void;
 }
@@ -74,6 +104,7 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
   const [status, setStatus] = useState<SyndicateDepositStatus>('idle');
   const [txHash, setTxHash] = useState<string | undefined>();
   const [approveTxHash, setApproveTxHash] = useState<string | undefined>();
+  const [delegationTxHash, setDelegationTxHash] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
 
   const { data: walletClient } = useWalletClient({ chainId: base.id });
@@ -83,6 +114,7 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
     setStatus('idle');
     setTxHash(undefined);
     setApproveTxHash(undefined);
+    setDelegationTxHash(undefined);
     setError(undefined);
   }, []);
 
@@ -90,10 +122,14 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
     amountUsdc,
     userAddress,
     poolAddress,
+    poolType = 'safe',
+    ptVaultAddress,
   }: {
     amountUsdc: number;
     userAddress: `0x${string}`;
     poolAddress: `0x${string}`;
+    poolType?: PoolType;
+    ptVaultAddress?: `0x${string}`;
   }): Promise<string | null> => {
     if (!walletClient) {
       setError('No EVM wallet connected. Please connect a Base-compatible wallet.');
@@ -115,16 +151,21 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
     setError(undefined);
     setTxHash(undefined);
     setApproveTxHash(undefined);
+    setDelegationTxHash(undefined);
 
     try {
       const amountWei = parseUnits(String(amountUsdc), 6);
 
-      // Check current allowance
+      // Determine the actual deposit address based on pool type
+      // For PoolTogether, we deposit to the TwabDelegator
+      const depositAddress = poolType === 'pooltogether' ? PT_TWAB_DELEGATOR : poolAddress;
+
+      // Check current allowance for the deposit address
       const currentAllowance = await publicClient.readContract({
         address: USDC_BASE,
         abi: ERC20_ABI,
         functionName: 'allowance',
-        args: [userAddress, poolAddress],
+        args: [userAddress, depositAddress],
       });
 
       // Approve if needed
@@ -134,24 +175,58 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
           address: USDC_BASE,
           abi: ERC20_ABI,
           functionName: 'approve',
-          args: [poolAddress, amountWei],
+          args: [depositAddress, amountWei],
           chain: base,
         });
         setApproveTxHash(approveHash);
         await publicClient.waitForTransactionReceipt({ hash: approveHash });
       }
 
-      // Transfer USDC to pool address
+      // Transfer USDC to deposit address
       setStatus('transferring');
       const transferHash = await walletClient.writeContract({
         address: USDC_BASE,
         abi: ERC20_ABI,
         functionName: 'transfer',
-        args: [poolAddress, amountWei],
+        args: [depositAddress, amountWei],
         chain: base,
       });
       setTxHash(transferHash);
       await publicClient.waitForTransactionReceipt({ hash: transferHash });
+
+      // For PoolTogether, also execute delegation to the syndicate pool
+      if (poolType === 'pooltogether' && ptVaultAddress) {
+        setStatus('delegating');
+        try {
+          // Encode delegation call to TwabDelegator
+          // This delegates the deposited tickets to the syndicate pool address
+          const delegationData = encodeFunctionData({
+            abi: TWAB_DELEGATOR_ABI,
+            functionName: 'delegate',
+            args: [ptVaultAddress, poolAddress, amountWei],
+          });
+
+          // Execute delegation transaction
+          const delegationHash = await walletClient.sendTransaction({
+            to: PT_TWAB_DELEGATOR,
+            data: delegationData,
+            chain: base,
+          });
+          
+          setDelegationTxHash(delegationHash);
+          await publicClient.waitForTransactionReceipt({ hash: delegationHash });
+          
+          console.log('[useSyndicateDeposit] PoolTogether delegation completed:', {
+            vault: ptVaultAddress,
+            delegate: poolAddress,
+            tickets: amountUsdc,
+            txHash: delegationHash,
+          });
+        } catch (delegationErr) {
+          // Delegation failure is non-critical - funds are still deposited
+          console.warn('[useSyndicateDeposit] Delegation failed, but deposit succeeded:', delegationErr);
+        }
+      }
 
       setStatus('complete');
       return transferHash;
@@ -163,5 +238,5 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
     }
   }, [walletClient, publicClient]);
 
-  return { status, txHash, approveTxHash, error, deposit, reset };
+  return { status, txHash, approveTxHash, delegationTxHash, error, deposit, reset };
 }

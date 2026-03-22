@@ -12,10 +12,28 @@ import type { SyndicateInfo } from '@/domains/lottery/types';
 import { web3Service } from '@/services/web3Service';
 import { splitsService, type ParticipantShare } from '@/services/splitsService';
 import { distributionService } from '@/services/distributionService';
-import { syndicateRepository } from '@/lib/db/repositories/syndicateRepository';
+import { syndicateRepository, type PoolType } from '@/lib/db/repositories/syndicateRepository';
+import { safeProvider, splitsProvider, poolTogetherV5Provider } from '@/services/syndicate/poolProviders';
+import type { PoolProvider, PoolProviderConfig, PoolCreationResult } from '@/services/syndicate/poolProviders';
 import { ethers } from 'ethers';
 
 export class SyndicateService {
+  /**
+   * Get pool provider for a given pool type
+   */
+  private getPoolProvider(poolType: PoolType): PoolProvider {
+    switch (poolType) {
+      case 'safe':
+        return safeProvider;
+      case 'splits':
+        return splitsProvider;
+      case 'pooltogether':
+        return poolTogetherV5Provider;
+      default:
+        return safeProvider;
+    }
+  }
+
   /**
    * Create a new syndicate pool
    */
@@ -24,6 +42,8 @@ export class SyndicateService {
     description?: string;
     coordinatorAddress: string;
     causeAllocationPercent: number;
+    poolType?: PoolType;
+    members?: Array<{ address: string; sharePercent: number }>;
   }): Promise<string> {
     // Validate cause allocation
     if (params.causeAllocationPercent < 0 || params.causeAllocationPercent > 100) {
@@ -35,13 +55,67 @@ export class SyndicateService {
       throw new Error('Invalid coordinator address');
     }
 
+    const poolType = params.poolType || 'safe';
+
+    // Create on-chain pool using the appropriate provider
+    let poolAddress: string | undefined;
+    let splitAddress: string | undefined;
+    let ptVaultAddress: string | undefined;
+    
+    try {
+      const provider = this.getPoolProvider(poolType);
+      const poolConfig: PoolProviderConfig = {
+        poolType,
+        chainId: 8453, // Base
+        members: params.members || [],
+        coordinatorAddress: params.coordinatorAddress,
+        threshold: poolType === 'safe' ? Math.max(1, Math.floor((params.members?.length || 1) / 2) + 1) : undefined,
+      };
+
+      const result: PoolCreationResult = await provider.createPool(poolConfig);
+      
+      if (result.success) {
+        poolAddress = result.poolAddress;
+        
+        // Store type-specific addresses
+        if (poolType === 'splits') {
+          splitAddress = result.poolAddress;
+        } else if (poolType === 'pooltogether') {
+          ptVaultAddress = result.poolAddress;
+        }
+        
+        console.log('[SyndicateService] On-chain pool created:', {
+          poolType,
+          poolAddress,
+          metadata: result.metadata,
+        });
+      } else {
+        console.warn('[SyndicateService] Failed to create on-chain pool:', result.error);
+        // Continue with database-only pool (graceful degradation)
+      }
+    } catch (error) {
+      console.warn('[SyndicateService] Pool provider error, continuing with DB-only:', error);
+    }
+
     // Create pool in database
-    const poolId = await syndicateRepository.createPool(params);
+    const poolId = await syndicateRepository.createPool({
+      name: params.name,
+      description: params.description,
+      coordinatorAddress: params.coordinatorAddress,
+      causeAllocationPercent: params.causeAllocationPercent,
+      poolType,
+      safeAddress: poolType === 'safe' ? poolAddress : undefined,
+      splitAddress,
+      ptVaultAddress,
+      memberShares: params.members,
+    });
 
     console.log('[SyndicateService] Pool created:', {
       poolId,
       name: params.name,
       coordinator: params.coordinatorAddress,
+      poolType,
+      poolAddress,
     });
 
     return poolId;
