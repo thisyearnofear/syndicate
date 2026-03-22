@@ -97,12 +97,19 @@ function mapPoolToSyndicateInfo(pool: SyndicatePoolRow): SyndicateInfo {
   const ticketsPurchased = pool.tickets_purchased || 0;
   const totalImpact = parseFloat(pool.total_impact_usdc || '0') || totalPooled * 0.2; // Fallback to calculation
 
+  // Determine pool address based on pool type
+  const poolAddress = pool.pool_type === 'splits' && pool.split_address 
+    ? pool.split_address 
+    : pool.pool_type === 'pooltogether' && pool.pt_vault_address
+    ? pool.pt_vault_address
+    : pool.safe_address || pool.coordinator_address;
+
   return {
     id: pool.id,
     name: pool.name,
     model: 'altruistic', // Default model
     distributionModel: 'proportional',
-    poolAddress: pool.coordinator_address, // Using coordinator as pool address for now
+    poolAddress: poolAddress,
     executionDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
     cutoffDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
     cause: defaultCause,
@@ -124,6 +131,11 @@ function mapPoolToSyndicateInfo(pool: SyndicatePoolRow): SyndicateInfo {
     isActive: pool.is_active,
     isTrending: pool.members_count > 1000, // Simple trending logic
     recentActivity: [], // Would be populated from activity tracking in production
+    // Pool type support
+    poolType: pool.pool_type || 'safe',
+    safeAddress: pool.safe_address || undefined,
+    splitAddress: pool.split_address || undefined,
+    ptVaultAddress: pool.pt_vault_address || undefined,
   };
 }
 

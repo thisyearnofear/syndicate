@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
-import { Users, Heart, TrendingUp, Share2, Trophy, Gift, Award, ArrowLeft } from "lucide-react";
+import { Users, Heart, TrendingUp, Share2, Trophy, Gift, Award, ArrowLeft, Shield, Share2 as SplitIcon, Coins } from "lucide-react";
 import SyndicateJoinModal from "@/components/syndicate/SyndicateJoinModal";
 import type { SyndicateInfo } from "@/domains/lottery/types";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
@@ -137,9 +137,23 @@ export default function SyndicateDetailPage() {
                 {syndicate.name.charAt(0)}
               </div>
               <div>
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <h1 className="text-2xl md:text-3xl font-bold text-white">{syndicate.name}</h1>
                   {syndicate.isTrending && <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full">Trending</span>}
+                  {syndicate.poolType && (
+                    <span className={`text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 ${
+                      syndicate.poolType === 'safe' ? 'bg-blue-500/80' :
+                      syndicate.poolType === 'splits' ? 'bg-green-500/80' :
+                      'bg-purple-500/80'
+                    }`}>
+                      {syndicate.poolType === 'safe' && <Shield className="w-3 h-3" />}
+                      {syndicate.poolType === 'splits' && <SplitIcon className="w-3 h-3" />}
+                      {syndicate.poolType === 'pooltogether' && <Coins className="w-3 h-3" />}
+                      {syndicate.poolType === 'safe' ? 'Safe Multisig' :
+                       syndicate.poolType === 'splits' ? '0xSplits' :
+                       'PoolTogether'}
+                    </span>
+                  )}
                 </div>
                 <p className="text-blue-300 font-medium">{syndicate.cause.name}</p>
                 <p className="text-gray-400 mt-2 max-w-2xl">{syndicate.description}</p>

@@ -19,6 +19,7 @@ const DEPOSIT_STATUS_LABELS: Record<string, string> = {
   checking_allowance: "Checking allowance…",
   approving: "Approving USDC…",
   transferring: "Transferring USDC…",
+  delegating: "Delegating tickets…",
   complete: "Transfer complete",
   error: "Transfer failed",
 };
@@ -54,6 +55,8 @@ export default function SyndicateJoinModal({
         amountUsdc: amount,
         userAddress: address as `0x${string}`,
         poolAddress,
+        poolType: syndicate.poolType || 'safe',
+        ptVaultAddress: syndicate.ptVaultAddress as `0x${string}` | undefined,
       });
       if (!txHash) throw new Error("On-chain transfer failed or was rejected.");
 
@@ -129,6 +132,10 @@ export default function SyndicateJoinModal({
           <div className="flex justify-between">
             <span>Governance</span>
             <span className="text-white capitalize">{syndicate.governanceModel}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Pool type</span>
+            <span className="text-white capitalize">{syndicate.poolType || 'safe'}</span>
           </div>
           {syndicate.vaultStrategy && (
             <div className="flex justify-between">
