@@ -1,7 +1,6 @@
 # Deployment Guide
 
-**Last Updated**: March 2, 2026  
-**Status**: Production
+**Last Updated**: March 22, 2026 | **Status**: Production
 
 ## Prerequisites
 
@@ -9,8 +8,8 @@
 - **Foundry** (`forge --version`)
 - **pnpm** or npm
 - **Vercel** account
-- **Postgres** database (Vercel Postgres, Neon, etc.)
-- **Deployer wallet** with Base ETH for gas
+- **Postgres** database
+- **Deployer wallet** with Base ETH
 
 ---
 
@@ -18,47 +17,19 @@
 
 ### 1. Set Environment Variables
 
-Create `.env` for Foundry:
-
 ```bash
-# Deployer private key
-PRIVATE_KEY=0x...
-
-# Contract dependencies
+PRIVATE_KEY=0x...                              # Deployer key
 MEGAPOT_ADDRESS=0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95
 USDC_ADDRESS=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
-
-# RPC configuration
 BASE_RPC_URL=https://base-mainnet.g.alchemy.com/v2/YOUR_KEY
 BASESCAN_API_KEY=your_basescan_api_key
 ```
 
-### 2. Compile Contract
+### 2. Compile & Deploy
 
 ```bash
 forge build
-```
 
-**Expected output**:
-```
-[⠊] Compiling...
-[⠒] Compiling 1 files with 0.8.20
-[⠢] Solc 0.8.20 finished in X.XXs
-Compiler run successful!
-```
-
-### 3. Test Deployment (Dry Run)
-
-```bash
-forge script script/DeployAutoPurchaseProxy.s.sol:DeployAutoPurchaseProxy \
-  --rpc-url $BASE_RPC_URL \
-  --private-key $PRIVATE_KEY \
-  --verify
-```
-
-### 4. Deploy to Base Mainnet
-
-```bash
 forge script script/DeployAutoPurchaseProxy.s.sol:DeployAutoPurchaseProxy \
   --rpc-url $BASE_RPC_URL \
   --private-key $PRIVATE_KEY \
@@ -67,29 +38,11 @@ forge script script/DeployAutoPurchaseProxy.s.sol:DeployAutoPurchaseProxy \
   --etherscan-api-key $BASESCAN_API_KEY
 ```
 
-### 5. Verify Deployment
+### 3. Verify Deployment
 
 ```bash
-# Check contract on Basescan
-# Verify constructor args match
-
 cast call <PROXY_ADDRESS> "megapot()" --rpc-url $BASE_RPC_URL
 cast call <PROXY_ADDRESS> "usdc()" --rpc-url $BASE_RPC_URL
-```
-
-**Expected**:
-- `megapot()` returns Megapot address
-- `usdc()` returns USDC address
-
-### 6. Test Proxy Functionality
-
-```bash
-# Test purchaseTicketsFor (requires USDC approval first)
-cast send <PROXY_ADDRESS> \
-  "purchaseTicketsFor(address,address,uint256)" \
-  <RECIPIENT> <REFERRER> 1000000 \
-  --rpc-url $BASE_RPC_URL \
-  --private-key $TEST_KEY
 ```
 
 ---
@@ -98,92 +51,53 @@ cast send <PROXY_ADDRESS> \
 
 ### 1. Set Environment Variables
 
-Create `.env.local` for Next.js:
-
 ```bash
 # Application
 NEXT_PUBLIC_ENVIRONMENT=production
-NEXT_PUBLIC_DEBUG_MODE=false
-NEXT_PUBLIC_USE_MOCK_DATA=false
-NEXT_PUBLIC_ENABLE_REALTIME=true
-NEXT_PUBLIC_ENABLE_ANALYTICS=true
-
-# Contract Addresses
 NEXT_PUBLIC_AUTO_PURCHASE_PROXY=<DEPLOYED_PROXY_ADDRESS>
 NEXT_PUBLIC_MEGAPOT_CONTRACT=0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95
 
 # RPC Endpoints
 NEXT_PUBLIC_BASE_RPC_URL=https://base-mainnet.g.alchemy.com/v2/YOUR_KEY
-NEXT_PUBLIC_ETHEREUM_RPC_URL=https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY
 NEXT_PUBLIC_SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
 
 # WalletConnect
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id
 
-# Database (Vercel Postgres)
+# Database
 POSTGRES_URL=postgresql://...
-POSTGRES_URLCONNECTION_STRING=postgresql://...
 
 # Bridge Configuration
 STACKS_LOTTERY_CONTRACT=SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3
 NEXT_PUBLIC_STACKS_API_URL=https://api.mainnet.hiro.so
 
-# Gelato Automation
-GELATO_API_KEY=your_gelato_api_key
-GELATO_RELAYER_ADDRESS=0x...
-GELATO_WEBHOOK_SECRET=your_secret_key_12345
+# Automation
+GELATO_WEBHOOK_SECRET=your_secret_key
+AUTOMATION_API_KEY=your-cron-secret-key
 
-# Cron Jobs (optional)
-AUTOMATION_API_KEY=your-secret-key-for-cron-jobs
+# Civic Pass (optional)
+NEXT_PUBLIC_CIVIC_APP_ID=your-civic-app-id
 ```
 
 ### 2. Database Setup
 
-**Option A: Vercel Postgres (Recommended)**
+**Vercel Postgres**: Dashboard → Storage → Create Database → Copy connection string
 
-1. Go to Vercel dashboard → Your project → Storage
-2. Create Database → PostgreSQL
-3. Copy connection string to `.env.local`
-
-**Option B: Neon/External Postgres**
-
+**Run Migrations**:
 ```bash
-# Create database
-createdb syndicate
-
-# Set env var
-export POSTGRES_URL=postgresql://localhost/syndicate
-```
-
-### 3. Run Migrations
-
-```bash
-# Create tables
 psql "$POSTGRES_URL" -f scripts/sql/create_purchase_statuses.sql
 psql "$POSTGRES_URL" -f scripts/sql/create_cross_chain_purchases.sql
 psql "$POSTGRES_URL" -f scripts/sql/create_gelato_tables.sql
 ```
 
-**Tables created**:
-- `purchase_statuses` - Cross-chain purchase tracking
-- `cross_chain_purchases` - UI analytics
-- `gelato_tasks` - Automation task metadata
-- `gelato_executions` - Execution history
-
-### 4. Deploy to Vercel
+### 3. Deploy to Vercel
 
 ```bash
-# Install Vercel CLI
-npm install -g vercel
-
-# Deploy
-vercel
-
-# Production deploy
+pnpm install -g vercel
 vercel --prod
 ```
 
-### 5. Configure Cron
+### 4. Configure Cron
 
 Cron is configured in `vercel.json`:
 
@@ -198,47 +112,22 @@ Cron is configured in `vercel.json`:
 }
 ```
 
-**No additional configuration needed** - runs hourly on Vercel.
+**Runs hourly** — no additional configuration needed.
 
-### 6. Configure Gelato Webhook
-
-After deploying to production:
-
-1. Go to Gelato console
-2. Register webhook: `https://yourdomain.com/api/gelato/webhook`
-3. Set webhook secret to match `GELATO_WEBHOOK_SECRET`
-4. Configure HMAC-SHA256 signature verification
-
-### 7. Configure Chainhook (Stacks)
+### 5. Configure Chainhook (Stacks)
 
 Chainhook 2.0 is already registered:
-
 - **UUID**: `480d87da-4420-4983-ae0e-2227f3b31200`
-- **Status**: `streaming` (actively monitoring)
 - **Dashboard**: https://platform.hiro.so
-
-To re-register (if needed):
-
-```bash
-export CHAINHOOK_API_KEY=your_api_key
-export CHAINHOOK_SECRET_TOKEN=your_webhook_authorization_secret
-export CHAINHOOK_WEBHOOK_URL=https://yourdomain.com/api/chainhook
-
-npx tsx scripts/register-chainhook-v2.ts
-```
 
 ---
 
 ## Production Checklist
 
-**Audit**: March 10, 2026. See `docs/PRODUCTION_READINESS_AUDIT.md`.
-**Status Note**: Checklist items require infra or chain verification and are not verifiable from the repo alone.
-
 ### Pre-Deployment
 
 - [ ] Foundry installed and tested
 - [ ] Deployer wallet funded with Base ETH
-- [ ] Contract addresses verified
 - [ ] Environment variables configured
 - [ ] Database created and migrated
 
@@ -248,7 +137,6 @@ npx tsx scripts/register-chainhook-v2.ts
 - [ ] `NEXT_PUBLIC_AUTO_PURCHASE_PROXY` set in Vercel
 - [ ] Database tables created
 - [ ] Cron configured in `vercel.json`
-- [ ] Gelato webhook URL registered
 - [ ] Chainhook streaming confirmed
 - [ ] First test purchase completed
 
@@ -257,15 +145,7 @@ npx tsx scripts/register-chainhook-v2.ts
 - [ ] 100% of purchases go through proxy
 - [ ] Zero operator wallet USDC balance changes
 - [ ] No failed transactions due to proxy issues
-- [ ] Gas costs within expected range
-- [ ] All three bridges (Stacks, Solana, NEAR) using proxy
-
-### Week 2: Optimization
-
-- [ ] Analyze gas usage patterns
-- [ ] Review error logs
-- [ ] Consider batch purchase support
-- [ ] Evaluate emergency pause mechanism
+- [ ] All bridges (Stacks, Solana, NEAR) using proxy
 
 ---
 
@@ -274,73 +154,40 @@ npx tsx scripts/register-chainhook-v2.ts
 ### Local Testing
 
 ```bash
-# Install dependencies
-npm install --legacy-peer-deps
-
-# Create environment file
+pnpm install
 cp .env.example .env.local
-
-# Start development server
-npm run dev
+pnpm run dev
 ```
 
 ### Test Critical Flows
 
-**1. Wallet Connection**
-- [ ] Connect MetaMask → Verify address displayed
-- [ ] Connect Phantom → Check balance queries
-- [ ] Connect NEAR → Test address derivation
-- [ ] Connect Stacks wallet → Verify Bitcoin symbol shows
+**Wallet Connection**: MetaMask, Phantom, NEAR, Stacks (Leather/Xverse)
 
-**2. Ticket Purchase (Base)**
-- [ ] Connect MetaMask on Base
-- [ ] Enter small amount (0.01 USDC)
-- [ ] Confirm transaction
-- [ ] Verify instant confirmation
+**Ticket Purchase (Base)**: Connect MetaMask → Enter 0.01 USDC → Confirm → Verify instant
 
-**3. Stacks Purchase**
-- [ ] Connect Leather wallet
-- [ ] Buy 1 ticket
-- [ ] Watch tracker show progress
-- [ ] Verify tickets on Base address
+**Stacks Purchase**: Connect Leather → Buy 1 ticket → Tracker shows progress → Verify on Base
 
-**4. Bridge Operations**
-- [ ] Navigate to /bridge
-- [ ] Select Stacks in source chain
-- [ ] Enter test amount
-- [ ] Monitor bridge status
+**Civic Pass**: /yield-strategies → Verify with Civic → CAPTCHA → Badge appears
 
 ### Health Checks
 
 ```bash
-# Check operator balance
 cast balance --erc20 $USDC $OPERATOR --rpc-url $BASE_RPC
-
-# Check recent purchases
 psql "$POSTGRES_URL" -c "SELECT * FROM purchase_statuses ORDER BY updated_at DESC LIMIT 20;"
-
-# Check Gelato tasks
-psql "$POSTGRES_URL" -c "SELECT * FROM gelato_tasks WHERE status = 'active';"
-
-# Check Chainhook status
-# Visit: https://platform.hiro.so → Your Project → Chainhooks
+psql "$POSTGRES_URL" -c "SELECT * FROM auto_purchases WHERE is_active = true;"
 ```
 
 ---
 
-## Rollback Plan
+## Monitoring
 
-If issues arise:
+**Vercel Dashboard**: Dashboard → Your project → **Functions** tab → Find `/api/crons/recurring-purchases`, `/api/chainhook` → View invocations, execution time, status, logs
 
-```bash
-# Revert to previous commit
-git revert HEAD
-git push origin main
+**Expected Logs**:
+- Cron: `[Cron] Starting recurring purchases → Found 5 active → ✅ Executed purchase abc123`
+- Chainhook: `[Chainhook] Received event → ✅ Purchase completed on Base`
 
-# Or set proxy to zero address (disables proxy requirement)
-# Note: This will cause transactions to fail with current code
-# Would need to redeploy previous version
-```
+**Database**: `SELECT status, COUNT(*) FROM purchase_statuses GROUP BY status;`
 
 ---
 
@@ -348,100 +195,26 @@ git push origin main
 
 ### Contract Deployment Fails
 
-| Issue | Cause | Fix |
-|-------|-------|-----|
-| Insufficient gas | Deployer needs ETH | Fund deployer wallet with 0.01+ ETH |
-| RPC error | Invalid RPC URL | Verify `BASE_RPC_URL` is correct |
-| Invalid addresses | Wrong Megapot/USDC | Double-check contract addresses |
+| Issue | Fix |
+|-------|-----|
+| Insufficient gas | Fund deployer with 0.01+ ETH |
+| RPC error | Verify `BASE_RPC_URL` |
+| Invalid addresses | Double-check Megapot/USDC |
 
 ### Transactions Revert
 
-| Issue | Cause | Fix |
-|-------|-------|-----|
-| USDC approval failed | No approval given | Approve USDC to proxy first |
-| Megapot paused | Contract paused | Check Megapot status, wait for unpause |
-| Invalid recipient | Zero address or EOA | Verify recipient address is valid |
-
-### Proxy Not Being Used
-
-| Issue | Cause | Fix |
-|-------|-------|-----|
-| Env var not set | `NEXT_PUBLIC_AUTO_PURCHASE_PROXY` missing | Set in Vercel dashboard |
-| App not restarted | Old env vars cached | Redeploy to Vercel |
-| Service logs error | Proxy address invalid | Check logs for proxy address |
+| Issue | Fix |
+|-------|-----|
+| USDC approval failed | Approve USDC to proxy first |
+| Megapot paused | Check Megapot status |
+| Invalid recipient | Verify recipient address |
 
 ### Cron Not Running
 
-| Issue | Cause | Fix |
-|-------|-------|-----|
-| Not deployed to Vercel | Cron only works on Vercel | Deploy to Vercel |
-| Schedule invalid | Cron syntax error | Check `vercel.json` format |
-| Function error | Code error in cron endpoint | Check Vercel Functions logs |
-
----
-
-## Monitoring
-
-### Vercel Dashboard
-
-1. Go to your project
-2. Click **Functions** tab
-3. Find endpoints:
-   - `/api/crons/recurring-purchases`
-   - `/api/gelato/webhook`
-   - `/api/chainhook`
-4. View:
-   - Recent invocations
-   - Execution time
-   - Status (200 OK)
-   - Error details
-   - Logs
-
-### Expected Logs
-
-**Cron Execution**:
-```
-[Cron] Starting recurring purchases check at 2025-01-10T12:00:00Z
-[Cron] Found 5 active purchases
-[Cron] 2 purchases are due for execution
-[Cron] Permission verification passed for perm_xyz
-[Cron] ✅ Executed purchase abc123 for 0xUser...
-[Cron] Completed: 2/2 purchases executed successfully
-```
-
-**Gelato Webhook**:
-```
-[Gelato Webhook] Received event: { taskId: '...', event: 'task.executed' }
-[Gelato Webhook] Recorded execution for task: { taskId: '...', status: 'executed' }
-```
-
-**Chainhook**:
-```
-[Chainhook] Received bridge-purchase-initiated event
-[Chainhook] Processing purchase for 0xUser...
-[Chainhook] ✅ Purchase completed on Base
-```
-
-### Database Monitoring
-
-```sql
--- Recent purchases by status
-SELECT status, COUNT(*) 
-FROM purchase_statuses 
-GROUP BY status 
-ORDER BY COUNT(*) DESC;
-
--- Failed purchases (for investigation)
-SELECT * FROM purchase_statuses 
-WHERE status = 'error' 
-ORDER BY updated_at DESC 
-LIMIT 20;
-
--- Active automation tasks
-SELECT * FROM gelato_tasks 
-WHERE status = 'active' 
-ORDER BY next_execution_time ASC;
-```
+| Issue | Fix |
+|-------|-----|
+| Not deployed to Vercel | Deploy to Vercel |
+| Function error | Check Vercel Functions logs |
 
 ---
 
@@ -449,20 +222,17 @@ ORDER BY next_execution_time ASC;
 
 ### Key Management
 
-- **No Operator Key**: CCTP relay is permissionless — user pays ~$0.01 gas on Base directly
+- **No Operator Key**: CCTP relay is permissionless — user pays gas
 - **Webhook Secrets**: Never commit, use environment variables
-- **Deployer Key**: Use hardware wallet for production deployments
+- **Deployer Key**: Use hardware wallet for production
 
 ### Secret Detection
 
 Pre-commit hook with gitleaks is configured:
 
 ```bash
-# Install pre-commit hook
-npm run prepare
-
-# Manually scan
-gitleaks detect --source .
+pnpm run prepare  # Install hook
+gitleaks detect --source .  # Manual scan
 ```
 
 See [SECURITY.md](./SECURITY.md) for details.
@@ -472,8 +242,20 @@ See [SECURITY.md](./SECURITY.md) for details.
 - ✅ Use hardware wallet for production
 - ✅ Enable 2FA on all infrastructure
 - ✅ Rotate secrets quarterly
-- ✅ Set up alerts for failed transactions
 - ❌ NEVER commit private keys to git
+
+---
+
+## Rollback Plan
+
+```bash
+# Revert to previous commit
+git revert HEAD
+git push origin main
+
+# Or update proxy address in Vercel
+# Set NEXT_PUBLIC_AUTO_PURCHASE_PROXY to previous version
+```
 
 ---
 
@@ -482,15 +264,9 @@ See [SECURITY.md](./SECURITY.md) for details.
 ### Bundle Analysis
 
 ```bash
-npm run analyze
-npm run perf
+pnpm run analyze
+pnpm run perf
 ```
-
-### Caching Strategy
-
-- **API routes**: `no-cache, no-store, must-revalidate`
-- **Static assets**: `public, max-age=31536000, immutable`
-- **Next.js optimizations**: Enabled by default
 
 ### Optimization Tips
 
@@ -503,8 +279,4 @@ npm run perf
 
 ## References
 
-- **Architecture**: [ARCHITECTURE.md](./ARCHITECTURE.md)
-- **Bridges**: [BRIDGES.md](./BRIDGES.md)
-- **Automation**: [AUTOMATION.md](./AUTOMATION.md)
-- **Development**: [DEVELOPMENT.md](./DEVELOPMENT.md)
-- **Security**: [SECURITY.md](./SECURITY.md)
+See [OVERVIEW.md](./OVERVIEW.md) for comprehensive guide. Other docs: [ARCHITECTURE.md](./ARCHITECTURE.md), [BRIDGES.md](./BRIDGES.md), [DEVELOPMENT.md](./DEVELOPMENT.md), [SECURITY.md](./SECURITY.md)
