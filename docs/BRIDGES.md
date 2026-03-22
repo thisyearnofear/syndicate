@@ -1,311 +1,170 @@
 # Cross-Chain Bridge Guide
 
-**Last Updated**: March 20, 2026
-**Status**: Production
+**Last Updated**: March 22, 2026 | **Status**: Production
 
 ## Quick Reference
 
-| Chain | Time | Method | Status | Contract/Program |
-|-------|------|--------|--------|------------------|
-| **Stacks** | 30-60s | sBTC → CCTP → Proxy | ✅ Live | `SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3` |
-| **NEAR** | 3-5 min | 1Click + Chain Signatures | ✅ Live | MPC-derived address |
-| **Solana** | 1-3 min | deBridge DLN → Proxy | ✅ Live | `deBridge DLN` + `BASEdeScGmh2FSGnH79gPSN8oV3krmxrPMsLFHvJLEkL` |
-| **Base** | Instant | Direct purchase | ✅ Live | Native |
-| **EVM** | 1-5 min | CCIP/CCTP → Proxy | ✅ Live | Varies by chain |
-
-## Lossless Lottery (Solana → Base Yield Routing)
-
-The Drift JLP Vault on Solana generates ~22.5% APY yield that is automatically converted to lottery tickets on Base. This creates a "no-loss" lottery where users maintain 100% of their principal while gaining prize exposure.
-
-**Flow**:
-```
-Solana Wallet → Civic KYC → Drift JLP Vault → Yield Accrual → Base Lottery Tickets
-```
-
-**Key Properties**:
-- Principal locked for 3 months (90 days)
-- Delta-neutral strategy (no impermanent loss)
-- Yield automatically converted to tickets
-- KYC required via Civic Pass before deposit
-
-See [ARCHITECTURE.md](./ARCHITECTURE.md#lossless-lottery-architecture) for full details.
+| Chain | Time | Method | Status |
+|-------|------|--------|--------|
+| **Stacks** | 30-60s | sBTC → CCTP → Proxy | ✅ Live |
+| **NEAR** | 3-5 min | 1Click + Chain Signatures | ✅ Live |
+| **Solana** | 1-3 min | deBridge DLN → Proxy | ✅ Live |
+| **Base** | Instant | Direct purchase | ✅ Live |
+| **EVM** | 1-5 min | CCIP/CCTP → Proxy | ✅ Live |
 
 ---
 
 ## Architecture Overview
 
-All cross-chain and autonomous purchases route through the **MegapotAutoPurchaseProxy** on Base:
+All cross-chain purchases route through **MegapotAutoPurchaseProxy** on Base:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                  MegapotAutoPurchaseProxy (Base)            │
-│                                                             │
 │  • Receives bridged USDC/USD₮ from any chain                │
-│  • Supports Pull (EOA/Agent) and Push (Bridge) models       │
+│  • Supports Pull (EOA) and Push (Bridge) models             │
 │  • Atomically purchases Megapot tickets                     │
-│  • Universal: Any IERC20 token support (Multi-stablecoin)   │
 │  • Fail-safe: If purchase reverts, tokens → recipient       │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Key Properties**:
-- **Universal**: Supports both USDC and USD₮, enabling integration with Tether WDK.
-- **Dual-Model**: Handles direct agent-led "Pull" purchases and bridge-triggered "Push" purchases.
-- **Trustless**: No operator wallet custody; proxy remains stateless.
-- **Atomic**: Bridge/Agent interaction + purchase in single execution path.
+**Key Properties**: Dual-Model (Pull/Push), Trustless (no operator custody), Atomic (bridge + purchase in single path)
 
 ---
 
 ## Per-Chain Implementation
 
-### Stacks → Base
+### Stacks → Base (30-60s)
 
 **Best for**: Bitcoin ecosystem users  
-**Settlement**: 30-60 seconds  
 **Tokens**: USDCx, sUSDT, aeUSDC
 
 #### Flow
 
 ```
-User (Leather/Xverse/Asigna/Fordefi)
-   │
-   ├─[1] Connect Stacks wallet
-   │     └─> System auto-derives Base address
-   │
-   ├─[2] Call: bridge-and-purchase(ticketCount, baseAddress, token)
-   │     └─> Transfer tokens to Stacks contract
-   │
-   ├─[3] Stacks contract emits: bridge-purchase-initiated
-   │
-   ├─[4] Chainhook 2.0 (Hiro Platform) detects event
-   │     └─> POST to /api/chainhook
-   │
-   ├─[5] Circle Iris API issues CCTP attestation (permissionless)
-   │     └─> Frontend polls /api/cctp-attestation/[messageHash]
-   │
-   └─[6] User's EVM wallet calls receiveMessage() on Base (~$0.01 gas)
-         ├─> useCctpRelay hook submits attestation via wagmi
-         ├─> USDC minted on Base
-         ├─> executeBridgedPurchase() called on AutoPurchaseProxy
-         └─> Tickets credited to user's Base address
+User (Leather/Xverse) → bridge-and-purchase() → CCTP attestation (~30-60s) →
+User calls receiveMessage() on Base → executeBridgedPurchase() → Tickets
 ```
 
 #### Contracts
 
 | Network | Contract | Address |
 |---------|----------|---------|
-| **Stacks Mainnet** | stacks-lottery-v3 | `SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3` |
-| **Base Mainnet** | MegapotAutoPurchaseProxy | `0x707043a8c35254876B8ed48F6537703F7736905c` |
-| **Base Mainnet** | Megapot | `0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95` |
-| **Base Mainnet** | USDC | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
-
-#### Supported Tokens
-
-| Token | Principal | Type |
-|-------|-----------|------|
-| USDCx | `SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx` | USD-backed |
-| sUSDT | `SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.susdt` | USD-backed |
-| aeUSDC | `SP3Y2ZSHBKS5W5W7W5W5W5W5W5W5W5W5W5W5W5W5.aeusdc` | USD-backed |
+| **Stacks** | stacks-lottery-v3 | `SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3` |
+| **Base** | MegapotAutoPurchaseProxy | `0x707043a8c35254876B8ed48F6537703F7736905c` |
 
 #### Configuration
 
-**Environment Variables** (no private keys required — user pays gas):
 ```bash
-# Stacks configuration
 STACKS_LOTTERY_CONTRACT=SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v4
 NEXT_PUBLIC_STACKS_API_URL=https://api.mainnet.hiro.so
-
-# Base configuration
 NEXT_PUBLIC_BASE_RPC_URL=https://base-mainnet.g.alchemy.com/v2/YOUR_KEY
-NEXT_PUBLIC_MEGAPOT_CONTRACT=0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95
 ```
 
-**Chainhook 2.0** (Hiro Platform):
-- **UUID**: `480d87da-4420-4983-ae0e-2227f3b31200`
-- **Status**: `streaming` (actively monitoring)
-- **Dashboard**: https://platform.hiro.so
-
-#### Testing
-
-```bash
-# Check recent purchases
-psql "$POSTGRES_URL" -c "SELECT * FROM purchase_statuses ORDER BY updated_at DESC LIMIT 20;"
-```
+**Chainhook 2.0**: UUID `480d87da-4420-4983-ae0e-2227f3b31200` (streaming on Hiro Platform)
 
 #### Troubleshooting
 
-| Issue | Cause | Fix |
-|-------|-------|-----|
-| Chainhook not detecting events | Service down | Check Hiro Platform dashboard |
-| Attestation polling timeout | Circle Iris API slow | User can retry; attestation is idempotent |
-| Purchase failed on Base | Megapot paused or invalid recipient | Check Megapot status, verify recipient address |
-| User has no ETH on Base | Insufficient gas | User needs ~$0.01 ETH on Base for `receiveMessage()` |
+| Issue | Fix |
+|-------|-----|
+| Chainhook not detecting | Check Hiro Platform dashboard |
+| Attestation timeout | User can retry; attestation is idempotent |
+| No ETH on Base | User needs ~$0.01 ETH for `receiveMessage()` |
 
 ---
 
-### NEAR → Base
+### NEAR → Base (3-5 min)
 
-**Best for**: NEAR ecosystem users  
-**Settlement**: 3-5 minutes  
-**Tokens**: USDC on NEAR
+**Best for**: NEAR ecosystem users
 
 #### Flow
 
 ```
-NEAR Account (papajams.near)
-   │
-   ├─[1] Derive EVM address (deterministic via MPC)
-   │     └→ 0x3a8a07e7...
-   │
-   ├─[2] 1Click SDK: Bridge USDC from NEAR → derived address
-   │     └→ USDC arrives at derived address on Base
-   │
-   └─[3] Chain Signatures: Sign atomic tx sequence
-         ├→ USDC.approve(AutoPurchaseProxy, amount)
-         ├→ Proxy.purchaseTicketsFor(derivedAddr, referrer, amount)
-         └→ Tickets credited to derived address
+NEAR Account → Derive EVM address (MPC) → 1Click SDK bridges USDC →
+Chain Signatures: approve + purchaseTicketsFor() → Tickets at derived address
 ```
 
-#### Key Features
-
-- **Deterministic Addresses**: Derived via NEAR Chain Signatures MPC
-- **No Storage Needed**: Address computed from NEAR account ID
-- **Atomic Purchase**: Approve + purchase in single signature
-
-#### Derived Address Formula
+#### Derived Address
 
 ```typescript
-// Address derived from NEAR account ID via MPC
 const derivedAddress = deriveEVMAddress(nearAccountId, mpcPublicKey);
 // Example: "papajams.near" → 0x3a8a07e7...
 ```
 
-#### Testing
-
-```bash
-# Test on testnet
-# 1. Connect NEAR wallet (testnet)
-# 2. Purchase tickets with small amount
-# 3. Verify tickets appear at derived Base address
-```
-
 #### Troubleshooting
 
-| Issue | Cause | Fix |
-|-------|-------|-----|
-| Derived address confusion | User doesn't understand MPC | Show education modal, provide MetaMask import instructions |
-| Bridge completes but purchase fails | Gas not available | Chain Signatures service covers gas |
-| Funds stuck in derived address | Purchase reverted | User can access via NEAR wallet or import to MetaMask |
+| Issue | Fix |
+|-------|-----|
+| Derived address confusion | Show education modal |
+| Funds stuck | Import derived address to MetaMask |
 
 ---
 
-### Solana → Base
+### Solana → Base (1-3 min)
 
-**Best for**: Solana ecosystem users  
-**Settlement**: 1-3 minutes  
-**Tokens**: USDC on Solana
+**Best for**: Solana ecosystem users
 
 #### Flow
 
 ```
-Solana Wallet (Phantom/Solflare)
-   │
-   ├─[1] deBridge create-tx with externalCall parameter
-   │     ├→ dstChainTokenOutRecipient: AutoPurchaseProxy
-   │     └─> externalCall: executeBridgedPurchase()
-   │
-   ├─[2] User signs Solana transaction in Phantom
-   │
-   └─[3] deBridge solver fulfills on Base
-         ├→ Deposits USDC to AutoPurchaseProxy
-         ├→ Calls executeBridgedPurchase(amount, userBaseAddr, referrer, orderId)
-         └→ Tickets credited to user's Base address
+Solana Wallet (Phantom) → deBridge create-tx with externalCall →
+deBridge solver fulfills on Base → executeBridgedPurchase() → Tickets
 ```
-
-#### Contracts
-
-| Network | Contract/Program | Address |
-|---------|-----------------|---------|
-| **Solana Mainnet** | Base-Solana Bridge | `BASEdeScGmh2FSGnH79gPSN8oV3krmxrPMsLFHvJLEkL` |
-| **Solana Mainnet** | USDC | `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` |
-| **Base Mainnet** | deBridge DLN | Intent-based (no fixed address) |
-| **Base Mainnet** | AutoPurchaseProxy | `0x707043a8c35254876B8ed48F6537703F7736905c` |
 
 #### deBridge Configuration
 
 **API**: https://api.dln.trade/v1.0  
 **Chain IDs**: Solana (7565164), Base (8453)
 
-**Example Quote Request**:
-```bash
-curl "https://api.dln.trade/v1.0/dln/order/quote?srcChainId=7565164&srcChainTokenIn=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&srcChainTokenInAmount=1000000&dstChainId=8453&dstChainTokenOut=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&dstChainTokenOutRecipient=0x707043a8c35254876B8ed48F6537703F7736905c"
-```
-
-#### Phantom Integration
-
-**Service**: `SolanaWalletService`  
-**Methods**:
-- `signTransaction()` - Sign transaction with Phantom
-- `signMessage()` - Sign message with Phantom
-- `signAndSendTransaction()` - Sign + broadcast to Solana
-
-**Hook**: `useSolanaWallet`
-
-#### Testing
-
-```bash
-# Test on devnet
-# 1. Connect Phantom (devnet)
-# 2. Bridge small USDC amount
-# 3. Verify tickets appear on Base
-```
-
 #### Troubleshooting
 
-| Issue | Cause | Fix |
-|-------|-------|-----|
-| Phantom not detected | Extension not installed | Show download link |
-| Address entry typo risk | Manual address input | Require wallet connection or double-entry + confirmation |
-| Solver not available | Low liquidity | Fallback to Base-Solana Bridge (official) |
+| Issue | Fix |
+|-------|-----|
+| Phantom not detected | Show download link |
+| Solver unavailable | Fallback to Base-Solana Bridge |
 
 ---
 
-### EVM → Base
+### EVM → Base (Instant)
 
-**Best for**: Ethereum, Arbitrum, Optimism users  
-**Settlement**: Instant (on Base) / 1-5 min (bridging)
-
-#### Flow
+**Best for**: Ethereum, Arbitrum, Optimism users
 
 ```
-EVM Wallet (MetaMask/WalletConnect)
-   │
-   ├─[1] On Base? Direct purchase
-   │     └─> Call Megapot.purchaseTickets()
-   │
-   └─[2] On other EVM? Bridge via CCIP/CCTP
-         ├→ Bridge USDC to Base
-         └─> Proxy purchases tickets
+EVM Wallet → If on Base: Direct purchase
+           → If on other EVM: CCIP/CCTP → Proxy
 ```
 
-#### Supported Chains
+| Chain | Chain ID | Time |
+|-------|----------|------|
+| Base | 8453 | Instant |
+| Ethereum | 1 | 5-10 min |
+| Arbitrum | 42161 | 1-3 min |
+| Optimism | 10 | 1-3 min |
 
-| Chain | Chain ID | Bridge Method | Time |
-|-------|----------|---------------|------|
-| Base | 8453 | Direct | Instant |
-| Ethereum | 1 | CCIP/CCTP | 5-10 min |
-| Arbitrum | 42161 | CCIP/CCTP | 1-3 min |
-| Optimism | 10 | CCIP/CCTP | 1-3 min |
-| Avalanche | 43114 | CCIP/CCTP | 1-3 min |
+---
 
-#### Testing
+## Lossless Lottery (Solana → Base Yield Routing)
 
-```bash
-# Test direct purchase on Base
-# 1. Connect MetaMask on Base
-# 2. Purchase tickets directly
-# 3. Verify instant confirmation
+The Drift JLP Vault generates ~22.5% APY yield automatically converted to lottery tickets.
+
+### Flow
+
 ```
+Solana Wallet → Civic KYC → Drift JLP Vault → Yield Accrual → Base Lottery Tickets
+```
+
+### Key Properties
+
+- **Principal locked**: 3 months (90 days)
+- **Delta-neutral**: No impermanent loss
+- **KYC required**: Civic Pass before deposit
+
+### Components
+
+| Component | File |
+|-----------|------|
+| DriftVaultProvider | `src/services/vaults/driftProvider.ts` |
+| YieldToTicketsService | `src/services/yieldToTicketsService.ts` |
 
 ---
 
@@ -314,22 +173,11 @@ EVM Wallet (MetaMask/WalletConnect)
 ### Architecture
 
 ```
-User Purchase Request
-         ↓
-┌────────────────────────┐
-│  UnifiedBridgeManager  │
-│  - Auto-protocol select│
-│  - Health monitoring   │
-│  - Fallback handling   │
-└────────┬───────────────┘
-         │
-    ┌────┴────┬────────────┬──────────┐
-    │         │            │          │
-    ▼         ▼            ▼          ▼
-┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐
-│Stacks  │ │deBridge│ │NEAR    │ │CCIP/   │
-│Bridge  │ │Protocol│ │Intents │ │CCTP    │
-└────────┘ └────────┘ └────────┘ └────────┘
+User Purchase Request → UnifiedBridgeManager → Auto-select protocol → Execute
+                              │
+         ┌────────────────────┼────────────────────┐
+         ▼                    ▼                    ▼
+   Stacks Bridge        deBridge            NEAR Intents
 ```
 
 ### Protocol Interface
@@ -337,54 +185,20 @@ User Purchase Request
 ```typescript
 interface BridgeProtocol {
   protocolId: string;
-  name: string;
-  
-  // Get quote for bridge
   getQuote(params: QuoteParams): Promise<BridgeQuote>;
-  
-  // Execute bridge
   bridge(params: BridgeParams): Promise<BridgeResult>;
-  
-  // Check status
   getStatus(bridgeId: string): Promise<BridgeStatus>;
-  
-  // Health check
   healthCheck(): Promise<HealthStatus>;
 }
 ```
 
-### Auto-Selection Logic
+### Error Codes
 
 ```typescript
-// Priority order (configurable)
-const PROTOCOL_PRIORITY = {
-  stacks: ['stacks-bridge'],
-  solana: ['base-solana-bridge', 'debridge'],
-  near: ['near-intents'],
-  evm: ['ccip', 'cctp'],
-};
-```
-
-### Error Handling
-
-```typescript
-// Standardized error codes
 enum BridgeErrorCode {
-  QUOTE_FAILED = 'QUOTE_FAILED',
-  BRIDGE_TIMEOUT = 'BRIDGE_TIMEOUT',
-  INSUFFICIENT_LIQUIDITY = 'INSUFFICIENT_LIQUIDITY',
-  RECIPIENT_INVALID = 'RECIPIENT_INVALID',
-  PROTOCOL_UNAVAILABLE = 'PROTOCOL_UNAVAILABLE',
+  QUOTE_FAILED, BRIDGE_TIMEOUT, INSUFFICIENT_LIQUIDITY,
+  RECIPIENT_INVALID, PROTOCOL_UNAVAILABLE
 }
-
-// User-friendly messages
-const ERROR_MESSAGES = {
-  [BridgeErrorCode.QUOTE_FAILED]: 'Unable to get bridge quote. Please try again.',
-  [BridgeErrorCode.BRIDGE_TIMEOUT]: 'Bridge is taking longer than usual. Expected: {time}',
-  [BridgeErrorCode.INSUFFICIENT_LIQUIDITY]: 'Insufficient liquidity. Try a smaller amount.',
-  [BridgeErrorCode.RECIPIENT_INVALID]: 'Invalid recipient address. Please verify.',
-  [BridgeErrorCode.PROTOCOL_UNAVAILABLE]: 'Bridge protocol unavailable. Trying fallback...',
-};
 ```
 
 ---
@@ -395,77 +209,28 @@ const ERROR_MESSAGES = {
 
 **Component**: `CrossChainTracker.tsx`
 
-**Status Stages**:
-```typescript
-const STAGE_INFO = {
-  validating: {
-    label: 'Validating Transaction',
-    description: 'Confirming on source chain',
-    estimatedSeconds: 30,
-  },
-  bridging: {
-    label: 'Bridging to Base',
-    description: 'Cross-chain transfer in progress',
-    estimatedSeconds: 180,
-  },
-  purchasing: {
-    label: 'Purchasing Tickets',
-    description: 'Executing on Megapot',
-    estimatedSeconds: 30,
-  },
-  complete: {
-    label: 'Complete',
-    description: 'Tickets credited to your wallet',
-    celebrate: true,
-  },
-};
-```
-
-### Time Estimates
-
-Display realistic estimates per chain:
-
-| Chain | Display |
-|-------|---------|
-| Stacks | ⏱️ 30-60 seconds |
-| NEAR | ⏱️ 3-5 minutes |
-| Solana | ⏱️ 1-3 minutes |
-| Base | ⏱️ Instant |
-| EVM (other) | ⏱️ 1-10 minutes |
+**Status Stages**: validating (30s) → bridging (180s) → purchasing (30s) → complete
 
 ### Cost Transparency
 
-Show full breakdown:
-
 ```
 Ticket Cost:        $5.00
-Bridge Fee:         $0.50  ℹ️ Paid to bridge protocol
-Gas (Base):         $0.10  ℹ️ Paid to Base network
-Source Chain Fee:   $0.05  ℹ️ Paid to Stacks network
+Bridge Fee:         $0.50  (Bridge protocol)
+Gas (Base):         $0.10  (Base network)
+Source Chain Fee:   $0.05  (Stacks network)
 ─────────────────────────
 Total:              $5.65
 ```
 
-### Error Recovery
-
-**Component**: Failure recovery UI
+### Error Recovery UI
 
 ```
 ┌─────────────────────────────────────────┐
 │  ⚠️ Purchase Delayed                    │
-├─────────────────────────────────────────┤
-│  Your USDC was bridged but the ticket   │
-│  purchase is taking longer than usual.  │
-│                                         │
-│  Your funds are safe at:                │
-│  0x707...905c (Auto-Purchase Proxy)     │
-│                                         │
-│  Options:                               │
-│  1. [Wait & Retry] (Recommended)        │
-│  2. [Manual Purchase]                   │
-│  3. [Withdraw USDC]                     │
-│                                         │
-│  Need help? [Contact Support]           │
+│  Your USDC was bridged but purchase    │
+│  is taking longer than usual.           │
+│  Funds safe at: 0x707...905c            │
+│  [Wait & Retry]  [Manual Purchase]      │
 └─────────────────────────────────────────┘
 ```
 
@@ -473,95 +238,36 @@ Total:              $5.65
 
 ## Monitoring
 
-### Success Rates
-
-Track per-protocol metrics:
-
-```typescript
-interface BridgeAnalytics {
-  protocolId: string;
-  attempts: number;
-  successes: number;
-  failures: number;
-  successRate: number;
-  avgSettlementTime: number;
-}
-```
-
-**Targets**:
-- Bridge success rate: >95%
-- Proxy call success rate: >99%
-- Average settlement time: Within 2x estimate
-
 ### Health Checks
 
 ```bash
 # Check all protocols
 curl http://localhost:3000/api/bridges/health
-
-# Expected response
-{
-  "stacks-bridge": { "status": "healthy", "latency": 45 },
-  "debridge": { "status": "healthy", "latency": 120 },
-  "near-intents": { "status": "healthy", "latency": 300 },
-}
 ```
 
 ### Alerts
 
-Set up alerts for:
-- ⚠️ Success rate <90% (any protocol)
+- ⚠️ Success rate <90%
 - ⚠️ Settlement time >2x normal
 - ⚠️ Operator balance <100 USDC
-- ⚠️ Chainhook service down
 
 ---
 
 ## Testing Checklist
 
-### Per-Chain Testing
+**Stacks**: Connect Leather → Purchase 1 ticket → Verify tracker → Confirm tickets on Base
 
-**Stacks**:
-- [ ] Connect Leather wallet
-- [ ] Purchase 1 ticket with USDCx
-- [ ] Verify status tracker shows progress
-- [ ] Confirm tickets appear on Base address
-- [ ] Test with sUSDT
-- [ ] Test with aeUSDC
+**NEAR**: Connect NEAR wallet → Verify derived address → Purchase → Test MetaMask import
 
-**NEAR**:
-- [ ] Connect NEAR wallet
-- [ ] Verify derived Base address shown
-- [ ] Purchase 1 ticket
-- [ ] Confirm tickets at derived address
-- [ ] Test recovery (import derived address to MetaMask)
+**Solana**: Connect Phantom → Bridge + purchase → Verify tickets on Base
 
-**Solana**:
-- [ ] Connect Phantom wallet
-- [ ] Enter Base address (or connect MetaMask)
-- [ ] Bridge + purchase USDC
-- [ ] Verify tickets on Base
-- [ ] Test deBridge fallback
-
-**EVM**:
-- [ ] Connect MetaMask on Base
-- [ ] Direct purchase (instant)
-- [ ] Connect MetaMask on Ethereum
-- [ ] Bridge + purchase (CCIP/CCTP)
-
-### Failure Mode Testing
-
-- [ ] Bridge timeout → Show recovery UI
-- [ ] Insufficient liquidity → Fallback to alternate protocol
-- [ ] Invalid recipient → Clear error message
-- [ ] Megapot paused → Fail-safe (USDC to recipient)
-- [ ] Operator offline → Direct proxy call works
+**EVM**: Connect MetaMask on Base → Direct purchase; on Ethereum → Bridge + purchase
 
 ---
 
 ## References
 
+- **Overview**: [OVERVIEW.md](./OVERVIEW.md)
 - **Architecture**: [ARCHITECTURE.md](./ARCHITECTURE.md)
 - **Deployment**: [DEPLOYMENT.md](./DEPLOYMENT.md)
-- **Automation**: [AUTOMATION.md](./AUTOMATION.md)
 - **Development**: [DEVELOPMENT.md](./DEVELOPMENT.md)

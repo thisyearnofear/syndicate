@@ -1,6 +1,6 @@
 # Security Guide
 
-**Last Updated**: March 20, 2026
+**Last Updated**: March 22, 2026
 
 **Audit**: March 10, 2026. See `docs/PRODUCTION_READINESS_AUDIT.md`.
 
@@ -12,40 +12,26 @@ This project uses [gitleaks](https://github.com/gitleaks/gitleaks) to prevent co
 
 ### How It Works
 
-A pre-commit hook automatically scans staged files for secrets before each commit. If secrets are detected, the commit is blocked.
+Pre-commit hook automatically scans staged files. If secrets are detected, commit is blocked.
 
 ### Installation
 
-The hook is already installed at `.git/hooks/pre-commit`. If gitleaks is not installed, the hook will attempt to install it via Homebrew on first run.
+Hook is at `.git/hooks/pre-commit`. Manual installation:
 
-Manual installation:
 ```bash
 brew install gitleaks
 ```
 
 ### Handling False Positives
 
-If gitleaks flags something that isn't actually a secret:
-
-1. Note the fingerprint from the error message (format: `file:rule:line`)
-2. Add it to `.gitleaksignore`:
+Add fingerprint to `.gitleaksignore`:
 ```bash
 # Example
 test-file.txt:generic-api-key:1
 ```
 
-### Bypassing the Hook (Not Recommended)
-
-In rare cases where you need to bypass:
-```bash
-git commit --no-verify
-```
-
-⚠️ **Only use this if you're absolutely certain there are no secrets in your commit.**
-
 ### Testing
 
-Test the hook:
 ```bash
 echo "secret: sk_test_123456789" > test.txt
 git add test.txt
@@ -99,18 +85,11 @@ git commit -m "test"  # Should be blocked
 - Fail-safe (USDC → recipient if purchase fails)
 - Reentrancy guarded
 
-**Stacks Contract**:
-- Owner controls emergency pause
-- Fee limits prevent exploitation
-- Purchase ID tracking prevents replay
-- Proper event emission for auditing
-
 ### Recommended Audits
 
 - [ ] Professional security audit before mainnet
 - [ ] Bug bounty program
 - [ ] Multi-sig for contract owner
-- [ ] Regular security reviews
 
 ---
 
@@ -123,11 +102,6 @@ git commit -m "test"  # Should be blocked
 - Use Preview deployments for testing
 - Enable deployment protection rules
 
-**Monitoring**:
-- Function logs for errors
-- Cron execution monitoring
-- Alert on failed invocations
-
 ### Database (Vercel Postgres)
 
 **Security**:
@@ -136,22 +110,12 @@ git commit -m "test"  # Should be blocked
 - Regular backups enabled
 - Access logging
 
-**Monitoring**:
-- Query performance
-- Connection pool usage
-- Error rates
-
 ### RPC Endpoints
 
 **Configuration**:
 - Use dedicated API keys per environment
 - Enable rate limiting
 - Monitor usage patterns
-
-**Providers**:
-- Alchemy (Base, Ethereum)
-- Hiro (Stacks)
-- Public RPC (Solana, NEAR)
 
 ---
 
@@ -161,8 +125,7 @@ git commit -m "test"  # Should be blocked
 
 **Required Secrets**:
 ```bash
-# Never commit these
-PRIVATE_KEY=0x...              # Deployer key (contract deployment only)
+PRIVATE_KEY=0x...              # Deployer key (deployment only)
 GELATO_WEBHOOK_SECRET=...       # Webhook verification
 POSTGRES_URL=...                # Database connection
 ```
@@ -179,11 +142,6 @@ POSTGRES_URL=...                # Database connection
 - Sanitize transaction hashes
 - Rate limit API endpoints
 
-**Smart Contract Calls**:
-- Validate recipient addresses
-- Check amounts before approval
-- Use reentrancy guards
-
 ### Authentication
 
 **Wallet Connections**:
@@ -195,6 +153,40 @@ POSTGRES_URL=...                # Database connection
 - HMAC signature verification (webhooks)
 - API key authentication (cron jobs)
 - Rate limiting per IP
+
+---
+
+## KYC/AML Compliance (Civic Pass)
+
+### Compliance Model
+
+- **KYC gates vault deposits**: Users must verify identity before accessing Drift JLP vault
+- **Prize claims permissionless**: Lottery payouts don't require KYC
+- **On-chain attestation**: Civic GatewayCredential stored on-chain
+- **Three verification tiers**: CAPTCHA (demo), Liveness (beta), ID_VERIFICATION (production)
+
+### Civic Integration Security
+
+- Civic App ID stored in environment variables
+- GatewayProvider wraps permissioned components
+- Verification status checked before allowing deposits
+- No sensitive user data stored by application (Civic handles KYC data)
+
+### Configuration
+
+```typescript
+// src/components/civic/CivicGateProvider.tsx
+const ACTIVE_NETWORK = CIVIC_NETWORKS.CAPTCHA; // Demo (hackathon)
+// const ACTIVE_NETWORK = CIVIC_NETWORKS.ID_VERIFICATION; // Production
+```
+
+### Best Practices
+
+- Use CAPTCHA network for development/testing only
+- Switch to ID_VERIFICATION for production compliance
+- Display compliance badges (KYC, AML, Sanctions) clearly
+- Provide privacy notice explaining data usage
+- Never store or transmit Civic verification data off-chain
 
 ---
 
@@ -252,34 +244,6 @@ Set up alerts for:
 - Data portability (export on request)
 - Privacy policy required
 
-### KYC/AML (Civic Pass)
-
-**Compliance Model**:
-- **KYC gates vault deposits**: Users must verify identity before accessing Drift JLP vault
-- **Prize claims permissionless**: Lottery payouts don't require KYC
-- **On-chain attestation**: Civic GatewayCredential stored on-chain
-- **Three verification tiers**: CAPTCHA (demo), Liveness (beta), ID_VERIFICATION (production)
-
-**Civic Integration Security**:
-- Civic App ID stored in environment variables
-- GatewayProvider wraps permissioned components
-- Verification status checked before allowing deposits
-- No sensitive user data stored by application (Civic handles KYC data)
-
-**Configuration**:
-```typescript
-// src/components/civic/CivicGateProvider.tsx
-const ACTIVE_NETWORK = CIVIC_NETWORKS.CAPTCHA; // Demo (hackathon)
-// const ACTIVE_NETWORK = CIVIC_NETWORKS.ID_VERIFICATION; // Production
-```
-
-**Best Practices**:
-- Use CAPTCHA network for development/testing only
-- Switch to ID_VERIFICATION for production compliance
-- Display compliance badges (KYC, AML, Sanctions) clearly
-- Provide privacy notice explaining data usage
-- Never store or transmit Civic verification data off-chain
-
 ### Terms of Service
 
 **Recommended**:
@@ -295,24 +259,22 @@ const ACTIVE_NETWORK = CIVIC_NETWORKS.CAPTCHA; // Demo (hackathon)
 ### Pre-Deployment
 
 - [ ] All secrets in secrets manager
-- [x] Gitleaks pre-commit hook installed (local hook present)
+- [x] Gitleaks pre-commit hook installed
 - [ ] Contract audit completed
 - [ ] Multi-sig configured for owner
 - [ ] Monitoring/alerting setup
-- [ ] Incident response plan documented
 
 ### Post-Deployment
 
 - [ ] Regular security reviews (quarterly)
-- [ ] Dependency audits (`npm audit`)
+- [ ] Dependency audits (`pnpm audit`)
 - [ ] Penetration testing
 - [ ] Bug bounty program active
-- [ ] Security documentation updated
 
 ---
 
 ## References
 
+- **Overview**: [OVERVIEW.md](./OVERVIEW.md)
 - **Architecture**: [ARCHITECTURE.md](./ARCHITECTURE.md)
 - **Deployment**: [DEPLOYMENT.md](./DEPLOYMENT.md)
-- **Development**: [DEVELOPMENT.md](./DEVELOPMENT.md)
