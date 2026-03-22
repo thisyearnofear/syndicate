@@ -30,6 +30,37 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
     strategy: null,
     isLoading: true,
   });
+  const [liveYield, setLiveYield] = useState(0);
+
+  // Calculate real data from vault
+  const totalDeposited = parseFloat(vaultData.balance?.deposited || '0');
+  const baseYield = parseFloat(vaultData.balance?.yieldAccrued || '0') + parseFloat(vaultData.strategy?.totalYieldProcessed || '0');
+  const ticketsGenerated = vaultData.strategy?.totalTicketsBought || 0;
+  const causesFunded = parseFloat(vaultData.strategy?.totalCausesFunded || '0');
+  const ticketsAllocation = vaultData.strategy?.config.ticketsAllocation || 85;
+  const causesAllocation = vaultData.strategy?.config.causesAllocation || 15;
+  const isLocked = vaultData.strategy?.config.vaultProtocol === 'drift';
+  const apy = vaultData.balance?.apy || 0;
+
+  // Simulate real-time yield accruing (every second)
+  useEffect(() => {
+    if (totalDeposited <= 0 || apy <= 0) return;
+
+    const interval = setInterval(() => {
+      // Calculate yield per second: (principal * APY) / (365 * 24 * 60 * 60)
+      const yieldPerSecond = (totalDeposited * (apy / 100)) / (365 * 24 * 60 * 60);
+      setLiveYield(prev => prev + yieldPerSecond);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [totalDeposited, apy]);
+
+  // Reset live yield when balance refreshes
+  useEffect(() => {
+    setLiveYield(0);
+  }, [baseYield]);
+
+  const totalYield = baseYield + liveYield;
 
   // Fetch real user data
   useEffect(() => {
@@ -115,14 +146,7 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
     }
   };
 
-  // Calculate real data from vault
-  const totalDeposited = parseFloat(vaultData.balance?.deposited || '0');
-  const totalYield = parseFloat(vaultData.balance?.yieldAccrued || '0') + parseFloat(vaultData.strategy?.totalYieldProcessed || '0');
-  const ticketsGenerated = vaultData.strategy?.totalTicketsBought || 0;
-  const causesFunded = parseFloat(vaultData.strategy?.totalCausesFunded || '0');
-  const ticketsAllocation = vaultData.strategy?.config.ticketsAllocation || 85;
-  const causesAllocation = vaultData.strategy?.config.causesAllocation || 15;
-  const isLocked = vaultData.strategy?.config.vaultProtocol === 'drift'; // Drift has 3-month lockup
+  // Variables moved to top with live yield ticker
 
   // Loading state
   if (vaultData.isLoading) {
@@ -185,7 +209,17 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
               </div>
               <div>
                 <p className="text-xs text-gray-400">Total Yield</p>
-                <p className="font-bold text-white">${totalYield.toFixed(2)}</p>
+                <div className="flex items-center gap-1">
+                  <p className="font-bold text-green-400">${totalYield.toFixed(6)}</p>
+                  {liveYield > 0.0001 && (
+                    <span className="text-[10px] text-green-400/60 animate-pulse">+${liveYield.toFixed(6)}</span>
+                  )}
+                </div>
+                {apy > 0 && (
+                  <p className="text-[10px] text-gray-500 mt-0.5">
+                    Earning ~${((totalDeposited * apy / 100) / (365 * 24 * 60 * 60)).toFixed(6)}/sec
+                  </p>
+                )}
               </div>
             </div>
           </PuzzlePiece>
