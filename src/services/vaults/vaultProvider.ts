@@ -32,6 +32,7 @@ export interface VaultDepositResult {
 export interface VaultWithdrawResult {
     success: boolean;
     txHash?: string;
+    txData?: string; // Serialized transaction for client-side signing (Solana)
     error?: string;
     amountWithdrawn?: string;
 }

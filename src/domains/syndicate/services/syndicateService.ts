@@ -379,32 +379,37 @@ export class SyndicateService {
         await web3Service.initialize();
       }
 
-      // TODO: Call SyndicatePool.purchaseTicketsFromPool()
-      // This requires:
-      // 1. Get contract instance via ethers.js/wagmi
-      // 2. Call purchaseTicketsFromPool(pool.contract_pool_id, ticketCount)
-      // 3. Wait for transaction confirmation
-      
-      // Placeholder implementation
-      console.log('[SyndicateService] Would execute syndicate purchase:', {
+      console.log('[SyndicateService] Executing syndicate purchase:', {
         poolId,
         ticketCount,
         coordinatorAddress,
+        poolAddress: pool.coordinator_address,
       });
 
-      // For MVP: just log intent and return success
-      // Production implementation would interact with contract
-      const txHash = '0x' + '0'.repeat(64); // Placeholder
+      // Use the pool's coordinator address as recipient for tickets
+      // In a real implementation, this would call SyndicatePool.purchaseTicketsFromPool()
+      // For now, we purchase tickets to the pool coordinator's address
+      const result = await web3Service.purchaseTickets(
+        ticketCount,
+        pool.coordinator_address
+      );
+
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error || 'Failed to purchase tickets',
+        };
+      }
 
       console.log('[SyndicateService] Syndicate purchase executed:', {
         poolId,
         ticketCount,
-        txHash,
+        txHash: result.txHash,
       });
 
       return {
         success: true,
-        txHash,
+        txHash: result.txHash,
       };
     } catch (error) {
       console.error('[SyndicateService] Syndicate purchase failed:', error);

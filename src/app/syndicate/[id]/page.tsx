@@ -239,7 +239,7 @@ export default function SyndicateDetailPage() {
               <h3 className="font-semibold text-gray-300 mb-3">Syndicate Growth</h3>
               <div className="space-y-3">
                 <div className="flex justify-between items-center"><span className="text-gray-400">Avg. Tickets per Member</span><span className="text-white font-medium">{ticketsPerMember.toFixed(1)}</span></div>
-                <div className="flex justify-between items-center"><span className="text-gray-400">Weekly Growth</span><span className="text-green-400 font-medium">+12%</span></div>
+                <div className="flex justify-between items-center"><span className="text-gray-400">Cause Impact</span><span className="text-green-400 font-medium">{syndicate.causePercentage}%</span></div>
                 <div className="flex justify-between items-center"><span className="text-gray-400">Monthly Impact</span><span className="text-white font-medium">${(syndicate.totalImpact / 1000).toFixed(1)}k</span></div>
               </div>
               <Button className="w-full mt-4" variant="default" onClick={() => setPurchaseModalOpen(true)}>

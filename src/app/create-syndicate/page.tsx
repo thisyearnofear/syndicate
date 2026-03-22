@@ -59,19 +59,39 @@ export default function CreateSyndicatePage() {
   };
 
   const handleSubmit = async () => {
+    if (!address) {
+      setError('Please connect your wallet first');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     
     try {
-      // In a real app, this would create the syndicate via API
-      // For now, we'll just simulate the creation
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await fetch('/api/syndicates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create',
+          name: formData.name,
+          description: formData.description,
+          coordinatorAddress: address,
+          causeAllocationPercent: formData.causePercentage
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create syndicate');
+      }
+
+      const { id: newPoolId } = await response.json();
       
-      // Redirect to syndicate page
-      router.push('/syndicates');
+      // Redirect to the new syndicate page
+      router.push(`/syndicate/${newPoolId}`);
     } catch (err: unknown) {
       console.error('Error creating syndicate:', err);
-      setError('Failed to create syndicate. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to create syndicate. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -337,12 +357,6 @@ export default function CreateSyndicatePage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
       <CompactContainer maxWidth="2xl">
         <CompactSection spacing="lg">
-          <ComingSoonBanner 
-            title="Syndicate Creation Coming Soon"
-            description="Governance models (Leader-Guided, DAO, Hybrid) and smart contract integration are under development. You can view and join syndicates once they're published."
-            variant="info"
-          />
-
           <div className="mb-6">
             <Button 
               variant="ghost" 
