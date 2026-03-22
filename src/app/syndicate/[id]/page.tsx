@@ -133,18 +133,18 @@ export default function SyndicateDetailPage() {
           Back to Syndicates
         </Button>
 
-        <div className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 rounded-2xl p-6 mb-6 border border-white/10 backdrop-blur-sm">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex items-start gap-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-2xl font-bold">
+        <div className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 rounded-2xl p-4 md:p-6 mb-4 md:mb-6 border border-white/10 backdrop-blur-sm">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-start gap-3 md:gap-4">
+              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xl md:text-2xl font-bold flex-shrink-0">
                 {syndicate.name.charAt(0)}
               </div>
-              <div>
-                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  <h1 className="text-2xl md:text-3xl font-bold text-white">{syndicate.name}</h1>
-                  {syndicate.isTrending && <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full">Trending</span>}
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-1 md:mb-2 flex-wrap">
+                  <h1 className="text-xl md:text-3xl font-bold text-white truncate">{syndicate.name}</h1>
+                  {syndicate.isTrending && <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full flex-shrink-0">Trending</span>}
                   {syndicate.poolType && (
-                    <span className={`text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 ${
+                    <span className={`text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 flex-shrink-0 ${
                       syndicate.poolType === 'safe' ? 'bg-blue-500/80' :
                       syndicate.poolType === 'splits' ? 'bg-green-500/80' :
                       'bg-purple-500/80'
@@ -152,27 +152,25 @@ export default function SyndicateDetailPage() {
                       {syndicate.poolType === 'safe' && <Shield className="w-3 h-3" />}
                       {syndicate.poolType === 'splits' && <SplitIcon className="w-3 h-3" />}
                       {syndicate.poolType === 'pooltogether' && <Coins className="w-3 h-3" />}
-                      {syndicate.poolType === 'safe' ? 'Safe Multisig' :
-                       syndicate.poolType === 'splits' ? '0xSplits' :
-                       'PoolTogether'}
+                      <span className="hidden sm:inline">
+                        {syndicate.poolType === 'safe' ? 'Safe Multisig' :
+                         syndicate.poolType === 'splits' ? '0xSplits' :
+                         'PoolTogether'}
+                      </span>
                     </span>
                   )}
                 </div>
-                <p className="text-blue-300 font-medium">{syndicate.cause.name}</p>
-                <p className="text-gray-400 mt-2 max-w-2xl">{syndicate.description}</p>
+                <p className="text-blue-300 font-medium text-sm md:text-base">{syndicate.cause.name}</p>
+                <p className="text-gray-400 mt-1 md:mt-2 text-sm md:text-base line-clamp-2 md:line-clamp-none">{syndicate.description}</p>
               </div>
             </div>
             
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Button variant="outline" className="border-purple-500/50 text-purple-300 hover:bg-purple-500/10" onClick={handleShare} disabled={isSharing}>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" className="border-purple-500/50 text-purple-300 hover:bg-purple-500/10 min-h-[44px] flex-1 sm:flex-none" onClick={handleShare} disabled={isSharing}>
                 <Share2 className="w-4 h-4 mr-2" />
                 {isSharing ? 'Sharing...' : 'Share'}
               </Button>
-              <Button variant="outline" className="border-blue-500/50 text-blue-300 hover:bg-blue-500/10" onClick={handleSnapshot} disabled={snapshotLoading}>
-                <Award className="w-4 h-4 mr-2" />
-                {snapshotLoading ? 'Snapshotting...' : 'Snapshot Weights'}
-              </Button>
-              <Button variant="default" className="flex-1" onClick={() => setShowJoinModal(true)}>
+              <Button variant="default" className="flex-1 sm:flex-none min-h-[44px]" onClick={() => setShowJoinModal(true)}>
                 Join Syndicate
               </Button>
             </div>
@@ -198,22 +196,22 @@ export default function SyndicateDetailPage() {
         </div>
 
         {/* Legacy Stats Grid (for reference) */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="glass-premium p-4 rounded-xl border border-white/20">
-            <div className="flex items-center gap-2 mb-2"><Users className="w-5 h-5 text-blue-400" /><span className="text-sm text-gray-400">Members</span></div>
-            <p className="text-2xl font-bold text-white">{syndicate.membersCount.toLocaleString()}</p>
+        <div className="grid grid-cols-2 gap-2 md:gap-4 mb-4 md:mb-6">
+          <div className="glass-premium p-3 md:p-4 rounded-xl border border-white/20">
+            <div className="flex items-center gap-2 mb-1 md:mb-2"><Users className="w-4 h-5 text-blue-400" /><span className="text-xs md:text-sm text-gray-400">Members</span></div>
+            <p className="text-xl md:text-2xl font-bold text-white">{syndicate.membersCount.toLocaleString()}</p>
           </div>
-          <div className="glass-premium p-4 rounded-xl border border-white/20">
-            <div className="flex items-center gap-2 mb-2"><Trophy className="w-5 h-5 text-yellow-400" /><span className="text-sm text-gray-400">Tickets</span></div>
-            <p className="text-2xl font-bold text-white">{syndicate.ticketsPooled.toLocaleString()}</p>
+          <div className="glass-premium p-3 md:p-4 rounded-xl border border-white/20">
+            <div className="flex items-center gap-2 mb-1 md:mb-2"><Trophy className="w-4 h-5 text-yellow-400" /><span className="text-xs md:text-sm text-gray-400">Tickets</span></div>
+            <p className="text-xl md:text-2xl font-bold text-white">{syndicate.ticketsPooled.toLocaleString()}</p>
           </div>
-          <div className="glass-premium p-4 rounded-xl border border-white/20">
-            <div className="flex items-center gap-2 mb-2"><Heart className="w-5 h-5 text-red-400" /><span className="text-sm text-gray-400">Total Impact</span></div>
-            <p className="text-2xl font-bold text-white">${(syndicate.totalImpact / 1000).toFixed(1)}k</p>
+          <div className="glass-premium p-3 md:p-4 rounded-xl border border-white/20">
+            <div className="flex items-center gap-2 mb-1 md:mb-2"><Heart className="w-4 h-5 text-red-400" /><span className="text-xs md:text-sm text-gray-400">Impact</span></div>
+            <p className="text-xl md:text-2xl font-bold text-white">${(syndicate.totalImpact / 1000).toFixed(1)}k</p>
           </div>
-          <div className="glass-premium p-4 rounded-xl border border-white/20">
-            <div className="flex items-center gap-2 mb-2"><Gift className="w-5 h-5 text-green-400" /><span className="text-sm text-gray-400">Per Member</span></div>
-            <p className="text-2xl font-bold text-white">${impactPerMember.toFixed(0)}</p>
+          <div className="glass-premium p-3 md:p-4 rounded-xl border border-white/20">
+            <div className="flex items-center gap-2 mb-1 md:mb-2"><Gift className="w-4 h-5 text-green-400" /><span className="text-xs md:text-sm text-gray-400">Per Member</span></div>
+            <p className="text-xl md:text-2xl font-bold text-white">${impactPerMember.toFixed(0)}</p>
           </div>
         </div>
 

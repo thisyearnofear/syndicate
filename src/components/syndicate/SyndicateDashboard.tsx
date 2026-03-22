@@ -205,7 +205,7 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
       </div>
 
       {/* Key Metrics Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 md:gap-4">
         <MetricCard
           icon={<Wallet className="w-5 h-5 text-green-400" />}
           label="Pool Balance"
@@ -232,31 +232,31 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-4 md:gap-6">
         {/* Members List */}
-        <div className="glass-premium rounded-2xl p-5 border border-white/20">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+        <div className="glass-premium rounded-2xl p-4 md:p-5 border border-white/20">
+          <h3 className="text-lg font-bold text-white mb-3 md:mb-4 flex items-center gap-2">
             <Users className="w-5 h-5 text-blue-400" />
             Members ({data.members_count})
           </h3>
-          <div className="space-y-2 max-h-64 overflow-y-auto">
+          <div className="space-y-2 max-h-48 md:max-h-64 overflow-y-auto -mx-2 px-2">
             {data.members.length === 0 ? (
               <p className="text-gray-400 text-center py-4">No members yet</p>
             ) : (
-              data.members.map((member, i) => (
-                <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
+              data.members.slice(0, 10).map((member, i) => (
+                <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-lg min-h-[60px]">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs md:text-sm font-bold flex-shrink-0">
                       {i + 1}
                     </div>
-                    <div>
-                      <p className="text-white font-mono text-sm">{formatAddress(member.address)}</p>
+                    <div className="min-w-0">
+                      <p className="text-white font-mono text-sm truncate">{formatAddress(member.address)}</p>
                       <p className="text-gray-400 text-xs">
                         Joined {new Date(member.joined_at).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex-shrink-0 ml-2">
                     <p className="text-green-400 font-medium">${parseFloat(member.contribution_usdc).toFixed(2)}</p>
                   </div>
                 </div>
@@ -266,19 +266,21 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
         </div>
 
         {/* Recent Activity */}
-        <div className="glass-premium rounded-2xl p-5 border border-white/20">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+        <div className="glass-premium rounded-2xl p-4 md:p-5 border border-white/20">
+          <h3 className="text-lg font-bold text-white mb-3 md:mb-4 flex items-center gap-2">
             <Activity className="w-5 h-5 text-purple-400" />
             Recent Activity
           </h3>
-          <div className="space-y-2 max-h-64 overflow-y-auto">
+          <div className="space-y-2 max-h-48 md:max-h-64 overflow-y-auto -mx-2 px-2">
             {data.recent_activity.length === 0 ? (
               <p className="text-gray-400 text-center py-4">No activity yet</p>
             ) : (
-              data.recent_activity.map((activity) => (
-                <div key={activity.id} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
-                  {getActivityIcon(activity.type)}
-                  <div className="flex-1">
+              data.recent_activity.slice(0, 10).map((activity) => (
+                <div key={activity.id} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg min-h-[56px]">
+                  <div className="flex-shrink-0">
+                    {getActivityIcon(activity.type)}
+                  </div>
+                  <div className="flex-1 min-w-0">
                     <p className="text-white text-sm">
                       {activity.type === 'join' && 'New member joined'}
                       {activity.type === 'deposit' && 'Deposit'}
@@ -286,7 +288,7 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
                       {activity.type === 'ticket_purchase' && 'Tickets purchased'}
                       {activity.type === 'win' && 'Prize won'}
                     </p>
-                    <p className="text-gray-400 text-xs">
+                    <p className="text-gray-400 text-xs truncate">
                       {activity.amount_usdc && `$${parseFloat(activity.amount_usdc).toFixed(2)} USDC`}
                       {activity.member_address && ` • ${formatAddress(activity.member_address)}`}
                     </p>
@@ -296,7 +298,7 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
                       href={`https://basescan.org/tx/${activity.tx_hash}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-gray-400 hover:text-white"
+                      className="text-gray-400 hover:text-white p-2 -mr-2"
                     >
                       <ExternalLink className="w-4 h-4" />
                     </a>
@@ -310,30 +312,30 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
 
       {/* Pool-Specific Info */}
       {data.pool_type === 'safe' && data.safe_info && (
-        <div className="glass-premium rounded-2xl p-5 border border-blue-500/30">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+        <div className="glass-premium rounded-2xl p-4 md:p-5 border border-blue-500/30">
+          <h3 className="text-lg font-bold text-white mb-3 md:mb-4 flex items-center gap-2">
             <Shield className="w-5 h-5 text-blue-400" />
-            Safe Multisig Details
+            Safe Multisig
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white/5 rounded-lg p-4">
-              <p className="text-gray-400 text-sm mb-1">Threshold</p>
-              <p className="text-2xl font-bold text-white">{data.safe_info.threshold} of {data.safe_info.owners.length}</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+            <div className="bg-white/5 rounded-lg p-3 md:p-4">
+              <p className="text-gray-400 text-xs mb-1">Threshold</p>
+              <p className="text-xl md:text-2xl font-bold text-white">{data.safe_info.threshold}/{data.safe_info.owners.length}</p>
             </div>
-            <div className="bg-white/5 rounded-lg p-4">
-              <p className="text-gray-400 text-sm mb-1">Nonce</p>
-              <p className="text-2xl font-bold text-white">{data.safe_info.nonce}</p>
+            <div className="bg-white/5 rounded-lg p-3 md:p-4">
+              <p className="text-gray-400 text-xs mb-1">Nonce</p>
+              <p className="text-xl md:text-2xl font-bold text-white">{data.safe_info.nonce}</p>
             </div>
-            <div className="bg-white/5 rounded-lg p-4">
-              <p className="text-gray-400 text-sm mb-1">Owners</p>
-              <div className="flex flex-wrap gap-1 mt-2">
-                {data.safe_info.owners.slice(0, 4).map((owner, i) => (
-                  <span key={i} className="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded">
+            <div className="bg-white/5 rounded-lg p-3 md:p-4 col-span-2 md:col-span-1">
+              <p className="text-gray-400 text-xs mb-1">Owners</p>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {data.safe_info.owners.slice(0, 3).map((owner, i) => (
+                  <span key={i} className="text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded">
                     {formatAddress(owner)}
                   </span>
                 ))}
-                {data.safe_info.owners.length > 4 && (
-                  <span className="text-xs text-gray-400">+{data.safe_info.owners.length - 4} more</span>
+                {data.safe_info.owners.length > 3 && (
+                  <span className="text-xs text-gray-400">+{data.safe_info.owners.length - 3}</span>
                 )}
               </div>
             </div>
@@ -342,31 +344,31 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
             href={getPoolExplorerUrl('safe', data.pool_address)}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 mt-4"
+            className="inline-flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 mt-3 md:mt-4 min-h-[44px]"
           >
-            Manage on Safe Wallet <ExternalLink className="w-4 h-4" />
+            Manage on Safe <ExternalLink className="w-4 h-4" />
           </a>
         </div>
       )}
 
       {data.pool_type === 'splits' && data.split_info && (
-        <div className="glass-premium rounded-2xl p-5 border border-green-500/30">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+        <div className="glass-premium rounded-2xl p-4 md:p-5 border border-green-500/30">
+          <h3 className="text-lg font-bold text-white mb-3 md:mb-4 flex items-center gap-2">
             <Share2 className="w-5 h-5 text-green-400" />
             Split Allocations
           </h3>
-          <div className="space-y-2">
-            {data.split_info.recipients.map((recipient, i) => (
-              <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                <span className="text-white font-mono text-sm">{formatAddress(recipient.address)}</span>
-                <div className="flex items-center gap-3">
-                  <div className="w-32 bg-gray-700 rounded-full h-2">
+          <div className="space-y-2 max-h-40 md:max-h-60 overflow-y-auto -mx-2 px-2">
+            {data.split_info.recipients.slice(0, 8).map((recipient, i) => (
+              <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-lg gap-2">
+                <span className="text-white font-mono text-xs md:text-sm truncate flex-shrink-0">{formatAddress(recipient.address)}</span>
+                <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+                  <div className="w-16 md:w-32 bg-gray-700 rounded-full h-2">
                     <div 
                       className="bg-green-500 h-2 rounded-full" 
                       style={{ width: `${recipient.share_percent}%` }}
                     ></div>
                   </div>
-                  <span className="text-green-400 font-medium w-16 text-right">
+                  <span className="text-green-400 font-medium w-12 md:w-16 text-right text-sm">
                     {recipient.share_percent.toFixed(1)}%
                   </span>
                 </div>
@@ -377,7 +379,7 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
             href={getPoolExplorerUrl('splits', data.pool_address)}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-sm text-green-400 hover:text-green-300 mt-4"
+            className="inline-flex items-center gap-1 text-sm text-green-400 hover:text-green-300 mt-3 md:mt-4 min-h-[44px]"
           >
             View on Splits <ExternalLink className="w-4 h-4" />
           </a>
@@ -385,34 +387,34 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
       )}
 
       {data.pool_type === 'pooltogether' && data.pt_vault_info && (
-        <div className="glass-premium rounded-2xl p-5 border border-purple-500/30">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+        <div className="glass-premium rounded-2xl p-4 md:p-5 border border-purple-500/30">
+          <h3 className="text-lg font-bold text-white mb-3 md:mb-4 flex items-center gap-2">
             <Coins className="w-5 h-5 text-purple-400" />
             PoolTogether Vault
           </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white/5 rounded-lg p-4">
-              <p className="text-gray-400 text-sm mb-1">Vault Name</p>
-              <p className="text-lg font-bold text-white truncate">{data.pt_vault_info.name}</p>
+          <div className="grid grid-cols-2 gap-2 md:gap-3">
+            <div className="bg-white/5 rounded-lg p-3">
+              <p className="text-gray-400 text-xs mb-1">Vault</p>
+              <p className="text-sm md:text-base font-bold text-white truncate">{data.pt_vault_info.name}</p>
             </div>
-            <div className="bg-white/5 rounded-lg p-4">
-              <p className="text-gray-400 text-sm mb-1">TVL</p>
-              <p className="text-lg font-bold text-white">{data.pt_vault_info.total_assets}</p>
+            <div className="bg-white/5 rounded-lg p-3">
+              <p className="text-gray-400 text-xs mb-1">TVL</p>
+              <p className="text-sm md:text-base font-bold text-white">{data.pt_vault_info.total_assets}</p>
             </div>
-            <div className="bg-white/5 rounded-lg p-4">
-              <p className="text-gray-400 text-sm mb-1">Est. APY</p>
-              <p className="text-lg font-bold text-purple-400">{data.pt_vault_info.apy}%</p>
+            <div className="bg-white/5 rounded-lg p-3">
+              <p className="text-gray-400 text-xs mb-1">APY</p>
+              <p className="text-sm md:text-base font-bold text-purple-400">{data.pt_vault_info.apy}%</p>
             </div>
-            <div className="bg-white/5 rounded-lg p-4">
-              <p className="text-gray-400 text-sm mb-1">Symbol</p>
-              <p className="text-lg font-bold text-white">{data.pt_vault_info.symbol}</p>
+            <div className="bg-white/5 rounded-lg p-3">
+              <p className="text-gray-400 text-xs mb-1">Symbol</p>
+              <p className="text-sm md:text-base font-bold text-white">{data.pt_vault_info.symbol}</p>
             </div>
           </div>
           <a
             href={getPoolExplorerUrl('pooltogether', data.pool_address)}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-sm text-purple-400 hover:text-purple-300 mt-4"
+            className="inline-flex items-center gap-1 text-sm text-purple-400 hover:text-purple-300 mt-3 md:mt-4 min-h-[44px]"
           >
             View on BaseScan <ExternalLink className="w-4 h-4" />
           </a>
@@ -431,13 +433,13 @@ interface MetricCardProps {
 
 function MetricCard({ icon, label, value, subtext }: MetricCardProps) {
   return (
-    <div className="glass-premium p-4 rounded-xl border border-white/20">
-      <div className="flex items-center gap-2 mb-2">
+    <div className="glass-premium p-3 md:p-4 rounded-xl border border-white/20 min-h-[80px] md:min-h-[100px]">
+      <div className="flex items-center gap-2 mb-1 md:mb-2">
         {icon}
-        <span className="text-sm text-gray-400">{label}</span>
+        <span className="text-xs md:text-sm text-gray-400">{label}</span>
       </div>
-      <p className="text-2xl font-bold text-white">{value}</p>
-      {subtext && <p className="text-xs text-gray-500 mt-1">{subtext}</p>}
+      <p className="text-xl md:text-2xl font-bold text-white leading-tight">{value}</p>
+      {subtext && <p className="text-xs text-gray-500 mt-1 truncate">{subtext}</p>}
     </div>
   );
 }

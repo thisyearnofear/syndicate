@@ -158,17 +158,18 @@ export function PrizeDistribution({
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          <Trophy className="w-6 h-6 text-yellow-400" />
-          Prize Distributions
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-lg md:text-xl font-bold text-white flex items-center gap-2">
+          <Trophy className="w-5 h-6 text-yellow-400" />
+          <span className="truncate">Prize Distributions</span>
         </h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Button 
             onClick={() => fetchDistributions(true)} 
             variant="ghost" 
             size="sm"
             disabled={refreshing}
+            className="min-h-[40px] min-w-[40px]"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           </Button>
@@ -178,16 +179,18 @@ export function PrizeDistribution({
               variant="default"
               size="sm"
               disabled={triggering}
+              className="min-h-[40px] text-xs md:text-sm"
             >
               {triggering ? (
                 <>
-                  <Loader className="w-4 h-4 mr-2 animate-spin" />
-                  Distributing...
+                  <Loader className="w-4 h-4 mr-1 md:mr-2 animate-spin" />
+                  <span className="hidden md:inline">Distributing...</span>
                 </>
               ) : (
                 <>
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  Simulate Win ($1000)
+                  <DollarSign className="w-4 h-4 mr-1 md:mr-2" />
+                  <span className="hidden md:inline">Simulate Win ($1000)</span>
+                  <span className="md:hidden">Simulate</span>
                 </>
               )}
             </Button>
@@ -215,26 +218,27 @@ export function PrizeDistribution({
           {distributions.map((dist) => (
             <div 
               key={dist.id}
-              className="glass-premium rounded-xl p-5 border border-white/20 cursor-pointer hover:border-white/40 transition-colors"
+              className="glass-premium rounded-xl p-3 md:p-5 border border-white/20 cursor-pointer hover:border-white/40 transition-colors min-h-[80px]"
               onClick={() => setSelectedDistribution(
                 selectedDistribution?.id === dist.id ? null : dist
               )}
             >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  {getStatusIcon(dist.status)}
-                  <div>
-                    <p className="text-white font-medium">
-                      ${dist.prizeAmount.toLocaleString()} USDC Distribution
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex-shrink-0">
+                    {getStatusIcon(dist.status)}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-white font-medium truncate">
+                      ${dist.prizeAmount.toLocaleString()} USDC
                     </p>
-                    <p className="text-gray-400 text-sm">
-                      {new Date(dist.createdAt).toLocaleDateString()} at{' '}
-                      {new Date(dist.createdAt).toLocaleTimeString()}
+                    <p className="text-gray-400 text-xs md:text-sm truncate">
+                      {new Date(dist.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className={`text-sm px-3 py-1 rounded-full ${
+                <div className="text-right flex-shrink-0">
+                  <span className={`text-xs md:text-sm px-2 md:px-3 py-1 rounded-full ${
                     dist.status === 'completed' ? 'bg-green-500/20 text-green-400' :
                     dist.status === 'failed' ? 'bg-red-500/20 text-red-400' :
                     'bg-yellow-500/20 text-yellow-400'
@@ -246,20 +250,20 @@ export function PrizeDistribution({
 
               {/* Expanded view */}
               {selectedDistribution?.id === dist.id && (
-                <div className="mt-4 pt-4 border-t border-white/10">
+                <div className="mt-3 pt-3 md:mt-4 md:pt-4 border-t border-white/10">
                   {dist.status === 'completed' && dist.txHash && (
                     <a
                       href={`https://basescan.org/tx/${dist.txHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm mb-4"
+                      className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm mb-3 md:mb-4 min-h-[44px]"
                     >
                       View Transaction <ExternalLink className="w-4 h-4" />
                     </a>
                   )}
 
                   {dist.error && (
-                    <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-4">
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-3 md:mb-4">
                       <p className="text-red-400 text-sm">{dist.error}</p>
                     </div>
                   )}
@@ -270,18 +274,15 @@ export function PrizeDistribution({
                         <Users className="w-4 h-4" />
                         Member Payouts
                       </h4>
-                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {dist.memberShares.map((share, i) => (
-                          <div key={i} className="flex items-center justify-between bg-white/5 rounded-lg p-2">
-                            <span className="text-white font-mono text-sm">
+                      <div className="space-y-2 max-h-40 md:max-h-48 overflow-y-auto -mx-1 px-1">
+                        {dist.memberShares.slice(0, 10).map((share, i) => (
+                          <div key={i} className="flex items-center justify-between bg-white/5 rounded-lg p-2 gap-2">
+                            <span className="text-white font-mono text-xs md:text-sm truncate flex-shrink-0">
                               {formatAddress(share.address)}
                             </span>
-                            <div className="text-right">
-                              <span className="text-green-400 font-medium">
+                            <div className="text-right flex-shrink-0">
+                              <span className="text-green-400 font-medium text-sm">
                                 ${share.shareAmount.toFixed(2)}
-                              </span>
-                              <span className="text-gray-500 text-xs ml-2">
-                                ({share.contributionPercent.toFixed(1)}%)
                               </span>
                             </div>
                           </div>
@@ -292,7 +293,7 @@ export function PrizeDistribution({
 
                   {dist.memberShares.length === 0 && dist.status === 'completed' && (
                     <p className="text-gray-400 text-sm">
-                      Distribution completed. Member details not available.
+                      Distribution completed.
                     </p>
                   )}
                 </div>
