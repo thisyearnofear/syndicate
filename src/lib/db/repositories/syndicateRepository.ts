@@ -14,6 +14,7 @@ export interface SyndicatePoolRow {
     name: string;
     description: string | null;
     coordinator_address: string;
+    lottery_id: string | null;
     members_count: number;
     total_pooled_usdc: string;
     tickets_purchased: number;
@@ -32,6 +33,7 @@ export interface SyndicateMemberRow {
     member_address: string;
     amount_usdc: string;
     amount_commitment: Buffer | null;
+    tx_hash: string | null;
     joined_at: string;
     updated_at: string;
 }
@@ -45,6 +47,7 @@ export class SyndicateRepository {
         description?: string;
         coordinatorAddress: string;
         causeAllocationPercent: number;
+        lotteryId?: string;
     }): Promise<string> {
         const now = Date.now();
 
@@ -53,6 +56,7 @@ export class SyndicateRepository {
         name,
         description,
         coordinator_address,
+        lottery_id,
         cause_allocation_percent,
         created_at,
         updated_at
@@ -60,6 +64,7 @@ export class SyndicateRepository {
         ${params.name},
         ${params.description || null},
         ${params.coordinatorAddress},
+        ${params.lotteryId ?? null},
         ${params.causeAllocationPercent},
         ${now},
         ${now}
@@ -115,6 +120,7 @@ export class SyndicateRepository {
         poolId: string;
         memberAddress: string;
         amountUsdc: string;
+        txHash?: string;
     }): Promise<string> {
         const now = Date.now();
 
@@ -124,18 +130,21 @@ export class SyndicateRepository {
         pool_id,
         member_address,
         amount_usdc,
+        tx_hash,
         joined_at,
         updated_at
       ) VALUES (
         ${params.poolId},
         ${params.memberAddress},
         ${params.amountUsdc},
+        ${params.txHash ?? null},
         ${now},
         ${now}
       )
       ON CONFLICT (pool_id, member_address)
       DO UPDATE SET
         amount_usdc = syndicate_members.amount_usdc + EXCLUDED.amount_usdc,
+        tx_hash = EXCLUDED.tx_hash,
         updated_at = EXCLUDED.updated_at
       RETURNING id
     `;

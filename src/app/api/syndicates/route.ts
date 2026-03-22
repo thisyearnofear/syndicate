@@ -1,7 +1,72 @@
 import { NextResponse } from 'next/server';
+import { createPublicClient, http, isHex, parseUnits } from 'viem';
+import { base } from 'viem/chains';
 import { syndicateService } from '@/domains/syndicate/services/syndicateService';
 import { syndicateRepository, type SyndicatePoolRow } from '@/lib/db/repositories/syndicateRepository';
 import type { SyndicateInfo, SyndicateActivity } from '@/domains/lottery/types';
+
+// USDC on Base (6 decimals)
+const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
+
+const publicClient = createPublicClient({
+  chain: base,
+  transport: http(process.env.BASE_RPC_URL || 'https://mainnet.base.org'),
+});
+
+/**
+ * Verify a USDC transfer txHash on-chain.
+ * Confirms: tx succeeded, recipient matches poolAddress, amount >= expected.
+ */
+async function verifyUsdcTransfer({
+  txHash,
+  expectedRecipient,
+  expectedAmountUsdc,
+}: {
+  txHash: `0x${string}`;
+  expectedRecipient: string;
+  expectedAmountUsdc: number;
+}): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    const receipt = await publicClient.getTransactionReceipt({ hash: txHash });
+
+    if (receipt.status !== 'success') {
+      return { ok: false, reason: 'Transaction reverted or failed on-chain.' };
+    }
+
+    // ERC-20 Transfer event: Transfer(address indexed from, address indexed to, uint256 value)
+    const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+
+    const transferLog = receipt.logs.find(
+      (log) =>
+        log.address.toLowerCase() === USDC_BASE.toLowerCase() &&
+        log.topics[0] === TRANSFER_TOPIC &&
+        log.topics[2] &&
+        `0x${log.topics[2].slice(26)}`.toLowerCase() === expectedRecipient.toLowerCase()
+    );
+
+    if (!transferLog) {
+      return { ok: false, reason: 'No USDC Transfer to pool address found in transaction logs.' };
+    }
+
+    // Decode the value from the log data (uint256, big-endian hex)
+    const transferredWei = BigInt(transferLog.data);
+    const expectedWei = parseUnits(String(expectedAmountUsdc), 6);
+
+    if (transferredWei < expectedWei) {
+      return {
+        ok: false,
+        reason: `Transferred amount (${transferredWei}) is less than expected (${expectedWei}).`,
+      };
+    }
+
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      reason: `Receipt lookup failed: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+}
 
 // CORS headers
 const corsHeaders = {
@@ -51,6 +116,7 @@ function mapPoolToSyndicateInfo(pool: SyndicatePoolRow): SyndicateInfo {
     yieldToTicketsPercentage: 85,
     yieldToCausesPercentage: 15,
     vaultStrategy: 'aave', // Default vault strategy
+    lotteryId: pool.lottery_id ?? undefined,
     membersCount: pool.members_count,
     ticketsPooled: ticketsPurchased,
     ticketsPurchased: ticketsPurchased,
@@ -119,7 +185,7 @@ export async function POST(request: Request) {
     }
 
     if (action === 'create') {
-      const { name, description, coordinatorAddress, causeAllocationPercent } = body;
+      const { name, description, coordinatorAddress, causeAllocationPercent, lotteryId } = body;
       
       // Validation
       if (!name || !coordinatorAddress || causeAllocationPercent === undefined) {
@@ -133,14 +199,15 @@ export async function POST(request: Request) {
         name,
         description,
         coordinatorAddress,
-        causeAllocationPercent
+        causeAllocationPercent,
+        lotteryId,
       });
 
       return NextResponse.json({ id: poolId, success: true }, { headers: corsHeaders });
     }
 
     if (action === 'join') {
-      const { poolId, memberAddress, amountUsdc } = body;
+      const { poolId, memberAddress, amountUsdc, txHash } = body;
       
       // Validation
       if (!poolId || !memberAddress || !amountUsdc) {
@@ -150,10 +217,48 @@ export async function POST(request: Request) {
         );
       }
 
+      // Require on-chain proof of transfer
+      if (!txHash) {
+        return NextResponse.json(
+          { error: 'Missing txHash: on-chain USDC transfer must be completed before joining' },
+          { status: 400, headers: corsHeaders }
+        );
+      }
+
+      if (!isHex(txHash)) {
+        return NextResponse.json(
+          { error: 'Invalid txHash format.' },
+          { status: 400, headers: corsHeaders }
+        );
+      }
+
+      // Fetch pool to get the pool address for receipt verification
+      const pool = await syndicateRepository.getPoolById(poolId);
+      if (!pool) {
+        return NextResponse.json(
+          { error: 'Syndicate pool not found.' },
+          { status: 404, headers: corsHeaders }
+        );
+      }
+
+      const verification = await verifyUsdcTransfer({
+        txHash: txHash as `0x${string}`,
+        expectedRecipient: pool.coordinator_address,
+        expectedAmountUsdc: Number(amountUsdc),
+      });
+
+      if (!verification.ok) {
+        return NextResponse.json(
+          { error: `Transaction verification failed: ${verification.reason}` },
+          { status: 400, headers: corsHeaders }
+        );
+      }
+
       await syndicateRepository.addMember({
         poolId,
         memberAddress,
-        amountUsdc
+        amountUsdc: String(amountUsdc),
+        txHash,
       });
 
       return NextResponse.json({ success: true }, { headers: corsHeaders });
