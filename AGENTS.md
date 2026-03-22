@@ -25,6 +25,8 @@ Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, A
 - `src/services/yieldToTicketsService.ts` - Orchestrator for Yield -> Ticket conversion
 - `src/components/modal/AutoPurchaseModal.tsx` - Auto-purchase + Yield upsell UI
 - `src/components/modal/SimplePurchaseModal.tsx` - Direct purchase + Yield upsell UI
+- `src/app/create-syndicate/page.tsx` - 4-step syndicate creation with pool type selector
+- `src/hooks/useSyndicateDeposit.ts` - Multi-pool-type deposit hook with PoolTogether delegation
 
 ## Tech Stack
 - **Framework**: Next.js 14 (App Router)
@@ -101,6 +103,56 @@ The Drift Lossless Vault is a delta-neutral yield strategy on Solana. Principal 
 | **Services** | `src/services/vaults/driftProvider.ts#L134-L145` (deposit implementation)<br>`src/services/vaults/index.ts#L187-L205` (VaultManager orchestration) |
 | **Monitoring** | `src/components/yield/YieldDashboard.tsx#L19-L45` (principal + yield view)<br>`src/components/yield/YieldPerformanceDisplay.tsx` (APY visualization + tickets generated) |
 
+## Syndicate Pool System
+
+Multi-chain syndicate pooling with three pool types for fund custody and prize distribution.
+
+### Pool Providers
+| Provider | Type | On-Chain | Use Case |
+|----------|------|----------|----------|
+| **Safe** | Multisig | ✅ Real contracts | Team coordination with threshold approval |
+| **0xSplits** | Distribution | ✅ Real contracts | Automatic proportional prize distribution |
+| **PoolTogether** | Prize-linked | ✅ Real contracts | Principal preservation with lottery odds |
+
+### Key Contracts (Base)
+| Contract | Address |
+|----------|---------|
+| Safe Proxy Factory | `0xa951BE5AF0Fb62a79a4D70954A8D69553207041E` |
+| Safe Singleton L2 | `0x41675C099F32341bf84BFc5382aF534df5C7461a` |
+| 0xSplits SplitMain | `0x2ed6c55457632e381550485286422539B967796D` |
+| PoolTogether PrizeVault (USDC) | `0x6B5a5c55E9dD4bb502Ce25bBfbaA49b69cf7E4dd` |
+| PoolTogether TwabDelegator | `0x2d3DaECD9F5502b533Ff72CDb1e1367481F2aEa6` |
+| USDC (Base) | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
+
+### Pool Provider Services
+| Service | Location | Purpose |
+|---------|----------|---------|
+| `safeService` | `src/services/safe/safeService.ts` | Deploy Safe, manage owners/threshold, execute txns |
+| `splitsService` | `src/services/splits/splitService.ts` | Create splits, distribute tokens/ETH |
+| `poolTogetherVaultService` | `src/services/poolTogether/vaultService.ts` | Fetch vault info, check balances |
+
+### Pool Provider Implementations
+| Provider | Location |
+|----------|----------|
+| SafeProvider | `src/services/syndicate/poolProviders/safeProvider.ts` |
+| SplitsProvider | `src/services/syndicate/poolProviders/splitsProvider.ts` |
+| PoolTogetherProvider | `src/services/syndicate/poolProviders/poolTogetherV5Provider.ts` |
+
+### Syndicate Creation Flow
+1. User fills out syndicate details (name, cause, governance)
+2. User selects **Pool Type** (Safe, 0xSplits, or PoolTogether)
+3. User selects yield strategy (Aave, Morpho, PoolTogether, Drift)
+4. System creates on-chain pool based on type
+5. Pool address stored in database with type metadata
+
+### Join Syndicate Flow
+1. User connects wallet and selects syndicate
+2. `useSyndicateDeposit` hook handles deposit:
+   - **Safe/Splits**: Direct USDC transfer to pool address
+   - **PoolTogether**: Transfer to TwabDelegator + delegation to syndicate
+3. Transaction verified on-chain via API
+4. Member recorded in database with contribution amount
+
 ## Development Notes
 - Token selector in SimplePurchaseModal supports USDCx/sBTC selection
 - AutoPurchaseModal shows different UI for Stacks (x402) vs EVM (ERC-7715)
@@ -108,3 +160,4 @@ The Drift Lossless Vault is a delta-neutral yield strategy on Solana. Principal 
 - Use `CONTRACTS` object from stacks.ts for contract addresses
 - **Civic**: Default gate is CAPTCHA for demos; switch to ID_VERIFICATION for production compliance
 - **Drift Vault**: 3-month lockup required; yield withdrawn automatically to purchase tickets
+- **Pool Types**: Pool type selection is in create-syndicate page step 3; badges shown on syndicate detail page
