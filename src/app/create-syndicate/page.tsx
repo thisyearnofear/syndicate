@@ -24,6 +24,7 @@ type SyndicateFormData = {
   description: string;
   cause: string;
   causePercentage: number;
+  lotteryId: string;
   governanceModel: GovernanceModel;
   vaultStrategy: SyndicateInfo['vaultStrategy'] | null;
   yieldToTicketsPercentage: number;
@@ -40,6 +41,7 @@ export default function CreateSyndicatePage() {
     description: "",
     cause: "",
     causePercentage: 20,
+    lotteryId: "",
     governanceModel: 'leader',
     vaultStrategy: null,
     yieldToTicketsPercentage: 85,
@@ -78,7 +80,8 @@ export default function CreateSyndicatePage() {
           name: formData.name,
           description: formData.description,
           coordinatorAddress: address,
-          causeAllocationPercent: formData.causePercentage
+          causeAllocationPercent: formData.causePercentage,
+          lotteryId: formData.lotteryId || undefined,
         })
       });
 
@@ -163,6 +166,18 @@ export default function CreateSyndicatePage() {
                   className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none transition-colors"
                   placeholder="e.g., Ocean Cleanup, Education Access"
                 />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Lottery Draw ID <span className="text-gray-500">(optional)</span></label>
+                <input
+                  type="text"
+                  value={formData.lotteryId}
+                  onChange={(e) => handleInputChange('lotteryId', e.target.value)}
+                  className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none transition-colors"
+                  placeholder="e.g., draw-2026-04-01"
+                />
+                <p className="text-xs text-gray-500 mt-1">Associate this syndicate with a specific lottery draw</p>
               </div>
               
               <div>

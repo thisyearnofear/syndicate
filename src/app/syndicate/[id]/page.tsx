@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
-import { Users, Heart, TrendingUp, Share2, Trophy, Gift, Award, ArrowLeft, X, Loader } from "lucide-react";
+import { Users, Heart, TrendingUp, Share2, Trophy, Gift, Award, ArrowLeft } from "lucide-react";
+import SyndicateJoinModal from "@/components/syndicate/SyndicateJoinModal";
 import type { SyndicateInfo } from "@/domains/lottery/types";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
-import { useToast } from "@/shared/components/ui/Toast";
 
 export default function SyndicateDetailPage() {
    const params = useParams<{ id: string }>();
@@ -23,41 +23,7 @@ export default function SyndicateDetailPage() {
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [snapshotInfo, setSnapshotInfo] = useState<null | { createdAt: string; participants: number }>(null);
   const [showJoinModal, setShowJoinModal] = useState(false);
-  const [joinAmount, setJoinAmount] = useState("");
-  const [isJoining, setIsJoining] = useState(false);
-  const { address, isConnected } = useWalletConnection();
-  const { addToast } = useToast();
-
-  const handleJoin = async () => {
-    if (!isConnected || !address) {
-      addToast({ type: "error", title: "Wallet Required", message: "Please connect your wallet to join.", duration: 4000 });
-      return;
-    }
-    const amount = parseFloat(joinAmount);
-    if (!amount || amount <= 0) {
-      addToast({ type: "error", title: "Invalid Amount", message: "Please enter a valid USDC amount.", duration: 3000 });
-      return;
-    }
-    setIsJoining(true);
-    try {
-      const res = await fetch("/api/syndicates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "join", poolId: id, memberAddress: address, amountUsdc: amount }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to join syndicate");
-      }
-      addToast({ type: "success", title: "Joined!", message: `You've joined ${syndicate?.name} with $${amount} USDC.`, duration: 5000 });
-      setShowJoinModal(false);
-      setJoinAmount("");
-    } catch (err) {
-      addToast({ type: "error", title: "Join Failed", message: err instanceof Error ? err.message : "Unknown error", duration: 5000 });
-    } finally {
-      setIsJoining(false);
-    }
-  };
+  const { address } = useWalletConnection();
 
   useEffect(() => {
     const fetchSyndicate = async () => {
@@ -243,6 +209,7 @@ export default function SyndicateDetailPage() {
               <h3 className="font-semibold text-gray-300 mb-3">Capital Preservation & Impact</h3>
               <div className="space-y-3">
                 <div className="flex justify-between items-center"><span className="text-gray-400">Vault Strategy</span><span className="text-white font-medium">{syndicate.vaultStrategy?.toUpperCase() || 'Standard'}</span></div>
+                {syndicate.lotteryId && <div className="flex justify-between items-center"><span className="text-gray-400">Lottery Draw</span><span className="text-yellow-400 font-medium font-mono text-sm">{syndicate.lotteryId}</span></div>}
                 <div className="flex justify-between items-center"><span className="text-gray-400">Tickets Allocation</span><span className="text-yellow-400 font-medium">{syndicate.yieldToTicketsPercentage || 85}%</span></div>
                 <div className="flex justify-between items-center"><span className="text-gray-400">Causes Allocation</span><span className="text-red-400 font-medium">{syndicate.yieldToCausesPercentage || 15}%</span></div>
               </div>
@@ -287,61 +254,45 @@ export default function SyndicateDetailPage() {
         </div>
       </div>
 
-      {/* Join Modal */}
-      {showJoinModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowJoinModal(false)}>
-          <div className="bg-gray-900 border border-white/20 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-white">Join {syndicate.name}</h3>
-              <button onClick={() => setShowJoinModal(false)} className="text-gray-400 hover:text-white transition-colors">
-                <X className="w-5 h-5" />
-              </button>
+      {/* Prize Distribution — My Share */}
+      {address && syndicate && (
+        <div className="glass-premium rounded-2xl p-6 border border-white/20 mb-6">
+          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <Award className="w-5 h-5 text-yellow-400" />
+            My Share
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-gray-800/50 rounded-xl p-4 text-center">
+              <p className="text-xs text-gray-400 mb-1">Your Address</p>
+              <p className="text-sm text-white font-mono truncate">{address.slice(0, 6)}…{address.slice(-4)}</p>
             </div>
-            <p className="text-sm text-gray-400 mb-4">{syndicate.description}</p>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-300 mb-2">Contribution Amount (USDC)</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={joinAmount}
-                  onChange={(e) => setJoinAmount(e.target.value)}
-                  placeholder="10"
-                  className="w-full pl-7 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none transition-colors"
-                />
-              </div>
-              <div className="flex gap-2 mt-2">
-                {[10, 25, 50, 100].map((preset) => (
-                  <button key={preset} onClick={() => setJoinAmount(String(preset))} className="flex-1 text-xs py-1 rounded bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors">
-                    ${preset}
-                  </button>
-                ))}
-              </div>
+            <div className="bg-gray-800/50 rounded-xl p-4 text-center">
+              <p className="text-xs text-gray-400 mb-1">Pool Members</p>
+              <p className="text-2xl font-bold text-white">{syndicate.membersCount}</p>
             </div>
-            <div className="bg-gray-800/50 rounded-lg p-3 mb-4 text-xs text-gray-400 space-y-1">
-              <div className="flex justify-between"><span>Cause allocation</span><span className="text-white">{syndicate.causePercentage}%</span></div>
-              <div className="flex justify-between"><span>Governance</span><span className="text-white capitalize">{syndicate.governanceModel}</span></div>
-              {syndicate.vaultStrategy && <div className="flex justify-between"><span>Yield strategy</span><span className="text-white uppercase">{syndicate.vaultStrategy}</span></div>}
-            </div>
-            {!isConnected && (
-              <p className="text-yellow-400 text-xs mb-3 text-center">⚠️ Connect your wallet to join</p>
-            )}
-            <div className="flex gap-3">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => setShowJoinModal(false)}>Cancel</Button>
-              <Button
-                variant="default"
-                size="sm"
-                className="flex-1 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
-                onClick={handleJoin}
-                disabled={isJoining || !joinAmount}
-              >
-                {isJoining ? <><Loader className="w-3 h-3 mr-1 animate-spin" />Joining...</> : "Confirm Join"}
-              </Button>
+            <div className="bg-gray-800/50 rounded-xl p-4 text-center">
+              <p className="text-xs text-gray-400 mb-1">Est. Prize Share</p>
+              <p className="text-2xl font-bold text-green-400">
+                {syndicate.membersCount > 0 ? (100 / syndicate.membersCount).toFixed(1) : '100'}%
+              </p>
+              <p className="text-xs text-gray-500 mt-1">proportional to contribution</p>
             </div>
           </div>
+          <p className="text-xs text-gray-500 mt-4">
+            Prize distribution is proportional to each member's USDC contribution at the time of the snapshot.
+            Snapshots are taken before each lottery draw.
+          </p>
         </div>
+      )}
+
+      {/* Join Modal */}
+      {showJoinModal && syndicate && (
+        <SyndicateJoinModal
+          syndicate={syndicate}
+          poolId={id}
+          onClose={() => setShowJoinModal(false)}
+          onSuccess={() => setSyndicate((s) => s ? { ...s, membersCount: s.membersCount + 1 } : s)}
+        />
       )}
 
       <style>{`
