@@ -412,11 +412,18 @@ export function OctantYieldDashboard({
               }`}>
                 {processResult.success ? (
                   <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Check className="w-5 h-5 text-green-400" />
-                      <span className="font-bold text-green-300">
-                        Converted! {processResult.ticketsPurchased} tickets purchased
-                      </span>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center animate-bounce">
+                        <Check className="w-7 h-7 text-green-400" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-green-300 text-lg">
+                          🎉 {processResult.ticketsPurchased} Tickets Purchased!
+                        </p>
+                        <p className="text-xs text-green-200/70">
+                          Your yield has been converted to lottery tickets
+                        </p>
+                      </div>
                     </div>
                     {processResult.txHashes.map((hash, i) => (
                       <a
