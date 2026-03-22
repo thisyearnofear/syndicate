@@ -245,9 +245,13 @@ function YieldStrategiesContent() {
                         )}
                       </CompactCard>
 
+                      {/* Use compact mode for small deposits - less intimidating */}
                       <CivicVerificationGate
-                        message="Identity verification is required to deposit into institutional-grade vaults."
+                        message={depositAmount < 1000 
+                          ? "Quick anti-bot check needed. Takes 30 seconds."
+                          : "Identity verification required for larger deposits."}
                         depositAmount={depositAmount}
+                        compact={depositAmount < 1000}
                       >
                         {/* Strategy detail + Deposit action (shown after KYC pass) */}
                         <CompactCard variant="premium" padding="lg">
@@ -291,20 +295,32 @@ function YieldStrategiesContent() {
 
                               {/* Deposit Button + Status */}
                               {depositSuccess && txHash ? (
-                                <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <Check className="w-5 h-5 text-green-400" />
-                                    <span className="font-bold text-green-300">Deposit Confirmed!</span>
+                                <div className="p-5 rounded-xl bg-gradient-to-r from-green-500/20 to-emerald-500/10 border border-green-500/30">
+                                  <div className="flex items-center gap-3 mb-3">
+                                    <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                                      <Check className="w-6 h-6 text-green-400" />
+                                    </div>
+                                    <div>
+                                      <p className="font-bold text-green-300">Deposit Successful!</p>
+                                      <p className="text-xs text-green-200/70">Your funds are now earning yield</p>
+                                    </div>
                                   </div>
-                                  <p className="text-xs text-green-200/70 mb-2">Your funds are now earning yield</p>
-                                  <a
-                                    href={`https://basescan.org/tx/${txHash}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-xs text-green-400 hover:text-green-300 underline flex items-center gap-1"
-                                  >
-                                    View on Basescan <ExternalLink className="w-3 h-3" />
-                                  </a>
+                                  <div className="flex gap-3 mt-4">
+                                    <a
+                                      href={`https://basescan.org/tx/${txHash}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex-1 text-center text-xs text-green-400 hover:text-green-300 underline py-2 border border-green-500/30 rounded-lg"
+                                    >
+                                      View TX <ExternalLink className="w-3 h-3 inline ml-1" />
+                                    </a>
+                                    <Link 
+                                      href="/yield-strategies"
+                                      className="flex-1 text-center text-xs text-blue-400 hover:text-blue-300 underline py-2 border border-blue-500/30 rounded-lg"
+                                    >
+                                      View Dashboard →
+                                    </Link>
+                                  </div>
                                 </div>
                               ) : depositError ? (
                                 <div className="space-y-3">
