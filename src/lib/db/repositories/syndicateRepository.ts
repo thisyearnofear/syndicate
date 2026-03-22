@@ -33,6 +33,8 @@ export interface SyndicatePoolRow {
     split_address?: string | null;
     pt_vault_address?: string | null;
     member_shares?: Array<{ address: string; sharePercent: number }> | null;
+    // Vault strategy (may be null if migration not run)
+    vault_strategy?: string | null;
 }
 
 export interface SyndicateMemberRow {
