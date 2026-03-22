@@ -6,6 +6,7 @@ import { Button } from "@/shared/components/ui/Button";
 import { Users, Heart, TrendingUp, Share2, Trophy, Gift, Award, ArrowLeft, Shield, Share2 as SplitIcon, Coins, ExternalLink } from "lucide-react";
 import SyndicateJoinModal from "@/components/syndicate/SyndicateJoinModal";
 import { SyndicateDashboard } from "@/components/syndicate/SyndicateDashboard";
+import { PrizeDistribution } from "@/components/syndicate/PrizeDistribution";
 import type { SyndicateInfo } from "@/domains/lottery/types";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 
@@ -180,6 +181,14 @@ export default function SyndicateDetailPage() {
         {/* Live Dashboard */}
         <div className="mb-8">
           <SyndicateDashboard poolId={id} />
+        </div>
+
+        {/* Prize Distribution */}
+        <div className="mb-8">
+          <PrizeDistribution 
+            poolId={id} 
+            isCoordinator={!!address}
+          />
         </div>
 
         {/* Legacy Stats Grid (for reference) */}
