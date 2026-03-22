@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
-import { Users, Heart, TrendingUp, Share2, Trophy, Gift, Award, ArrowLeft, Shield, Share2 as SplitIcon, Coins } from "lucide-react";
+import { Users, Heart, TrendingUp, Share2, Trophy, Gift, Award, ArrowLeft, Shield, Share2 as SplitIcon, Coins, ExternalLink } from "lucide-react";
 import SyndicateJoinModal from "@/components/syndicate/SyndicateJoinModal";
 import type { SyndicateInfo } from "@/domains/lottery/types";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
@@ -266,6 +266,176 @@ export default function SyndicateDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* PoolTogether Vault Info */}
+        {syndicate.poolType === 'pooltogether' && syndicate.ptVaultAddress && (
+          <div className="glass-premium rounded-2xl p-6 border border-purple-500/30 mb-6">
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <Coins className="w-5 h-5 text-purple-400" />
+              PoolTogether Vault
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="font-semibold text-gray-300 mb-3">Vault Details</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Vault Type</span>
+                    <span className="text-white font-medium">PrizeVault (ERC4626)</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Underlying Token</span>
+                    <span className="text-white font-medium">USDC</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Prize Frequency</span>
+                    <span className="text-purple-400 font-medium">Weekly</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Principal Safety</span>
+                    <span className="text-green-400 font-medium">100% Preserved</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-300 mb-3">How It Works</h3>
+                <ul className="text-sm text-gray-400 space-y-2">
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-400">1.</span>
+                    <span>Your USDC is deposited to the PrizeVault</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-400">2.</span>
+                    <span>Deposits generate yield for prize pool</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-400">3.</span>
+                    <span>Weekly draws select winners from depositors</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-400">4.</span>
+                    <span>Principal is always withdrawable</span>
+                  </li>
+                </ul>
+                <a 
+                  href={`https://basescan.org/address/${syndicate.ptVaultAddress}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 mt-3"
+                >
+                  View on BaseScan <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Safe Multisig Info */}
+        {syndicate.poolType === 'safe' && syndicate.safeAddress && (
+          <div className="glass-premium rounded-2xl p-6 border border-blue-500/30 mb-6">
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <Shield className="w-5 h-5 text-blue-400" />
+              Safe Multisig
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="font-semibold text-gray-300 mb-3">Pool Details</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Pool Type</span>
+                    <span className="text-white font-medium">Gnosis Safe</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Deposit Token</span>
+                    <span className="text-white font-medium">USDC</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Management</span>
+                    <span className="text-blue-400 font-medium">Multi-signature</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-300 mb-3">How It Works</h3>
+                <ul className="text-sm text-gray-400 space-y-2">
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-400">1.</span>
+                    <span>Members deposit USDC to the Safe</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-400">2.</span>
+                    <span>Coordinator purchases tickets with pooled funds</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-400">3.</span>
+                    <span>Prizes distributed proportionally to members</span>
+                  </li>
+                </ul>
+                <a 
+                  href={`https://app.safe.global/bridge?safe=base:${syndicate.safeAddress}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 mt-3"
+                >
+                  View on Safe <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 0xSplits Info */}
+        {syndicate.poolType === 'splits' && syndicate.splitAddress && (
+          <div className="glass-premium rounded-2xl p-6 border border-green-500/30 mb-6">
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <SplitIcon className="w-5 h-5 text-green-400" />
+              0xSplits Distribution
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="font-semibold text-gray-300 mb-3">Pool Details</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Pool Type</span>
+                    <span className="text-white font-medium">0xSplits</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Distribution</span>
+                    <span className="text-green-400 font-medium">Automatic</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Transparency</span>
+                    <span className="text-white font-medium">On-chain</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-300 mb-3">How It Works</h3>
+                <ul className="text-sm text-gray-400 space-y-2">
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-400">1.</span>
+                    <span>Members contribute with defined share percentages</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-400">2.</span>
+                    <span>Prizes automatically distributed to members</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-400">3.</span>
+                    <span>No coordinator needed for distribution</span>
+                  </li>
+                </ul>
+                <a 
+                  href={`https://app.splits.org/users/${syndicate.splitAddress}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-green-300 mt-3"
+                >
+                  View on Splits <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Prize Distribution — My Share */}
