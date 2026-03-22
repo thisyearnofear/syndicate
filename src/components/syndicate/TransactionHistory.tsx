@@ -159,34 +159,26 @@ export function TransactionHistory({ poolId, className = '' }: TransactionHistor
 
       {/* Summary Cards */}
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 gap-2 md:gap-3">
           <div className="bg-white/5 rounded-lg p-3">
-            <p className="text-xs text-gray-400">Total Deposits</p>
+            <p className="text-xs text-gray-400">Deposits</p>
             <p className="text-lg font-bold text-green-400">${parseFloat(summary.totalDeposits).toLocaleString()}</p>
           </div>
           <div className="bg-white/5 rounded-lg p-3">
-            <p className="text-xs text-gray-400">Total Distributed</p>
+            <p className="text-xs text-gray-400">Distributed</p>
             <p className="text-lg font-bold text-purple-400">${parseFloat(summary.totalDistributions).toLocaleString()}</p>
-          </div>
-          <div className="bg-white/5 rounded-lg p-3">
-            <p className="text-xs text-gray-400">Members</p>
-            <p className="text-lg font-bold text-white">{summary.memberCount}</p>
-          </div>
-          <div className="bg-white/5 rounded-lg p-3">
-            <p className="text-xs text-gray-400">Distributions</p>
-            <p className="text-lg font-bold text-white">{summary.distributionCount}</p>
           </div>
         </div>
       )}
 
       {/* Filter */}
       <div className="flex items-center gap-2 flex-wrap">
-        <Filter className="w-4 h-4 text-gray-400" />
+        <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
         {filterOptions.map(opt => (
           <button
             key={opt.value}
             onClick={() => setFilter(opt.value)}
-            className={`px-3 py-1 rounded-full text-sm transition-colors ${
+            className={`px-3 py-2 min-h-[40px] rounded-full text-sm transition-colors ${
               filter === opt.value
                 ? 'bg-blue-500 text-white'
                 : 'bg-white/10 text-gray-300 hover:bg-white/20'
@@ -200,9 +192,9 @@ export function TransactionHistory({ poolId, className = '' }: TransactionHistor
       {/* Transactions List */}
       <div className="glass-premium rounded-2xl border border-white/20 overflow-hidden">
         {transactions.length === 0 ? (
-          <div className="p-8 text-center">
-            <Wallet className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-300 mb-2">No Transactions</h3>
+          <div className="p-6 md:p-8 text-center">
+            <Wallet className="w-10 h-10 md:w-12 md:h-12 text-gray-500 mx-auto mb-3 md:mb-4" />
+            <h3 className="text-base md:text-lg font-medium text-gray-300 mb-2">No Transactions</h3>
             <p className="text-gray-500 text-sm">
               {filter === 'all' 
                 ? 'Transactions will appear here when members deposit or prizes are distributed.'
@@ -210,45 +202,39 @@ export function TransactionHistory({ poolId, className = '' }: TransactionHistor
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-white/10">
+          <div className="divide-y divide-white/10 max-h-80 md:max-h-96 overflow-y-auto">
             {transactions.map((tx, i) => (
-              <div key={i} className="p-4 hover:bg-white/5 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
-                      {getTypeIcon(tx.type)}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className={`font-medium ${tx.typeColor}`}>{tx.typeLabel}</span>
-                        <span className="text-xs text-gray-500 px-2 py-0.5 rounded bg-white/10">
+              <div key={i} className="p-3 md:p-4 hover:bg-white/5 transition-colors">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                    {getTypeIcon(tx.type)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`font-medium text-sm md:text-base ${tx.typeColor}`}>{tx.typeLabel}</span>
+                        <span className="text-xs text-gray-500 px-1.5 py-0.5 rounded bg-white/10">
                           {tx.status}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-400">{tx.summary}</p>
+                      <p className="font-medium text-white text-sm md:text-base flex-shrink-0">{tx.amountFormatted}</p>
+                    </div>
+                    <p className="text-xs md:text-sm text-gray-400 truncate">{tx.summary}</p>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-xs text-gray-500">{formatDate(tx.timestamp)}</p>
+                      {tx.explorerUrl && (
+                        <a
+                          href={tx.explorerUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 p-1 -m-1 min-h-[32px]"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium text-white">{tx.amountFormatted}</p>
-                    <p className="text-xs text-gray-500">{formatDate(tx.timestamp)}</p>
-                  </div>
                 </div>
-                {tx.explorerUrl && (
-                  <div className="mt-2 pt-2 border-t border-white/5">
-                    <a
-                      href={tx.explorerUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
-                    >
-                      {tx.type === 'deposit' ? 'View Deposit' : 'View Transaction'} 
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                    <span className="text-xs text-gray-500 ml-2">
-                      {formatAddress(tx.hash)}
-                    </span>
-                  </div>
-                )}
               </div>
             ))}
           </div>
