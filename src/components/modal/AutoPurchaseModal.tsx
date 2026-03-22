@@ -499,15 +499,15 @@ export function AutoPurchaseModal({
               </DialogTitle>
               <DialogDescription className="text-gray-300">
                 {isStacksWallet 
-                  ? 'Set up automatic purchases using SIP-018 signatures on Stacks'
-                  : 'Set up automatic lottery ticket purchases with custom amounts'}
+                  ? 'Recurring purchases via SIP-018 on Stacks'
+                  : 'Automated ticket purchases on your schedule'}
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-6">
               <div className="space-y-3">
                 <label className="block text-sm font-medium text-gray-300">
-                  {config.strategy === 'autonomous' ? 'Initial Agent Wallet Funding' : 'Amount per period'}
+                  {config.strategy === 'autonomous' ? 'Initial Funding' : 'Amount per period'}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -557,49 +557,35 @@ export function AutoPurchaseModal({
               )}
 
               {config.strategy === 'autonomous' && (
-                <div className="bg-indigo-900/30 border border-indigo-700/50 rounded-xl p-4 space-y-3">
+                <div className="bg-indigo-900/30 border border-indigo-700/50 rounded-xl p-4 space-y-2">
                   <div className="flex items-center gap-2">
                     <Brain className="w-5 h-5 text-indigo-400" />
-                    <h4 className="text-sm font-bold text-indigo-200 uppercase tracking-wider">Voyager Intelligence</h4>
+                    <h4 className="text-sm font-bold text-indigo-200">Smart Timing</h4>
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-[11px] text-indigo-100/70 leading-relaxed">
-                      Your agent will use these funds to purchase tickets when yield or market conditions are most favorable.
-                    </p>
-                    <div className="flex items-center gap-2 px-2 py-1.5 bg-indigo-950/50 rounded border border-indigo-500/20">
-                      <Terminal className="w-3 h-3 text-indigo-400" />
-                      <span className="text-[10px] font-mono text-indigo-300">Strategy: Yield-Optimized Opportunistic</span>
-                    </div>
+                  <p className="text-[11px] text-indigo-100/70">
+                    Purchases when yield or market conditions are optimal.
+                  </p>
+                  <div className="flex items-center gap-2 px-2 py-1 bg-indigo-950/50 rounded border border-indigo-500/20">
+                    <Terminal className="w-3 h-3 text-indigo-400" />
+                    <span className="text-[10px] font-mono text-indigo-300">Yield-Optimized</span>
                   </div>
                 </div>
               )}
 
               <div className="bg-slate-800/50 border border-slate-600 rounded-xl p-4">
-                <h4 className="font-semibold text-gray-300 mb-3">Your Setup</h4>
-                <div className="space-y-2">
+                <h4 className="font-semibold text-gray-300 mb-2">Your Setup</h4>
+                <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-400">
-                      Amount per {config.frequency}:
-                    </span>
-                    <span className="font-semibold text-white">
-                      ${config.amount} USDC
-                    </span>
+                    <span className="text-gray-400">Amount:</span>
+                    <span className="font-semibold text-white">${config.amount} USDC</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">
-                      Tickets per {config.frequency}:
-                    </span>
-                    <span className="font-semibold text-white">
-                      {config.ticketCount}
-                    </span>
+                    <span className="text-gray-400">Tickets:</span>
+                    <span className="font-semibold text-white">{config.ticketCount}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">
-                      Total monthly estimate:
-                    </span>
-                    <span className="font-semibold text-white">
-                      ${config.totalAmount} USDC
-                    </span>
+                    <span className="text-gray-400">Monthly:</span>
+                    <span className="font-semibold text-white">${config.totalAmount} USDC</span>
                   </div>
                 </div>
               </div>
@@ -614,10 +600,10 @@ export function AutoPurchaseModal({
                     </div>
                     <div>
                       <h4 className="text-sm font-bold text-white mb-1 tracking-tight">
-                        Why drain your wallet? ♾️
+                        Play for Free Forever ♾️
                       </h4>
                       <p className="text-xs text-indigo-200 leading-relaxed">
-                        Instead of spending ${config.totalAmount} a {config.frequency}, deposit ${Math.round((config.totalAmount * 12) / 0.225)} into the <span className="text-indigo-300 font-semibold">Drift Lossless Vault</span>. Let the ~22.5% APY yield fund these tickets forever while you keep your principal.
+                        Deposit ${Math.round((config.totalAmount * 12) / 0.225)} into <span className="text-indigo-300 font-semibold">Drift Vault</span>. The ~22.5% APY funds tickets automatically—your principal stays intact.
                       </p>
                     </div>
                   </div>
@@ -630,7 +616,7 @@ export function AutoPurchaseModal({
                       window.location.href = '/yield-strategies';
                     }}
                   >
-                    Try Yield-to-Tickets
+                    Explore Yield Strategies
                   </Button>
                 </div>
               )}
@@ -682,18 +668,12 @@ export function AutoPurchaseModal({
                   <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-blue-300 mb-1">
-                      How Auto-Purchase Works
+                      How It Works
                     </p>
                     <ul className="text-xs text-blue-200 space-y-1">
-                      <li>
-                        • You approve spending up to ${config.amount} per{" "}
-                        {config.frequency}
-                      </li>
-                      <li>• Syndicate purchases tickets automatically</li>
-                      <li>• You can revoke permission anytime from settings</li>
-                      <li>
-                        • Only works with MetaMask Flask Advanced Permissions
-                      </li>
+                      <li>• Approve spending up to ${config.amount}/{config.frequency}</li>
+                      <li>• Tickets purchased automatically by syndicate</li>
+                      <li>• Revoke anytime from settings</li>
                     </ul>
                   </div>
                 </div>
