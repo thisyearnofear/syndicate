@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
 import { Users, Heart, TrendingUp, Share2, Trophy, Gift, Award, ArrowLeft, Shield, Share2 as SplitIcon, Coins, ExternalLink } from "lucide-react";
 import SyndicateJoinModal from "@/components/syndicate/SyndicateJoinModal";
+import { SyndicateDashboard } from "@/components/syndicate/SyndicateDashboard";
 import type { SyndicateInfo } from "@/domains/lottery/types";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 
@@ -176,6 +177,12 @@ export default function SyndicateDetailPage() {
           </div>
         </div>
 
+        {/* Live Dashboard */}
+        <div className="mb-8">
+          <SyndicateDashboard poolId={id} />
+        </div>
+
+        {/* Legacy Stats Grid (for reference) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="glass-premium p-4 rounded-xl border border-white/20">
             <div className="flex items-center gap-2 mb-2"><Users className="w-5 h-5 text-blue-400" /><span className="text-sm text-gray-400">Members</span></div>
@@ -195,6 +202,7 @@ export default function SyndicateDetailPage() {
           </div>
         </div>
 
+        {/* Recent Activity (legacy) */}
         <div className="glass-premium rounded-2xl p-6 mb-6 border border-white/20">
           <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-purple-400" />Recent Activity</h2>
           <div className="space-y-4">
