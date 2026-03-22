@@ -151,22 +151,19 @@ class SyndicateWinningsService {
 
       console.log('[SyndicateWinningsService] Polling blocks', { fromBlock, currentBlock });
 
-      // Listen for Megapot WinnerSelected events where winner is the SyndicatePool
-      // This is a placeholder - actual implementation depends on Megapot's event structure
+      // TODO: Implement event detection when SyndicatePool contract is deployed
+      // 
+      // When implemented, this will:
+      // 1. Listen for Megapot WinnerSelected events where winner is the SyndicatePool
+      // 2. Parse event logs using ethers.js provider.getLogs()
+      // 3. Call handleWinningsEvent() for each relevant event
+      // 
+      // Example implementation:
       // const filter = {
       //   address: this.megapotAddress,
-      //   topics: [
-      //     ethers.id('WinnerSelected(address,uint256)'),
-      //     null, // any winner
-      //   ],
+      //   topics: [ethers.id('WinnerSelected(address,uint256)'), null],
       // };
-
-      // const logs = await provider.getLogs({
-      //   ...filter,
-      //   fromBlock,
-      //   toBlock: currentBlock,
-      // });
-
+      // const logs = await provider.getLogs({ ...filter, fromBlock, toBlock: currentBlock });
       // for (const log of logs) {
       //   await this.handleWinningsEvent(log);
       // }
@@ -271,20 +268,24 @@ class SyndicateWinningsService {
   /**
    * Call SyndicatePool.startWinningsDistribution()
    * 
-   * This is a placeholder - actual implementation depends on
-   * how you're interacting with the contract (ethers.js, wagmi, etc.)
+   * NOTE: This is a placeholder - actual implementation requires
+   * a deployed SyndicatePool contract. Currently returns error.
+   * 
+   * TODO: Implement when SyndicatePool contract is deployed
    */
   private async callStartDistribution(
     poolAddress: string,
     totalWinnings: bigint,
     causeWalletAddress: string
   ): Promise<string> {
-    // TODO: Implement actual contract call
-    // This would use web3Service to call:
+    // This is a placeholder - actual implementation depends on
+    // how you're interacting with the contract (ethers.js, wagmi, etc.)
+    // 
+    // When implemented, this would use web3Service to call:
     // syndicatePool.startWinningsDistribution(poolId, totalWinnings, causeWalletAddress)
     
-    console.log('[SyndicateWinningsService] Would call startWinningsDistribution');
-    return '0x' + '0'.repeat(64); // Placeholder
+    console.warn('[SyndicateWinningsService] callStartDistribution not implemented - SyndicatePool contract not deployed');
+    throw new Error('SyndicatePool contract interactions not yet implemented. Contract deployment pending.');
   }
 
   /**

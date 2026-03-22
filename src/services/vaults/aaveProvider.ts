@@ -44,12 +44,13 @@ const ERC20_ABI = [
 
 /**
  * Aave V3 configuration for Base
+ * Exported for client-side hooks that need contract addresses.
  */
-const AAVE_CONFIG = {
+export const AAVE_CONFIG = {
     BASE: {
-        POOL_ADDRESS: '0xA238Dd80C259a72e81d7e4664a9801593F98d1c5', // Aave V3 Pool on Base
-        USDC_ADDRESS: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // USDC on Base
-        AUSDC_ADDRESS: '0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB', // aUSDC on Base
+        POOL_ADDRESS: '0xA238Dd80C259a72e81d7e4664a9801593F98d1c5',
+        USDC_ADDRESS: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+        AUSDC_ADDRESS: '0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB',
         CHAIN_ID: 8453,
     },
 };

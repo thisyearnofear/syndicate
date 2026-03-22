@@ -5,17 +5,17 @@
  * and automatic ticket/cause allocation
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/shared/components/ui/Button';
 import { CompactStack, CompactFlex } from '@/shared/components/premium/CompactLayout';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
 import { CountUpText } from '@/shared/components/ui/CountUpText';
-import { useSimplePurchase } from '@/hooks/useSimplePurchase';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
-import { purchaseOrchestrator } from '@/domains/lottery/services/purchaseOrchestrator';
+import { solanaWalletService } from '@/services/solanaWalletService';
 import { octantVaultService, type OctantVaultInfo } from '@/services/octantVaultService';
 import { OCTANT_CONFIG } from '@/config/octantConfig';
 import { yieldToTicketsService, type AutoYieldStrategy } from '@/services/yieldToTicketsService';
+import { Loader, Check, ExternalLink } from 'lucide-react';
 
 interface OctantYieldDashboardProps {
   vaultAddress?: string;
@@ -27,16 +27,6 @@ export function OctantYieldDashboard({
   className = '' 
 }: OctantYieldDashboardProps) {
   const { address } = useWalletConnection();
-  const { 
-    purchase,
-    isPurchasing: isProcessing 
-  } = useSimplePurchase();
-
-  // Use purchaseOrchestrator directly for yield-specific read operations if needed,
-  // or define simple wrappers in useSimplePurchase.
-  // For MVP, we'll use local state for preview/conversion status.
-  const [lastYieldConversion, setLastYieldConversion] = useState<any>(null);
-  const [yieldStrategyActive, setYieldStrategyActive] = useState(false);
 
   const [vaultInfo, setVaultInfo] = useState<OctantVaultInfo | null>(null);
   const [yieldPreview, setYieldPreview] = useState<{
@@ -46,71 +36,125 @@ export function OctantYieldDashboard({
     causesAmount: string;
   } | null>(null);
   const [strategyStatus, setStrategyStatus] = useState<AutoYieldStrategy | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processResult, setProcessResult] = useState<{
+    success: boolean;
+    txHashes: string[];
+    ticketsPurchased: number;
+    error?: string;
+  } | null>(null);
 
-  // Resolve vault address from config unless explicitly provided
   const resolvedVaultAddress = vaultAddress || (OCTANT_CONFIG.useMockVault 
     ? 'mock:octant-usdc' 
     : OCTANT_CONFIG.vaults.ethereumUsdcVault);
 
-  // Load vault information
+  // Load vault info + strategy status
   useEffect(() => {
-    async function loadVaultInfo() {
+    async function load() {
       if (!address) return;
-
       try {
-        const info = await octantVaultService.getVaultInfo(resolvedVaultAddress, address);
+        const [info, status] = await Promise.all([
+          octantVaultService.getVaultInfo(resolvedVaultAddress, address).catch(() => null),
+          Promise.resolve(yieldToTicketsService.getStrategyStatus(address)),
+        ]);
         setVaultInfo(info);
-        
-        // Get strategy status
-        const status = yieldToTicketsService.getStrategyStatus(address);
         setStrategyStatus(status);
-      } catch (error) {
-        console.error('Failed to load vault info:', error);
+      } catch (err) {
+        console.error('[OctantYieldDashboard] Failed to load:', err);
       }
     }
-
-    loadVaultInfo();
-    
-    // Refresh every 30 seconds
-    const interval = setInterval(loadVaultInfo, 30000);
+    load();
+    const interval = setInterval(load, 30000);
     return () => clearInterval(interval);
   }, [address, resolvedVaultAddress]);
 
-  // Preview yield conversion when allocation changes
+  // Load yield preview when strategy is active
   useEffect(() => {
-    async function updatePreview() {
-      if (!address || !strategyStatus?.config) return;
-
-      // previewYieldConversion doesn't exist on useSimplePurchase, using orchestrator directly
-      // as part of the consolidation to single source of truth
+    async function preview() {
+      if (!address || !strategyStatus?.isActive) {
+        setYieldPreview(null);
+        return;
+      }
       try {
-        // Mock preview for now to satisfy types, or implement in orchestrator
-        const preview = {
-          yieldAmount: '0',
-          ticketsAmount: '0',
-          ticketCount: 0,
-          causesAmount: '0'
-        };
-        setYieldPreview(preview);
-      } catch (err) {
-        console.error('Failed to preview yield:', err);
+        const result = await yieldToTicketsService.previewYieldConversion(
+          strategyStatus.config.vaultProtocol,
+          address,
+          strategyStatus.config.ticketsAllocation,
+          strategyStatus.config.causesAllocation,
+          strategyStatus.config.ticketPrice,
+        );
+        setYieldPreview(result);
+      } catch {
+        setYieldPreview(null);
       }
     }
+    preview();
+  }, [address, strategyStatus]);
 
-    updatePreview();
-  }, [address, resolvedVaultAddress, strategyStatus]);
+  const handleProcessYield = useCallback(async () => {
+    if (!address) return;
+    setIsProcessing(true);
+    setProcessResult(null);
 
-  const handleProcessYield = async () => {
     try {
-      await purchase({
-        mode: 'vault' as any,
-        userAddress: address || '',
-        chain: 'base' // Octant is on Base
+      const result = await yieldToTicketsService.processYieldConversion(address);
+
+      // If Drift withdrawal needs client-side signing
+      if (result.pendingWithdrawalTx) {
+        try {
+          if (!solanaWalletService.isReady()) {
+            const pk = await solanaWalletService.connectPhantom();
+            if (!pk) throw new Error('Failed to connect Phantom wallet');
+          }
+
+          const { VersionedTransaction } = await import('@solana/web3.js');
+          const txBytes = Buffer.from(result.pendingWithdrawalTx, 'base64');
+          const transaction = VersionedTransaction.deserialize(txBytes);
+          const signature = await solanaWalletService.signAndSendTransaction(transaction);
+
+          // Complete the conversion after signing
+          const completeResult = await yieldToTicketsService.completeYieldConversion(address, signature);
+          setProcessResult({
+            success: completeResult.success,
+            txHashes: completeResult.txHashes,
+            ticketsPurchased: completeResult.ticketsPurchased,
+            error: completeResult.error,
+          });
+          return;
+        } catch (signErr) {
+          const msg = signErr instanceof Error ? signErr.message : 'Signing failed';
+          const isCancel = msg.toLowerCase().includes('cancel') || msg.toLowerCase().includes('reject');
+          setProcessResult({
+            success: false,
+            txHashes: [],
+            ticketsPurchased: 0,
+            error: isCancel ? 'Transaction cancelled' : msg,
+          });
+          return;
+        }
+      }
+
+      // EVM or already-complete path
+      setProcessResult({
+        success: result.success,
+        txHashes: result.txHashes,
+        ticketsPurchased: result.ticketsPurchased,
+        error: result.error,
       });
+
+      // Refresh strategy status
+      setStrategyStatus(yieldToTicketsService.getStrategyStatus(address));
     } catch (err) {
-      console.error('Yield conversion failed:', err);
+      setProcessResult({
+        success: false,
+        txHashes: [],
+        ticketsPurchased: 0,
+        error: err instanceof Error ? err.message : 'Processing failed',
+      });
+    } finally {
+      setIsProcessing(false);
     }
-  };
+  }, [address]);
 
   if (!vaultInfo) {
     return (
@@ -126,7 +170,7 @@ export function OctantYieldDashboard({
   }
 
   const hasYield = parseFloat(vaultInfo.yieldGenerated) > 0;
-  const canProcess = hasYield && yieldStrategyActive;
+  const canProcess = hasYield && strategyStatus?.isActive;
 
   return (
     <div className={`w-full space-y-6 ${className}`}>
@@ -136,7 +180,7 @@ export function OctantYieldDashboard({
           <CompactFlex align="center" justify="between">
             <div>
               <h3 className="text-xl font-bold text-white mb-1">
-                🎯 Octant Yield Strategy
+                🎯 Yield Strategy
               </h3>
               <p className="text-gray-400 text-sm">
                 Capital preserved • Yield generates tickets & funds causes
@@ -193,7 +237,7 @@ export function OctantYieldDashboard({
         </CompactStack>
       </PuzzlePiece>
 
-      {/* Yield Conversion Preview */}
+      {/* Yield Conversion */}
       {yieldPreview && hasYield && (
         <PuzzlePiece variant="neutral" size="md">
           <CompactStack spacing="md">
@@ -226,6 +270,39 @@ export function OctantYieldDashboard({
               </div>
             </div>
 
+            {/* Result display */}
+            {processResult && (
+              <div className={`p-4 rounded-lg border ${
+                processResult.success
+                  ? 'bg-green-500/10 border-green-500/20'
+                  : 'bg-red-500/10 border-red-500/20'
+              }`}>
+                {processResult.success ? (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Check className="w-5 h-5 text-green-400" />
+                      <span className="font-bold text-green-300">
+                        Converted! {processResult.ticketsPurchased} tickets purchased
+                      </span>
+                    </div>
+                    {processResult.txHashes.map((hash, i) => (
+                      <a
+                        key={i}
+                        href={`https://basescan.org/tx/${hash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-green-400 hover:text-green-300 underline flex items-center gap-1"
+                      >
+                        TX {i + 1} <ExternalLink className="w-3 h-3" />
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-red-300">{processResult.error}</p>
+                )}
+              </div>
+            )}
+
             <Button
               onClick={handleProcessYield}
               disabled={!canProcess || isProcessing}
@@ -233,51 +310,16 @@ export function OctantYieldDashboard({
               variant={canProcess ? "default" : "outline"}
             >
               {isProcessing ? (
-                <>🔄 Processing Yield...</>
+                <span className="flex items-center gap-2">
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Processing Yield...
+                </span>
               ) : !canProcess ? (
                 <>⏳ No Yield Available</>
               ) : (
                 <>🚀 Convert Yield to Tickets & Causes</>
               )}
             </Button>
-          </CompactStack>
-        </PuzzlePiece>
-      )}
-
-      {/* Recent Activity */}
-      {lastYieldConversion && (
-        <PuzzlePiece variant="accent" size="sm">
-          <CompactStack spacing="sm">
-            <CompactFlex align="center" justify="between">
-              <h4 className="font-semibold text-white">
-                ✅ Last Conversion
-              </h4>
-              <span className="text-xs text-gray-400">
-                {new Date().toLocaleTimeString()}
-              </span>
-            </CompactFlex>
-            
-            <div className="text-sm text-gray-300">
-              Converted ${parseFloat(lastYieldConversion.yieldAmount).toFixed(4)} yield →{' '}
-              <span className="text-blue-400">{lastYieldConversion.ticketsPurchased} tickets</span>
-              {' '}+ <span className="text-green-400">${parseFloat(lastYieldConversion.causesAmount).toFixed(4)} to causes</span>
-            </div>
-
-            {lastYieldConversion.txHashes && lastYieldConversion.txHashes.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {lastYieldConversion.txHashes.map((hash: string, index: number) => (
-                  <a
-                    key={index}
-                    href={`https://basescan.org/tx/${hash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-blue-400 hover:text-blue-300 underline"
-                  >
-                    TX {index + 1}
-                  </a>
-                ))}
-              </div>
-            )}
           </CompactStack>
         </PuzzlePiece>
       )}
@@ -315,7 +357,7 @@ export function OctantYieldDashboard({
             </div>
 
             <div className="text-xs text-gray-400">
-              Last processed: {strategyStatus.lastProcessed 
+              Last processed: {strategyStatus.lastProcessed && new Date(strategyStatus.lastProcessed).getTime() > 0
                 ? new Date(strategyStatus.lastProcessed).toLocaleString()
                 : 'Never'
               }
@@ -324,7 +366,7 @@ export function OctantYieldDashboard({
         </PuzzlePiece>
       )}
 
-      {/* Vault TVL & Performance */}
+      {/* Vault Performance */}
       <PuzzlePiece variant="neutral" size="sm">
         <CompactStack spacing="sm">
           <h4 className="font-semibold text-white">

@@ -7,8 +7,7 @@
  * 3. Confirm on-chain
  *
  * Note: 3-month lockup on principal. Yield is auto-routed to lottery tickets.
- * The deposit backend is currently a stub — this hook is architected to work
- * once the Drift SDK integration is complete.
+ * DriftVaultProvider builds real transactions via @drift-labs/sdk.
  */
 
 import { useState, useCallback } from 'react';
@@ -73,37 +72,28 @@ export function useDriftDeposit(): UseDriftDepositResult {
     setTxSignature(undefined);
 
     try {
-      // Step 1: Prepare deposit transaction via DriftVaultProvider
-      // In production, this would call an API endpoint that returns serialized tx data
-      // For now, the provider returns a stub response indicating backend is not ready
+      // Step 1: Build unsigned deposit tx via DriftVaultProvider (Drift SDK)
       const { driftProvider } = await import('@/services/vaults/driftProvider');
       const result = await driftProvider.deposit(String(amountUsdc), walletAddress);
 
-      if (result.error && !result.success) {
-        // Backend deposit is not yet implemented — surface clearly
-        setError('Drift vault deposit is being integrated. Please use the Yield Strategies page for now.');
+      if (!result.success || !result.txData) {
+        setError(result.error || 'Failed to prepare Drift deposit transaction.');
         setStatus('error');
         return;
       }
 
-      // Step 2: If we get transaction data back, sign via Phantom
-      if (result.txData) {
-        setStatus('signing');
-        const { VersionedTransaction } = await import('@solana/web3.js');
-        const txBytes = Buffer.from(result.txData, 'base64');
-        const transaction = VersionedTransaction.deserialize(txBytes);
+      // Step 2: Deserialize and sign via Phantom
+      setStatus('signing');
+      const { VersionedTransaction } = await import('@solana/web3.js');
+      const txBytes = Buffer.from(result.txData, 'base64');
+      const transaction = VersionedTransaction.deserialize(txBytes);
 
-        const signature = await solanaWalletService.signAndSendTransaction(transaction);
+      const signature = await solanaWalletService.signAndSendTransaction(transaction);
 
-        // Step 3: Confirm on-chain
-        setStatus('confirming');
-        setTxSignature(signature);
-
-        // In production, send signature back to backend to complete deposit
-        // const confirmResult = await fetch('/api/vault/deposit/confirm', { ... });
-
-        setStatus('complete');
-      }
+      // Step 3: Confirm on-chain
+      setStatus('confirming');
+      setTxSignature(signature);
+      setStatus('complete');
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message.length > 200 ? message.slice(0, 200) + '…' : message);

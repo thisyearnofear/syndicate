@@ -4,13 +4,12 @@
  * CIVIC PASS GATE PROVIDER
  * 
  * Wraps Solana-connected components with Civic Pass identity verification.
- * Uses the ID Verification gatekeeper network for institutional-grade KYC.
+ * Dynamically selects gatekeeper network based on deposit amount (tiered KYC).
  * 
- * Architecture:
- * - GatewayProvider from @civic/solana-gateway-react handles all verification UI
- * - Non-transferable on-chain attestation (Civic Pass) gates vault deposits
- * - User data stored off-chain by Civic; only attestation lives on-chain
- * - Supports CAPTCHA, Liveness, and full ID Verification networks
+ * Tiers (aligned with FATF Travel Rule):
+ * - < $1,000:   CAPTCHA only (frictionless)
+ * - $1K–$10K:   Liveness check (biometric selfie)
+ * - ≥ $10,000:  Full ID Verification (document + sanctions screening)
  */
 
 import React, { useMemo } from 'react';
@@ -18,33 +17,32 @@ import { GatewayProvider } from '@civic/solana-gateway-react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
 import { getSolanaRpcUrls } from '@/utils/rpcFallback';
+import { getRequiredKycTier, CIVIC_NETWORKS } from '@/utils/kycTiers';
 
-// Civic Gatekeeper Networks
-// See: https://docs.civic.com/integration-guides/civic-idv-services/available-networks
-export const CIVIC_NETWORKS = {
-  // Uniqueness + Liveness (no document upload, low friction)
-  CAPTCHA: new PublicKey('ignREusXmGrscGNUesoU9mxfds9AiYqzdam8AXsSqzC'),
-  // Liveness check (biometric selfie)
-  LIVENESS: new PublicKey('uniqobk8oGh4XBLMqM68K8M2zNs3RYQ2TV8KFnk1Nh3'),
-  // Full ID Verification (document + liveness + sanctions screening)
-  ID_VERIFICATION: new PublicKey('ni1jXzPTq1yTqo67tUmVgnp22b1qGAAZCtPmHtskqYG'),
-} as const;
-
-// Default to CAPTCHA for hackathon (low friction, still shows compliance awareness)
-// Switch to ID_VERIFICATION for production institutional use
-const ACTIVE_NETWORK = CIVIC_NETWORKS.CAPTCHA;
+// Re-export for backward compatibility
+export { CIVIC_NETWORKS } from '@/utils/kycTiers';
 
 interface CivicGateProviderProps {
   children: React.ReactNode;
-  /** Override gatekeeper network (defaults to CAPTCHA for hackathon) */
+  /** Override gatekeeper network — if set, takes priority over depositAmount */
   gatekeeperNetwork?: PublicKey;
+  /** Deposit amount in USDC — used to select the appropriate KYC tier */
+  depositAmount?: number;
 }
 
 export function CivicGateProvider({ 
   children, 
-  gatekeeperNetwork = ACTIVE_NETWORK 
+  gatekeeperNetwork,
+  depositAmount,
 }: CivicGateProviderProps) {
   const { publicKey, signTransaction } = useSolanaWallet();
+
+  // Select gatekeeper network: explicit override > deposit-based tier > default CAPTCHA
+  const resolvedNetwork = useMemo(() => {
+    if (gatekeeperNetwork) return gatekeeperNetwork;
+    if (depositAmount !== undefined) return getRequiredKycTier(depositAmount).gatekeeperNetwork;
+    return CIVIC_NETWORKS.CAPTCHA;
+  }, [gatekeeperNetwork, depositAmount]);
 
   const connection = useMemo(() => {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -54,7 +52,6 @@ export function CivicGateProvider({
     return new Connection(urls[0] || 'https://api.mainnet-beta.solana.com', 'confirmed');
   }, []);
 
-  // Build wallet adapter shape that Civic expects
   const wallet = useMemo(() => {
     if (!publicKey) return undefined;
     return {
@@ -63,7 +60,6 @@ export function CivicGateProvider({
     };
   }, [publicKey, signTransaction]);
 
-  // If no Solana wallet connected, just render children without gating
   if (!wallet) {
     return <>{children}</>;
   }
@@ -71,7 +67,7 @@ export function CivicGateProvider({
   return (
     <GatewayProvider
       wallet={wallet}
-      gatekeeperNetwork={gatekeeperNetwork}
+      gatekeeperNetwork={resolvedNetwork}
       connection={connection}
       cluster="mainnet-beta"
     >

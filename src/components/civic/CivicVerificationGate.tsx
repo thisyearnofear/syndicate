@@ -14,7 +14,8 @@
 
 import React from 'react';
 import { useCivicGate } from '@/hooks/useCivicGate';
-import { Shield, Loader, AlertTriangle, CircleCheck } from 'lucide-react';
+import { Shield, Loader, AlertTriangle, CircleCheck, Info } from 'lucide-react';
+import { getRequiredKycTier, getComplianceRationale } from '@/utils/kycTiers';
 
 interface CivicVerificationGateProps {
   children: React.ReactNode;
@@ -22,14 +23,19 @@ interface CivicVerificationGateProps {
   message?: string;
   /** Show a compact inline badge instead of full gate */
   compact?: boolean;
+  /** Deposit amount in USDC — shows tier-aware rationale */
+  depositAmount?: number;
 }
 
 export function CivicVerificationGate({ 
   children, 
   message = 'Identity verification is required to access institutional-grade vaults.',
   compact = false,
+  depositAmount,
 }: CivicVerificationGateProps) {
   const { isVerified, isChecking, isInProgress, isRejected, requestVerification, statusText } = useCivicGate();
+  const tierInfo = depositAmount !== undefined ? getRequiredKycTier(depositAmount) : undefined;
+  const rationale = depositAmount !== undefined ? getComplianceRationale(depositAmount) : undefined;
 
   // Verified — render children
   if (isVerified) {
@@ -84,6 +90,19 @@ export function CivicVerificationGate({
             }
           </p>
         </div>
+
+        {/* Tier-aware compliance rationale */}
+        {tierInfo && rationale && (
+          <div className="w-full max-w-md rounded-lg bg-blue-500/10 border border-blue-500/20 p-3 flex items-start gap-2.5">
+            <Info className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+            <div className="text-left">
+              <p className="text-xs font-semibold text-blue-300 mb-0.5">
+                {tierInfo.label} Required
+              </p>
+              <p className="text-xs text-blue-200/80">{rationale}</p>
+            </div>
+          </div>
+        )}
 
         {/* Compliance info */}
         <div className="flex flex-wrap justify-center gap-2 text-xs text-gray-500">

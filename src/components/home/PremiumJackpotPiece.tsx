@@ -4,14 +4,11 @@ import { useMemo, memo } from "react";
 import { useLottery } from "@/domains/lottery/hooks/useLottery";
 import { MagneticPiece } from "@/shared/components/premium/PuzzlePiece";
 import { CompactStack, CompactFlex } from "@/shared/components/premium/CompactLayout";
-import { Button } from "@/shared/components/ui/Button";
 import { LoadingSpinner } from "@/shared/components/LoadingSpinner";
 import { CountUpText } from "@/shared/components/ui/CountUpText";
 import { formatTimeRemaining } from "@/shared/utils";
 
-import type { UserIdentity } from '@/interfaces';
-
-export function PremiumJackpotPiece({ onBuyClick, userIdentity }: { onBuyClick: () => void; userIdentity?: UserIdentity | null }) {
+export function PremiumJackpotPiece({ onBuyClick }: { onBuyClick: () => void }) {
   const { jackpotStats, isLoading, error, refresh } = useLottery();
 
   const oddsDisplay = useMemo(() => {
@@ -45,9 +42,12 @@ export function PremiumJackpotPiece({ onBuyClick, userIdentity }: { onBuyClick: 
           <p className="text-sm text-gray-400 leading-relaxed">
             Failed to load jackpot data
           </p>
-          <Button variant="ghost" size="sm" onClick={refresh}>
+          <button
+            className="text-sm text-gray-300 hover:text-white underline transition-colors"
+            onClick={refresh}
+          >
             Retry
-          </Button>
+          </button>
         </CompactStack>
       </MagneticPiece>
     );
@@ -104,36 +104,10 @@ export function PremiumJackpotPiece({ onBuyClick, userIdentity }: { onBuyClick: 
             </p>
           )}
 
-          {/* Premium CTA */}
-          <Button
-            variant="default"
-            size="lg"
-            className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white shadow-2xl hover:shadow-yellow-500/30 border border-yellow-400/30 animate-pulse-glow"
-            onClick={onBuyClick}
-          >
-            ⚡ Get Your Tickets
-          </Button>
-
-          {/* Social proof with personalization */}
-          <CompactFlex
-          align="center"
-          gap="sm"
-          className="text-sm text-gray-400 flex-wrap justify-center"
-          >
-          <span>⚡ Instant</span>
-          <span>•</span>
-          <span>🎯 {oddsDisplay}</span>
-          <span>•</span>
-          <span>🌊 Supports causes</span>
-            {userIdentity && (
-              <>
-                <span>•</span>
-                <span className="text-blue-400">
-                  👥 {((userIdentity.farcaster?.followerCount || 0) + (userIdentity.twitter?.followerCount || 0)).toLocaleString()}+ in your network
-                </span>
-              </>
-            )}
-          </CompactFlex>
+          {/* Odds display */}
+          <p className="text-sm text-gray-400">
+            🎯 {oddsDisplay} odds per ticket
+          </p>
         </div>
       </CompactStack>
     </MagneticPiece>

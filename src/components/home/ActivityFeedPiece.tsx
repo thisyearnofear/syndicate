@@ -13,78 +13,58 @@ interface Activity {
 }
 
 /**
-* MODULAR: Activity Feed Puzzle Piece with Social Personalization
-*/
+ * MODULAR: Activity Feed Puzzle Piece — only shows real data
+ */
 export function ActivityFeedPiece() {
     const [hoveredActivity, setHoveredActivity] = useState<number | null>(null);
-    const [personalizedActivities, setPersonalizedActivities] = useState<Activity[]>([]);
+    const [activities, setActivities] = useState<Activity[]>([]);
     const [loading, setLoading] = useState(false);
     const { address, isConnected } = useWalletConnection();
 
     useEffect(() => {
-        const defaultActivities = [
-            { text: "Sarah joined Ocean Warriors", icon: "🌊", time: "2m ago" },
-            { text: "User deposited 5k into Drift JLP", icon: "⚡", time: "3m ago" },
-            { text: "Climate Network won $500", icon: "🌍", time: "5m ago" },
-            { text: "Drift Vault generated 45 tickets", icon: "🎰", time: "7m ago" },
-            { text: "Education Alliance milestone", icon: "📚", time: "8m ago" },
-        ];
-
-        const loadPersonalizedActivities = async () => {
+        const loadActivities = async () => {
             if (!isConnected || !address) {
-                setPersonalizedActivities(defaultActivities);
+                setActivities([]);
                 return;
             }
 
             setLoading(true);
             try {
-                // Get user's identity to personalize activities
                 const identity = await socialService.getUserIdentity(address);
-
-                // Generate personalized activities based on user's social context
-                const activities = [...defaultActivities];
+                const realActivities: Activity[] = [];
 
                 if (identity?.farcaster) {
-                    // Add personalized activities for Farcaster users
-                    activities.unshift({
-                        text: `${identity.farcaster.displayName} connected their Farcaster`,
+                    realActivities.push({
+                        text: `Connected as @${identity.farcaster.username}`,
                         icon: "💜",
-                        time: "just now"
+                        time: "now"
                     });
                 }
 
                 if (identity?.twitter) {
-                    // Add personalized activities for Twitter users
-                    activities.splice(1, 0, {
-                        text: `${identity.twitter.displayName} joined the lottery community`,
+                    realActivities.push({
+                        text: `Connected as @${identity.twitter.username}`,
                         icon: "🐦",
-                        time: "1m ago"
+                        time: "now"
                     });
                 }
 
-                // Add social proof based on follower counts
-                const totalFollowers = (identity?.farcaster?.followerCount || 0) + (identity?.twitter?.followerCount || 0);
-                if (totalFollowers > 100) {
-                    activities.splice(2, 0, {
-                        text: `${totalFollowers.toLocaleString()}+ community members active`,
-                        icon: "👥",
-                        time: "3m ago"
-                    });
-                }
-
-                setPersonalizedActivities(activities);
+                setActivities(realActivities);
             } catch (error) {
-                console.error('Failed to load personalized activities:', error);
-                setPersonalizedActivities(defaultActivities);
+                console.error('Failed to load activities:', error);
+                setActivities([]);
             } finally {
                 setLoading(false);
             }
         };
 
-        loadPersonalizedActivities();
+        loadActivities();
     }, [address, isConnected]);
 
-    const activities = loading ? [] : personalizedActivities;
+    // Don't render if no connected user or no real activities
+    if (!isConnected || (!loading && activities.length === 0)) {
+        return null;
+    }
 
     return (
         <PuzzlePiece
@@ -94,43 +74,45 @@ export function ActivityFeedPiece() {
             className="hover-glow"
         >
             <CompactStack spacing="md">
-                <div className="flex flex-col space-y-4 items-stretch">
-                    <h2 className="font-bold text-lg md:text-4xl lg:text-5xl leading-tight tracking-tight text-white">
-                        Live Activity
+                <CompactFlex align="center" gap="sm">
+                    <h2 className="font-bold text-lg text-white">
+                        Your Activity
                     </h2>
-                    <CompactFlex align="center" gap="sm">
-                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                    </CompactFlex>
-                </div>
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                </CompactFlex>
 
-                <div className="flex flex-col space-y-2 items-stretch">
-                    {activities.map((activity, index) => (
-                        <div
-                            key={index}
-                            className={`glass p-3 rounded-lg hover-scale animate-fade-in-up stagger-${index + 1
-                                } transition-all duration-300 ${hoveredActivity === index
-                                    ? "ring-1 ring-white/30 bg-white/5"
-                                    : ""
+                {loading ? (
+                    <div className="text-sm text-gray-400">Loading...</div>
+                ) : (
+                    <div className="flex flex-col space-y-2 items-stretch">
+                        {activities.map((activity, index) => (
+                            <div
+                                key={index}
+                                className={`glass p-3 rounded-lg hover-scale transition-all duration-300 ${
+                                    hoveredActivity === index
+                                        ? "ring-1 ring-white/30 bg-white/5"
+                                        : ""
                                 }`}
-                            onMouseEnter={() => setHoveredActivity(index)}
-                            onMouseLeave={() => setHoveredActivity(null)}
-                        >
-                            <CompactFlex align="center" gap="sm">
-                                <span className="text-xl transition-transform duration-300 hover:scale-125">
-                                    {activity.icon}
-                                </span>
-                                <div className="flex-1">
-                                    <p className="text-sm text-white leading-relaxed">
-                                        {activity.text}
-                                    </p>
-                                    <p className="text-xs text-gray-500 leading-relaxed">
-                                        {activity.time}
-                                    </p>
-                                </div>
-                            </CompactFlex>
-                        </div>
-                    ))}
-                </div>
+                                onMouseEnter={() => setHoveredActivity(index)}
+                                onMouseLeave={() => setHoveredActivity(null)}
+                            >
+                                <CompactFlex align="center" gap="sm">
+                                    <span className="text-xl">
+                                        {activity.icon}
+                                    </span>
+                                    <div className="flex-1">
+                                        <p className="text-sm text-white leading-relaxed">
+                                            {activity.text}
+                                        </p>
+                                        <p className="text-xs text-gray-500 leading-relaxed">
+                                            {activity.time}
+                                        </p>
+                                    </div>
+                                </CompactFlex>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </CompactStack>
         </PuzzlePiece>
     );

@@ -10,10 +10,10 @@ export async function executeVaultYieldPurchase(
   req: PurchaseRequest,
 ): Promise<PurchaseResult> {
   try {
-    if (!req.vaultProtocol || !req.vaultAmount) {
+    if (!req.vaultProtocol) {
       return {
         success: false,
-        error: { code: "INVALID_REQUEST", message: "Vault protocol and amount required" },
+        error: { code: "INVALID_REQUEST", message: "Vault protocol required" },
       };
     }
 
@@ -21,20 +21,32 @@ export async function executeVaultYieldPurchase(
       "@/services/yieldToTicketsService"
     );
 
-    const result = await yieldToTicketsService.purchaseTicketsFromYield(
-      req.vaultProtocol,
+    const result = await yieldToTicketsService.processYieldConversion(
       req.userAddress,
-      req.vaultAmount,
     );
+
+    if (result.pendingWithdrawalTx) {
+      // Needs client-side signing (Solana/Drift)
+      return {
+        success: true,
+        status: 'pending_signature',
+        txHash: undefined,
+        details: {
+          txData: { data: result.pendingWithdrawalTx },
+          yieldAmount: result.yieldAmount,
+          causesAmount: result.causesAmount,
+        },
+      };
+    }
 
     if (!result.success) {
       return {
         success: false,
-        error: { code: "VAULT_PURCHASE_FAILED", message: result.error || "Failed to purchase tickets from vault yield" },
+        error: { code: "VAULT_PURCHASE_FAILED", message: result.error || "Failed to process vault yield" },
       };
     }
 
-    return { success: true, txHash: result.txHash };
+    return { success: true, txHash: result.txHashes[0] };
   } catch (error) {
     return errorResult("VAULT_ERROR", error, "Vault purchase failed");
   }
