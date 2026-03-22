@@ -90,11 +90,12 @@ function YieldStrategiesContent() {
     }
   }, [protocolParam]);
 
-  // Handle deposit
+  // Handle deposit - now supports all vault protocols
   const handleDeposit = async () => {
     if (!selectedStrategy || depositAmount <= 0) return;
-    // Only vault protocols (drift, aave) support deposits
-    if (selectedStrategy !== 'drift' && selectedStrategy !== 'aave') return;
+    // Support all vault protocols (drift, aave, morpho, pooltogether)
+    const vaultProtocols: VaultProtocol[] = ['drift', 'aave', 'morpho', 'pooltogether'];
+    if (!vaultProtocols.includes(selectedStrategy as VaultProtocol)) return;
 
     setDepositSuccess(false);
     const result = await deposit(selectedStrategy as VaultProtocol, depositAmount.toString());
@@ -272,9 +273,12 @@ function YieldStrategiesContent() {
                                   </p>
                                 </div>
                                 <div className="glass-premium p-4 rounded-lg border border-white/10">
-                                  <p className="text-sm text-gray-400 mb-1">Expected APY</p>
-                                  <p className="font-bold text-white">
-                                    {selectedStrategy === 'drift' ? '~22.5%' : '3-6%'}
+                                  <p className="text-sm text-gray-400 mb-1">Current APY</p>
+                                  <p className="font-bold text-green-400">
+                                    {selectedStrategy === 'drift' ? '~22.5%' : 
+                                     selectedStrategy === 'morpho' ? '~6.7%' :
+                                     selectedStrategy === 'pooltogether' ? '~3.5%' :
+                                     selectedStrategy === 'aave' ? '~4.5%' : 'Variable'}
                                   </p>
                                 </div>
                                 <div className="glass-premium p-4 rounded-lg border border-white/10">
@@ -290,17 +294,16 @@ function YieldStrategiesContent() {
                                 <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
                                   <div className="flex items-center gap-2 mb-2">
                                     <Check className="w-5 h-5 text-green-400" />
-                                    <span className="font-bold text-green-300">Deposit Confirmed</span>
+                                    <span className="font-bold text-green-300">Deposit Confirmed!</span>
                                   </div>
+                                  <p className="text-xs text-green-200/70 mb-2">Your funds are now earning yield</p>
                                   <a
-                                    href={selectedStrategy === 'aave'
-                                      ? `https://basescan.org/tx/${txHash}`
-                                      : `https://solscan.io/tx/${txHash}`}
+                                    href={`https://basescan.org/tx/${txHash}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-xs text-green-400 hover:text-green-300 underline flex items-center gap-1"
                                   >
-                                    View on {selectedStrategy === 'aave' ? 'Basescan' : 'Solscan'} <ExternalLink className="w-3 h-3" />
+                                    View on Basescan <ExternalLink className="w-3 h-3" />
                                   </a>
                                 </div>
                               ) : depositError ? (
@@ -320,7 +323,7 @@ function YieldStrategiesContent() {
                               ) : (
                                 <Button
                                   onClick={handleDeposit}
-                                  disabled={!depositAmount || depositAmount <= 0 || isDepositing || (selectedStrategy !== 'drift' && selectedStrategy !== 'aave')}
+                                  disabled={!depositAmount || depositAmount <= 0 || isDepositing}
                                   className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
                                   variant="default"
                                 >
@@ -333,12 +336,6 @@ function YieldStrategiesContent() {
                                     `Deposit ${depositAmount > 0 ? `${depositAmount.toLocaleString()} USDC` : ''} into ${selectedStrategy.toUpperCase()}`
                                   )}
                                 </Button>
-                              )}
-
-                              {selectedStrategy !== 'drift' && selectedStrategy !== 'aave' && !depositSuccess && (
-                                <p className="text-xs text-gray-500 mt-2 text-center">
-                                  Deposit not yet available for this strategy
-                                </p>
                               )}
                             </div>
                           </div>
