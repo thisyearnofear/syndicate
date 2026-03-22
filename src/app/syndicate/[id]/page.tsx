@@ -8,6 +8,7 @@ import SyndicateJoinModal from "@/components/syndicate/SyndicateJoinModal";
 import { SyndicateDashboard } from "@/components/syndicate/SyndicateDashboard";
 import { PrizeDistribution } from "@/components/syndicate/PrizeDistribution";
 import { TransactionHistory } from "@/components/syndicate/TransactionHistory";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import type { SyndicateInfo } from "@/domains/lottery/types";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 
@@ -165,7 +166,8 @@ export default function SyndicateDetailPage() {
               </div>
             </div>
             
-            <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <NotificationBell poolId={id} />
               <Button variant="outline" className="border-purple-500/50 text-purple-300 hover:bg-purple-500/10 min-h-[44px] flex-1 sm:flex-none" onClick={handleShare} disabled={isSharing}>
                 <Share2 className="w-4 h-4 mr-2" />
                 {isSharing ? 'Sharing...' : 'Share'}
