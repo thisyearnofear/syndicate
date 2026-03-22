@@ -88,6 +88,8 @@ export interface TicketPurchaseProps {
 // SYNDICATE TYPES (ENHANCEMENT FIRST: Added to existing lottery types)
 // =============================================================================
 
+export type PoolType = 'safe' | 'splits' | 'pooltogether';
+
 export interface SyndicateInfo {
   id: string;
   name: string;
@@ -134,6 +136,11 @@ export interface SyndicateInfo {
   isActive: boolean;
   isTrending: boolean;
   recentActivity: SyndicateActivity[];
+  // Pool type support
+  poolType?: PoolType;          // Type of pooling mechanism
+  safeAddress?: string;         // Safe multisig address
+  splitAddress?: string;        // 0xSplits contract address
+  ptVaultAddress?: string;      // PoolTogether vault address
 }
 
 export interface VerifiedCause {
