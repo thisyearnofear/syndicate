@@ -1,48 +1,154 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { CompactCard, CompactStack } from '@/shared/components/premium/CompactLayout';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
-import { TrendingUp, Wallet, Heart, Trophy, Zap, ShieldAlert, BadgeCheck } from 'lucide-react';
+import { TrendingUp, Wallet, Heart, Trophy, Zap, ShieldAlert, BadgeCheck, Loader } from 'lucide-react';
 import { YieldPerformanceDisplay } from '@/components/yield/YieldPerformanceDisplay';
 import { useToast, useErrorToast, useSuccessToast } from '@/shared/components/ui/Toast';
-import { vaultManager } from '@/services/vaults';
+import { vaultManager, type VaultBalance } from '@/services/vaults';
+import { yieldToTicketsService, type AutoYieldStrategy } from '@/services/yieldToTicketsService';
+import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { Button } from '@/shared/components/ui/Button';
 
 interface YieldDashboardProps {
   className?: string;
 }
 
+interface UserVaultData {
+  balance: VaultBalance | null;
+  strategy: AutoYieldStrategy | null;
+  isLoading: boolean;
+}
+
 export function YieldDashboard({ className = '' }: YieldDashboardProps) {
+  const { address } = useWalletConnection();
   const { addToast } = useToast();
   const successToast = useSuccessToast();
   const errorToast = useErrorToast();
+  
+  const [vaultData, setVaultData] = useState<UserVaultData>({
+    balance: null,
+    strategy: null,
+    isLoading: true,
+  });
+
+  // Fetch real user data
+  useEffect(() => {
+    async function fetchUserData() {
+      if (!address) {
+        setVaultData({ balance: null, strategy: null, isLoading: false });
+        return;
+      }
+
+      setVaultData(prev => ({ ...prev, isLoading: true }));
+      
+      try {
+        // Get strategy status
+        const strategy = yieldToTicketsService.getStrategyStatus(address);
+        
+        // Get vault balance if strategy exists
+        let balance: VaultBalance | null = null;
+        if (strategy) {
+          try {
+            const provider = vaultManager.getProvider(strategy.config.vaultProtocol);
+            balance = await provider.getBalance(address);
+          } catch (err) {
+            console.error('[YieldDashboard] Failed to fetch vault balance:', err);
+          }
+        }
+        
+        setVaultData({
+          balance,
+          strategy,
+          isLoading: false,
+        });
+      } catch (err) {
+        console.error('[YieldDashboard] Failed to fetch user data:', err);
+        setVaultData({ balance: null, strategy: null, isLoading: false });
+      }
+    }
+
+    fetchUserData();
+    const interval = setInterval(fetchUserData, 30000); // Refresh every 30s
+    return () => clearInterval(interval);
+  }, [address]);
 
   const handleWithdrawPrincipal = async () => {
+    if (!address || !vaultData.strategy) {
+      errorToast("No Strategy", "No active yield strategy found.");
+      return;
+    }
+
     try {
-      // DRIFT PREMIUM strategy is selected by default in this context
-      // We manually fetch user address from context in the real service
       addToast({
         type: "info",
         title: "Initiating Withdrawal",
         message: "Checking strategy lockup status..."
       });
 
-      // Simulation of principal status check
-      const isPremiumStrategy = true; 
-      if (isPremiumStrategy) {
+      // Check if Drift premium strategy (has 3-month lockup)
+      const isDriftPremium = vaultData.strategy.config.vaultProtocol === 'drift';
+      if (isDriftPremium) {
         errorToast(
           "Principal Locked", 
-          "Drift Premium JLP strategy requires 3 months of activity to maintain yield coverage. Status: ~82 days remaining."
+          "Drift Premium JLP strategy requires 3 months of activity to maintain yield coverage."
         );
         return;
       }
 
-      // Default withdrawal path (for non-premium strategies or expired locks)
-      // await vaultManager.withdraw('drift', '2450.00', 'USER_ADDRESS_HERE');
-      successToast("Principal Withdrawn", "Your capital has been successfully moved back to your main wallet.");
+      // Withdraw from vault
+      const result = await vaultManager.withdraw(
+        vaultData.strategy.config.vaultProtocol,
+        vaultData.balance?.deposited || '0',
+        address
+      );
+      
+      if (result.success) {
+        successToast("Principal Withdrawn", "Your capital has been successfully moved back to your main wallet.");
+        // Refresh data
+        const updatedBalance = await vaultManager.getProvider(vaultData.strategy.config.vaultProtocol).getBalance(address);
+        setVaultData(prev => ({ ...prev, balance: updatedBalance }));
+      } else {
+        errorToast("Withdrawal Failed", result.error || "Failed to withdraw principal.");
+      }
     } catch (err: any) {
       errorToast("Withdrawal Failed", err.message || "An unexpected error occurred.");
     }
   };
+
+  // Calculate real data from vault
+  const totalDeposited = parseFloat(vaultData.balance?.deposited || '0');
+  const totalYield = parseFloat(vaultData.balance?.yieldAccrued || '0') + parseFloat(vaultData.strategy?.totalYieldProcessed || '0');
+  const ticketsGenerated = vaultData.strategy?.totalTicketsBought || 0;
+  const causesFunded = parseFloat(vaultData.strategy?.totalCausesFunded || '0');
+  const ticketsAllocation = vaultData.strategy?.config.ticketsAllocation || 85;
+  const causesAllocation = vaultData.strategy?.config.causesAllocation || 15;
+  const isLocked = vaultData.strategy?.config.vaultProtocol === 'drift'; // Drift has 3-month lockup
+
+  // Loading state
+  if (vaultData.isLoading) {
+    return (
+      <div className={`w-full ${className}`}>
+        <div className="flex justify-center items-center py-12">
+          <Loader className="w-8 h-8 text-blue-400 animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  // No active strategy
+  if (!vaultData.strategy) {
+    return (
+      <div className={`w-full ${className}`}>
+        <CompactCard variant="glass" padding="lg">
+          <div className="text-center py-8">
+            <Wallet className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-white mb-2">No Active Yield Strategy</h3>
+            <p className="text-gray-400">Set up a yield strategy to start earning and funding causes.</p>
+          </div>
+        </CompactCard>
+      </div>
+    );
+  }
 
   return (
     <div className={`w-full ${className}`}>
@@ -51,7 +157,10 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
           <TrendingUp className="w-6 h-6 text-blue-400" />
           Yield Dashboard
         </h2>
-        <p className="text-gray-400">Track your yield generation and impact</p>
+        <p className="text-gray-400">
+          {vaultData.strategy.config.vaultProtocol.toUpperCase()} Strategy • 
+          {vaultData.strategy.isActive ? ' Active' : ' Inactive'}
+        </p>
       </div>
       
       <CompactStack spacing="lg">
@@ -64,7 +173,7 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
               </div>
               <div>
                 <p className="text-xs text-gray-400">Total Deposited</p>
-                <p className="font-bold text-white">$2,450.00</p>
+                <p className="font-bold text-white">${totalDeposited.toFixed(2)}</p>
               </div>
             </div>
           </PuzzlePiece>
@@ -76,7 +185,7 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
               </div>
               <div>
                 <p className="text-xs text-gray-400">Total Yield</p>
-                <p className="font-bold text-white">$128.45</p>
+                <p className="font-bold text-white">${totalYield.toFixed(2)}</p>
               </div>
             </div>
           </PuzzlePiece>
@@ -88,7 +197,7 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
               </div>
               <div>
                 <p className="text-xs text-gray-400">Tickets Generated</p>
-                <p className="font-bold text-white">128</p>
+                <p className="font-bold text-white">{ticketsGenerated}</p>
               </div>
             </div>
           </PuzzlePiece>
@@ -100,7 +209,7 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
               </div>
               <div>
                 <p className="text-xs text-gray-400">To Causes</p>
-                <p className="font-bold text-white">$85.30</p>
+                <p className="font-bold text-white">${causesFunded.toFixed(2)}</p>
               </div>
             </div>
           </PuzzlePiece>
@@ -108,12 +217,12 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
         
         {/* Performance Display */}
         <YieldPerformanceDisplay 
-          strategy="Drift Premium JLP"
-          yieldRate={22.5}
-          totalYield={128.45}
-          ticketsGenerated={128}
-          causesFunded={85.30}
-          isLocked={true}
+          strategy={`${vaultData.strategy.config.vaultProtocol.toUpperCase()} Strategy`}
+          yieldRate={totalDeposited > 0 ? (totalYield / totalDeposited * 100) : 0}
+          totalYield={totalYield}
+          ticketsGenerated={ticketsGenerated}
+          causesFunded={causesFunded}
+          isLocked={isLocked}
           onWithdrawPrincipal={handleWithdrawPrincipal}
         />
         
@@ -123,13 +232,13 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
           <div className="space-y-4">
             <div>
               <div className="flex justify-between mb-1">
-                <span className="text-gray-300">Tickets: 85%</span>
-                <span className="text-gray-300">Causes: 15%</span>
+                <span className="text-gray-300">Tickets: {ticketsAllocation}%</span>
+                <span className="text-gray-300">Causes: {causesAllocation}%</span>
               </div>
               <div className="w-full bg-gray-700 rounded-full h-2.5">
                 <div 
                   className="bg-gradient-to-r from-yellow-500 to-yellow-400 h-2.5 rounded-full" 
-                  style={{ width: '85%' }}
+                  style={{ width: `${ticketsAllocation}%` }}
                 ></div>
               </div>
             </div>
@@ -141,7 +250,7 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
                   <span className="text-sm font-medium text-white">Ticket Impact</span>
                 </div>
                 <p className="text-xs text-gray-400">
-                  Generated 128 additional tickets for lottery participation
+                  Generated {ticketsGenerated} additional tickets for lottery participation
                 </p>
               </CompactCard>
               
@@ -151,44 +260,57 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
                   <span className="text-sm font-medium text-white">Cause Impact</span>
                 </div>
                 <p className="text-xs text-gray-400">
-                  Donated $85.30 directly to causes
+                  Donated ${causesFunded.toFixed(2)} directly to causes
                 </p>
               </CompactCard>
             </div>
           </div>
         </PuzzlePiece>
         
-        {/* Active Syndicates */}
+        {/* Current Strategy */}
         <CompactCard variant="premium" padding="md">
-          <h3 className="font-bold text-white mb-4">Active Yield Syndicates</h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+          <h3 className="font-bold text-white mb-4">Current Yield Strategy</h3>
+          <div className="p-4 bg-white/5 rounded-lg">
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm">
-                  O
+                  {vaultData.strategy.config.vaultProtocol.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <p className="font-medium text-white">Ocean Warriors</p>
-                  <p className="text-xs text-gray-400">Aave V3 • 85/15 split</p>
+                  <p className="font-medium text-white">
+                    {vaultData.strategy.config.vaultProtocol.toUpperCase()} Strategy
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {ticketsAllocation}/{causesAllocation} split • 
+                    {vaultData.strategy.isActive ? ' Active' : ' Paused'}
+                  </p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm font-medium text-green-400">+2.12% APY</p>
+                <p className="text-sm font-medium text-green-400">
+                  {vaultData.balance?.apy ? `+${vaultData.balance.apy.toFixed(1)}% APY` : 'Loading...'}
+                </p>
               </div>
             </div>
             
-            <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center text-white font-bold text-sm">
-                  E
-                </div>
-                <div>
-                  <p className="font-medium text-white">Education First</p>
-                  <p className="text-xs text-gray-400">Morpho V2 • 80/20 split</p>
-                </div>
+            <div className="grid grid-cols-3 gap-4 pt-3 border-t border-white/10">
+              <div>
+                <p className="text-xs text-gray-400">Last Processed</p>
+                <p className="text-sm text-white">
+                  {new Date(vaultData.strategy.lastProcessed).toLocaleDateString()}
+                </p>
               </div>
-              <div className="text-right">
-                <p className="text-sm font-medium text-green-400">+3.87% APY</p>
+              <div>
+                <p className="text-xs text-gray-400">Total Processed</p>
+                <p className="text-sm text-white">
+                  ${parseFloat(vaultData.strategy.totalYieldProcessed).toFixed(2)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">Next Processing</p>
+                <p className="text-sm text-white">
+                  {vaultData.strategy.config.minIntervalMinutes}min interval
+                </p>
               </div>
             </div>
           </div>

@@ -21,7 +21,8 @@ import {
 } from "@/shared/components/premium/CompactLayout";
 
 import Link from "next/link";
-
+import { useRouter } from "next/navigation";
+import { useToast } from "@/shared/components/ui/Toast";
 
 import type { SyndicateInfo } from "@/domains/lottery/types";
 
@@ -32,6 +33,8 @@ export default function SyndicatesPage() {
     const [syndicates, setSyndicates] = useState<SyndicateInfo[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const { addToast } = useToast();
+    const router = useRouter();
 
     useEffect(() => {
         const fetchSyndicates = async () => {
@@ -145,8 +148,17 @@ export default function SyndicatesPage() {
                                     >
                                         <SyndicateCard
                                             syndicate={syndicate}
-                                            onJoin={(id) => console.log('Join syndicate:', id)}
-                                            onView={(id) => console.log('View syndicate:', id)}
+                                            onJoin={(id) => {
+                                                addToast({
+                                                    type: 'info',
+                                                    title: 'Join Syndicate',
+                                                    message: 'Opening purchase modal...',
+                                                    duration: 2000,
+                                                });
+                                                // TODO: Open purchase modal with syndicate ID
+                                                console.log('Join syndicate:', id);
+                                            }}
+                                            onView={(id) => router.push(`/syndicate/${id}`)}
                                         />
                                     </Suspense>
                                 ))}

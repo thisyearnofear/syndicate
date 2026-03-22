@@ -27,10 +27,10 @@ function mapPoolToSyndicateInfo(pool: SyndicatePoolRow): SyndicateInfo {
     verificationTier: 2 as const,
   };
 
-  // Calculate metrics from pool data
+  // Use actual ticket tracking data
   const totalPooled = parseFloat(pool.total_pooled_usdc);
-  const estimatedTicketPrice = 1.0; // $1 per ticket
-  const ticketsPurchased = Math.floor(totalPooled / estimatedTicketPrice);
+  const ticketsPurchased = pool.tickets_purchased || 0;
+  const totalImpact = parseFloat(pool.total_impact_usdc || '0') || totalPooled * 0.2; // Fallback to calculation
 
   return {
     id: pool.id,
@@ -54,7 +54,7 @@ function mapPoolToSyndicateInfo(pool: SyndicatePoolRow): SyndicateInfo {
     membersCount: pool.members_count,
     ticketsPooled: ticketsPurchased,
     ticketsPurchased: ticketsPurchased,
-    totalImpact: totalPooled * 0.2, // 20% goes to cause
+    totalImpact: totalImpact,
     isActive: pool.is_active,
     isTrending: pool.members_count > 1000, // Simple trending logic
     recentActivity: [], // Would be populated from activity tracking in production
@@ -175,6 +175,11 @@ export async function POST(request: Request) {
         ticketCount,
         coordinatorAddress
       );
+
+      // Record ticket purchase if successful
+      if (result.success && result.txHash) {
+        await syndicateRepository.recordTicketPurchase(poolId, ticketCount, result.txHash);
+      }
 
       return NextResponse.json(result, { headers: corsHeaders });
     }

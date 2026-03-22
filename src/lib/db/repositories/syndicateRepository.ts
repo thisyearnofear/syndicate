@@ -16,6 +16,8 @@ export interface SyndicatePoolRow {
     coordinator_address: string;
     members_count: number;
     total_pooled_usdc: string;
+    tickets_purchased: number;
+    total_impact_usdc: string;
     cause_allocation_percent: number;
     privacy_enabled: boolean;
     pool_public_key: Buffer | null;
@@ -220,14 +222,20 @@ export class SyndicateRepository {
         totalPooled: string;
         membersCount: number;
         avgContribution: string;
+        ticketsPurchased: number;
+        totalImpact: string;
     } | null> {
         const result = await sql`
       SELECT 
         COALESCE(SUM(amount_usdc), 0) as total_pooled,
         COUNT(DISTINCT member_address) as members_count,
-        COALESCE(AVG(amount_usdc), 0) as avg_contribution
-      FROM syndicate_members
-      WHERE pool_id = ${poolId}
+        COALESCE(AVG(amount_usdc), 0) as avg_contribution,
+        tickets_purchased,
+        total_impact_usdc
+      FROM syndicate_pools p
+      LEFT JOIN syndicate_members m ON p.id = m.pool_id
+      WHERE p.id = ${poolId}
+      GROUP BY p.id, p.tickets_purchased, p.total_impact_usdc
     `;
 
         if (result.rows.length === 0) return null;
@@ -237,7 +245,41 @@ export class SyndicateRepository {
             totalPooled: row.total_pooled,
             membersCount: parseInt(row.members_count),
             avgContribution: row.avg_contribution,
+            ticketsPurchased: parseInt(row.tickets_purchased || '0'),
+            totalImpact: row.total_impact_usdc || '0',
         };
+    }
+
+    /**
+     * Record ticket purchase for a pool
+     */
+    async recordTicketPurchase(poolId: string, ticketCount: number, txHash?: string): Promise<void> {
+        const now = Date.now();
+        
+        // Update pool ticket count
+        await sql`
+      UPDATE syndicate_pools
+      SET 
+        tickets_purchased = tickets_purchased + ${ticketCount},
+        updated_at = ${now}
+      WHERE id = ${poolId}
+    `;
+
+        // If transaction hash provided, we could store it in distributions table
+        // For now, just update the pool totals
+    }
+
+    /**
+     * Update pool impact (total USDC allocated to causes)
+     */
+    async updatePoolImpact(poolId: string, impactAmountUsdc: string): Promise<void> {
+        await sql`
+      UPDATE syndicate_pools
+      SET 
+        total_impact_usdc = ${impactAmountUsdc},
+        updated_at = ${Date.now()}
+      WHERE id = ${poolId}
+    `;
     }
 }
 

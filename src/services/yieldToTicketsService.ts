@@ -37,6 +37,13 @@ export interface YieldConversionResult {
   txHashes: string[];
   /** If withdrawal needs client-side signing (Solana/Drift) */
   pendingWithdrawalTx?: string;
+  /** Cause transfer params for client-side signing after yield conversion */
+  causeTransferParams?: {
+    chain: 'evm' | 'solana';
+    to: string;
+    amountWei: string;
+    data?: string;
+  } | null;
   error?: string;
 }
 
@@ -190,6 +197,13 @@ class YieldToTicketsService {
         const withdrawResult = await provider.withdrawYield(config.userAddress);
 
         if (withdrawResult.txData) {
+          // Get cause transfer params for after withdrawal completes
+          const causeTransferParams = this.getCauseTransferParams(
+            config.vaultProtocol,
+            causesAmount,
+            config.causeWallet
+          );
+          
           return {
             success: false, // Not complete yet — needs client signing
             yieldAmount,
@@ -197,6 +211,7 @@ class YieldToTicketsService {
             causesAmount,
             txHashes: [],
             pendingWithdrawalTx: withdrawResult.txData,
+            causeTransferParams,
           };
         }
 
@@ -236,12 +251,20 @@ class YieldToTicketsService {
       strategy.totalCausesFunded = (parseFloat(strategy.totalCausesFunded) + parseFloat(causesAmount)).toString();
       this.saveToStorage();
 
+      // Get cause transfer params for client-side execution
+      const causeTransferParams = this.getCauseTransferParams(
+        config.vaultProtocol,
+        causesAmount,
+        config.causeWallet
+      );
+
       return {
         success: true,
         yieldAmount,
         ticketsPurchased,
         causesAmount,
         txHashes,
+        causeTransferParams,
       };
     } catch (error) {
       console.error('[YieldToTicketsService] Yield conversion failed:', error);
@@ -299,16 +322,29 @@ class YieldToTicketsService {
       }
     }
 
+    // Calculate causes amount from total yield processed
+    const totalYield = parseFloat(strategy.totalYieldProcessed || '0');
+    const causesAmount = (totalYield * config.causesAllocation / 100).toFixed(6);
+    
+    // Get cause transfer params for client-side execution
+    const causeTransferParams = this.getCauseTransferParams(
+      config.vaultProtocol,
+      causesAmount,
+      config.causeWallet
+    );
+
     strategy.lastProcessed = new Date().toISOString();
     strategy.totalTicketsBought += ticketsPurchased;
+    strategy.totalCausesFunded = (parseFloat(strategy.totalCausesFunded) + parseFloat(causesAmount)).toString();
     this.saveToStorage();
 
     return {
       success: true,
       yieldAmount: strategy.totalYieldProcessed,
       ticketsPurchased,
-      causesAmount: '0',
+      causesAmount,
       txHashes,
+      causeTransferParams,
     };
   }
 
@@ -366,6 +402,65 @@ class YieldToTicketsService {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Build a USDC transfer to a cause wallet.
+   * Returns encoded call data for client-side signing.
+   *
+   * For EVM (Base): ABI-encoded USDC.transfer(to, amount)
+   * For Solana: SPL token transfer instruction data
+   */
+  getCauseTransferParams(
+    vaultProtocol: VaultProtocol,
+    amountUsdc: string,
+    causeWallet: string
+  ): { chain: 'evm' | 'solana'; to: string; amountWei: string; data?: string } | null {
+    const amount = parseFloat(amountUsdc);
+    if (amount <= 0 || !causeWallet || causeWallet === '0x0000000000000000000000000000000000000000') {
+      return null;
+    }
+
+    // USDC has 6 decimals
+    const amountWei = Math.round(amount * 1e6).toString();
+
+    if (vaultProtocol === 'aave') {
+      // EVM USDC transfer: function transfer(address to, uint256 amount) returns (bool)
+      // Function selector: 0xa9059cbb
+      const functionSelector = '0xa9059cbb';
+      const paddedTo = causeWallet.slice(2).padStart(64, '0');
+      const paddedAmount = BigInt(amountWei).toString(16).padStart(64, '0');
+      const data = `${functionSelector}${paddedTo}${paddedAmount}`;
+      return { chain: 'evm', to: causeWallet, amountWei, data };
+    }
+
+    if (vaultProtocol === 'drift') {
+      // Solana SPL transfer - client will construct instruction
+      return { chain: 'solana', to: causeWallet, amountWei };
+    }
+
+    return null;
+  }
+
+  /**
+   * Get cause transfer params for a user's active strategy.
+   * Returns null if no active strategy or causes allocation is 0.
+   */
+  getStrategyCauseTransferParams(
+    userAddress: string,
+    yieldAmount: string
+  ): { chain: 'evm' | 'solana'; to: string; amountWei: string; data?: string } | null {
+    const strategy = this.strategies.get(userAddress);
+    if (!strategy || !strategy.isActive || strategy.config.causesAllocation <= 0) {
+      return null;
+    }
+
+    const causesAmount = (parseFloat(yieldAmount) * strategy.config.causesAllocation / 100).toFixed(6);
+    return this.getCauseTransferParams(
+      strategy.config.vaultProtocol,
+      causesAmount,
+      strategy.config.causeWallet
+    );
   }
 }
 

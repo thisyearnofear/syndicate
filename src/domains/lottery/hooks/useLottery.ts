@@ -185,14 +185,12 @@ export function useLotteryPurchase() {
     setTxHash(null);
 
     try {
-      // This would integrate with the actual contract interaction
-      // For now, simulate the purchase based on ticketCount
-      await new Promise(resolve => setTimeout(resolve, 2000 + (ticketCount * 100))); // Simulate time based on number of tickets
-
-      const mockTxHash = `0x${Math.random().toString(16).substr(2, 64)}`;
-      setTxHash(mockTxHash);
-
-      return { success: true, txHash: mockTxHash, ticketCount };
+      // NOTE: This function is a placeholder for individual ticket purchases
+      // For syndicate purchases, use the API route: POST /api/syndicates with action: 'executePurchase'
+      // For individual purchases, use the purchase orchestrator in src/domains/lottery/services/purchaseOrchestrator.ts
+      // 
+      // TODO: Implement actual purchase flow integration
+      throw new Error('Individual ticket purchases should use the purchase orchestrator. See purchaseOrchestrator.ts');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Purchase failed';
       setError(errorMessage);
