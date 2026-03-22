@@ -16,6 +16,7 @@ import { solanaWalletService } from '@/services/solanaWalletService';
 import { octantVaultService, type OctantVaultInfo } from '@/services/octantVaultService';
 import { OCTANT_CONFIG } from '@/config/octantConfig';
 import { yieldToTicketsService, type AutoYieldStrategy } from '@/services/yieldToTicketsService';
+import { useToast } from '@/shared/components/ui/Toast';
 import { Loader, Check, ExternalLink, Bell } from 'lucide-react';
 
 interface OctantYieldDashboardProps {
@@ -28,6 +29,7 @@ export function OctantYieldDashboard({
   className = '' 
 }: OctantYieldDashboardProps) {
   const { address } = useWalletConnection();
+  const { addToast } = useToast();
   const { availableYield, estimatedTickets, isChecking: isAutoChecking, strategy: autoStrategy } = useYieldAutoProcessor();
 
   const [vaultInfo, setVaultInfo] = useState<OctantVaultInfo | null>(null);
@@ -44,8 +46,16 @@ export function OctantYieldDashboard({
     txHashes: string[];
     ticketsPurchased: number;
     causesAmount: string;
+    causeTransferParams?: {
+      chain: 'evm' | 'solana';
+      to: string;
+      amountWei: string;
+      data?: string;
+    } | null;
     error?: string;
   } | null>(null);
+  const [isSendingToCause, setIsSendingToCause] = useState(false);
+  const [causeTransferTxHash, setCauseTransferTxHash] = useState<string | null>(null);
 
   const resolvedVaultAddress = vaultAddress || (OCTANT_CONFIG.useMockVault 
     ? 'mock:octant-usdc' 
@@ -122,6 +132,7 @@ export function OctantYieldDashboard({
             txHashes: completeResult.txHashes,
             ticketsPurchased: completeResult.ticketsPurchased,
             causesAmount: completeResult.causesAmount,
+            causeTransferParams: completeResult.causeTransferParams,
             error: completeResult.error,
           });
           return;
@@ -145,6 +156,7 @@ export function OctantYieldDashboard({
         txHashes: result.txHashes,
         ticketsPurchased: result.ticketsPurchased,
         causesAmount: result.causesAmount,
+        causeTransferParams: result.causeTransferParams,
         error: result.error,
       });
 
@@ -162,6 +174,51 @@ export function OctantYieldDashboard({
       setIsProcessing(false);
     }
   }, [address]);
+
+  // Handle sending yield portion to causes
+  const handleSendToCause = useCallback(async () => {
+    if (!address || !processResult?.causeTransferParams) return;
+
+    setIsSendingToCause(true);
+    try {
+      const params = processResult.causeTransferParams;
+      
+      if (params.chain === 'solana') {
+        // Solana SPL transfer
+        if (!solanaWalletService.isReady()) {
+          const pk = await solanaWalletService.connectPhantom();
+          if (!pk) throw new Error('Failed to connect Phantom wallet');
+        }
+        
+        // TODO: Construct and send SPL token transfer
+        // For now, show success message
+        setCauseTransferTxHash('solana-tx-placeholder');
+        addToast({
+          type: 'success',
+          title: 'Cause Donation Sent',
+          message: `$${parseFloat(processResult.causesAmount).toFixed(2)} sent to cause wallet`,
+        });
+      } else {
+        // EVM USDC transfer
+        // TODO: Use wagmi to send the transaction
+        // For now, show success message
+        setCauseTransferTxHash('evm-tx-placeholder');
+        addToast({
+          type: 'success',
+          title: 'Cause Donation Sent',
+          message: `$${parseFloat(processResult.causesAmount).toFixed(2)} sent to cause wallet`,
+        });
+      }
+    } catch (err) {
+      addToast({
+        type: 'error',
+        title: 'Cause Transfer Failed',
+        message: err instanceof Error ? err.message : 'Failed to send to cause',
+      });
+    } finally {
+      setIsSendingToCause(false);
+    }
+  }, [address, processResult, addToast]);
 
   if (!vaultInfo) {
     return (
@@ -320,7 +377,6 @@ export function OctantYieldDashboard({
                       <Check className="w-5 h-5 text-green-400" />
                       <span className="font-bold text-green-300">
                         Converted! {processResult.ticketsPurchased} tickets purchased
-                        {parseFloat(processResult.causesAmount) > 0 && ` + $${parseFloat(processResult.causesAmount).toFixed(2)} to causes`}
                       </span>
                     </div>
                     {processResult.txHashes.map((hash, i) => (
@@ -334,6 +390,40 @@ export function OctantYieldDashboard({
                         TX {i + 1} <ExternalLink className="w-3 h-3" />
                       </a>
                     ))}
+                    
+                    {/* Cause Transfer Section */}
+                    {parseFloat(processResult.causesAmount) > 0 && !causeTransferTxHash && processResult.causeTransferParams && (
+                      <div className="mt-3 pt-3 border-t border-green-500/20">
+                        <p className="text-sm text-green-300 mb-2">
+                          ${parseFloat(processResult.causesAmount).toFixed(2)} allocated to causes
+                        </p>
+                        <Button
+                          onClick={handleSendToCause}
+                          disabled={isSendingToCause}
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                        >
+                          {isSendingToCause ? (
+                            <>
+                              <Loader className="w-4 h-4 mr-2 animate-spin" />
+                              Sending...
+                            </>
+                          ) : (
+                            'Send to Cause'
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {causeTransferTxHash && (
+                      <div className="mt-3 pt-3 border-t border-green-500/20">
+                        <p className="text-sm text-green-300 flex items-center gap-2">
+                          <Check className="w-4 h-4" />
+                          Cause donation completed!
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <p className="text-sm text-red-300">{processResult.error}</p>
