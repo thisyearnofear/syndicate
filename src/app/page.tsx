@@ -28,6 +28,7 @@ import { StatsPieces } from "@/components/home/StatsPieces";
 
 // Lazy load heavy components
 const SimplePurchaseModal = lazy(() => import("@/components/modal/SimplePurchaseModal"));
+import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 const SocialFeed = lazy(() => import("@/components/SocialFeed"));
 const MultiLotteryPrizes = lazy(() => import("@/components/home/MultiLotteryPrizes"));
 const WalletConnectionManager = lazy(() => import("@/components/wallet/WalletConnectionManager"));
@@ -401,6 +402,9 @@ export default function PremiumHome() {
           ⚡ Quick Buy
         </Button>
       </div>
+
+      {/* Onboarding Wizard */}
+      <OnboardingWizard />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { PrizeDistribution } from "@/components/syndicate/PrizeDistribution";
 import { TransactionHistory } from "@/components/syndicate/TransactionHistory";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { SyndicateYieldDashboard } from "@/components/syndicate/SyndicateYieldDashboard";
+import { GovernanceVoting } from "@/components/syndicate/GovernanceVoting";
 import type { SyndicateInfo } from "@/domains/lottery/types";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 
@@ -201,6 +202,11 @@ export default function SyndicateDetailPage() {
         {/* Yield Dashboard */}
         <div className="mb-8">
           <SyndicateYieldDashboard poolId={id} />
+        </div>
+
+        {/* Governance Voting */}
+        <div className="mb-8">
+          <GovernanceVoting poolId={id} />
         </div>
 
         {/* Legacy Stats Grid (for reference) */}
