@@ -122,7 +122,7 @@ function mapPoolToSyndicateInfo(pool: SyndicatePoolRow): SyndicateInfo {
     },
     yieldToTicketsPercentage: 85,
     yieldToCausesPercentage: 15,
-    vaultStrategy: 'aave', // Default vault strategy
+    vaultStrategy: (pool.vault_strategy as any) || 'aave', // Use actual vault strategy
     lotteryId: pool.lottery_id ?? undefined,
     membersCount: pool.members_count,
     ticketsPooled: ticketsPurchased,
