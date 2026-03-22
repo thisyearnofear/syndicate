@@ -167,6 +167,7 @@ export function ImprovedYieldStrategySelector({
                     <p className="font-bold text-indigo-400">
                       {strategy.id === 'drift' ? 'Live on Solana 🟣' : 
                        strategy.id === 'aave' ? 'Live on Base 🟦' : 
+                       strategy.id === 'morpho' ? 'Live on Base 🟦' :
                        strategy.id === 'pooltogether' ? 'Live on Base 🟦' :
                        'Coming Soon'}
                     </p>
