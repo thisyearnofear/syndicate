@@ -165,7 +165,7 @@ export function ImprovedYieldStrategySelector({
                       </div>
                     </div>
                     <p className="font-bold text-indigo-400">
-                      {selectedStrategy === 'drift' ? 'Premium Strategy 🚀' : 'Coming Soon'}
+                      {strategy.id === 'drift' ? 'Premium Strategy 🚀' : strategy.id === 'aave' ? 'Live on Base 🟦' : 'Coming Soon'}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
                       {strategy.description}
