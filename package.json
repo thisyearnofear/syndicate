@@ -22,6 +22,7 @@
     "test:coverage": "jest --coverage",
     "test:gelato-webhook": "tsx scripts/test-gelato-webhook.ts",
     "migrate:gelato": "tsx scripts/migrate-gelato-db.ts",
+    "migrate": "tsx scripts/run-migration.ts",
     "postinstall": "bash scripts/patch-viem.sh"
   },
   "dependencies": {

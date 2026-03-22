@@ -17,7 +17,25 @@ import { octantVaultService, type OctantVaultInfo } from '@/services/octantVault
 import { OCTANT_CONFIG } from '@/config/octantConfig';
 import { yieldToTicketsService, type AutoYieldStrategy } from '@/services/yieldToTicketsService';
 import { useToast } from '@/shared/components/ui/Toast';
+import { useWalletClient, usePublicClient } from 'wagmi';
+import { base } from 'wagmi/chains';
+import { parseUnits } from 'viem';
 import { Loader, Check, ExternalLink, Bell } from 'lucide-react';
+
+// USDC contract on Base
+const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
+const ERC20_ABI = [
+  {
+    name: 'transfer',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'to', type: 'address' },
+      { name: 'amount', type: 'uint256' }
+    ],
+    outputs: [{ name: '', type: 'bool' }]
+  }
+] as const;
 
 interface OctantYieldDashboardProps {
   vaultAddress?: string;
@@ -175,6 +193,10 @@ export function OctantYieldDashboard({
     }
   }, [address]);
 
+  // Wagmi hooks for EVM transfers
+  const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
+
   // Handle sending yield portion to causes
   const handleSendToCause = useCallback(async () => {
     if (!address || !processResult?.causeTransferParams) return;
@@ -199,14 +221,31 @@ export function OctantYieldDashboard({
           message: `$${parseFloat(processResult.causesAmount).toFixed(2)} sent to cause wallet`,
         });
       } else {
-        // EVM USDC transfer
-        // TODO: Use wagmi to send the transaction
-        // For now, show success message
-        setCauseTransferTxHash('evm-tx-placeholder');
+        // EVM USDC transfer using wagmi
+        if (!walletClient || !publicClient) {
+          throw new Error('No EVM wallet connected');
+        }
+
+        const amountWei = parseUnits(processResult.causesAmount, 6);
+        const causeWallet = params.to as `0x${string}`;
+
+        // Send USDC transfer transaction
+        const txHash = await walletClient.writeContract({
+          address: USDC_BASE,
+          abi: ERC20_ABI,
+          functionName: 'transfer',
+          args: [causeWallet, amountWei],
+          chain: base,
+        });
+
+        // Wait for confirmation
+        await publicClient.waitForTransactionReceipt({ hash: txHash });
+        
+        setCauseTransferTxHash(txHash);
         addToast({
           type: 'success',
           title: 'Cause Donation Sent',
-          message: `$${parseFloat(processResult.causesAmount).toFixed(2)} sent to cause wallet`,
+          message: `$${parseFloat(processResult.causesAmount).toFixed(2)} sent to cause wallet. TX: ${txHash.slice(0, 10)}...`,
         });
       }
     } catch (err) {
@@ -218,7 +257,7 @@ export function OctantYieldDashboard({
     } finally {
       setIsSendingToCause(false);
     }
-  }, [address, processResult, addToast]);
+  }, [address, processResult, addToast, walletClient, publicClient]);
 
   if (!vaultInfo) {
     return (
@@ -422,6 +461,16 @@ export function OctantYieldDashboard({
                           <Check className="w-4 h-4" />
                           Cause donation completed!
                         </p>
+                        {causeTransferTxHash !== 'solana-tx-placeholder' && causeTransferTxHash !== 'evm-tx-placeholder' && (
+                          <a
+                            href={`https://basescan.org/tx/${causeTransferTxHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-green-400 hover:text-green-300 underline flex items-center gap-1 mt-1"
+                          >
+                            View donation TX <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
                       </div>
                     )}
                   </div>
@@ -438,16 +487,25 @@ export function OctantYieldDashboard({
               variant={canProcess ? "default" : "outline"}
             >
               {isProcessing ? (
-                <span className="flex items-center gap-2">
-                  <Loader className="w-4 h-4 animate-spin" />
-                  Processing Yield...
-                </span>
-              ) : !canProcess ? (
-                <>⏳ No Yield Available</>
+                <>
+                  <Loader className="w-4 h-4 mr-2 animate-spin" />
+                  Converting Yield...
+                </>
               ) : (
-                <>🚀 Convert Yield to Tickets & Causes</>
+                <>Convert Yield to Tickets & Causes</>
               )}
             </Button>
+            
+            {isProcessing && (
+              <div className="mt-3 text-center">
+                <p className="text-xs text-gray-400 animate-pulse">
+                  Please wait while we process your yield conversion...
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  This may take a moment for Solana transactions.
+                </p>
+              </div>
+            )}
           </CompactStack>
         </PuzzlePiece>
       )}

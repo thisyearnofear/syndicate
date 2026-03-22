@@ -176,10 +176,23 @@ class YieldToTicketsService {
       const yieldAmount = await this.getYieldAccrued(config.vaultProtocol, config.userAddress);
       const availableYield = parseFloat(yieldAmount);
 
-      if (availableYield <= 0) {
+      if (isNaN(availableYield) || availableYield <= 0) {
         return {
           success: true,
           yieldAmount: '0',
+          ticketsPurchased: 0,
+          causesAmount: '0',
+          txHashes: [],
+          error: availableYield <= 0 ? undefined : 'Invalid yield amount received',
+        };
+      }
+
+      // Minimum yield threshold (e.g., $0.01)
+      if (availableYield < 0.01) {
+        return {
+          success: false,
+          error: `Yield too small (${availableYield.toFixed(4)} USDC). Minimum $0.01 required.`,
+          yieldAmount: yieldAmount,
           ticketsPurchased: 0,
           causesAmount: '0',
           txHashes: [],
@@ -251,12 +264,15 @@ class YieldToTicketsService {
       strategy.totalCausesFunded = (parseFloat(strategy.totalCausesFunded) + parseFloat(causesAmount)).toString();
       this.saveToStorage();
 
-      // Get cause transfer params for client-side execution
-      const causeTransferParams = this.getCauseTransferParams(
-        config.vaultProtocol,
-        causesAmount,
-        config.causeWallet
-      );
+      // Get cause transfer params for client-side execution (only if causeAllocation > 0)
+      let causeTransferParams = null;
+      if (config.causesAllocation > 0 && parseFloat(causesAmount) > 0) {
+        causeTransferParams = this.getCauseTransferParams(
+          config.vaultProtocol,
+          causesAmount,
+          config.causeWallet
+        );
+      }
 
       return {
         success: true,
@@ -417,7 +433,18 @@ class YieldToTicketsService {
     causeWallet: string
   ): { chain: 'evm' | 'solana'; to: string; amountWei: string; data?: string } | null {
     const amount = parseFloat(amountUsdc);
-    if (amount <= 0 || !causeWallet || causeWallet === '0x0000000000000000000000000000000000000000') {
+    
+    // Validate amount
+    if (isNaN(amount) || amount <= 0) {
+      console.warn('[YieldToTickets] Invalid cause amount:', amountUsdc);
+      return null;
+    }
+    
+    // Validate cause wallet
+    if (!causeWallet || 
+        causeWallet === '0x0000000000000000000000000000000000000000' ||
+        causeWallet.length < 32) {
+      console.warn('[YieldToTickets] Invalid cause wallet:', causeWallet);
       return null;
     }
 
