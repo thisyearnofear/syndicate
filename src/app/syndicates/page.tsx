@@ -13,7 +13,6 @@ import { useState, useEffect, Suspense, lazy } from "react";
 import { Button } from "@/shared/components/ui/Button";
 import { LoadingSpinner } from "@/shared/components/LoadingSpinner";
 import WalletConnectionManager from "@/components/wallet/WalletConnectionManager";
-import { ComingSoonBanner } from "@/components/ui/ComingSoonBanner";
 import {
     CompactContainer,
     CompactStack,
@@ -22,7 +21,6 @@ import {
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/shared/components/ui/Toast";
 
 import type { SyndicateInfo } from "@/domains/lottery/types";
 
@@ -33,7 +31,6 @@ export default function SyndicatesPage() {
     const [syndicates, setSyndicates] = useState<SyndicateInfo[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const { addToast } = useToast();
     const router = useRouter();
 
     useEffect(() => {
@@ -93,13 +90,6 @@ export default function SyndicatesPage() {
                         </div>
                     </div>
 
-                    {/* Feature Status */}
-                    <ComingSoonBanner 
-                        title="Syndicate Pooling Under Development"
-                        description="Syndicate creation and pooling mechanics are being finalized. Governance and yield distribution will be fully integrated in the next release."
-                        variant="info"
-                    />
-
                     {/* Syndicates Grid */}
                     <CompactSection spacing="lg">
                          {isLoading ? (
@@ -148,16 +138,8 @@ export default function SyndicatesPage() {
                                     >
                                         <SyndicateCard
                                             syndicate={syndicate}
-                                            onJoin={(id) => {
-                                                addToast({
-                                                    type: 'info',
-                                                    title: 'Join Syndicate',
-                                                    message: 'Opening purchase modal...',
-                                                    duration: 2000,
-                                                });
-                                                // TODO: Open purchase modal with syndicate ID
-                                                console.log('Join syndicate:', id);
-                                            }}
+                                            poolId={syndicate.id}
+                                            onJoin={(id) => router.push(`/syndicate/${id}`)}
                                             onView={(id) => router.push(`/syndicate/${id}`)}
                                         />
                                     </Suspense>
