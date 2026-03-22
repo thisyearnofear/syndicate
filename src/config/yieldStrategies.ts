@@ -38,7 +38,7 @@ export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
   {
     id: 'morpho',
     name: 'Morpho Blue',
-    description: 'Optimized peer-to-peer lending (coming soon)',
+    description: 'Curated lending vaults on Base with optimized yields (~6.7% APY)',
     icon: '⚡',
     color: 'bg-gradient-to-br from-purple-500 to-pink-400',
     risk: 'Medium',

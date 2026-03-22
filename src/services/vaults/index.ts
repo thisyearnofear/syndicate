@@ -24,6 +24,7 @@ import { VaultError, VaultErrorCode } from './vaultProvider';
 import { aaveProvider } from './aaveProvider';
 import { driftProvider } from './driftProvider';
 import { poolTogetherProvider } from './poolTogetherProvider';
+import { morphoProvider } from './morphoProvider';
 
 /**
  * Vault information for UI display
@@ -71,8 +72,8 @@ export class VaultManager {
         // Register PoolTogether provider (Prize Savings)
         this.providers.set('pooltogether', poolTogetherProvider);
 
-        // TODO: Register Morpho provider
-        // this.providers.set('morpho', morphoProvider);
+        // Register Morpho provider (Lending Vaults)
+        this.providers.set('morpho', morphoProvider);
 
         // TODO: Register Spark provider
         // this.providers.set('spark', sparkProvider);
@@ -260,7 +261,7 @@ export class VaultManager {
     private getVaultDescription(protocol: VaultProtocol): string {
         const descriptions: Record<VaultProtocol, string> = {
             aave: 'Decentralized lending protocol with proven track record',
-            morpho: 'Optimized lending with better rates than Aave',
+            morpho: 'Curated lending vaults with optimized yields (~6.7% APY)',
             spark: 'MakerDAO lending protocol with DAI integration',
             drift: 'Solana USDC yield via Drift Protocol with automated ticket routing',
             pooltogether: 'No-loss prize savings on Base - keep principal, win prizes',
@@ -277,3 +278,4 @@ export * from './vaultProvider';
 export { aaveProvider } from './aaveProvider';
 export { driftProvider } from './driftProvider';
 export { poolTogetherProvider } from './poolTogetherProvider';
+export { morphoProvider } from './morphoProvider';
