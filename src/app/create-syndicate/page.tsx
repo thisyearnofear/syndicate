@@ -7,7 +7,10 @@ import {
   TrendingUp,
   ArrowLeft,
   Target,
-  Shield
+  Shield,
+  Vault,
+  Coins,
+  Share2
 } from "lucide-react";
 import { CompactCard, CompactStack, CompactContainer, CompactSection } from '@/shared/components/premium/CompactLayout';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
@@ -18,6 +21,7 @@ import { useToast } from '@/shared/components/ui/Toast';
 import type { SyndicateInfo } from "@/domains/lottery/types";
 
 type GovernanceModel = 'leader' | 'dao' | 'hybrid';
+type PoolType = 'safe' | 'splits' | 'pooltogether';
 
 type SyndicateFormData = {
   name: string;
@@ -26,6 +30,7 @@ type SyndicateFormData = {
   causePercentage: number;
   lotteryId: string;
   governanceModel: GovernanceModel;
+  poolType: PoolType;
   vaultStrategy: SyndicateInfo['vaultStrategy'] | null;
   yieldToTicketsPercentage: number;
   yieldToCausesPercentage: number;
@@ -43,6 +48,7 @@ export default function CreateSyndicatePage() {
     causePercentage: 20,
     lotteryId: "",
     governanceModel: 'leader',
+    poolType: 'safe',
     vaultStrategy: null,
     yieldToTicketsPercentage: 85,
     yieldToCausesPercentage: 15,
@@ -82,6 +88,7 @@ export default function CreateSyndicatePage() {
           coordinatorAddress: address,
           causeAllocationPercent: formData.causePercentage,
           lotteryId: formData.lotteryId || undefined,
+          poolType: formData.poolType,
         })
       });
 
@@ -332,13 +339,134 @@ export default function CreateSyndicatePage() {
                 className="flex-1"
                 onClick={() => setStep(3)}
               >
+                Next: Pool Type
+              </Button>
+            </div>
+          </CompactCard>
+        );
+
+      case 3:
+        return (
+          <CompactCard variant="premium" padding="lg">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+                <Vault className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">Pool Type</h2>
+                <p className="text-gray-400">Choose how funds are pooled and managed</p>
+              </div>
+            </div>
+            
+            <CompactStack spacing="md">
+              <div 
+                className="cursor-pointer border-2 border-transparent hover:border-blue-500/50 rounded-xl transition-all duration-300"
+                onClick={() => handleInputChange('poolType', 'safe')}
+              >
+                <PuzzlePiece 
+                  variant={formData.poolType === 'safe' ? 'primary' : 'neutral'} 
+                  size="md" 
+                  shape="rounded"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center">
+                      <Shield className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-white">Safe Multisig</h3>
+                      <p className="text-sm text-gray-400 mb-2">
+                        Secure multisig wallet for team coordination
+                      </p>
+                      <ul className="text-xs text-gray-400 space-y-1">
+                        <li>• Multi-signature approval required</li>
+                        <li>• Direct USDC deposits to Safe</li>
+                        <li>• Coordinator can execute transactions</li>
+                        <li>• Best for: Small to medium teams</li>
+                      </ul>
+                    </div>
+                  </div>
+                </PuzzlePiece>
+              </div>
+              
+              <div 
+                className="cursor-pointer border-2 border-transparent hover:border-blue-500/50 rounded-xl transition-all duration-300"
+                onClick={() => handleInputChange('poolType', 'splits')}
+              >
+                <PuzzlePiece 
+                  variant={formData.poolType === 'splits' ? 'primary' : 'neutral'} 
+                  size="md" 
+                  shape="rounded"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-emerald-400 flex items-center justify-center">
+                      <Share2 className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-white">0xSplits</h3>
+                      <p className="text-sm text-gray-400 mb-2">
+                        Automatic proportional distribution
+                      </p>
+                      <ul className="text-xs text-gray-400 space-y-1">
+                        <li>• On-chain proportional splits</li>
+                        <li>• Automatic prize distribution</li>
+                        <li>• Transparent share percentages</li>
+                        <li>• Best for: Decentralized teams</li>
+                      </ul>
+                    </div>
+                  </div>
+                </PuzzlePiece>
+              </div>
+              
+              <div 
+                className="cursor-pointer border-2 border-transparent hover:border-blue-500/50 rounded-xl transition-all duration-300"
+                onClick={() => handleInputChange('poolType', 'pooltogether')}
+              >
+                <PuzzlePiece 
+                  variant={formData.poolType === 'pooltogether' ? 'primary' : 'neutral'} 
+                  size="md" 
+                  shape="rounded"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-400 flex items-center justify-center">
+                      <Coins className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-white">PoolTogether</h3>
+                      <p className="text-sm text-gray-400 mb-2">
+                        Prize-linked savings with delegation
+                      </p>
+                      <ul className="text-xs text-gray-400 space-y-1">
+                        <li>• Principal preservation</li>
+                        <li>• Prize-linked yield generation</li>
+                        <li>• Delegation to syndicate tickets</li>
+                        <li>• Best for: Risk-averse participants</li>
+                      </ul>
+                    </div>
+                  </div>
+                </PuzzlePiece>
+              </div>
+            </CompactStack>
+            
+            <div className="flex gap-3 mt-6">
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => setStep(2)}
+              >
+                Back
+              </Button>
+              <Button 
+                variant="default" 
+                className="flex-1"
+                onClick={() => setStep(4)}
+              >
                 Next: Yield Strategy
               </Button>
             </div>
           </CompactCard>
         );
         
-      case 3:
+      case 4:
         return (
           <CompactCard variant="premium" padding="lg">
             <div className="flex items-center gap-3 mb-6">
@@ -366,7 +494,7 @@ export default function CreateSyndicatePage() {
               <Button 
                 variant="outline" 
                 className="flex-1"
-                onClick={() => setStep(2)}
+                onClick={() => setStep(3)}
               >
                 Back
               </Button>
@@ -407,23 +535,30 @@ export default function CreateSyndicatePage() {
               }`}>
                 1
               </div>
-              <div className="h-1 w-8 bg-gray-600"></div>
+              <div className="h-1 w-4 bg-gray-600"></div>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                 step >= 2 ? 'bg-purple-500 text-white' : 'bg-gray-700 text-gray-400'
               }`}>
                 2
               </div>
-              <div className="h-1 w-8 bg-gray-600"></div>
+              <div className="h-1 w-4 bg-gray-600"></div>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                step >= 3 ? 'bg-green-500 text-white' : 'bg-gray-700 text-gray-400'
+                step >= 3 ? 'bg-indigo-500 text-white' : 'bg-gray-700 text-gray-400'
               }`}>
                 3
+              </div>
+              <div className="h-1 w-4 bg-gray-600"></div>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                step >= 4 ? 'bg-green-500 text-white' : 'bg-gray-700 text-gray-400'
+              }`}>
+                4
               </div>
             </div>
             <div className="flex justify-between text-xs text-gray-400">
               <span>Basic Info</span>
               <span>Governance</span>
-              <span>Yield Strategy</span>
+              <span>Pool Type</span>
+              <span>Yield</span>
             </div>
           </div>
           

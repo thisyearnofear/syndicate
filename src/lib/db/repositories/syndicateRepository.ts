@@ -9,6 +9,8 @@
 
 import { sql } from '@vercel/postgres';
 
+export type PoolType = 'safe' | 'splits' | 'pooltogether';
+
 export interface SyndicatePoolRow {
     id: string;
     name: string;
@@ -25,6 +27,12 @@ export interface SyndicatePoolRow {
     is_active: boolean;
     created_at: string;
     updated_at: string;
+    // Pool type support (may be null if migration not run)
+    pool_type?: PoolType | null;
+    safe_address?: string | null;
+    split_address?: string | null;
+    pt_vault_address?: string | null;
+    member_shares?: Array<{ address: string; sharePercent: number }> | null;
 }
 
 export interface SyndicateMemberRow {
@@ -38,41 +46,84 @@ export interface SyndicateMemberRow {
     updated_at: string;
 }
 
+export interface CreatePoolParams {
+    name: string;
+    description?: string;
+    coordinatorAddress: string;
+    causeAllocationPercent: number;
+    lotteryId?: string;
+    poolType?: PoolType;
+    safeAddress?: string;
+    splitAddress?: string;
+    ptVaultAddress?: string;
+    memberShares?: Array<{ address: string; sharePercent: number }>;
+}
+
 export class SyndicateRepository {
     /**
      * Create a new syndicate pool
      */
-    async createPool(params: {
-        name: string;
-        description?: string;
-        coordinatorAddress: string;
-        causeAllocationPercent: number;
-        lotteryId?: string;
-    }): Promise<string> {
+    async createPool(params: CreatePoolParams): Promise<string> {
         const now = Date.now();
 
-        const result = await sql`
-      INSERT INTO syndicate_pools (
-        name,
-        description,
-        coordinator_address,
-        lottery_id,
-        cause_allocation_percent,
-        created_at,
-        updated_at
-      ) VALUES (
-        ${params.name},
-        ${params.description || null},
-        ${params.coordinatorAddress},
-        ${params.lotteryId ?? null},
-        ${params.causeAllocationPercent},
-        ${now},
-        ${now}
-      )
-      RETURNING id
-    `;
-
-        return result.rows[0].id;
+        // Try to insert with pool_type columns (migration may not have run)
+        try {
+            const result = await sql`
+                INSERT INTO syndicate_pools (
+                    name,
+                    description,
+                    coordinator_address,
+                    lottery_id,
+                    cause_allocation_percent,
+                    pool_type,
+                    safe_address,
+                    split_address,
+                    pt_vault_address,
+                    member_shares,
+                    created_at,
+                    updated_at
+                ) VALUES (
+                    ${params.name},
+                    ${params.description || null},
+                    ${params.coordinatorAddress},
+                    ${params.lotteryId ?? null},
+                    ${params.causeAllocationPercent},
+                    ${params.poolType || 'safe'},
+                    ${params.safeAddress || null},
+                    ${params.splitAddress || null},
+                    ${params.ptVaultAddress || null},
+                    ${params.memberShares ? JSON.stringify(params.memberShares) : null},
+                    ${now},
+                    ${now}
+                )
+                RETURNING id
+            `;
+            return result.rows[0].id;
+        } catch (error) {
+            // Fallback to original schema if pool_type columns don't exist
+            console.warn('[SyndicateRepository] Pool type columns may not exist, using fallback');
+            const result = await sql`
+                INSERT INTO syndicate_pools (
+                    name,
+                    description,
+                    coordinator_address,
+                    lottery_id,
+                    cause_allocation_percent,
+                    created_at,
+                    updated_at
+                ) VALUES (
+                    ${params.name},
+                    ${params.description || null},
+                    ${params.coordinatorAddress},
+                    ${params.lotteryId ?? null},
+                    ${params.causeAllocationPercent},
+                    ${now},
+                    ${now}
+                )
+                RETURNING id
+            `;
+            return result.rows[0].id;
+        }
     }
 
     /**
