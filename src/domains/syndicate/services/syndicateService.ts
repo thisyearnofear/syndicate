@@ -97,15 +97,22 @@ export class SyndicateService {
   async getActivePools(): Promise<SyndicatePool[]> {
     const rows = await syndicateRepository.getActivePools();
 
-    return rows.map(row => ({
-      id: row.id,
-      name: row.name,
-      description: row.description || '',
-      memberCount: row.members_count,
-      totalTickets: 0, // TODO: Track tickets purchased
-      causeAllocation: row.cause_allocation_percent,
-      isActive: row.is_active,
-    }));
+    return rows.map(row => {
+      // Calculate tickets from total pooled (ticket price is $1)
+      const totalPooled = parseFloat(row.total_pooled_usdc);
+      const estimatedTicketPrice = 1.0;
+      const totalTickets = Math.floor(totalPooled / estimatedTicketPrice);
+      
+      return {
+        id: row.id,
+        name: row.name,
+        description: row.description || '',
+        memberCount: row.members_count,
+        totalTickets: totalTickets, // Calculate from total pooled
+        causeAllocation: row.cause_allocation_percent,
+        isActive: row.is_active,
+      };
+    });
   }
 
   async getActiveSyndicates(): Promise<SyndicateInfo[]> {

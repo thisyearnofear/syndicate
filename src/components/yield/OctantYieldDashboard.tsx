@@ -11,11 +11,12 @@ import { CompactStack, CompactFlex } from '@/shared/components/premium/CompactLa
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
 import { CountUpText } from '@/shared/components/ui/CountUpText';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
+import { useYieldAutoProcessor } from '@/hooks/useYieldAutoProcessor';
 import { solanaWalletService } from '@/services/solanaWalletService';
 import { octantVaultService, type OctantVaultInfo } from '@/services/octantVaultService';
 import { OCTANT_CONFIG } from '@/config/octantConfig';
 import { yieldToTicketsService, type AutoYieldStrategy } from '@/services/yieldToTicketsService';
-import { Loader, Check, ExternalLink } from 'lucide-react';
+import { Loader, Check, ExternalLink, Bell } from 'lucide-react';
 
 interface OctantYieldDashboardProps {
   vaultAddress?: string;
@@ -27,6 +28,7 @@ export function OctantYieldDashboard({
   className = '' 
 }: OctantYieldDashboardProps) {
   const { address } = useWalletConnection();
+  const { availableYield, estimatedTickets, isChecking: isAutoChecking, strategy: autoStrategy } = useYieldAutoProcessor();
 
   const [vaultInfo, setVaultInfo] = useState<OctantVaultInfo | null>(null);
   const [yieldPreview, setYieldPreview] = useState<{
@@ -41,6 +43,7 @@ export function OctantYieldDashboard({
     success: boolean;
     txHashes: string[];
     ticketsPurchased: number;
+    causesAmount: string;
     error?: string;
   } | null>(null);
 
@@ -118,6 +121,7 @@ export function OctantYieldDashboard({
             success: completeResult.success,
             txHashes: completeResult.txHashes,
             ticketsPurchased: completeResult.ticketsPurchased,
+            causesAmount: completeResult.causesAmount,
             error: completeResult.error,
           });
           return;
@@ -128,6 +132,7 @@ export function OctantYieldDashboard({
             success: false,
             txHashes: [],
             ticketsPurchased: 0,
+            causesAmount: '0',
             error: isCancel ? 'Transaction cancelled' : msg,
           });
           return;
@@ -139,6 +144,7 @@ export function OctantYieldDashboard({
         success: result.success,
         txHashes: result.txHashes,
         ticketsPurchased: result.ticketsPurchased,
+        causesAmount: result.causesAmount,
         error: result.error,
       });
 
@@ -149,6 +155,7 @@ export function OctantYieldDashboard({
         success: false,
         txHashes: [],
         ticketsPurchased: 0,
+        causesAmount: '0',
         error: err instanceof Error ? err.message : 'Processing failed',
       });
     } finally {
@@ -169,11 +176,41 @@ export function OctantYieldDashboard({
     );
   }
 
-  const hasYield = parseFloat(vaultInfo.yieldGenerated) > 0;
-  const canProcess = hasYield && strategyStatus?.isActive;
+  const hasYield = parseFloat(vaultInfo.yieldGenerated) > 0 || parseFloat(availableYield) > 0;
+  const canProcess = hasYield && (strategyStatus?.isActive || autoStrategy?.isActive);
 
   return (
     <div className={`w-full space-y-6 ${className}`}>
+      {/* Yield Available Notification (auto-checked) */}
+      {autoStrategy?.isActive && parseFloat(availableYield) > 0 && (
+        <PuzzlePiece variant="accent" size="sm">
+          <CompactFlex align="center" justify="between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                <Bell className="w-5 h-5 text-yellow-400 animate-pulse" />
+              </div>
+              <div>
+                <p className="font-semibold text-white">
+                  Yield Available: ${parseFloat(availableYield).toFixed(2)}
+                </p>
+                <p className="text-xs text-gray-400">
+                  ~{estimatedTickets} tickets ready to convert
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={handleProcessYield}
+              disabled={isProcessing}
+              variant="default"
+              size="sm"
+              className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
+            >
+              {isProcessing ? 'Converting...' : 'Convert Now'}
+            </Button>
+          </CompactFlex>
+        </PuzzlePiece>
+      )}
+
       {/* Vault Overview */}
       <PuzzlePiece variant="primary" size="lg" glow>
         <CompactStack spacing="md">
@@ -283,6 +320,7 @@ export function OctantYieldDashboard({
                       <Check className="w-5 h-5 text-green-400" />
                       <span className="font-bold text-green-300">
                         Converted! {processResult.ticketsPurchased} tickets purchased
+                        {parseFloat(processResult.causesAmount) > 0 && ` + $${parseFloat(processResult.causesAmount).toFixed(2)} to causes`}
                       </span>
                     </div>
                     {processResult.txHashes.map((hash, i) => (

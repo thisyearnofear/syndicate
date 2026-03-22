@@ -72,3 +72,4 @@ out/
 package-lock.json
 yarn.lock
 
+.blackboxcli/

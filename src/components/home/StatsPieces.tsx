@@ -3,24 +3,18 @@
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
 import { CompactStack } from '@/shared/components/premium/CompactLayout';
 import { CountUpText } from '@/shared/components/ui/CountUpText';
-import { useLottery } from '@/domains/lottery/hooks/useLottery';
+import { usePlatformStats } from '@/hooks/usePlatformStats';
 
 export function StatsPieces() {
-  const { jackpotStats, isLoading } = useLottery();
+  const { stats, isLoading } = usePlatformStats();
 
-  const totalRaised = jackpotStats
-    ? jackpotStats.ticketsSoldCount * jackpotStats.ticketPrice
-    : null;
-
-  const activePlayers = jackpotStats?.activePlayers ?? null;
-
-  const stats = [
+  const statItems = [
     {
       label: "Total Raised",
-      value: totalRaised !== null ? totalRaised : 0,
+      value: stats?.totalRaised ?? 0,
       prefix: "$",
       color: "green",
-      isLive: totalRaised !== null,
+      isLive: stats?.totalRaised !== null,
     },
     {
       label: "Drift Vault APY",
@@ -31,10 +25,10 @@ export function StatsPieces() {
     },
     {
       label: "Players",
-      value: activePlayers !== null ? activePlayers : 0,
+      value: stats?.activePlayers ?? 0,
       prefix: "",
       color: "blue",
-      isLive: activePlayers !== null,
+      isLive: stats?.activePlayers !== null,
     },
     {
       label: "Donated to Causes",
@@ -49,7 +43,7 @@ export function StatsPieces() {
     <div className="flex flex-col items-center w-full max-w-2xl mx-auto">
       <CompactStack spacing="md" align="center">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
-          {stats.map((stat, index) => (
+          {statItems.map((stat, index) => (
             <PuzzlePiece
               key={index}
               variant="primary"
@@ -81,7 +75,7 @@ export function StatsPieces() {
             Loading live data...
           </p>
         )}
-        {!isLoading && totalRaised === null && (
+        {!isLoading && stats?.totalRaised === null && (
           <p className="text-[10px] text-gray-600 text-center">
             Stats sourced from on-chain data — some values are historical estimates
           </p>

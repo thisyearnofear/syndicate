@@ -14,6 +14,7 @@ import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
 import { ComingSoonBanner } from '@/components/ui/ComingSoonBanner';
 import { ImprovedYieldStrategySelector } from '@/components/yield/ImprovedYieldStrategySelector';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
+import { useToast } from '@/shared/components/ui/Toast';
 import type { SyndicateInfo } from "@/domains/lottery/types";
 
 type GovernanceModel = 'leader' | 'dao' | 'hybrid';
@@ -32,6 +33,7 @@ type SyndicateFormData = {
 export default function CreateSyndicatePage() {
   const router = useRouter();
   const { address } = useWalletConnection();
+  const { addToast } = useToast();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<SyndicateFormData>({
     name: "",
@@ -87,11 +89,28 @@ export default function CreateSyndicatePage() {
 
       const { id: newPoolId } = await response.json();
       
+      // Show success notification
+      addToast({
+        type: 'success',
+        title: 'Syndicate Created!',
+        message: `Your syndicate "${formData.name}" has been created successfully.`,
+        duration: 5000,
+      });
+      
       // Redirect to the new syndicate page
       router.push(`/syndicate/${newPoolId}`);
     } catch (err: unknown) {
       console.error('Error creating syndicate:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create syndicate. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create syndicate. Please try again.';
+      setError(errorMessage);
+      
+      // Show error notification
+      addToast({
+        type: 'error',
+        title: 'Creation Failed',
+        message: errorMessage,
+        duration: 5000,
+      });
     } finally {
       setLoading(false);
     }
