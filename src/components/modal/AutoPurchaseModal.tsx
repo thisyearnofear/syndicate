@@ -438,8 +438,8 @@ export function AutoPurchaseModal({
                   walletType === 'solana' ? 'border-indigo-500 bg-slate-800' : 'border-slate-700 bg-slate-800/50 hover:border-indigo-500 hover:bg-slate-800'
                 }`}
               >
-                <div className="absolute -top-2 -right-2 bg-indigo-600 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tighter animate-pulse">
-                  Hackathon Choice
+                <div className="absolute -top-2 -right-2 bg-indigo-600 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                  Recommended
                 </div>
                 <div className="flex items-start gap-4">
                   <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">

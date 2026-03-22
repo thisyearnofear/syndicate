@@ -165,9 +165,13 @@ export class TransactionExecutor {
 
       let errorMessage = "Purchase failed. Please try again.";
 
-      if (code === "ACTION_REJECTED" || code === -32603) {
+      // User explicitly rejected the transaction in their wallet
+      if (code === "ACTION_REJECTED" || code === 4001) {
+        errorMessage = "Transaction was rejected by user.";
+      } else if (code === -32603) {
+        // RPC endpoint failure - MetaMask's Base RPC is failing
         errorMessage =
-          "Transaction was rejected. Please approve the transaction in your wallet.";
+          "Network RPC error. Your wallet's Base RPC is unavailable. In MetaMask: Settings → Networks → Base → Edit → change RPC to https://mainnet.base.org";
       } else if (message.includes("insufficient funds")) {
         errorMessage = "Insufficient funds for transaction.";
       } else if (message.includes("allowance")) {
