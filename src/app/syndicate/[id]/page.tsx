@@ -7,6 +7,7 @@ import { Users, Heart, TrendingUp, Share2, Trophy, Gift, Award, ArrowLeft, Shiel
 import SyndicateJoinModal from "@/components/syndicate/SyndicateJoinModal";
 import { SyndicateDashboard } from "@/components/syndicate/SyndicateDashboard";
 import { PrizeDistribution } from "@/components/syndicate/PrizeDistribution";
+import { TransactionHistory } from "@/components/syndicate/TransactionHistory";
 import type { SyndicateInfo } from "@/domains/lottery/types";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 
@@ -189,6 +190,11 @@ export default function SyndicateDetailPage() {
             poolId={id} 
             isCoordinator={!!address}
           />
+        </div>
+
+        {/* Transaction History */}
+        <div className="mb-8">
+          <TransactionHistory poolId={id} />
         </div>
 
         {/* Legacy Stats Grid (for reference) */}
