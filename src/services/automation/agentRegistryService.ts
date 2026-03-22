@@ -15,7 +15,7 @@
 
 import { Address } from 'viem';
 
-export type AgentType = 'scheduled' | 'autonomous' | 'stacks-x402';
+export type AgentType = 'scheduled' | 'autonomous' | 'stacks-x402' | 'ton-agentic';
 
 export interface AgentStatus {
   id: string;
@@ -24,9 +24,9 @@ export interface AgentStatus {
   description: string;
   isEnabled: boolean;
   status: 'active' | 'paused' | 'expired' | 'low-balance' | 'inactive';
-  tokenSymbol: 'USDC' | 'USD₮' | 'USDCx' | 'sBTC';
+  tokenSymbol: 'USDC' | 'USD₮' | 'USDCx' | 'sBTC' | 'USDT';
   tokenAddress: string;
-  chainName: 'Base' | 'Solana' | 'Stacks' | 'NEAR';
+  chainName: 'Base' | 'Solana' | 'Stacks' | 'NEAR' | 'TON';
   balance?: bigint;
   allowance?: bigint;
   frequency?: 'daily' | 'weekly' | 'monthly' | 'opportunistic';
@@ -73,6 +73,10 @@ export class AgentRegistryService {
     // 5. Check NEAR Agent (Chain Signatures)
     const nearAgent = await this.getNearAgent(userAddress);
     if (nearAgent) agents.push(nearAgent);
+
+    // 6. Check TON Agent (Agentic Wallet)
+    const tonAgent = await this.getTonAgent(userAddress);
+    if (tonAgent) agents.push(tonAgent);
 
     return agents;
   }
@@ -202,6 +206,32 @@ export class AgentRegistryService {
         chainName: 'Stacks',
         frequency: config.frequency || 'weekly',
         nextExecution: config.nextExecutionTime,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private async getTonAgent(userAddress: string): Promise<AgentStatus | null> {
+    try {
+      const configStr = typeof window !== 'undefined' ? localStorage.getItem('syndicate_ton_agent_config') : null;
+      if (!configStr) return null;
+
+      const config = JSON.parse(configStr);
+      return {
+        id: `ton-${userAddress.slice(0, 6)}`,
+        type: 'ton-agentic',
+        name: 'The Conductor (TON)',
+        description: 'Autonomous agent on TON via Telegram. Purchases tickets with USDT/TON yield.',
+        isEnabled: config.isEnabled ?? false,
+        status: config.isEnabled ? 'active' : 'inactive',
+        tokenSymbol: config.token === 'USDT' ? 'USDT' : 'USDC',
+        tokenAddress: '',
+        chainName: 'TON',
+        frequency: config.frequency || 'weekly',
+        lastExecution: config.isEnabled ? config.activatedAt : undefined,
+        nextExecution: config.isEnabled ? Date.now() + 7 * 24 * 60 * 60 * 1000 : undefined,
+        lastReasoning: config.isEnabled ? 'Monitoring TON wallet for yield accrual. Ready to auto-purchase tickets.' : undefined,
       };
     } catch {
       return null;

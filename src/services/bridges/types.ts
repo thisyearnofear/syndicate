@@ -26,7 +26,8 @@ export type ChainIdentifier =
     | 'stacks'    // Stacks Bitcoin L2
     | 'starknet'  // Starknet ZK-rollup
     | 'zcash'     // Zcash support
-    | 'near';     // NEAR as orchestration layer
+    | 'near'      // NEAR as orchestration layer
+    | 'ton';      // TON blockchain
 
 /**
  * Bridge protocols - each protocol is a separate module
@@ -42,6 +43,7 @@ export type BridgeProtocolType =
     | 'stacks'    // Stacks → Base bridge (sBTC → USDC)
     | 'starknet'  // Starknet → Base bridge (via Orbiter/LayerSwap)
     | 'zcash'     // Zcash-specific (uses NEAR as orchestrator)
+    | 'ton'       // TON → Base bridge (CCTP)
     | 'auto';     // Automatic selection
 
 /**
@@ -200,6 +202,7 @@ export const USDC_ADDRESSES: Record<ChainIdentifier, string | undefined> = {
     starknet: '0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8', // USDC on Starknet
     zcash: undefined,
     near: 'a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.factory.bridge.near',
+    ton: undefined, // Uses USDT Jetton, not USDC
 };
 
 // STRK - Starknet's native gas token (can be used for bridging/gas)
@@ -213,6 +216,7 @@ export const STRK_ADDRESSES: Record<ChainIdentifier, string | undefined> = {
     stacks: undefined,
     zcash: undefined,
     near: undefined,
+    ton: undefined,
 };
 
 // ============================================================================

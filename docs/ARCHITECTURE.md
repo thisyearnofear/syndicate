@@ -4,13 +4,13 @@
 
 ## Overview
 
-Syndicate is a **Multi-Protocol Lottery Aggregator** with autonomous AI agents. Users participate in Megapot, PoolTogether v5, and Drift JLP lotteries from any blockchain (Stacks, NEAR, Solana, Base, EVM) with KYC/AML compliance via Civic Pass.
+Syndicate is a **Multi-Protocol Lottery Aggregator** with autonomous AI agents. Users participate in Megapot, PoolTogether v5, and Drift JLP lotteries from any blockchain (Stacks, NEAR, Solana, Base, EVM, TON) with KYC/AML compliance via Civic Pass.
 
 ### Core Principles
 
 - **Universal Agent**: Autonomous AI agents (Tether WDK) decide when to buy based on yield
 - **Multi-Protocol**: Aggregate Megapot, PoolTogether, Drift from single hub
-- **Cross-Chain**: Buy tickets from Stacks, NEAR, Solana, or Base
+- **Cross-Chain**: Buy tickets from Stacks, NEAR, Solana, Base, or TON (Telegram Mini App)
 - **Trustless**: No custodial intermediaries; proxy handles purchases atomically
 - **Compliance**: KYC/AML via Civic Pass (CAPTCHA demo → Full ID production)
 

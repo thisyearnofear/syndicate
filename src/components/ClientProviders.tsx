@@ -30,18 +30,24 @@
  */
 
 import { ReactNode } from 'react';
+import { TonConnectUIProvider } from '@tonconnect/ui-react';
 
 import { Providers } from './Providers';
 import { WalletProvider } from '@/context/WalletContext';
+import { TelegramProvider } from '@/components/telegram/TelegramProvider';
 import { BridgeNotificationWrapper } from '@/components/bridge/BridgeNotificationWrapper';
 
 export default function ClientProviders({ children }: { children: ReactNode }) {
   return (
     <Providers>
       <WalletProvider>
-        {children}
-        {/* Global bridge notification - shows when user returns with pending bridge */}
-        <BridgeNotificationWrapper />
+        <TonConnectUIProvider manifestUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/tonconnect-manifest.json`}>
+          <TelegramProvider>
+            {children}
+            {/* Global bridge notification - shows when user returns with pending bridge */}
+            <BridgeNotificationWrapper />
+          </TelegramProvider>
+        </TonConnectUIProvider>
       </WalletProvider>
     </Providers>
   );

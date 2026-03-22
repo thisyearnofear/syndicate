@@ -30,6 +30,7 @@
     "node_modules",
     "tmp_*",
     "src/__tests__/**/*",
-    "indexer"
+    "indexer",
+    "contracts/ton"
   ]
 }

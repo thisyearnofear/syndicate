@@ -17,7 +17,8 @@ export type PurchaseChain =
   | "solana"
   | "stacks"
   | "ethereum"
-  | "starknet";
+  | "starknet"
+  | "ton";
 
 export type PurchaseMode = "direct" | "syndicate" | "vault";
 
@@ -71,6 +72,9 @@ export interface PurchaseRequest {
 
   /** For Starknet: which token to use */
   starknetTokenAddress?: string;
+
+  /** For TON: which token to use (USDT or TON) */
+  tonToken?: 'USDT' | 'TON';
 
   /** For resuming after wallet signature */
   resume?: {

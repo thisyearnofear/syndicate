@@ -16,6 +16,7 @@ import { executeNEARPurchase } from "../handlers/near";
 import { executeSolanaPurchase } from "../handlers/solana";
 import { executeStacksPurchase } from "../handlers/stacks";
 import { executeStarknetPurchase } from "../handlers/starknet";
+import { executeTonPurchase } from "../handlers/ton";
 import { executeSyndicatePurchase } from "../handlers/syndicate";
 import { executeVaultYieldPurchase } from "../handlers/vault";
 
@@ -79,6 +80,8 @@ class PurchaseOrchestrator {
             return executeStacksPurchase(req);
           case "starknet":
             return executeStarknetPurchase(req);
+          case "ton":
+            return executeTonPurchase(req);
           default:
             return {
               success: false,

@@ -101,10 +101,48 @@ Megapot tickets minted → Telegram notification sent
 - Eliminates per-purchase gas costs for high-frequency users
 
 ### TON Smart Contract (FunC/Tact)
-- Receives USDT/TON payments from users
-- Emits events for the chainhook-equivalent listener
-- Bridges value to Base via CCTP for Megapot ticket minting
-- Operator-free: uses Circle CCTP attestation (permissionless, consistent with our architecture)
+
+The TON contract uses an **On-Chain Accumulator + Payment Channel** architecture:
+
+**Accumulator Pattern** (direct purchases):
+- User sends TON/USDT → contract stores purchase in dict → emits `PurchaseConfirmed` (for UI)
+- Keeper/operator calls `triggerBatchBridge()` → emits `BatchBridgeReady` with all pending purchases
+- Relayer bridges the batch total in a single CCTP transfer (lower gas, no missed purchases)
+
+**Payment Channel** (agentic flow):
+- User opens channel with deposit → contract stores channel state
+- Agent signs off-chain updates (ticket purchases) → `settleChannel()` reconciles on-chain
+- Zero per-purchase gas — true "play for free" UX
+
+**Contract Opcodes**:
+| Opcode | Hex | Description |
+|--------|-----|-------------|
+| `PURC` | `0x50555243` | Direct TON purchase |
+| `BATC` | `0x42415443` | Trigger batch bridge (permissionless) |
+| `CHNL` | `0x43484e4c` | Open payment channel |
+| `SETL` | `0x5345544c` | Settle channel purchase |
+| `CLOS` | `0x434c4f53` | Close channel (refund) |
+| `FEES` | `0x46454553` | Admin: update bridge fee |
+| `BNTV` | `0x424e5456` | Admin: set batch interval |
+
+**Deploy**:
+```bash
+cd contracts/ton && npm install
+npx blueprint build lottery          # compile
+npx blueprint run lottery --testnet  # deploy testnet
+npx blueprint run lottery --mainnet  # deploy mainnet
+```
+
+### Contract Event Format
+
+Two event types for the chainhook listener:
+
+1. **PurchaseConfirmed** (`0x434f4e46`) — lightweight, for UI
+   - Fields: `purchaseId`, `sender`, `amount`, `ticketCount`
+
+2. **BatchBridgeReady** (`0x42415448`) — for relayer
+   - Fields: `startId`, `endId`, `purchaseCount`
+   - Relayer fetches purchases via `get_purchase()` then bridges batch total
 
 ---
 
@@ -112,19 +150,20 @@ Megapot tickets minted → Telegram notification sent
 
 | Component | Status | Work Needed |
 |-----------|--------|-------------|
-| Purchase orchestrator | ✅ Done | Add `ton` chain handler in `src/domains/lottery/handlers/ton.ts` |
-| Bridge infrastructure | ✅ Done | Add TON→Base CCTP path in `src/services/bridges/protocols/ton.ts` |
+| Purchase orchestrator | ✅ Done | `ton` chain handler in `src/domains/lottery/handlers/ton.ts` |
+| Bridge infrastructure | ✅ Done | TON→Base CCTP path in `src/services/bridges/protocols/ton.ts` |
 | Auto-purchase flow | ✅ Done | Wire to TON Payment Channels |
 | Yield-to-tickets service | ✅ Done | Connect to TON yield source |
 | CCTP attestation relay | ✅ Done | Reuse `useCctpRelay` hook (user pays gas, permissionless) |
 | Durable job queue | ✅ Done | Reuse `purchase_jobs` table + `purchaseJobProcessor` |
 | SSE status stream | ✅ Done | Reuse `/api/purchase-status/[txId]/stream` |
-| Telegram bot | ❌ New | BotFather setup + webhook handler |
-| Mini App shell | ❌ New | Telegram WebApp SDK wrapper (~0.5 day) |
-| TON Connect integration | ❌ New | `@tonconnect/ui-react` (~1 day) |
-| TON Pay SDK | ❌ New | Payment flow wiring (~1 day) |
-| Agentic Wallet + MCP | ❌ New | Agent config + MCP tool definitions (~1–2 days) |
-| TON smart contract | ❌ New | FunC/Tact contract (~1 day) |
+| Telegram bot webhook | ✅ Created | `src/app/api/ton-webhook/route.ts` — Bot commands (/start, /buy, /balance) |
+| Mini App shell | ✅ Created | `src/components/telegram/TelegramProvider.tsx` — WebApp SDK wrapper |
+| TON Connect integration | ✅ Created | `@tonconnect/ui-react` + `src/hooks/useTonConnect.ts` + `TonConnectButton` |
+| TON Pay SDK | ✅ Created | `src/hooks/useTonPay.ts` — USDT/TON payment flow |
+| Agentic Wallet + MCP | ✅ Created | `src/services/automation/tonAgentService.ts` — MCP tool definitions |
+| Telegram Purchase Modal | ✅ Created | `src/components/telegram/TelegramPurchaseModal.tsx` — Mini App purchase UI |
+| TON smart contract | ✅ Created | `contracts/ton/lottery.fc` (FunC) + `lottery.tact` (Tact) |
 
 ---
 
@@ -170,18 +209,24 @@ Megapot tickets minted → Telegram notification sent
 
 ```
 src/
-├── domains/lottery/handlers/ton.ts          # TON chain purchase handler
-├── services/bridges/protocols/ton.ts        # TON→Base bridge protocol
-├── services/automation/tonAgentService.ts   # Agentic Wallet + MCP tools
-├── hooks/useTonConnect.ts                   # TON Connect wallet hook
-├── hooks/useTonPay.ts                       # TON Pay SDK payment hook
+├── domains/lottery/handlers/ton.ts          # TON chain purchase handler ✅
+├── services/bridges/protocols/ton.ts        # TON→Base bridge protocol ✅
+├── services/automation/tonAgentService.ts   # Agentic Wallet + MCP tools ✅
+├── hooks/useTonConnect.ts                   # TON Connect wallet hook ✅
+├── hooks/useTonPay.ts                       # TON Pay SDK payment hook ✅
 ├── components/telegram/
-│   ├── TelegramProvider.tsx                 # WebApp SDK context
-│   ├── TonConnectButton.tsx                 # Wallet connection for Telegram
-│   └── TelegramPurchaseModal.tsx            # Telegram-optimised purchase UI
+│   ├── TelegramProvider.tsx                 # WebApp SDK context ✅
+│   ├── TonConnectButton.tsx                 # Wallet connection for Telegram ✅
+│   └── TelegramPurchaseModal.tsx            # Telegram-optimised purchase UI ✅
 └── app/api/
-    ├── ton-webhook/route.ts                 # Bot webhook handler
-    └── ton-chainhook/route.ts               # TON contract event listener
+    ├── ton-webhook/route.ts                 # Bot webhook handler ✅
+    └── ton-chainhook/route.ts               # TON contract event listener ✅
+
+contracts/ton/
+├── lottery.fc                               # FunC contract (low-level, production) ✅
+├── lottery.tact                             # Tact contract (modern, type-safe) ✅
+├── package.json                             # Blueprint project config ✅
+└── scripts/deploy.ts                        # Deployment script ✅
 ```
 
 ---

@@ -1,0 +1,566 @@
+;; ===========================================================
+;; Syndicate Lottery — TON Payment Receiver Contract (FunC)
+;; ===========================================================
+;;
+;; ARCHITECTURE: On-Chain Accumulator + Payment Channels
+;;
+;; Accumulator Pattern:
+;;   1. User sends TON/USDT → contract stores purchase in dict
+;;   2. Contract emits lightweight confirmation (for UI)
+;;   3. Keeper/operator calls triggerBatchBridge() → emits one
+;;      event with all pending purchases → relayer bridges batch
+;;   Benefit: Lower relayer costs, no missed purchases, permissionless
+;;
+;; Payment Channel (agentic flow):
+;;   1. User opens channel with deposit → contract stores channel state
+;;   2. Agent signs off-chain updates (ticket purchases)
+;;   3. Anyone calls settleChannel() → reconciles on-chain → bridges
+;;   Benefit: Zero per-purchase gas, true "play for free" UX
+;;
+;; Messages:
+;;   OP_PURCHASE_TICKETS       (0x50555243) — direct TON purchase
+;;   OP_JETTON_TRANSFER_NOTIFY (0x7362d09c) — Jetton wallet notification
+;;   OP_TRIGGER_BATCH           (0x42415443) — trigger batch bridge ("BATC")
+;;   OP_OPEN_CHANNEL            (0x43484e4c) — open payment channel ("CHNL")
+;;   OP_SETTLE_CHANNEL          (0x5345544c) — settle channel ("SETL")
+;;   OP_CLOSE_CHANNEL           (0x434c4f53) — close channel ("CLOS")
+;;   OP_ADMIN_WITHDRAW          (0x41444d49) — admin withdrawal ("ADMI")
+;;   OP_SET_BRIDGE_FEE          (0x46454553) — update bridge fee ("FEES")
+;;   OP_SET_BATCH_INTERVAL      (0x424e5456) — set batch trigger interval ("BNTV")
+
+;; ===========================================================
+;; CONSTANTS
+;; ===========================================================
+
+const int OP_PURCHASE_TICKETS       = 0x50555243;
+const int OP_JETTON_TRANSFER_NOTIFY = 0x7362d09c;
+const int OP_TRIGGER_BATCH          = 0x42415443;
+const int OP_OPEN_CHANNEL           = 0x43484e4c;
+const int OP_SETTLE_CHANNEL         = 0x5345544c;
+const int OP_CLOSE_CHANNEL          = 0x434c4f53;
+const int OP_ADMIN_WITHDRAW         = 0x41444d49;
+const int OP_SET_BRIDGE_FEE         = 0x46454553;
+const int OP_SET_BATCH_INTERVAL     = 0x424e5456;
+
+const int MAX_TICKETS_PER_PURCHASE  = 100;
+const int TICKET_PRICE_NANO         = 1_000_000;
+const int MIN_CHANNEL_DEPOSIT       = 10_000_000;  ;; 10 USDT minimum
+const int DEFAULT_BATCH_INTERVAL    = 300;          ;; 5 minutes
+
+;; ===========================================================
+;; STORAGE LAYOUT
+;; ===========================================================
+;;
+;; storage =
+;;   owner:MsgAddress          ;; admin address
+;;   bridge_operator:MsgAddress ;; authorized bridge triggerer
+;;   bridge_fee:uint64         ;; fee per purchase (nanoTON)
+;;   next_purchase_id:uint64   ;; auto-incrementing purchase ID
+;;   is_paused:bool            ;; pause flag
+;;   total_purchases:uint64    ;; total purchases ever
+;;   batch_start_id:uint64     ;; first un-bridged purchase ID
+;;   last_batch_time:uint32    ;; last batch trigger timestamp
+;;   batch_interval:uint32     ;; minimum seconds between batches
+;;   total_channels:uint64     ;; total channels opened
+;;   purchases:^cell           ;; dict<uint64, purchase_cell>
+;;   channels:^cell            ;; dict<slice, channel_cell>
+;;   = Storage
+
+(slice, slice, int, int, int, int, int, int, int, int, cell, cell)
+load_storage() {
+    cell sc = get_data();
+    slice ss = sc.begin_parse();
+    return (
+        ss~load_msg_addr(),    ;; owner
+        ss~load_msg_addr(),    ;; bridge_operator
+        ss~load_coins(),       ;; bridge_fee
+        ss~load_uint(64),      ;; next_purchase_id
+        ss~load_uint(1),       ;; is_paused
+        ss~load_uint(64),      ;; total_purchases
+        ss~load_uint(64),      ;; batch_start_id
+        ss~load_uint(32),      ;; last_batch_time
+        ss~load_uint(32),      ;; batch_interval
+        ss~load_uint(64),      ;; total_channels
+        ss~load_ref(),         ;; purchases dict
+        ss~load_ref()          ;; channels dict
+    );
+}
+
+() store_storage(slice owner, slice bridge_op, int bridge_fee,
+                 int next_id, int paused, int total,
+                 int batch_start, int last_batch, int batch_int,
+                 int total_chn, cell purchases, cell channels) {
+    set_data(begin_cell()
+        .store_slice(owner)
+        .store_slice(bridge_op)
+        .store_coins(bridge_fee)
+        .store_uint(next_id, 64)
+        .store_uint(paused, 1)
+        .store_uint(total, 64)
+        .store_uint(batch_start, 64)
+        .store_uint(last_batch, 32)
+        .store_uint(batch_int, 32)
+        .store_uint(total_chn, 64)
+        .store_ref(purchases)
+        .store_ref(channels)
+        .end_cell());
+}
+
+;; ===========================================================
+;; PURCHASE DATA
+;; ===========================================================
+;;
+;; purchase_cell =
+;;   sender:MsgAddress        ;; who bought
+;;   amount:Coins             ;; how much they paid
+;;   base_address:Slice       ;; their Base/EVM address (267 bits)
+;;   ticket_count:uint16      ;; number of tickets
+;;   token_type:uint8         ;; 0=TON, 1=USDT
+;;   timestamp:uint32         ;; when
+
+cell build_purchase_cell(slice sender, int amount, slice base_addr,
+                         int tickets, int token_type, int ts) {
+    return begin_cell()
+        .store_slice(sender)
+        .store_coins(amount)
+        .store_slice(base_addr)
+        .store_uint(tickets, 16)
+        .store_uint(token_type, 8)
+        .store_uint(ts, 32)
+        .end_cell();
+}
+
+(slice, int, slice, int, int, int) parse_purchase_cell(cell pc) {
+    slice ss = pc.begin_parse();
+    return (
+        ss~load_msg_addr(),    ;; sender
+        ss~load_coins(),       ;; amount
+        ss~load_slice(ss),     ;; base_address (rest is base_addr + metadata)
+        0, 0, 0                ;; placeholder — caller should parse properly
+    );
+}
+
+;; ===========================================================
+;; CHANNEL DATA
+;; ===========================================================
+;;
+;; channel_cell =
+;;   user:MsgAddress           ;; channel owner
+;;   balance:Coins             ;; remaining deposit
+;;   total_deposited:Coins     ;; total ever deposited
+;;   total_spent:Coins         ;; total spent on tickets
+;;   purchase_count:uint16     ;; purchases made via channel
+;;   opened_at:uint32          ;; open timestamp
+;;   last_update:uint32        ;; last activity timestamp
+;;   is_active:bool            ;; active flag
+
+cell build_channel_cell(slice user, int balance, int deposited,
+                        int spent, int count, int opened, int last) {
+    return begin_cell()
+        .store_slice(user)
+        .store_coins(balance)
+        .store_coins(deposited)
+        .store_coins(spent)
+        .store_uint(count, 16)
+        .store_uint(opened, 32)
+        .store_uint(last, 32)
+        .store_uint(1, 1)      ;; is_active = true
+        .end_cell();
+}
+
+;; ===========================================================
+;; PURCHASE BODY PARSER
+;; ===========================================================
+;;
+;; Parses OP_PURCHASE_TICKETS body after opcode + query_id consumed:
+;;   addr_extern(2+9+160) + ticket_count(16)
+;;
+;; addr_extern format: type(2) = 2, len(9) = 160, data(160 bits = 20 bytes)
+
+(slice, int) parse_purchase_body(slice body) {
+    body~load_uint(2);   ;; skip addr type (2 = extern)
+    int addr_len = body~load_uint(9);  ;; addr length
+    slice base_address = body~load_bits(addr_len);  ;; EVM address (160 bits)
+    int ticket_count = body~load_uint(16);
+    return (base_address, ticket_count);
+}
+
+;; ===========================================================
+;; MAIN ENTRY POINT
+;; ===========================================================
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full,
+                 slice in_msg_body) {
+
+    slice cs = in_msg_full.begin_parse();
+    int flags = cs~load_uint(4);
+    slice sender = cs~load_msg_addr();
+
+    var (owner, bridge_op, bridge_fee, next_id, paused, total,
+         batch_start, last_batch, batch_int, total_chn,
+         purchases, channels) = load_storage();
+
+    throw_if(403, paused);
+
+    ;; ---- Simple TON transfer (no body) ----
+    if (in_msg_body.slice_empty()) {
+        if (msg_value > bridge_fee) {
+            int net = msg_value - bridge_fee;
+            int ts = now();
+
+            ;; Store in purchases dict
+            cell pc = build_purchase_cell(sender, net, sender, 1, 0, ts);
+            purchases = dict_set(purchases, 64, next_id, pc);
+
+            ;; Lightweight confirmation event
+            emit_raw(begin_cell()
+                .store_uint(0x434f4e46, 32)  ;; "CONF" — purchase confirmed
+                .store_uint(next_id, 64)
+                .store_slice(sender)
+                .store_coins(net)
+                .store_uint(1, 16)  ;; 1 ticket
+                .end_cell());
+
+            next_id = next_id + 1;
+            total = total + 1;
+            store_storage(owner, bridge_op, bridge_fee, next_id, paused,
+                         total, batch_start, last_batch, batch_int,
+                         total_chn, purchases, channels);
+        }
+        return ();
+    }
+
+    int op = in_msg_body~load_uint(32);
+    int query_id = in_msg_body~load_uint(64);
+
+    ;; ===========================================================
+    ;; PURCHASE: Direct TON
+    ;; ===========================================================
+    if (op == OP_PURCHASE_TICKETS) {
+        var (base_addr, ticket_count) = parse_purchase_body(in_msg_body);
+
+        throw_if(400, ticket_count <= 0);
+        throw_if(400, ticket_count > MAX_TICKETS_PER_PURCHASE);
+        int required = ticket_count * TICKET_PRICE_NANO + bridge_fee;
+        throw_if(401, msg_value < required);
+
+        int net = msg_value - bridge_fee;
+        int ts = now();
+
+        cell pc = build_purchase_cell(sender, net, base_addr, ticket_count, 0, ts);
+        purchases = dict_set(purchases, 64, next_id, pc);
+
+        emit_raw(begin_cell()
+            .store_uint(0x434f4e46, 32)
+            .store_uint(next_id, 64)
+            .store_slice(sender)
+            .store_coins(net)
+            .store_uint(ticket_count, 16)
+            .end_cell());
+
+        next_id = next_id + 1;
+        total = total + 1;
+        store_storage(owner, bridge_op, bridge_fee, next_id, paused,
+                     total, batch_start, last_batch, batch_int,
+                     total_chn, purchases, channels);
+        return ();
+    }
+
+    ;; ===========================================================
+    ;; PURCHASE: USDT Jetton
+    ;; ===========================================================
+    if (op == OP_JETTON_TRANSFER_NOTIFY) {
+        int jetton_amount = in_msg_body~load_coins();
+        slice jetton_sender = in_msg_body~load_msg_addr();
+        int has_ref = in_msg_body~load_uint(1);
+
+        slice base_addr;
+        int ticket_count;
+
+        if (has_ref) {
+            slice fwd = in_msg_body~load_ref().begin_parse();
+            var (ba, tc) = parse_purchase_body(fwd);
+            base_addr = ba;
+            ticket_count = tc;
+        } else {
+            ticket_count = 1;
+            base_addr = jetton_sender;
+        }
+
+        throw_if(400, ticket_count <= 0);
+        throw_if(400, ticket_count > MAX_TICKETS_PER_PURCHASE);
+        int ts = now();
+
+        cell pc = build_purchase_cell(jetton_sender, jetton_amount,
+                                       base_addr, ticket_count, 1, ts);
+        purchases = dict_set(purchases, 64, next_id, pc);
+
+        emit_raw(begin_cell()
+            .store_uint(0x434f4e46, 32)
+            .store_uint(next_id, 64)
+            .store_slice(jetton_sender)
+            .store_coins(jetton_amount)
+            .store_uint(ticket_count, 16)
+            .end_cell());
+
+        next_id = next_id + 1;
+        total = total + 1;
+        store_storage(owner, bridge_op, bridge_fee, next_id, paused,
+                     total, batch_start, last_batch, batch_int,
+                     total_chn, purchases, channels);
+        return ();
+    }
+
+    ;; ===========================================================
+    ;; BATCH: Trigger batch bridge (permissionless)
+    ;; ===========================================================
+    if (op == OP_TRIGGER_BATCH) {
+        ;; Anyone can trigger, but must respect minimum interval
+        int elapsed = now() - last_batch;
+        ;; Allow owner/operator to bypass interval
+        int is_authorized = (equal_slices(sender, owner) | equal_slices(sender, bridge_op));
+        if ((elapsed >= batch_int) | is_authorized) {
+            ;; Collect pending purchases range
+            int pending_count = next_id - batch_start;
+
+            if (pending_count > 0) {
+                ;; Build batch event with purchase range
+                emit_raw(begin_cell()
+                    .store_uint(0x42415448, 32)  ;; "BATH" — batch bridge event
+                    .store_uint(batch_start, 64)  ;; first purchase ID
+                    .store_uint(next_id, 64)      ;; last purchase ID (exclusive)
+                    .store_uint(pending_count, 32)
+                    .store_slice(owner)            ;; topic
+                    .end_cell());
+
+                last_batch = now();
+                batch_start = next_id;  ;; mark all as bridged
+            }
+
+            store_storage(owner, bridge_op, bridge_fee, next_id, paused,
+                         total, batch_start, last_batch, batch_int,
+                         total_chn, purchases, channels);
+        }
+        return ();
+    }
+
+    ;; ===========================================================
+    ;; CHANNEL: Open payment channel
+    ;; ===========================================================
+    if (op == OP_OPEN_CHANNEL) {
+        throw_if(401, msg_value < MIN_CHANNEL_DEPOSIT);
+
+        ;; Check if user already has an active channel
+        cell existing = dict_get(channels, 267, sender);
+        if (existing != null()) {
+            slice es = existing.begin_parse();
+            es~load_msg_addr();  ;; skip user
+            es~load_coins();     ;; skip balance
+            es~load_coins();     ;; skip deposited
+            es~load_coins();     ;; skip spent
+            es~load_uint(16);    ;; skip count
+            es~load_uint(32);    ;; skip opened
+            es~load_uint(32);    ;; skip last
+            int active = es~load_uint(1);
+            throw_if(409, active);  ;; already has active channel
+        }
+
+        int ts = now();
+        cell ch = build_channel_cell(sender, msg_value, msg_value, 0, 0, ts, ts);
+        channels = dict_set(channels, 267, sender, ch);
+
+        total_chn = total_chn + 1;
+
+        emit_raw(begin_cell()
+            .store_uint(0x43484f50, 32)  ;; "CHOP" — channel opened
+            .store_slice(sender)
+            .store_coins(msg_value)
+            .end_cell());
+
+        store_storage(owner, bridge_op, bridge_fee, next_id, paused,
+                     total, batch_start, last_batch, batch_int,
+                     total_chn, purchases, channels);
+        return ();
+    }
+
+    ;; ===========================================================
+    ;; CHANNEL: Settle channel (agent purchases via channel)
+    ;; ===========================================================
+    if (op == OP_SETTLE_CHANNEL) {
+        ;; Body: ticket_count:uint16 base_address:MsgAddress
+        int ticket_count = in_msg_body~load_uint(16);
+        slice base_addr = in_msg_body~load_msg_addr();
+
+        throw_if(400, ticket_count <= 0);
+        throw_if(400, ticket_count > MAX_TICKETS_PER_PURCHASE);
+
+        cell existing = dict_get(channels, 267, sender);
+        throw_if(404, existing == null());
+
+        slice cs = existing.begin_parse();
+        slice ch_user = cs~load_msg_addr();
+        int ch_balance = cs~load_coins();
+        int ch_deposited = cs~load_coins();
+        int ch_spent = cs~load_coins();
+        int ch_count = cs~load_uint(16);
+        int ch_opened = cs~load_uint(32);
+        int ch_last = cs~load_uint(32);
+        int ch_active = cs~load_uint(1);
+
+        throw_unless(403, ch_active);
+
+        int cost = ticket_count * TICKET_PRICE_NANO;
+        throw_if(401, ch_balance < cost);
+
+        int new_balance = ch_balance - cost;
+        int new_spent = ch_spent + cost;
+        int new_count = ch_count + ticket_count;
+        int ts = now();
+
+        ;; Update channel
+        cell updated_ch = build_channel_cell(ch_user, new_balance,
+                                              ch_deposited, new_spent,
+                                              new_count, ch_opened, ts);
+        channels = dict_set(channels, 267, sender, updated_ch);
+
+        ;; Store as purchase
+        cell pc = build_purchase_cell(sender, cost, base_addr, ticket_count, 1, ts);
+        purchases = dict_set(purchases, 64, next_id, pc);
+
+        emit_raw(begin_cell()
+            .store_uint(0x43485354, 32)  ;; "CHST" — channel settle
+            .store_uint(next_id, 64)
+            .store_slice(sender)
+            .store_coins(cost)
+            .store_uint(ticket_count, 16)
+            .end_cell());
+
+        next_id = next_id + 1;
+        total = total + 1;
+        store_storage(owner, bridge_op, bridge_fee, next_id, paused,
+                     total, batch_start, last_batch, batch_int,
+                     total_chn, purchases, channels);
+        return ();
+    }
+
+    ;; ===========================================================
+    ;; CHANNEL: Close channel (refund remaining balance)
+    ;; ===========================================================
+    if (op == OP_CLOSE_CHANNEL) {
+        cell existing = dict_get(channels, 267, sender);
+        throw_if(404, existing == null());
+
+        slice cs = existing.begin_parse();
+        cs~load_msg_addr();  ;; user
+        int ch_balance = cs~load_coins();
+        int ch_active = cs~load_uint(1 + 64 + 64 + 16 + 32 + 32);
+        ;; skip to is_active
+
+        throw_unless(403, ch_active);
+        throw_if(400, ch_balance <= 0);
+
+        ;; Mark inactive
+        cell closed_ch = begin_cell()
+            .store_slice(sender)
+            .store_coins(0)  ;; zero balance
+            .store_ref(existing)  ;; keep history in ref
+            .end_cell();
+        channels = dict_set(channels, 267, sender, closed_ch);
+
+        ;; Refund remaining
+        send_raw_message(begin_cell()
+            .store_uint(0x10, 6)
+            .store_slice(sender)
+            .store_coins(ch_balance)
+            .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+            .end_cell(), 1);
+
+        emit_raw(begin_cell()
+            .store_uint(0x4348434c, 32)  ;; "CHCL" — channel closed
+            .store_slice(sender)
+            .store_coins(ch_balance)
+            .end_cell());
+
+        store_storage(owner, bridge_op, bridge_fee, next_id, paused,
+                     total, batch_start, last_batch, batch_int,
+                     total_chn, purchases, channels);
+        return ();
+    }
+
+    ;; ===========================================================
+    ;; ADMIN: Set batch interval
+    ;; ===========================================================
+    if (op == OP_SET_BATCH_INTERVAL) {
+        throw_unless(403, equal_slices(sender, owner));
+        int new_interval = in_msg_body~load_uint(32);
+        store_storage(owner, bridge_op, bridge_fee, next_id, paused,
+                     total, batch_start, last_batch, new_interval,
+                     total_chn, purchases, channels);
+        return ();
+    }
+
+    ;; ===========================================================
+    ;; ADMIN: Set bridge fee
+    ;; ===========================================================
+    if (op == OP_SET_BRIDGE_FEE) {
+        throw_unless(403, equal_slices(sender, owner));
+        int new_fee = in_msg_body~load_coins();
+        store_storage(owner, bridge_op, bridge_fee, next_id, paused,
+                     total, batch_start, last_batch, batch_int,
+                     total_chn, purchases, channels);
+        return ();
+    }
+
+    ;; ===========================================================
+    ;; ADMIN: Withdraw
+    ;; ===========================================================
+    if (op == OP_ADMIN_WITHDRAW) {
+        throw_unless(403, equal_slices(sender, owner));
+        slice dest = in_msg_body~load_msg_addr();
+        int amount = in_msg_body~load_coins();
+        send_raw_message(begin_cell()
+            .store_uint(0x10, 6)
+            .store_slice(dest)
+            .store_coins(amount)
+            .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+            .end_cell(), 1);
+        return ();
+    }
+
+    return ();
+}
+
+;; ===========================================================
+;; GET METHODS
+;; ===========================================================
+
+(int, int, int, int, int) get_batch_status() {
+    var (_, _, _, next_id, _, _, batch_start, last_batch,
+         batch_int, _, _, _) = load_storage();
+    int pending = next_id - batch_start;
+    return (pending, batch_start, next_id, last_batch, batch_int);
+}
+
+(int, slice, int, int, int, int, int) get_channel(slice user_addr) {
+    var (_, _, _, _, _, _, _, _, _, _, _, channels) = load_storage();
+    cell ch = dict_get(channels, 267, user_addr);
+    if (ch == null()) {
+        return (0, user_addr, 0, 0, 0, 0, 0);
+    }
+    slice cs = ch.begin_parse();
+    return (
+        cs~load_uint(1),       ;; active
+        cs~load_msg_addr(),    ;; user
+        cs~load_coins(),       ;; balance
+        cs~load_coins(),       ;; deposited
+        cs~load_coins(),       ;; spent
+        cs~load_uint(16),      ;; purchase count
+        cs~load_uint(32)       ;; last update
+    );
+}
+
+(int, int, int, int, int) get_contract_info() {
+    var (_, _, bridge_fee, _, _, total, batch_start,
+         _, _, total_chn, _, _) = load_storage();
+    return (bridge_fee, total, batch_start, total_chn, now());
+}

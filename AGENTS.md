@@ -1,7 +1,7 @@
 # Syndicate App - Developer Guide
 
 ## Project Overview
-Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, Arbitrum), Solana, NEAR, Starknet, and Stacks.
+Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, Arbitrum), Solana, NEAR, Starknet, Stacks, and TON (Telegram Mini App).
 
 ## Core Architecture
 
@@ -18,13 +18,22 @@ Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, A
 | Solana | Drift Vaults + Proxy | Delta-neutral JLP yield, Lossless Lottery |
 | NEAR | Intents | Cross-chain intents |
 | Starknet | Cairo contracts | Native bridging |
+| TON | CCTP + Telegram | USDT/TON → CCTP → Base, Telegram Mini App |
 
 ### Key Files
 - `src/services/bridges/protocols/stacks.ts` - Stacks bridge with USDCx/sBTC support
+- `src/services/bridges/protocols/ton.ts` - TON→Base bridge protocol (CCTP)
 - `src/services/vaults/driftProvider.ts` - Drift Delta-Neutral Vault (Solana)
+- `src/services/automation/tonAgentService.ts` - TON Agentic Wallet + MCP tools
 - `src/services/yieldToTicketsService.ts` - Orchestrator for Yield -> Ticket conversion
 - `src/components/modal/AutoPurchaseModal.tsx` - Auto-purchase + Yield upsell UI
 - `src/components/modal/SimplePurchaseModal.tsx` - Direct purchase + Yield upsell UI
+- `src/components/telegram/TelegramProvider.tsx` - Telegram WebApp SDK context
+- `src/components/telegram/TelegramPurchaseModal.tsx` - Telegram-optimized purchase UI
+- `src/hooks/useTonConnect.ts` - TON Connect wallet hook
+- `src/hooks/useTonPay.ts` - TON Pay SDK payment hook
+- `contracts/ton/lottery.fc` - TON lottery payment receiver contract (FunC)
+- `contracts/ton/lottery.tact` - TON lottery contract (Tact, modern alternative)
 - `src/app/create-syndicate/page.tsx` - 4-step syndicate creation with pool type selector
 - `src/hooks/useSyndicateDeposit.ts` - Multi-pool-type deposit hook with PoolTogether delegation
 
@@ -33,6 +42,7 @@ Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, A
 - **Styling**: Tailwind CSS
 - **EVM**: wagmi + RainbowKit
 - **Stacks**: @stacks/connect
+- **TON**: @tonconnect/ui-react + @twa-dev/sdk (Telegram Mini App)
 - **State**: React Context + useState
 
 ## Common Commands

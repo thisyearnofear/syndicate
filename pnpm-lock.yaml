@@ -149,6 +149,18 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.76.1
         version: 5.90.12(react@18.3.1)
+      '@ton/core':
+        specifier: 0.63.1
+        version: 0.63.1(@ton/crypto@3.3.0)
+      '@tonconnect/sdk':
+        specifier: 3.4.1
+        version: 3.4.1
+      '@tonconnect/ui-react':
+        specifier: 2.4.2
+        version: 2.4.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@twa-dev/sdk':
+        specifier: 8.0.2
+        version: 8.0.2(react@18.3.1)
       '@vercel/postgres':
         specifier: ^0.10.0
         version: 0.10.0(utf-8-validate@5.0.10)
@@ -4836,6 +4848,11 @@ packages:
     peerDependencies:
       '@ton/crypto': '>=3.2.0'
 
+  '@ton/core@0.63.1':
+    resolution: {integrity: sha512-hDWMjlKzc18W2E4OeV3hUP8ohRJNHPD4Wd1+AQJj8zshZyCRT0usrvnExgbNUTo/vntDqCGMzgYWbXxyaA+L4g==}
+    peerDependencies:
+      '@ton/crypto': '>=3.2.0'
+
   '@ton/crypto-primitives@2.1.0':
     resolution: {integrity: sha512-PQesoyPgqyI6vzYtCXw4/ZzevePc4VGcJtFwf08v10OevVJHVfW238KBdpj1kEDQkxWLeuNHEpTECNFKnP6tow==}
 
@@ -4847,6 +4864,27 @@ packages:
     peerDependencies:
       '@ton/core': '>=0.60.0'
       '@ton/crypto': '>=3.2.0'
+
+  '@tonconnect/isomorphic-eventsource@0.0.2':
+    resolution: {integrity: sha512-B4UoIjPi0QkvIzZH5fV3BQLWrqSYABdrzZQSI9sJA9aA+iC0ohOzFwVVGXanlxeDAy1bcvPbb29f6sVUk0UnnQ==}
+
+  '@tonconnect/isomorphic-fetch@0.0.3':
+    resolution: {integrity: sha512-jIg5nTrDwnite4fXao3dD83eCpTvInTjZon/rZZrIftIegh4XxyVb5G2mpMqXrVGk1e8SVXm3Kj5OtfMplQs0w==}
+
+  '@tonconnect/protocol@2.4.0':
+    resolution: {integrity: sha512-3xg6sMWIrSgW7/f7iPgOb2BI3LaMScjDMqfu20fcEMbOVvNFk3TGAUKK5cJ3pfvUINsyLgPoylcIbPap37jXiA==}
+
+  '@tonconnect/sdk@3.4.1':
+    resolution: {integrity: sha512-eVH8erAFout89gXYHXua/es+mmLPiW1r7ng9hgHKYQv85HLq8/zzQEkbJpbTlnIuQ6CJ/QKchjMsIgYz3BYCUQ==}
+
+  '@tonconnect/ui-react@2.4.2':
+    resolution: {integrity: sha512-wSHZWEvOK9VugIWothDbCW8sAEbwUoi1qHTICTdpK8zusphEzA3cv4RYAcEXkR2YFXrcDgmqLIob4XFBBNYeVQ==}
+    peerDependencies:
+      react: ^18.3.1
+      react-dom: ^18.3.1
+
+  '@tonconnect/ui@2.4.2':
+    resolution: {integrity: sha512-8mr7AAxcg8TQBgzOiOQ8/B5BGvS1DVM+2vSLk5NTqli/eGZzNhk/09wcKYdTH50lQ/WbYoAdZu5StWHZ9R7Dmw==}
 
   '@tootallnate/once@2.0.0':
     resolution: {integrity: sha512-XCuKFP5PS55gnMVu3dty8KPatLqUoy/ZYzDzAGCQ8JNFCkLXzmI7vNHCR+XpbZaMWQK/vQubr7PkYq8g470J/A==}
@@ -5077,6 +5115,14 @@ packages:
   '@turnkey/webauthn-stamper@0.5.0':
     resolution: {integrity: sha512-iUbTUwD4f4ibdLy5PWWb7ITEz4S4VAP9/mNjFhoRY3cKVVTDfmykrVTKjPOIHWzDgAmLtgrLvySIIC9ZBVENBw==}
     engines: {node: '>=18.0.0'}
+
+  '@twa-dev/sdk@8.0.2':
+    resolution: {integrity: sha512-Pp5GxnxP2blboVZFiM9aWjs4cb8IpW3x2jP3kLOMvIqy0jzNUTuFHkwHtx+zEvh/UcF2F+wmS8G6ebIA0XPXcg==}
+    peerDependencies:
+      react: ^18.3.1
+
+  '@twa-dev/types@8.0.2':
+    resolution: {integrity: sha512-ICQ6n4NaUPPzV3/GzflVQS6Nnu5QX2vr9OlOG8ZkFf3rSJXzRKazrLAbZlVhCPPWkIW3MMuELPsE6tByrA49qA==}
 
   '@tybys/wasm-util@0.10.1':
     resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
@@ -6756,6 +6802,9 @@ packages:
 
   class-variance-authority@0.7.1:
     resolution: {integrity: sha512-Ka+9Trutv7G8M6WT6SeiRWz792K5qEqIGEGzXKhAE6xOWAY6pPH8U+9IY3oCMv6kqTmLsv7Xh/2w2RigkePMsg==}
+
+  classnames@2.5.1:
+    resolution: {integrity: sha512-saHYOzhIQs6wy2sVxTM6bUDsQO4F50V9RQ22qBpEdCW+I+/Wmke2HOl6lS6dTpdxVhb88/I6+Hs+438c3lfUow==}
 
   cli-cursor@2.1.0:
     resolution: {integrity: sha512-8lgKz8LmCRYZZQDpRyT2m5rKJ08TnU4tR9FFFW2rxpxR1FzWi4PQ/NfyODchAatHaUgnSPVcx/R5w6NuTBzFiw==}
@@ -14700,7 +14749,7 @@ snapshots:
       '@near-js/types': 2.2.5
       '@near-js/utils': 2.2.5(@near-js/types@2.2.5)
       '@stellar/stellar-sdk': 13.2.0
-      '@ton-api/client': 0.4.0(@ton/core@0.60.1(@ton/crypto@3.3.0))
+      '@ton-api/client': 0.4.0(@ton/core@0.63.1(@ton/crypto@3.3.0))
       '@ton-api/ton-adapter': 0.4.1(@ton-api/client@0.4.0(@ton/core@0.60.1(@ton/crypto@3.3.0)))(@ton/core@0.60.1(@ton/crypto@3.3.0))
       '@ton/core': 0.60.1(@ton/crypto@3.3.0)
       '@ton/crypto': 3.3.0
@@ -20398,20 +20447,24 @@ snapshots:
 
   '@thames/monads@0.7.0': {}
 
-  '@ton-api/client@0.4.0(@ton/core@0.60.1(@ton/crypto@3.3.0))':
+  '@ton-api/client@0.4.0(@ton/core@0.63.1(@ton/crypto@3.3.0))':
     dependencies:
-      '@ton/core': 0.60.1(@ton/crypto@3.3.0)
+      '@ton/core': 0.63.1(@ton/crypto@3.3.0)
       core-js-pure: 3.47.0
 
   '@ton-api/ton-adapter@0.4.1(@ton-api/client@0.4.0(@ton/core@0.60.1(@ton/crypto@3.3.0)))(@ton/core@0.60.1(@ton/crypto@3.3.0))':
     dependencies:
-      '@ton-api/client': 0.4.0(@ton/core@0.60.1(@ton/crypto@3.3.0))
+      '@ton-api/client': 0.4.0(@ton/core@0.63.1(@ton/crypto@3.3.0))
       '@ton/core': 0.60.1(@ton/crypto@3.3.0)
 
   '@ton/core@0.60.1(@ton/crypto@3.3.0)':
     dependencies:
       '@ton/crypto': 3.3.0
       symbol.inspect: 1.0.1
+
+  '@ton/core@0.63.1(@ton/crypto@3.3.0)':
+    dependencies:
+      '@ton/crypto': 3.3.0
 
   '@ton/crypto-primitives@2.1.0':
     dependencies:
@@ -20434,6 +20487,47 @@ snapshots:
       zod: 3.25.76
     transitivePeerDependencies:
       - debug
+
+  '@tonconnect/isomorphic-eventsource@0.0.2':
+    dependencies:
+      eventsource: 2.0.2
+
+  '@tonconnect/isomorphic-fetch@0.0.3':
+    dependencies:
+      node-fetch: 2.7.0
+    transitivePeerDependencies:
+      - encoding
+
+  '@tonconnect/protocol@2.4.0':
+    dependencies:
+      tweetnacl: 1.0.3
+      tweetnacl-util: 0.15.1
+
+  '@tonconnect/sdk@3.4.1':
+    dependencies:
+      '@tonconnect/isomorphic-eventsource': 0.0.2
+      '@tonconnect/isomorphic-fetch': 0.0.3
+      '@tonconnect/protocol': 2.4.0
+    transitivePeerDependencies:
+      - encoding
+
+  '@tonconnect/ui-react@2.4.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      '@tonconnect/ui': 2.4.2
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+    transitivePeerDependencies:
+      - encoding
+
+  '@tonconnect/ui@2.4.2':
+    dependencies:
+      '@tonconnect/sdk': 3.4.1
+      classnames: 2.5.1
+      csstype: 3.2.3
+      deepmerge: 4.3.1
+      ua-parser-js: 1.0.41
+    transitivePeerDependencies:
+      - encoding
 
   '@tootallnate/once@2.0.0': {}
 
@@ -20879,6 +20973,13 @@ snapshots:
   '@turnkey/webauthn-stamper@0.5.0':
     dependencies:
       sha256-uint8array: 0.10.7
+
+  '@twa-dev/sdk@8.0.2(react@18.3.1)':
+    dependencies:
+      '@twa-dev/types': 8.0.2
+      react: 18.3.1
+
+  '@twa-dev/types@8.0.2': {}
 
   '@tybys/wasm-util@0.10.1':
     dependencies:
@@ -24534,6 +24635,8 @@ snapshots:
   class-variance-authority@0.7.1:
     dependencies:
       clsx: 2.1.1
+
+  classnames@2.5.1: {}
 
   cli-cursor@2.1.0:
     dependencies:

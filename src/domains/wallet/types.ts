@@ -20,7 +20,7 @@
  * - User sets limit (e.g., 10 USDC/week) and Syndicate executes purchases automatically
  */
 
-export type WalletType = 'evm' | 'solana' | 'social' | 'near' | 'stacks' | 'starknet';
+export type WalletType = 'evm' | 'solana' | 'social' | 'near' | 'stacks' | 'starknet' | 'ton';
 
 export const WalletTypes = {
     EVM: 'evm' as const,           // MetaMask, WalletConnect, etc.
@@ -29,6 +29,7 @@ export const WalletTypes = {
     NEAR: 'near' as const,
     STACKS: 'stacks' as const,      // Leather, Xverse, Asigna, Fordefi, etc.
     STARKNET: 'starknet' as const,  // ArgentX, Braavos
+    TON: 'ton' as const,            // @Wallet, Tonkeeper, MyTonWallet
 };
 
 /**
@@ -84,6 +85,13 @@ export function getWalletRouting(walletType: WalletType): {
                 bridgeProtocol: 'Starknet Bridge',
                 destination: 'Base',
                 description: 'ZK-rollup bridge via Orbiter/LayerSwap'
+            };
+        case WalletTypes.TON:
+            return {
+                nativeChain: 'TON',
+                bridgeProtocol: 'CCTP (TON → Base)',
+                destination: 'Base',
+                description: 'USDT/TON → CCTP → Megapot on Base'
             };
         case WalletTypes.SOCIAL:
             return {
