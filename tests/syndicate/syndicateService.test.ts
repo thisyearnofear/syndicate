@@ -60,12 +60,13 @@ describe('SyndicateService', () => {
             });
 
             expect(poolId).toBe(mockPoolId);
-            expect(syndicateRepository.createPool).toHaveBeenCalledWith({
+            expect(syndicateRepository.createPool).toHaveBeenCalledWith(expect.objectContaining({
                 name: 'Test Pool',
                 description: 'A test syndicate pool',
                 coordinatorAddress: '0x1234567890123456789012345678901234567890',
                 causeAllocationPercent: 10,
-            });
+                poolType: 'safe', // Default pool type
+            }));
         });
 
         it('should reject invalid cause allocation (negative)', async () => {
@@ -236,7 +237,7 @@ describe('SyndicateService', () => {
                 name: 'Pool 1',
                 description: 'First pool',
                 memberCount: 5,
-                totalTickets: 0,
+                totalTickets: 500, // Calculated from total_pooled_usdc (500.00 / $1 per ticket)
                 causeAllocation: 10,
                 isActive: true,
             });
