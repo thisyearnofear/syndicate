@@ -25,6 +25,13 @@ const customJestConfig = {
   // Test match patterns
   testMatch: ['**/tests/**/*.[jt]s?(x)', '**/?(*.)+(spec|test).[tj]s?(x)'],
   
+  // Ignore external Solidity contract tests (OpenZeppelin/Hardhat) and mocks
+  testPathIgnorePatterns: [
+    '<rootDir>/node_modules/',
+    '<rootDir>/lib/openzeppelin-contracts/',
+    '<rootDir>/tests/mocks/',
+  ],
+  
   // Transform files with ts-jest
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
@@ -37,6 +44,8 @@ const customJestConfig = {
     '^@/(.*)$': '<rootDir>/src/$1',
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '\\.(jpg|jpeg|png|gif|webp|svg)$': '<rootDir>/tests/mocks/__mocks__/fileMock.js',
+    // Mock Solana and other problematic modules in tests
+    '^uuid$': '<rootDir>/tests/mocks/__mocks__/uuid.js',
   },
   
   // Coverage configuration
@@ -65,6 +74,11 @@ const customJestConfig = {
   
   // Restore mocks between tests
   restoreMocks: true,
+  
+  // Transform ESM modules that Jest can't handle
+  transformIgnorePatterns: [
+    '/node_modules/(?!(uuid|@solana|@coral-xyz|jayson)/)',
+  ],
 };
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

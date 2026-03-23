@@ -9,6 +9,48 @@ const { TextEncoder, TextDecoder } = require('util');
 global.TextEncoder = TextEncoder;
 global.TextDecoder = TextDecoder;
 
+// Polyfill Request/Response for Next.js API route testing
+if (typeof Request === 'undefined') {
+  global.Request = class Request {
+    constructor(input, init = {}) {
+      this.url = typeof input === 'string' ? input : input.url;
+      this.method = init.method || 'GET';
+      this.headers = new Headers(init.headers);
+      this.body = init.body || null;
+    }
+    async json() {
+      return JSON.parse(this.body || '{}');
+    }
+    async text() {
+      return this.body || '';
+    }
+  };
+}
+
+if (typeof Response === 'undefined') {
+  global.Response = class Response {
+    constructor(body, init = {}) {
+      this.body = body;
+      this.status = init.status || 200;
+      this.statusText = init.statusText || 'OK';
+      this.headers = new Headers(init.headers);
+      this.ok = this.status >= 200 && this.status < 300;
+    }
+    async json() {
+      return JSON.parse(this.body || '{}');
+    }
+    async text() {
+      return this.body || '';
+    }
+    static json(data, init = {}) {
+      return new Response(JSON.stringify(data), {
+        ...init,
+        headers: { 'Content-Type': 'application/json', ...init.headers },
+      });
+    }
+  };
+}
+
 // Mock browser APIs
 global.ResizeObserver = class ResizeObserver {
   observe() {}
