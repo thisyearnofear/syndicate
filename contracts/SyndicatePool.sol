@@ -13,7 +13,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * Strategy: Base-only pools for MVP
  *
  * Rationale:
- * - Megapot lives on Base (0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95)
+ * - Megapot V2 lives on Base (0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2)
  * - Users from any chain bridge to Base, join pool, participate
  * - Single source of truth = no cross-chain coordination
  * - Follows same UX pattern as individual ticket purchases
@@ -172,7 +172,7 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
 
     /**
      * @param _usdc USDC token address on Base (0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913)
-     * @param _megapot Megapot contract address on Base (0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95)
+     * @param _megapot Megapot V2 contract address on Base (0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2)
      */
     constructor(address _usdc, address _megapot) Ownable(msg.sender) {
         if (_usdc == address(0) || _megapot == address(0)) {

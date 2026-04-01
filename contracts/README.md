@@ -47,7 +47,7 @@ This directory contains smart contracts for the Syndicate lottery platform.
 **Deployment**:
 - Network: Base (Chain ID: 8453)
 - USDC: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
-- Megapot: 0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95
+- Megapot V2: 0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2
 
 See `docs/bridges/DECENTRALIZED_ARCHITECTURE.md` for full architecture.
 

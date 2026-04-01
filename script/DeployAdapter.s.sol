@@ -14,7 +14,7 @@ import {DeBridgeMegapotAdapter} from "../contracts/adapters/DeBridgeMegapotAdapt
 contract DeployAdapter is Script {
     // Base Mainnet Constants
     address constant USDC_BASE = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
-    address constant MEGAPOT_BASE = 0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95;
+    address constant MEGAPOT_BASE = 0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2; // V2
 
     // Configuration
     address deployer;

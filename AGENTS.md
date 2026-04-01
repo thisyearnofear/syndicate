@@ -72,6 +72,7 @@ npm run lint   # Lint (note: may have config issues)
 - **USDCx Bridge**: `SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx-v1`
 - **sBTC**: `SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token`
 - **Lottery**: `SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3`
+- **Megapot V2 (Base)**: `0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2`
 
 ## Civic Pass Integration (KYC/AML Compliance)
 Permissioned vault access via Civic's on-chain attestation system. KYC gates deposits, not prize claims.
