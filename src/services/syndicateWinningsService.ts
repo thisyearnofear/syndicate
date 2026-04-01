@@ -58,7 +58,7 @@ const SYNDICATE_POOL_ABI = [
 class SyndicateWinningsService {
   private detectionActive = false;
   private syndicatePoolAddress: string | null = null;
-  private megapotAddress = '0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95'; // Base
+  private megapotAddress = '0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2'; // Base V2
   private baseChainId = 8453;
 
   /**

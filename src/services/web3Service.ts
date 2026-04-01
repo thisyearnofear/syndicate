@@ -29,9 +29,10 @@ import type {
 } from "./base/ContractDataService";
 import type { TicketPurchaseResult } from "./base/TransactionExecutor";
 
-// Megapot contract ABI
+// Megapot V2 contract ABI (March 2026 upgrade)
+// V2 uses buyTickets() instead of purchaseTickets()
 export const MEGAPOT_ABI = [
-  "function purchaseTickets(address referrer, uint256 value, address recipient) external",
+  "function buyTickets(tuple(uint8[] normals, uint8 bonusball)[] _tickets, address _recipient, address[] _referrers, uint256[] _referralSplit, bytes32 _source) external returns (uint256[] memory ticketIds)",
   "function ticketPrice() external view returns (uint256)",
   "function getCurrentJackpot() external view returns (uint256)",
   "function usersInfo(address) external view returns (uint256 ticketsPurchasedTotalBps, uint256 winningsClaimable, bool active)",

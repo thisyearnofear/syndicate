@@ -15,7 +15,7 @@ import { Address } from 'viem';
 // =============================================================================
 
 export const MEGAPOT = {
-  address: '0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95' as Address,
+  address: '0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2' as Address, // V2 (March 2026)
   chainId: 8453, // Base
   abi: [
     {
