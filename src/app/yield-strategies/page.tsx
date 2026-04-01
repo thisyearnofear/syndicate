@@ -282,7 +282,9 @@ function YieldStrategiesContent() {
                                     {selectedStrategy === 'drift' ? '~22.5%' : 
                                      selectedStrategy === 'morpho' ? '~6.7%' :
                                      selectedStrategy === 'pooltogether' ? '~3.5%' :
-                                     selectedStrategy === 'aave' ? '~4.5%' : 'Variable'}
+                                     selectedStrategy === 'aave' ? '~4.5%' :
+                                     selectedStrategy === 'octant' ? '~10%' :
+                                     selectedStrategy === 'uniswap' ? '~8.5%' : 'Variable'}
                                   </p>
                                 </div>
                                 <div className="glass-premium p-4 rounded-lg border border-white/10">

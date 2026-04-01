@@ -169,6 +169,8 @@ export function ImprovedYieldStrategySelector({
                        strategy.id === 'aave' ? 'Live on Base 🟦' : 
                        strategy.id === 'morpho' ? 'Live on Base 🟦' :
                        strategy.id === 'pooltogether' ? 'Live on Base 🟦' :
+                       strategy.id === 'octant' ? 'MVP Mock 🧪' :
+                       strategy.id === 'uniswap' ? 'Coming Soon 🚧' :
                        'Coming Soon'}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">

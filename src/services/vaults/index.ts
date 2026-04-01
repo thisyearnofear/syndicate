@@ -25,6 +25,8 @@ import { aaveProvider } from './aaveProvider';
 import { driftProvider } from './driftProvider';
 import { poolTogetherProvider } from './poolTogetherProvider';
 import { morphoProvider } from './morphoProvider';
+import { octantProvider } from './octantProvider';
+import { uniswapProvider } from './uniswapProvider';
 
 /**
  * Vault information for UI display
@@ -74,6 +76,12 @@ export class VaultManager {
 
         // Register Morpho provider (Lending Vaults)
         this.providers.set('morpho', morphoProvider);
+
+        // Register Octant provider (Yield Donating Vaults)
+        this.providers.set('octant', octantProvider);
+
+        // Register Uniswap provider (V3 LP Positions)
+        this.providers.set('uniswap', uniswapProvider);
 
         // TODO: Register Spark provider
         // this.providers.set('spark', sparkProvider);
@@ -254,6 +262,8 @@ export class VaultManager {
             spark: 'Spark Protocol',
             drift: 'Drift Delta Neutral',
             pooltogether: 'PoolTogether V5',
+            octant: 'Octant V2',
+            uniswap: 'Uniswap V3 LP',
         };
         return names[protocol];
     }
@@ -265,6 +275,8 @@ export class VaultManager {
             spark: 'MakerDAO lending protocol with DAI integration',
             drift: 'Solana USDC yield via Drift Protocol with automated ticket routing',
             pooltogether: 'No-loss prize savings on Base - keep principal, win prizes',
+            octant: 'Yield donating vaults with public goods funding (~10% APY)',
+            uniswap: 'Concentrated liquidity positions earning trading fees (~8.5% APY)',
         };
         return descriptions[protocol];
     }
@@ -279,3 +291,5 @@ export { aaveProvider } from './aaveProvider';
 export { driftProvider } from './driftProvider';
 export { poolTogetherProvider } from './poolTogetherProvider';
 export { morphoProvider } from './morphoProvider';
+export { octantProvider } from './octantProvider';
+export { uniswapProvider } from './uniswapProvider';

@@ -20,10 +20,27 @@ Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, A
 | Starknet | Cairo contracts | Native bridging |
 | TON | CCTP + Telegram | USDT/TON → CCTP → Base, Telegram Mini App |
 
+### Vault Providers (Yield Strategies)
+| Provider | Chain | Status | APY | Notes |
+|----------|-------|--------|-----|-------|
+| Drift | Solana | ✅ Live | ~22.5% | Delta-neutral JLP vault, 3-month lockup |
+| Aave V3 | Base | ✅ Live | ~4.5% | Stable lending with variable rates |
+| Morpho Blue | Base | ✅ Live | ~6.7% | Curated lending vaults |
+| PoolTogether V5 | Base | ✅ Live | ~3.5% | No-loss prize savings |
+| Octant V2 | Ethereum/Base | 🧪 MVP Mock | ~10% | Yield donating vaults (mock for testing) |
+| Uniswap V3 | Base | 🚧 Coming Soon | ~8.5% | Concentrated liquidity positions |
+
 ### Key Files
 - `src/services/bridges/protocols/stacks.ts` - Stacks bridge with USDCx/sBTC support
 - `src/services/bridges/protocols/ton.ts` - TON→Base bridge protocol (CCTP)
-- `src/services/vaults/driftProvider.ts` - Drift Delta-Neutral Vault (Solana)
+- `src/services/vaults/driftProvider.ts` - Drift Delta-Neutral Vault (Solana) ✅ Working
+- `src/services/vaults/aaveProvider.ts` - Aave V3 lending (Base) ✅ Working
+- `src/services/vaults/morphoProvider.ts` - Morpho Blue vaults (Base) ✅ Working
+- `src/services/vaults/poolTogetherProvider.ts` - PoolTogether V5 (Base) ✅ Working
+- `src/services/vaults/octantProvider.ts` - Octant V2 yield donating (Ethereum) 🧪 MVP Mock
+- `src/services/vaults/uniswapProvider.ts` - Uniswap V3 LP positions (Base) 🚧 Coming Soon
+- `src/services/vaults/index.ts` - VaultManager orchestrator
+- `src/hooks/useVaultDeposit.ts` - Unified deposit/withdraw hook for all vaults
 - `src/services/automation/tonAgentService.ts` - TON Agentic Wallet + MCP tools
 - `src/services/yieldToTicketsService.ts` - Orchestrator for Yield -> Ticket conversion
 - `src/components/modal/AutoPurchaseModal.tsx` - Auto-purchase + Yield upsell UI
