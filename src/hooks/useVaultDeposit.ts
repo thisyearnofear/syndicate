@@ -102,7 +102,7 @@ export function useVaultDeposit() {
 
   // ─── EVM (Aave on Base) — approve USDC + supply / withdraw via wagmi ───
 
-  const depositEvm = useCallback(
+  const depositAave = useCallback(
     async (amount: string): Promise<{ success: boolean; txHash?: string }> => {
       if (!walletClient || !publicClient || !address) throw new Error('No EVM wallet connected');
 
@@ -137,7 +137,49 @@ export function useVaultDeposit() {
     [walletClient, publicClient, address],
   );
 
-  const withdrawEvm = useCallback(
+  // ─── EVM (ERC4626 Vaults: Morpho, PoolTogether) — approve USDC + deposit via wagmi ───
+
+  const depositERC4626 = useCallback(
+    async (amount: string, vaultAddress: `0x${string}`): Promise<{ success: boolean; txHash?: string }> => {
+      if (!walletClient || !publicClient || !address) throw new Error('No EVM wallet connected');
+
+      const amountWei = parseUnits(amount, 6);
+      const userAddr = address as `0x${string}`;
+
+      // ERC4626 deposit ABI
+      const ERC4626_DEPOSIT_ABI = [
+        { name: 'deposit', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'assets', type: 'uint256' }, { name: 'receiver', type: 'address' }], outputs: [{ name: 'shares', type: 'uint256' }] },
+      ] as const;
+
+      // 1. Check USDC allowance for vault
+      setState(prev => ({ ...prev, status: 'checking_allowance' }));
+      const currentAllowance = await publicClient.readContract({
+        address: USDC_BASE, abi: ERC20_ABI, functionName: 'allowance', args: [userAddr, vaultAddress],
+      });
+
+      // 2. Approve if needed
+      if (currentAllowance < amountWei) {
+        setState(prev => ({ ...prev, status: 'approving' }));
+        const approveHash = await walletClient.writeContract({
+          address: USDC_BASE, abi: ERC20_ABI, functionName: 'approve', args: [vaultAddress, amountWei], chain: base,
+        });
+        setState(prev => ({ ...prev, approveTxHash: approveHash }));
+        await publicClient.waitForTransactionReceipt({ hash: approveHash });
+      }
+
+      // 3. Deposit USDC to ERC4626 vault
+      setState(prev => ({ ...prev, status: 'depositing' }));
+      const depositHash = await walletClient.writeContract({
+        address: vaultAddress, abi: ERC4626_DEPOSIT_ABI, functionName: 'deposit', args: [amountWei, userAddr], chain: base,
+      });
+      await publicClient.waitForTransactionReceipt({ hash: depositHash });
+
+      return { success: true, txHash: depositHash };
+    },
+    [walletClient, publicClient, address],
+  );
+
+  const withdrawAave = useCallback(
     async (amount: string): Promise<{ success: boolean; txHash?: string }> => {
       if (!walletClient || !publicClient || !address) throw new Error('No EVM wallet connected');
 
@@ -147,6 +189,29 @@ export function useVaultDeposit() {
       setState(prev => ({ ...prev, status: 'signing' }));
       const withdrawHash = await walletClient.writeContract({
         address: AAVE_POOL, abi: AAVE_POOL_ABI, functionName: 'withdraw', args: [USDC_BASE, amountWei, userAddr], chain: base,
+      });
+      await publicClient.waitForTransactionReceipt({ hash: withdrawHash });
+
+      return { success: true, txHash: withdrawHash };
+    },
+    [walletClient, publicClient, address],
+  );
+
+  const withdrawERC4626 = useCallback(
+    async (amount: string, vaultAddress: `0x${string}`): Promise<{ success: boolean; txHash?: string }> => {
+      if (!walletClient || !publicClient || !address) throw new Error('No EVM wallet connected');
+
+      const amountWei = parseUnits(amount, 6);
+      const userAddr = address as `0x${string}`;
+
+      // ERC4626 withdraw ABI
+      const ERC4626_WITHDRAW_ABI = [
+        { name: 'withdraw', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'assets', type: 'uint256' }, { name: 'receiver', type: 'address' }, { name: 'owner', type: 'address' }], outputs: [{ name: 'shares', type: 'uint256' }] },
+      ] as const;
+
+      setState(prev => ({ ...prev, status: 'signing' }));
+      const withdrawHash = await walletClient.writeContract({
+        address: vaultAddress, abi: ERC4626_WITHDRAW_ABI, functionName: 'withdraw', args: [amountWei, userAddr, userAddr], chain: base,
       });
       await publicClient.waitForTransactionReceipt({ hash: withdrawHash });
 
@@ -169,9 +234,36 @@ export function useVaultDeposit() {
 
       try {
         let result: { success: boolean; txHash?: string };
-        if (protocol === 'drift') result = await depositSolana(amount);
-        else if (protocol === 'aave') result = await depositEvm(amount);
-        else throw new Error(`Deposit not yet supported for ${protocol}`);
+        
+        // Route to appropriate deposit handler
+        if (protocol === 'drift') {
+          result = await depositSolana(amount);
+        } else if (protocol === 'aave') {
+          result = await depositAave(amount);
+        } else if (protocol === 'morpho') {
+          // Morpho USDC Vault on Base
+          result = await depositERC4626(amount, '0x9CBF0184036048895e69aAFb4D0A1598085bFc82');
+        } else if (protocol === 'pooltogether') {
+          // PoolTogether PrizeVault on Base
+          result = await depositERC4626(amount, '0x45b201633594A8090f48866B570932B328080C0B');
+        } else if (protocol === 'octant') {
+          // Octant uses octantVaultService which needs initialization
+          const { octantVaultService } = await import('@/services/octantVaultService');
+          const { web3Service } = await import('@/services/web3Service');
+          const provider = web3Service.getProvider();
+          const signer = await web3Service.getFreshSigner();
+          if (!provider) throw new Error('Provider not available');
+          await octantVaultService.initialize(provider, signer);
+          const vaultAddr = 'mock:octant-usdc'; // Use mock vault for MVP
+          const depositResult = await octantVaultService.deposit(vaultAddr, amount, address);
+          result = { success: depositResult.success, txHash: depositResult.txHash };
+          if (!depositResult.success) throw new Error(depositResult.error || 'Octant deposit failed');
+        } else if (protocol === 'uniswap') {
+          // Uniswap V3 requires complex position management - not yet implemented
+          throw new Error('Uniswap V3 deposits require position management UI. Coming soon.');
+        } else {
+          throw new Error(`Deposit not yet supported for ${protocol}`);
+        }
 
         setState(prev => ({ ...prev, isDepositing: false, error: null, txHash: result.txHash ?? null, status: 'complete' }));
         return result;
@@ -182,7 +274,7 @@ export function useVaultDeposit() {
         return { success: false, error: isCancel ? 'Transaction cancelled' : msg };
       }
     },
-    [address, depositSolana, depositEvm],
+    [address, depositSolana, depositAave, depositERC4626],
   );
 
   const withdraw = useCallback(
@@ -193,9 +285,36 @@ export function useVaultDeposit() {
 
       try {
         let result: { success: boolean; txHash?: string };
-        if (protocol === 'drift') result = await withdrawSolana(amount, yieldOnly);
-        else if (protocol === 'aave') result = await withdrawEvm(amount);
-        else throw new Error(`Withdrawal not yet supported for ${protocol}`);
+        
+        // Route to appropriate withdraw handler
+        if (protocol === 'drift') {
+          result = await withdrawSolana(amount, yieldOnly);
+        } else if (protocol === 'aave') {
+          result = await withdrawAave(amount);
+        } else if (protocol === 'morpho') {
+          // Morpho USDC Vault on Base
+          result = await withdrawERC4626(amount, '0x9CBF0184036048895e69aAFb4D0A1598085bFc82');
+        } else if (protocol === 'pooltogether') {
+          // PoolTogether PrizeVault on Base
+          result = await withdrawERC4626(amount, '0x45b201633594A8090f48866B570932B328080C0B');
+        } else if (protocol === 'octant') {
+          // Octant withdrawal
+          const { octantVaultService } = await import('@/services/octantVaultService');
+          const { web3Service } = await import('@/services/web3Service');
+          const provider = web3Service.getProvider();
+          const signer = await web3Service.getFreshSigner();
+          if (!provider) throw new Error('Provider not available');
+          await octantVaultService.initialize(provider, signer);
+          const vaultAddr = 'mock:octant-usdc';
+          const withdrawResult = await octantVaultService.withdraw(vaultAddr, amount, address, address);
+          result = { success: withdrawResult.success, txHash: withdrawResult.txHash };
+          if (!withdrawResult.success) throw new Error(withdrawResult.error || 'Octant withdrawal failed');
+        } else if (protocol === 'uniswap') {
+          // Uniswap V3 requires complex position management - not yet implemented
+          throw new Error('Uniswap V3 withdrawals require position management UI. Coming soon.');
+        } else {
+          throw new Error(`Withdrawal not yet supported for ${protocol}`);
+        }
 
         setState(prev => ({ ...prev, isDepositing: false, error: null, txHash: result.txHash ?? null, status: 'complete' }));
         return result;
@@ -205,7 +324,7 @@ export function useVaultDeposit() {
         return { success: false, error: msg };
       }
     },
-    [address, withdrawSolana, withdrawEvm],
+    [address, withdrawSolana, withdrawAave, withdrawERC4626],
   );
 
   const reset = useCallback(() => {

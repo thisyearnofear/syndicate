@@ -51,6 +51,23 @@ export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
     color: 'bg-gradient-to-br from-yellow-400 to-amber-600',
     risk: 'Low',
   },
+  {
+    id: 'octant',
+    name: 'Octant V2',
+    description: 'Yield donating vaults supporting public goods. ~10% APY with social impact.',
+    icon: '🌍',
+    color: 'bg-gradient-to-br from-green-500 to-emerald-400',
+    risk: 'Low',
+    isOctant: true,
+  },
+  {
+    id: 'uniswap',
+    name: 'Uniswap V3 LP',
+    description: 'Concentrated liquidity positions earning trading fees. ~8.5% APY from USDC/ETH pool.',
+    icon: '🦄',
+    color: 'bg-gradient-to-br from-pink-500 to-rose-400',
+    risk: 'Medium',
+  },
 ];
 
 export function getStrategyById(id: SyndicateInfo['vaultStrategy']): YieldStrategyConfig | undefined {
