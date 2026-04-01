@@ -1,6 +1,32 @@
 # Syndicate - Cross-Chain Lottery Platform
 
+**Status**: Production | **Hackathon**: Ranger Build-A-Bear (Main + Drift Side Track)
+
 Syndicate enables users and institutions to purchase Megapot lottery tickets from any blockchain through trustless cross-chain bridges. The platform supports Bitcoin (via Stacks), Solana, NEAR, StarkNet, and EVM chains with native USDC bridging, institutional-grade KYC/AML compliance, and privacy-preserving commitments.
+
+## Ranger Hackathon Submission
+
+**Tracks**: Main Track + Drift Side Track  
+**Strategy**: Drift Delta-Neutral Lossless Lottery  
+**Deadline**: April 6, 2026, 23:59 UTC
+
+### Key Differentiators
+- ✅ Production-ready (live since March 2026, not a prototype)
+- ✅ Unique primitive: Lossless lottery (yield → tickets)
+- ✅ 22.5% APY via Drift JLP delta-neutral strategy
+- ✅ Multi-chain accessibility (Bitcoin, NEAR, Solana, Base)
+- ✅ Institutional compliance (KYC/AML via Civic Pass)
+- ✅ Proven track record ($200M+ in Megapot prizes)
+
+### Contract Addresses (Verified April 1, 2026)
+
+**Drift (Solana)**:
+- Vaults: `JCNCMFXo5M5qwUPg2Utu1u6YWp3MbygxqBsBeXXJfrw`
+- Protocol: `dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH`
+
+**Megapot V2 (Base)**:
+- Jackpot: `0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2`
+- AutoPurchaseProxy: `0x707043a8c35254876B8ed48F6537703F7736905c`
 
 ---
 
@@ -184,7 +210,7 @@ Solana Wallet → Civic KYC → Drift JLP Vault → Yield Accrual → Base Lotte
 | Contract | Address |
 |----------|---------|
 | **MegapotAutoPurchaseProxy** | `0x707043a8c35254876B8ed48F6537703F7736905c` |
-| **Megapot** | `0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95` |
+| **Megapot V2** | `0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2` |
 | **USDC** | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
 
 ### Stacks Contracts (Mainnet)

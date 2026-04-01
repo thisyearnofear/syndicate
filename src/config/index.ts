@@ -89,7 +89,6 @@ export const DEFAULT_CHAIN = CHAINS.base;
  * V2 Upgrade (March 2026): New Jackpot contract with LP pooling, cross-chain bridge claims, auto-subscriptions
  * Testnet (Base Sepolia): 0x6f03c7BCaDAdBf5E6F5900DA3d56AdD8FbDac5De with mock MPUSDC
  * Prod (Base Mainnet): 0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2 (V2 - Active)
- * Legacy (Base Mainnet): 0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95 (V1 - Deprecated, no longer runs draws)
  */
 const MEGAPOT_BY_CHAIN: Record<number, `0x${string}`> = {
   [CHAIN_IDS.BASE]: '0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2',           // Base mainnet V2 (prod)

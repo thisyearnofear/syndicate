@@ -145,7 +145,7 @@ Solana Wallet → Civic KYC → Drift JLP Vault → Yield Accrual → Base Lotte
 | Contract | Address |
 |----------|---------|
 | **MegapotAutoPurchaseProxy** | `0x707043a8c35254876B8ed48F6537703F7736905c` |
-| **Megapot** | `0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95` |
+| **Megapot V2** | `0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2` |
 | **USDC** | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
 
 ### MegapotAutoPurchaseProxy

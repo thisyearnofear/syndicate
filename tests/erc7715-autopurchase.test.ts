@@ -50,8 +50,8 @@ describe('ERC-7715 Auto-Purchase Flow', () => {
       const session = await service.createSmartSession(
         [
           {
-            target: '0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95',
-            methods: ['purchaseTickets'],
+            target: '0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2', // Megapot V2
+            methods: ['buyTickets'], // V2 method
             maxGasLimit: BigInt(500000),
             maxValuePerTransaction: BigInt(10 * 10 ** 6),
           },

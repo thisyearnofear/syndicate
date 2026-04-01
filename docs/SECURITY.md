@@ -73,7 +73,7 @@ git commit -m "test"  # Should be blocked
 | Contract | Address | Network |
 |----------|---------|---------|
 | MegapotAutoPurchaseProxy | `0x707043a8c35254876B8ed48F6537703F7736905c` | Base Mainnet |
-| Megapot | `0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95` | Base Mainnet |
+| Megapot V2 | `0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2` | Base Mainnet |
 | Stacks Lottery V3 | `SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3` | Stacks Mainnet |
 
 ### Security Properties
