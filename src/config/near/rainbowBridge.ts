@@ -35,8 +35,8 @@ export const RAINBOW_BRIDGE_CONTRACTS = {
     // USDC on Base
     usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
     
-    // Megapot contract on Base
-    megapot: '0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95',
+    // Megapot contract on Base (V2)
+    megapot: '0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2',
   },
   
   // Avalanche contracts (for cross-chain support)

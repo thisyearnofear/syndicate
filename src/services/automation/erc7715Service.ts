@@ -379,8 +379,8 @@ export class ERC7715Service {
       // MODULAR: Create session with permission for Megapot purchases
       const sessionPermissions: SessionPermissionScope[] = [
         {
-          target: '0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95', // Megapot on Base
-          methods: ['purchaseTickets'], // Only allow ticket purchases
+          target: '0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2', // Megapot V2 on Base
+          methods: ['buyTickets'], // V2 uses buyTickets instead of purchaseTickets
           maxGasLimit: BigInt(500000), // 500k gas per transaction
           maxValuePerTransaction: permission.limit / BigInt(numberOfPurchases), // Split limit across purchases
         },

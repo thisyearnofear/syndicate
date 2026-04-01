@@ -19,12 +19,18 @@ import { VaultError, VaultErrorCode } from './vaultProvider';
  */
 
 // Production Configuration for Drift JLP Delta Neutral Vault Interface
+// Updated: April 1, 2026 - Verified against Drift Protocol docs (Feb 27, 2026)
 export const DRIFT_CONFIG = {
     SOLANA: {
-        // The specific SPL Token Mint representing shares in the Drift JLP Vault
-        VAULT_SHARE_MINT: new PublicKey('JLPmN1cM1N3hU7mNz8s2XyZ1WJ2uXv1vV7tQ5Z7JLP5'), 
+        // Drift Vaults Program (verified Feb 27, 2026)
+        PROGRAM_ID: new PublicKey('JCNCMFXo5M5qwUPg2Utu1u6YWp3MbygxqBsBeXXJfrw'),
+        // Drift Protocol Program (for DriftClient)
+        DRIFT_PROTOCOL_PROGRAM: new PublicKey('dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH'),
+        // USDC SPL Token Mint (Solana mainnet)
         USDC_MINT: new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
-        PROGRAM_ID: new PublicKey('vAuLTsyrvSfZRuRB3XgvkPwNGgYSs9YRYymVebLKoxR'), // Drift Vaults Program
+        // The specific SPL Token Mint representing shares in the Drift JLP Vault
+        // TODO: Verify specific JLP vault share mint address from Drift app
+        VAULT_SHARE_MINT: new PublicKey('JLPmN1cM1N3hU7mNz8s2XyZ1WJ2uXv1vV7tQ5Z7JLP5'), 
         CHAIN_ID: 101, // Solana Mainnet Equivalent
     },
 };
