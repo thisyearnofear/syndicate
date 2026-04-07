@@ -1,0 +1,130 @@
+{
+  "scripts": [
+    {
+      "name": "dev",
+      "command": "pnpm dev",
+      "mode": "service",
+      "category": "dev"
+    },
+    {
+      "name": "dev:fast",
+      "command": "pnpm dev:fast",
+      "mode": "service",
+      "category": "dev"
+    },
+    {
+      "name": "dev:turbo",
+      "command": "pnpm dev:turbo",
+      "mode": "service",
+      "category": "dev"
+    },
+    {
+      "name": "dev:debug",
+      "command": "pnpm dev:debug",
+      "mode": "service",
+      "category": "dev"
+    },
+    {
+      "name": "build",
+      "command": "pnpm build",
+      "mode": "command",
+      "category": "build"
+    },
+    {
+      "name": "build:analyze",
+      "command": "pnpm build:analyze",
+      "mode": "command",
+      "category": "build"
+    },
+    {
+      "name": "start",
+      "command": "pnpm start",
+      "mode": "service",
+      "category": "dev"
+    },
+    {
+      "name": "start:dev",
+      "command": "pnpm start:dev",
+      "mode": "service",
+      "category": "dev"
+    },
+    {
+      "name": "lint",
+      "command": "pnpm lint",
+      "mode": "command",
+      "category": "lint"
+    },
+    {
+      "name": "analyze",
+      "command": "pnpm analyze",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "perf",
+      "command": "pnpm perf",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "perf:monitor",
+      "command": "pnpm perf:monitor",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "clean",
+      "command": "pnpm clean",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "type-check",
+      "command": "pnpm type-check",
+      "mode": "command",
+      "category": "typecheck"
+    },
+    {
+      "name": "test",
+      "command": "pnpm test",
+      "mode": "command",
+      "category": "test"
+    },
+    {
+      "name": "test:watch",
+      "command": "pnpm test:watch",
+      "mode": "command",
+      "category": "test"
+    },
+    {
+      "name": "test:coverage",
+      "command": "pnpm test:coverage",
+      "mode": "command",
+      "category": "test"
+    },
+    {
+      "name": "test:gelato-webhook",
+      "command": "pnpm test:gelato-webhook",
+      "mode": "command",
+      "category": "test"
+    },
+    {
+      "name": "migrate:gelato",
+      "command": "pnpm migrate:gelato",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "migrate",
+      "command": "pnpm migrate",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "postinstall",
+      "command": "pnpm postinstall",
+      "mode": "command",
+      "category": "other"
+    }
+  ]
+}
