@@ -41,6 +41,10 @@ Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, A
 - `src/services/vaults/uniswapProvider.ts` - Uniswap V3 LP positions (Base) 🚧 Coming Soon
 - `src/services/vaults/index.ts` - VaultManager orchestrator
 - `src/hooks/useVaultDeposit.ts` - Unified deposit/withdraw hook for all vaults
+- `src/hooks/useUserVaults.ts` - Fetch all user vault positions with caching
+- `src/components/yield/YieldDashboard.tsx` - Multi-vault overview dashboard
+- `src/app/portfolio/page.tsx` - Unified portfolio (syndicates + vaults) with tabs
+- `src/app/yield-strategies/page.tsx` - Yield strategies page with 3 tabs
 - `src/services/automation/tonAgentService.ts` - TON Agentic Wallet + MCP tools
 - `src/services/yieldToTicketsService.ts` - Orchestrator for Yield -> Ticket conversion
 - `src/components/modal/AutoPurchaseModal.tsx` - Auto-purchase + Yield upsell UI

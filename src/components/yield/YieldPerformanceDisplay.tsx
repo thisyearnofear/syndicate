@@ -7,9 +7,11 @@ interface YieldPerformanceDisplayProps {
   strategy: string;
   yieldRate: number; // Annual percentage yield
   totalYield: number; // Total yield generated
+  totalDeposited: number; // Total deposited amount
   ticketsGenerated: number; // Tickets generated from yield
   causesFunded: number; // Amount funded to causes from yield
   isLocked?: boolean;
+  isHealthy?: boolean;
   onWithdrawPrincipal?: () => void;
   className?: string;
 }
@@ -17,10 +19,12 @@ interface YieldPerformanceDisplayProps {
 export function YieldPerformanceDisplay({ 
   strategy, 
   yieldRate, 
-  totalYield, 
+  totalYield,
+  totalDeposited, 
   ticketsGenerated, 
   causesFunded,
   isLocked = false,
+  isHealthy = true,
   onWithdrawPrincipal,
   className = '' 
 }: YieldPerformanceDisplayProps) {
@@ -39,9 +43,11 @@ export function YieldPerformanceDisplay({
           </div>
           <div className="flex items-center gap-3">
             <div className="text-right mr-4 border-r border-white/10 pr-4">
-              <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Status</p>
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Health</p>
               <div className="flex items-center gap-1.5 justify-end">
-                {isLocked ? (
+                {!isHealthy ? (
+                  <span className="text-xs font-bold text-red-400">Unhealthy</span>
+                ) : isLocked ? (
                   <>
                     <Lock className="w-3 h-3 text-amber-400" />
                     <span className="text-xs font-bold text-amber-400">Locked</span>
@@ -55,11 +61,16 @@ export function YieldPerformanceDisplay({
               <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">APY</p>
               <p className="text-sm font-bold text-green-400">+{yieldRate.toFixed(2)}%</p>
             </div>
+            <div className="text-right mr-4 border-r border-white/10 pr-4">
+              <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Deposited</p>
+              <p className="text-sm font-bold text-white">${totalDeposited.toFixed(2)}</p>
+            </div>
             <Button 
               variant="outline" 
               size="sm"
               onClick={onWithdrawPrincipal}
-              className="h-9 border-white/10 bg-white/5 hover:bg-white/10 text-xs gap-2"
+              disabled={isLocked || !isHealthy}
+              className="h-9 border-white/10 bg-white/5 hover:bg-white/10 text-xs gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Withdraw Principal
               <ArrowUpRight className="w-3 h-3" />
