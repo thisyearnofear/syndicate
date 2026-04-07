@@ -12,14 +12,14 @@
  * 1. Webhook signature is valid
  * 2. Permission exists and is still valid
  * 3. User's balance is sufficient
- * Then executes Megapot.purchaseTickets()
+ * Then executes Megapot.purchaseTickets() via Relay Service
  *
  * Endpoint: POST /api/automation/execute-purchase-tickets
  * Authentication: Gelato signature validation
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { Address, createPublicClient, http } from 'viem';
+import { Address, createPublicClient, http, encodeFunctionData } from 'viem';
 import { base } from 'viem/chains';
 import { automationOrchestrator } from '@/services/automation/AutomationOrchestrator';
 import { getERC7715Service } from '@/services/automation/erc7715Service';
@@ -27,16 +27,14 @@ import type { ERC7715Grant } from '@/services/automation/erc7715Service';
 import { MEGAPOT } from '@/config/contracts';
 import {
   verifyGelatoSignature,
-  isWebhookTimestampFresh,
   validateWebhookPayload,
-  getTxHashFromPayload,
-  isSuccessfulExecution,
 } from '@/lib/gelato/signature';
 import {
   getGelatoTaskRepository,
   type GelatoTaskRecord,
   type GelatoExecutionRecord,
 } from '@/lib/db/schema/gelatoTasks';
+import { relayService } from '@/services/automation/RelayService';
 
 // =============================================================================
 // TYPES
@@ -151,15 +149,8 @@ export default async function handler(
 
     const { userAddress, permissionId } = taskRecord;
 
-    console.log('[Execution] Found task record:', {
-      taskId: taskRecord.id,
-      gelatoTaskId: taskRecord.taskId,
-      userAddress,
-    });
-
     // Get permission from ERC7715 service
-    const erc7715Service2 = getERC7715Service();
-    const permissions = erc7715Service2.getActiveGrants();
+    const permissions = erc7715Service.getActiveGrants();
     const userPermission = permissions
       .filter((g: ERC7715Grant) => g.type === 'advanced-permission')
       .map((g: ERC7715Grant) => g.permission!)
@@ -199,44 +190,46 @@ export default async function handler(
       });
     }
 
-    // Execute Megapot purchase
-    const publicClient = createPublicClient({
-      chain: base,
-      transport: http(),
-    });
-
-    // Simulate the transaction first to catch errors
+    // Execute Megapot purchase via Relay
     const referrerAddress = (process.env.MEGAPOT_REFERRER ||
       '0x0000000000000000000000000000000000000000') as Address;
 
-    console.log('[Execution] Simulating Megapot purchase:', {
-      referrer: referrerAddress,
-      amount: purchaseAmount.toString(),
-      recipient: userAddress,
-    });
-
-    // In a real implementation, you'd:
-    // 1. Use a relay service to execute the transaction
-    // 2. Sign with a backend key or use MetaTx
-    // 3. Handle potential failures and retries
-    // 4. Update the permission's spent amount
-    // 5. Store task execution in database
-
-    // For now, we'll simulate and log
     try {
-      const result = await publicClient.simulateContract({
-        account: userAddress,
-        address: MEGAPOT.address,
+      // 1. Encode the function data
+      const execData = encodeFunctionData({
         abi: MEGAPOT.abi,
         functionName: 'purchaseTickets',
         args: [referrerAddress, purchaseAmount, userAddress],
       });
 
-      console.log('[Execution] Simulation successful');
+      console.log('[Execution] Submitting Megapot purchase via Relay:', {
+        taskId: taskRecord.id,
+        user: userAddress,
+        amount: purchaseAmount.toString()
+      });
 
-      // TODO: Execute the actual transaction via relay service
-      // const txHash = await relayService.execute(...)
-      const simulatedTxHash = 'simulated-tx-hash'; // In production: actual tx hash
+      // 2. Submit to Relay Service
+      const relayResponse = await relayService.relayTransaction({
+        chainId: 8453, // Base
+        target: MEGAPOT.address,
+        data: execData,
+        user: userAddress,
+      });
+
+      if (!relayResponse.success) {
+        throw new Error(`Relay submission failed: ${relayResponse.error}`);
+      }
+
+      // 3. Wait for completion (optional, but good for reliable DB updates)
+      // For an API route, we might want to return early if it takes too long, 
+      // but here we wait to ensure the DB is updated.
+      const finalStatus = await relayService.waitForTaskCompletion(relayResponse.taskId);
+      
+      if (finalStatus.taskState !== 'ExecSuccess') {
+        throw new Error(`Relay execution failed: ${finalStatus.taskState} - ${finalStatus.lastError || 'Unknown error'}`);
+      }
+
+      const txHash = finalStatus.transactionHash || '0x';
 
       // Record execution in database
       const executionRecord: GelatoExecutionRecord = {
@@ -245,46 +238,37 @@ export default async function handler(
         taskRecordId: taskRecord.id,
         userId: taskRecord.userId,
         executedAt: Math.floor(Date.now() / 1000),
-        transactionHash: simulatedTxHash,
+        transactionHash: txHash,
         success: true,
         amountExecuted: purchaseAmount,
-        referrer: '0x0000000000000000000000000000000000000000' as Address,
+        referrer: referrerAddress,
         createdAt: Math.floor(Date.now() / 1000),
       };
 
-      try {
-        await taskRepository.recordExecution(executionRecord);
-        console.log('[Execution] Recorded execution:', { taskId, txHash: simulatedTxHash });
-      } catch (dbErr) {
-        console.error('[Execution] Failed to record execution:', dbErr);
-        // Don't fail the response if logging fails
-      }
+      await taskRepository.recordExecution(executionRecord);
 
       // Update task in database
-      try {
-        const nextExecution = automationOrchestrator.calculateNextExecution(taskRecord.frequency);
-        await taskRepository.updateTask(taskRecord.id, {
-          executionCount: taskRecord.executionCount + 1,
-          lastExecutedAt: Math.floor(Date.now() / 1000),
-          nextExecutionTime: nextExecution,
-          lastError: undefined,
-          updatedAt: Math.floor(Date.now() / 1000),
-        });
-      } catch (dbErr) {
-        console.error('[Execution] Failed to update task:', dbErr);
-      }
+      const nextExecution = automationOrchestrator.calculateNextExecution(taskRecord.frequency);
+      await taskRepository.updateTask(taskRecord.id, {
+        executionCount: taskRecord.executionCount + 1,
+        lastExecutedAt: Math.floor(Date.now() / 1000),
+        nextExecutionTime: nextExecution,
+        lastError: undefined,
+        updatedAt: Math.floor(Date.now() / 1000),
+      });
 
       return res.status(200).json({
         success: true,
         taskId: taskRecord.id,
-        txHash: simulatedTxHash,
+        txHash: txHash,
         timestamp: Date.now(),
       });
-      } catch (simulationError) {
-      console.error('[Execution] Simulation failed:', simulationError);
+    } catch (executionError) {
+      console.error('[Execution] Purchase failed:', executionError);
 
+      const errorMessage = executionError instanceof Error ? executionError.message : 'Unknown error';
+      
       // Record failed execution
-      const errorMessage = simulationError instanceof Error ? simulationError.message : 'Unknown error';
       const failedExecution: GelatoExecutionRecord = {
         id: `exec_${Date.now()}`,
         taskId: taskRecord.taskId,
@@ -294,23 +278,27 @@ export default async function handler(
         success: false,
         error: errorMessage,
         amountExecuted: purchaseAmount,
-        referrer: '0x0000000000000000000000000000000000000000' as Address,
+        referrer: referrerAddress,
         createdAt: Math.floor(Date.now() / 1000),
       };
 
       try {
         await taskRepository.recordExecution(failedExecution);
+        await taskRepository.updateTask(taskRecord.id, {
+          lastError: errorMessage,
+          updatedAt: Math.floor(Date.now() / 1000),
+        });
       } catch (dbErr) {
-        console.error('[Execution] Failed to record failed execution:', dbErr);
+        console.error('[Execution] Failed to record failure in DB:', dbErr);
       }
 
       return res.status(400).json({
         success: false,
         taskId: taskRecord.id,
-        error: `Simulation failed: ${errorMessage}`,
+        error: errorMessage,
         timestamp: Date.now(),
       });
-      }
+    }
   } catch (error) {
     console.error('[Execution] Unexpected error:', error);
     return res.status(500).json({
