@@ -98,6 +98,13 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
     // Distribution tracking for pagination
     mapping(bytes32 => DistributionState) public distributionStates;
 
+    // Pool ID => Coordinator address
+    mapping(bytes32 => address) public poolCoordinators;
+
+    // Pending coordinator transfers
+    mapping(bytes32 => address) public pendingCoordinatorTransfers;
+    mapping(bytes32 => uint256) public coordinatorTransferTimestamps;
+
     // Track claimed winnings per pool
     mapping(bytes32 => uint256) public totalWinningsClaimed;
 
@@ -143,6 +150,10 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
 
     event EmergencyWithdrawExecuted(bytes32 indexed poolId, address indexed member, uint256 amount);
 
+    event CoordinatorTransferInitiated(bytes32 indexed poolId, address indexed oldCoordinator, address indexed newCoordinator, uint256 timelockExpires);
+
+    event CoordinatorTransferCompleted(bytes32 indexed poolId, address indexed oldCoordinator, address indexed newCoordinator);
+
     // =============================================================================
     // ERRORS
     // =============================================================================
@@ -161,6 +172,9 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
     error InvalidDistributionState();
     error InvalidTicketCount();
     error WinningsClaimFailed();
+    error InvalidNewCoordinator();
+    error CoordinatorTransferNotPending();
+    error CoordinatorTransferTimelockNotPassed();
     error NoWinningsToWithdraw();
     error EmergencyTimelockNotPassed();
     error NoEmergencyRequest();
@@ -863,5 +877,41 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
         // without revealing individual amounts
 
         revert("Privacy distribution implementation pending Phase 3");
+    }
+
+    // =============================================================================
+    // COORDINATOR MANAGEMENT
+    // =============================================================================
+
+    /**
+     * @notice Initiate a coordinator transfer (timelock: 2 days)
+     */
+    function initiateCoordinatorTransfer(bytes32 poolId, address newCoordinator) external {
+        if (pools[poolId].coordinator != msg.sender) revert OnlyCoordinator();
+        if (newCoordinator == address(0)) revert InvalidNewCoordinator();
+
+        // 2 day timelock for coordinator transfers
+        uint256 timelock = 2 days;
+        pendingCoordinatorTransfers[poolId] = newCoordinator;
+        coordinatorTransferTimestamps[poolId] = block.timestamp + timelock;
+
+        emit CoordinatorTransferInitiated(poolId, msg.sender, newCoordinator, block.timestamp + timelock);
+    }
+
+    /**
+     * @notice Complete a coordinator transfer after timelock
+     */
+    function completeCoordinatorTransfer(bytes32 poolId) external {
+        if (pendingCoordinatorTransfers[poolId] == address(0)) revert CoordinatorTransferNotPending();
+        if (block.timestamp < coordinatorTransferTimestamps[poolId]) revert CoordinatorTransferTimelockNotPassed();
+
+        address oldCoordinator = pools[poolId].coordinator;
+        address newCoordinator = pendingCoordinatorTransfers[poolId];
+
+        pools[poolId].coordinator = newCoordinator;
+        delete pendingCoordinatorTransfers[poolId];
+        delete coordinatorTransferTimestamps[poolId];
+
+        emit CoordinatorTransferCompleted(poolId, oldCoordinator, newCoordinator);
     }
 }

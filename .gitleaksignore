@@ -13,3 +13,4 @@ src/services/automation/agentRegistryService.ts:generic-api-key:96
 src/services/automation/agentRegistryService.ts:generic-api-key:122
 src/services/automation/agentRegistryService.ts:generic-api-key:148
 src/services/automation/agentRegistryService.ts:generic-api-key:174
+src/services/automation/RelayService.ts:generic-api-key:71
