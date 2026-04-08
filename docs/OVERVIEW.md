@@ -35,7 +35,7 @@ The current Drift JLP/lossless-lottery framing in this repo should not be treate
 | 🌉 **Cross-Chain** | Buy tickets from Bitcoin/Stacks, NEAR, Solana, StarkNet, or Base |
 | ⚡ **Fast Settlement** | 30-60s from Stacks (CCTP), 1-3 min from Solana/StarkNet |
 | 🔒 **Trustless** | Proxy contract handles all purchases atomically |
-| 🎟️ **Multi-Protocol** | Megapot, PoolTogether v5 (No-Loss), Drift JLP lotteries |
+| 🎟️ **Multi-Protocol** | Megapot, PoolTogether v5 (No-Loss), Drift JLP, yield-linked vault participation |
 | 🤖 **Auto-Purchase** | Recurring tickets via x402 (Stacks SIP-018) / ERC-7715 (EVM) |
 | 💰 **Fair Pricing** | Clear fees, no hidden costs |
 
@@ -173,19 +173,18 @@ Multi-chain syndicate pooling with three custody models for team coordination an
 
 ### Overview
 
-The Drift JLP Vault on Solana generates ~22.5% APY yield that is automatically converted to lottery tickets on Base. Users maintain **100% of their principal** while gaining prize exposure.
+Syndicate generates yield from various sources which is automatically converted to lottery tickets on Base. Users maintain **100% of their principal** while gaining prize exposure.
+
+### Supported Yield Sources
+
+- **Drift JLP Vault**: Generates ~22.5% APY yield (Solana).
+- **Aave / Morpho**: Standard lending yields on Base/EVM.
+- **PoolTogether**: Prize-linked savings yield.
+- **Octant / Uniswap**: Additional strategy surfaces in MVP or in-progress state.
 
 ### Flow
 
-Solana Wallet → Civic KYC → Drift JLP Vault → Yield Accrual → Base Lottery Tickets
-
-### Key Properties
-
-- **Principal Safety**: 100% of initial deposit maintained (delta-neutral strategy)
-- **Yield Generation**: ~22.5% APY from Drift JLP perpetual futures strategy
-- **Lockup Period**: 3 months (90 days) to normalize yield
-- **Automatic Conversion**: Yield → tickets via on-chain orchestrator
-- **Compliance**: KYC/AML via Civic Pass gates vault deposits
+User Wallet → Civic KYC → Yield Vault (Drift, Aave, Morpho, PoolTogether, etc.) → Yield Accrual → Base Lottery Tickets
 
 ---
 
