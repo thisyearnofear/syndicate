@@ -1,140 +1,142 @@
-# Syndicate - Cross-Chain Lottery Platform
+# Syndicate - Cross-Chain Yield + Lottery Platform
 
-Syndicate enables users and institutions to purchase Megapot lottery tickets from any blockchain through trustless cross-chain bridges. The platform supports Bitcoin (via Stacks), Solana, NEAR, StarkNet, and EVM chains with native USDC bridging, institutional-grade KYC/AML compliance, and privacy-preserving commitments.
+**Status**: Production | **Hackathon**: See [docs/HACKATHON.md](./docs/HACKATHON.md) 
 
-For the Ranger Build-A-Bear main track, this repo is now being adapted around a different premise: **a real Ranger-operated Solana vault strategy first, with Syndicate as the custom frontend and downstream distribution layer**. See [docs/RANGER_HACKATHON_STRATEGY.md](./docs/RANGER_HACKATHON_STRATEGY.md) and [docs/RANGER_SUBMISSION_CHECKLIST.md](./docs/RANGER_SUBMISSION_CHECKLIST.md).
+Syndicate enables multi-chain lottery ticket purchases with integrated yield strategies that auto-route accrued yield into lottery entries. 8 bridge protocols, 6 vault providers, institutional-grade compliance.
 
-## Quick Links
+---
+
+## Quick Navigation
 
 | For | See |
 |-----|-----|
-| **Overview** | [docs/OVERVIEW.md](./docs/OVERVIEW.md) — Features, chains, compliance, pools |
-| **Architecture** | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) — System design, contracts, automation |
-| **Bridges** | [docs/BRIDGES.md](./docs/BRIDGES.md) — Cross-chain implementation guide |
-| **Deployment** | [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) — Production deployment checklist |
-| **Development** | [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) — Local setup and testing |
+| **Hackathon Strategy** | [docs/HACKATHON.md](./docs/HACKATHON.md) |
+| **Architecture & Dev** | [AGENTS.md](./AGENTS.md) · [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) |
+| **Bridge Protocols** | [docs/BRIDGES.md](./docs/BRIDGES.md) |
+| **Deployment** | [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) |
 
 ---
 
-## Features
+## Core Capabilities
 
-### Cross-Chain & Multi-Protocol
+### 🌉 Multi-Chain Bridging (8 Protocols)
 
-| Feature | Description |
-|---------|-------------|
-| 🌉 **Cross-Chain** | Buy tickets from Bitcoin/Stacks, NEAR, Solana, StarkNet, or Base |
-| ⚡ **Fast Settlement** | 30-60s from Stacks (CCTP), 1-3 min from Solana/StarkNet |
-| 🔒 **Trustless** | Proxy contract handles all purchases atomically |
-| 🎟️ **Multi-Protocol** | Megapot, PoolTogether v5 (No-Loss), Drift JLP lotteries |
-| 🤖 **Auto-Purchase** | Recurring tickets via x402 (Stacks SIP-018) / ERC-7715 (EVM) |
-| 💰 **Fair Pricing** | Clear fees, no hidden costs |
+CCTP, Lifi, CCIP, deBridge, TON, Starknet, NEAR, Stacks
 
-### Institutional & Compliance
+**See**: `src/services/bridges/protocols/` · [docs/BRIDGES.md](./docs/BRIDGES.md)
 
-| Feature | Description |
-|---------|-------------|
-| 🛡️ **KYC/AML Gates** | Civic Pass integration with tiered verification (CAPTCHA → Full ID) |
-| 🏢 **Syndicate Pools** | Safe multisig, 0xSplits distribution, PoolTogether prize-linked custody |
-| 🏛️ **Institutional Vaults** | Permissioned access with on-chain attestation |
-| 📊 **Transparent Tracking** | Real-time status, AI reasoning logs, compliance audit trail |
+### 💰 Yield Strategies (6 Active)
 
----
+Drift (Solana, 22.5% APY) · Aave V3 (Base, 4.5%) · Morpho Blue (6.7%) · PoolTogether (3.5%) · Octant (10% mock) · Uniswap V3 (in progress)
 
-## Supported Chains
+Yield auto-converts to lottery tickets (Yield-to-Tickets pattern).
 
-| Source Chain | Destination | Time | Protocol | Status |
-|--------------|-------------|------|----------|--------|
-| **Stacks (Bitcoin)** | Base | 30-60s | CCTP + xRelay | ✅ Live |
-| **Stacks (sBTC)** | Base | 30-60s | Syndicate Bridge | ✅ Live |
-| **NEAR** | Base | 3-5 min | Intents | ✅ Live |
-| **Solana** | Base | 1-3 min | Drift + Proxy | ✅ Live |
-| **StarkNet** | Base | 1-3 min | Orbiter Finance | ✅ Live |
-| **Base** | Base | Instant | Native | ✅ Live |
-| **EVM (Arbitrum, etc.)** | Base | 1-5 min | CCIP/CCTP | ✅ Live |
+**See**: `src/services/vaults/` · [AGENTS.md#lossless-lottery](./AGENTS.md#lossless-lottery-yield-to-tickets-flow)
 
----
+### 🏢 Syndicate Pools
 
-## Deployed Contracts (Base Mainnet)
+Safe Multisig · 0xSplits Distribution · PoolTogether Prize-Linked
 
-| Contract | Address |
-|----------|---------|
-| **MegapotAutoPurchaseProxy** | `0x707043a8c35254876B8ed48F6537703F7736905c` |
-| **Megapot V2** | `0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2` |
-| **USDC** | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
+**See**: `src/services/syndicate/poolProviders/`
 
-### Stacks Contracts (Mainnet)
+### 🎟️ Cross-Chain Lottery
 
-| Contract | Address |
-|----------|---------|
-| **Lottery** | `SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3` |
-| **USDCx (Circle)** | `SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx` |
-| **USDCx Bridge** | `SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx-v1` |
-| **sBTC** | `SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token` |
+Buy tickets from any supported chain. Atomic proxy contract. Auto-purchase via x402/ERC-7715.
+
+### 🛡️ Compliance
+
+Civic Pass integration. KYC gates deposits.
 
 ---
 
 ## Quick Start
 
-### For Users
-
-1. **Connect your wallet** (Stacks for Bitcoin, NEAR, Solana, StarkNet, or Base)
-2. **Select number of tickets** (or configure auto-purchase)
-3. **Review cost breakdown** and time estimate
-4. **Confirm purchase**
-5. **Track status** in real-time
-
-### For Developers
-
 ```bash
-# Install dependencies
-pnpm install
+npm install && npm run dev    # localhost:3000
+npm run build                 # Production build
+npm run lint && npm run test   # Lint & test
+```
 
-# Run development server
-pnpm run dev
+**Environment**: See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)
 
-# Run tests
-pnpm test
+---
 
-# Deploy contracts
-forge script script/Deploy.s.sol --broadcast
+## Project Structure
+
+```
+src/
+├── services/bridges/           # 8 bridge protocols
+├── services/vaults/            # 6 vault providers
+├── services/syndicate/         # Pool management
+├── components/modal/           # Purchase + vault UIs
+├── components/yield/           # Dashboard, strategy selector
+├── app/yield-strategies        # Vault selection page
+└── app/portfolio               # User portfolio
+
+contracts/
+├── *.sol                       # EVM (Solidity)
+├── ton/                        # TON (FunC/Tact)
+└── starknet/                   # Starknet (Cairo)
+
+docs/
+├── HACKATHON.md               # 👈 Consolidated hackathon strategy
+├── ARCHITECTURE.md            # Technical design
+├── BRIDGES.md                 # Bridge reference
+├── DEPLOYMENT.md              # Deployment guide
+├── SECURITY.md                # Security considerations
+└── ...
 ```
 
 ---
 
-## Development
+## 🎯 Hackathon Strategy
 
-### Tech Stack
+**Two opportunities** (both viable, different scopes):
 
-- **Framework**: Next.js 14 (App Router)
-- **Styling**: Tailwind CSS
-- **EVM**: wagmi + RainbowKit
-- **Stacks**: @stacks/connect
-- **State**: React Context + useState
+### Ranger Build-a-Bear (April 21 deadline)
+- ⚠️ **Constraint**: Ranger explicitly disallows DEX LP vaults (Drift JLP ineligible)
+- ✅ **Path**: USDC lending allocator strategy (if 10%+ APY achievable)
+- 📖 **Details**: [docs/HACKATHON.md#ranger-build-a-bear](./docs/HACKATHON.md#ranger-build-a-bear)
 
-### Core Principles
+### Lifi DeFi Mullet (deadline TBD)
+- ✅ **Perfect fit**: Cross-chain bridges (8 protocols) + yield routing
+- ✅ **Novel**: TON/CCTP + Telegram Mini App integration
+- 📖 **Details**: [docs/HACKATHON.md#lifi-defi-mullet](./docs/HACKATHON.md#lifi-defi-mullet)
 
-- Enhancement first over new components
-- Delete unused code (no deprecation)
-- Single source of truth (DRY)
-- Clear separation of concerns
-- Modular and testable
+**Recommendation**: Lifi (higher confidence) + Ranger (if strategy is viable)
+
+**Full analysis**: [docs/HACKATHON.md](./docs/HACKATHON.md)
 
 ---
 
-## Documentation
+## Tech Stack
 
-See [docs/OVERVIEW.md](./docs/OVERVIEW.md) for comprehensive guide including KYC/AML compliance and syndicate pools.
+- **Framework**: Next.js 14
+- **Wallets**: wagmi, @stacks/connect, @tonconnect/ui-react
+- **Solana**: @drift-labs/sdk
+- **Contracts**: Solidity, Cairo, FunC
+- **UI**: Tailwind CSS
 
-| Doc | Description |
-|-----|-------------|
-| [OVERVIEW.md](./docs/OVERVIEW.md) | Features, chains, compliance, pools, quick start |
-| [ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System design, contracts, automation, AI agents |
-| [BRIDGES.md](./docs/BRIDGES.md) | Per-chain bridge implementation |
-| [DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Production deployment and monitoring |
-| [DEVELOPMENT.md](./docs/DEVELOPMENT.md) | Local development and testing |
+---
+
+## Core Principles
+
+✅ Enhancement First · ✅ Consolidation · ✅ DRY · ✅ Clean · ✅ Modular · ✅ Organized
+
+**Read**: [AGENTS.md](./AGENTS.md) for full developer guide.
+
+---
+
+## Resources
+
+- **Developer Guide**: [AGENTS.md](./AGENTS.md)
+- **Architecture**: [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
+- **Bridges**: [docs/BRIDGES.md](./docs/BRIDGES.md)
+- **Deployment**: [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)
+- **Security**: [docs/SECURITY.md](./docs/SECURITY.md)
 
 ---
 
 ## License
 
-See LICENSE file for details.
+MIT

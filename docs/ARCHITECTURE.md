@@ -114,7 +114,14 @@ Multi-chain syndicate pooling with three custody models:
 
 ### Overview
 
-Drift JLP Vault generates ~22.5% APY yield automatically converted to lottery tickets. Users maintain **100% of principal** while gaining prize exposure.
+Syndicate generates yield from various sources which is automatically converted to lottery tickets. Users maintain **100% of principal** while gaining prize exposure.
+
+### Supported Yield Sources
+
+- **Drift JLP Vault**: Generates ~22.5% APY yield (Solana).
+- **Aave / Morpho**: Standard lending yields on Base/EVM.
+- **PoolTogether**: Prize-linked savings yield.
+- **Octant / Uniswap**: Additional strategy surfaces in MVP or in-progress state.
 
 ### Flow
 
