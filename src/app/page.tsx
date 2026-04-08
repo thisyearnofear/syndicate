@@ -7,6 +7,7 @@ import { useTicketInfo } from "@/hooks/useTicketInfo";
 import { useAutoPurchaseExecutor } from "@/hooks/useAutoPurchaseExecutor";
 import type { UserIdentity } from '@/interfaces';
 import { socialService } from "@/services/socialService";
+import { trackEvent } from "@/services/analytics/client";
 
 // UI Components
 import { Button } from "@/shared/components/ui/Button";
@@ -210,17 +211,23 @@ export default function PremiumHome() {
                         Play for free. <span className="text-emerald-400">Forever.</span>
                       </h3>
                       <p className="text-sm text-gray-400 leading-relaxed max-w-lg">
-                        Deposit USDC into the Drift Lossless Vault. Your deposit earns ~20%+ APY.
-                        Yield is auto-converted to lottery tickets. Your principal stays 100% intact.
+                        Deposit USDC into a principal-preserving vault strategy. Your capital stays yours
+                        while yield can fund tickets, causes, or compounding.
                       </p>
                     </CompactStack>
                   </div>
                   <div className="flex-shrink-0">
-                    <Link href="/yield-strategies">
+                    <Link href="/vaults">
                       <Button
                         variant="default"
                         size="lg"
                         className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/20 border border-emerald-400/30 whitespace-nowrap"
+                        onClick={() =>
+                          trackEvent({
+                            eventName: 'home_vaults_cta_click',
+                            properties: { section: 'play-for-free' },
+                          })
+                        }
                       >
                         🎯 Start Playing Free
                       </Button>
@@ -232,7 +239,7 @@ export default function PremiumHome() {
                   <span className="text-xs text-gray-600">•</span>
                   <span className="text-xs text-gray-500">💎 100% principal preserved</span>
                   <span className="text-xs text-gray-600">•</span>
-                  <span className="text-xs text-gray-500">📊 22.5% historical APY</span>
+                  <span className="text-xs text-gray-500">📊 Transparent strategy rules</span>
                 </CompactFlex>
               </div>
             </div>
@@ -251,9 +258,9 @@ export default function PremiumHome() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
                 {[
-                  { icon: "💰", step: "Step 1", title: "Deposit", desc: "Deposit USDC into a yield vault. Your principal is never spent — it stays 100% yours.", accent: "from-blue-500 to-cyan-500" },
-                  { icon: "📈", step: "Step 2", title: "Earn Yield", desc: "Your deposit earns yield automatically (~20%+ APY via Drift JLP). No action needed.", accent: "from-purple-500 to-pink-500" },
-                  { icon: "🎰", step: "Step 3", title: "Win Prizes", desc: "Yield is converted into lottery tickets. You keep your deposit and play for free — forever.", accent: "from-yellow-500 to-orange-500" },
+                  { icon: "💰", step: "Step 1", title: "Deposit", desc: "Deposit USDC into a vault strategy. Your principal remains yours while the vault works.", accent: "from-blue-500 to-cyan-500" },
+                  { icon: "📈", step: "Step 2", title: "Earn Yield", desc: "The vault allocates into transparent carry venues with explicit guardrails and ongoing monitoring.", accent: "from-purple-500 to-pink-500" },
+                  { icon: "🎰", step: "Step 3", title: "Use Yield", desc: "Use accrued yield for tickets, causes, or simply compound over time without changing the base deposit.", accent: "from-yellow-500 to-orange-500" },
                 ].map((s, i) => (
                   <PuzzlePiece key={i} variant="neutral" size="lg" shape="rounded" className={`animate-fade-in-up stagger-${i + 1} text-center`}>
                     <CompactStack spacing="md" align="center">

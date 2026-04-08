@@ -1,520 +1,210 @@
-# Ranger Build-A-Bear Hackathon Strategy
+# Ranger Build-A-Bear Main Track Strategy
 
-**Project**: Megapot Syndicate  
-**Track**: Main Track + Drift Side Track  
-**Submission Deadline**: April 6, 2026, 23:59 UTC  
-**Current Date**: April 1, 2026
+**Project**: Syndicate  
+**Track**: Ranger Build-A-Bear Main Track  
+**Status**: Active execution plan  
+**Last Updated**: April 7, 2026
 
----
+## Positioning
 
-## Executive Summary
-
-Megapot already has a **production-ready Drift JLP vault integration** (`driftProvider.ts`) that generates ~22.5% APY through delta-neutral strategies. This positions us perfectly for the Ranger hackathon with minimal additional work required.
+Syndicate is **not** submitting the current product unchanged.
 
-### Competitive Advantages
-
-✅ **Already Live**: Drift vault integration operational since March 2026  
-✅ **Meets All Requirements**: 10%+ APY, USDC base, 3-month tenor  
-✅ **Unique Value Prop**: Lossless lottery (yield → tickets) differentiates from pure yield vaults  
-✅ **KYC/AML Compliant**: Civic Pass integration for institutional readiness  
-✅ **Multi-Chain**: Cross-chain deposits from Stacks, NEAR, Base → Solana vault
-
----
-
-## Hackathon Requirements Analysis
-
-### ✅ Prize Eligibility Checklist
-
-| Requirement | Status | Evidence |
-|-------------|--------|----------|
-| **Minimum APY: 10%** | ✅ PASS | Currently 22.5% APY (Drift JLP) |
-| **Vault Base Asset: USDC** | ✅ PASS | `USDC_MINT: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` |
-| **Tenor: 3-month lock** | ✅ PASS | `LOCKUP_MS = 90 * 24 * 60 * 60 * 1000` |
-| **No Ponzi yield** | ✅ PASS | Drift JLP = delta-neutral perp futures |
-| **No junior tranche** | ✅ PASS | Direct vault shares, no insurance pool |
-| **No DEX LP** | ✅ PASS | Drift perps, not AMM LP |
-| **No high leverage** | ✅ PASS | Delta-neutral = hedged positions |
-
-### 🎯 Submission Requirements
-
-| Item | Status | Action Required |
-|------|--------|-----------------|
-| **Demo/Pitch Video** | ❌ TODO | Record 3-min walkthrough |
-| **Strategy Documentation** | ⚠️ PARTIAL | Enhance existing docs |
-| **Code Repository** | ✅ READY | GitHub repo already public |
-| **On-chain Verification** | ✅ READY | Solana wallet with tx history |
-| **CEX Verification** | ✅ N/A | Pure on-chain strategy |
-
----
-
-## Current Implementation Review
-
-### Existing Infrastructure
-
-**File**: `src/services/vaults/driftProvider.ts`
-
-**Key Features**:
-- ✅ Drift SDK integration (`@drift-labs/sdk: 2.160.0-beta.1`)
-- ✅ USDC deposit/withdrawal via SPL tokens
-- ✅ Share-based accounting (pricePerShare calculation)
-- ✅ 3-month lockup enforcement
-- ✅ Yield accrual tracking
-- ✅ RPC fallback for reliability
-
-**Architecture**:
-```
-User (Solana Wallet) 
-  → Civic KYC Gate 
-  → DriftVaultProvider.deposit() 
-  → Drift SDK (DriftClient) 
-  → Drift Vaults Program (vAuLTsyrvSfZRuRB3XgvkPwNGgYSs9YRYymVebLKoxR)
-  → JLP Vault Shares Minted
-  → Yield Accrues (~22.5% APY)
-  → YieldToTicketsService (auto-convert to lottery tickets)
-```
-
-### Integration Points
-
-**UI Components**:
-- `src/app/yield-strategies/page.tsx` - Strategy selection
-- `src/components/yield/ImprovedYieldStrategySelector.tsx` - Drift card
-- `src/components/yield/YieldDashboard.tsx` - Balance monitoring
-- `src/components/civic/CivicVerificationGate.tsx` - KYC gate
-
-**Hooks**:
-- `src/hooks/useDriftDeposit.ts` - Deposit flow
-- `src/hooks/useVaultDeposit.ts` - Generic vault interface
-- `src/hooks/useSolanaWallet.ts` - Phantom wallet integration
-
----
-
-## Gap Analysis & Required Work
-
-### 🔴 Critical (Must-Have for Submission)
-
-1. **Verify Drift Vault Contract Addresses**
-   - Current: `VAULT_SHARE_MINT: JLPmN1cM1N3hU7mNz8s2XyZ1WJ2uXv1vV7tQ5Z7JLP5`
-   - Current: `PROGRAM_ID: vAuLTsyrvSfZRuRB3XgvkPwNGgYSs9YRYymVebLKoxR`
-   - **ACTION**: Verify these are correct Drift Vaults addresses (docs mention "Megapot just upgraded contracts")
-   - **RISK**: If addresses are outdated, deposits will fail
-
-2. **Test End-to-End Deposit Flow**
-   - **ACTION**: Execute test deposit on Solana devnet/mainnet
-   - **VERIFY**: Transaction succeeds, shares minted, balance updates
-   - **DOCUMENT**: Save wallet address + tx signature for submission
-
-3. **Strategy Documentation Enhancement**
-   - **ACTION**: Create `docs/RANGER_STRATEGY.md` with:
-     - Strategy thesis (delta-neutral JLP yield)
-     - Risk management (drawdown limits, position sizing)
-     - Rebalancing logic (Drift's automated hedging)
-     - Edge/differentiation (lossless lottery conversion)
-
-4. **Demo Video Production**
-   - **ACTION**: Record 3-minute video covering:
-     - Problem: Traditional lotteries extract value
-     - Solution: Lossless lottery via yield-to-tickets
-     - Demo: Deposit USDC → Drift vault → Yield accrues → Auto-tickets
-     - Edge: Multi-chain access, KYC compliance, institutional-ready
-
-### 🟡 Important (Competitive Advantage)
-
-5. **Ranger Vault Adaptor Integration**
-   - **OPPORTUNITY**: Integrate with Ranger Earn's vault infrastructure
-   - **ACTION**: Review Ranger docs for CPI/adaptor requirements
-   - **BENEFIT**: Enables composability with other Ranger vaults
-
-6. **Performance Backtesting**
-   - **ACTION**: Pull historical Drift JLP APY data (last 90 days)
-   - **BENEFIT**: Demonstrate consistent 20%+ APY performance
-   - **SOURCE**: Drift API or on-chain vault state history
-
-7. **Risk Dashboard**
-   - **ACTION**: Add UI showing:
-     - Current vault health rate
-     - Delta exposure (should be ~0 for delta-neutral)
-     - Liquidation risk (should be minimal)
-   - **BENEFIT**: Demonstrates robust risk management
-
-### 🟢 Nice-to-Have (Polish)
-
-8. **Cobo MPC Integration**
-   - **OPPORTUNITY**: Use Cobo's free MPC wallet infra (sponsor prize)
-   - **BENEFIT**: Institutional custody for syndicate pools
-
-9. **Helius RPC Upgrade**
-   - **OPPORTUNITY**: Use free 1-month Helius Dev Plan
-   - **BENEFIT**: Faster RPC, better reliability
-
-10. **AWS Credits Application**
-    - **OPPORTUNITY**: $10k AWS credits for top 9 teams
-    - **BENEFIT**: Scale infrastructure post-hackathon
-
----
-
-## Critical V2 API Changes
-
-**BREAKING CHANGE**: Megapot V2 uses different function signature:
-
-**V1 (Deprecated)**:
-```solidity
-function purchaseTickets(address referrer, uint256 value, address recipient) external
-```
-
-**V2 (Current)**:
-```solidity
-function buyTickets(
-    Ticket[] memory _tickets,
-    address _recipient,
-    address[] memory _referrers,
-    uint256[] memory _referralSplit,
-    bytes32 _source
-) external returns (uint256[] memory ticketIds)
-
-struct Ticket {
-    uint8[] normals;   // 5 unique numbers in [1, ballMax]
-    uint8 bonusball;   // 1 number in [1, bonusballMax]
-}
-```
-
-**Migration Required**:
-- ⚠️ All `purchaseTickets()` calls need updating to `buyTickets()` with new parameters
-- ⚠️ MegapotAutoPurchaseProxy may need updating if it calls Megapot directly
-- ✅ Updated `src/services/web3Service.ts` ABI
-- ✅ Updated `src/services/automation/erc7715Service.ts` permissions
-- ⚠️ TODO: Update `src/services/base/TransactionExecutor.ts` implementation
-- ⚠️ TODO: Test end-to-end purchase flow with V2 contract
-
-**For Ranger Submission**: Document that integration uses MegapotAutoPurchaseProxy which abstracts V2 complexity.
-
-### Contract Migration Status
-
-**V2 Upgrade** (Verified April 1, 2026):
-- ✅ Megapot V2 Jackpot: `0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2` (Base) - **ACTIVE**
-- ✅ MegapotAutoPurchaseProxy: `0x707043a8c35254876B8ed48F6537703F7736905c` (Base) - Compatible with V2
-- ❌ Megapot V1 (Legacy): `0xbEDd4F2beBE9E3E636161E644759f3cbe3d51B95` - **DEPRECATED (no longer runs draws)**
+The Ranger main track expects a real **vault strategy** with:
 
-**V2 New Features** (Source: [FailSafe Security Audit](https://getfailsafe.com/failsafe-agentic-ai-megapot-v2)):
-- LP pooling with better capital efficiency
-- Cross-chain bridge claims (improved UX)
-- Automated subscription systems
-- Enhanced security (4 vulnerabilities fixed pre-launch)
-
-**Migration Actions Taken**:
-- ✅ Updated `src/config/index.ts` with V2 address
-- ✅ Updated `src/config/contracts.ts` with V2 address
-- ✅ Updated `src/config/near/rainbowBridge.ts` with V2 address
-- ✅ Updated `src/services/syndicateWinningsService.ts` with V2 address
-- ✅ Updated `src/services/automation/erc7715Service.ts` (method changed: `purchaseTickets` → `buyTickets`)
+- a strategy thesis and operator edge
+- explicit risk controls
+- rebalancing logic
+- on-chain verification during the hackathon window
 
-**IMPORTANT**: V2 uses `buyTickets()` instead of `purchaseTickets()` - check all contract interactions!
+The current Syndicate app remains useful, but only as:
 
-### Drift Vault Contract Verification
+- a custom frontend for deposits and reporting
+- a downstream consumer use case for vault yield
+- a distribution story after the vault strategy is real
 
-**TODO**: Verify Drift Vaults program addresses
-- Check if `vAuLTsyrvSfZRuRB3XgvkPwNGgYSs9YRYymVebLKoxR` is current
-- Check if `JLPmN1cM1N3hU7mNz8s2XyZ1WJ2uXv1vV7tQ5Z7JLP5` is correct JLP vault share mint
-- Review Drift docs: https://docs.drift.trade/vaults
-
----
+Ranger's current docs make that operator model explicit:
 
-## Competitive Positioning
+- vault managers initialize a vault, add adaptors, initialize strategies, allocate funds, run bots, and get listed later
+- a custom frontend is optional because listed vaults can already use Ranger UI
+- the workshop flow is strategy-first: add adaptors, initialize strategies, deposit, run rebalance bot
 
-### Our Unique Edge
+References:
 
-**1. Lossless Lottery Primitive**
-- Most hackathon entries = pure yield vaults
-- Megapot = yield vault + automatic lottery ticket conversion
-- **Differentiation**: Users maintain 100% principal while gaining prize exposure
+- [Ranger Vault Owners Overview](https://docs.ranger.finance/vault-owners/overview)
+- [Ranger Frontend Integration Guide](https://docs.ranger.finance/vault-owners/frontend-integration)
+- [Ranger Hackathon Workshop 01](https://github.com/ranger-finance/hackathon-workshop-01)
 
-**2. Multi-Chain Accessibility**
-- Deposit from Bitcoin (Stacks), NEAR, Base, Solana
-- Bridge to Solana → Drift vault → Yield → Base lottery
-- **Differentiation**: Broadest chain support in hackathon
+## Fit Assessment
 
-**3. Institutional Compliance**
-- Civic Pass KYC/AML gates
-- Safe multisig + 0xSplits for syndicate pools
-- **Differentiation**: Production-ready for regulated entities
+### What Does Not Fit
 
-**4. Proven Track Record**
-- Megapot: $200M+ in drawings, 19 jackpot winners since July 2024
-- Drift integration: Live since March 2026
-- **Differentiation**: Not a hackathon prototype, actual production system
+The repo's existing "Drift JLP lossless lottery" framing is not a safe main-track thesis.
 
-### Judging Criteria Alignment
+Reasons:
 
-| Criterion | Our Strength | Score (1-10) |
-|-----------|--------------|--------------|
-| **Strategy Quality & Edge** | Delta-neutral + lossless lottery | 9/10 |
-| **Risk Management** | Drift's automated hedging, 3-mo lockup | 8/10 |
-| **Technical Implementation** | Production code, multi-chain | 9/10 |
-| **Production Viability** | Already live with real users | 10/10 |
-| **Novelty & Innovation** | Yield-to-tickets primitive | 9/10 |
+- the main-track submission asks for a strategy, not a generic app demo
+- the required docs emphasize drawdown, position sizing, and rebalancing
+- the eligibility rules explicitly disallow DEX LP vaults such as JLP, HLP, and LLP
 
-**Estimated Placement**: Top 3 Main Track, Top 3 Drift Side Track
+That means the existing Drift JLP messaging in this repo should be treated as:
 
----
+- useful product inspiration
+- not the main-track vault strategy
 
-## Submission Timeline
+### What Does Fit
 
-### April 1-2 (Today + Tomorrow)
+The legitimate fit is:
 
-- [ ] Verify Drift vault contract addresses
-- [ ] Test deposit flow on mainnet (small amount)
-- [ ] Document wallet address + tx signature
-- [ ] Pull historical APY data from Drift
+1. Build a compliant Ranger vault strategy on Solana.
+2. Use Syndicate as the branded frontend and reporting surface.
+3. Optionally route realized yield into Syndicate's ticketing mechanics as a downstream use case.
 
-### April 3-4
+## Submission Thesis
 
-- [ ] Write `docs/RANGER_STRATEGY.md` (strategy documentation)
-- [ ] Create demo video script
-- [ ] Record demo video (3 min max)
-- [ ] Add @jakeyvee to GitHub repo (if private)
+### Primary Submission
 
-### April 5
+**Syndicate Ranger Vault**: a compliant Solana USDC vault strategy operated on Ranger, with Syndicate as the custom frontend and post-yield consumer layer.
 
-- [ ] Review all submission materials
-- [ ] Test video upload
-- [ ] Prepare on-chain verification data
-- [ ] Draft submission text
+### Product Story
 
-### April 6 (Deadline Day)
+Users deposit into a Ranger-operated vault through Syndicate. The vault allocates capital according to explicit risk rules. Yield is visible in Syndicate and can later be routed into ticket purchases, but the main-track submission is judged on the underlying strategy itself.
 
-- [ ] Submit via Ranger Earn platform before 23:59 UTC
-- [ ] Verify submission received
-- [ ] Post in Ranger Telegram
+## Strategy Direction
 
----
+We are narrowing to a **USDC-denominated Solana carry strategy** rather than a pure trading app.
 
-## Risk Mitigation
+### Candidate A: USDC Lending Allocator
 
-### Technical Risks
+Allocate across supported Solana lending venues exposed through Ranger-supported integrations.
 
-| Risk | Mitigation |
-|------|------------|
-| Drift contract addresses outdated | Verify against Drift docs today |
-| Deposit transaction fails | Test on devnet first, then small mainnet tx |
-| APY drops below 10% | Document historical 20%+ performance |
-| RPC rate limits | Use Helius free tier (sponsor benefit) |
+Pros:
 
-### Competition Risks
+- easiest to explain
+- easiest to document
+- easiest to verify on-chain
+- lowest principal risk profile
 
-| Risk | Mitigation |
-|------|------------|
-| Other teams have higher APY | Emphasize lossless lottery differentiation |
-| Pure Drift vaults submitted | Highlight multi-chain + compliance features |
-| More polished demos | Focus on production viability, real users |
+Cons:
 
-### Submission Risks
+- may struggle to clear the `10%` minimum APY alone
 
-| Risk | Mitigation |
-|------|------------|
-| Video too long | Script tightly, practice timing |
-| Missing on-chain proof | Execute test tx by April 3 |
-| Documentation incomplete | Use template from Ranger docs |
+### Candidate B: Conservative Delta-Neutral Basis Strategy
 
----
+USDC collateral plus tightly risk-bounded carry capture using allowed venues and hard leverage limits.
 
-## Post-Hackathon Strategy
+Pros:
 
-### If We Win Seeding ($200k-$500k)
+- more realistic path to `10%+` APY
+- closer to the type of strategy this track appears to reward
 
-1. **Deploy Ranger Vault**: Migrate Drift integration to Ranger Earn infrastructure
-2. **Scale TVL**: Use seeded capital to bootstrap liquidity
-3. **Performance Fees**: Earn ongoing fees as vault manager
-4. **Marketing**: Leverage "Ranger-backed" credibility
+Cons:
 
-### If We Place (Top 3)
+- materially harder to implement correctly
+- must be validated carefully against the disallowed-yield rules
+- requires real risk instrumentation, rebalance triggers, and better ops discipline
 
-1. **Audit Credits**: Use $15k Adevar Labs credits for security audit
-2. **Cobo MPC**: Implement institutional custody for syndicates
-3. **AWS Credits**: Scale infrastructure with $10k credits
+### Rejected Candidate: Drift JLP Lossless Lottery
 
-### If We Don't Place
+Rejected for main-track use because the published rules explicitly disallow DEX LP vaults.
 
-1. **Community Building**: Share strategy docs with Ranger community
-2. **Partnerships**: Explore integration with other Ranger vaults
-3. **Iterate**: Apply feedback for future hackathons
+## Current Decision
 
----
+The working plan is:
 
-## Dual Track Submission Strategy
+1. Treat **USDC lending allocator** as the lowest-risk fallback submission.
+2. Investigate whether a **conservative delta-neutral basis variant** can be implemented without violating the disqualifying rules.
+3. Keep the Syndicate "yield to tickets" flow as optional distribution and differentiation, not the core strategy claim.
 
-### Main Track + Drift Side Track
+## Build Plan
 
-We're eligible for BOTH tracks with the same submission:
-- **Main Track**: $200k-$500k seeding potential
-- **Drift Side Track**: $40k-$100k seeding potential
-- **Total Potential**: Up to $600k in vault seeding
+### Phase 1: Submission Safety
 
-**Submission Process**: Submit separately on both bounty pages with identical materials.
+The immediate goal is to move the repo to an honest, reviewable state.
 
----
+- remove or correct docs that overstate Drift JLP eligibility
+- document compliant and non-compliant strategy candidates
+- encode the main-track constraints directly in the codebase
+- define a single source of truth for the submission plan
 
-## Contract Verification Status
+### Phase 2: Vault Strategy Skeleton
 
-### ✅ VERIFIED - Drift Contracts Updated (April 1, 2026)
+Create the scaffolding for a real Ranger strategy implementation:
 
-**Previous (Outdated)**:
-- ❌ Drift Vaults: `vAuLTsyrvSfZRuRB3XgvkPwNGgYSs9YRYymVebLKoxR`
+- strategy config
+- venue definitions
+- allocation policy
+- risk guardrails
+- rebalance trigger model
+- submission checklist tied to on-chain evidence
 
-**Current (Verified Feb 27, 2026)**:
-- ✅ Drift Vaults: `JCNCMFXo5M5qwUPg2Utu1u6YWp3MbygxqBsBeXXJfrw`
-- ✅ Drift Protocol: `dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH`
-- ✅ USDC Mint: `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`
+### Phase 3: Frontend and Reporting
 
-**Action Taken**: Updated `src/services/vaults/driftProvider.ts` with correct addresses.
+Use existing Syndicate surfaces to support the submission:
 
----
+- branded vault page
+- deposit and balance reporting
+- risk dashboard
+- strategy explainer
 
-## Next Steps (Immediate Actions)
+The custom frontend is useful, but secondary to the strategy itself.
 
-### Priority 1: Test Deposit Flow (Today - April 1)
+## Required Deliverables
 
-```bash
-# 1. Run local dev server
-npm run dev
+### Demo Video
 
-# 2. Navigate to http://localhost:3000/yield-strategies
-# 3. Connect Phantom wallet (use test wallet with small USDC balance)
-# 4. Select "Drift Delta Neutral" strategy
-# 5. Deposit 1-5 USDC (test amount)
-# 6. Save transaction signature from Solscan
-# 7. Document wallet address for submission
-```
+The video must show:
 
-**Expected Result**: Transaction succeeds, vault shares minted, balance updates in dashboard.
+1. what the strategy is
+2. why it has edge
+3. how it is implemented on Ranger
+4. what the actual on-chain activity looks like
 
-### Priority 2: Strategy Documentation (April 2-3)
+### Strategy Documentation
 
-**Enhance existing docs** (don't create new files):
+The final submission doc must include:
 
-1. Update `docs/ARCHITECTURE.md` - Add Ranger hackathon section
-2. Update `README.md` - Add Ranger badge/mention
-3. Create submission doc: `RANGER_SUBMISSION.md` (single source of truth)
+- thesis
+- venue selection
+- position sizing
+- drawdown and leverage limits
+- rebalance triggers
+- shutdown conditions
+- operational assumptions
 
-**Content for RANGER_SUBMISSION.md**:
-- Strategy thesis (delta-neutral + lossless lottery)
-- Risk management (drawdown limits, rebalancing)
-- Performance data (historical APY)
-- Differentiation (multi-chain, compliance, production-ready)
+### On-Chain Verification
 
-### Priority 3: Demo Video (April 4-5)
+We need verifiable activity from the actual wallet or vault address used during the build window.
 
-**Script** (3 min max):
-```
-[0:00-0:30] Problem
-- Traditional lotteries extract 70% of sales
-- Users lose money even when they don't win
+That means the execution plan must end in:
 
-[0:30-1:30] Solution
-- Megapot lossless lottery: keep 100% principal
-- Drift vault generates 22.5% APY yield
-- Yield auto-converts to lottery tickets
-- "Play for free forever"
+- vault address
+- manager wallet address
+- deposit txs
+- allocation txs
+- rebalance txs if applicable
 
-[1:30-2:30] Demo
-- Show deposit flow (Phantom → Drift vault)
-- Show yield dashboard (principal + yield tracking)
-- Show ticket conversion (yield → Base lottery)
-- Show prize pool ($1M daily)
+## Repo Execution Priorities
 
-[2:30-3:00] Edge
-- Already live with real users ($200M+ in prizes)
-- Multi-chain (Bitcoin, NEAR, Solana, Base)
-- Institutional-ready (KYC/AML via Civic)
-- Production-ready (not a prototype)
-```
+### Highest Priority
 
-**Tools**: Loom or OBS for screen recording, simple editing in iMovie/DaVinci Resolve.
+1. Replace incorrect hackathon framing in repo docs.
+2. Add strategy guardrails to the codebase.
+3. Create a single main-track strategy spec we can iterate on.
 
-### Priority 4: Submission Package (April 5-6)
+### Next Priority
 
-**Checklist**:
-- [ ] Demo video uploaded (YouTube unlisted or direct file)
-- [ ] `RANGER_SUBMISSION.md` completed
-- [ ] GitHub repo access granted to @jakeyvee (if private)
-- [ ] Wallet address documented with tx signatures
-- [ ] Submit on Main Track bounty page
-- [ ] Submit on Drift Side Track bounty page (separate submission)
-- [ ] Post in Ranger Telegram confirming submission
+1. Wire a branded Ranger vault page into the app.
+2. Add risk and allocation visualization for the chosen strategy.
+3. Prepare an execution checklist for live on-chain setup.
 
----
+## Success Criteria
 
-## Resources
+We should consider this track worth pursuing only if we can truthfully say:
 
-### Hackathon Links
+- we have a Ranger-compatible vault strategy, not just a frontend
+- the strategy is inside the published eligibility rules
+- the yield target is plausible
+- the risk controls are concrete
+- the on-chain activity is verifiable
 
-- Landing Page: https://earn.superteam.fun/listings/hackathon/ranger-build-a-bear/
-- Ranger Docs: https://docs.ranger.finance/
-- Drift Docs: https://docs.drift.trade/
-- Telegram: https://t.me/RangerFinance
-
-### Internal Docs
-
-- Architecture: `docs/ARCHITECTURE.md`
-- Deployment: `docs/DEPLOYMENT.md`
-- Drift Provider: `src/services/vaults/driftProvider.ts`
-- Vault Manager: `src/services/vaults/index.ts`
-
-### Workshops (Recordings Available)
-
-- Workshop 1: Launch & Operate Your Ranger Vault (Mar 11)
-- Workshop 2: Compose with Ranger Vaults via CPI (Mar 13)
-- Workshop 3: Drift Perps and Vaults (Mar 16)
-- Workshop 4: Cobo MPC Wallet Infra (Mar 17)
-
----
-
-## Immediate Action Items (April 1-6)
-
-### Today (April 1)
-- [x] Verify Drift contract addresses (COMPLETED)
-- [x] Update `driftProvider.ts` with correct addresses (COMPLETED)
-- [x] Verify Megapot V2 contract addresses (COMPLETED)
-- [x] Update all config files with V2 addresses (COMPLETED)
-- [ ] ⚠️ CRITICAL: Test purchase flow with V2 contract (buyTickets vs purchaseTickets)
-- [ ] Test deposit flow on mainnet (1-5 USDC)
-- [ ] Document wallet address + tx signature
-
-### April 2-3
-- [ ] Create `RANGER_SUBMISSION.md` (consolidate all strategy docs)
-- [ ] Update `docs/ARCHITECTURE.md` (add Ranger section)
-- [ ] Pull historical APY data from Drift (last 90 days)
-- [ ] Prepare on-chain verification data (Solscan links)
-
-### April 4-5
-- [ ] Write demo video script (3 min max)
-- [ ] Record demo video (screen capture + voiceover)
-- [ ] Edit video (trim to <3 min)
-- [ ] Upload to YouTube (unlisted) or prepare file
-
-### April 6 (Deadline)
-- [ ] Final review of all materials
-- [ ] Submit on Main Track bounty page
-- [ ] Submit on Drift Side Track bounty page (separate)
-- [ ] Grant @jakeyvee GitHub access (if repo private)
-- [ ] Post confirmation in Ranger Telegram
-
----
-
-## Conclusion
-
-**Status**: READY TO SUBMIT
-
-**Competitive Position**:
-- ✅ Already live with real users (not a prototype)
-- ✅ Meets all eligibility requirements (10%+ APY, USDC, 3-mo lock)
-- ✅ Unique differentiation (lossless lottery primitive)
-- ✅ Institutional-ready (KYC/AML compliance)
-- ✅ Multi-chain accessibility (broadest support)
-
-**Estimated Effort**: 15-20 hours over 5 days
-
-**Prize Potential**:
-- Main Track: $200k-$500k (Top 3)
-- Drift Side Track: $40k-$100k (Top 3)
-- **Total**: Up to $600k in vault seeding
-
-**Recommendation**: PROCEED WITH DUAL TRACK SUBMISSION
+If we cannot hit those conditions, Syndicate should not force-fit itself into the main track.

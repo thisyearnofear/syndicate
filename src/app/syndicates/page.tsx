@@ -79,7 +79,7 @@ export default function SyndicatesPage() {
                                     ✨ Create Syndicate
                                 </Button>
                             </Link>
-                            <Link href="/yield-strategies">
+                            <Link href="/vaults">
                                 <Button 
                                     variant="outline"
                                     className="border-green-500/50 text-green-300 hover:bg-green-500/10"

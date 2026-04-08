@@ -6,6 +6,8 @@
 
 Syndicate is a **Multi-Protocol Lottery Aggregator** with autonomous AI agents. Users participate in Megapot, PoolTogether v5, and Drift JLP lotteries from any blockchain (Stacks, NEAR, Solana, Base, EVM, TON) with KYC/AML compliance via Civic Pass.
 
+For the Ranger main track, the repo is being reframed around a stricter operator model: a **real Solana vault strategy on Ranger first**, with Syndicate serving as a custom frontend, reporting surface, and optional downstream yield-consumer experience.
+
 ### Core Principles
 
 - **Universal Agent**: Autonomous AI agents (Tether WDK) decide when to buy based on yield

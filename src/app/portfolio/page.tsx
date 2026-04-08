@@ -23,7 +23,7 @@ import {
   Coins,
   Zap,
   RefreshCw,
-  PieChart
+  ChartPie
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 import { SyndicateCard } from '@/components/syndicate/SyndicateCard';
@@ -79,7 +79,7 @@ export default function PortfolioPage() {
     totalYield: vaultTotalYield,
     isLoading: vaultsLoading,
     refresh: refreshVaults 
-  } = useUserVaults(address);
+  } = useUserVaults(address ?? undefined);
 
   const fetchPortfolio = useCallback(async (showRefresh = false) => {
     if (!address) {
@@ -230,7 +230,7 @@ export default function PortfolioPage() {
             className={`border-blue-500/50 ${activeTab === 'overview' ? 'bg-blue-500/20' : 'text-blue-300 hover:bg-blue-500/10'}`}
             onClick={() => setActiveTab('overview')}
           >
-            <PieChart className="w-4 h-4 mr-2" />
+            <ChartPie className="w-4 h-4 mr-2" />
             Overview
           </Button>
           <Button
@@ -283,7 +283,7 @@ export default function PortfolioPage() {
           </div>
           <div className="glass-premium p-4 rounded-xl border border-white/20">
             <div className="flex items-center gap-2 mb-2">
-              <PieChart className="w-5 h-5 text-purple-400" />
+              <ChartPie className="w-5 h-5 text-purple-400" />
               <span className="text-sm text-gray-400">Portfolio Value</span>
             </div>
             <p className="text-2xl font-bold text-white">{formatCurrency(combinedTotalValue)}</p>
@@ -311,7 +311,7 @@ export default function PortfolioPage() {
                     <Users className="w-4 h-4 mr-2" />
                     Browse Syndicates
                   </Button>
-                  <Link href="/yield-strategies">
+                  <Link href="/vaults">
                     <Button variant="outline" className="border-green-500/50 text-green-300">
                       <Zap className="w-4 h-4 mr-2" />
                       Explore Vaults
@@ -388,7 +388,7 @@ export default function PortfolioPage() {
                     <p className="text-gray-400 text-sm mb-4">
                       Deposit into vaults to earn yield while supporting causes
                     </p>
-                    <Link href="/yield-strategies">
+                    <Link href="/vaults">
                       <Button variant="outline" className="w-full border-green-500/50 text-green-300">
                         <Zap className="w-4 h-4 mr-2" />
                         Explore Vaults
@@ -489,7 +489,7 @@ export default function PortfolioPage() {
                 <p className="text-gray-400 mb-6">
                   Deposit into a yield vault to start earning passive income!
                 </p>
-                <Link href="/yield-strategies">
+                <Link href="/vaults">
                   <Button>
                     <Zap className="w-4 h-4 mr-2" />
                     Explore Yield Vaults
@@ -508,7 +508,7 @@ export default function PortfolioPage() {
                     <div 
                       key={position.protocol}
                       className="glass-premium rounded-xl p-4 border border-white/20 hover:border-white/40 transition-all cursor-pointer"
-                      onClick={() => router.push('/yield-strategies?tab=overview')}
+                      onClick={() => router.push('/vaults')}
                     >
                       {/* Header */}
                       <div className="flex items-center justify-between mb-3">
@@ -577,7 +577,7 @@ export default function PortfolioPage() {
                   <p className="text-gray-400 text-sm mb-4">
                     View detailed performance, withdraw funds, or deposit into more vaults
                   </p>
-                  <Link href="/yield-strategies">
+                  <Link href="/vaults">
                     <Button>
                       <TrendingUp className="w-4 h-4 mr-2" />
                       Go to Yield Dashboard
@@ -601,7 +601,7 @@ export default function PortfolioPage() {
                 <Users className="w-4 h-4 mr-2" />
                 More Syndicates
               </Button>
-              <Link href="/yield-strategies">
+              <Link href="/vaults">
                 <Button variant="outline" className="border-green-500/50 text-green-300">
                   <Zap className="w-4 h-4 mr-2" />
                   More Vaults

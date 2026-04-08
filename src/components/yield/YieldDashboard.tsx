@@ -8,6 +8,8 @@ import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { useUserVaults } from '@/hooks/useUserVaults';
 import { yieldToTicketsService } from '@/services/yieldToTicketsService';
 import { Button } from '@/shared/components/ui/Button';
+import { vaultManager } from '@/services/vaults';
+import { buildYieldStrategiesHref } from '@/constants/vaultRouting';
 import Link from 'next/link';
 
 interface YieldDashboardProps {
@@ -29,7 +31,7 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
     isLoading, 
     error: vaultError,
     refresh 
-  } = useUserVaults(address);
+  } = useUserVaults(address ?? undefined);
 
   // Get auto-yield strategy status (if any)
   const [autoYieldStrategy, setAutoYieldStrategy] = useState(
@@ -171,7 +173,7 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
             <p className="text-gray-400 mb-6">
               Deposit into a yield vault to start earning and funding causes.
             </p>
-            <Link href="/yield-strategies?tab=strategies">
+            <Link href="/vaults">
               <Button variant="default" size="sm">
                 <Zap className="w-4 h-4 mr-2" />
                 Browse Yield Strategies
@@ -344,7 +346,7 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
               <p className="text-gray-400 mb-6">
                 Automatically convert your yield into lottery tickets and cause donations.
               </p>
-              <Link href="/yield-strategies?tab=allocation">
+              <Link href={buildYieldStrategiesHref('allocation')}>
                 <Button variant="default" size="sm">
                   Configure Auto-Yield
                 </Button>

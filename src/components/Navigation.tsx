@@ -79,10 +79,10 @@ export default function Navigation({ className = '' }: NavigationProps) {
             active: pathname === '/syndicates',
         },
         {
-            href: '/yield-strategies',
-            label: 'Yield',
+            href: '/vaults',
+            label: 'Vaults',
             icon: TrendingUp,
-            active: pathname === '/yield-strategies',
+            active: pathname === '/vaults' || pathname === '/yield-strategies',
         },
         // Bridge (secondary journey): discoverable, minimal logic here
         // Clean + DRY: single place to define nav items

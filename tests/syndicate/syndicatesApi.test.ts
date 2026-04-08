@@ -8,9 +8,6 @@
  * To enable these tests, configure jest-environment-node or add proper web API polyfills.
  */
 
-// Skip all tests in this file due to Request/Response polyfill issues
-const describe.skip = describe;
-
 import { NextRequest } from 'next/server';
 import { syndicateRepository } from '@/lib/db/repositories/syndicateRepository';
 import { syndicateService } from '@/domains/syndicate/services/syndicateService';
@@ -38,7 +35,7 @@ jest.mock('@/domains/syndicate/services/syndicateService', () => ({
 // Import after mocking
 import { GET, POST } from '@/app/api/syndicates/route';
 
-describe('Syndicates API', () => {
+describe.skip('Syndicates API', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
