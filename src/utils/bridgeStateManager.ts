@@ -10,6 +10,7 @@
  */
 
 import type { BridgeProtocolType, ChainIdentifier } from '@/services/bridges/types';
+import type { SupportedYieldStrategyId } from '@/config/yieldStrategies';
 
 export interface PendingBridge {
     signature: string;
@@ -29,9 +30,12 @@ export interface BridgeActivityRecord {
     destinationChain: ChainIdentifier;
     destinationAddress: string;
     sourceAddress?: string;
+    targetStrategy?: SupportedYieldStrategyId;
     sourceTxHash?: string;
     destinationTxHash?: string;
     bridgeId?: string;
+    linkedVaultProtocol?: SupportedYieldStrategyId;
+    linkedDepositTxHash?: string;
     redirectUrl?: string;
     status: string;
     error?: string;

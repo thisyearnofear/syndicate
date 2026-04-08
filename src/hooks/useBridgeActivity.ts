@@ -30,24 +30,65 @@ export function useBridgeActivity(): BridgeActivityState & BridgeActivityActions
     const [lastUpdated, setLastUpdated] = useState<number | null>(null);
 
     const refreshActivity = useCallback(() => {
-        setIsLoading(true);
+        const run = async () => {
+            setIsLoading(true);
 
-        const normalizedAddress = normalizeAddress(address);
-        const history = getBridgeActivityHistory()
-            .filter((entry) => {
-                if (!normalizedAddress) return true;
+            const normalizedAddress = normalizeAddress(address);
 
-                return (
-                    normalizeAddress(entry.sourceAddress) === normalizedAddress ||
-                    normalizeAddress(entry.destinationAddress) === normalizedAddress
-                );
-            })
-            .sort((a, b) => b.updatedAt - a.updatedAt);
+            try {
+                if (address) {
+                    const response = await fetch(`/api/activity?wallet=${encodeURIComponent(address)}&type=bridge`);
+                    if (response.ok) {
+                        const rows = await response.json();
+                        const mapped: BridgeActivityRecord[] = (rows as any[]).map((row) => ({
+                            id: row.id,
+                            protocol: row.protocol,
+                            amount: row.amount,
+                            sourceChain: row.sourceChain,
+                            destinationChain: row.destinationChain,
+                            destinationAddress: row.destinationAddress,
+                            sourceAddress: row.sourceAddress ?? undefined,
+                            targetStrategy: row.targetStrategy ?? undefined,
+                            sourceTxHash: row.txHash ?? undefined,
+                            destinationTxHash: row.metadata?.destinationTxHash ?? undefined,
+                            bridgeId: row.metadata?.bridgeId ?? undefined,
+                            linkedVaultProtocol: row.linkedVaultProtocol ?? undefined,
+                            linkedDepositTxHash: row.linkedDepositTxHash ?? undefined,
+                            redirectUrl: row.metadata?.redirectUrl ?? undefined,
+                            status: row.status,
+                            error: row.error ?? undefined,
+                            timestamp: row.createdAt,
+                            updatedAt: row.updatedAt,
+                        }));
+                        setActivities(mapped.sort((a, b) => b.updatedAt - a.updatedAt));
+                        setPendingBridge(getPendingBridge());
+                        setLastUpdated(Date.now());
+                        setIsLoading(false);
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.warn('[useBridgeActivity] Falling back to local activity store:', error);
+            }
 
-        setActivities(history);
-        setPendingBridge(getPendingBridge());
-        setLastUpdated(Date.now());
-        setIsLoading(false);
+            const history = getBridgeActivityHistory()
+                .filter((entry) => {
+                    if (!normalizedAddress) return true;
+
+                    return (
+                        normalizeAddress(entry.sourceAddress) === normalizedAddress ||
+                        normalizeAddress(entry.destinationAddress) === normalizedAddress
+                    );
+                })
+                .sort((a, b) => b.updatedAt - a.updatedAt);
+
+            setActivities(history);
+            setPendingBridge(getPendingBridge());
+            setLastUpdated(Date.now());
+            setIsLoading(false);
+        };
+
+        void run();
     }, [address]);
 
     useEffect(() => {

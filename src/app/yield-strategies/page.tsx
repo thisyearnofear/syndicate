@@ -27,14 +27,20 @@ import { CivicVerificationGate } from '@/components/civic/CivicVerificationGate'
 import { getRequiredKycTier, getComplianceRationale } from '@/utils/kycTiers';
 import { yieldToTicketsService } from '@/services/yieldToTicketsService';
 import type { VaultProtocol } from '@/services/vaults';
-import type { SupportedYieldStrategyId } from '@/config/yieldStrategies';
+import { getStrategyById, type SupportedYieldStrategyId } from '@/config/yieldStrategies';
+import { persistVaultDepositActivityRecord } from '@/services/activity/activityClient';
+import { updateBridgeActivity } from '@/utils/bridgeStateManager';
+import { createVaultActivityId, recordVaultDepositActivity } from '@/utils/vaultActivityManager';
 import {
   VAULTS_ROUTE,
+  YIELD_ENTRY_BRIDGE,
+  YIELD_ENTRY_PARAM,
   hasYieldExecutionIntent,
 } from '@/constants/vaultRouting';
 import Link from "next/link";
 
 const ALLOCATION_STORAGE_KEY = 'vault_yield_allocation';
+const DIRECT_DEPOSIT_STRATEGIES: VaultProtocol[] = ['drift', 'aave', 'morpho', 'pooltogether'];
 
 function YieldStrategiesContent() {
   const router = useRouter();
@@ -42,8 +48,14 @@ function YieldStrategiesContent() {
   const { isDepositing, status, txHash, error: depositError, deposit, reset } = useVaultDeposit();
   const searchParams = useSearchParams();
   const protocolParam = searchParams?.get('protocol');
+  const strategyParam = searchParams?.get('strategy');
   const tabParam = searchParams?.get('tab');
+  const entryParam = searchParams?.get(YIELD_ENTRY_PARAM);
+  const amountParam = searchParams?.get('amount');
+  const sourceChainParam = searchParams?.get('sourceChain');
+  const bridgeActivityIdParam = searchParams?.get('bridgeActivityId');
   const hasExecutionIntent = hasYieldExecutionIntent(searchParams);
+  const isBridgeEntry = entryParam === YIELD_ENTRY_BRIDGE;
   
   const [activeTab, setActiveTab] = useState<'overview' | 'strategies' | 'allocation'>('strategies');
   const [selectedStrategy, setSelectedStrategy] = useState<SupportedYieldStrategyId | null>(null);
@@ -51,6 +63,10 @@ function YieldStrategiesContent() {
   const [yieldToTickets, setYieldToTickets] = useState(85);
   const [yieldToCauses, setYieldToCauses] = useState(15);
   const [depositSuccess, setDepositSuccess] = useState(false);
+  const selectedStrategyConfig = selectedStrategy ? getStrategyById(selectedStrategy) : undefined;
+  const canDepositIntoSelectedStrategy = Boolean(
+    selectedStrategy && DIRECT_DEPOSIT_STRATEGIES.includes(selectedStrategy as VaultProtocol)
+  );
 
   // Load persisted allocation from localStorage
   useEffect(() => {
@@ -100,17 +116,34 @@ function YieldStrategiesContent() {
       setActiveTab(tabParam);
     }
 
-    if (protocolParam === 'pooltogether') {
+    const targetStrategy = strategyParam ?? protocolParam;
+
+    if (targetStrategy === 'pooltogether') {
       setSelectedStrategy('pooltogether');
-      setActiveTab('strategies');
-    } else if (protocolParam === 'drift') {
+      setActiveTab(isBridgeEntry ? 'allocation' : 'strategies');
+    } else if (targetStrategy === 'drift') {
       setSelectedStrategy('drift');
-      setActiveTab('strategies');
+      setActiveTab(isBridgeEntry ? 'allocation' : 'strategies');
+    } else if (targetStrategy === 'aave') {
+      setSelectedStrategy('aave');
+      setActiveTab(isBridgeEntry ? 'allocation' : 'strategies');
+    } else if (targetStrategy === 'morpho') {
+      setSelectedStrategy('morpho');
+      setActiveTab(isBridgeEntry ? 'allocation' : 'strategies');
     }
-  }, [protocolParam, tabParam]);
+  }, [isBridgeEntry, strategyParam, protocolParam, tabParam]);
+
+  useEffect(() => {
+    if (!amountParam) return;
+
+    const parsedAmount = Number(amountParam);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) return;
+
+    setDepositAmount((current) => (current > 0 ? current : parsedAmount));
+  }, [amountParam]);
 
   // Handle deposit - now supports all vault protocols
-  const handleDeposit = async () => {
+  const handleDeposit = useCallback(async () => {
     if (!selectedStrategy || depositAmount <= 0) return;
     // Support all vault protocols (drift, aave, morpho, pooltogether)
     const vaultProtocols: VaultProtocol[] = ['drift', 'aave', 'morpho', 'pooltogether'];
@@ -119,9 +152,30 @@ function YieldStrategiesContent() {
     setDepositSuccess(false);
     const result = await deposit(selectedStrategy as VaultProtocol, depositAmount.toString());
     if (result.success) {
+      if (address && result.txHash) {
+        const depositRecord = {
+          id: createVaultActivityId(),
+          walletAddress: address,
+          protocol: selectedStrategy as VaultProtocol,
+          amount: depositAmount.toString(),
+          txHash: result.txHash,
+          timestamp: Date.now(),
+          bridgeActivityId: bridgeActivityIdParam || undefined,
+        };
+        recordVaultDepositActivity(depositRecord);
+        void persistVaultDepositActivityRecord(depositRecord).catch((error) => {
+          console.warn('[YieldStrategies] Failed to persist vault deposit activity:', error);
+        });
+      }
+      if (bridgeActivityIdParam && result.txHash) {
+        updateBridgeActivity(bridgeActivityIdParam, {
+          linkedVaultProtocol: selectedStrategy,
+          linkedDepositTxHash: result.txHash,
+        });
+      }
       setDepositSuccess(true);
     }
-  };
+  }, [address, bridgeActivityIdParam, deposit, depositAmount, selectedStrategy]);
 
   // Reset deposit state when amount or strategy changes
   useEffect(() => {
@@ -141,6 +195,183 @@ function YieldStrategiesContent() {
       default: return null;
     }
   };
+
+  const renderStrategyExecution = (showAllocationControl: boolean) => (
+    <CompactStack spacing="lg">
+      {showAllocationControl ? (
+        <YieldAllocationControl
+          ticketsAllocation={yieldToTickets}
+          causesAllocation={yieldToCauses}
+          onAllocationChange={handleAllocationChange}
+        />
+      ) : null}
+
+      <ImprovedYieldStrategySelector 
+        selectedStrategy={selectedStrategy} 
+        onStrategySelect={(strategy) => setSelectedStrategy(strategy || null)}
+        ticketsAllocation={yieldToTickets}
+        causesAllocation={yieldToCauses}
+        onAllocationChange={handleAllocationChange}
+        userAddress={address || undefined}
+      />
+      
+      {selectedStrategy ? (
+        <>
+          <CompactCard variant="premium" padding="lg">
+            <label className="block text-sm font-semibold text-gray-300 mb-2">
+              Deposit Amount (USDC)
+            </label>
+            <input
+              type="number"
+              min={0}
+              step={100}
+              value={depositAmount || ''}
+              onChange={(e) => setDepositAmount(Number(e.target.value) || 0)}
+              placeholder="Enter amount to deposit"
+              className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-lg"
+            />
+
+            {depositAmount > 0 ? (
+              <div className="mt-3 flex items-center gap-2">
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
+                  depositAmount >= 10_000
+                    ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                    : depositAmount >= 1_000
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    : 'bg-green-500/20 text-green-300 border border-green-500/30'
+                }`}>
+                  <Shield className="w-3.5 h-3.5" />
+                  {getRequiredKycTier(depositAmount).label}
+                </span>
+                <span className="text-xs text-gray-400">
+                  {getComplianceRationale(depositAmount)}
+                </span>
+              </div>
+            ) : null}
+          </CompactCard>
+
+          <CivicVerificationGate
+            message={depositAmount < 1000 
+              ? "Quick anti-bot check needed. Takes 30 seconds."
+              : "Identity verification required for larger deposits."}
+            depositAmount={depositAmount}
+            compact={depositAmount < 1000}
+          >
+            <CompactCard variant="premium" padding="lg">
+              <div className="flex items-start gap-4">
+                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                  <Shield className="w-8 h-8 text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-xl font-bold text-white">
+                      {selectedStrategyConfig?.name ?? `${selectedStrategy.toUpperCase()} Strategy`}
+                    </h3>
+                    <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Verified
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div className="glass-premium p-4 rounded-lg border border-white/10">
+                      <p className="text-sm text-gray-400 mb-1">Risk Level</p>
+                      <p className="font-bold text-white">
+                        {selectedStrategy === 'drift' ? 'Medium (Hedged)' : 'Low to Medium'}
+                      </p>
+                    </div>
+                    <div className="glass-premium p-4 rounded-lg border border-white/10">
+                      <p className="text-sm text-gray-400 mb-1">Current APY</p>
+                      <p className="font-bold text-green-400">
+                        {selectedStrategy === 'drift' ? '~22.5%' : 
+                        selectedStrategy === 'morpho' ? '~6.7%' :
+                        selectedStrategy === 'pooltogether' ? '~3.5%' :
+                        selectedStrategy === 'aave' ? '~4.5%' :
+                        selectedStrategy === 'octant' ? '~10%' :
+                        selectedStrategy === 'uniswap' ? '~8.5%' : 'Variable'}
+                      </p>
+                    </div>
+                    <div className="glass-premium p-4 rounded-lg border border-white/10">
+                      <p className="text-sm text-gray-400 mb-1">Allocation</p>
+                      <p className="font-bold text-white">
+                        {yieldToTickets}% tickets / {yieldToCauses}% causes
+                      </p>
+                    </div>
+                  </div>
+
+                  {depositSuccess && txHash ? (
+                    <div className="p-5 rounded-xl bg-gradient-to-r from-green-500/20 to-emerald-500/10 border border-green-500/30">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                          <Check className="w-6 h-6 text-green-400" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-green-300">Deposit Successful!</p>
+                          <p className="text-xs text-green-200/70">Your funds are now earning yield</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-3 mt-4">
+                        <a
+                          href={`https://basescan.org/tx/${txHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 text-center text-xs text-green-400 hover:text-green-300 underline py-2 border border-green-500/30 rounded-lg"
+                        >
+                          View TX <ExternalLink className="w-3 h-3 inline ml-1" />
+                        </a>
+                        <Link
+                          href="/vaults"
+                          className="flex-1 text-center text-xs text-blue-400 hover:text-blue-300 underline py-2 border border-blue-500/30 rounded-lg"
+                        >
+                          View Dashboard →
+                        </Link>
+                      </div>
+                    </div>
+                  ) : depositError ? (
+                    <div className="space-y-3">
+                      <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+                        <p className="text-sm text-red-300">{depositError}</p>
+                      </div>
+                      <Button
+                        onClick={handleDeposit}
+                        disabled={!depositAmount || depositAmount <= 0 || isDepositing || !canDepositIntoSelectedStrategy}
+                        className="w-full"
+                        variant="default"
+                      >
+                        Retry Deposit
+                      </Button>
+                    </div>
+                  ) : canDepositIntoSelectedStrategy ? (
+                    <Button
+                      onClick={handleDeposit}
+                      disabled={!depositAmount || depositAmount <= 0 || isDepositing}
+                      className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                      variant="default"
+                    >
+                      {isDepositing ? (
+                        <span className="flex items-center gap-2">
+                          <Loader className="w-4 h-4 animate-spin" />
+                          {getDepositStatusLabel()}
+                        </span>
+                      ) : (
+                        `Deposit ${depositAmount > 0 ? `${depositAmount.toLocaleString()} USDC` : ''} into ${selectedStrategyConfig?.name ?? selectedStrategy.toUpperCase()}`
+                      )}
+                    </Button>
+                  ) : (
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                      <p className="text-sm text-amber-200">
+                        {selectedStrategyConfig?.name ?? 'This strategy'} is not yet available for direct deposit from this flow.
+                        Choose Aave, Morpho, PoolTogether, or Drift to complete the current execution path.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CompactCard>
+          </CivicVerificationGate>
+        </>
+      ) : null}
+    </CompactStack>
+  );
 
   if (!hasExecutionIntent) {
     return (
@@ -196,6 +427,19 @@ function YieldStrategiesContent() {
                 set how yield should be allocated, and complete the deposit flow without leaving
                 the product path.
               </p>
+
+              {isBridgeEntry ? (
+                <div className="mx-auto mt-6 max-w-2xl rounded-2xl border border-blue-500/30 bg-blue-500/10 px-5 py-4 text-left">
+                  <p className="text-sm font-semibold text-blue-200">
+                    Funding received from {sourceChainParam || 'bridge flow'}
+                  </p>
+                  <p className="mt-1 text-sm text-blue-100/80">
+                    Your bridged capital is ready for allocation.
+                    {amountParam ? ` ${amountParam} USDC has been carried into this step so you can finish the deposit flow immediately.` : ''}
+                    {selectedStrategyConfig ? ` The destination strategy is preselected as ${selectedStrategyConfig.name}.` : ''}
+                  </p>
+                </div>
+              ) : null}
               
               {/* Wallet Connection Status */}
               <div className="flex justify-center mt-6">
@@ -240,181 +484,15 @@ function YieldStrategiesContent() {
             
             {activeTab === 'strategies' && (
               <CivicGateProvider depositAmount={depositAmount}>
-                <CompactStack spacing="lg">
-                  <ImprovedYieldStrategySelector 
-                    selectedStrategy={selectedStrategy} 
-                    onStrategySelect={(strategy) => setSelectedStrategy(strategy || null)}
-                    ticketsAllocation={yieldToTickets}
-                    causesAllocation={yieldToCauses}
-                    onAllocationChange={handleAllocationChange}
-                    userAddress={address || undefined}
-                  />
-                  
-                  {selectedStrategy && (
-                    <>
-                      {/* Deposit Amount Input — drives tiered KYC */}
-                      <CompactCard variant="premium" padding="lg">
-                        <label className="block text-sm font-semibold text-gray-300 mb-2">
-                          Deposit Amount (USDC)
-                        </label>
-                        <input
-                          type="number"
-                          min={0}
-                          step={100}
-                          value={depositAmount || ''}
-                          onChange={(e) => setDepositAmount(Number(e.target.value) || 0)}
-                          placeholder="Enter amount to deposit"
-                          className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-lg"
-                        />
-
-                        {/* Dynamic tier indicator */}
-                        {depositAmount > 0 && (
-                          <div className="mt-3 flex items-center gap-2">
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
-                              depositAmount >= 10_000
-                                ? 'bg-red-500/20 text-red-300 border border-red-500/30'
-                                : depositAmount >= 1_000
-                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                                : 'bg-green-500/20 text-green-300 border border-green-500/30'
-                            }`}>
-                              <Shield className="w-3.5 h-3.5" />
-                              {getRequiredKycTier(depositAmount).label}
-                            </span>
-                            <span className="text-xs text-gray-400">
-                              {getComplianceRationale(depositAmount)}
-                            </span>
-                          </div>
-                        )}
-                      </CompactCard>
-
-                      {/* Use compact mode for small deposits - less intimidating */}
-                      <CivicVerificationGate
-                        message={depositAmount < 1000 
-                          ? "Quick anti-bot check needed. Takes 30 seconds."
-                          : "Identity verification required for larger deposits."}
-                        depositAmount={depositAmount}
-                        compact={depositAmount < 1000}
-                      >
-                        {/* Strategy detail + Deposit action (shown after KYC pass) */}
-                        <CompactCard variant="premium" padding="lg">
-                          <div className="flex items-start gap-4">
-                            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
-                              <Shield className="w-8 h-8 text-white" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <h3 className="text-xl font-bold text-white">
-                                  {selectedStrategy.toUpperCase()} Strategy
-                                </h3>
-                                <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full flex items-center gap-1">
-                                  <Check className="w-3 h-3" /> Verified
-                                </span>
-                              </div>
-                              
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                <div className="glass-premium p-4 rounded-lg border border-white/10">
-                                  <p className="text-sm text-gray-400 mb-1">Risk Level</p>
-                                  <p className="font-bold text-white">
-                                    {selectedStrategy === 'drift' ? 'Medium (Hedged)' : 'Low to Medium'}
-                                  </p>
-                                </div>
-                                <div className="glass-premium p-4 rounded-lg border border-white/10">
-                                  <p className="text-sm text-gray-400 mb-1">Current APY</p>
-                                  <p className="font-bold text-green-400">
-                                     {selectedStrategy === 'drift' ? '~22.5%' : 
-                                     selectedStrategy === 'morpho' ? '~6.7%' :
-                                     selectedStrategy === 'pooltogether' ? '~3.5%' :
-                                     selectedStrategy === 'aave' ? '~4.5%' :
-                                     selectedStrategy === 'octant' ? '~10%' :
-                                     selectedStrategy === 'uniswap' ? '~8.5%' : 'Variable'}
-                                  </p>
-                                </div>
-                                <div className="glass-premium p-4 rounded-lg border border-white/10">
-                                  <p className="text-sm text-gray-400 mb-1">Allocation</p>
-                                  <p className="font-bold text-white">
-                                    {yieldToTickets}% tickets / {yieldToCauses}% causes
-                                  </p>
-                                </div>
-                              </div>
-
-                              {/* Deposit Button + Status */}
-                              {depositSuccess && txHash ? (
-                                <div className="p-5 rounded-xl bg-gradient-to-r from-green-500/20 to-emerald-500/10 border border-green-500/30">
-                                  <div className="flex items-center gap-3 mb-3">
-                                    <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                                      <Check className="w-6 h-6 text-green-400" />
-                                    </div>
-                                    <div>
-                                      <p className="font-bold text-green-300">Deposit Successful!</p>
-                                      <p className="text-xs text-green-200/70">Your funds are now earning yield</p>
-                                    </div>
-                                  </div>
-                                  <div className="flex gap-3 mt-4">
-                                    <a
-                                      href={`https://basescan.org/tx/${txHash}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="flex-1 text-center text-xs text-green-400 hover:text-green-300 underline py-2 border border-green-500/30 rounded-lg"
-                                    >
-                                      View TX <ExternalLink className="w-3 h-3 inline ml-1" />
-                                    </a>
-                                    <Link
-                                      href="/vaults"
-                                      className="flex-1 text-center text-xs text-blue-400 hover:text-blue-300 underline py-2 border border-blue-500/30 rounded-lg"
-                                    >
-                                      View Dashboard →
-                                    </Link>
-                                  </div>
-                                </div>
-                              ) : depositError ? (
-                                <div className="space-y-3">
-                                  <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
-                                    <p className="text-sm text-red-300">{depositError}</p>
-                                  </div>
-                                  <Button
-                                    onClick={handleDeposit}
-                                    disabled={!depositAmount || depositAmount <= 0 || isDepositing}
-                                    className="w-full"
-                                    variant="default"
-                                  >
-                                    Retry Deposit
-                                  </Button>
-                                </div>
-                              ) : (
-                                <Button
-                                  onClick={handleDeposit}
-                                  disabled={!depositAmount || depositAmount <= 0 || isDepositing}
-                                  className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
-                                  variant="default"
-                                >
-                                  {isDepositing ? (
-                                    <span className="flex items-center gap-2">
-                                      <Loader className="w-4 h-4 animate-spin" />
-                                      {getDepositStatusLabel()}
-                                    </span>
-                                  ) : (
-                                    `Deposit ${depositAmount > 0 ? `${depositAmount.toLocaleString()} USDC` : ''} into ${selectedStrategy.toUpperCase()}`
-                                  )}
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        </CompactCard>
-                      </CivicVerificationGate>
-                    </>
-                  )}
-                </CompactStack>
+                {renderStrategyExecution(false)}
               </CivicGateProvider>
             )}
             
             {activeTab === 'allocation' && (
-              <CompactStack spacing="lg">
-                <YieldAllocationControl
-                  ticketsAllocation={yieldToTickets}
-                  causesAllocation={yieldToCauses}
-                  onAllocationChange={handleAllocationChange}
-                />
-                
+              <CivicGateProvider depositAmount={depositAmount}>
+                <CompactStack spacing="lg">
+                  {renderStrategyExecution(true)}
+
                 <CompactCard variant="premium" padding="lg">
                   <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
                     <Trophy className="w-5 h-5 text-yellow-400" />
@@ -471,7 +549,8 @@ function YieldStrategiesContent() {
                     </div>
                   </div>
                 </CompactCard>
-              </CompactStack>
+                </CompactStack>
+              </CivicGateProvider>
             )}
           </div>
         </CompactSection>

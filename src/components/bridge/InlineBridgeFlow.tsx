@@ -15,6 +15,7 @@ import type { BridgeResult } from '@/services/bridges/types';
 import { Button } from '@/shared/components/ui/Button';
 import {
     createBridgeActivityId,
+    getBridgeActivityHistory,
     getSolanaExplorerLink,
     savePendingBridge,
     updateBridgeActivity,
@@ -22,6 +23,7 @@ import {
 } from '@/utils/bridgeStateManager';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { getStatusMessage, getStatusDescription } from '@/utils/bridgeStatusMessages';
+import { persistBridgeActivityRecord } from '@/services/activity/activityClient';
 
 export interface InlineBridgeFlowProps {
     sourceChain: 'solana' | 'ethereum';
@@ -56,6 +58,25 @@ export function InlineBridgeFlow({
     const [events, setEvents] = useState<Array<{ status: string; info?: Record<string, unknown>; ts: number }>>([]);
     const [bridgeActivityId] = useState(() => createBridgeActivityId());
 
+    const syncBridgeActivity = React.useCallback(() => {
+        const record = getBridgeActivityHistory().find((entry) => entry.id === bridgeActivityId);
+        if (!record) return;
+
+        void persistBridgeActivityRecord(record).catch((persistError) => {
+            console.warn('[InlineBridgeFlow] Failed to persist bridge activity:', persistError);
+        });
+    }, [bridgeActivityId]);
+
+    const createBridgeActivity = React.useCallback((record: Parameters<typeof upsertBridgeActivity>[0]) => {
+        upsertBridgeActivity(record);
+        syncBridgeActivity();
+    }, [syncBridgeActivity]);
+
+    const patchBridgeActivity = React.useCallback((updates: Parameters<typeof updateBridgeActivity>[1]) => {
+        updateBridgeActivity(bridgeActivityId, updates);
+        syncBridgeActivity();
+    }, [bridgeActivityId, syncBridgeActivity]);
+
     const startBridge = React.useCallback(async () => {
         setIsStarted(true);
         setError(null);
@@ -70,7 +91,7 @@ export function InlineBridgeFlow({
             // Use selected protocol or default to CCTP
             const initialProtocol = selectedProtocol || 'cctp';
             setProtocol(initialProtocol as 'cctp' | 'wormhole' | null);
-            upsertBridgeActivity({
+            createBridgeActivity({
                 id: bridgeActivityId,
                 protocol: initialProtocol,
                 amount,
@@ -129,7 +150,7 @@ export function InlineBridgeFlow({
                         });
                     }
 
-                    updateBridgeActivity(bridgeActivityId, {
+                    patchBridgeActivity({
                         status,
                         sourceTxHash: hash || undefined,
                         bridgeId:
@@ -187,17 +208,23 @@ export function InlineBridgeFlow({
             if (result.success) {
                 setProgress(100);
                 setCurrentStatus('complete');
-                updateBridgeActivity(bridgeActivityId, {
+                patchBridgeActivity({
                     status: 'complete',
                     sourceTxHash: result.sourceTxHash || txHash || undefined,
                     destinationTxHash: result.destinationTxHash,
                     bridgeId: result.bridgeId,
                     error: undefined,
                 });
-                onComplete(result);
+                onComplete({
+                    ...result,
+                    details: {
+                        ...result.details,
+                        bridgeActivityId,
+                    },
+                });
             } else {
                 setError(result.error || 'Bridge failed');
-                updateBridgeActivity(bridgeActivityId, {
+                patchBridgeActivity({
                     status: 'failed',
                     sourceTxHash: result.sourceTxHash || txHash || undefined,
                     destinationTxHash: result.destinationTxHash,
@@ -210,7 +237,7 @@ export function InlineBridgeFlow({
             const error = err as Error;
             const errorMessage = error.message || 'Bridge failed';
             setError(errorMessage);
-            updateBridgeActivity(bridgeActivityId, {
+            patchBridgeActivity({
                 status: 'failed',
                 sourceTxHash: txHash || undefined,
                 error: errorMessage,
@@ -219,6 +246,8 @@ export function InlineBridgeFlow({
         }
     }, [
         bridgeActivityId,
+        createBridgeActivity,
+        patchBridgeActivity,
         sourceAddress,
         selectedProtocol,
         protocol,

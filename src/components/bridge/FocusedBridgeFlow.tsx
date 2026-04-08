@@ -22,10 +22,13 @@ import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { getStatusMessage, getStatusDescription } from "@/utils/bridgeStatusMessages";
 import {
   createBridgeActivityId,
+  getBridgeActivityHistory,
   savePendingBridge,
   updateBridgeActivity,
   upsertBridgeActivity,
 } from "@/utils/bridgeStateManager";
+import type { SupportedYieldStrategyId } from "@/config/yieldStrategies";
+import { persistBridgeActivityRecord } from "@/services/activity/activityClient";
 
 export interface FocusedBridgeFlowProps {
   sourceChain: "solana" | "ethereum" | "near" | "starknet";
@@ -37,6 +40,7 @@ export interface FocusedBridgeFlowProps {
   onError: (error: string) => void;
   onCancel: () => void;
   preselectedProtocol?: string;
+  targetStrategy?: SupportedYieldStrategyId;
 }
 
 export function FocusedBridgeFlow({
@@ -49,6 +53,7 @@ export function FocusedBridgeFlow({
   onError,
   onCancel,
   preselectedProtocol,
+  targetStrategy,
 }: FocusedBridgeFlowProps) {
   // Get source wallet address
   const { address: sourceAddress, chainId: sourceChainId } = useWalletConnection();
@@ -73,6 +78,25 @@ export function FocusedBridgeFlow({
   const [amountInput, setAmountInput] = useState<string>(amount);
   const [manualActionUrl, setManualActionUrl] = useState<string | null>(null);
   const [bridgeActivityId] = useState(() => createBridgeActivityId());
+
+  const syncBridgeActivity = React.useCallback(() => {
+    const record = getBridgeActivityHistory().find((entry) => entry.id === bridgeActivityId);
+    if (!record) return;
+
+    void persistBridgeActivityRecord(record).catch((persistError) => {
+      console.warn("[FocusedBridgeFlow] Failed to persist bridge activity:", persistError);
+    });
+  }, [bridgeActivityId]);
+
+  const createBridgeActivity = React.useCallback((record: Parameters<typeof upsertBridgeActivity>[0]) => {
+    upsertBridgeActivity(record);
+    syncBridgeActivity();
+  }, [syncBridgeActivity]);
+
+  const patchBridgeActivity = React.useCallback((updates: Parameters<typeof updateBridgeActivity>[1]) => {
+    updateBridgeActivity(bridgeActivityId, updates);
+    syncBridgeActivity();
+  }, [bridgeActivityId, syncBridgeActivity]);
 
   useEffect(() => {
     setAmountInput(amount);
@@ -146,7 +170,7 @@ export function FocusedBridgeFlow({
         throw new Error("Source wallet not connected");
       }
 
-      upsertBridgeActivity({
+      createBridgeActivity({
         id: bridgeActivityId,
         protocol: selectedProtocol.protocol,
         amount: amountInput,
@@ -154,6 +178,7 @@ export function FocusedBridgeFlow({
         destinationChain,
         sourceAddress,
         destinationAddress: recipient,
+        targetStrategy,
         status: "starting",
         timestamp: Date.now(),
         updatedAt: Date.now(),
@@ -168,7 +193,7 @@ export function FocusedBridgeFlow({
         );
         setCurrentStatus("initializing");
         setProgress(10);
-        updateBridgeActivity(bridgeActivityId, { status: "initializing" });
+        patchBridgeActivity({ status: "initializing" });
 
         const ok = await nearWalletSelectorService.init();
         if (!ok) throw new Error("NEAR wallet not ready");
@@ -188,7 +213,7 @@ export function FocusedBridgeFlow({
         );
         setCurrentStatus("quote_requested");
         setProgress(20);
-        updateBridgeActivity(bridgeActivityId, { status: "quote_requested" });
+        patchBridgeActivity({ status: "quote_requested" });
 
         const amountUnits = BigInt(
           Math.floor(parseFloat(amountInput) * 1_000_000)
@@ -206,7 +231,7 @@ export function FocusedBridgeFlow({
         );
         setCurrentStatus("intent_submitted");
         setProgress(40);
-        updateBridgeActivity(bridgeActivityId, { status: "intent_submitted" });
+        patchBridgeActivity({ status: "intent_submitted" });
 
         const res = await nearIntentsService.purchaseViaIntent({
           sourceAsset:
@@ -221,7 +246,7 @@ export function FocusedBridgeFlow({
         }
 
         setTxHash(String(res.intentHash));
-        updateBridgeActivity(bridgeActivityId, {
+        patchBridgeActivity({
           status: "waiting_execution",
           sourceTxHash: String(res.intentHash),
           bridgeId: String(res.intentHash),
@@ -291,7 +316,7 @@ export function FocusedBridgeFlow({
         setCurrentStatus("complete");
         setProgress(100);
         setStage("complete");
-        updateBridgeActivity(bridgeActivityId, {
+        patchBridgeActivity({
           status: "complete",
           sourceTxHash: String(res.intentHash),
           error: undefined,
@@ -305,7 +330,12 @@ export function FocusedBridgeFlow({
           });
         }
 
-        onComplete({ success: true } as BridgeResult);
+        onComplete({
+          success: true,
+          protocol: selectedProtocol.protocol,
+          status: "complete",
+          details: { bridgeActivityId },
+        } as BridgeResult);
       } else {
         const result = await bridgeManager.bridge({
           sourceChain,
@@ -327,7 +357,7 @@ export function FocusedBridgeFlow({
             if (status === 'manual_action_required') {
                 const url = dataObj?.redirectUrl as string;
                 if (url) {
-                    updateBridgeActivity(bridgeActivityId, {
+                    patchBridgeActivity({
                       status,
                       redirectUrl: url,
                     });
@@ -361,7 +391,7 @@ export function FocusedBridgeFlow({
                 destinationChain,
               });
             }
-            updateBridgeActivity(bridgeActivityId, {
+            patchBridgeActivity({
               status,
               sourceTxHash: activityTxHash,
               bridgeId:
@@ -410,19 +440,25 @@ export function FocusedBridgeFlow({
           setProgress(100);
           setCurrentStatus("complete");
           setStage("complete");
-          updateBridgeActivity(bridgeActivityId, {
+          patchBridgeActivity({
             status: "complete",
             sourceTxHash: result.sourceTxHash || txHash || undefined,
             destinationTxHash: result.destinationTxHash,
             bridgeId: result.bridgeId,
             error: undefined,
           });
-          onComplete(result);
+          onComplete({
+            ...result,
+            details: {
+              ...result.details,
+              bridgeActivityId,
+            },
+          });
         } else {
           setError(result.error || "Bridge failed");
           setErrorProtocol(selectedProtocol?.name || "Unknown");
           setStage("error");
-          updateBridgeActivity(bridgeActivityId, {
+          patchBridgeActivity({
             status: "failed",
             sourceTxHash: result.sourceTxHash || txHash || undefined,
             destinationTxHash: result.destinationTxHash,
@@ -446,7 +482,7 @@ export function FocusedBridgeFlow({
       setError(errorMessage);
       setErrorProtocol(selectedProtocol?.name || "Unknown");
       setStage("error");
-      updateBridgeActivity(bridgeActivityId, {
+      patchBridgeActivity({
         status: "failed",
         sourceTxHash: txHash || undefined,
         error: errorMessage,
@@ -455,6 +491,8 @@ export function FocusedBridgeFlow({
     }
   }, [
     bridgeActivityId,
+    createBridgeActivity,
+    patchBridgeActivity,
     selectedProtocol,
     sourceChain,
     destinationChain,
@@ -462,6 +500,7 @@ export function FocusedBridgeFlow({
     amountInput,
     recipient,
     preselectedProtocol,
+    targetStrategy,
     onStatus,
     onComplete,
     onError,
