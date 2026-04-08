@@ -35,6 +35,7 @@ export type ChainIdentifier =
 export type BridgeProtocolType =
     | 'cctp'      // Circle CCTP (EVM + Solana)
     | 'ccip'      // Chainlink CCIP (EVM only)
+    | 'lifi'      // LI.FI route aggregation (EVM -> Base)
     | 'wormhole'  // Wormhole (multi-chain)
     | 'base-solana-bridge' // Base-Solana Bridge (official, Chainlink CCIP)
     | 'debridge'  // deBridge DLN (intent-based fallback)
@@ -52,6 +53,7 @@ export type BridgeProtocolType =
 export type BridgeStatus =
     | 'idle'
     | 'validating'
+    | 'checking_allowance'
     | 'approve'           // Approval in progress
     | 'approved'          // Approval complete
     | 'approving'

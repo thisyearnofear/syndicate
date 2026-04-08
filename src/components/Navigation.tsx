@@ -19,7 +19,7 @@ import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { useUnifiedWallet } from '@/domains/wallet/services/unifiedWalletService';
 import { WalletType } from '@/domains/wallet/types';
 import WalletInfo from './wallet/WalletInfo';
-import { Home, Ticket, Users, TrendingUp, Menu, X, Loader, ArrowLeftRight } from 'lucide-react';
+import { Home, Users, TrendingUp, Menu, X, Loader, ArrowLeftRight, LayoutDashboard } from 'lucide-react';
 import { useRef, useEffect } from 'react';
 
 // Lazy load heavy modal components
@@ -66,10 +66,10 @@ export default function Navigation({ className = '' }: NavigationProps) {
             active: pathname === '/',
         },
         {
-            href: '/my-tickets',
-            label: 'My Tickets',
-            icon: Ticket,
-            active: pathname === '/my-tickets',
+            href: '/portfolio',
+            label: 'Portfolio',
+            icon: LayoutDashboard,
+            active: pathname === '/portfolio',
             requiresWallet: true,
         },
         {

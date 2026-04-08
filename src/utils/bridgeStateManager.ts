@@ -9,19 +9,41 @@
  * Reuses existing balance checks
  */
 
+import type { BridgeProtocolType, ChainIdentifier } from '@/services/bridges/types';
+
 export interface PendingBridge {
     signature: string;
-    protocol: 'cctp' | 'wormhole';
+    protocol: BridgeProtocolType;
     amount: string;
     recipient: string;
     timestamp: number;
-    sourceChain: 'solana' | 'ethereum';
-    destinationChain: 'base';
+    sourceChain: ChainIdentifier;
+    destinationChain: ChainIdentifier;
+}
+
+export interface BridgeActivityRecord {
+    id: string;
+    protocol: BridgeProtocolType;
+    amount: string;
+    sourceChain: ChainIdentifier;
+    destinationChain: ChainIdentifier;
+    destinationAddress: string;
+    sourceAddress?: string;
+    sourceTxHash?: string;
+    destinationTxHash?: string;
+    bridgeId?: string;
+    redirectUrl?: string;
+    status: string;
+    error?: string;
+    timestamp: number;
+    updatedAt: number;
 }
 
 const STORAGE_KEY = 'pendingBridge';
+const HISTORY_KEY = 'bridgeActivityHistory';
 const BALANCE_BEFORE_KEY = 'balanceBeforeBridge';
 const MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
+const MAX_HISTORY_ITEMS = 20;
 
 /**
  * Save bridge transaction for later checking
@@ -90,6 +112,72 @@ export function clearPendingBridge(): void {
     } catch {
         console.warn('Failed to clear pending bridge');
     }
+}
+
+function readBridgeHistory(): BridgeActivityRecord[] {
+    try {
+        const stored = localStorage.getItem(HISTORY_KEY);
+        if (!stored) return [];
+
+        const parsed = JSON.parse(stored);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        console.warn('Failed to read bridge activity history');
+        return [];
+    }
+}
+
+function writeBridgeHistory(history: BridgeActivityRecord[]): void {
+    try {
+        const trimmed = [...history]
+            .sort((a, b) => b.updatedAt - a.updatedAt)
+            .slice(0, MAX_HISTORY_ITEMS);
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed));
+    } catch {
+        console.warn('Failed to write bridge activity history');
+    }
+}
+
+export function createBridgeActivityId(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+
+    return `bridge-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export function getBridgeActivityHistory(): BridgeActivityRecord[] {
+    return readBridgeHistory();
+}
+
+export function upsertBridgeActivity(record: BridgeActivityRecord): void {
+    const history = readBridgeHistory();
+    const existingIndex = history.findIndex((entry) => entry.id === record.id);
+
+    if (existingIndex >= 0) {
+        history[existingIndex] = { ...history[existingIndex], ...record };
+    } else {
+        history.unshift(record);
+    }
+
+    writeBridgeHistory(history);
+}
+
+export function updateBridgeActivity(
+    id: string,
+    updates: Partial<Omit<BridgeActivityRecord, 'id' | 'timestamp'>>
+): void {
+    const history = readBridgeHistory();
+    const existingIndex = history.findIndex((entry) => entry.id === id);
+    if (existingIndex === -1) return;
+
+    history[existingIndex] = {
+        ...history[existingIndex],
+        ...updates,
+        updatedAt: Date.now(),
+    };
+
+    writeBridgeHistory(history);
 }
 
 /**

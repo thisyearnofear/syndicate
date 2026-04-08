@@ -32,7 +32,7 @@ import { RangerVaultInspector } from '@/components/ranger/RangerVaultInspector';
 import { RangerOperationalPlaybook } from '@/components/ranger/RangerOperationalPlaybook';
 import { VaultWaitlistCard } from '@/components/ranger/VaultWaitlistCard';
 import { trackEvent } from '@/services/analytics/client';
-import { buildYieldStrategiesHref } from '@/constants/vaultRouting';
+import { buildVaultExecutionHref } from '@/constants/vaultRouting';
 
 interface VaultsPageContentProps {
   showOperatorTools?: boolean;
@@ -58,6 +58,28 @@ const userFlow = [
   'Deposit USDC into the vault flow.',
   'Track strategy status, yield posture, and next actions in Syndicate.',
   'Decide whether to use yield for tickets, causes, or long-term compounding.',
+];
+
+const publicBenefits = [
+  {
+    title: 'Fund Once',
+    body: 'Bring USDC in from the chain you already use, then manage the rest of the experience from one product surface.',
+  },
+  {
+    title: 'Allocate Clearly',
+    body: 'Choose a yield path, understand the risk posture, and decide what your upside should do next.',
+  },
+  {
+    title: 'Track Outcomes',
+    body: 'Portfolio, tickets, and future cause allocation should all roll up into one place instead of separate flows.',
+  },
+];
+
+const publicFlow = [
+  'Route funds into the product from your current chain.',
+  'Choose a yield strategy and review the capital posture.',
+  'Track balances, yield, and ticket utility from your portfolio.',
+  'Adjust where upside goes: tickets, causes, or compounding.',
 ];
 
 function getStatusStyle(status: string): string {
@@ -93,6 +115,8 @@ export function VaultsPageContent({
   const secondaryCandidates = rangerMainTrackCandidates.filter(
     (candidate) => candidate.id !== primaryStrategy?.id
   );
+  const activeBenefits = showOperatorTools ? benefits : publicBenefits;
+  const activeUserFlow = showOperatorTools ? userFlow : publicFlow;
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.16),transparent_25%),radial-gradient(circle_at_80%_20%,rgba(16,185,129,0.16),transparent_24%),linear-gradient(180deg,#020617_0%,#0f172a_46%,#111827_100%)] px-4 py-8">
@@ -107,7 +131,7 @@ export function VaultsPageContent({
             </Link>
 
             <div className="flex flex-wrap gap-2">
-              <Link href={buildYieldStrategiesHref('strategies')}>
+              <Link href={buildVaultExecutionHref('strategies')}>
                 <Button
                   variant="outline"
                   className="border-cyan-500/30 bg-cyan-500/10 text-cyan-100 hover:bg-cyan-500/20"
@@ -118,17 +142,28 @@ export function VaultsPageContent({
                     })
                   }
                 >
-                  Deposit Flow
+                  Allocation Flow
                 </Button>
               </Link>
-              <Link href={showOperatorTools ? '/vaults' : '/ranger'}>
-                <Button
-                  variant="outline"
-                  className="border-slate-500/30 bg-slate-500/10 text-slate-100 hover:bg-slate-500/20"
-                >
-                  {showOperatorTools ? 'Public View' : 'Operator Mode'}
-                </Button>
-              </Link>
+              {showOperatorTools ? (
+                <Link href="/vaults">
+                  <Button
+                    variant="outline"
+                    className="border-slate-500/30 bg-slate-500/10 text-slate-100 hover:bg-slate-500/20"
+                  >
+                    Public View
+                  </Button>
+                </Link>
+              ) : (
+                <Link href="/ranger">
+                  <Button
+                    variant="outline"
+                    className="border-slate-500/30 bg-slate-500/10 text-slate-100 hover:bg-slate-500/20"
+                  >
+                    Operator Mode
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
 
@@ -140,22 +175,24 @@ export function VaultsPageContent({
             <CompactStack spacing="lg">
               <div className="inline-flex w-fit items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-sm font-semibold text-cyan-100">
                 <Waves className="h-4 w-4" />
-                {showOperatorTools ? 'Vault Operator Workspace' : 'Vaults'}
+                {showOperatorTools ? 'Vault Operator Workspace' : 'User Yield Workspace'}
               </div>
 
               <div className="space-y-4">
                 <h1 className="max-w-4xl text-4xl font-black tracking-tight text-white md:text-6xl">
-                  Stable vault yield, designed for real users.
+                  {showOperatorTools
+                    ? 'Stable vault yield, designed for real users.'
+                    : 'Move capital once. Put yield to work continuously.'}
                 </h1>
                 <p className="max-w-4xl text-lg leading-8 text-slate-300 md:text-xl">
-                  Syndicate Vaults is the product-facing entry point for our yield experience:
-                  principal-preserving USDC strategies, visible rules, and a cleaner path from
-                  deposit to recurring upside.
+                  {showOperatorTools
+                    ? 'Syndicate Vaults is the product-facing entry point for our yield experience: principal-preserving USDC strategies, visible rules, and a cleaner path from deposit to recurring upside.'
+                    : 'Vaults is the primary user entry point for funding, allocation, and ongoing upside. Start with capital, choose where yield goes, and track the full outcome in one place.'}
                 </p>
               </div>
 
               <div className="flex flex-wrap gap-3">
-                <Link href={buildYieldStrategiesHref('strategies')}>
+                <Link href={buildVaultExecutionHref('strategies')}>
                   <Button
                     className="bg-gradient-to-r from-cyan-500 to-emerald-500 text-white hover:from-cyan-600 hover:to-emerald-600"
                     onClick={() =>
@@ -166,26 +203,37 @@ export function VaultsPageContent({
                     }
                   >
                     <Wallet className="mr-2 h-4 w-4" />
-                    Start With Vaults
+                    {showOperatorTools ? 'Start With Vaults' : 'Choose Strategy And Deposit'}
                   </Button>
                 </Link>
-                <a
-                  href="https://docs.ranger.finance/vault-owners/overview"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <Button
-                    variant="outline"
-                    className="border-white/10 bg-white/[0.03] text-slate-100 hover:bg-white/[0.08]"
+                {showOperatorTools ? (
+                  <a
+                    href="https://docs.ranger.finance/vault-owners/overview"
+                    target="_blank"
+                    rel="noreferrer"
                   >
-                    Ranger Docs
-                    <ExternalLink className="ml-2 h-4 w-4" />
-                  </Button>
-                </a>
+                    <Button
+                      variant="outline"
+                      className="border-white/10 bg-white/[0.03] text-slate-100 hover:bg-white/[0.08]"
+                    >
+                      Ranger Docs
+                      <ExternalLink className="ml-2 h-4 w-4" />
+                    </Button>
+                  </a>
+                ) : (
+                  <Link href="/portfolio">
+                    <Button
+                      variant="outline"
+                      className="border-white/10 bg-white/[0.03] text-slate-100 hover:bg-white/[0.08]"
+                    >
+                      View Portfolio
+                    </Button>
+                  </Link>
+                )}
               </div>
 
               <CompactGrid columns={3} gap="sm">
-                {benefits.map((benefit) => (
+                {activeBenefits.map((benefit) => (
                   <CompactCard
                     key={benefit.title}
                     variant="glass"
@@ -279,10 +327,12 @@ export function VaultsPageContent({
             <CompactCard variant="glass" padding="lg" className="border border-white/10 bg-white/[0.04]">
               <div className="flex items-center gap-2 text-white">
                 <ArrowRight className="h-5 w-5 text-cyan-300" />
-                <h2 className="text-xl font-bold">How Users Experience It</h2>
+                <h2 className="text-xl font-bold">
+                  {showOperatorTools ? 'How Users Experience It' : 'Core Product Loop'}
+                </h2>
               </div>
               <div className="mt-5 space-y-3">
-                {userFlow.map((step, index) => (
+                {activeUserFlow.map((step, index) => (
                   <div
                     key={step}
                     className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"
@@ -299,24 +349,46 @@ export function VaultsPageContent({
             <CompactCard variant="glass" padding="lg" className="border border-white/10 bg-white/[0.04]">
               <div className="flex items-center gap-2 text-white">
                 <AlertTriangle className="h-5 w-5 text-amber-300" />
-                <h2 className="text-xl font-bold">What Users Should Know</h2>
+                <h2 className="text-xl font-bold">
+                  {showOperatorTools ? 'What Users Should Know' : 'What This Product Optimizes For'}
+                </h2>
               </div>
               <div className="mt-5 space-y-3">
-                {rangerMainTrackRules.slice(0, 3).map((rule) => (
-                  <div
-                    key={rule.id}
-                    className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-200"
-                  >
-                    {rule.summary}
-                  </div>
-                ))}
-                <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/[0.05] px-4 py-3 text-sm text-slate-200">
-                  Regular users should live on this page. The build and operational controls stay in
-                  <Link href="/ranger" className="ml-1 text-cyan-200 underline underline-offset-4">
-                    operator mode
-                  </Link>
-                  .
-                </div>
+                {showOperatorTools ? (
+                  <>
+                    {rangerMainTrackRules.slice(0, 3).map((rule) => (
+                      <div
+                        key={rule.id}
+                        className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-200"
+                      >
+                        {rule.summary}
+                      </div>
+                    ))}
+                    <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/[0.05] px-4 py-3 text-sm text-slate-200">
+                      Regular users should live on this page. The build and operational controls stay in
+                      <Link href="/ranger" className="ml-1 text-cyan-200 underline underline-offset-4">
+                        operator mode
+                      </Link>
+                      .
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-200">
+                      Funding, strategy selection, and utility should feel like one connected workflow.
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-200">
+                      User-facing vault surfaces should stay simple; operator tooling and strategy setup remain separate.
+                    </div>
+                    <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/[0.05] px-4 py-3 text-sm text-slate-200">
+                      Looking for strategy operations, allocation controls, or Ranger evidence?
+                      <Link href="/ranger" className="ml-1 text-cyan-200 underline underline-offset-4">
+                        Open operator mode
+                      </Link>
+                      .
+                    </div>
+                  </>
+                )}
               </div>
             </CompactCard>
           </CompactGrid>

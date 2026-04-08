@@ -1,17 +1,25 @@
 export const VAULTS_ROUTE = '/vaults';
 export const RANGER_ROUTE = '/ranger';
 export const YIELD_STRATEGIES_ROUTE = '/yield-strategies';
+export const VAULT_EXECUTION_ROUTE = YIELD_STRATEGIES_ROUTE;
 
 export const YIELD_ENTRY_PARAM = 'entry';
 export const YIELD_ENTRY_VAULTS = 'vaults';
 
 export type YieldStrategiesTab = 'overview' | 'strategies' | 'allocation';
 
+export function buildVaultExecutionHref(
+  tab: YieldStrategiesTab = 'strategies',
+  entry: string = YIELD_ENTRY_VAULTS
+): string {
+  return `${VAULT_EXECUTION_ROUTE}?tab=${tab}&${YIELD_ENTRY_PARAM}=${entry}`;
+}
+
 export function buildYieldStrategiesHref(
   tab: YieldStrategiesTab = 'strategies',
   entry: string = YIELD_ENTRY_VAULTS
 ): string {
-  return `${YIELD_STRATEGIES_ROUTE}?tab=${tab}&${YIELD_ENTRY_PARAM}=${entry}`;
+  return buildVaultExecutionHref(tab, entry);
 }
 
 export function hasYieldExecutionIntent(

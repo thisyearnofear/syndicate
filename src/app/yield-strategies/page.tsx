@@ -27,6 +27,7 @@ import { CivicVerificationGate } from '@/components/civic/CivicVerificationGate'
 import { getRequiredKycTier, getComplianceRationale } from '@/utils/kycTiers';
 import { yieldToTicketsService } from '@/services/yieldToTicketsService';
 import type { VaultProtocol } from '@/services/vaults';
+import type { SupportedYieldStrategyId } from '@/config/yieldStrategies';
 import {
   VAULTS_ROUTE,
   hasYieldExecutionIntent,
@@ -45,7 +46,7 @@ function YieldStrategiesContent() {
   const hasExecutionIntent = hasYieldExecutionIntent(searchParams);
   
   const [activeTab, setActiveTab] = useState<'overview' | 'strategies' | 'allocation'>('strategies');
-  const [selectedStrategy, setSelectedStrategy] = useState<VaultProtocol | 'uniswap' | 'octant' | 'pooltogether' | null>(null);
+  const [selectedStrategy, setSelectedStrategy] = useState<SupportedYieldStrategyId | null>(null);
   const [depositAmount, setDepositAmount] = useState<number>(0);
   const [yieldToTickets, setYieldToTickets] = useState(85);
   const [yieldToCauses, setYieldToCauses] = useState(15);
@@ -158,20 +159,20 @@ function YieldStrategiesContent() {
         <CompactSection spacing="lg">
           {/* Header */}
           <div className="mb-8">
-            <Link href="/">
+            <Link href={VAULTS_ROUTE}>
               <Button 
                 variant="ghost" 
                 className="mb-4 text-gray-400 hover:text-white"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Home
+                Back to Vaults
               </Button>
             </Link>
             
             <div className="text-center mb-8">
               <div className="inline-flex items-center gap-2 bg-gradient-to-r from-green-500/20 to-teal-500/20 px-4 py-2 rounded-full border border-green-500/30 mb-4">
                 <Zap className="w-4 h-4 text-green-400" />
-                <span className="text-sm font-semibold text-green-300">YIELD STRATEGIES</span>
+                <span className="text-sm font-semibold text-green-300">ALLOCATION FLOW</span>
               </div>
 
               <div className="mb-4">
@@ -180,20 +181,20 @@ function YieldStrategiesContent() {
                     variant="outline"
                     className="border-emerald-500/40 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20"
                   >
-                    Vault Strategy Build
+                    Back To Vaults
                     <ExternalLink className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
               </div>
               
               <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-blue-400 via-purple-500 to-pink-400 bg-clip-text text-transparent mb-4">
-                Capital Preservation + Dual Impact
+                Choose Strategy, Allocation, And Deposit
               </h1>
               
               <p className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-                Leverage yield-bearing strategies while simultaneously supporting public goods and 
-                amplifying your lottery participation. Your capital is preserved while generating 
-                dual benefits: consistent cause funding and potential lottery wins.
+                This is the execution step after vault discovery. Compare the available strategies,
+                set how yield should be allocated, and complete the deposit flow without leaving
+                the product path.
               </p>
               
               {/* Wallet Connection Status */}
@@ -320,7 +321,7 @@ function YieldStrategiesContent() {
                                 <div className="glass-premium p-4 rounded-lg border border-white/10">
                                   <p className="text-sm text-gray-400 mb-1">Current APY</p>
                                   <p className="font-bold text-green-400">
-                                    {selectedStrategy === 'drift' ? '~22.5%' : 
+                                     {selectedStrategy === 'drift' ? '~22.5%' : 
                                      selectedStrategy === 'morpho' ? '~6.7%' :
                                      selectedStrategy === 'pooltogether' ? '~3.5%' :
                                      selectedStrategy === 'aave' ? '~4.5%' :

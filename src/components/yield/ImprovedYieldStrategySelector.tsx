@@ -5,7 +5,11 @@ import { YieldAllocationControl } from './YieldAllocationControl';
 import { octantVaultService, type OctantVaultInfo } from '@/services/octantVaultService';
 import { vaultManager, type VaultInfo } from '@/services/vaults';
 import { TrendingUp } from 'lucide-react';
-import { YIELD_STRATEGIES, type YieldStrategyConfig } from '@/config/yieldStrategies';
+import {
+  YIELD_STRATEGIES,
+  type YieldStrategyConfig,
+  type SupportedYieldStrategyId,
+} from '@/config/yieldStrategies';
 
 /**
  * UNIFIED YIELD STRATEGY SELECTOR
@@ -18,8 +22,8 @@ import { YIELD_STRATEGIES, type YieldStrategyConfig } from '@/config/yieldStrate
  */
 
 interface ImprovedYieldStrategySelectorProps {
-  selectedStrategy: SyndicateInfo['vaultStrategy'] | null;
-  onStrategySelect: (strategy: SyndicateInfo['vaultStrategy'] | undefined) => void;
+  selectedStrategy: SupportedYieldStrategyId | null;
+  onStrategySelect: (strategy: SupportedYieldStrategyId | undefined) => void;
   ticketsAllocation?: number;
   causesAllocation?: number;
   onAllocationChange?: (tickets: number, causes: number) => void;

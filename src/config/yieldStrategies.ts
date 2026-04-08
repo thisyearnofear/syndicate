@@ -1,15 +1,21 @@
 /**
  * YIELD STRATEGIES CONFIGURATION
- * 
+ *
  * Core Principles Applied:
  * - DRY: Single source of truth for yield strategy definitions
  * - CONSOLIDATION: Extracted from YieldStrategySelector and ImprovedYieldStrategySelector
  */
 
-import type { SyndicateInfo } from '@/domains/lottery/types';
+export type SupportedYieldStrategyId =
+  | 'aave'
+  | 'drift'
+  | 'morpho'
+  | 'pooltogether'
+  | 'octant'
+  | 'uniswap';
 
 export interface YieldStrategyConfig {
-  id: SyndicateInfo['vaultStrategy'];
+  id: SupportedYieldStrategyId;
   name: string;
   description: string;
   icon: string;
@@ -60,16 +66,8 @@ export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
     risk: 'Low',
     isOctant: true,
   },
-  {
-    id: 'uniswap',
-    name: 'Uniswap V3 LP',
-    description: 'Concentrated liquidity positions earning trading fees. ~8.5% APY from USDC/ETH pool.',
-    icon: '🦄',
-    color: 'bg-gradient-to-br from-pink-500 to-rose-400',
-    risk: 'Medium',
-  },
 ];
 
-export function getStrategyById(id: SyndicateInfo['vaultStrategy']): YieldStrategyConfig | undefined {
+export function getStrategyById(id: SupportedYieldStrategyId): YieldStrategyConfig | undefined {
   return YIELD_STRATEGIES.find(s => s.id === id);
 }

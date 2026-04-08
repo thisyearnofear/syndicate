@@ -11,11 +11,11 @@
 
 import React from 'react';
 import { ImprovedYieldStrategySelector } from './ImprovedYieldStrategySelector';
-import type { SyndicateInfo } from '@/domains/lottery/types';
+import type { SupportedYieldStrategyId } from '@/config/yieldStrategies';
 
 interface YieldStrategySelectorProps {
-  selectedStrategy: SyndicateInfo['vaultStrategy'] | null;
-  onStrategySelect: (strategy: SyndicateInfo['vaultStrategy'] | undefined) => void;
+  selectedStrategy: SupportedYieldStrategyId | null;
+  onStrategySelect: (strategy: SupportedYieldStrategyId | undefined) => void;
   className?: string;
   userAddress?: string;
 }

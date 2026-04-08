@@ -360,6 +360,9 @@ export class UnifiedBridgeManager {
         if (params.sourceChain === 'solana' && route.protocol === 'base-solana-bridge') {
             score -= 30; // Penalize manual fallback - only use as last resort
         }
+        if (params.sourceChain === 'ethereum' && route.protocol === 'lifi') {
+            score += 8; // Prefer route aggregation for EVM users when available
+        }
         if (params.sourceChain === 'near' && route.protocol === 'near-intents') {
             score += 10; // Prefer intents over Chain Signatures for NEAR
         }
@@ -646,6 +649,11 @@ export class UnifiedBridgeManager {
                     this.registerProtocol(ccipProtocol);
                     return ccipProtocol;
                 }
+                case 'lifi': {
+                    const { lifiProtocol } = await import('./protocols/lifi');
+                    this.registerProtocol(lifiProtocol);
+                    return lifiProtocol;
+                }
                 case 'wormhole': {
                     // Wormhole NTT not yet implemented
                     console.warn('[BridgeManager] Wormhole NTT protocol not available');
@@ -915,6 +923,7 @@ export class UnifiedBridgeManager {
         await Promise.all([
             'cctp',
             'ccip',
+            'lifi',
             'base-solana-bridge',
             'debridge',
             'near',

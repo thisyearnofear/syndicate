@@ -21,7 +21,7 @@ import {
 export interface PendingBridgeStatus {
     hasPending: boolean;
     signature?: string;
-    protocol?: 'cctp' | 'wormhole';
+    protocol?: string;
     amount?: string;
     timeRemaining?: string;
     explorerLink?: string;
