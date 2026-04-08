@@ -2,6 +2,8 @@
 
 Syndicate enables users and institutions to purchase Megapot lottery tickets from any blockchain through trustless cross-chain bridges. The platform supports Bitcoin (via Stacks), Solana, NEAR, StarkNet, and EVM chains with native USDC bridging, institutional-grade KYC/AML compliance, and privacy-preserving commitments.
 
+For the Ranger Build-A-Bear main track, this repo is now being adapted around a different premise: **a real Ranger-operated Solana vault strategy first, with Syndicate as the custom frontend and downstream distribution layer**. See [docs/RANGER_HACKATHON_STRATEGY.md](./docs/RANGER_HACKATHON_STRATEGY.md) and [docs/RANGER_SUBMISSION_CHECKLIST.md](./docs/RANGER_SUBMISSION_CHECKLIST.md).
+
 ## Quick Links
 
 | For | See |

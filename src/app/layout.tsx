@@ -67,7 +67,7 @@ export default function RootLayout({
                       <div className="space-y-2">
                         <a href="/" className="block text-sm text-gray-500 hover:text-white transition-colors">Home</a>
                         <a href="/syndicates" className="block text-sm text-gray-500 hover:text-white transition-colors">Syndicates</a>
-                        <a href="/yield-strategies" className="block text-sm text-gray-500 hover:text-white transition-colors">Yield Strategies</a>
+                        <a href="/vaults" className="block text-sm text-gray-500 hover:text-white transition-colors">Vaults</a>
                         <a href="/bridge" className="block text-sm text-gray-500 hover:text-white transition-colors">Bridge</a>
                       </div>
                     </div>

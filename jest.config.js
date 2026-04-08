@@ -31,6 +31,11 @@ const customJestConfig = {
     '<rootDir>/lib/openzeppelin-contracts/',
     '<rootDir>/tests/mocks/',
   ],
+
+  modulePathIgnorePatterns: [
+    '<rootDir>/lib/forge-std/',
+    '<rootDir>/lib/openzeppelin-contracts/lib/forge-std/',
+  ],
   
   // Transform files with ts-jest
   transform: {

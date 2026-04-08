@@ -613,7 +613,7 @@ export function AutoPurchaseModal({
                     className="w-full text-xs bg-indigo-500/20 hover:bg-indigo-500/30 border-indigo-500/30 text-indigo-100 transition-colors"
                     onClick={() => {
                       onClose();
-                      window.location.href = '/yield-strategies';
+                      window.location.href = '/vaults';
                     }}
                   >
                     Explore Yield Strategies

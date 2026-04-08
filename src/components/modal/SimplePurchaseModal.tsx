@@ -249,13 +249,13 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
     setBaseAddressError('');
 
     if (selectedProtocol === 'pooltogether') {
-      if (walletType !== 'evm') { handleClose(); window.location.href = '/yield-strategies?protocol=pooltogether'; return; }
+      if (walletType !== 'evm') { handleClose(); window.location.href = '/vaults'; return; }
       await ptDeposit.deposit({ amountUsdc: ptDepositAmount, userAddress: address as `0x${string}` });
       return;
     }
 
     if (selectedProtocol === 'drift') {
-      if (walletType !== 'solana') { handleClose(); window.location.href = '/yield-strategies?protocol=drift'; return; }
+      if (walletType !== 'solana') { handleClose(); window.location.href = '/vaults'; return; }
       await driftDeposit.deposit({ amountUsdc: driftDepositAmount, userAddress: address });
       return;
     }
@@ -531,7 +531,7 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
                       <p className="text-xs text-indigo-200 leading-relaxed">Instead of spending capital, deposit into the <span className="text-indigo-300 font-semibold">Drift Lossless Vault</span>. You keep your principal and get auto-routed tickets from ~22.5% APY yield.</p>
                     </div>
                   </div>
-                  <Button variant="secondary" size="sm" className="w-full text-xs bg-indigo-500/20 hover:bg-indigo-500/30 border-indigo-500/30 text-indigo-100 transition-colors" onClick={() => { handleClose(); window.location.href = '/yield-strategies'; }}>Try Yield-to-Tickets</Button>
+                  <Button variant="secondary" size="sm" className="w-full text-xs bg-indigo-500/20 hover:bg-indigo-500/30 border-indigo-500/30 text-indigo-100 transition-colors" onClick={() => { handleClose(); window.location.href = '/vaults'; }}>Try Yield-to-Tickets</Button>
                 </div>
               )}
 

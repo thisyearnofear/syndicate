@@ -14,7 +14,7 @@ export function YieldStrategyCTA({
   className = '', 
   variant = 'default', 
   asLink = false,
-  href = '/yield-strategies'
+  href = '/vaults'
 }: YieldStrategyCTAProps) {
   const button = (
     <Button 
@@ -22,7 +22,7 @@ export function YieldStrategyCTA({
       className={className}
     >
       <TrendingUp className="w-4 h-4 mr-2" />
-      Yield Strategy
+      Vault Strategy
     </Button>
   );
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
 import { 
   TrendingUp, 
@@ -27,15 +27,22 @@ import { CivicVerificationGate } from '@/components/civic/CivicVerificationGate'
 import { getRequiredKycTier, getComplianceRationale } from '@/utils/kycTiers';
 import { yieldToTicketsService } from '@/services/yieldToTicketsService';
 import type { VaultProtocol } from '@/services/vaults';
+import {
+  VAULTS_ROUTE,
+  hasYieldExecutionIntent,
+} from '@/constants/vaultRouting';
 import Link from "next/link";
 
 const ALLOCATION_STORAGE_KEY = 'vault_yield_allocation';
 
 function YieldStrategiesContent() {
+  const router = useRouter();
   const { address } = useWalletConnection();
   const { isDepositing, status, txHash, error: depositError, deposit, reset } = useVaultDeposit();
   const searchParams = useSearchParams();
   const protocolParam = searchParams?.get('protocol');
+  const tabParam = searchParams?.get('tab');
+  const hasExecutionIntent = hasYieldExecutionIntent(searchParams);
   
   const [activeTab, setActiveTab] = useState<'overview' | 'strategies' | 'allocation'>('strategies');
   const [selectedStrategy, setSelectedStrategy] = useState<VaultProtocol | 'uniswap' | 'octant' | 'pooltogether' | null>(null);
@@ -79,8 +86,19 @@ function YieldStrategiesContent() {
     }
   }, [address, selectedStrategy]);
 
-  // Pre-select strategy based on URL parameter
+  // Redirect first-time marketing traffic to the canonical /vaults experience.
   useEffect(() => {
+    if (!hasExecutionIntent) {
+      router.replace(VAULTS_ROUTE);
+    }
+  }, [hasExecutionIntent, router]);
+
+  // Pre-select tab and strategy based on URL parameters
+  useEffect(() => {
+    if (tabParam === 'overview' || tabParam === 'strategies' || tabParam === 'allocation') {
+      setActiveTab(tabParam);
+    }
+
     if (protocolParam === 'pooltogether') {
       setSelectedStrategy('pooltogether');
       setActiveTab('strategies');
@@ -88,7 +106,7 @@ function YieldStrategiesContent() {
       setSelectedStrategy('drift');
       setActiveTab('strategies');
     }
-  }, [protocolParam]);
+  }, [protocolParam, tabParam]);
 
   // Handle deposit - now supports all vault protocols
   const handleDeposit = async () => {
@@ -123,6 +141,17 @@ function YieldStrategiesContent() {
     }
   };
 
+  if (!hasExecutionIntent) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-white"></div>
+          <p className="text-sm text-gray-300">Redirecting to Vaults...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
       <CompactContainer maxWidth="2xl">
@@ -143,6 +172,18 @@ function YieldStrategiesContent() {
               <div className="inline-flex items-center gap-2 bg-gradient-to-r from-green-500/20 to-teal-500/20 px-4 py-2 rounded-full border border-green-500/30 mb-4">
                 <Zap className="w-4 h-4 text-green-400" />
                 <span className="text-sm font-semibold text-green-300">YIELD STRATEGIES</span>
+              </div>
+
+              <div className="mb-4">
+                <Link href={VAULTS_ROUTE}>
+                  <Button
+                    variant="outline"
+                    className="border-emerald-500/40 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20"
+                  >
+                    Vault Strategy Build
+                    <ExternalLink className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
               </div>
               
               <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-blue-400 via-purple-500 to-pink-400 bg-clip-text text-transparent mb-4">
@@ -316,8 +357,8 @@ function YieldStrategiesContent() {
                                     >
                                       View TX <ExternalLink className="w-3 h-3 inline ml-1" />
                                     </a>
-                                    <Link 
-                                      href="/yield-strategies"
+                                    <Link
+                                      href="/vaults"
                                       className="flex-1 text-center text-xs text-blue-400 hover:text-blue-300 underline py-2 border border-blue-500/30 rounded-lg"
                                     >
                                       View Dashboard →
