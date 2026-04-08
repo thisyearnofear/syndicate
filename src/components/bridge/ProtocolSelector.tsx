@@ -24,6 +24,7 @@ export interface ProtocolSelectorProps {
   sourceChain: ChainIdentifier;
   destinationChain: ChainIdentifier;
   amount: string;
+  sourceChainId?: number;
   onSelect: (protocol: ProtocolOption) => void;
   onEstimateError?: (error: string) => void;
 }
@@ -32,6 +33,7 @@ export function ProtocolSelector({
   sourceChain,
   destinationChain,
   amount,
+  sourceChainId,
   onSelect,
   onEstimateError,
 }: ProtocolSelectorProps) {
@@ -54,6 +56,7 @@ export function ProtocolSelector({
           destinationAddress: "0x0000000000000000000000000000000000000000",
           token: USDC_ADDRESSES[sourceChain] || "",
           amount,
+          options: sourceChainId ? { sourceChainId } : undefined,
         });
 
         // Map to our protocol options format
@@ -80,6 +83,12 @@ export function ProtocolSelector({
                 description =
                   "Reliable cross-chain messaging with Chainlink infrastructure.";
                 icon = "🔗";
+                break;
+              case "lifi":
+                name = "LI.FI";
+                description =
+                  "Route-aggregated bridge execution with live quote and status tracking.";
+                icon = "🧭";
                 break;
               case "near":
                 name = "NEAR Chain Sigs";
@@ -131,7 +140,7 @@ export function ProtocolSelector({
     if (amount && parseFloat(amount) > 0) {
       fetchProtocolEstimates();
     }
-  }, [sourceChain, destinationChain, amount, onEstimateError]);
+  }, [sourceChain, destinationChain, amount, sourceChainId, onEstimateError]);
 
   if (loading) {
     return (

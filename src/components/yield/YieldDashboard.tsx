@@ -9,7 +9,7 @@ import { useUserVaults } from '@/hooks/useUserVaults';
 import { yieldToTicketsService } from '@/services/yieldToTicketsService';
 import { Button } from '@/shared/components/ui/Button';
 import { vaultManager } from '@/services/vaults';
-import { buildYieldStrategiesHref } from '@/constants/vaultRouting';
+import { buildVaultExecutionHref } from '@/constants/vaultRouting';
 import Link from 'next/link';
 
 interface YieldDashboardProps {
@@ -176,7 +176,7 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
             <Link href="/vaults">
               <Button variant="default" size="sm">
                 <Zap className="w-4 h-4 mr-2" />
-                Browse Yield Strategies
+                Review Vault Options
               </Button>
             </Link>
           </div>
@@ -346,9 +346,9 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
               <p className="text-gray-400 mb-6">
                 Automatically convert your yield into lottery tickets and cause donations.
               </p>
-              <Link href={buildYieldStrategiesHref('allocation')}>
+              <Link href={buildVaultExecutionHref('allocation')}>
                 <Button variant="default" size="sm">
-                  Configure Auto-Yield
+                  Adjust Allocation
                 </Button>
               </Link>
             </div>

@@ -18,7 +18,7 @@ import { ComingSoonBanner } from '@/components/ui/ComingSoonBanner';
 import { ImprovedYieldStrategySelector } from '@/components/yield/ImprovedYieldStrategySelector';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { useToast } from '@/shared/components/ui/Toast';
-import type { SyndicateInfo } from "@/domains/lottery/types";
+import type { SupportedYieldStrategyId } from '@/config/yieldStrategies';
 
 type GovernanceModel = 'leader' | 'dao' | 'hybrid';
 type PoolType = 'safe' | 'splits' | 'pooltogether';
@@ -31,7 +31,7 @@ type SyndicateFormData = {
   lotteryId: string;
   governanceModel: GovernanceModel;
   poolType: PoolType;
-  vaultStrategy: SyndicateInfo['vaultStrategy'] | null;
+  vaultStrategy: SupportedYieldStrategyId | null;
   yieldToTicketsPercentage: number;
   yieldToCausesPercentage: number;
 };
@@ -482,7 +482,7 @@ export default function CreateSyndicatePage() {
             <CompactStack spacing="md">
               <ImprovedYieldStrategySelector 
                 selectedStrategy={formData.vaultStrategy} 
-                onStrategySelect={(strategy) => handleInputChange('vaultStrategy', strategy)}
+                onStrategySelect={(strategy) => handleInputChange('vaultStrategy', strategy ?? null)}
                 ticketsAllocation={formData.yieldToTicketsPercentage}
                 causesAllocation={formData.yieldToCausesPercentage}
                 onAllocationChange={handleAllocationChange}

@@ -16,19 +16,21 @@ import {
   Trophy, 
   TrendingUp, 
   Users,
-  ArrowUpRight,
   ArrowRight,
   Plus,
   ExternalLink,
-  Coins,
   Zap,
   RefreshCw,
-  ChartPie
+  ChartPie,
+  Ticket,
+  Clock
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
-import { SyndicateCard } from '@/components/syndicate/SyndicateCard';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { useUserVaults } from '@/hooks/useUserVaults';
+import { useBridgeActivity } from '@/hooks/useBridgeActivity';
+import { useTicketHistory, type TicketPurchaseHistory } from '@/hooks/useTicketHistory';
+import type { BridgeActivityRecord } from '@/utils/bridgeStateManager';
 import Link from 'next/link';
 
 interface SyndicatePosition {
@@ -70,7 +72,7 @@ export default function PortfolioPage() {
   const [portfolio, setPortfolio] = useState<PortfolioData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'syndicates' | 'vaults'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'syndicates' | 'vaults' | 'activity'>('overview');
 
   // Fetch vault positions using the new hook
   const { 
@@ -80,6 +82,13 @@ export default function PortfolioPage() {
     isLoading: vaultsLoading,
     refresh: refreshVaults 
   } = useUserVaults(address ?? undefined);
+  const {
+    activities: bridgeActivities,
+    pendingBridge,
+    isLoading: bridgeLoading,
+    refreshActivity,
+  } = useBridgeActivity();
+  const { purchases: ticketHistory, isLoading: ticketsLoading, refreshHistory } = useTicketHistory();
 
   const fetchPortfolio = useCallback(async (showRefresh = false) => {
     if (!address) {
@@ -108,14 +117,16 @@ export default function PortfolioPage() {
     fetchPortfolio();
   }, [fetchPortfolio]);
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await Promise.all([
       fetchPortfolio(true),
-      refreshVaults()
+      refreshVaults(),
+      refreshActivity(),
+      refreshHistory(),
     ]);
     setRefreshing(false);
-  };
+  }, [fetchPortfolio, refreshVaults, refreshActivity, refreshHistory]);
 
   const formatCurrency = (amount: number) => {
     return amount.toLocaleString(undefined, { 
@@ -167,7 +178,7 @@ export default function PortfolioPage() {
   }
 
   // Loading
-  if (loading || vaultsLoading) {
+  if (loading || vaultsLoading || ticketsLoading || bridgeLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
         <div className="max-w-6xl mx-auto pt-8">
@@ -185,7 +196,51 @@ export default function PortfolioPage() {
     );
   }
 
-  const hasAnything = syndicates.length > 0 || vaultPositions.length > 0;
+  const hasAnything =
+    syndicates.length > 0 ||
+    vaultPositions.length > 0 ||
+    ticketHistory.length > 0 ||
+    bridgeActivities.length > 0;
+  const totalTicketCount = ticketHistory.reduce((sum, purchase) => sum + purchase.ticketCount, 0);
+  const recentBridgeActivity = bridgeActivities.slice(0, 5);
+  const totalActivityCount = ticketHistory.length + bridgeActivities.length;
+  const pendingFundingActivity = recentBridgeActivity.find(
+    (activity) => activity.status !== 'complete' && activity.status !== 'failed'
+  );
+  const recentTicketPurchases = [...ticketHistory]
+    .sort((a, b) => {
+      const ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      return tb - ta;
+    })
+    .slice(0, 5);
+  const recommendedAction = bridgeActivities.length === 0 && vaultPositions.length === 0
+    ? {
+        title: 'Fund from another chain',
+        description: 'Start the product loop by bridging USDC into Base before you allocate it.',
+        cta: 'Open Bridge',
+        href: '/bridge',
+      }
+    : vaultPositions.length === 0
+    ? {
+        title: 'Allocate into a vault',
+        description: 'Move from funded capital into an active strategy so the portfolio can start earning.',
+        cta: 'Explore Vaults',
+        href: '/vaults',
+      }
+    : syndicates.length === 0
+      ? {
+          title: 'Join a syndicate',
+          description: 'Put existing capital and yield to work with a shared pool and cause alignment.',
+          cta: 'Browse Syndicates',
+          href: '/discover',
+        }
+      : {
+          title: 'Track ticket utility',
+          description: 'Review recent ticket purchases and make sure your yield is flowing where you want it.',
+          cta: 'View Activity',
+          href: '/portfolio',
+        };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
@@ -207,7 +262,7 @@ export default function PortfolioPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button 
+              <Button
               onClick={handleRefresh} 
               variant="outline" 
               disabled={refreshing}
@@ -248,6 +303,14 @@ export default function PortfolioPage() {
           >
             <Zap className="w-4 h-4 mr-2" />
             Vaults ({vaultPositions.length})
+          </Button>
+          <Button
+            variant={activeTab === 'activity' ? 'default' : 'outline'}
+            className={`border-amber-500/50 ${activeTab === 'activity' ? 'bg-amber-500/20' : 'text-amber-300 hover:bg-amber-500/10'}`}
+            onClick={() => setActiveTab('activity')}
+          >
+            <Ticket className="w-4 h-4 mr-2" />
+            Activity ({totalActivityCount})
           </Button>
         </div>
 
@@ -304,9 +367,13 @@ export default function PortfolioPage() {
                 <Wallet className="w-16 h-16 text-gray-500 mx-auto mb-4" />
                 <h2 className="text-xl font-bold text-white mb-2">No Positions Yet</h2>
                 <p className="text-gray-400 mb-6">
-                  Start by joining a syndicate or depositing into a yield vault!
+                  Start by funding the app, allocating into a vault, or joining a syndicate.
                 </p>
                 <div className="flex gap-4 justify-center">
+                  <Button onClick={() => router.push('/bridge')} variant="outline" className="border-blue-500/50 text-blue-300">
+                    <ArrowRight className="w-4 h-4 mr-2" />
+                    Bridge Funds
+                  </Button>
                   <Button onClick={() => router.push('/discover')}>
                     <Users className="w-4 h-4 mr-2" />
                     Browse Syndicates
@@ -324,7 +391,7 @@ export default function PortfolioPage() {
                 {/* Performance Summary */}
                 <div className="glass-premium rounded-2xl p-5 border border-white/20 mb-8">
                   <h2 className="text-xl font-bold text-white mb-4">Portfolio Breakdown</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     {/* Syndicates Summary */}
                     <div className="bg-white/5 rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-3">
@@ -368,32 +435,106 @@ export default function PortfolioPage() {
                         </div>
                       </div>
                     </div>
+
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <ArrowRight className="w-5 h-5 text-blue-400" />
+                        <h3 className="font-semibold text-white">Funding</h3>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400 text-sm">Routes</span>
+                          <span className="text-white font-medium">{bridgeActivities.length}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400 text-sm">Latest</span>
+                          <span className="text-blue-300 font-medium">
+                            {recentBridgeActivity[0]
+                              ? formatBridgeStatus(recentBridgeActivity[0].status)
+                              : 'No funding yet'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400 text-sm">Pending</span>
+                          <span className="text-white font-medium">
+                            {pendingFundingActivity || pendingBridge ? 'Yes' : 'No'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Ticket className="w-5 h-5 text-amber-400" />
+                        <h3 className="font-semibold text-white">Ticket Utility</h3>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400 text-sm">Purchases</span>
+                          <span className="text-white font-medium">{ticketHistory.length}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400 text-sm">Tickets</span>
+                          <span className="text-white font-medium">{totalTicketCount}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400 text-sm">Latest</span>
+                          <span className="text-amber-300 font-medium">
+                            {recentTicketPurchases[0]?.timestamp
+                              ? new Date(recentTicketPurchases[0].timestamp).toLocaleDateString()
+                              : 'No activity'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 {/* Quick Actions */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-8">
                   <div className="glass-premium rounded-xl p-4 border border-white/20">
-                    <h3 className="font-semibold text-white mb-2">Grow Your Portfolio</h3>
+                    <h3 className="font-semibold text-white mb-2">{recommendedAction.title}</h3>
                     <p className="text-gray-400 text-sm mb-4">
-                      Join more syndicates to diversify and increase impact
+                      {recommendedAction.description}
                     </p>
-                    <Button onClick={() => router.push('/discover')} className="w-full">
-                      <Users className="w-4 h-4 mr-2" />
-                      Browse Syndicates
+                    <Button onClick={() => router.push(recommendedAction.href)} className="w-full">
+                      <ArrowRight className="w-4 h-4 mr-2" />
+                      {recommendedAction.cta}
                     </Button>
                   </div>
                   <div className="glass-premium rounded-xl p-4 border border-white/20">
-                    <h3 className="font-semibold text-white mb-2">Earn Passive Yield</h3>
+                    <h3 className="font-semibold text-white mb-2">Recent Funding Activity</h3>
                     <p className="text-gray-400 text-sm mb-4">
-                      Deposit into vaults to earn yield while supporting causes
+                      Keep cross-chain capital movement visible next to allocation and ticket utility.
                     </p>
-                    <Link href="/vaults">
-                      <Button variant="outline" className="w-full border-green-500/50 text-green-300">
-                        <Zap className="w-4 h-4 mr-2" />
-                        Explore Vaults
-                      </Button>
-                    </Link>
+                    {recentBridgeActivity.length > 0 ? (
+                      <div className="space-y-2">
+                        {recentBridgeActivity.slice(0, 3).map((activity) => (
+                          <BridgeActivityRow key={activity.id} activity={activity} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-4 text-sm text-gray-400">
+                        No funding routes recorded yet.
+                      </div>
+                    )}
+                  </div>
+                  <div className="glass-premium rounded-xl p-4 border border-white/20">
+                    <h3 className="font-semibold text-white mb-2">Recent Ticket Activity</h3>
+                    <p className="text-gray-400 text-sm mb-4">
+                      Keep the utility loop visible from the same portfolio surface.
+                    </p>
+                    {recentTicketPurchases.length > 0 ? (
+                      <div className="space-y-2">
+                        {recentTicketPurchases.slice(0, 3).map((purchase) => (
+                          <TicketActivityRow key={purchase.id} purchase={purchase} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-4 text-sm text-gray-400">
+                        No ticket purchases recorded yet.
+                      </div>
+                    )}
                   </div>
                 </div>
               </>
@@ -610,7 +751,281 @@ export default function PortfolioPage() {
             </div>
           </div>
         )}
+
+        {activeTab === 'activity' && (
+          <>
+            {totalActivityCount === 0 ? (
+              <div className="glass-premium rounded-2xl p-8 border border-white/20 text-center">
+                <Ticket className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+                <h2 className="text-xl font-bold text-white mb-2">No Activity Yet</h2>
+                <p className="text-gray-400 mb-6">
+                  Funding, ticket utility, and other post-deposit activity will appear here once the loop starts.
+                </p>
+                <Button onClick={() => router.push('/bridge')}>
+                  <ArrowRight className="w-4 h-4 mr-2" />
+                  Start Funding
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-white">Recent Activity</h2>
+                  <span className="text-gray-400 text-sm">{totalActivityCount} event{totalActivityCount !== 1 ? 's' : ''}</span>
+                </div>
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-white">Funding</h3>
+                      <span className="text-gray-400 text-sm">{bridgeActivities.length} route{bridgeActivities.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    {recentBridgeActivity.length > 0 ? recentBridgeActivity.map((activity) => (
+                      <BridgeActivityCard key={activity.id} activity={activity} />
+                    )) : (
+                      <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-6 text-sm text-gray-400">
+                        No bridge activity recorded yet.
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-white">Tickets</h3>
+                      <span className="text-gray-400 text-sm">{ticketHistory.length} purchase{ticketHistory.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    {recentTicketPurchases.length > 0 ? recentTicketPurchases.map((purchase) => (
+                      <TicketActivityCard key={purchase.id} purchase={purchase} />
+                    )) : (
+                      <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-6 text-sm text-gray-400">
+                        No ticket purchases recorded yet.
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {ticketHistory.length > 0 ? (
+                  <Link href="/my-tickets">
+                    <Button variant="outline" className="border-amber-500/40 text-amber-200 hover:bg-amber-500/10">
+                      <Ticket className="w-4 h-4 mr-2" />
+                      Open Full Ticket History
+                    </Button>
+                  </Link>
+                ) : null}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
+}
+
+function TicketActivityRow({ purchase }: { purchase: TicketPurchaseHistory }) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-white">
+            {purchase.ticketCount} ticket{purchase.ticketCount !== 1 ? 's' : ''}
+          </p>
+          <p className="text-xs text-gray-400">
+            {purchase.timestamp ? new Date(purchase.timestamp).toLocaleString() : 'Timestamp unavailable'}
+          </p>
+        </div>
+        <span className="text-sm font-medium text-amber-300">${purchase.totalCost}</span>
+      </div>
+    </div>
+  );
+}
+
+function BridgeActivityRow({ activity }: { activity: BridgeActivityRecord }) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-white">
+            {getBridgeProtocolLabel(activity.protocol)} from {activity.sourceChain}
+          </p>
+          <p className="text-xs text-gray-400">
+            {formatCurrencyValue(activity.amount)} • {formatBridgeStatus(activity.status)}
+          </p>
+        </div>
+        <span className="text-xs font-medium text-blue-300">
+          {new Date(activity.updatedAt).toLocaleDateString()}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function TicketActivityCard({ purchase }: { purchase: TicketPurchaseHistory }) {
+  return (
+    <div className="glass-premium rounded-xl p-4 border border-white/20">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white">
+            <Ticket className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-white">
+              {purchase.ticketCount} ticket{purchase.ticketCount !== 1 ? 's' : ''} purchased
+            </h3>
+            <p className="text-sm text-gray-400">
+              {purchase.timestamp ? new Date(purchase.timestamp).toLocaleString() : 'Timestamp unavailable'}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-400">
+              {purchase.jackpotRoundId ? (
+                <span className="rounded-full bg-white/10 px-2 py-1 text-gray-300">
+                  Round {purchase.jackpotRoundId}
+                </span>
+              ) : null}
+              {purchase.status ? (
+                <span className="rounded-full bg-amber-500/20 px-2 py-1 text-amber-200">
+                  {purchase.status}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-sm text-gray-400">Cost</p>
+          <p className="font-bold text-amber-300">${purchase.totalCost}</p>
+        </div>
+      </div>
+
+      {purchase.txHash ? (
+        <div className="mt-4 pt-4 border-t border-white/10">
+          <a
+            href={`https://basescan.org/tx/${purchase.txHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-sm text-blue-300 hover:text-blue-200"
+          >
+            <Clock className="w-4 h-4" />
+            View transaction
+            <ExternalLink className="w-4 h-4" />
+          </a>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function BridgeActivityCard({ activity }: { activity: BridgeActivityRecord }) {
+  const sourceExplorerUrl = getExplorerUrl(activity.sourceChain, activity.sourceTxHash);
+  const destinationExplorerUrl = getExplorerUrl(activity.destinationChain, activity.destinationTxHash);
+
+  return (
+    <div className="glass-premium rounded-xl p-4 border border-white/20">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white">
+            <ArrowRight className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-white">
+              {getBridgeProtocolLabel(activity.protocol)} funding route
+            </h3>
+            <p className="text-sm text-gray-400">
+              {activity.sourceChain} to {activity.destinationChain} • {formatBridgeStatus(activity.status)}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-400">
+              <span className="rounded-full bg-white/10 px-2 py-1 text-gray-300">
+                {formatCurrencyValue(activity.amount)}
+              </span>
+              <span className="rounded-full bg-white/10 px-2 py-1 text-gray-300">
+                {new Date(activity.updatedAt).toLocaleString()}
+              </span>
+              {activity.error ? (
+                <span className="rounded-full bg-red-500/15 px-2 py-1 text-red-300">
+                  {activity.error}
+                </span>
+              ) : null}
+              {activity.redirectUrl ? (
+                <a
+                  href={activity.redirectUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full bg-blue-500/15 px-2 py-1 text-blue-300 hover:text-blue-200"
+                >
+                  Complete manually
+                </a>
+              ) : null}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-2 text-xs">
+          {sourceExplorerUrl ? (
+            <a
+              href={sourceExplorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-300 hover:text-blue-200"
+            >
+              Source Tx
+            </a>
+          ) : null}
+          {destinationExplorerUrl ? (
+            <a
+              href={destinationExplorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-green-300 hover:text-green-200"
+            >
+              Destination Tx
+            </a>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function formatBridgeStatus(status: string) {
+  return status.replace(/_/g, ' ');
+}
+
+function getBridgeProtocolLabel(protocol: string) {
+  switch (protocol) {
+    case 'cctp':
+      return 'Circle CCTP';
+    case 'wormhole':
+      return 'Wormhole';
+    case 'lifi':
+      return 'LI.FI';
+    case 'debridge':
+      return 'deBridge';
+    case 'near-intents':
+      return 'NEAR Intents';
+    case 'base-solana-bridge':
+      return 'Base Bridge';
+    default:
+      return protocol;
+  }
+}
+
+function formatCurrencyValue(amount: string) {
+  const parsed = Number(amount);
+  if (Number.isNaN(parsed)) return amount;
+  return parsed.toLocaleString(undefined, {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2,
+  });
+}
+
+function getExplorerUrl(chain: string, txHash?: string) {
+  if (!txHash) return null;
+
+  switch (chain) {
+    case 'solana':
+      return `https://explorer.solana.com/tx/${txHash}`;
+    case 'ethereum':
+      return `https://etherscan.io/tx/${txHash}`;
+    case 'base':
+      return `https://basescan.org/tx/${txHash}`;
+    case 'near':
+      return `https://nearblocks.io/txns/${txHash}`;
+    case 'starknet':
+      return `https://voyager.online/tx/${txHash}`;
+    default:
+      return null;
+  }
 }

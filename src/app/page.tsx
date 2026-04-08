@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, Suspense, lazy } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { useTicketInfo } from "@/hooks/useTicketInfo";
 import { useAutoPurchaseExecutor } from "@/hooks/useAutoPurchaseExecutor";
@@ -39,6 +40,7 @@ const WalletConnectionManager = lazy(() => import("@/components/wallet/WalletCon
 // =============================================================================
 
 export default function PremiumHome() {
+  const router = useRouter();
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [userIdentity, setUserIdentity] = useState<UserIdentity | null>(null);
@@ -82,6 +84,14 @@ export default function PremiumHome() {
       setShowPurchaseModal(true);
     }
   }, [isConnected]);
+
+  const handlePrimaryAction = useCallback(() => {
+    router.push("/vaults");
+  }, [router]);
+
+  const handleBridgeAction = useCallback(() => {
+    router.push("/bridge");
+  }, [router]);
 
   return (
     <div className="relative overflow-hidden">
@@ -129,27 +139,35 @@ export default function PremiumHome() {
               {/* Value Proposition */}
               <div className="text-center animate-fade-in-up space-y-3">
                 <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-white leading-tight">
-                  Win weekly prizes.
+                  Route funds once.
                   <br />
                   <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-                    Never lose your deposit.
+                    Keep earning while you play.
                   </span>
                 </h2>
                 <p className="text-sm md:text-base text-gray-400 max-w-lg mx-auto leading-relaxed">
-                  Deposit USDC, earn yield, and play the lottery for free — forever.
-                  Your principal stays 100% yours.
+                  Move USDC in from your current chain, allocate into a yield strategy,
+                  and direct upside toward tickets, causes, or compounding.
                 </p>
               </div>
 
               {/* Primary CTA */}
-              <div className="animate-scale-in">
+              <div className="animate-scale-in flex flex-col sm:flex-row gap-3">
                 <Button
                   variant="default"
                   size="lg"
-                  className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white shadow-2xl hover:shadow-yellow-500/30 border border-yellow-400/30 animate-pulse-glow text-lg px-8 py-4"
-                  onClick={handlePurchaseAction}
+                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-2xl hover:shadow-emerald-500/30 border border-emerald-400/30 text-lg px-8 py-4"
+                  onClick={handlePrimaryAction}
                 >
-                  ⚡ Get Your Tickets
+                  Start With Vaults
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="border-white/15 bg-white/5 text-white hover:bg-white/10 text-lg px-8 py-4"
+                  onClick={handleBridgeAction}
+                >
+                  Route Funds To Base
                 </Button>
               </div>
 
@@ -159,11 +177,13 @@ export default function PremiumHome() {
                 gap="sm"
                 className="text-xs text-gray-500 flex-wrap justify-center animate-fade-in-up"
               >
-                <span>⚡ Instant</span>
+                <span>🌉 Cross-chain entry</span>
                 <span>•</span>
                 <span>🔒 Non-custodial</span>
                 <span>•</span>
-                <span>🌊 Supports causes</span>
+                <span>📈 Yield allocation</span>
+                <span>•</span>
+                <span>🎟️ Ticket utility</span>
               </CompactFlex>
 
               {/* Jackpot — the visual money shot */}

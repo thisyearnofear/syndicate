@@ -13,7 +13,13 @@ import { Loader, CircleCheck, AlertCircle, ExternalLink } from 'lucide-react';
 import { bridgeManager } from '@/services/bridges';
 import type { BridgeResult } from '@/services/bridges/types';
 import { Button } from '@/shared/components/ui/Button';
-import { savePendingBridge, getSolanaExplorerLink } from '@/utils/bridgeStateManager';
+import {
+    createBridgeActivityId,
+    getSolanaExplorerLink,
+    savePendingBridge,
+    updateBridgeActivity,
+    upsertBridgeActivity,
+} from '@/utils/bridgeStateManager';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { getStatusMessage, getStatusDescription } from '@/utils/bridgeStatusMessages';
 
@@ -48,6 +54,7 @@ export function InlineBridgeFlow({
     const [txHash, setTxHash] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [events, setEvents] = useState<Array<{ status: string; info?: Record<string, unknown>; ts: number }>>([]);
+    const [bridgeActivityId] = useState(() => createBridgeActivityId());
 
     const startBridge = React.useCallback(async () => {
         setIsStarted(true);
@@ -63,6 +70,18 @@ export function InlineBridgeFlow({
             // Use selected protocol or default to CCTP
             const initialProtocol = selectedProtocol || 'cctp';
             setProtocol(initialProtocol as 'cctp' | 'wormhole' | null);
+            upsertBridgeActivity({
+                id: bridgeActivityId,
+                protocol: initialProtocol,
+                amount,
+                sourceChain,
+                destinationChain,
+                sourceAddress,
+                destinationAddress: recipient,
+                status: 'starting',
+                timestamp: Date.now(),
+                updatedAt: Date.now(),
+            });
 
             const result = await bridgeManager.bridge({
                 sourceChain,
@@ -110,6 +129,23 @@ export function InlineBridgeFlow({
                         });
                     }
 
+                    updateBridgeActivity(bridgeActivityId, {
+                        status,
+                        sourceTxHash: hash || undefined,
+                        bridgeId:
+                            typeof dataObj?.bridgeId === 'string'
+                                ? dataObj.bridgeId
+                                : undefined,
+                        redirectUrl:
+                            typeof dataObj?.redirectUrl === 'string'
+                                ? dataObj.redirectUrl
+                                : undefined,
+                        error:
+                            typeof dataObj?.error === 'string'
+                                ? dataObj.error
+                                : undefined,
+                    });
+
                     // Update progress based on status
                     const progressMap: Record<string, number> = {
                         "initializing": 10,
@@ -151,18 +187,38 @@ export function InlineBridgeFlow({
             if (result.success) {
                 setProgress(100);
                 setCurrentStatus('complete');
+                updateBridgeActivity(bridgeActivityId, {
+                    status: 'complete',
+                    sourceTxHash: result.sourceTxHash || txHash || undefined,
+                    destinationTxHash: result.destinationTxHash,
+                    bridgeId: result.bridgeId,
+                    error: undefined,
+                });
                 onComplete(result);
             } else {
                 setError(result.error || 'Bridge failed');
+                updateBridgeActivity(bridgeActivityId, {
+                    status: 'failed',
+                    sourceTxHash: result.sourceTxHash || txHash || undefined,
+                    destinationTxHash: result.destinationTxHash,
+                    bridgeId: result.bridgeId,
+                    error: result.error || 'Bridge failed',
+                });
                 onError(result.error || 'Bridge failed');
             }
         } catch (err) {
             const error = err as Error;
             const errorMessage = error.message || 'Bridge failed';
             setError(errorMessage);
+            updateBridgeActivity(bridgeActivityId, {
+                status: 'failed',
+                sourceTxHash: txHash || undefined,
+                error: errorMessage,
+            });
             onError(errorMessage);
         }
     }, [
+        bridgeActivityId,
         sourceAddress,
         selectedProtocol,
         protocol,

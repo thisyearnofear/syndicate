@@ -1,0 +1,8 @@
+export const LIFI_API_BASE_URL = 'https://li.quest/v1';
+export const LIFI_DEFAULT_SLIPPAGE = '0.003';
+export const LIFI_DEFAULT_ORDER = 'RECOMMENDED';
+export const LIFI_DESTINATION_CHAIN_ID = 8453;
+export const LIFI_DESTINATION_TOKEN = 'USDC';
+export const LIFI_QUOTE_TIMEOUT_MS = 15_000;
+export const LIFI_STATUS_POLL_INTERVAL_MS = 4_000;
+export const LIFI_STATUS_TIMEOUT_MS = 10 * 60 * 1000;

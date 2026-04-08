@@ -20,6 +20,12 @@ import { Button } from "@/shared/components/ui/Button";
 import { ProtocolSelector, ProtocolOption } from "./ProtocolSelector";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
 import { getStatusMessage, getStatusDescription } from "@/utils/bridgeStatusMessages";
+import {
+  createBridgeActivityId,
+  savePendingBridge,
+  updateBridgeActivity,
+  upsertBridgeActivity,
+} from "@/utils/bridgeStateManager";
 
 export interface FocusedBridgeFlowProps {
   sourceChain: "solana" | "ethereum" | "near" | "starknet";
@@ -45,7 +51,7 @@ export function FocusedBridgeFlow({
   preselectedProtocol,
 }: FocusedBridgeFlowProps) {
   // Get source wallet address
-  const { address: sourceAddress } = useWalletConnection();
+  const { address: sourceAddress, chainId: sourceChainId } = useWalletConnection();
   // If protocol is preselected, skip selection stage and go directly to bridging
   const [stage, setStage] = useState<
     "select" | "bridging" | "complete" | "error" | "manual_action"
@@ -66,6 +72,7 @@ export function FocusedBridgeFlow({
   >([]);
   const [amountInput, setAmountInput] = useState<string>(amount);
   const [manualActionUrl, setManualActionUrl] = useState<string | null>(null);
+  const [bridgeActivityId] = useState(() => createBridgeActivityId());
 
   useEffect(() => {
     setAmountInput(amount);
@@ -139,6 +146,19 @@ export function FocusedBridgeFlow({
         throw new Error("Source wallet not connected");
       }
 
+      upsertBridgeActivity({
+        id: bridgeActivityId,
+        protocol: selectedProtocol.protocol,
+        amount: amountInput,
+        sourceChain,
+        destinationChain,
+        sourceAddress,
+        destinationAddress: recipient,
+        status: "starting",
+        timestamp: Date.now(),
+        updatedAt: Date.now(),
+      });
+
       if (sourceChain === "near") {
         // NEAR Intents bridge path (1Click SDK only)
         // This bridges USDC from NEAR to Base at the recipient address
@@ -148,6 +168,7 @@ export function FocusedBridgeFlow({
         );
         setCurrentStatus("initializing");
         setProgress(10);
+        updateBridgeActivity(bridgeActivityId, { status: "initializing" });
 
         const ok = await nearWalletSelectorService.init();
         if (!ok) throw new Error("NEAR wallet not ready");
@@ -167,6 +188,7 @@ export function FocusedBridgeFlow({
         );
         setCurrentStatus("quote_requested");
         setProgress(20);
+        updateBridgeActivity(bridgeActivityId, { status: "quote_requested" });
 
         const amountUnits = BigInt(
           Math.floor(parseFloat(amountInput) * 1_000_000)
@@ -184,6 +206,7 @@ export function FocusedBridgeFlow({
         );
         setCurrentStatus("intent_submitted");
         setProgress(40);
+        updateBridgeActivity(bridgeActivityId, { status: "intent_submitted" });
 
         const res = await nearIntentsService.purchaseViaIntent({
           sourceAsset:
@@ -198,6 +221,11 @@ export function FocusedBridgeFlow({
         }
 
         setTxHash(String(res.intentHash));
+        updateBridgeActivity(bridgeActivityId, {
+          status: "waiting_execution",
+          sourceTxHash: String(res.intentHash),
+          bridgeId: String(res.intentHash),
+        });
         setEvents((prev) =>
           [
             ...prev,
@@ -263,6 +291,11 @@ export function FocusedBridgeFlow({
         setCurrentStatus("complete");
         setProgress(100);
         setStage("complete");
+        updateBridgeActivity(bridgeActivityId, {
+          status: "complete",
+          sourceTxHash: String(res.intentHash),
+          error: undefined,
+        });
 
         // Provide info about derived address and ticket purchase
         if (recipient) {
@@ -282,6 +315,10 @@ export function FocusedBridgeFlow({
           destinationAddress: recipient, // Destination EVM address
           token: "USDC",
           protocol: selectedProtocol.protocol,
+          options:
+            typeof sourceChainId === "number"
+              ? { sourceChainId }
+              : undefined,
           onStatus: (status, data) => {
             setCurrentStatus(status);
             const dataObj = data && typeof data === 'object' && !Array.isArray(data) && data !== null ? data as Record<string, unknown> : undefined;
@@ -290,6 +327,10 @@ export function FocusedBridgeFlow({
             if (status === 'manual_action_required') {
                 const url = dataObj?.redirectUrl as string;
                 if (url) {
+                    updateBridgeActivity(bridgeActivityId, {
+                      status,
+                      redirectUrl: url,
+                    });
                     setManualActionUrl(url);
                     setStage('manual_action');
                     return;
@@ -305,6 +346,37 @@ export function FocusedBridgeFlow({
 
             if (dataObj?.txHash) setTxHash(String(dataObj.txHash));
             if (dataObj?.signature) setTxHash(String(dataObj.signature));
+            const activityTxHash =
+              (typeof dataObj?.txHash === "string" && dataObj.txHash) ||
+              (typeof dataObj?.signature === "string" && dataObj.signature) ||
+              undefined;
+            if (activityTxHash) {
+              savePendingBridge({
+                signature: activityTxHash,
+                protocol: selectedProtocol.protocol,
+                amount: amountInput,
+                recipient,
+                timestamp: Date.now(),
+                sourceChain,
+                destinationChain,
+              });
+            }
+            updateBridgeActivity(bridgeActivityId, {
+              status,
+              sourceTxHash: activityTxHash,
+              bridgeId:
+                typeof dataObj?.bridgeId === "string"
+                  ? dataObj.bridgeId
+                  : undefined,
+              redirectUrl:
+                typeof dataObj?.redirectUrl === "string"
+                  ? dataObj.redirectUrl
+                  : undefined,
+              error:
+                typeof dataObj?.error === "string"
+                  ? dataObj.error
+                  : undefined,
+            });
 
             const progressMap: Record<string, number> = {
               initializing: 10,
@@ -338,11 +410,25 @@ export function FocusedBridgeFlow({
           setProgress(100);
           setCurrentStatus("complete");
           setStage("complete");
+          updateBridgeActivity(bridgeActivityId, {
+            status: "complete",
+            sourceTxHash: result.sourceTxHash || txHash || undefined,
+            destinationTxHash: result.destinationTxHash,
+            bridgeId: result.bridgeId,
+            error: undefined,
+          });
           onComplete(result);
         } else {
           setError(result.error || "Bridge failed");
           setErrorProtocol(selectedProtocol?.name || "Unknown");
           setStage("error");
+          updateBridgeActivity(bridgeActivityId, {
+            status: "failed",
+            sourceTxHash: result.sourceTxHash || txHash || undefined,
+            destinationTxHash: result.destinationTxHash,
+            bridgeId: result.bridgeId,
+            error: result.error || "Bridge failed",
+          });
           onError(result.error || "Bridge failed");
         }
       }
@@ -360,11 +446,18 @@ export function FocusedBridgeFlow({
       setError(errorMessage);
       setErrorProtocol(selectedProtocol?.name || "Unknown");
       setStage("error");
+      updateBridgeActivity(bridgeActivityId, {
+        status: "failed",
+        sourceTxHash: txHash || undefined,
+        error: errorMessage,
+      });
       onError(errorMessage);
     }
   }, [
+    bridgeActivityId,
     selectedProtocol,
     sourceChain,
+    destinationChain,
     sourceAddress,
     amountInput,
     recipient,
@@ -379,6 +472,7 @@ export function FocusedBridgeFlow({
     setTxHash,
     setEvents,
     setBaseEthHint,
+    txHash,
   ]);
 
   // Auto-start bridge when protocol is set
@@ -438,6 +532,7 @@ export function FocusedBridgeFlow({
             sourceChain={sourceChain}
             destinationChain={destinationChain}
             amount={amountInput}
+            sourceChainId={typeof sourceChainId === "number" ? sourceChainId : undefined}
             onSelect={handleProtocolSelect}
           />
         </div>
