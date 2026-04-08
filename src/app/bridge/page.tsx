@@ -13,6 +13,7 @@
  */
 
 import React, { useState, useMemo, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { FocusedBridgeFlow } from "@/components/bridge/FocusedBridgeFlow";
 import { WinningsWithdrawalFlow } from "@/components/bridge/WinningsWithdrawalFlow";
 import { useWalletContext } from "@/context/WalletContext";
@@ -24,6 +25,13 @@ import {
   CompactStack,
   CompactSection,
 } from "@/shared/components/premium/CompactLayout";
+import { buildVaultExecutionHref, YIELD_ENTRY_BRIDGE } from "@/constants/vaultRouting";
+import type { BridgeResult } from "@/services/bridges/types";
+import {
+  YIELD_STRATEGIES,
+  type SupportedYieldStrategyId,
+  getStrategyById,
+} from "@/config/yieldStrategies";
 import { nearIntentsService } from "@/services/nearIntentsService";
 import { nearWalletSelectorService } from "@/domains/wallet/services/nearWalletSelectorService";
 
@@ -40,15 +48,22 @@ interface ChainOption {
 }
 
 export default function BridgePage() {
+  const router = useRouter();
   const { state } = useWalletContext();
   const { address, isConnected, walletType, chainId } = state;
   const [isBridging, setIsBridging] = useState(false);
   const [bridgeAmount, setBridgeAmount] = useState("10");
-  const [showSuccess, setShowSuccess] = useState(false);
   const [sourceChain, setSourceChain] = useState<SourceChain>("solana");
+  const [destinationStrategy, setDestinationStrategy] =
+    useState<SupportedYieldStrategyId>("aave");
   const [showWithdrawal, setShowWithdrawal] = useState(false);
   const [nearDerivedAddress, setNearDerivedAddress] = useState<string | undefined>();
   const [nearAccountId, setNearAccountId] = useState<string | undefined>();
+  const bridgeTargetStrategies = useMemo(
+    () => YIELD_STRATEGIES.filter((strategy) => !strategy.isOctant && strategy.id !== "uniswap"),
+    []
+  );
+  const selectedStrategyConfig = getStrategyById(destinationStrategy);
 
   // Derive EVM address for NEAR users
   useEffect(() => {
@@ -146,13 +161,20 @@ export default function BridgePage() {
   // Determine if EVM wallet is needed for destination
   const needsEvmWallet = !isEvmConnected;
 
-  const handleBridgeComplete = () => {
-    setShowSuccess(true);
+  const handleBridgeComplete = (result: BridgeResult) => {
     setIsBridging(false);
-    setTimeout(() => {
-      setShowSuccess(false);
-      setBridgeAmount("10");
-    }, 3000);
+    router.push(
+        buildVaultExecutionHref('strategies', YIELD_ENTRY_BRIDGE, {
+          amount: bridgeAmount,
+          sourceChain,
+          protocol: result.protocol,
+          strategy: destinationStrategy,
+          bridgeActivityId:
+            typeof result.details?.bridgeActivityId === "string"
+              ? result.details.bridgeActivityId
+              : undefined,
+        })
+    );
   };
 
   const handleBridgeError = (error: string) => {
@@ -225,20 +247,6 @@ export default function BridgePage() {
                   derivedEvmAddress={nearDerivedAddress}
                   onSuccess={() => setShowWithdrawal(false)}
                 />
-              ) : showSuccess ? (
-                <div className="glass-premium p-8 rounded-3xl border border-green-500/30 backdrop-blur-xl animate-fade-in">
-                  <div className="text-center space-y-4">
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center mx-auto">
-                      <span className="text-2xl">✅</span>
-                    </div>
-                    <h2 className="text-2xl font-bold text-white">
-                      Bridge Successful!
-                    </h2>
-                    <p className="text-green-300">
-                      Your USDC has been bridged to Base Network
-                    </p>
-                  </div>
-                </div>
               ) : (
                 <div className="glass-premium p-8 rounded-3xl border border-blue-500/30 backdrop-blur-xl">
                   {!isBridging ? (
@@ -363,10 +371,52 @@ export default function BridgePage() {
                         )}
                       </div>
 
-                      {/* Step 3: Bridge Amount */}
+                      {/* Step 3: Choose Destination */}
                       <div>
                         <h3 className="text-white font-semibold text-lg mb-4 flex items-center gap-2">
-                          <span className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-sm">3</span>
+                          <span className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-sm">3</span>
+                          Choose Destination Strategy
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {bridgeTargetStrategies.map((strategy) => (
+                            <button
+                              key={strategy.id}
+                              type="button"
+                              onClick={() => setDestinationStrategy(strategy.id)}
+                              className={`rounded-xl border p-4 text-left transition-all ${
+                                destinationStrategy === strategy.id
+                                  ? "border-emerald-400 bg-emerald-500/10"
+                                  : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
+                              }`}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className={`flex h-10 w-10 items-center justify-center rounded-lg text-lg ${strategy.color}`}>
+                                  {strategy.icon}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="font-semibold text-white">{strategy.name}</span>
+                                    <span className="rounded-full bg-white/10 px-2 py-1 text-[11px] text-gray-300">
+                                      {strategy.risk} risk
+                                    </span>
+                                  </div>
+                                  <p className="mt-1 text-xs leading-5 text-gray-400">
+                                    {strategy.description}
+                                  </p>
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                        <p className="mt-3 text-sm text-gray-400">
+                          Funding will continue into {selectedStrategyConfig?.name ?? "the selected strategy"} after the bridge completes.
+                        </p>
+                      </div>
+
+                      {/* Step 4: Bridge Amount */}
+                      <div>
+                        <h3 className="text-white font-semibold text-lg mb-4 flex items-center gap-2">
+                          <span className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-sm">4</span>
                           Enter Amount & Bridge
                         </h3>
                         <div className="space-y-4">
@@ -392,7 +442,7 @@ export default function BridgePage() {
                             className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-[1.02]"
                           >
                             <span className="text-xl mr-2">🌉</span>
-                            Bridge {bridgeAmount || "0"} USDC to Base
+                            Bridge {bridgeAmount || "0"} USDC to {selectedStrategyConfig?.name ?? "Vaults"}
                           </Button>
 
                           {!canBridge && (
@@ -411,6 +461,7 @@ export default function BridgePage() {
                        destinationChain="base"
                        amount={bridgeAmount}
                        recipient={address || ""}
+                       targetStrategy={destinationStrategy}
                        onComplete={handleBridgeComplete}
                        onError={handleBridgeError}
                        onCancel={() => setIsBridging(false)}

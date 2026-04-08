@@ -29,8 +29,10 @@ import { Button } from '@/shared/components/ui/Button';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { useUserVaults } from '@/hooks/useUserVaults';
 import { useBridgeActivity } from '@/hooks/useBridgeActivity';
+import { useVaultActivity } from '@/hooks/useVaultActivity';
 import { useTicketHistory, type TicketPurchaseHistory } from '@/hooks/useTicketHistory';
 import type { BridgeActivityRecord } from '@/utils/bridgeStateManager';
+import type { VaultDepositActivityRecord } from '@/utils/vaultActivityManager';
 import Link from 'next/link';
 
 interface SyndicatePosition {
@@ -66,6 +68,27 @@ interface PortfolioData {
   syndicates: SyndicatePosition[];
 }
 
+type PortfolioLifecycleEvent =
+  | {
+      id: string;
+      timestamp: number;
+      type: 'bridge';
+      bridge: BridgeActivityRecord;
+    }
+  | {
+      id: string;
+      timestamp: number;
+      type: 'deposit';
+      deposit: VaultDepositActivityRecord;
+      bridge?: BridgeActivityRecord;
+    }
+  | {
+      id: string;
+      timestamp: number;
+      type: 'ticket';
+      purchase: TicketPurchaseHistory;
+    };
+
 export default function PortfolioPage() {
   const router = useRouter();
   const { isConnected, address } = useWalletConnection();
@@ -88,6 +111,11 @@ export default function PortfolioPage() {
     isLoading: bridgeLoading,
     refreshActivity,
   } = useBridgeActivity();
+  const {
+    deposits: vaultDeposits,
+    isLoading: vaultActivityLoading,
+    refreshActivity: refreshVaultActivity,
+  } = useVaultActivity();
   const { purchases: ticketHistory, isLoading: ticketsLoading, refreshHistory } = useTicketHistory();
 
   const fetchPortfolio = useCallback(async (showRefresh = false) => {
@@ -123,10 +151,11 @@ export default function PortfolioPage() {
       fetchPortfolio(true),
       refreshVaults(),
       refreshActivity(),
+      refreshVaultActivity(),
       refreshHistory(),
     ]);
     setRefreshing(false);
-  }, [fetchPortfolio, refreshVaults, refreshActivity, refreshHistory]);
+  }, [fetchPortfolio, refreshVaults, refreshActivity, refreshVaultActivity, refreshHistory]);
 
   const formatCurrency = (amount: number) => {
     return amount.toLocaleString(undefined, { 
@@ -178,7 +207,7 @@ export default function PortfolioPage() {
   }
 
   // Loading
-  if (loading || vaultsLoading || ticketsLoading || bridgeLoading) {
+  if (loading || vaultsLoading || ticketsLoading || bridgeLoading || vaultActivityLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
         <div className="max-w-6xl mx-auto pt-8">
@@ -203,7 +232,8 @@ export default function PortfolioPage() {
     bridgeActivities.length > 0;
   const totalTicketCount = ticketHistory.reduce((sum, purchase) => sum + purchase.ticketCount, 0);
   const recentBridgeActivity = bridgeActivities.slice(0, 5);
-  const totalActivityCount = ticketHistory.length + bridgeActivities.length;
+  const recentVaultDeposits = [...vaultDeposits].slice(0, 5);
+  const totalActivityCount = ticketHistory.length + bridgeActivities.length + vaultDeposits.length;
   const pendingFundingActivity = recentBridgeActivity.find(
     (activity) => activity.status !== 'complete' && activity.status !== 'failed'
   );
@@ -214,6 +244,31 @@ export default function PortfolioPage() {
       return tb - ta;
     })
     .slice(0, 5);
+  const lifecycleEvents: PortfolioLifecycleEvent[] = [
+    ...bridgeActivities.map((bridge) => ({
+      id: `bridge-${bridge.id}`,
+      timestamp: bridge.updatedAt,
+      type: 'bridge' as const,
+      bridge,
+    })),
+    ...vaultDeposits.map((deposit) => ({
+      id: `deposit-${deposit.id}`,
+      timestamp: deposit.timestamp,
+      type: 'deposit' as const,
+      deposit,
+      bridge: deposit.bridgeActivityId
+        ? bridgeActivities.find((activity) => activity.id === deposit.bridgeActivityId)
+        : undefined,
+    })),
+    ...ticketHistory.map((purchase) => ({
+      id: `ticket-${purchase.id}`,
+      timestamp: purchase.timestamp ? new Date(purchase.timestamp).getTime() : 0,
+      type: 'ticket' as const,
+      purchase,
+    })),
+  ]
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .slice(0, 12);
   const recommendedAction = bridgeActivities.length === 0 && vaultPositions.length === 0
     ? {
         title: 'Fund from another chain',
@@ -520,6 +575,23 @@ export default function PortfolioPage() {
                     )}
                   </div>
                   <div className="glass-premium rounded-xl p-4 border border-white/20">
+                    <h3 className="font-semibold text-white mb-2">Recent Deposits</h3>
+                    <p className="text-gray-400 text-sm mb-4">
+                      Track when funded capital actually moved into a live strategy.
+                    </p>
+                    {recentVaultDeposits.length > 0 ? (
+                      <div className="space-y-2">
+                        {recentVaultDeposits.slice(0, 3).map((deposit) => (
+                          <VaultDepositActivityRow key={deposit.id} deposit={deposit} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-4 text-sm text-gray-400">
+                        No vault deposits recorded yet.
+                      </div>
+                    )}
+                  </div>
+                  <div className="glass-premium rounded-xl p-4 border border-white/20">
                     <h3 className="font-semibold text-white mb-2">Recent Ticket Activity</h3>
                     <p className="text-gray-400 text-sm mb-4">
                       Keep the utility loop visible from the same portfolio surface.
@@ -645,7 +717,15 @@ export default function PortfolioPage() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {vaultPositions.map((position) => (
+                  {vaultPositions.map((position) => {
+                    const linkedFundingActivity = findLatestFundingForVault(
+                      bridgeActivities,
+                      position.protocol,
+                      vaultDeposits
+                    );
+                    const latestDepositActivity = findLatestVaultDepositForProtocol(vaultDeposits, position.protocol);
+
+                    return (
                     <div 
                       key={position.protocol}
                       className="glass-premium rounded-xl p-4 border border-white/20 hover:border-white/40 transition-all cursor-pointer"
@@ -662,6 +742,16 @@ export default function PortfolioPage() {
                             <p className="text-green-300 text-sm">
                               {position.balance.apy.toFixed(2)}% APY
                             </p>
+                            {latestDepositActivity ? (
+                              <p className="text-xs text-white/60 mt-1">
+                                Latest deposit {new Date(latestDepositActivity.timestamp).toLocaleDateString()}
+                              </p>
+                            ) : null}
+                            {linkedFundingActivity ? (
+                              <p className="text-xs text-blue-200/80 mt-1">
+                                Funded via {getBridgeProtocolLabel(linkedFundingActivity.protocol)} from {linkedFundingActivity.sourceChain}
+                              </p>
+                            ) : null}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -709,7 +799,7 @@ export default function PortfolioPage() {
                         </span>
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
 
                 {/* Vault Actions */}
@@ -769,10 +859,27 @@ export default function PortfolioPage() {
             ) : (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-white">Recent Activity</h2>
+                  <h2 className="text-xl font-bold text-white">Lifecycle Activity</h2>
                   <span className="text-gray-400 text-sm">{totalActivityCount} event{totalActivityCount !== 1 ? 's' : ''}</span>
                 </div>
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <div className="glass-premium rounded-xl p-4 border border-white/20">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-white">Capital Lifecycle</h3>
+                    <span className="text-gray-400 text-sm">bridge → deposit → tickets</span>
+                  </div>
+                  {lifecycleEvents.length > 0 ? (
+                    <div className="space-y-3">
+                      {lifecycleEvents.map((event) => (
+                        <LifecycleEventCard key={event.id} event={event} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-6 text-sm text-gray-400">
+                      No lifecycle events recorded yet.
+                    </div>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold text-white">Funding</h3>
@@ -783,6 +890,25 @@ export default function PortfolioPage() {
                     )) : (
                       <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-6 text-sm text-gray-400">
                         No bridge activity recorded yet.
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-white">Deposits</h3>
+                      <span className="text-gray-400 text-sm">{vaultDeposits.length} deposit{vaultDeposits.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    {recentVaultDeposits.length > 0 ? recentVaultDeposits.map((deposit) => (
+                      <VaultDepositActivityCard
+                        key={deposit.id}
+                        deposit={deposit}
+                        bridge={deposit.bridgeActivityId
+                          ? bridgeActivities.find((activity) => activity.id === deposit.bridgeActivityId)
+                          : undefined}
+                      />
+                    )) : (
+                      <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-6 text-sm text-gray-400">
+                        No vault deposits recorded yet.
                       </div>
                     )}
                   </div>
@@ -849,6 +975,26 @@ function BridgeActivityRow({ activity }: { activity: BridgeActivityRecord }) {
         </div>
         <span className="text-xs font-medium text-blue-300">
           {new Date(activity.updatedAt).toLocaleDateString()}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function VaultDepositActivityRow({ deposit }: { deposit: VaultDepositActivityRecord }) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-white">
+            Deposit into {deposit.protocol.toUpperCase()}
+          </p>
+          <p className="text-xs text-gray-400">
+            {formatCurrencyValue(deposit.amount)} • {new Date(deposit.timestamp).toLocaleString()}
+          </p>
+        </div>
+        <span className="text-xs font-medium text-emerald-300">
+          deposited
         </span>
       </div>
     </div>
@@ -978,8 +1124,146 @@ function BridgeActivityCard({ activity }: { activity: BridgeActivityRecord }) {
   );
 }
 
+function VaultDepositActivityCard({
+  deposit,
+  bridge,
+}: {
+  deposit: VaultDepositActivityRecord;
+  bridge?: BridgeActivityRecord;
+}) {
+  return (
+    <div className="glass-premium rounded-xl p-4 border border-white/20">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white">
+            <Zap className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-white">
+              {deposit.protocol.toUpperCase()} deposit
+            </h3>
+            <p className="text-sm text-gray-400">
+              {formatCurrencyValue(deposit.amount)} allocated into the strategy
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-400">
+              <span className="rounded-full bg-white/10 px-2 py-1 text-gray-300">
+                {new Date(deposit.timestamp).toLocaleString()}
+              </span>
+              {bridge ? (
+                <span className="rounded-full bg-blue-500/15 px-2 py-1 text-blue-300">
+                  From {getBridgeProtocolLabel(bridge.protocol)} on {bridge.sourceChain}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-2 text-xs">
+          <a
+            href={`https://basescan.org/tx/${deposit.txHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-emerald-300 hover:text-emerald-200"
+          >
+            Deposit Tx
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LifecycleEventCard({ event }: { event: PortfolioLifecycleEvent }) {
+  if (event.type === 'bridge') {
+    return (
+      <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 px-4 py-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-white">
+              Funding routed via {getBridgeProtocolLabel(event.bridge.protocol)}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              {event.bridge.sourceChain} to {event.bridge.destinationChain} • {formatCurrencyValue(event.bridge.amount)}
+            </p>
+          </div>
+          <span className="text-xs text-blue-200">
+            {new Date(event.timestamp).toLocaleString()}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (event.type === 'deposit') {
+    return (
+      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-white">
+              Capital deposited into {event.deposit.protocol.toUpperCase()}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              {formatCurrencyValue(event.deposit.amount)}
+              {event.bridge ? ` • sourced from ${getBridgeProtocolLabel(event.bridge.protocol)} on ${event.bridge.sourceChain}` : ''}
+            </p>
+          </div>
+          <span className="text-xs text-emerald-200">
+            {new Date(event.timestamp).toLocaleString()}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-white">
+            {event.purchase.ticketCount} ticket{event.purchase.ticketCount !== 1 ? 's' : ''} purchased
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            {event.purchase.totalCost ? `$${event.purchase.totalCost}` : 'Cost unavailable'}
+            {event.purchase.jackpotRoundId ? ` • round ${event.purchase.jackpotRoundId}` : ''}
+          </p>
+        </div>
+        <span className="text-xs text-amber-200">
+          {event.purchase.timestamp ? new Date(event.purchase.timestamp).toLocaleString() : 'Timestamp unavailable'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function formatBridgeStatus(status: string) {
   return status.replace(/_/g, ' ');
+}
+
+function findLatestFundingForVault(
+  activities: BridgeActivityRecord[],
+  protocol: string,
+  vaultDeposits: VaultDepositActivityRecord[]
+) {
+  const latestDeposit = findLatestVaultDepositForProtocol(vaultDeposits, protocol);
+  if (latestDeposit?.bridgeActivityId) {
+    return activities.find((activity) => activity.id === latestDeposit.bridgeActivityId);
+  }
+
+  return [...activities]
+    .filter(
+      (activity) =>
+        activity.linkedVaultProtocol === protocol ||
+        (!activity.linkedVaultProtocol && activity.targetStrategy === protocol)
+    )
+    .sort((a, b) => b.updatedAt - a.updatedAt)[0];
+}
+
+function findLatestVaultDepositForProtocol(
+  deposits: VaultDepositActivityRecord[],
+  protocol: string
+) {
+  return [...deposits]
+    .filter((deposit) => deposit.protocol === protocol)
+    .sort((a, b) => b.timestamp - a.timestamp)[0];
 }
 
 function getBridgeProtocolLabel(protocol: string) {

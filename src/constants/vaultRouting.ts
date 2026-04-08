@@ -5,14 +5,28 @@ export const VAULT_EXECUTION_ROUTE = YIELD_STRATEGIES_ROUTE;
 
 export const YIELD_ENTRY_PARAM = 'entry';
 export const YIELD_ENTRY_VAULTS = 'vaults';
+export const YIELD_ENTRY_BRIDGE = 'bridge';
 
 export type YieldStrategiesTab = 'overview' | 'strategies' | 'allocation';
 
 export function buildVaultExecutionHref(
   tab: YieldStrategiesTab = 'strategies',
-  entry: string = YIELD_ENTRY_VAULTS
+  entry: string = YIELD_ENTRY_VAULTS,
+  params?: Record<string, string | number | undefined>
 ): string {
-  return `${VAULT_EXECUTION_ROUTE}?tab=${tab}&${YIELD_ENTRY_PARAM}=${entry}`;
+  const searchParams = new URLSearchParams({
+    tab,
+    [YIELD_ENTRY_PARAM]: entry,
+  });
+
+  if (params) {
+    for (const [key, value] of Object.entries(params)) {
+      if (value === undefined) continue;
+      searchParams.set(key, String(value));
+    }
+  }
+
+  return `${VAULT_EXECUTION_ROUTE}?${searchParams.toString()}`;
 }
 
 export function buildYieldStrategiesHref(
@@ -33,7 +47,7 @@ export function hasYieldExecutionIntent(
 
   if (protocol) return true;
 
-  if (entry !== YIELD_ENTRY_VAULTS) return false;
+  if (entry !== YIELD_ENTRY_VAULTS && entry !== YIELD_ENTRY_BRIDGE) return false;
   if (!tab) return true;
   if (tab === 'overview' || tab === 'strategies' || tab === 'allocation') return true;
 
