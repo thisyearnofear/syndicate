@@ -275,6 +275,6 @@ Set up alerts for:
 
 ## References
 
-- **Overview**: [OVERVIEW.md](./OVERVIEW.md)
+- **Overview**: [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
 - **Architecture**: [ARCHITECTURE.md](./ARCHITECTURE.md)
 - **Deployment**: [DEPLOYMENT.md](./DEPLOYMENT.md)

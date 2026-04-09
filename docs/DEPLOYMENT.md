@@ -279,4 +279,4 @@ pnpm run perf
 
 ## References
 
-See [OVERVIEW.md](./OVERVIEW.md) for comprehensive guide. Other docs: [ARCHITECTURE.md](./ARCHITECTURE.md), [BRIDGES.md](./BRIDGES.md), [DEVELOPMENT.md](./DEVELOPMENT.md), [SECURITY.md](./SECURITY.md)
+See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for comprehensive guide. Other docs: [ARCHITECTURE.md](./ARCHITECTURE.md), [BRIDGES.md](./BRIDGES.md), [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md), [SECURITY.md](./SECURITY.md)

@@ -268,7 +268,92 @@ curl http://localhost:3000/api/bridges/health
 
 ## References
 
-- **Overview**: [OVERVIEW.md](./OVERVIEW.md)
+- **Overview**: [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
 - **Architecture**: [ARCHITECTURE.md](./ARCHITECTURE.md)
 - **Deployment**: [DEPLOYMENT.md](./DEPLOYMENT.md)
-- **Development**: [DEVELOPMENT.md](./DEVELOPMENT.md)
+- **Development**: [docs/ARCHITECTURE.md](./ARCHITECTURE.md)
+
+
+## TON / Telegram Mini App Integration (merged)
+
+# TON / Telegram Mini App Integration
+
+## Overview
+
+Syndicate's TON integration brings the Lossless Lottery to Telegram's 1.1 billion monthly active users. Users buy Megapot tickets with USDT/TON inside a Telegram Mini App — no MetaMask, no cross-chain UX, no App Store approval required. An AI agent layer (Agentic Wallet + TON MCP) enables fully autonomous yield-to-tickets conversion, competing in both hackathon tracks simultaneously.
+
+---
+
+## Hackathon Positioning (Deadline: March 25, 2026)
+
+| Track | Prize | Our Angle |
+|-------|-------|-----------|
+| **Agent Infrastructure** | $10,000 | Syndicate AI agent autonomously purchases lottery tickets via TON Payment Channels when yield threshold is met |
+| **User-Facing AI Agents** | $10,000 | Telegram Mini App where users buy Megapot tickets, check winnings, and configure yield strategies — all inside Telegram |
+
+---
+
+## Architecture
+
+```
+Telegram Bot (@SyndicateLotteryBot)
+    │
+    ├── Mini App (Next.js app + Telegram WebApp SDK)
+    │       ├── TON Connect (wallet auth — @Wallet, Tonkeeper, MyTonWallet)
+    │       ├── TON Pay SDK (USDT/TON payment)
+    │       └── Existing purchase flow → Megapot on Base via CCTP
+    │
+    └── AI Agent (Agentic Wallet + TON MCP)
+            ├── Monitors yield accrual on TON
+            ├── Auto-purchases tickets (TON Payment Channels)
+            └── Sends Telegram notifications on wins
+```
+
+### User Flow (Mini App)
+
+```
+User opens @SyndicateLotteryBot in Telegram
+    ↓
+Taps "Buy Tickets" → Mini App opens (Telegram WebApp)
+    ↓
+TON Connect → connects @Wallet (user already has USDT)
+    ↓
+TON Pay SDK → pays USDT → ticket purchased on Megapot (Base)
+    ↓
+Result shown inline — no redirect, no MetaMask, no cross-chain UX
+```
+
+---
+
+## Technical Stack
+
+### TON Connect
+- Standard wallet connection protocol (equivalent to wagmi for TON)
+- Works with @Wallet bot (25M active accounts), Tonkeeper, MyTonWallet
+- Users already have wallets — no onboarding friction
+- **Package**: `@tonconnect/ui-react`
+
+### TON Pay SDK (Feb 2026)
+- Wallet-agnostic SDK for USDT + TON payments inside Telegram Mini Apps
+- Sub-second finality, fees < $0.01 — ideal for $1 lottery tickets
+- No App Store approval, no MetaMask prompts
+- Handles both Toncoin and USDT (Jetton) payments natively
+
+### Agentic Wallet
+- AI agents hold their own TON wallet and sign transactions autonomously
+- Enables the lossless lottery flow: agent deposits yield → buys tickets → no user action needed
+- Maps directly onto existing `YieldToTicketsService` and `AutoPurchaseModal` logic
+
+---
+
+## Implementation Order
+
+### Day 1 — Bot + Mini App Shell + TON Connect
+
+1. Create bot via BotFather → get `BOT_TOKEN`
+2. Add Telegram WebApp SDK to Next.js (`@twa-dev/sdk`)
+3. Wrap app with `TelegramProvider` — detects Mini App context, exposes `window.Telegram.WebApp`
+4. Integrate `@tonconnect/ui-react` — `TonConnectButton` replaces EVM wallet options in Telegram context
+5. Add `ton` to `WalletContext` chain types
+6. Wire `TON_BOT_TOKEN` and `TON_MANIFEST_URL` env vars
+

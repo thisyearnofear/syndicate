@@ -1,6 +1,6 @@
 # System Architecture
 
-**Last Updated**: March 22, 2026 | **Status**: Production
+**Last Updated**: April 9, 2026 | **Status**: Production
 
 ## Overview
 
@@ -298,4 +298,180 @@ psql "$POSTGRES_URL" -c "SELECT * FROM purchase_statuses ORDER BY updated_at DES
 
 ## References
 
-See [OVERVIEW.md](./OVERVIEW.md) for comprehensive guide. Other docs: [BRIDGES.md](./BRIDGES.md), [DEPLOYMENT.md](./DEPLOYMENT.md), [DEVELOPMENT.md](./DEVELOPMENT.md), [SECURITY.md](./SECURITY.md)
+See the merged sections below for Development and Overview. Other docs: [BRIDGES.md](./BRIDGES.md), [DEPLOYMENT.md](./DEPLOYMENT.md), [SECURITY.md](./SECURITY.md)
+
+---
+
+## Supplemental: Platform Overview (merged from docs/ARCHITECTURE.md)
+
+# Syndicate - Cross-Chain Lottery Platform
+
+**Status**: Production | **Hackathon Focus**: Ranger Main Track execution plan under active revision
+
+Syndicate enables users and institutions to purchase Megapot lottery tickets from any blockchain through trustless cross-chain bridges. The platform supports Bitcoin (via Stacks), Solana, NEAR, StarkNet, and EVM chains with native USDC bridging, institutional-grade KYC/AML compliance, and privacy-preserving commitments.
+
+## Ranger Hackathon Submission
+
+The current Ranger main-track plan is **strategy-first**:
+
+- build a compliant Ranger vault strategy on Solana
+- use Syndicate as the custom frontend and reporting layer
+- keep the existing yield-to-tickets flow as optional downstream distribution, not the core strategy thesis
+
+The current Drift JLP/lossless-lottery framing in this repo should not be treated as the main-track submission thesis because the published rules explicitly disallow DEX LP vaults such as JLP. See RANGER_HACKATHON_STRATEGY.md (internal reference).
+
+---
+
+## Quick Navigation
+
+| For | See |
+|-----|-----|
+| **End Users** | Quick Start · Supported Chains |
+| **Institutions** | Syndicate Pools · Compliance |
+| **Developers** | Architecture · Bridge Guide · Deployment |
+
+---
+
+## Features
+
+### Cross-Chain & Multi-Protocol
+
+| Feature | Description |
+|---------|-------------|
+| 🌉 **Cross-Chain** | Buy tickets from Bitcoin/Stacks, NEAR, Solana, StarkNet, or Base |
+| ⚡ **Fast Settlement** | 30-60s from Stacks (CCTP), 1-3 min from Solana/StarkNet |
+| 🔒 **Trustless** | Proxy contract handles all purchases atomically |
+| 🎟️ **Multi-Protocol** | Megapot, PoolTogether v5 (No-Loss), Drift JLP, yield-linked vault participation |
+| 🤖 **Auto-Purchase** | Recurring tickets via x402 (Stacks SIP-018) / ERC-7715 (EVM) |
+| 💰 **Fair Pricing** | Clear fees, no hidden costs |
+
+---
+
+## KYC/AML Compliance
+
+### Overview
+
+Syndicate integrates **Civic Pass** for institutional-grade compliance. The model is:
+- **KYC gates deposits** into yield-generating vaults (Drift JLP, Aave, Morpho)
+- **Prize claims remain permissionless** (lottery payouts don't require KYC)
+
+---
+
+## Supplemental: Development Guide (merged from docs/ARCHITECTURE.md)
+
+# Development Guide
+
+**Last Updated**: March 22, 2026 | **Status**: Active Development
+
+## Quick Start
+
+### Prerequisites
+- Node.js v18+
+- MetaMask wallet (EVM testing)
+  - For Advanced Permissions: MetaMask Flask v13.5.0+ (ERC-7715)
+- Phantom wallet (Solana testing)
+- Civic Pass account (KYC testing): https://www.civic.com/
+
+### Setup
+```bash
+pnpm install
+cp .env.example .env.local
+pnpm run dev
+```
+
+### Environment Variables
+```bash
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id
+NEXT_PUBLIC_BASE_RPC_URL=https://base-mainnet.g.alchemy.com/v2/your_key
+NEXT_PUBLIC_SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+NEXT_PUBLIC_AUTO_PURCHASE_PROXY=0x707043a8c35254876B8ed48F6537703F7736905c
+```
+
+---
+
+## Core Architecture
+
+### Single Wallet, Any Chain Origin
+
+**Status**: ✅ Fully Implemented
+
+User connects ONE native wallet → System auto-detects and routes:
+
+| Wallet Type | Origin | Bridge Protocol |
+|-------------|--------|-----------------|
+| MetaMask/WalletConnect | EVM | CCIP/CCTP |
+| Phantom | Solana | Circle Bridge |
+| Leather/Xverse/Asigna/Fordefi | Stacks | sBTC → CCTP |
+| NEAR Wallet | NEAR | 1Click SDK |
+
+**Key Principle**: System detects wallet type → picks best bridge → user clicks once.
+
+### Lossless Lottery (Yield-to-Tickets)
+
+**Status**: ✅ Live (Drift JLP Vault on Solana)
+
+**Flow**:
+1. User deposits USDC into Drift delta-neutral JLP vault (Solana)
+2. Principal locked for 3 months, earning ~22.5% APY
+3. Yield automatically converted to lottery tickets
+4. User maintains 100% of principal while playing for free
+
+---
+
+## Testing Strategy
+
+### Manual Testing Required
+
+**Wallet Connection**: Connect MetaMask, Phantom, NEAR, Stacks (Leather/Xverse) → Verify address displayed, Bitcoin symbol shows for Stacks.
+
+**Ticket Purchase (EVM → Base)**: Connect MetaMask → Enter 0.01 USDC → Confirm → Monitor bridge → Verify ticket purchase.
+
+**Drift Vault Deposit**: Complete Civic verification → Select Drift JLP → Enter amount → Confirm 3-month lockup → Execute → Verify principal in YieldDashboard.
+
+---
+
+## Development Workflow
+
+### Running the Application
+```bash
+# Development
+pnpm run dev
+pnpm run dev:turbo
+pnpm run dev:debug
+
+# Production
+pnpm run build
+pnpm run start
+
+# Testing
+pnpm test
+pnpm run test:watch
+
+# Quality
+pnpm run lint
+pnpm run type-check
+pnpm run analyze
+```
+
+---
+
+## Wallet State Management
+
+### Architecture
+
+**Single Source of Truth**: `WalletContext` is authoritative for all wallet types.
+
+---
+
+## Deployment
+
+**Vercel**: `pnpm install -g vercel && vercel --prod`
+
+**Docker**: `docker build -t syndicate . && docker run -p 3000:3000 syndicate`
+
+---
+
+## References
+
+This file now consolidates Development and Overview material. For per-chain bridge details see [BRIDGES.md](./BRIDGES.md).
+
