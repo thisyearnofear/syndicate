@@ -22,6 +22,7 @@ import { createWalletClient, custom, WalletClient, Address } from 'viem';
 import { sepolia, base, mainnet, baseSepolia } from 'viem/chains';
 // Import directly from the specific actions entry point to ensure correct resolution
 import { erc7715ProviderActions } from '@metamask/smart-accounts-kit/actions';
+import { CONTRACTS } from '@/config';
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -379,7 +380,7 @@ export class ERC7715Service {
       // MODULAR: Create session with permission for Megapot purchases
       const sessionPermissions: SessionPermissionScope[] = [
         {
-          target: '0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2', // Megapot V2 on Base
+          target: CONTRACTS.megapot as Address,
           methods: ['buyTickets'], // V2 uses buyTickets instead of purchaseTickets
           maxGasLimit: BigInt(500000), // 500k gas per transaction
           maxValuePerTransaction: permission.limit / BigInt(numberOfPurchases), // Split limit across purchases

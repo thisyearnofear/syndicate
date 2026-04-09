@@ -136,15 +136,15 @@ export default function PremiumHome() {
               {/* Value Proposition */}
               <div className="text-center animate-fade-in-up space-y-3">
                 <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-white leading-tight">
-                  Route funds once.
+                  One place to buy tickets, join pools,
                   <br />
                   <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-                    Keep earning while you play.
+                    and turn yield into repeat entries.
                   </span>
                 </h2>
                 <p className="text-sm md:text-base text-gray-400 max-w-lg mx-auto leading-relaxed">
-                  Move USDC in from your current chain, allocate into a yield strategy,
-                  and direct upside toward tickets, causes, or compounding.
+                  Syndicate is for players, communities, and treasury-minded teams that want
+                  transparent onchain lottery access, with optional no-loss vault strategies.
                 </p>
               </div>
 
@@ -154,17 +154,17 @@ export default function PremiumHome() {
                   variant="default"
                   size="lg"
                   className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-2xl hover:shadow-emerald-500/30 border border-emerald-400/30 text-lg px-8 py-4"
-                  onClick={handlePrimaryAction}
+                  onClick={handlePurchaseAction}
                 >
-                  Start With Vaults
+                  Buy Tickets Now
                 </Button>
                 <Button
                   variant="outline"
                   size="lg"
                   className="border-white/15 bg-white/5 text-white hover:bg-white/10 text-lg px-8 py-4"
-                  onClick={handleBridgeAction}
+                  onClick={handlePrimaryAction}
                 >
-                  Route Funds To Base
+                  Explore No-Loss Vaults
                 </Button>
               </div>
 
@@ -176,11 +176,11 @@ export default function PremiumHome() {
               >
                 <span>🌉 Cross-chain entry</span>
                 <span>•</span>
+                <span>👥 Built for players & syndicates</span>
+                <span>•</span>
                 <span>🔒 Non-custodial</span>
                 <span>•</span>
-                <span>📈 Yield allocation</span>
-                <span>•</span>
-                <span>🎟️ Ticket utility</span>
+                <span>📈 Optional yield strategies</span>
               </CompactFlex>
 
               {/* Jackpot — the visual money shot */}
@@ -260,6 +260,60 @@ export default function PremiumHome() {
                 </CompactFlex>
               </div>
             </div>
+          </CompactContainer>
+        </CompactSection>
+
+        {/* ===== WHO IT'S FOR ===== */}
+        <CompactSection spacing="md">
+          <CompactContainer maxWidth="xl">
+            <CompactStack spacing="lg" align="center">
+              <div className="text-center">
+                <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Who Syndicate Is For</h2>
+                <p className="text-gray-400 text-sm max-w-2xl mx-auto">
+                  Pick a flow based on your goal. You can switch between direct play and yield-powered play anytime.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
+                {[
+                  {
+                    icon: "🎟️",
+                    title: "Direct Players",
+                    desc: "Buy Megapot tickets on Base and stay close to every daily draw cycle.",
+                    action: "Fastest path: Quick Buy",
+                  },
+                  {
+                    icon: "♾️",
+                    title: "No-Loss Players",
+                    desc: "Deposit into supported vaults and route yield into entries while preserving principal.",
+                    action: "Best path: Vaults",
+                  },
+                  {
+                    icon: "👥",
+                    title: "Groups & Communities",
+                    desc: "Create or join syndicates to pool funds, share prizes, and coordinate causes.",
+                    action: "Best path: Syndicates",
+                  },
+                ].map((item, i) => (
+                  <PuzzlePiece key={item.title} variant="neutral" size="lg" shape="rounded" className={`animate-fade-in-up stagger-${i + 1}`}>
+                    <CompactStack spacing="sm">
+                      <div className="text-2xl">{item.icon}</div>
+                      <h3 className="text-lg font-bold text-white">{item.title}</h3>
+                      <p className="text-sm text-gray-400 leading-relaxed">{item.desc}</p>
+                      <p className="text-xs text-emerald-400">{item.action}</p>
+                    </CompactStack>
+                  </PuzzlePiece>
+                ))}
+              </div>
+              <CompactFlex align="center" gap="sm" className="text-xs text-gray-500">
+                <span>Need funding first?</span>
+                <button
+                  onClick={handleBridgeAction}
+                  className="text-blue-400 hover:text-blue-300 underline underline-offset-2"
+                >
+                  Bridge to Base
+                </button>
+              </CompactFlex>
+            </CompactStack>
           </CompactContainer>
         </CompactSection>
 
