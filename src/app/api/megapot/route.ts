@@ -1,6 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { API } from '@/config';
 
+function normalizeBaseUrl(url: string): string {
+  return url.replace(/\/+$/, '');
+}
+
+function getCandidateBaseUrls(): string[] {
+  const configured = normalizeBaseUrl(API.megapot.baseUrl);
+  const candidates = [
+    configured,
+    configured.replace(/\/api\/v2$/i, ''),
+    'https://api.megapot.io/api/v2',
+  ];
+  return [...new Set(candidates)];
+}
+
+function getEndpointVariants(endpoint: string): string[] {
+  const normalized = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const lotteryPrefixed = normalized.startsWith('/lottery/')
+    ? normalized
+    : `/lottery${normalized}`;
+  return [...new Set([normalized, lotteryPrefixed])];
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -31,8 +53,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const url = `${API.megapot.baseUrl}${endpoint}`;
-    
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
@@ -42,23 +62,42 @@ export async function GET(request: NextRequest) {
       headers['apikey'] = API.megapot.apiKey;
     }
 
-    const response = await fetch(url, {
-      method: 'GET',
-      headers,
-      // Add timeout to prevent hanging requests
-      signal: AbortSignal.timeout(30000), // 30 second timeout
-    });
+    const baseUrls = getCandidateBaseUrls();
+    const endpointVariants = getEndpointVariants(endpoint);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Megapot API error: ${response.status} - ${errorText}`);
-      
+    let response: Response | null = null;
+    let responseBody = '';
+    let lastStatus = 502;
+
+    for (const baseUrl of baseUrls) {
+      for (const endpointVariant of endpointVariants) {
+        const url = `${baseUrl}${endpointVariant}`;
+        const attempt = await fetch(url, {
+          method: 'GET',
+          headers,
+          signal: AbortSignal.timeout(30000),
+        });
+
+        if (attempt.ok) {
+          response = attempt;
+          break;
+        }
+
+        lastStatus = attempt.status;
+        responseBody = await attempt.text();
+      }
+
+      if (response) break;
+    }
+
+    if (!response) {
+      console.error(`Megapot API error: ${lastStatus} - ${responseBody}`);
       return NextResponse.json(
-        { 
-          error: `Megapot API error: ${response.status}`,
-          details: errorText
+        {
+          error: `Megapot API error: ${lastStatus}`,
+          details: responseBody || 'No successful Megapot endpoint variant found',
         },
-        { status: response.status }
+        { status: lastStatus >= 400 ? lastStatus : 502 }
       );
     }
 

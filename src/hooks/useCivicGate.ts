@@ -16,35 +16,48 @@
 import { useGateway, GatewayStatus } from '@civic/solana-gateway-react';
 
 export function useCivicGate() {
-  const { gatewayStatus, gatewayToken, requestGatewayToken } = useGateway();
+  try {
+    const { gatewayStatus, gatewayToken, requestGatewayToken } = useGateway();
 
-  const isVerified = gatewayStatus === GatewayStatus.ACTIVE;
-  const isChecking = gatewayStatus === GatewayStatus.CHECKING;
-  const isInProgress = [
-    GatewayStatus.COLLECTING_USER_INFORMATION,
-    GatewayStatus.IN_REVIEW,
-    GatewayStatus.VALIDATING_USER_INFORMATION,
-    GatewayStatus.USER_INFORMATION_VALIDATED,
-  ].includes(gatewayStatus);
+    const isVerified = gatewayStatus === GatewayStatus.ACTIVE;
+    const isChecking = gatewayStatus === GatewayStatus.CHECKING;
+    const isInProgress = [
+      GatewayStatus.COLLECTING_USER_INFORMATION,
+      GatewayStatus.IN_REVIEW,
+      GatewayStatus.VALIDATING_USER_INFORMATION,
+      GatewayStatus.USER_INFORMATION_VALIDATED,
+    ].includes(gatewayStatus);
 
-  const isRejected = [
-    GatewayStatus.REJECTED,
-    GatewayStatus.REVOKED,
-    GatewayStatus.FROZEN,
-  ].includes(gatewayStatus);
+    const isRejected = [
+      GatewayStatus.REJECTED,
+      GatewayStatus.REVOKED,
+      GatewayStatus.FROZEN,
+    ].includes(gatewayStatus);
 
-  const statusText = getStatusText(gatewayStatus);
+    const statusText = getStatusText(gatewayStatus);
 
-  return {
-    isVerified,
-    isChecking,
-    isInProgress,
-    isRejected,
-    gatewayStatus,
-    gatewayToken,
-    requestVerification: requestGatewayToken,
-    statusText,
-  };
+    return {
+      isVerified,
+      isChecking,
+      isInProgress,
+      isRejected,
+      gatewayStatus,
+      gatewayToken,
+      requestVerification: requestGatewayToken,
+      statusText,
+    };
+  } catch {
+    return {
+      isVerified: false,
+      isChecking: false,
+      isInProgress: false,
+      isRejected: false,
+      gatewayStatus: GatewayStatus.UNKNOWN,
+      gatewayToken: null,
+      requestVerification: async () => undefined,
+      statusText: getStatusText(GatewayStatus.UNKNOWN),
+    };
+  }
 }
 
 function getStatusText(status: GatewayStatus): string {

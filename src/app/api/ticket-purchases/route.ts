@@ -3,22 +3,48 @@ import { ethers } from 'ethers';
 import { API } from '@/config';
 import { getCrossChainPurchasesByStacksAddress } from '@/lib/db/repositories/crossChainPurchaseRepository';
 
+function normalizeBaseUrl(url: string): string {
+    return url.replace(/\/+$/, '');
+}
+
+function getCandidateBaseUrls(): string[] {
+    const configured = normalizeBaseUrl(API.megapot.baseUrl);
+    return [
+        configured,
+        configured.replace(/\/api\/v2$/i, ''),
+        'https://api.megapot.io/api/v2',
+    ].filter((value, index, arr) => arr.indexOf(value) === index);
+}
+
+function getEndpointVariants(endpoint: string): string[] {
+    const normalized = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const lotteryPrefixed = normalized.startsWith('/lottery/') ? normalized : `/lottery${normalized}`;
+    return [normalized, lotteryPrefixed].filter((value, index, arr) => arr.indexOf(value) === index);
+}
+
 // Helper to fetch purchases for a single EVM address
 async function fetchPurchasesForEvmAddress(walletAddress: string) {
     const endpoint = `/ticket-purchases/${walletAddress}`;
-    const url = `${API.megapot.baseUrl}${endpoint}`;
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (API.megapot.apiKey) headers['apikey'] = API.megapot.apiKey;
 
-    const response = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(30000) });
+    for (const baseUrl of getCandidateBaseUrls()) {
+        for (const endpointVariant of getEndpointVariants(endpoint)) {
+            const response = await fetch(`${baseUrl}${endpointVariant}`, {
+                method: 'GET',
+                headers,
+                signal: AbortSignal.timeout(30000),
+            });
 
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Megapot API error for ${walletAddress}: ${response.status} - ${errorText}`);
-        // Return empty array for a single address failure to not fail the whole batch
-        return [];
+            if (response.ok) {
+                return response.json();
+            }
+        }
     }
-    return response.json();
+
+    console.error(`Megapot API error for ${walletAddress}: no endpoint variant resolved`);
+    // Return empty array for a single address failure to not fail the whole batch
+    return [];
 }
 
 export async function GET(request: NextRequest) {
