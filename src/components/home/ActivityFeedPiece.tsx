@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useWalletConnection } from '@/hooks/useWalletConnection';
+import { useUnifiedWallet } from '@/hooks';
 import { socialService } from '@/services/socialService';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
 import { CompactStack, CompactFlex } from '@/shared/components/premium/CompactLayout';
@@ -19,7 +19,7 @@ export function ActivityFeedPiece() {
     const [hoveredActivity, setHoveredActivity] = useState<number | null>(null);
     const [activities, setActivities] = useState<Activity[]>([]);
     const [loading, setLoading] = useState(false);
-    const { address, isConnected } = useWalletConnection();
+    const { address, isConnected } = useUnifiedWallet();
 
     useEffect(() => {
         const loadActivities = async () => {

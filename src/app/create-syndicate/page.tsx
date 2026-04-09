@@ -16,7 +16,7 @@ import { CompactCard, CompactStack, CompactContainer, CompactSection } from '@/s
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
 import { ComingSoonBanner } from '@/components/ui/ComingSoonBanner';
 import { ImprovedYieldStrategySelector } from '@/components/yield/ImprovedYieldStrategySelector';
-import { useWalletConnection } from '@/hooks/useWalletConnection';
+import { useUnifiedWallet } from '@/hooks';
 import { useToast } from '@/shared/components/ui/Toast';
 import type { SupportedYieldStrategyId } from '@/config/yieldStrategies';
 
@@ -38,7 +38,7 @@ type SyndicateFormData = {
 
 export default function CreateSyndicatePage() {
   const router = useRouter();
-  const { address } = useWalletConnection();
+  const { address } = useUnifiedWallet();
   const { addToast } = useToast();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<SyndicateFormData>({

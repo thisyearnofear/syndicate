@@ -21,7 +21,7 @@ import {
     updateBridgeActivity,
     upsertBridgeActivity,
 } from '@/utils/bridgeStateManager';
-import { useWalletConnection } from '@/hooks/useWalletConnection';
+import { useUnifiedWallet } from '@/hooks';
 import { getStatusMessage, getStatusDescription } from '@/utils/bridgeStatusMessages';
 import { persistBridgeActivityRecord } from '@/services/activity/activityClient';
 
@@ -48,7 +48,7 @@ export function InlineBridgeFlow({
     onError,
     autoStart = false
 }: InlineBridgeFlowProps) {
-    const { address: sourceAddress } = useWalletConnection();
+    const { address: sourceAddress } = useUnifiedWallet();
     const [currentStatus, setCurrentStatus] = useState<string>('idle');
     const [protocol, setProtocol] = useState<'cctp' | 'wormhole' | null>(null);
     const [progress, setProgress] = useState(0);

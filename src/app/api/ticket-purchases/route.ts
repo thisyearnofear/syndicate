@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
+import { API } from '@/config';
 import { getCrossChainPurchasesByStacksAddress } from '@/lib/db/repositories/crossChainPurchaseRepository';
-
-const MEGAPOT_API_BASE_URL = 'https://api.megapot.io/api/v1';
-const MEGAPOT_API_KEY = process.env.NEXT_PUBLIC_MEGAPOT_API_KEY;
 
 // Helper to fetch purchases for a single EVM address
 async function fetchPurchasesForEvmAddress(walletAddress: string) {
     const endpoint = `/ticket-purchases/${walletAddress}`;
-    const url = `${MEGAPOT_API_BASE_URL}${endpoint}`;
+    const url = `${API.megapot.baseUrl}${endpoint}`;
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (MEGAPOT_API_KEY) headers['apikey'] = MEGAPOT_API_KEY;
+    if (API.megapot.apiKey) headers['apikey'] = API.megapot.apiKey;
 
     const response = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(30000) });
 

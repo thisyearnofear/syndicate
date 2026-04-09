@@ -15,7 +15,7 @@
  * This setup allows:
  * - EVM wallets: Handled by wagmi/RainbowKit, synced to WalletContext via SYNC_WAGMI
  * - Non-EVM wallets: Handled by custom services, stored in WalletContext directly
- * - Single interface: useWalletConnection() works for all wallet types
+ * - Single interface: useUnifiedWallet() works for all wallet types
  */
 
 import { RainbowKitProvider } from "@rainbow-me/rainbowkit";

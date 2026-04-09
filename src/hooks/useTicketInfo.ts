@@ -9,7 +9,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useWalletConnection } from './useWalletConnection';
+import { useUnifiedWallet } from './useUnifiedWallet';
 import { web3Service, type UserTicketInfo, type OddsInfo, UserBalance } from '@/services/web3Service';
 
 export interface TicketInfoState {
@@ -28,7 +28,7 @@ export interface TicketInfoActions {
 }
 
 export function useTicketInfo(): TicketInfoState & TicketInfoActions {
-  const { isConnected, address, walletType } = useWalletConnection();
+  const { isConnected, address, walletType } = useUnifiedWallet();
   const [state, setState] = useState<TicketInfoState>({
     userTicketInfo: null,
     oddsInfo: null,

@@ -17,10 +17,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Loader, AlertCircle, CircleCheckBig as CheckCircle } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
-import { useTicketInfo } from '@/hooks/useTicketInfo';
-import { useSimplePurchase } from '@/hooks/useSimplePurchase';
-import { useWalletConnection, STACKS_WALLETS } from '@/hooks/useWalletConnection';
-import { useCrossChainWinnings } from '@/hooks/useCrossChainWinnings';
+import { useTicketInfo, useUnifiedWallet, useUnifiedBridge } from '@/hooks';
 import { WalletTypes } from '@/domains/wallet/types';
 import { bridgeManager } from '@/services/bridges';
 import { web3Service } from '@/services/web3Service';
@@ -47,13 +44,13 @@ export function WinningsWithdrawalFlow({
   onSuccess,
   onError,
 }: WinningsWithdrawalFlowProps) {
-  const { walletType, address: stacksAddress } = useWalletConnection();
-  const { winningsAmount } = useCrossChainWinnings();
-  // useSimplePurchase doesn't have near-specific withdrawal yet, but it's the consolidated replacement.
-  // For now we'll mock the missing Near withdrawal state or migrate it if it was essential.
-  // Actually, the legacy code used `useTicketPurchase`.
+  const { walletType, address: stacksAddress } = useUnifiedWallet();
+  const { status: bridgeStatus, txHash: bridgeTxHash } = useUnifiedBridge();
   const { isClaimingWinnings } = useTicketInfo();
-  const { isPurchasing: isWithdrawingWinningsToNear, error } = useSimplePurchase();
+  
+  // Derived state for bridge monitoring
+  const isWithdrawingWinningsToNear = bridgeStatus === 'bridging' || bridgeStatus === 'pending';
+  const error = null; // Error handling via unified bridge
   
   // Use bridgeManager for withdrawal status
   const [nearWithdrawalWaitingForDeposit, setNearWithdrawalWaitingForDeposit] = useState(false);
@@ -162,7 +159,7 @@ export function WinningsWithdrawalFlow({
 
   // ENHANCEMENT: Support both NEAR and Stacks
   // For Stacks users: render Stacks-specific flow
-  if (STACKS_WALLETS.includes(walletType as any)) {
+  if ((walletType as string | null) === WalletTypes.STACKS) {
     return <StacksWinningsFlow onSuccess={onSuccess} onError={onError} />;
   }
 
@@ -416,8 +413,12 @@ function StacksWinningsFlow({
   onSuccess,
   onError,
 }: StacksWinningsFlowProps) {
-  const { address: stacksAddress } = useWalletConnection();
-  const { stacksClaimableWinnings, stacksWinningsToken, isLoading } = useCrossChainWinnings();
+  const { address: stacksAddress } = useUnifiedWallet();
+  const {
+    stacksClaimableWinnings,
+    stacksWinningsToken,
+    isCheckingWinnings: isLoading,
+  } = useUnifiedBridge();
   const [step, setStep] = useState<WithdrawalStep>('check');
   const [localError, setLocalError] = useState<string | null>(null);
 

@@ -1,19 +1,17 @@
 import { NextResponse } from 'next/server';
-
-const MEGAPOT_API_BASE_URL = 'https://api.megapot.io/api/v1';
-const MEGAPOT_API_KEY = process.env.NEXT_PUBLIC_MEGAPOT_API_KEY;
+import { API } from '@/config';
 
 export async function GET() {
   try {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-    if (MEGAPOT_API_KEY) {
-      headers['apikey'] = MEGAPOT_API_KEY;
+    if (API.megapot.apiKey) {
+      headers['apikey'] = API.megapot.apiKey;
     }
 
     const response = await fetch(
-      `${MEGAPOT_API_BASE_URL}/jackpot-round-stats/active`,
+      `${API.megapot.baseUrl}${API.megapot.endpoints.jackpotStats}`,
       { headers, signal: AbortSignal.timeout(15000) }
     );
 

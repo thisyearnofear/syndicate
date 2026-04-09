@@ -24,7 +24,7 @@ import { base } from 'viem/chains';
 import { automationOrchestrator } from '@/services/automation/AutomationOrchestrator';
 import { getERC7715Service } from '@/services/automation/erc7715Service';
 import type { ERC7715Grant } from '@/services/automation/erc7715Service';
-import { MEGAPOT } from '@/config/contracts';
+import { MEGAPOT_V2_CONTRACTS } from '@/config/contracts';
 import {
   verifyGelatoSignature,
   validateWebhookPayload,
@@ -195,11 +195,11 @@ export default async function handler(
       '0x0000000000000000000000000000000000000000') as Address;
 
     try {
-      // 1. Encode the function data
+      // 1. Encode the function data - use buyTickets with proper ticket structure
       const execData = encodeFunctionData({
-        abi: MEGAPOT.abi,
-        functionName: 'purchaseTickets',
-        args: [referrerAddress, purchaseAmount, userAddress],
+        abi: MEGAPOT_V2_CONTRACTS.abi,
+        functionName: 'buyTickets',
+        args: [[], userAddress, [], [], '0x0000000000000000000000000000000000000000000000000000000000000000'],
       });
 
       console.log('[Execution] Submitting Megapot purchase via Relay:', {
@@ -211,7 +211,7 @@ export default async function handler(
       // 2. Submit to Relay Service
       const relayResponse = await relayService.relayTransaction({
         chainId: 8453, // Base
-        target: MEGAPOT.address,
+        target: MEGAPOT_V2_CONTRACTS.jackpot.address,
         data: execData,
         user: userAddress,
       });

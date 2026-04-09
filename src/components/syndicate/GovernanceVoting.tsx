@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/shared/components/ui/Button";
-import { useWalletConnection } from "@/hooks/useWalletConnection";
+import { useUnifiedWallet } from "@/hooks";
 import { Vote, Plus, CircleCheck, X, Clock, Users, AlertCircle, ChevronDown, ChevronUp, Send, Ban } from "lucide-react";
 
 interface Proposal {
@@ -38,7 +38,7 @@ interface GovernanceVotingProps {
 }
 
 export function GovernanceVoting({ poolId }: GovernanceVotingProps) {
-  const { address } = useWalletConnection();
+  const { address } = useUnifiedWallet();
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

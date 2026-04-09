@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useWalletConnection } from './useWalletConnection';
+import { useUnifiedWallet } from './useUnifiedWallet';
 import { yieldToTicketsService, type AutoYieldStrategy } from '@/services/yieldToTicketsService';
 
 const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -19,7 +19,7 @@ export interface YieldAutoProcessorState {
  * to convert into tickets. Runs client-side only (needs wallet signing).
  */
 export function useYieldAutoProcessor() {
-  const { address } = useWalletConnection();
+  const { address } = useUnifiedWallet();
   const [state, setState] = useState<YieldAutoProcessorState>({
     strategy: null,
     availableYield: '0',

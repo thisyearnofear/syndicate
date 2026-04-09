@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/shared/components/ui/Button";
 import { Loader, X } from "lucide-react";
-import { useWalletConnection } from "@/hooks/useWalletConnection";
+import { useUnifiedWallet } from "@/hooks";
 import { useToast } from "@/shared/components/ui/Toast";
 import { useSyndicateDeposit } from "@/hooks/useSyndicateDeposit";
 import type { SyndicateInfo } from "@/domains/lottery/types";
@@ -32,7 +32,7 @@ export default function SyndicateJoinModal({
 }: SyndicateJoinModalProps) {
   const [joinAmount, setJoinAmount] = useState("");
   const [isJoining, setIsJoining] = useState(false);
-  const { address, isConnected } = useWalletConnection();
+  const { address, isConnected } = useUnifiedWallet();
   const { addToast } = useToast();
   const { deposit: depositUsdc, status: depositStatus, reset: resetDeposit } = useSyndicateDeposit();
 

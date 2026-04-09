@@ -3,9 +3,7 @@
 import { useState, useCallback, useEffect, Suspense, lazy } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useWalletConnection } from "@/hooks/useWalletConnection";
-import { useTicketInfo } from "@/hooks/useTicketInfo";
-import { useAutoPurchaseExecutor } from "@/hooks/useAutoPurchaseExecutor";
+import { useUnifiedWallet, useTicketInfo } from "@/hooks";
 import type { UserIdentity } from '@/interfaces';
 import { socialService } from "@/services/socialService";
 import { trackEvent } from "@/services/analytics/client";
@@ -46,9 +44,8 @@ export default function PremiumHome() {
   const [userIdentity, setUserIdentity] = useState<UserIdentity | null>(null);
   const [identityLoading, setIdentityLoading] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const { isConnected, address } = useWalletConnection();
+  const { isConnected, address } = useUnifiedWallet();
   const { userTicketInfo, claimWinnings, isClaimingWinnings } = useTicketInfo();
-  const { isEnabled: autoPurchaseEnabled, nextExecution } = useAutoPurchaseExecutor(true);
 
   useEffect(() => {
     setIsMounted(true);

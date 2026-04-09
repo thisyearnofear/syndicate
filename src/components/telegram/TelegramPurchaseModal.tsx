@@ -11,7 +11,7 @@
 import { useState, useCallback } from "react";
 import { useTelegram, useHapticFeedback } from "./TelegramProvider";
 import { SyndicateTonConnectButton } from "./TonConnectButton";
-import { useTonConnect } from "@/hooks/useTonConnect";
+import { useUnifiedWallet } from "@/hooks";
 import { useTonPay } from "@/hooks/useTonPay";
 
 interface TelegramPurchaseModalProps {
@@ -29,7 +29,7 @@ export function TelegramPurchaseModal({
 }: TelegramPurchaseModalProps) {
   const { isTelegram, colorScheme, user } = useTelegram();
   const { impact, notification } = useHapticFeedback();
-  const { isConnected, address } = useTonConnect();
+  const { isConnected, address } = useUnifiedWallet();
   const { pay, isPending } = useTonPay();
 
   const [selectedToken, setSelectedToken] = useState<"USDT" | "TON">("USDT");

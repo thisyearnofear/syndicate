@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const MEGAPOT_API_BASE_URL = 'https://api.megapot.io/api/v1';
-const MEGAPOT_API_KEY = process.env.NEXT_PUBLIC_MEGAPOT_API_KEY;
+import { API } from '@/config';
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,15 +31,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const url = `${MEGAPOT_API_BASE_URL}${endpoint}`;
+    const url = `${API.megapot.baseUrl}${endpoint}`;
     
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
     // Add API key to headers if available
-    if (MEGAPOT_API_KEY) {
-      headers['apikey'] = MEGAPOT_API_KEY;
+    if (API.megapot.apiKey) {
+      headers['apikey'] = API.megapot.apiKey;
     }
 
     const response = await fetch(url, {

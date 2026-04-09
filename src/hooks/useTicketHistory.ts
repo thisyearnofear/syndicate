@@ -9,7 +9,9 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { useWalletConnection, STACKS_WALLETS } from './useWalletConnection';
+import { useUnifiedWallet } from './useUnifiedWallet';
+
+const STACKS_WALLETS = ['stacks'] as const;
 
 export interface TicketPurchaseHistory {
     id: string;
@@ -46,7 +48,7 @@ export interface TicketHistoryActions {
 }
 
 export function useTicketHistory(): TicketHistoryState & TicketHistoryActions {
-    const { isConnected, address, walletType } = useWalletConnection();
+    const { isConnected, address, walletType } = useUnifiedWallet();
 
     const [state, setState] = useState<TicketHistoryState>({
         purchases: [],

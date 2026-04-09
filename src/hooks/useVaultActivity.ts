@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useWalletConnection } from './useWalletConnection';
+import { useUnifiedWallet } from './useUnifiedWallet';
 import {
     getVaultActivityHistory,
     type VaultDepositActivityRecord,
@@ -20,7 +20,7 @@ function normalizeAddress(value?: string | null) {
 }
 
 export function useVaultActivity(): VaultActivityState & VaultActivityActions {
-    const { address } = useWalletConnection();
+    const { address } = useUnifiedWallet();
     const [deposits, setDeposits] = useState<VaultDepositActivityRecord[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [lastUpdated, setLastUpdated] = useState<number | null>(null);

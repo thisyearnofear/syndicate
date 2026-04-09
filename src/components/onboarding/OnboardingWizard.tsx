@@ -27,7 +27,7 @@ import {
   Play
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
-import { useWalletConnection } from '@/hooks/useWalletConnection';
+import { useUnifiedWallet } from '@/hooks';
 
 interface OnboardingState {
   currentStep: number;
@@ -60,7 +60,7 @@ const ONBOARDING_STEPS = [
 
 export function OnboardingWizard() {
   const router = useRouter();
-  const { isConnected, address } = useWalletConnection();
+  const { isConnected, address } = useUnifiedWallet();
   const [currentStep, setCurrentStep] = useState(0);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [loading, setLoading] = useState(true);

@@ -15,7 +15,7 @@ import {
   Loader
 } from "lucide-react";
 import { CompactCard, CompactStack, CompactContainer, CompactSection } from '@/shared/components/premium/CompactLayout';
-import { useWalletConnection } from '@/hooks/useWalletConnection';
+import { useUnifiedWallet } from '@/hooks';
 import { useVaultDeposit } from '@/hooks/useVaultDeposit';
 import WalletConnectionManager from '@/components/wallet/WalletConnectionManager';
 
@@ -44,7 +44,7 @@ const DIRECT_DEPOSIT_STRATEGIES: VaultProtocol[] = ['drift', 'aave', 'morpho', '
 
 function YieldStrategiesContent() {
   const router = useRouter();
-  const { address } = useWalletConnection();
+  const { address } = useUnifiedWallet();
   const { isDepositing, status, txHash, error: depositError, deposit, reset } = useVaultDeposit();
   const searchParams = useSearchParams();
   const protocolParam = searchParams?.get('protocol');

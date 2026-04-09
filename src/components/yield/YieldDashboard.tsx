@@ -4,7 +4,7 @@ import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
 import { TrendingUp, Wallet, Heart, Trophy, Zap, Loader, RefreshCw, ExternalLink } from 'lucide-react';
 import { YieldPerformanceDisplay } from '@/components/yield/YieldPerformanceDisplay';
 import { useToast, useErrorToast, useSuccessToast } from '@/shared/components/ui/Toast';
-import { useWalletConnection } from '@/hooks/useWalletConnection';
+import { useUnifiedWallet } from '@/hooks';
 import { useUserVaults } from '@/hooks/useUserVaults';
 import { yieldToTicketsService } from '@/services/yieldToTicketsService';
 import { Button } from '@/shared/components/ui/Button';
@@ -17,7 +17,7 @@ interface YieldDashboardProps {
 }
 
 export function YieldDashboard({ className = '' }: YieldDashboardProps) {
-  const { address } = useWalletConnection();
+  const { address } = useUnifiedWallet();
   const { addToast } = useToast();
   const successToast = useSuccessToast();
   const errorToast = useErrorToast();
