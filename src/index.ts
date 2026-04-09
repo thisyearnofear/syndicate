@@ -25,13 +25,6 @@ export * from './shared/utils';
 // export * from './shared/components';
 export * from './shared/services/performanceMonitor';
 
-// =============================================================================
-// LEGACY COMPATIBILITY
-// =============================================================================
-// Keep these exports for backward compatibility during migration
-export { useWalletConnection } from './hooks/useWalletConnection';
-
-// =============================================================================
 // CONVENIENCE EXPORTS
 // =============================================================================
 // Most commonly used exports for easy access

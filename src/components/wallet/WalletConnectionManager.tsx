@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback } from "react";
-import { useWalletConnection, WalletType } from "@/hooks/useWalletConnection";
+import { useUnifiedWallet } from "@/hooks";
 import { useWalletContext } from "@/context/WalletContext";
+import type { WalletType } from "@/domains/wallet/types";
 import UnifiedModal from "@/components/modal/UnifiedModal";
 import WalletConnectionOptions from "@/components/wallet/WalletConnectionOptions";
 import WalletInfo from "@/components/wallet/WalletInfo";
@@ -19,7 +20,7 @@ export default function WalletConnectionManager({
   showConnectionInfo = true,
   variant = "default",
 }: WalletConnectionManagerProps) {
-  const { isConnected, connect, disconnect } = useWalletConnection();
+  const { isConnected, connect, disconnect } = useUnifiedWallet();
   const { state, dispatch } = useWalletContext();
 
   const handleConnectClick = useCallback(() => {

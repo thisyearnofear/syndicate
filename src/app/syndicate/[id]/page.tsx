@@ -12,7 +12,7 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { SyndicateYieldDashboard } from "@/components/syndicate/SyndicateYieldDashboard";
 import { GovernanceVoting } from "@/components/syndicate/GovernanceVoting";
 import type { SyndicateInfo } from "@/domains/lottery/types";
-import { useWalletConnection } from "@/hooks/useWalletConnection";
+import { useUnifiedWallet } from "@/hooks";
 
 export default function SyndicateDetailPage() {
    const params = useParams<{ id: string }>();
@@ -29,7 +29,7 @@ export default function SyndicateDetailPage() {
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [snapshotInfo, setSnapshotInfo] = useState<null | { createdAt: string; participants: number }>(null);
   const [showJoinModal, setShowJoinModal] = useState(false);
-  const { address } = useWalletConnection();
+  const { address } = useUnifiedWallet();
 
   useEffect(() => {
     const fetchSyndicate = async () => {

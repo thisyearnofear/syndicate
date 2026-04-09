@@ -18,7 +18,7 @@ import { ethers } from "ethers";
 import type { BridgeResult } from "@/services/bridges/types";
 import { Button } from "@/shared/components/ui/Button";
 import { ProtocolSelector, ProtocolOption } from "./ProtocolSelector";
-import { useWalletConnection } from "@/hooks/useWalletConnection";
+import { useUnifiedWallet } from "@/hooks";
 import { getStatusMessage, getStatusDescription } from "@/utils/bridgeStatusMessages";
 import {
   createBridgeActivityId,
@@ -56,7 +56,7 @@ export function FocusedBridgeFlow({
   targetStrategy,
 }: FocusedBridgeFlowProps) {
   // Get source wallet address
-  const { address: sourceAddress, chainId: sourceChainId } = useWalletConnection();
+  const { address: sourceAddress, chainId: sourceChainId } = useUnifiedWallet();
   // If protocol is preselected, skip selection stage and go directly to bridging
   const [stage, setStage] = useState<
     "select" | "bridging" | "complete" | "error" | "manual_action"

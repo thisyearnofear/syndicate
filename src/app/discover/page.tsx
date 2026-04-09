@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 import { SyndicateCard } from '@/components/syndicate/SyndicateCard';
-import { useWalletConnection } from '@/hooks/useWalletConnection';
+import { useUnifiedWallet } from '@/hooks';
 
 type PoolType = 'safe' | 'splits' | 'pooltogether' | 'all';
 type VaultStrategy = 'aave' | 'morpho' | 'drift' | 'pooltogether' | 'all';
@@ -45,7 +45,7 @@ interface SyndicateData {
 
 export default function SyndicateDiscoveryPage() {
   const router = useRouter();
-  const { isConnected, address } = useWalletConnection();
+  const { isConnected, address } = useUnifiedWallet();
   
   const [syndicates, setSyndicates] = useState<SyndicateData[]>([]);
   const [filteredSyndicates, setFilteredSyndicates] = useState<SyndicateData[]>([]);

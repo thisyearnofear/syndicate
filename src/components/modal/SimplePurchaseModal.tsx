@@ -13,8 +13,7 @@ import { useState, Suspense, lazy, useEffect } from "react";
 import type { ReactNode } from "react";
 import { Button } from "@/shared/components/ui/Button";
 import { Loader, AlertCircle, Check, Zap, Link2, ChevronDown, TrendingUp, ArrowRight, Wallet, Shield, DollarSign, Bitcoin, Trophy, Coins } from "lucide-react";
-import { useWalletConnection } from "@/hooks/useWalletConnection";
-import { useSimplePurchase } from "@/hooks/useSimplePurchase";
+import { useUnifiedWallet, useUnifiedPurchase } from "@/hooks";
 import { useERC7715 } from "@/hooks/useERC7715";
 import { usePoolTogetherDeposit } from "@/hooks/usePoolTogetherDeposit";
 import { useDriftDeposit } from "@/hooks/useDriftDeposit";
@@ -122,8 +121,8 @@ export interface SimplePurchaseModalProps {
 }
 
 export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseModalProps) {
-  const { isConnected, address, walletType, mirrorAddress } = useWalletConnection();
-  const { purchase, isPurchasing, error, txHash, clearError, reset, status, sourceChain, sourceTxHash, destinationTxHash, walletInfo } = useSimplePurchase();
+  const { isConnected, address, walletType, mirrorAddress } = useUnifiedWallet();
+  const { purchase, isPurchasing, error, txHash, clearError, reset, status, sourceChain, sourceTxHash, destinationTxHash, walletInfo } = useUnifiedPurchase();
   const { permissions, isSupported } = useERC7715();
   const ptDeposit = usePoolTogetherDeposit();
   const driftDeposit = useDriftDeposit();

@@ -16,14 +16,14 @@ import React, { useState, useEffect } from 'react';
 import { Loader, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/shared/components/ui/Button';
-import { useWalletConnection } from '@/hooks/useWalletConnection';
+import { useUnifiedWallet } from '@/hooks';
 import { WalletTypes } from '@/domains/wallet/types';
 import { web3Service } from '@/services/web3Service';
 import { nearIntentsService } from '@/services/nearIntentsService';
 import { nearWalletSelectorService } from '@/domains/wallet/services/nearWalletSelectorService';
 
 export function WinningsCard() {
-  const { walletType, isConnected, address } = useWalletConnection();
+  const { walletType, isConnected, address } = useUnifiedWallet();
   const [winningsAmount, setWinningsAmount] = useState<string>('0');
   const [loading, setLoading] = useState(false);
   const [hasWinnings, setHasWinnings] = useState(false);

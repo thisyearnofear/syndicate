@@ -1,16 +1,15 @@
 "use client";
 
-import { useCrossChainWinnings } from "@/hooks/useCrossChainWinnings";
+import { useUnifiedBridge } from "@/hooks";
 import { useWalletContext } from "@/context/WalletContext";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { Loader, AlertCircle } from 'lucide-react';
 
 /**
  * A component that detects if a connected Stacks user has winnings
  * on an associated EVM address and guides them to connect that wallet to claim.
  */
 export function WinningsGuide() {
-    const { isLoading, error, winningsAmount, associatedEvmAddress } = useCrossChainWinnings();
+    const { isCheckingWinnings: isLoading, error, winningsAmount, associatedEvmAddress } = useUnifiedBridge();
     const { state } = useWalletContext();
     const evmConnected = state.walletType === 'evm' && state.isConnected;
     const evmAddress = state.address;

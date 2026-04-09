@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { useWalletConnection } from "@/hooks/useWalletConnection";
+import { useUnifiedWallet } from "@/hooks";
 import { useTicketInfo } from "@/hooks/useTicketInfo";
 import { useTicketHistory } from "@/hooks/useTicketHistory";
 import { Button } from "@/shared/components/ui/Button";
@@ -158,7 +158,7 @@ className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 
 }
 
 export default function MyTicketsPage() {
-    const { isConnected } = useWalletConnection();
+    const { isConnected } = useUnifiedWallet();
     const { userTicketInfo, refresh: getCurrentTicketInfo, claimWinnings, isClaimingWinnings } = useTicketInfo();
     const { purchases: ticketHistory, isLoading, refreshHistory } = useTicketHistory();
     const [isRefreshing, setIsRefreshing] = useState(false);

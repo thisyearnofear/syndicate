@@ -25,11 +25,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/Button";
 import { AgentRegistryService, AgentStatus, AgentType } from "@/services/automation/agentRegistryService";
-import { useWalletConnection } from "@/hooks/useWalletConnection";
+import { useUnifiedWallet } from "@/hooks";
 import { AutoPurchaseModal } from "@/components/modal/AutoPurchaseModal";
 
 export function AutoPurchaseSettings() {
-  const { address, walletType } = useWalletConnection();
+  const { address, walletType } = useUnifiedWallet();
   const [agents, setAgents] = useState<AgentStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);

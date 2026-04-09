@@ -26,9 +26,8 @@ import {
   Clock
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
-import { useWalletConnection } from '@/hooks/useWalletConnection';
+import { useUnifiedWallet, useUnifiedBridge } from '@/hooks';
 import { useUserVaults } from '@/hooks/useUserVaults';
-import { useBridgeActivity } from '@/hooks/useBridgeActivity';
 import { useVaultActivity } from '@/hooks/useVaultActivity';
 import { useTicketHistory, type TicketPurchaseHistory } from '@/hooks/useTicketHistory';
 import type { BridgeActivityRecord } from '@/utils/bridgeStateManager';
@@ -91,7 +90,7 @@ type PortfolioLifecycleEvent =
 
 export default function PortfolioPage() {
   const router = useRouter();
-  const { isConnected, address } = useWalletConnection();
+  const { isConnected, address } = useUnifiedWallet();
   const [portfolio, setPortfolio] = useState<PortfolioData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -110,7 +109,7 @@ export default function PortfolioPage() {
     pendingBridge,
     isLoading: bridgeLoading,
     refreshActivity,
-  } = useBridgeActivity();
+  } = useUnifiedBridge();
   const {
     deposits: vaultDeposits,
     isLoading: vaultActivityLoading,

@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import { useWalletClient, usePublicClient } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { parseUnits } from 'viem';
-import { useWalletConnection } from './useWalletConnection';
+import { useUnifiedWallet } from './useUnifiedWallet';
 import { solanaWalletService } from '@/services/solanaWalletService';
 import { AAVE_CONFIG } from '@/services/vaults/aaveProvider';
 import type { VaultProtocol } from '@/services/vaults';
@@ -34,7 +34,7 @@ const USDC_BASE = AAVE_CONFIG.BASE.USDC_ADDRESS as `0x${string}`;
 const AAVE_POOL = AAVE_CONFIG.BASE.POOL_ADDRESS as `0x${string}`;
 
 export function useVaultDeposit() {
-  const { address } = useWalletConnection();
+  const { address } = useUnifiedWallet();
   const { data: walletClient } = useWalletClient({ chainId: base.id });
   const publicClient = usePublicClient({ chainId: base.id });
 

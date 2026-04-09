@@ -15,8 +15,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/shared/components/ui/Button';
 import { CompactFlex } from '@/shared/components/premium/CompactLayout';
-import { useWalletConnection } from '@/hooks/useWalletConnection';
-import { useUnifiedWallet } from '@/domains/wallet/services/unifiedWalletService';
+import { useUnifiedWallet } from '@/hooks';
 import { WalletType } from '@/domains/wallet/types';
 import WalletInfo from './wallet/WalletInfo';
 import { Home, Users, TrendingUp, Menu, X, Loader, ArrowLeftRight, LayoutDashboard } from 'lucide-react';
@@ -32,7 +31,7 @@ interface NavigationProps {
 
 export default function Navigation({ className = '' }: NavigationProps) {
     const pathname = usePathname();
-    const { isConnected } = useWalletConnection();
+    const { isConnected } = useUnifiedWallet();
     const { connect } = useUnifiedWallet();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [showWalletDetails, setShowWalletDetails] = useState(false);

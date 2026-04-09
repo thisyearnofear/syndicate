@@ -27,7 +27,7 @@ import {
 import { useERC7715 } from "@/hooks/useERC7715";
 import { AdvancedPermissionsTooltip } from "@/components/common/InfoTooltip";
 import { CONTRACTS } from "@/services/bridges/protocols/stacks";
-import { useWalletConnection } from "@/hooks/useWalletConnection";
+import { useUnifiedWallet } from "@/hooks";
 import { getPermissionPresets } from "@/domains/wallet/services/advancedPermissionsService";
 import { stacksX402Service } from "@/domains/wallet/services/stacksX402Service";
 import type { AutoPurchaseConfig } from "@/domains/wallet/types";
@@ -74,7 +74,7 @@ export function AutoPurchaseModal({
   });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const { address, chainId, walletType } = useWalletConnection();
+  const { address, chainId, walletType } = useUnifiedWallet();
   const {
     isRequesting,
     error,

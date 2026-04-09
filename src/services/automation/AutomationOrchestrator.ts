@@ -19,7 +19,7 @@ import { TetherWDKService } from './wdkService';
 import { getERC7715Service } from './erc7715Service';
 import { referralManager } from '../referral/ReferralManager';
 import { poolTogetherService, POOLTOGETHER_VAULTS } from '../lotteries/PoolTogetherService';
-import { MEGAPOT } from '@/config/contracts';
+import { MEGAPOT_V2_CONTRACTS } from '@/config/contracts';
 
 // =============================================================================
 // TYPES
@@ -96,9 +96,9 @@ export class AutomationOrchestrator {
       const nextExecTime = Math.floor(Date.now() / 1000) + intervalSeconds;
 
       const execData = encodeFunctionData({
-        abi: MEGAPOT.abi,
-        functionName: 'purchaseTickets',
-        args: [referrer, amount, userAddress],
+        abi: MEGAPOT_V2_CONTRACTS.abi,
+        functionName: 'buyTickets',
+        args: [[], userAddress, [], [], '0x0000000000000000000000000000000000000000000000000000000000000000'],
       });
 
       const response = await fetch('https://api.gelato.digital/tasks', {

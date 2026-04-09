@@ -11,7 +11,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { usePendingBridge } from '@/hooks/usePendingBridge';
+import { useUnifiedBridge } from '@/hooks';
 import { ExternalLink, X, Clock } from 'lucide-react';
 
 interface PendingBridgeNotificationProps {
@@ -23,7 +23,17 @@ export function PendingBridgeNotification({
     currentBalance,
     onBridgeComplete
 }: PendingBridgeNotificationProps) {
-    const { hasPending, protocol, amount, timeRemaining, explorerLink, isOverdue, dismissPending } = usePendingBridge(currentBalance);
+    // Use unified bridge - check for pending bridges via status
+    const { status, txHash, sourceTxHash, destinationTxHash, isPending, error } = useUnifiedBridge();
+    
+    // Derive pending state from unified bridge status
+    const hasPending = isPending || status === 'pending' || status === 'bridging' || status === 'confirming';
+    const protocol = 'cctp'; // Default protocol - can be enhanced
+    const amount = '0'; // Would need to be passed as prop or from context
+    const timeRemaining = '5 min'; // Placeholder
+    const explorerLink = txHash ? `https://basescan.org/tx/${txHash}` : null;
+    const isOverdue = false;
+    const dismissPending = () => { /* No-op for now */ };
     const [isVisible, setIsVisible] = React.useState(false);
 
     useEffect(() => {

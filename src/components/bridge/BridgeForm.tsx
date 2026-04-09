@@ -7,10 +7,10 @@ import { cctp as CCTP } from '@/config';
 import { Button } from '@/shared/components/ui/Button';
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner';
 import type { ChainIdentifier, BridgeResult } from '@/services/bridges/types';
-import { useWalletConnection } from '@/hooks/useWalletConnection';
+import { useUnifiedWallet } from '@/hooks';
 
 export function BridgeForm({ onComplete }: { onComplete?: (result: BridgeResult) => void }) {
-  const { address: sourceAddress } = useWalletConnection();
+  const { address: sourceAddress } = useUnifiedWallet();
   const [sourceChain, setSourceChain] = useState<ChainIdentifier>('solana');
   const [amount, setAmount] = useState('10.00');
   const [recipient, setRecipient] = useState('');

@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { CrossChainTracker } from "@/components/bridge/CrossChainTracker";
 import type { TrackerStatus } from "@/components/bridge/CrossChainTracker";
-import { usePurchaseSSE } from "@/hooks/usePurchaseSSE";
 import { mapPurchaseStatusToTracker } from "@/domains/lottery/utils/mapPurchaseStatus";
 
 interface PurchaseStatusResponse {
@@ -85,7 +84,22 @@ export default function PurchaseStatusPage() {
     fetchInitial();
   }, [txId, updateFromResponse]);
 
-  usePurchaseSSE({ txId, onStatusChange: updateFromResponse });
+// Subscribe to status changes via SSE
+useEffect(() => {
+  if (!txId) return;
+  
+  const eventSource = new EventSource(`/api/purchase-status/${txId}/stream`);
+  eventSource.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      updateFromResponse(data);
+    } catch (e) {
+      console.error('Failed to parse SSE data:', e);
+    }
+  };
+  
+  return () => eventSource.close();
+}, [txId]);
 
   return (
     <div className="min-h-screen px-4 py-10">

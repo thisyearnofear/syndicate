@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { X, Users, Heart, Sparkles, Target, Eye } from "lucide-react";
 import { Button } from "@/shared/components/ui/Button";
 import { syndicateService } from "@/domains/syndicate/services/syndicateService";
-import { useWalletConnection } from "@/hooks/useWalletConnection";
+import { useUnifiedWallet } from "@/hooks";
 
 /**
  * DELIGHTFUL SYNDICATE CREATOR
@@ -41,7 +41,7 @@ const AVAILABLE_CAUSES = [
 ];
 
 export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }: SyndicateCreatorProps) {
-  const { isConnected, address } = useWalletConnection();
+  const { isConnected, address } = useUnifiedWallet();
 
   const [formData, setFormData] = useState<NewSyndicate>({
     name: "",

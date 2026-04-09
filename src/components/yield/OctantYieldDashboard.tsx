@@ -10,7 +10,7 @@ import { Button } from '@/shared/components/ui/Button';
 import { CompactStack, CompactFlex } from '@/shared/components/premium/CompactLayout';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
 import { CountUpText } from '@/shared/components/ui/CountUpText';
-import { useWalletConnection } from '@/hooks/useWalletConnection';
+import { useUnifiedWallet } from '@/hooks';
 import { useYieldAutoProcessor } from '@/hooks/useYieldAutoProcessor';
 import { solanaWalletService } from '@/services/solanaWalletService';
 import { octantVaultService, type OctantVaultInfo } from '@/services/octantVaultService';
@@ -46,7 +46,7 @@ export function OctantYieldDashboard({
   vaultAddress,
   className = '' 
 }: OctantYieldDashboardProps) {
-  const { address } = useWalletConnection();
+  const { address } = useUnifiedWallet();
   const { addToast } = useToast();
   const { availableYield, estimatedTickets, isChecking: isAutoChecking, strategy: autoStrategy } = useYieldAutoProcessor();
 

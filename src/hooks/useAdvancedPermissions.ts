@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useERC7715 } from './useERC7715';
-import { useWalletConnection } from './useWalletConnection';
+import { useUnifiedWallet } from './useUnifiedWallet';
 import { getPermissionPresets } from '@/domains/wallet/services/advancedPermissionsService';
 import type { AdvancedPermission, AutoPurchaseConfig } from '@/domains/wallet/types';
 
@@ -58,7 +58,7 @@ const STORAGE_KEY_AUTO_CONFIG = 'syndicate:auto-purchase-config';
 export function useAdvancedPermissions(): UseAdvancedPermissionsState & UseAdvancedPermissionsActions {
   // Delegate to unified ERC-7715 hook
   const erc7715 = useERC7715();
-  const { isConnected, walletType, chainId } = useWalletConnection();
+  const { isConnected, walletType, chainId } = useUnifiedWallet();
 
   // Local state for backward compatibility
   const [autoPurchaseConfig, setAutoPurchaseConfig] = useState<AutoPurchaseConfig | null>(null);
@@ -258,7 +258,7 @@ export function useCanEnableAutoPurchase(): {
   reason?: string;
   chainRequirement?: string;
 } {
-  const { isConnected, walletType } = useWalletConnection();
+  const { isConnected, walletType } = useUnifiedWallet();
   const { permission, isSupported, support } = useAdvancedPermissions();
 
   return useMemo(() => {

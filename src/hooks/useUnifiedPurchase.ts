@@ -1,39 +1,26 @@
-/**
- * SIMPLIFIED PURCHASE HOOK
- * 
- * Core Principles Applied:
- * - ENHANCEMENT FIRST: Replaces complex useTicketPurchase with simplified version
- * - DRY: Single source of truth using purchaseOrchestrator
- * - CLEAN: Single responsibility - manage UI state for purchase flow
- * - MODULAR: Works with any chain, delegated to orchestrator
- * 
- * Replaces: useTicketPurchase.ts (1429 lines)
- * Consolidates with: useCrossChainPurchase.ts
- * 
- * Usage:
- * const { purchase, isPurchasing, error, result } = useSimplePurchase();
- * await purchase({ chain: 'base', userAddress, ticketCount: 5 });
- */
-
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { purchaseOrchestrator, type PurchaseRequest, type PurchaseResult } from '@/domains/lottery/services/purchaseOrchestrator';
-import { useWalletConnection } from './useWalletConnection';
+import { useUnifiedWallet } from './useUnifiedWallet';
 import type { TrackerStatus, SourceChainType } from '@/components/bridge/CrossChainTracker';
-import { usePurchasePolling } from './usePurchasePolling';
 import { mapPurchaseStatusToTracker } from '@/domains/lottery/utils/mapPurchaseStatus';
 import { solanaWalletService } from '@/services/solanaWalletService';
 
 const PENDING_PURCHASE_KEY = 'pending_cross_chain_purchase';
+const BASE_POLLING_INTERVAL = 5000;
+const MAX_POLLING_INTERVAL = 30000;
 
-export interface UseSimplePurchaseState {
+export type PurchaseStatus = TrackerStatus;
+export type PurchaseStrategy = 'direct';
+export type PurchaseParams = Partial<PurchaseRequest>;
+
+export interface PurchaseState {
   isPurchasing: boolean;
   error: string | null;
   result: PurchaseResult | null;
   txHash: string | null;
   sourceTxHash: string | null;
   destinationTxHash: string | null;
-  // Enhanced tracking
-  status: TrackerStatus;
+  status: PurchaseStatus;
   sourceChain?: SourceChainType;
   walletInfo?: {
     sourceAddress?: string;
@@ -42,15 +29,21 @@ export interface UseSimplePurchaseState {
   };
 }
 
-export interface UseSimplePurchaseActions {
-  purchase: (request: Partial<PurchaseRequest>, permissionId?: string) => Promise<PurchaseResult>;
+export interface PurchaseActions {
+  purchase: (request: PurchaseParams, permissionId?: string) => Promise<PurchaseResult>;
   clearError: () => void;
   reset: () => void;
 }
 
-export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseActions {
-  const { address: connectedAddress, walletType } = useWalletConnection();
-  const [state, setState] = useState<UseSimplePurchaseState>({
+interface PurchaseStatusResponse {
+  status: string;
+  baseTxId?: string;
+  error?: string;
+}
+
+export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
+  const { address: connectedAddress, walletType } = useUnifiedWallet();
+  const [state, setState] = useState<PurchaseState>({
     isPurchasing: false,
     error: null,
     result: null,
@@ -62,16 +55,32 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
     walletInfo: undefined,
   });
 
-  // Memoize onStatusChange to prevent infinite polling loops
-  const handleStatusChange = useCallback((data: { status?: string; baseTxId?: string; error?: string }) => {
-    // Update state using functional update to get latest status and avoid dependencies
-    setState(prev => {
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pollCountRef = useRef(0);
+  const isPollingRef = useRef(false);
+  const lastStatusRef = useRef<string | null>(null);
+
+  const stopPolling = useCallback(() => {
+    isPollingRef.current = false;
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    pollCountRef.current = 0;
+    lastStatusRef.current = null;
+  }, []);
+
+  const handleStatusChange = useCallback((data: PurchaseStatusResponse) => {
+    setState((prev) => {
       const newStatus = mapPurchaseStatusToTracker(data.status);
       if (newStatus === 'complete' || newStatus === 'error') {
         if (typeof window !== 'undefined') {
-          try { localStorage.removeItem(PENDING_PURCHASE_KEY); } catch {}
+          try {
+            localStorage.removeItem(PENDING_PURCHASE_KEY);
+          } catch {}
         }
       }
+
       return {
         ...prev,
         status: newStatus,
@@ -82,43 +91,88 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
     });
   }, []);
 
-  // Use shared polling hook for cross-chain transactions
-  const { stopPolling } = usePurchasePolling({
-    txId: state.sourceTxHash,
-    currentStatus: state.status,
-    adaptivePolling: true,
-    onStatusChange: handleStatusChange,
-  });
+  useEffect(() => {
+    const txId = state.sourceTxHash;
+    const shouldPoll = !!txId
+      && ['confirmed_source', 'confirmed_stacks', 'bridging', 'purchasing'].includes(state.status)
+      && state.status !== 'complete'
+      && state.status !== 'error';
 
-  // Restore pending cross-chain purchase on mount
+    if (!shouldPoll) {
+      stopPolling();
+      return;
+    }
+
+    if (isPollingRef.current) return;
+    isPollingRef.current = true;
+
+    const getCurrentInterval = (count: number) => {
+      if (count < 3) return BASE_POLLING_INTERVAL;
+      if (count < 6) return BASE_POLLING_INTERVAL * 2;
+      if (count < 10) return BASE_POLLING_INTERVAL * 3;
+      return Math.min(BASE_POLLING_INTERVAL * 4, MAX_POLLING_INTERVAL);
+    };
+
+    const poll = async () => {
+      if (!isPollingRef.current || !txId) return;
+
+      try {
+        const response = await fetch(`/api/purchase-status/${txId}`);
+        if (response.ok) {
+          const data = await response.json() as PurchaseStatusResponse;
+          if (data.status !== lastStatusRef.current) {
+            lastStatusRef.current = data.status;
+            handleStatusChange(data);
+          }
+          if (data.status === 'complete' || data.status === 'error') {
+            stopPolling();
+            return;
+          }
+        }
+      } catch {}
+
+      pollCountRef.current++;
+      timeoutRef.current = setTimeout(poll, getCurrentInterval(pollCountRef.current));
+    };
+
+    void poll();
+
+    return () => {
+      stopPolling();
+    };
+  }, [handleStatusChange, state.sourceTxHash, state.status, stopPolling]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
       const saved = localStorage.getItem(PENDING_PURCHASE_KEY);
       if (!saved) return;
-      const pending = JSON.parse(saved);
-      // Only restore if less than 1 hour old
+      const pending = JSON.parse(saved) as {
+        sourceTxHash: string;
+        chain: SourceChainType;
+        timestamp: number;
+      };
       if (Date.now() - pending.timestamp > 3600_000) {
         localStorage.removeItem(PENDING_PURCHASE_KEY);
         return;
       }
-      // Restore tracking state so polling resumes
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         isPurchasing: true,
         sourceTxHash: pending.sourceTxHash,
         sourceChain: pending.chain,
-        status: 'confirmed_source' as TrackerStatus,
+        status: 'confirmed_source',
       }));
     } catch {
-      localStorage.removeItem(PENDING_PURCHASE_KEY);
+      try {
+        localStorage.removeItem(PENDING_PURCHASE_KEY);
+      } catch {}
     }
   }, []);
 
   const purchase = useCallback(
-    async (request: Partial<PurchaseRequest>, permissionId?: string): Promise<PurchaseResult> => {
-      // Initial state setup
-      setState(prev => ({
+    async (request: PurchaseParams, permissionId?: string): Promise<PurchaseResult> => {
+      setState((prev) => ({
         ...prev,
         isPurchasing: true,
         error: null,
@@ -126,66 +180,43 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
       }));
 
       try {
-        // Use connected wallet address if not provided
         const userAddress = request.userAddress || connectedAddress;
         if (!userAddress) {
-          const err = 'No wallet connected';
-          setState(prev => ({
-            ...prev,
-            isPurchasing: false,
-            error: err,
-            status: 'error',
-          }));
-          return {
-            success: false,
-            error: {
-              code: 'NOT_CONNECTED',
-              message: err,
-            },
-          };
+          const message = 'No wallet connected';
+          setState((prev) => ({ ...prev, isPurchasing: false, error: message, status: 'error' }));
+          return { success: false, error: { code: 'NOT_CONNECTED', message } };
         }
 
-        // Map wallet type to chain if not specified
-        let chain = request.chain as any;
+        let chain = request.chain as PurchaseRequest['chain'] | undefined;
         if (!chain) {
           if (walletType === 'evm') chain = 'base';
           else if (walletType === 'near') chain = 'near';
           else if (walletType === 'solana') chain = 'solana';
           else if (walletType === 'stacks') chain = 'stacks';
           else if (walletType === 'starknet') chain = 'starknet';
+          else if (walletType === 'ton') chain = 'ton';
         }
 
         if (!chain) {
-          const err = 'Unable to determine purchase chain';
-          setState(prev => ({
-            ...prev,
-            isPurchasing: false,
-            error: err,
-            status: 'error',
-          }));
-          return {
-            success: false,
-            error: {
-              code: 'UNSUPPORTED_CHAIN',
-              message: err,
-            },
-          };
+          const message = 'Unable to determine purchase chain';
+          setState((prev) => ({ ...prev, isPurchasing: false, error: message, status: 'error' }));
+          return { success: false, error: { code: 'UNSUPPORTED_CHAIN', message } };
         }
 
-        // Set source chain and wallet info
         const isCrossChain = chain !== 'base' && chain !== 'ethereum';
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           sourceChain: chain as SourceChainType,
-          walletInfo: isCrossChain ? {
-            sourceAddress: userAddress,
-            baseAddress: request.recipientAddress || userAddress,
-            isLinked: true,
-          } : undefined,
+          walletInfo: isCrossChain
+            ? {
+                sourceAddress: userAddress,
+                baseAddress: request.recipientAddress || userAddress,
+                isLinked: true,
+              }
+            : undefined,
           status: isCrossChain ? 'linking_wallets' : 'signing',
         }));
 
-        // Merge with defaults
         const fullRequest: PurchaseRequest = {
           userAddress,
           chain,
@@ -193,21 +224,22 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
           recipientAddress: request.recipientAddress,
           permissionId: request.permissionId || permissionId,
           stacksTokenPrincipal: request.stacksTokenPrincipal,
-          // P0.4 FIX: Forward starknet token address
           starknetTokenAddress: request.starknetTokenAddress,
+          tonToken: request.tonToken,
+          mode: request.mode,
+          syndicatePoolId: request.syndicatePoolId,
+          vaultProtocol: request.vaultProtocol,
+          vaultAmount: request.vaultAmount,
+          resume: request.resume,
         };
 
-        // Update status: signing
-        setState(prev => ({ ...prev, status: 'signing' }));
+        setState((prev) => ({ ...prev, status: 'signing' }));
 
-        // Execute purchase with status tracking
         let result = await purchaseOrchestrator.executePurchase(fullRequest);
 
-        // Handle pending_signature: wallet signing happens here in the UI layer
         if (result.success && result.status === 'pending_signature') {
           try {
             let sourceTxHash: string;
-
             if (chain === 'solana') {
               sourceTxHash = await handleSolanaWalletSign(result);
             } else if (chain === 'stacks') {
@@ -218,23 +250,24 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
               throw new Error(`Unsupported chain for wallet signing: ${chain}`);
             }
 
-            // Persist pending purchase before resuming
             if (typeof window !== 'undefined') {
               try {
-                localStorage.setItem(PENDING_PURCHASE_KEY, JSON.stringify({
-                  sourceTxHash,
-                  chain,
-                  bridgeId: result.bridgeId,
-                  ticketCount: request.ticketCount || 1,
-                  timestamp: Date.now(),
-                }));
+                localStorage.setItem(
+                  PENDING_PURCHASE_KEY,
+                  JSON.stringify({
+                    sourceTxHash,
+                    chain,
+                    bridgeId: result.bridgeId,
+                    ticketCount: request.ticketCount || 1,
+                    timestamp: Date.now(),
+                  }),
+                );
               } catch {}
             }
 
-            // Resume the orchestrator with the signed tx hash
-            setState(prev => ({ ...prev, status: 'confirmed_source' as TrackerStatus }));
+            setState((prev) => ({ ...prev, status: 'confirmed_source' }));
 
-            const resumedResult = await purchaseOrchestrator.executePurchase({
+            const resumed = await purchaseOrchestrator.executePurchase({
               ...fullRequest,
               resume: {
                 bridgeId: result.bridgeId!,
@@ -242,18 +275,19 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
               },
             });
 
-            // Merge source tx into resumed result
             result = {
-              ...resumedResult,
-              sourceTxHash: sourceTxHash,
+              ...resumed,
+              sourceTxHash,
             };
           } catch (signError) {
             const msg = signError instanceof Error ? signError.message : 'Wallet signing failed';
             const isCancel = msg.includes('cancel') || msg.includes('reject') || msg.includes('denied');
             if (typeof window !== 'undefined') {
-              try { localStorage.removeItem(PENDING_PURCHASE_KEY); } catch {}
+              try {
+                localStorage.removeItem(PENDING_PURCHASE_KEY);
+              } catch {}
             }
-            setState(prev => ({
+            setState((prev) => ({
               ...prev,
               isPurchasing: false,
               error: isCancel ? 'Transaction cancelled' : msg,
@@ -269,13 +303,11 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
           }
         }
 
-        // Update state based on result
         if (result.success) {
           if (result.sourceTxHash && isCrossChain) {
             const hasDestination = !!result.destinationTxHash;
             const nextStatus: TrackerStatus = hasDestination ? 'complete' : 'confirmed_source';
 
-            // Persist initial status
             try {
               await fetch('/api/purchase-status', {
                 method: 'POST',
@@ -288,11 +320,9 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
                   recipientBaseAddress: request.recipientAddress || userAddress,
                 }),
               });
-            } catch (err) {
-              console.warn('[useSimplePurchase] Failed to persist initial status:', err);
-            }
+            } catch {}
 
-            setState(prev => ({
+            setState((prev) => ({
               ...prev,
               isPurchasing: !hasDestination,
               result,
@@ -303,11 +333,12 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
               status: nextStatus,
             }));
           } else {
-            // Direct purchase: complete immediately
             if (typeof window !== 'undefined') {
-              try { localStorage.removeItem(PENDING_PURCHASE_KEY); } catch {}
+              try {
+                localStorage.removeItem(PENDING_PURCHASE_KEY);
+              } catch {}
             }
-            setState(prev => ({
+            setState((prev) => ({
               ...prev,
               isPurchasing: false,
               result,
@@ -319,11 +350,12 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
             }));
           }
         } else {
-          // Error state
           if (typeof window !== 'undefined') {
-            try { localStorage.removeItem(PENDING_PURCHASE_KEY); } catch {}
+            try {
+              localStorage.removeItem(PENDING_PURCHASE_KEY);
+            } catch {}
           }
-          setState(prev => ({
+          setState((prev) => ({
             ...prev,
             isPurchasing: false,
             result,
@@ -334,36 +366,36 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
 
         return result;
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Purchase failed';
+        const message = error instanceof Error ? error.message : 'Purchase failed';
         if (typeof window !== 'undefined') {
-          try { localStorage.removeItem(PENDING_PURCHASE_KEY); } catch {}
+          try {
+            localStorage.removeItem(PENDING_PURCHASE_KEY);
+          } catch {}
         }
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           isPurchasing: false,
-          error: errorMessage,
+          error: message,
           status: 'error',
         }));
         return {
           success: false,
           error: {
             code: 'UNKNOWN_ERROR',
-            message: errorMessage,
+            message,
           },
         };
       }
     },
-    [connectedAddress, walletType]
+    [connectedAddress, walletType],
   );
 
   const clearError = useCallback(() => {
-    setState(prev => ({ ...prev, error: null }));
+    setState((prev) => ({ ...prev, error: null }));
   }, []);
 
   const reset = useCallback(() => {
-    // Stop polling
     stopPolling();
-
     setState({
       isPurchasing: false,
       error: null,
@@ -385,41 +417,23 @@ export function useSimplePurchase(): UseSimplePurchaseState & UseSimplePurchaseA
   };
 }
 
-// =============================================================================
-// Wallet signing helpers (browser-only, chain-specific)
-// =============================================================================
-
-/**
- * Sign and submit a Solana transaction via Phantom wallet.
- * deBridge returns base64-encoded transaction data that needs to be deserialized,
- * signed, and submitted.
- */
 async function handleSolanaWalletSign(result: PurchaseResult): Promise<string> {
   const txData = result.details?.txData as { data?: string } | undefined;
   if (!txData?.data) {
     throw new Error('No transaction data returned from bridge');
   }
 
-  // Ensure Phantom is connected
   if (!solanaWalletService.isReady()) {
     const pk = await solanaWalletService.connectPhantom();
     if (!pk) throw new Error('Failed to connect Phantom wallet');
   }
 
-  // Deserialize the base64 transaction from deBridge
   const { VersionedTransaction } = await import('@solana/web3.js');
   const txBytes = Buffer.from(txData.data, 'base64');
   const transaction = VersionedTransaction.deserialize(txBytes);
-
-  // Sign and send via Phantom
-  const signature = await solanaWalletService.signAndSendTransaction(transaction);
-  return signature;
+  return solanaWalletService.signAndSendTransaction(transaction);
 }
 
-/**
- * Sign a Stacks contract call via openContractCall (@stacks/connect).
- * Returns a promise that resolves with the txId when the user signs.
- */
 async function handleStacksWalletSign(result: PurchaseResult): Promise<string> {
   const walletAction = result.details?.walletAction as {
     contractAddress: string;
@@ -439,7 +453,6 @@ async function handleStacksWalletSign(result: PurchaseResult): Promise<string> {
   const { openContractCall } = await import('@stacks/connect');
   const { uintCV, stringAsciiCV, contractPrincipalCV } = await import('@stacks/transactions');
   const { StacksMainnet } = await import('@stacks/network');
-
   const [tokenAddr, tokenName] = walletAction.functionArgs.tokenPrincipal.split('.');
 
   return new Promise<string>((resolve, reject) => {
@@ -448,42 +461,31 @@ async function handleStacksWalletSign(result: PurchaseResult): Promise<string> {
       contractName: walletAction.contractName,
       functionName: walletAction.functionName,
       functionArgs: [
-        uintCV(parseInt(walletAction.functionArgs.ticketCount)),
+        uintCV(parseInt(walletAction.functionArgs.ticketCount, 10)),
         stringAsciiCV(walletAction.functionArgs.baseAddress),
         contractPrincipalCV(tokenAddr, tokenName),
       ],
       network: new StacksMainnet(),
-      onFinish: (data: { txId: string }) => {
-        resolve(data.txId);
-      },
-      onCancel: () => {
-        reject(new Error('User cancelled Stacks transaction'));
-      },
+      onFinish: (data: { txId: string }) => resolve(data.txId),
+      onCancel: () => reject(new Error('User cancelled Stacks transaction')),
     });
   });
 }
-/**
- * Sign and submit a Starknet transaction via ArgentX/Braavos.
- * Expects 'calls' array in result.details for account.execute().
- */
+
 async function handleStarknetWalletSign(result: PurchaseResult): Promise<string> {
-  const calls = result.details?.calls as any[];
+  const calls = result.details?.calls as unknown[];
   if (!calls || !Array.isArray(calls)) {
     throw new Error('No Starknet calls returned from bridge');
   }
 
-  // Get the active Starknet account from the window object (standard for Starknet discovery)
-  // We use getStarknet from the starknet-kit or discovery
   const { connect } = await import('starknetkit');
-  const { wallet } = await connect({ modalMode: 'neverAsk' }); // Use already connected wallet
-
+  const { wallet } = await connect({ modalMode: 'neverAsk' });
   if (!wallet || !(wallet as any).account) {
     throw new Error('Starknet wallet not connected or account not found');
   }
 
-  // Execute the transaction
   const response = await (wallet as any).account.execute(calls);
-  
-  // Starknet response contains transaction_hash
   return response.transaction_hash;
 }
+
+export default useUnifiedPurchase;

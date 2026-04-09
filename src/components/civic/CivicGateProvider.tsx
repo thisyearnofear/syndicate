@@ -15,7 +15,7 @@
 import React, { useMemo } from 'react';
 import { GatewayProvider } from '@civic/solana-gateway-react';
 import { Connection, PublicKey } from '@solana/web3.js';
-import { useSolanaWallet } from '@/hooks/useSolanaWallet';
+import { useUnifiedWallet } from '@/hooks';
 import { getSolanaRpcUrls } from '@/utils/rpcFallback';
 import { getRequiredKycTier, CIVIC_NETWORKS } from '@/utils/kycTiers';
 
@@ -35,7 +35,7 @@ export function CivicGateProvider({
   gatekeeperNetwork,
   depositAmount,
 }: CivicGateProviderProps) {
-  const { publicKey, signTransaction } = useSolanaWallet();
+  const { publicKey, signTransaction } = useUnifiedWallet();
 
   // Select gatekeeper network: explicit override > deposit-based tier > default CAPTCHA
   const resolvedNetwork = useMemo(() => {
