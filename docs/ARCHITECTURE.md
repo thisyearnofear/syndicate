@@ -475,3 +475,37 @@ pnpm run analyze
 
 This file now consolidates Development and Overview material. For per-chain bridge details see [BRIDGES.md](./BRIDGES.md).
 
+
+---
+
+## Consolidation & Cleanup (merged)
+
+This section consolidates the previously separate cleanup and consolidation artifacts into a single canonical location to follow our Core Principles (ENHANCEMENT FIRST, CONSOLIDATION, DRY, CLEAN, MODULAR, PERFORMANT, ORGANIZED).
+
+Summary
+- Unified hooks created: useUnifiedWallet, useUnifiedPurchase, useUnifiedBridge
+- Base bridge abstraction added: src/services/bridges/BaseBridgeProtocol.ts
+- Centralized contracts: src/config/contracts.ts (Megapot V2 + ABIs)
+- Compatibility wrappers created for gradual migration
+- Cleanup scripts retained: scripts/cleanup-deprecated.ts, scripts/migrate-imports.sh
+
+Files changed (high level)
+- Created: unified hooks, BaseBridgeProtocol, contracts.ts
+- Deleted: deprecated hook files (now compatibility wrappers exist)
+- Updated: app pages and components to consume unified hooks
+
+Migration & usage
+- To migrate imports, use the migration script: scripts/migrate-imports.sh
+- To detect and plan deletions, run: npx tsx scripts/cleanup-deprecated.ts (this will exit non-zero if deprecated files remain)
+- After migration, remove wrappers and run tests/build
+
+Current status
+- Core consolidation completed and documented here
+- Remaining developer tasks: fix TypeScript errors in a small set of components, finish component-level API adjustments, run full CI tests
+
+Next steps
+1. Run scripts/migrate-imports.sh then update any remaining manual import cases
+2. Run npx tsx scripts/cleanup-deprecated.ts to ensure deprecated files are safe to delete
+3. Remove wrappers and run build + tests
+4. Monitor bundle size and metrics post-deploy
+
