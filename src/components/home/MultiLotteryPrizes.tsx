@@ -84,7 +84,7 @@ export function MultiLotteryPrizes({ onBuyClick }: MultiLotteryPrizesProps) {
                   </span>
                 )}
                 {lottery.apy && (
-                  <span className="text-xs text-emerald-400 ml-2">
+                  <span className="inline-block text-xs text-emerald-400 ml-2">
                     {lottery.apy}% APY
                   </span>
                 )}

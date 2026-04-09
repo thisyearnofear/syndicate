@@ -69,6 +69,9 @@ export function PremiumJackpotPiece({ onBuyClick }: { onBuyClick: () => void }) 
   const prizeValue = jackpotStats?.prizeUsd
     ? parseFloat(jackpotStats.prizeUsd)
     : undefined;
+  const timeRemainingLabel = jackpotStats?.endTimestamp
+    ? formatTimeRemaining(jackpotStats.endTimestamp)
+    : null;
 
   return (
     <MagneticPiece variant="primary" size="lg" shape="organic" glow>
@@ -98,9 +101,9 @@ export function PremiumJackpotPiece({ onBuyClick }: { onBuyClick: () => void }) 
           </div>
 
           {/* Time remaining */}
-          {jackpotStats?.endTimestamp && (
+          {timeRemainingLabel && (
             <p className="text-lg text-center text-gray-300 leading-relaxed">
-              ⏰ {formatTimeRemaining(jackpotStats.endTimestamp)} until draw
+              ⏰ {timeRemainingLabel === "Ended" ? "Drawing in progress" : `${timeRemainingLabel} until draw`}
             </p>
           )}
 

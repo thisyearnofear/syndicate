@@ -31,6 +31,10 @@
 
 import { ReactNode } from 'react';
 import { TonConnectUIProvider } from '@tonconnect/ui-react';
+import {
+  ConnectionProvider,
+  WalletProvider as SolanaWalletAdapterProvider,
+} from '@solana/wallet-adapter-react';
 
 import { Providers } from './Providers';
 import { WalletProvider } from '@/context/WalletContext';
@@ -38,17 +42,23 @@ import { TelegramProvider } from '@/components/telegram/TelegramProvider';
 import { BridgeNotificationWrapper } from '@/components/bridge/BridgeNotificationWrapper';
 
 export default function ClientProviders({ children }: { children: ReactNode }) {
+  const solanaEndpoint = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
+
   return (
     <Providers>
-      <WalletProvider>
-        <TonConnectUIProvider manifestUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/tonconnect-manifest.json`}>
-          <TelegramProvider>
-            {children}
-            {/* Global bridge notification - shows when user returns with pending bridge */}
-            <BridgeNotificationWrapper />
-          </TelegramProvider>
-        </TonConnectUIProvider>
-      </WalletProvider>
+      <ConnectionProvider endpoint={solanaEndpoint}>
+        <SolanaWalletAdapterProvider wallets={[]} autoConnect={false}>
+          <WalletProvider>
+            <TonConnectUIProvider manifestUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/tonconnect-manifest.json`}>
+              <TelegramProvider>
+                {children}
+                {/* Global bridge notification - shows when user returns with pending bridge */}
+                <BridgeNotificationWrapper />
+              </TelegramProvider>
+            </TonConnectUIProvider>
+          </WalletProvider>
+        </SolanaWalletAdapterProvider>
+      </ConnectionProvider>
     </Providers>
   );
 }
