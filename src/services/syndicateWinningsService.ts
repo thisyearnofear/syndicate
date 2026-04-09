@@ -12,6 +12,7 @@
  */
 
 import { web3Service } from './web3Service';
+import { CONTRACTS } from '@/config';
 
 // Minimal Megapot ABI - just the events we listen to
 const MEGAPOT_ABI = [
@@ -58,7 +59,7 @@ const SYNDICATE_POOL_ABI = [
 class SyndicateWinningsService {
   private detectionActive = false;
   private syndicatePoolAddress: string | null = null;
-  private megapotAddress = '0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2'; // Base V2
+  private megapotAddress = CONTRACTS.megapot;
   private baseChainId = 8453;
 
   /**

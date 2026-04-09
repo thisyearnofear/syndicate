@@ -93,20 +93,23 @@ export function PremiumJackpotPiece({ onBuyClick }: { onBuyClick: () => void }) 
               )}
             </div>
             <span className="font-semibold text-yellow-400 drop-shadow-[0_0_20px_rgba(251,191,36,0.6)] animate-pulse text-lg">
-              Growing every minute
+              Daily onchain draw
             </span>
           </div>
 
           {/* Time remaining */}
           {jackpotStats?.endTimestamp && (
             <p className="text-lg text-center text-gray-300 leading-relaxed">
-              ⏰ {formatTimeRemaining(jackpotStats.endTimestamp)} remaining
+              ⏰ {formatTimeRemaining(jackpotStats.endTimestamp)} until draw
             </p>
           )}
 
           {/* Odds display */}
           <p className="text-sm text-gray-400">
             🎯 {oddsDisplay} odds per ticket
+          </p>
+          <p className="text-xs text-gray-500 text-center">
+            LP-backed jackpot with a provably fair draw every 24 hours.
           </p>
         </div>
       </CompactStack>

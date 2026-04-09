@@ -86,12 +86,13 @@ export const DEFAULT_CHAIN = CHAINS.base;
 
 /**
  * Megapot contract addresses by chain
- * V2 Upgrade (March 2026): New Jackpot contract with LP pooling, cross-chain bridge claims, auto-subscriptions
+ * Active app integration address (Base mainnet)
  * Testnet (Base Sepolia): 0x6f03c7BCaDAdBf5E6F5900DA3d56AdD8FbDac5De with mock MPUSDC
- * Prod (Base Mainnet): 0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2 (V2 - Active)
+ * Prod (Base Mainnet): 0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2
+ * Note: if you need to override, set NEXT_PUBLIC_MEGAPOT_CONTRACT.
  */
 const MEGAPOT_BY_CHAIN: Record<number, `0x${string}`> = {
-  [CHAIN_IDS.BASE]: '0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2',           // Base mainnet V2 (prod)
+  [CHAIN_IDS.BASE]: '0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2',           // Base mainnet prod
   [CHAIN_IDS.BASE_SEPOLIA]: '0x6f03c7BCaDAdBf5E6F5900DA3d56AdD8FbDac5De',   // Base Sepolia (testnet)
 };
 
@@ -189,7 +190,7 @@ export const LOTTERY = {
 export const API = {
   megapot: {
     baseUrl: process.env.NEXT_PUBLIC_MEGAPOT_API_BASE_URL || "https://api.megapot.io/api/v2",
-    apiKey: process.env.NEXT_PUBLIC_MEGAPOT_API_KEY,
+    apiKey: process.env.MEGAPOT_API_KEY,
     endpoints: {
       jackpotStats: "/jackpot-round-stats/active",
       ticketPurchases: "/ticket-purchases",
