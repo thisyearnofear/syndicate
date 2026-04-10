@@ -12,7 +12,8 @@ export type SupportedYieldStrategyId =
   | 'morpho'
   | 'pooltogether'
   | 'octant'
-  | 'uniswap';
+  | 'uniswap'
+  | 'lifiearn';
 
 export interface YieldStrategyConfig {
   id: SupportedYieldStrategyId;
@@ -65,6 +66,14 @@ export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
     color: 'bg-gradient-to-br from-green-500 to-emerald-400',
     risk: 'Low',
     isOctant: true,
+  },
+  {
+    id: 'lifiearn',
+    name: 'LI.FI Earn',
+    description: 'Cross-chain vault aggregator. Access 20+ protocols across 60+ chains with one-click deposits.',
+    icon: '🔀',
+    color: 'bg-gradient-to-br from-indigo-500 to-purple-600',
+    risk: 'Low',
   },
 ];
 

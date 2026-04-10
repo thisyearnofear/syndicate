@@ -224,13 +224,29 @@ export default function PremiumHome() {
                   </div>
                   <div className="flex-1 text-center md:text-left">
                     <CompactStack spacing="xs">
-                      <h3 className="text-lg md:text-xl font-bold text-white">
-                        Play for free. <span className="text-emerald-400">Forever.</span>
-                      </h3>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-lg md:text-xl font-bold text-white">
+                          Play for free. <span className="text-emerald-400">Forever.</span>
+                        </h3>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                          🔀 Cross-Chain
+                        </span>
+                      </div>
                       <p className="text-sm text-gray-400 leading-relaxed max-w-lg">
-                        Deposit USDC into a principal-preserving vault strategy. Your capital stays yours
-                        while yield can fund tickets, causes, or compounding.
+                        Deposit USDC from any chain into a principal-preserving vault strategy. 
+                        Access 20+ protocols across 60+ chains with LI.FI Earn integration. 
+                        Your capital stays yours while yield funds tickets, causes, or compounds.
                       </p>
+                      {/* Chain logos strip */}
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-xs text-gray-500">Works on:</span>
+                        {['Ethereum', 'Base', 'Arbitrum', 'Solana', 'NEAR'].map((chain) => (
+                          <span key={chain} className="text-xs px-2 py-0.5 rounded-full bg-white/5 text-gray-400 border border-white/10">
+                            {chain}
+                          </span>
+                        ))}
+                        <span className="text-xs text-gray-500">+55 more</span>
+                      </div>
                     </CompactStack>
                   </div>
                   <div className="flex-shrink-0">
@@ -273,7 +289,7 @@ export default function PremiumHome() {
                   Pick a flow based on your goal. You can switch between direct play and yield-powered play anytime.
                 </p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-6xl">
                 {[
                   {
                     icon: "🎟️",
@@ -288,18 +304,32 @@ export default function PremiumHome() {
                     action: "Best path: Vaults",
                   },
                   {
+                    icon: "🔀",
+                    title: "Cross-Chain Players",
+                    desc: "Access 20+ yield protocols across 60+ chains without bridging first. LI.FI Earn handles it.",
+                    action: "Best path: Cross-Chain",
+                    highlight: true,
+                  },
+                  {
                     icon: "👥",
                     title: "Groups & Communities",
                     desc: "Create or join syndicates to pool funds, share prizes, and coordinate causes.",
                     action: "Best path: Syndicates",
                   },
                 ].map((item, i) => (
-                  <PuzzlePiece key={item.title} variant="neutral" size="lg" shape="rounded" className={`animate-fade-in-up stagger-${i + 1}`}>
+                  <PuzzlePiece 
+                    key={item.title} 
+                    variant={item.highlight ? 'primary' : 'neutral'} 
+                    size="lg" 
+                    shape="rounded" 
+                    glow={item.highlight}
+                    className={`animate-fade-in-up stagger-${i + 1}`}
+                  >
                     <CompactStack spacing="sm">
                       <div className="text-2xl">{item.icon}</div>
                       <h3 className="text-lg font-bold text-white">{item.title}</h3>
                       <p className="text-sm text-gray-400 leading-relaxed">{item.desc}</p>
-                      <p className="text-xs text-emerald-400">{item.action}</p>
+                      <p className={`text-xs ${item.highlight ? 'text-indigo-400' : 'text-emerald-400'}`}>{item.action}</p>
                     </CompactStack>
                   </PuzzlePiece>
                 ))}

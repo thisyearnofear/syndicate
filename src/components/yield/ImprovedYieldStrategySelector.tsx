@@ -1,15 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
 import type { SyndicateInfo } from '@/domains/lottery/types';
 import { YieldAllocationControl } from './YieldAllocationControl';
 import { octantVaultService, type OctantVaultInfo } from '@/services/octantVaultService';
 import { vaultManager, type VaultInfo } from '@/services/vaults';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Globe, Zap } from 'lucide-react';
 import {
   YIELD_STRATEGIES,
   type YieldStrategyConfig,
   type SupportedYieldStrategyId,
 } from '@/config/yieldStrategies';
+import type { LifiEarnVault } from '@/services/vaults/lifiEarnProvider';
+
+// Lazy load LI.FI Earn vault selector to prevent bloat
+const LifiEarnVaultSelector = lazy(() => import('./LifiEarnVaultSelector').then(m => ({ default: m.LifiEarnVaultSelector })));
 
 /**
  * UNIFIED YIELD STRATEGY SELECTOR
@@ -48,6 +52,9 @@ export function ImprovedYieldStrategySelector({
   const [vaultInfos, setVaultInfos] = useState<VaultInfo[]>([]);
   const [isDetailView, setIsDetailView] = useState(externalDetailView);
   const [isLoading, setIsLoading] = useState(false);
+  // LI.FI Earn specific state
+  const [selectedLifiEarnVault, setSelectedLifiEarnVault] = useState<LifiEarnVault | null>(null);
+  const [lifiEarnDepositAmount, setLifiEarnDepositAmount] = useState('');
   
   // Load vault data when component mounts
   useEffect(() => {
@@ -175,6 +182,7 @@ export function ImprovedYieldStrategySelector({
                        strategy.id === 'pooltogether' ? 'Live on Base 🟦' :
                        strategy.id === 'octant' ? 'MVP Mock 🧪' :
                        strategy.id === 'uniswap' ? 'Coming Soon 🚧' :
+                       strategy.id === 'lifiearn' ? 'Live Cross-Chain 🔀' :
                        'Coming Soon'}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
@@ -203,6 +211,8 @@ export function ImprovedYieldStrategySelector({
   // Render the strategy detail view
   const renderDetailView = () => {
     if (!selectedStrategyObj) return null;
+
+    const isLifiEarn = selectedStrategyObj.id === 'lifiearn';
 
     return (
       <div className="relative">
@@ -241,10 +251,55 @@ export function ImprovedYieldStrategySelector({
                     🔒 3-Month Lockup
                   </span>
                 )}
+                {isLifiEarn && (
+                  <span className="text-xs bg-indigo-500/20 text-indigo-400 px-2 py-1 rounded-full font-bold">
+                    🔀 Cross-Chain
+                  </span>
+                )}
               </div>
               <p className="text-gray-300 mt-2">
                 {selectedStrategyObj.description}
               </p>
+              
+              {/* LI.FI Earn specific content */}
+              {isLifiEarn && (
+                <div className="mt-4 space-y-4">
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                        <Globe className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-indigo-300 mb-1">Cross-Chain Vault Aggregator</p>
+                        <p className="text-sm text-indigo-200">
+                          Access 20+ protocols across 60+ chains. Deposit from any chain into the best yield opportunities 
+                          with one-click Composer execution.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Vault Discovery */}
+                  <div className="pt-4 border-t border-white/10">
+                    <h5 className="font-semibold text-white mb-3 flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-yellow-400" />
+                      Discover Vaults
+                    </h5>
+                    <Suspense fallback={
+                      <div className="h-64 flex items-center justify-center">
+                        <div className="animate-spin w-6 h-6 border-4 border-indigo-500 border-t-transparent rounded-full" />
+                      </div>
+                    }>
+                      <LifiEarnVaultSelector
+                        onVaultSelect={setSelectedLifiEarnVault}
+                        selectedVault={selectedLifiEarnVault}
+                        depositAmount={lifiEarnDepositAmount}
+                        userAddress={userAddress}
+                      />
+                    </Suspense>
+                  </div>
+                </div>
+              )}
               
               {selectedStrategyObj.id === 'drift' && (
                 <div className="mt-4 p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex gap-3 text-sm">
@@ -256,8 +311,8 @@ export function ImprovedYieldStrategySelector({
                 </div>
               )}
               
-              {/* Allocation Controls - conditionally shown */}
-              {showAllocationControls && onAllocationChange && (
+              {/* Allocation Controls - conditionally shown, hidden for LI.FI Earn (it has its own flow) */}
+              {showAllocationControls && onAllocationChange && !isLifiEarn && (
                 <div className="mt-4 pt-4 border-t border-white/10">
                   <YieldAllocationControl
                     ticketsAllocation={ticketsAllocation}

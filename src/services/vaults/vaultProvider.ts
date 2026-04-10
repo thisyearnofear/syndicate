@@ -11,7 +11,7 @@
 
 import type { TransactionResponse } from 'ethers';
 
-export type VaultProtocol = 'aave' | 'morpho' | 'spark' | 'drift' | 'pooltogether' | 'octant' | 'uniswap';
+export type VaultProtocol = 'aave' | 'morpho' | 'spark' | 'drift' | 'pooltogether' | 'octant' | 'uniswap' | 'lifiearn';
 
 export interface VaultBalance {
     deposited: string; // USDC amount deposited
