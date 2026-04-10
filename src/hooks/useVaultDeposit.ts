@@ -261,6 +261,9 @@ export function useVaultDeposit() {
         } else if (protocol === 'uniswap') {
           // Uniswap V3 requires complex position management - not yet implemented
           throw new Error('Uniswap V3 deposits require position management UI. Coming soon.');
+        } else if (protocol === 'lifiearn') {
+          // LI.FI Earn uses Composer - requires cross-chain deposit flow
+          throw new Error('LI.FI Earn requires cross-chain deposit. Use useLifiEarnVaultDeposit hook for Composer execution.');
         } else {
           throw new Error(`Deposit not yet supported for ${protocol}`);
         }

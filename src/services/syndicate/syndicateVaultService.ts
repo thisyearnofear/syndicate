@@ -325,6 +325,7 @@ export class SyndicateVaultService {
       pooltogether: '0x6B5a5c55E9dD4bb502Ce25bBfbaA49b69cf7E4dd', // PT PrizeVault
       octant: '0xOctantUSDCVaultOnEthereum', // Placeholder
       uniswap: '0xUniswapV3StrategyOnBase', // Placeholder
+      lifiearn: 'lifiearn:aggregator', // LI.FI Earn uses multiple vaults
     };
     return addresses[protocol];
   }
@@ -338,6 +339,7 @@ export class SyndicateVaultService {
       pooltogether: 8453, // Base
       octant: 1, // Ethereum
       uniswap: 8453, // Base
+      lifiearn: 8453, // Base (primary destination)
     };
     return chainIds[protocol];
   }

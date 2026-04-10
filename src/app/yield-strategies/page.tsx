@@ -12,7 +12,8 @@ import {
   Zap,
   Check,
   ExternalLink,
-  Loader
+  Loader,
+  Globe
 } from "lucide-react";
 import { CompactCard, CompactStack, CompactContainer, CompactSection } from '@/shared/components/premium/CompactLayout';
 import { useUnifiedWallet } from '@/hooks';
@@ -28,6 +29,7 @@ import { getRequiredKycTier, getComplianceRationale } from '@/utils/kycTiers';
 import { yieldToTicketsService } from '@/services/yieldToTicketsService';
 import type { VaultProtocol } from '@/services/vaults';
 import { getStrategyById, type SupportedYieldStrategyId } from '@/config/yieldStrategies';
+import { LifiEarnVaultSelector } from '@/components/yield/LifiEarnVaultSelector';
 import { persistVaultDepositActivityRecord } from '@/services/activity/activityClient';
 import { updateBridgeActivity } from '@/utils/bridgeStateManager';
 import { createVaultActivityId, recordVaultDepositActivity } from '@/utils/vaultActivityManager';
@@ -57,7 +59,7 @@ function YieldStrategiesContent() {
   const hasExecutionIntent = hasYieldExecutionIntent(searchParams);
   const isBridgeEntry = entryParam === YIELD_ENTRY_BRIDGE;
   
-  const [activeTab, setActiveTab] = useState<'overview' | 'strategies' | 'allocation'>('strategies');
+  const [activeTab, setActiveTab] = useState<'overview' | 'strategies' | 'allocation' | 'cross-chain'>('strategies');
   const [selectedStrategy, setSelectedStrategy] = useState<SupportedYieldStrategyId | null>(null);
   const [depositAmount, setDepositAmount] = useState<number>(0);
   const [yieldToTickets, setYieldToTickets] = useState(85);
@@ -474,6 +476,14 @@ function YieldStrategiesContent() {
               <Heart className="w-4 h-4 mr-2" />
               Allocation
             </Button>
+            <Button
+              variant={activeTab === 'cross-chain' ? 'default' : 'outline'}
+              className={`border-indigo-500/50 ${activeTab === 'cross-chain' ? 'bg-indigo-500/20' : 'text-indigo-300 hover:bg-indigo-500/10'}`}
+              onClick={() => setActiveTab('cross-chain')}
+            >
+              <Globe className="w-4 h-4 mr-2" />
+              Cross-Chain
+            </Button>
           </div>
 
           {/* Tab Content */}
@@ -549,6 +559,48 @@ function YieldStrategiesContent() {
                     </div>
                   </div>
                 </CompactCard>
+                </CompactStack>
+              </CivicGateProvider>
+            )}
+            
+            {activeTab === 'cross-chain' && (
+              <CivicGateProvider depositAmount={depositAmount}>
+                <CompactStack spacing="lg">
+                  <CompactCard variant="premium" padding="lg">
+                    <div className="flex items-start gap-4 mb-6">
+                      <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                        <Globe className="w-7 h-7 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-white mb-2">Cross-Chain Yield with LI.FI Earn</h3>
+                        <p className="text-gray-400 max-w-2xl">
+                          Access the best yield opportunities across 20+ protocols and 60+ chains. 
+                          Deposit from any chain with one-click Composer execution.
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                      <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+                        <div className="text-2xl font-bold text-indigo-400 mb-1">20+</div>
+                        <div className="text-sm text-gray-400">Protocols</div>
+                      </div>
+                      <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+                        <div className="text-2xl font-bold text-purple-400 mb-1">60+</div>
+                        <div className="text-sm text-gray-400">Chains Supported</div>
+                      </div>
+                      <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+                        <div className="text-2xl font-bold text-blue-400 mb-1">1 Click</div>
+                        <div className="text-sm text-gray-400">Cross-Chain Deposits</div>
+                      </div>
+                    </div>
+                    
+                    <LifiEarnVaultSelector
+                      onVaultSelect={(vault) => console.log('Selected vault:', vault)}
+                      depositAmount={depositAmount.toString()}
+                      userAddress={address || undefined}
+                    />
+                  </CompactCard>
                 </CompactStack>
               </CivicGateProvider>
             )}

@@ -1,13 +1,13 @@
 /**
  * VAULT MANAGER
- * 
+ *
  * Core Principles Applied:
  * - MODULAR: Composable vault provider system
  * - DRY: Single entry point for all vault operations
  * - CLEAN: Clear orchestration layer
- * 
+ *
  * Phase 2: Week 2 - Vault Provider Orchestration
- * 
+ *
  * Central manager for all vault providers (Aave, Morpho, Spark)
  * Handles provider selection, health checks, and fallback logic
  */
@@ -27,6 +27,7 @@ import { poolTogetherProvider } from './poolTogetherProvider';
 import { morphoProvider } from './morphoProvider';
 import { octantProvider } from './octantProvider';
 import { uniswapProvider } from './uniswapProvider';
+import { lifiEarnProvider } from './lifiEarnProvider';
 
 /**
  * Vault information for UI display
@@ -82,6 +83,9 @@ export class VaultManager {
 
         // Register Uniswap provider (V3 LP Positions)
         this.providers.set('uniswap', uniswapProvider);
+
+        // Register LI.FI Earn provider (Cross-chain vault aggregator)
+        this.providers.set('lifiearn', lifiEarnProvider);
 
         // TODO: Register Spark provider
         // this.providers.set('spark', sparkProvider);
@@ -264,6 +268,7 @@ export class VaultManager {
             pooltogether: 'PoolTogether V5',
             octant: 'Octant V2',
             uniswap: 'Uniswap V3 LP',
+            lifiearn: 'LI.FI Earn Aggregator',
         };
         return names[protocol];
     }
@@ -277,6 +282,7 @@ export class VaultManager {
             pooltogether: 'No-loss prize savings on Base - keep principal, win prizes',
             octant: 'Yield donating vaults with public goods funding (~10% APY)',
             uniswap: 'Concentrated liquidity positions earning trading fees (~8.5% APY)',
+            lifiearn: 'Cross-chain vault aggregator with 20+ protocols via LI.FI Earn',
         };
         return descriptions[protocol];
     }
@@ -293,3 +299,4 @@ export { poolTogetherProvider } from './poolTogetherProvider';
 export { morphoProvider } from './morphoProvider';
 export { octantProvider } from './octantProvider';
 export { uniswapProvider } from './uniswapProvider';
+export { lifiEarnProvider } from './lifiEarnProvider';
