@@ -30,6 +30,8 @@ import { lifiEarnProvider, type LifiEarnVault } from '@/services/vaults/lifiEarn
 import { useLifiEarnVaultDeposit } from '@/hooks/useLifiEarnVaultDeposit';
 import { useUnifiedWallet } from '@/hooks/useUnifiedWallet';
 import { formatUnits } from 'viem';
+import { VaultCardSkeleton } from './VaultCardSkeleton';
+import { EmptyVaultState } from './EmptyVaultState';
 
 // Supported chains for display
 const CHAIN_NAMES: Record<number, string> = {
@@ -275,10 +277,7 @@ export function LifiEarnVaultSelector({
 
       {/* Loading state */}
       {isLoading && (
-        <div className="text-center py-12">
-          <div className="animate-spin w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-gray-400 text-sm">Discovering vault opportunities...</p>
-        </div>
+        <VaultCardSkeleton count={6} />
       )}
 
       {/* Vault grid */}
@@ -466,13 +465,11 @@ export function LifiEarnVaultSelector({
 
       {/* Empty state */}
       {!isLoading && filteredVaults.length === 0 && (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-            <Globe className="w-8 h-8 text-gray-500" />
-          </div>
-          <p className="text-gray-400 mb-2">No vaults found</p>
-          <p className="text-sm text-gray-500">Try adjusting your filters</p>
-        </div>
+        <EmptyVaultState
+          hasFilters={selectedChain !== 'all'}
+          onClearFilters={() => setSelectedChain('all')}
+          onRetry={loadVaults}
+        />
       )}
     </div>
   );
