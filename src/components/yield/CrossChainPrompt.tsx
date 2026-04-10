@@ -1,158 +1,136 @@
-/**
- * CROSS-CHAIN PROMPT
- *
- * Contextual prompt to discover LI.FI Earn feature
- * Appears when users have funds on other chains
- */
-
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { CompactCard } from '@/shared/components/premium/CompactLayout';
-import { Button } from '@/shared/components/ui/Button';
-import { Globe, ArrowRight, X, Zap } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useUnifiedWallet } from '@/hooks/useUnifiedWallet';
+import { useRouter } from 'next/navigation';
+import { CheckBadgeIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { FiInfo } from 'react-icons/fi';
+import { useCivicGate } from '@/hooks/useCivicGate';
 
-interface CrossChainPromptProps {
-  variant?: 'banner' | 'inline' | 'minimal';
-  onDismiss?: () => void;
+/**
+ * Cross‑chain discovery prompt with trust signals.
+ */
+export default function CrossChainPrompt() {
+  const { address, chainId } = useUnifiedWallet();
+  const [hasMultiChain, setHasMultiChain] = useState(false);
+  const [totalUsdc, setTotalUsdc] = useState('0');
+  const [isVerified, setIsVerified] = useState(false);
+  const router = useRouter();
+
+  // Supported chains – add/remove as product expands
+  const SUPPORTED_CHAIN_IDS = [
+    '0x1', // Ethereum
+    '0x5', // Arbitrum
+    '0x138', // Optimism
+    '0x2105', // Base
+    '0x2a1', // Polygon (example)
+    // Add any additional EVM chains here
+  ];
+
+  // -------------------------------------------------------------------
+  // Detect multi‑chain balances
+  // -------------------------------------------------------------------
+  useEffect(() => {
+    if (!address) {
+      setHasMultiChain(false);
+      return;
+    }
+
+    async function fetchBalances() {
+      let cumulative = 0;
+      let otherChainFound = false;
+
+      for (const id of SUPPORTED_CHAIN_IDS) {
+        if (id === chainId) continue;
+
+        // NOTE: replace this mock with real portfolio service call
+        const balanceWei = await fetchBalance(address, id);
+        if (balanceWei && parseFloat(balanceWei) > 0) {
+          otherChainFound = true;
+          cumulative += parseFloat(balanceWei);
+        }
+      }
+
+      setHasMultiChain(otherChainFound);
+      setTotalUsdc(cumulative.toFixed(2));
+    }
+
+    fetchBalances();
+  }, [address, chainId]);
+
+  // -------------------------------------------------------------------
+  // Trust signal – Civic verification
+  // -------------------------------------------------------------------
+  const { isChecking, isVerified: checked } = useCivicGate();
+  // In production we could combine the two flags:
+  useEffect(() => {
+    if (isChecking) {
+      setIsVerified(null); // null = unknown / loading
+    } else {
+      setIsVerified(checked);
+    }
+  }, [isChecking, checked]);
+
+  if (!hasMultiChain) return null;
+
+  return (
+    <section className="fixed inset-x-0 top-4 z-20 mx-auto max-w-3xl p-4 bg-white/95 backdrop-blur-md rounded-xl border border-gray-200 shadow-lg animate-fade-in">
+      <div className="flex items-start gap-4">
+        {/* LI.FI logo + badge */}
+        <div className="flex-shrink-0 w-10 flex flex-col items-center">
+          <img src="/logo/li-fi.svg" alt="LI.FI" className="h-9 w-9" />
+          {isVerified === true && (
+            <CheckBadgeIcon className="h-4 w-4 mt-2 text-green-600" />
+          )}
+          {isVerified === false && (
+            <ExclamationTriangleIcon className="h-4 w-4 mt-2 text-yellow-600" />
+          )}
+        </div>
+
+        {/* Main message */}
+        <div className="flex-1">
+          <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+            <FiInfo className="h-5 w-5 text-indigo-500" />
+            Cross‑chain Earn Opportunities
+          </h3>
+          <p className="mt-1 text-sm text-gray-600">
+            You have <strong>{totalUsdc}</strong> USDC across other networks. 
+            Move it into LI.FI Earn to earn yield and auto‑convert that yield into free lottery tickets.
+          </p>
+
+          <div className="mt-2 flex items-center gap-3">
+            <Link
+              href="/earn"
+              className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+            >
+              Explore Earn
+            </Link>
+            {isVerified !== true && (
+              <span className="flex items-center text-sm text-yellow-600">
+                <ExclamationTriangleIcon className="h-4 w-4 mr-1" />
+                Verify with Civic Pass for extra security
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
-export function CrossChainPrompt({ variant = 'inline', onDismiss }: CrossChainPromptProps) {
-  const router = useRouter();
-  const { isConnected } = useUnifiedWallet();
-  const [isVisible, setIsVisible] = useState(false);
-  const [hasBeenDismissed, setHasBeenDismissed] = useState(false);
-
-  // Check if user has seen this prompt
-  useEffect(() => {
-    const dismissed = localStorage.getItem('syndicate_cross_chain_prompt_dismissed');
-    if (!dismissed && isConnected) {
-      // Show after a short delay for better UX
-      const timer = setTimeout(() => setIsVisible(true), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [isConnected]);
-
-  const handleDismiss = () => {
-    setIsVisible(false);
-    setHasBeenDismissed(true);
-    localStorage.setItem('syndicate_cross_chain_prompt_dismissed', 'true');
-    onDismiss?.();
-  };
-
-  const handleExplore = () => {
-    router.push('/yield-strategies?tab=cross-chain');
-  };
-
-  if (!isVisible || hasBeenDismissed) return null;
-
-  if (variant === 'banner') {
-    return (
-      <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50 animate-slide-in-up">
-        <CompactCard variant="premium" padding="md" className="border-indigo-500/30 shadow-2xl">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-              <Globe className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="font-semibold text-white text-sm">Deposit from Any Chain</h4>
-              <p className="text-xs text-gray-400 mt-1">
-                Access 20+ yield vaults across Ethereum, Solana, NEAR & more with one click.
-              </p>
-              <div className="flex items-center gap-2 mt-3">
-                <Button
-                  size="sm"
-                  variant="default"
-                  className="bg-indigo-500 hover:bg-indigo-600 text-white text-xs"
-                  onClick={handleExplore}
-                >
-                  Explore
-                  <ArrowRight className="w-3 h-3 ml-1" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-gray-400 hover:text-white text-xs"
-                  onClick={handleDismiss}
-                >
-                  Maybe Later
-                </Button>
-              </div>
-            </div>
-            <button
-              onClick={handleDismiss}
-              className="text-gray-400 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </CompactCard>
-      </div>
-    );
+/**
+ * Fetch balance from real API
+ */
+async function fetchBalance(address: string, chainId: string): Promise<string | null> {
+  try {
+    const chainIdNum = parseInt(chainId, 16);
+    const url = `/api/balance?address=${encodeURIComponent(address)}&chainId=${chainIdNum}`;
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.usdc || data.balance || null;
+  } catch {
+    return null;
   }
-
-  if (variant === 'minimal') {
-    return (
-      <button
-        onClick={handleExplore}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/20 transition-colors text-sm"
-      >
-        <Zap className="w-4 h-4" />
-        Cross-Chain Vaults Available
-        <ArrowRight className="w-3 h-3" />
-      </button>
-    );
-  }
-
-  // Inline variant (default)
-  return (
-    <CompactCard variant="premium" padding="lg" className="border-indigo-500/20">
-      <div className="flex flex-col sm:flex-row items-center gap-4">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-          <Globe className="w-6 h-6 text-white" />
-        </div>
-        <div className="flex-1 text-center sm:text-left">
-          <h4 className="font-semibold text-white">Cross-Chain Yield Discovery</h4>
-          <p className="text-sm text-gray-400 mt-1">
-            Not on Base? Access 20+ protocols across 60+ chains with LI.FI Earn integration.
-            Deposit from Ethereum, Solana, NEAR, and more.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Button
-            variant="default"
-            className="bg-indigo-500 hover:bg-indigo-600 text-white"
-            onClick={handleExplore}
-          >
-            Explore Vaults
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-          <button
-            onClick={handleDismiss}
-            className="p-2 text-gray-400 hover:text-white"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-      
-      {/* Chain logos */}
-      <div className="mt-4 pt-4 border-t border-white/5">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-gray-500">Supported chains:</span>
-          {['Ethereum', 'Base', 'Arbitrum', 'Optimism', 'Solana', 'NEAR', 'Polygon'].map((chain) => (
-            <span
-              key={chain}
-              className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-gray-400 border border-white/10"
-            >
-              {chain}
-            </span>
-          ))}
-          <span className="text-[10px] text-gray-500">+50 more</span>
-        </div>
-      </div>
-    </CompactCard>
-  );
 }

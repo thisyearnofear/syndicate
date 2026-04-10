@@ -168,6 +168,21 @@ export function LifiEarnVaultSelector({
   const formatApy = (apy: number) => `${apy.toFixed(2)}%`;
   const formatTvl = (tvl: string) => lifiEarnProvider.formatTvl(tvl);
 
+  // Step status for deposit flow visualization
+  const STEPS = [
+    { key: 'quoting', label: 'Quote', icon: '🔍' },
+    { key: 'approving', label: 'Approve', icon: '✓' },
+    { key: 'signing', label: 'Sign', icon: '✍️' },
+    { key: 'confirming', label: 'Confirm', icon: '⏳' },
+    { key: 'polling', label: 'Complete', icon: '🎉' },
+  ];
+
+  const getStepIndex = () => {
+    const statusOrder = ['quoting', 'approving', 'signing', 'confirming', 'polling', 'complete'];
+    const idx = statusOrder.indexOf(status);
+    return idx >= 0 ? idx : -1;
+  };
+
   const getStatusLabel = () => {
     switch (status) {
       case 'quoting': return 'Getting quote...';
@@ -423,9 +438,35 @@ export function LifiEarnVaultSelector({
             ) : (
               <>
                 {status !== 'idle' && status !== 'error' && (
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                    <Loader className="w-4 h-4 text-blue-400 animate-spin" />
-                    <span className="text-sm text-blue-300">{getStatusLabel()}</span>
+                  <div className="space-y-3">
+                    {/* Step progress visualization */}
+                    <div className="flex items-center gap-1">
+                      {STEPS.map((step, idx) => {
+                        const currentIdx = getStepIndex();
+                        const isCompleted = idx < currentIdx;
+                        const isCurrent = idx === currentIdx;
+                        return (
+                          <div key={step.key} className="flex-1 flex items-center">
+                            <div className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium ${
+                              isCompleted ? 'bg-green-500 text-white' :
+                              isCurrent ? 'bg-blue-500 text-white animate-pulse' :
+                              'bg-gray-700 text-gray-400'
+                            }`}>
+                              {isCompleted ? '✓' : step.icon}
+                            </div>
+                            {idx < STEPS.length - 1 && (
+                              <div className={`flex-1 h-0.5 ${
+                                isCompleted ? 'bg-green-500' : 'bg-gray-700'
+                              }`} />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                      <Loader className="w-4 h-4 text-blue-400 animate-spin" />
+                      <span className="text-sm text-blue-300">{getStatusLabel()}</span>
+                    </div>
                   </div>
                 )}
 
