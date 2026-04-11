@@ -96,9 +96,38 @@ export class PoolTogetherService {
 
       return prizeData;
     } catch (error) {
-      console.error('[PoolTogether] Failed to fetch prize data:', error);
-      
-      // Return null instead of fake fallback data to prevent misleading users
+      console.warn('[PoolTogether] API unavailable, trying on-chain fallback:', error);
+      return this.getOnChainFallback();
+    }
+  }
+
+  /**
+   * Read PoolTogether prize data directly from the vault contract on Base
+   */
+  private async getOnChainFallback(): Promise<PoolTogetherPrizeData | null> {
+    try {
+      const { getPoolTogetherOnChainPrize } = await import('./OnChainFallbackService');
+      const onChainData = await getPoolTogetherOnChainPrize();
+      if (!onChainData || parseFloat(onChainData.prizeUsd) <= 0) {
+        return null;
+      }
+
+      const prizeData: PoolTogetherPrizeData = {
+        prizeUsd: onChainData.prizeUsd,
+        totalDepositsUsd: onChainData.totalDepositsUsd,
+        apy: 3.5, // Approximate historical APY
+        vaultAddress: POOLTOGETHER_VAULTS[0].address,
+        chainId: POOLTOGETHER_VAULTS[0].chainId,
+      };
+
+      // Cache the on-chain result
+      this.prizeCache = prizeData;
+      this.lastFetchTime = Date.now();
+
+      console.log('[PoolTogether] On-chain fallback succeeded, prize:', onChainData.prizeUsd);
+      return prizeData;
+    } catch (error) {
+      console.error('[PoolTogether] On-chain fallback also failed:', error);
       return null;
     }
   }

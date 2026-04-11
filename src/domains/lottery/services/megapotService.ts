@@ -93,14 +93,56 @@ class MegapotService {
       const stats = await this.makeRequest<JackpotStats>(api.megapot.endpoints.jackpotStats);
       // Validate the response has meaningful data
       if (!stats || !stats.prizeUsd || parseFloat(stats.prizeUsd) <= 0) {
-        console.warn('[megapotService] Invalid jackpot stats response, returning null');
-        return null;
+        console.warn('[megapotService] Invalid jackpot stats response, trying on-chain fallback');
+        return this.getOnChainFallback();
       }
       return stats;
     } catch (error) {
-      console.error('[megapotService] Failed to fetch jackpot stats:', error);
-      // Return null instead of fake fallback data to prevent misleading users
-      // UI will handle the null state appropriately
+      console.warn('[megapotService] API unavailable, trying on-chain fallback:', error);
+      return this.getOnChainFallback();
+    }
+  }
+
+  /**
+   * Read jackpot data directly from the Megapot contract on Base
+   * Uses currentDrawingId() + getDrawingState() per Megapot SDK docs
+   */
+  private async getOnChainFallback(): Promise<JackpotStats | null> {
+    try {
+      const { getMegapotOnChainPrize } = await import('@/services/lotteries/OnChainFallbackService');
+      const onChainData = await getMegapotOnChainPrize();
+      if (!onChainData || parseFloat(onChainData.prizeUsd) <= 0) {
+        return null;
+      }
+
+      // Map on-chain data to JackpotStats shape
+      const stats: JackpotStats = {
+        prizeUsd: onChainData.prizeUsd,
+        endTimestamp: onChainData.nextDrawTimestamp
+          ? new Date(onChainData.nextDrawTimestamp * 1000).toISOString()
+          : '',
+        oddsPerTicket: '',
+        ticketPrice: 1,
+        ticketsSoldCount: parseInt(onChainData.ticketCount) || 0,
+        lastTicketPurchaseBlockNumber: 0,
+        lastTicketPurchaseCount: 0,
+        lastTicketPurchaseTimestamp: '',
+        lastTicketPurchaseTxHash: '',
+        lpPoolTotalBps: '',
+        userPoolTotalBps: '',
+        feeBps: 0,
+        referralFeeBps: 0,
+        activeLps: 0,
+        activePlayers: 0,
+      };
+
+      // Cache the on-chain result
+      this.cache.set(api.megapot.endpoints.jackpotStats, { data: stats, timestamp: Date.now() });
+
+      console.log('[megapotService] On-chain fallback succeeded, prize:', onChainData.prizeUsd);
+      return stats;
+    } catch (error) {
+      console.error('[megapotService] On-chain fallback also failed:', error);
       return null;
     }
   }

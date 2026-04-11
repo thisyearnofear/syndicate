@@ -5,9 +5,9 @@
  * Uses viem public client to read contract state.
  */
 
-import { createPublicClient, http, Address, getContract } from 'viem';
+import { createPublicClient, http, Address } from 'viem';
 import { base } from 'viem/chains';
-import { CONTRACTS } from '@/config/contracts';
+import { MEGAPOT_ABI } from '@/config/contracts';
 
 // =============================================================================
 // CHAIN CONFIGURATION
@@ -22,8 +22,8 @@ const basePublicClient = createPublicClient({
 // CONTRACT ADDRESSES
 // =============================================================================
 
-const MEGAPOT_JACKPOT_ADDRESS: Address = '0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2' as Address; // Megapot V2 on Base
-const POOLTOGETHER_VAULT_ADDRESS: Address = '0x6B5a5c55E9dD4bb502Ce25bBfbaA49b69cf7E4dd' as Address; // PoolTogether vault on Base
+const MEGAPOT_JACKPOT_ADDRESS: Address = '0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2';
+const POOLTOGETHER_VAULT_ADDRESS: Address = '0x6B5a5c55E9dD4bb502Ce25bBfbaA49b69cf7E4dd';
 
 // =============================================================================
 // INTERFACES
@@ -44,66 +44,40 @@ export interface OnChainPrizeData {
 
 /**
  * Read Megapot prize data directly from the blockchain
- * Uses contract state variables as fallback when API is unavailable
+ * Uses currentDrawingId() + getDrawingState() as documented in Megapot SDK
  */
 export async function getMegapotOnChainPrize(): Promise<OnChainPrizeData | null> {
   try {
-    // Read draw state from contract
-    // Note: These functions may not exist on actual contract - this is a best-effort fallback
-    const results = await Promise.allSettled([
-      basePublicClient.readContract({
-        address: MEGAPOT_JACKPOT_ADDRESS,
-        abi: GENERIC_ABI,
-        functionName: 'getCurrentJackpot' as any,
-      }).catch(() => 0n),
-      basePublicClient.readContract({
-        address: POOLTOGETHER_VAULT_ADDRESS,
-        abi: GENERIC_ABI,
-        functionName: 'totalSupply' as any,
-      }).catch(() => 0n),
-      basePublicClient.readContract({
-        address: MEGAPOT_JACKPOT_ADDRESS,
-        abi: GENERIC_ABI,
-        functionName: 'getTicketCount' as any,
-      }).catch(() => 0n),
-      basePublicClient.readContract({
-        address: MEGAPOT_JACKPOT_ADDRESS,
-        abi: GENERIC_ABI,
-        functionName: 'currentDrawId' as any,
-      }).catch(() => 0n),
-      basePublicClient.readContract({
-        address: MEGAPOT_JACKPOT_ADDRESS,
-        abi: GENERIC_ABI,
-        functionName: 'nextDrawTime' as any,
-      }).catch(() => 0n),
-    ]);
+    const drawingId = await basePublicClient.readContract({
+      address: MEGAPOT_JACKPOT_ADDRESS,
+      abi: MEGAPOT_ABI,
+      functionName: 'currentDrawingId',
+    }) as bigint;
 
-    const currentJackpot = results[0].status === 'fulfilled' ? results[0].value as bigint : 0n;
-    const totalDeposits = results[1].status === 'fulfilled' ? results[1].value as bigint : 0n;
-    const ticketCount = results[2].status === 'fulfilled' ? results[2].value as bigint : 0n;
-    const drawId = results[3].status === 'fulfilled' ? results[3].value as bigint : 0n;
-    const nextDrawTime = results[4].status === 'fulfilled' ? results[4].value as bigint : 0n;
+    const drawingState = await basePublicClient.readContract({
+      address: MEGAPOT_JACKPOT_ADDRESS,
+      abi: MEGAPOT_ABI,
+      functionName: 'getDrawingState',
+      args: [drawingId],
+    }) as { prizePool: bigint; ticketPrice: bigint; bonusballMax: number; drawingTime: bigint; isSettled: boolean };
 
-    // Convert to USD (assuming USDC decimals)
-    const jackpotUsd = Number(currentJackpot) / 1e6;
-    const depositsUsd = Number(totalDeposits) / 1e6;
+    const prizePoolUsd = Number(drawingState.prizePool) / 1e6;
 
-    // Only return data if we got actual values
-    if (jackpotUsd <= 0 && depositsUsd <= 0) {
-      console.warn('[OnChainFallback] No Megapot data available from chain');
+    if (prizePoolUsd <= 0) {
+      console.warn('[OnChainFallback] Megapot prizePool is zero');
       return null;
     }
 
     return {
-      prizeUsd: jackpotUsd > 0 ? jackpotUsd.toFixed(2) : depositsUsd.toFixed(2),
-      totalDepositsUsd: depositsUsd.toFixed(2),
-      ticketCount: ticketCount.toString(),
-      drawId: drawId.toString(),
-      nextDrawTimestamp: Number(nextDrawTime),
+      prizeUsd: prizePoolUsd.toFixed(2),
+      totalDepositsUsd: prizePoolUsd.toFixed(2),
+      ticketCount: '0',
+      drawId: drawingId.toString(),
+      nextDrawTimestamp: Number(drawingState.drawingTime),
       chainId: 8453,
     };
   } catch (error) {
-    console.warn('Failed to read Megapot from chain:', error);
+    console.warn('[OnChainFallback] Failed to read Megapot from chain:', error);
     return null;
   }
 }
@@ -111,6 +85,23 @@ export async function getMegapotOnChainPrize(): Promise<OnChainPrizeData | null>
 // =============================================================================
 // POOLTOGETHER ON-CHAIN READ
 // =============================================================================
+
+const ERC4626_ABI = [
+  {
+    name: 'totalSupply',
+    type: 'function',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    name: 'totalAssets',
+    type: 'function',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+] as const;
 
 /**
  * Read PoolTogether prize data directly from the blockchain
@@ -120,20 +111,20 @@ export async function getPoolTogetherOnChainPrize(): Promise<OnChainPrizeData | 
     const results = await Promise.allSettled([
       basePublicClient.readContract({
         address: POOLTOGETHER_VAULT_ADDRESS,
-        abi: GENERIC_ABI,
-        functionName: 'totalSupply' as any,
-      }).catch(() => 0n),
+        abi: ERC4626_ABI,
+        functionName: 'totalSupply',
+      } as any),
       basePublicClient.readContract({
         address: POOLTOGETHER_VAULT_ADDRESS,
-        abi: GENERIC_ABI,
-        functionName: 'totalAssets' as any,
-      }).catch(() => 0n),
+        abi: ERC4626_ABI,
+        functionName: 'totalAssets',
+      } as any),
     ]);
 
-    const totalSupply = results[0].status === 'fulfilled' ? results[0].value as bigint : 0n;
-    const totalAssets = results[1].status === 'fulfilled' ? results[1].value as bigint : 0n;
+    const zero = BigInt(0);
+    const totalSupply = results[0].status === 'fulfilled' ? results[0].value as bigint : zero;
+    const totalAssets = results[1].status === 'fulfilled' ? results[1].value as bigint : zero;
 
-    // PoolTogether doesn't have a jackpot in same way - use total deposits
     const depositsUsd = Number(totalAssets || totalSupply) / 1e6;
 
     if (depositsUsd <= 0) {
@@ -141,7 +132,6 @@ export async function getPoolTogetherOnChainPrize(): Promise<OnChainPrizeData | 
       return null;
     }
 
-    // Approximate prize from yield (very rough estimate)
     const estimatedPrize = depositsUsd * 0.001;
 
     return {
@@ -153,21 +143,7 @@ export async function getPoolTogetherOnChainPrize(): Promise<OnChainPrizeData | 
       chainId: 8453,
     };
   } catch (error) {
-    console.warn('Failed to read PoolTogether from chain:', error);
+    console.warn('[OnChainFallback] Failed to read PoolTogether from chain:', error);
     return null;
   }
 }
-
-// =============================================================================
-// GENERIC ABI (Dynamic calls)
-// =============================================================================
-
-// Minimal ABI that allows any function call - TypeScript treats it loosely
-const GENERIC_ABI = [
-  {
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [],
-    outputs: [{ type: 'uint256' }],
-  },
-] as const;
