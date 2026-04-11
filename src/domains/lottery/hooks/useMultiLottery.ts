@@ -12,7 +12,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { megapotService } from '../services/megapotService';
 import { poolTogetherService } from '@/services/lotteries/PoolTogetherService';
-import { performance, features } from '@/config';
 
 // Simple prize data interface that works for both APIs
 interface PrizeData {
@@ -66,15 +65,9 @@ export function useMultiLottery() {
 
       const lotteries: LotteryPrize[] = [];
 
-      // Megapot - API first, fallback to on-chain read
-      let megapotPrize = megapotStats.status === 'fulfilled' ? megapotStats.value : null;
-      
-      // Note: On-chain fallback provides limited data - for now, we just log attempts
-      // In production, we'd properly map these types
-      if (!megapotPrize) {
-        console.warn('[useMultiLottery] Megapot API unavailable, on-chain fallback available but types differ');
-      }
-      
+      // Megapot (service handles API → on-chain fallback internally)
+      const megapotPrize = megapotStats.status === 'fulfilled' ? megapotStats.value : null;
+
       if (megapotPrize) {
         const prizeValue = megapotPrize.prizeUsd ? parseFloat(megapotPrize.prizeUsd) : 0;
         if (prizeValue > 0) {
@@ -94,14 +87,9 @@ export function useMultiLottery() {
         }
       }
 
-      // PoolTogether - API first
-      let poolTogetherPrizeData: PrizeData | null = poolTogetherPrize.status === 'fulfilled' ? poolTogetherPrize.value : null;
-      
-      // Try on-chain fallback if API failed
-      if (!poolTogetherPrizeData) {
-        console.warn('[useMultiLottery] PoolTogether API unavailable, on-chain fallback available but types differ');
-      }
-      
+      // PoolTogether (service handles API → on-chain fallback internally)
+      const poolTogetherPrizeData: PrizeData | null = poolTogetherPrize.status === 'fulfilled' ? poolTogetherPrize.value : null;
+
       if (poolTogetherPrizeData) {
         const ptValue = poolTogetherPrizeData.prizeUsd ? parseFloat(poolTogetherPrizeData.prizeUsd) : 0;
         if (ptValue > 0) {
