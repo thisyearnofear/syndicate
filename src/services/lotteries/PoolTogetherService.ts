@@ -53,8 +53,9 @@ export class PoolTogetherService {
 
   /**
    * Fetch current prize pool data from PoolTogether API
+   * Returns null when API fails to prevent showing inaccurate data
    */
-  async getPrizeData(): Promise<PoolTogetherPrizeData> {
+  async getPrizeData(): Promise<PoolTogetherPrizeData | null> {
     const now = Date.now();
     
     // Return cached data if fresh
@@ -97,14 +98,8 @@ export class PoolTogetherService {
     } catch (error) {
       console.error('[PoolTogether] Failed to fetch prize data:', error);
       
-      // Return fallback data
-      return {
-        prizeUsd: '10000', // Fallback estimate
-        totalDepositsUsd: '1000000',
-        apy: 5.2,
-        vaultAddress: POOLTOGETHER_VAULTS[0].address,
-        chainId: POOLTOGETHER_VAULTS[0].chainId,
-      };
+      // Return null instead of fake fallback data to prevent misleading users
+      return null;
     }
   }
 

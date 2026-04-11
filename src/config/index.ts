@@ -190,7 +190,7 @@ export const LOTTERY = {
 export const API = {
   megapot: {
     baseUrl: process.env.NEXT_PUBLIC_MEGAPOT_API_BASE_URL || "https://api.megapot.io/api/v2",
-    apiKey: process.env.MEGAPOT_API_KEY,
+    apiKey: process.env.MEGAPOT_API_KEY || process.env.NEXT_PUBLIC_MEGAPOT_API_KEY,
     endpoints: {
       jackpotStats: "/jackpot-round-stats/active",
       ticketPurchases: "/ticket-purchases",

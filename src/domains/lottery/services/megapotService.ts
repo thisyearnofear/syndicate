@@ -86,30 +86,22 @@ class MegapotService {
 
   /**
    * ENHANCEMENT FIRST: Enhanced jackpot stats with better error handling
+   * Returns null when API fails to prevent showing inaccurate fallback data
    */
   async getJackpotStats(): Promise<JackpotStats | null> {
     try {
-      return await this.makeRequest<JackpotStats>(api.megapot.endpoints.jackpotStats);
+      const stats = await this.makeRequest<JackpotStats>(api.megapot.endpoints.jackpotStats);
+      // Validate the response has meaningful data
+      if (!stats || !stats.prizeUsd || parseFloat(stats.prizeUsd) <= 0) {
+        console.warn('[megapotService] Invalid jackpot stats response, returning null');
+        return null;
+      }
+      return stats;
     } catch (error) {
-      console.error('Failed to fetch jackpot stats:', error);
-      // Return fallback data to prevent UI breaks
-      return {
-        prizeUsd: "15000",
-        endTimestamp: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours from now
-        oddsPerTicket: "15000",
-        ticketPrice: 1,
-        ticketsSoldCount: 15000,
-        lastTicketPurchaseBlockNumber: 0,
-        lastTicketPurchaseCount: 0,
-        lastTicketPurchaseTimestamp: new Date().toISOString(),
-        lastTicketPurchaseTxHash: "",
-        lpPoolTotalBps: "1000",
-        userPoolTotalBps: "1000",
-        feeBps: 250,
-        referralFeeBps: 50,
-        activeLps: 0,
-        activePlayers: 0,
-      } as JackpotStats;
+      console.error('[megapotService] Failed to fetch jackpot stats:', error);
+      // Return null instead of fake fallback data to prevent misleading users
+      // UI will handle the null state appropriately
+      return null;
     }
   }
 
