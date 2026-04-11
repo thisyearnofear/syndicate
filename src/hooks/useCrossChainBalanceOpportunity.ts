@@ -29,7 +29,6 @@ const CROSS_CHAIN_IDS: Record<WalletChain, number> = {
   ton: 0,         // TON
   stacks: 0,      // Stacks
   starknet: 0,    // Starknet
-  social: 0,      // Social
 };
 
 export function useCrossChainBalanceOpportunity(): CrossChainOpportunity {

@@ -4,8 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useUnifiedWallet } from '@/hooks/useUnifiedWallet';
 import { useRouter } from 'next/navigation';
-import { CheckBadgeIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { FiInfo } from 'react-icons/fi';
+import { Shield, AlertTriangle, Info, Globe } from 'lucide-react';
 import { useCivicGate } from '@/hooks/useCivicGate';
 
 /**
@@ -13,9 +12,9 @@ import { useCivicGate } from '@/hooks/useCivicGate';
  */
 export default function CrossChainPrompt() {
   const { address, chainId } = useUnifiedWallet();
-  const [hasMultiChain, setHasMultiChain] = useState(false);
-  const [totalUsdc, setTotalUsdc] = useState('0');
-  const [isVerified, setIsVerified] = useState(false);
+  const [hasMultiChain, setHasMultiChain] = useState<boolean>(false);
+  const [totalUsdc, setTotalUsdc] = useState<string>('0');
+  const [isVerified, setIsVerified] = useState<boolean | null>(null);
   const router = useRouter();
 
   // Supported chains – add/remove as product expands
@@ -41,12 +40,17 @@ export default function CrossChainPrompt() {
       let cumulative = 0;
       let otherChainFound = false;
 
+      // Guard against missing data
+      if (!address || chainId == null) return;
+
       for (const id of SUPPORTED_CHAIN_IDS) {
-        if (id === chainId) continue;
+        // Convert id to number for comparison
+        const chainIdNum = parseInt(id.replace('0x', ''), 16);
+        if (chainIdNum === Number(chainId)) continue;
 
         // NOTE: replace this mock with real portfolio service call
         const balanceWei = await fetchBalance(address, id);
-        if (balanceWei && parseFloat(balanceWei) > 0) {
+        if (balanceWei != null && parseFloat(balanceWei) > 0) {
           otherChainFound = true;
           cumulative += parseFloat(balanceWei);
         }
@@ -81,17 +85,17 @@ export default function CrossChainPrompt() {
         <div className="flex-shrink-0 w-10 flex flex-col items-center">
           <img src="/logo/li-fi.svg" alt="LI.FI" className="h-9 w-9" />
           {isVerified === true && (
-            <CheckBadgeIcon className="h-4 w-4 mt-2 text-green-600" />
+            <Shield className="h-4 w-4 mt-2 text-green-600" />
           )}
           {isVerified === false && (
-            <ExclamationTriangleIcon className="h-4 w-4 mt-2 text-yellow-600" />
+            <AlertTriangle className="h-4 w-4 mt-2 text-yellow-600" />
           )}
         </div>
 
         {/* Main message */}
         <div className="flex-1">
           <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
-            <FiInfo className="h-5 w-5 text-indigo-500" />
+            <Info className="h-5 w-5 text-indigo-500" />
             Cross‑chain Earn Opportunities
           </h3>
           <p className="mt-1 text-sm text-gray-600">
@@ -108,7 +112,7 @@ export default function CrossChainPrompt() {
             </Link>
             {isVerified !== true && (
               <span className="flex items-center text-sm text-yellow-600">
-                <ExclamationTriangleIcon className="h-4 w-4 mr-1" />
+                <AlertTriangle className="h-4 w-4 mr-1" />
                 Verify with Civic Pass for extra security
               </span>
             )}

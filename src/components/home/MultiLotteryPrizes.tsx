@@ -37,6 +37,26 @@ export function MultiLotteryPrizes({ onBuyClick }: MultiLotteryPrizesProps) {
     );
   }
 
+  // Empty state - no prizes available (APIs down)
+  if (lotteries.length === 0 && !isLoading) {
+    return (
+      <div className="glass-premium rounded-2xl p-6 border border-white/10">
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-2xl">⚠️</span>
+          <div>
+            <h4 className="text-white font-semibold">Prizes Temporarily Unavailable</h4>
+            <p className="text-sm text-gray-400">
+              Prize data is currently being fetched. Please try again in a few moments.
+            </p>
+          </div>
+        </div>
+        <Button variant="outline" size="sm" onClick={refresh}>
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Header */}

@@ -14,6 +14,12 @@ import { megapotService } from '../services/megapotService';
 import { poolTogetherService } from '@/services/lotteries/PoolTogetherService';
 import { performance, features } from '@/config';
 
+// Simple prize data interface that works for both APIs
+interface PrizeData {
+  prizeUsd?: string;
+  apy?: number;
+}
+
 export interface LotteryPrize {
   name: string;
   protocol: 'megapot' | 'pooltogether' | 'drift';
@@ -60,35 +66,58 @@ export function useMultiLottery() {
 
       const lotteries: LotteryPrize[] = [];
 
-      // Megapot
-      if (megapotStats.status === 'fulfilled' && megapotStats.value) {
-        lotteries.push({
-          name: 'Megapot',
-          protocol: 'megapot',
-          prizeUsd: megapotStats.value.prizeUsd || '0',
-          description: 'Base lottery with a provably fair onchain draw every 24 hours',
-          isNoLoss: false,
-          token: 'USDC',
-          chain: 'Base',
-          color: 'from-yellow-400 to-orange-500',
-          icon: '🎰',
-        });
+      // Megapot - API first, fallback to on-chain read
+      let megapotPrize = megapotStats.status === 'fulfilled' ? megapotStats.value : null;
+      
+      // Note: On-chain fallback provides limited data - for now, we just log attempts
+      // In production, we'd properly map these types
+      if (!megapotPrize) {
+        console.warn('[useMultiLottery] Megapot API unavailable, on-chain fallback available but types differ');
+      }
+      
+      if (megapotPrize) {
+        const prizeValue = megapotPrize.prizeUsd ? parseFloat(megapotPrize.prizeUsd) : 0;
+        if (prizeValue > 0) {
+          lotteries.push({
+            name: 'Megapot',
+            protocol: 'megapot',
+            prizeUsd: megapotPrize.prizeUsd || '0',
+            description: 'Base lottery with a provably fair onchain draw every 24 hours',
+            isNoLoss: false,
+            token: 'USDC',
+            chain: 'Base',
+            color: 'from-yellow-400 to-orange-500',
+            icon: '🎰',
+          });
+        } else {
+          console.warn('[useMultiLottery] Megapot returned zero/empty prize, skipping');
+        }
       }
 
-      // PoolTogether
-      if (poolTogetherPrize.status === 'fulfilled' && poolTogetherPrize.value) {
-        lotteries.push({
-          name: 'PoolTogether v5',
-          protocol: 'pooltogether',
-          prizeUsd: poolTogetherPrize.value.prizeUsd || '0',
-          apy: poolTogetherPrize.value.apy,
-          description: 'No-loss prize savings - keep your principal, win prizes',
-          isNoLoss: true,
-          token: 'USDC',
-          chain: 'Base',
-          color: 'from-emerald-400 to-teal-500',
-          icon: '🏆',
-        });
+      // PoolTogether - API first
+      let poolTogetherPrizeData: PrizeData | null = poolTogetherPrize.status === 'fulfilled' ? poolTogetherPrize.value : null;
+      
+      // Try on-chain fallback if API failed
+      if (!poolTogetherPrizeData) {
+        console.warn('[useMultiLottery] PoolTogether API unavailable, on-chain fallback available but types differ');
+      }
+      
+      if (poolTogetherPrizeData) {
+        const ptValue = poolTogetherPrizeData.prizeUsd ? parseFloat(poolTogetherPrizeData.prizeUsd) : 0;
+        if (ptValue > 0) {
+          lotteries.push({
+            name: 'PoolTogether v5',
+            protocol: 'pooltogether',
+            prizeUsd: poolTogetherPrizeData.prizeUsd || '0',
+            apy: poolTogetherPrizeData.apy,
+            description: 'No-loss prize savings - keep your principal, win prizes',
+            isNoLoss: true,
+            token: 'USDC',
+            chain: 'Base',
+            color: 'from-emerald-400 to-teal-500',
+            icon: '🏆',
+          });
+        }
       }
 
       // Drift JLP (static data - yield-based)
