@@ -9,7 +9,11 @@ function getCandidateBaseUrls(): string[] {
   const configured = normalizeBaseUrl(API.megapot.baseUrl);
   const candidates = [
     configured,
+    configured.replace(/\/api\/v2$/i, '/api/v1'),
     configured.replace(/\/api\/v2$/i, ''),
+    configured.replace(/\/api\/v1$/i, '/api/v2'),
+    configured.replace(/\/api\/v1$/i, ''),
+    'https://api.megapot.io/api/v1',
     'https://api.megapot.io/api/v2',
   ];
   return [...new Set(candidates)];
@@ -71,7 +75,12 @@ export async function GET(request: NextRequest) {
 
     for (const baseUrl of baseUrls) {
       for (const endpointVariant of endpointVariants) {
-        const url = `${baseUrl}${endpointVariant}`;
+        const url = new URL(`${baseUrl}${endpointVariant}`);
+
+        if (API.megapot.apiKey) {
+          url.searchParams.set('apikey', API.megapot.apiKey);
+        }
+
         const attempt = await fetch(url, {
           method: 'GET',
           headers,

@@ -26,9 +26,15 @@ class MegapotService {
       retries?: number;
       cache?: boolean;
       cacheDuration?: number;
+      logFailures?: boolean;
     } = {}
   ): Promise<T> {
-    const { retries = 3, cache = true, cacheDuration = performance.cache.jackpotData } = options;
+    const {
+      retries = 3,
+      cache = true,
+      cacheDuration = performance.cache.jackpotData,
+      logFailures = true,
+    } = options;
     const cacheKey = `${endpoint}`;
 
     // PERFORMANT: Check cache first
@@ -70,7 +76,9 @@ class MegapotService {
 
         return data;
       } catch (error) {
-        console.warn(`Attempt ${attempt}/${retries} failed for ${endpoint}:`, error);
+        if (logFailures) {
+          console.warn(`Attempt ${attempt}/${retries} failed for ${endpoint}:`, error);
+        }
 
         if (attempt === retries) {
           throw new Error(`Failed to fetch ${endpoint} after ${retries} attempts: ${error}`);
@@ -85,64 +93,21 @@ class MegapotService {
   }
 
   /**
-   * ENHANCEMENT FIRST: Enhanced jackpot stats with better error handling
-   * Returns null when API fails to prevent showing inaccurate fallback data
+   * Jackpot stats are optional homepage content.
+   * If the API is unavailable, fail quietly and let the UI render a stable fallback.
    */
   async getJackpotStats(): Promise<JackpotStats | null> {
     try {
-      const stats = await this.makeRequest<JackpotStats>(api.megapot.endpoints.jackpotStats);
+      const stats = await this.makeRequest<JackpotStats>(api.megapot.endpoints.jackpotStats, {
+        retries: 1,
+        logFailures: false,
+      });
       // Validate the response has meaningful data
       if (!stats || !stats.prizeUsd || parseFloat(stats.prizeUsd) <= 0) {
-        console.warn('[megapotService] Invalid jackpot stats response, trying on-chain fallback');
-        return this.getOnChainFallback();
-      }
-      return stats;
-    } catch (error) {
-      console.warn('[megapotService] API unavailable, trying on-chain fallback:', error);
-      return this.getOnChainFallback();
-    }
-  }
-
-  /**
-   * Read jackpot data directly from the Megapot contract on Base
-   * Uses currentDrawingId() + getDrawingState() per Megapot SDK docs
-   */
-  private async getOnChainFallback(): Promise<JackpotStats | null> {
-    try {
-      const { getMegapotOnChainPrize } = await import('@/services/lotteries/OnChainFallbackService');
-      const onChainData = await getMegapotOnChainPrize();
-      if (!onChainData || parseFloat(onChainData.prizeUsd) <= 0) {
         return null;
       }
-
-      // Map on-chain data to JackpotStats shape
-      const stats: JackpotStats = {
-        prizeUsd: onChainData.prizeUsd,
-        endTimestamp: onChainData.nextDrawTimestamp
-          ? new Date(onChainData.nextDrawTimestamp * 1000).toISOString()
-          : '',
-        oddsPerTicket: '',
-        ticketPrice: 1,
-        ticketsSoldCount: parseInt(onChainData.ticketCount) || 0,
-        lastTicketPurchaseBlockNumber: 0,
-        lastTicketPurchaseCount: 0,
-        lastTicketPurchaseTimestamp: '',
-        lastTicketPurchaseTxHash: '',
-        lpPoolTotalBps: '',
-        userPoolTotalBps: '',
-        feeBps: 0,
-        referralFeeBps: 0,
-        activeLps: 0,
-        activePlayers: 0,
-      };
-
-      // Cache the on-chain result
-      this.cache.set(api.megapot.endpoints.jackpotStats, { data: stats, timestamp: Date.now() });
-
-      console.log('[megapotService] On-chain fallback succeeded, prize:', onChainData.prizeUsd);
       return stats;
-    } catch (error) {
-      console.error('[megapotService] On-chain fallback also failed:', error);
+    } catch {
       return null;
     }
   }

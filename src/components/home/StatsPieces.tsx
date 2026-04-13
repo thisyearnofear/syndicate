@@ -15,6 +15,7 @@ export function StatsPieces() {
       prefix: "$",
       color: "green",
       isLive: stats?.totalRaised !== null,
+      note: stats?.totalRaised ? "Live on-chain" : "Unavailable"
     },
     {
       label: "Drift Vault APY",
@@ -22,20 +23,23 @@ export function StatsPieces() {
       suffix: "%",
       color: "indigo",
       isLive: false,
+      note: "Historical estimate"
     },
     {
-      label: "Players",
+      label: "Active Players",
       value: stats?.activePlayers ?? 0,
       prefix: "",
       color: "blue",
       isLive: stats?.activePlayers !== null,
+      note: stats?.activePlayers ? "Live data" : "Unavailable"
     },
     {
-      label: "Donated to Causes",
-      value: 47000,
-      prefix: "$",
-      color: "yellow",
-      isLive: false,
+      label: "Supported Chains",
+      value: 6,
+      prefix: "",
+      color: "purple",
+      isLive: true,
+      note: "Base, Ethereum, Solana, Stacks, NEAR, Starknet"
     },
   ];
 
@@ -75,9 +79,9 @@ export function StatsPieces() {
             Loading live data...
           </p>
         )}
-        {!isLoading && stats?.totalRaised === null && (
+        {!isLoading && (
           <p className="text-[10px] text-gray-600 text-center">
-            Stats sourced from on-chain data — some values are historical estimates
+            Live data when available • Historical estimates marked • Updated: {new Date().toLocaleDateString()}
           </p>
         )}
       </CompactStack>

@@ -226,26 +226,24 @@ export default function PremiumHome() {
                     <CompactStack spacing="xs">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="text-lg md:text-xl font-bold text-white">
-                          Play for free. <span className="text-emerald-400">Forever.</span>
+                          Turn Yield Into <span className="text-emerald-400">Lottery Entries</span>
                         </h3>
                         <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                           🔀 Cross-Chain
                         </span>
                       </div>
                       <p className="text-sm text-gray-400 leading-relaxed max-w-lg">
-                        Deposit USDC from any chain into a principal-preserving vault strategy. 
-                        Access 20+ protocols across 60+ chains with LI.FI Earn integration. 
-                        Your capital stays yours while yield funds tickets, causes, or compounds.
+                        Deposit USDC into yield-generating vaults. Earned yield automatically converts to lottery tickets. 
+                        Withdraw your principal according to each strategy's terms (some have lockup periods).
                       </p>
                       {/* Chain logos strip */}
                       <div className="flex items-center gap-2 mt-2">
-                        <span className="text-xs text-gray-500">Works on:</span>
-                        {['Ethereum', 'Base', 'Arbitrum', 'Solana', 'NEAR'].map((chain) => (
+                        <span className="text-xs text-gray-500">Supported:</span>
+                        {['Base', 'Ethereum', 'Solana'].map((chain) => (
                           <span key={chain} className="text-xs px-2 py-0.5 rounded-full bg-white/5 text-gray-400 border border-white/10">
                             {chain}
                           </span>
                         ))}
-                        <span className="text-xs text-gray-500">+55 more</span>
                       </div>
                     </CompactStack>
                   </div>
@@ -258,11 +256,11 @@ export default function PremiumHome() {
                         onClick={() =>
                           trackEvent({
                             eventName: 'home_vaults_cta_click',
-                            properties: { section: 'play-for-free' },
+                            properties: { section: 'yield-to-tickets' },
                           })
                         }
                       >
-                        🎯 Start Playing Free
+                        🎯 Explore Yield Strategies
                       </Button>
                     </Link>
                   </div>
@@ -270,9 +268,9 @@ export default function PremiumHome() {
                 <CompactFlex justify="center" align="center" gap="md" wrap className="mt-4 pt-4 border-t border-white/5">
                   <span className="text-xs text-gray-500">🔒 Non-custodial</span>
                   <span className="text-xs text-gray-600">•</span>
-                  <span className="text-xs text-gray-500">💎 100% principal preserved</span>
+                  <span className="text-xs text-gray-500">📊 Strategy-dependent returns</span>
                   <span className="text-xs text-gray-600">•</span>
-                  <span className="text-xs text-gray-500">📊 Transparent strategy rules</span>
+                  <span className="text-xs text-gray-500">⚠️ Check lockup terms</span>
                 </CompactFlex>
               </div>
             </div>
@@ -299,15 +297,15 @@ export default function PremiumHome() {
                   },
                   {
                     icon: "♾️",
-                    title: "No-Loss Players",
-                    desc: "Deposit into supported vaults and route yield into entries while preserving principal.",
+                    title: "Yield-Powered Players",
+                    desc: "Deposit into yield vaults and convert earnings into entries. Principal withdrawal rules vary by strategy.",
                     action: "Best path: Vaults",
                   },
                   {
                     icon: "🔀",
                     title: "Cross-Chain Players",
-                    desc: "Access 20+ yield protocols across 60+ chains without bridging first. LI.FI Earn handles it.",
-                    action: "Best path: Cross-Chain",
+                    desc: "Bridge from Solana, Stacks, NEAR, or Starknet to buy tickets on Base.",
+                    action: "Best path: Bridge",
                     highlight: true,
                   },
                   {
@@ -354,14 +352,14 @@ export default function PremiumHome() {
               <div className="text-center">
                 <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">How It Works</h2>
                 <p className="text-gray-400 text-sm max-w-md mx-auto">
-                  Win prizes without risking your deposit. Your money always stays yours.
+                  Deposit into yield strategies and use earnings for lottery entries.
                 </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
                 {[
-                  { icon: "💰", step: "Step 1", title: "Deposit", desc: "Deposit USDC into a vault strategy. Your principal remains yours while the vault works.", accent: "from-blue-500 to-cyan-500" },
-                  { icon: "📈", step: "Step 2", title: "Earn Yield", desc: "The vault allocates into transparent carry venues with explicit guardrails and ongoing monitoring.", accent: "from-purple-500 to-pink-500" },
-                  { icon: "🎰", step: "Step 3", title: "Use Yield", desc: "Use accrued yield for tickets, causes, or simply compound over time without changing the base deposit.", accent: "from-yellow-500 to-orange-500" },
+                  { icon: "💰", step: "Step 1", title: "Deposit", desc: "Deposit USDC into a yield vault. Each strategy has different lockup periods and withdrawal rules.", accent: "from-blue-500 to-cyan-500" },
+                  { icon: "📈", step: "Step 2", title: "Earn Yield", desc: "Your deposit generates yield based on the strategy. APYs vary and are not guaranteed.", accent: "from-purple-500 to-pink-500" },
+                  { icon: "🎰", step: "Step 3", title: "Use Yield", desc: "Earned yield automatically converts to lottery tickets. Withdraw principal according to strategy terms.", accent: "from-yellow-500 to-orange-500" },
                 ].map((s, i) => (
                   <PuzzlePiece key={i} variant="neutral" size="lg" shape="rounded" className={`animate-fade-in-up stagger-${i + 1} text-center`}>
                     <CompactStack spacing="md" align="center">
@@ -378,11 +376,11 @@ export default function PremiumHome() {
               <CompactFlex align="center" gap="sm" className="text-sm text-gray-500">
                 <span>🔒 Non-custodial</span>
                 <span>•</span>
-                <span>💸 Zero-risk principal</span>
+                <span>📊 Variable APYs</span>
                 <span>•</span>
-                <span>🔄 Withdraw anytime*</span>
+                <span>⚠️ Strategy-specific lockups</span>
               </CompactFlex>
-              <p className="text-xs text-gray-600">*Drift vault has a 3-month lockup period to normalize yield</p>
+              <p className="text-xs text-gray-600">Drift: 90-day lockup | Aave/Morpho: Flexible | PoolTogether: Flexible</p>
             </CompactStack>
           </CompactContainer>
         </CompactSection>
@@ -435,8 +433,7 @@ export default function PremiumHome() {
                   isClaimingWinnings={isClaimingWinnings}
                 />
 
-                {/* Community insights — only when identity exists */}
-                {userIdentity && <CommunityInsightsPiece userIdentity={userIdentity} />}
+                {/* Community insights removed - was showing fabricated behavior data */}
               </CompactStack>
             </CompactContainer>
           </CompactSection>

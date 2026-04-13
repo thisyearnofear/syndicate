@@ -600,10 +600,10 @@ export function AutoPurchaseModal({
                     </div>
                     <div>
                       <h4 className="text-sm font-bold text-white mb-1 tracking-tight">
-                        Play for Free Forever ♾️
+                        Use Yield Instead ♾️
                       </h4>
                       <p className="text-xs text-indigo-200 leading-relaxed">
-                        Deposit ${Math.round((config.totalAmount * 12) / 0.225)} into <span className="text-indigo-300 font-semibold">Drift Vault</span>. The ~22.5% APY funds tickets automatically—your principal stays intact.
+                        Deposit ${Math.round((config.totalAmount * 12) / 0.225)} into <span className="text-indigo-300 font-semibold">Drift Vault</span> (90-day lockup). ~22.5% APY funds tickets. Principal withdrawable after lockup.
                       </p>
                     </div>
                   </div>

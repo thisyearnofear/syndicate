@@ -37,8 +37,8 @@ export function DriftFlow({
                 ⚠️ 3-Month Lockup Period
               </p>
               <p className="text-xs text-gray-300 leading-relaxed">
-                Your principal is locked for 90 days to normalize yield (~22.5% APY).
-                Yield is automatically converted to lottery tickets. You keep 100% of your capital after lockup.
+                Your deposit is locked for 90 days. Target APY is ~22.5% but not guaranteed.
+                Yield converts to lottery tickets. Principal withdrawable after lockup period ends.
               </p>
             </div>
           </div>
