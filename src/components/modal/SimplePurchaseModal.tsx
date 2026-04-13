@@ -526,8 +526,8 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
                   <div className="flex items-start gap-3 relative z-10">
                     <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0 border border-indigo-500/40"><TrendingUp className="w-4 h-4 text-indigo-400" /></div>
                     <div>
-                      <h4 className="text-sm font-bold text-white mb-1 tracking-tight">Play for free forever? ♾️</h4>
-                      <p className="text-xs text-indigo-200 leading-relaxed">Instead of spending capital, deposit into the <span className="text-indigo-300 font-semibold">Drift Lossless Vault</span>. You keep your principal and get auto-routed tickets from ~22.5% APY yield.</p>
+                      <h4 className="text-sm font-bold text-white mb-1 tracking-tight">Use Yield for Tickets ♾️</h4>
+                      <p className="text-xs text-indigo-200 leading-relaxed">Deposit into <span className="text-indigo-300 font-semibold">Drift Vault</span> (90-day lockup). Earn ~22.5% APY and auto-convert yield to tickets. Principal withdrawable after lockup.</p>
                     </div>
                   </div>
                   <Button variant="secondary" size="sm" className="w-full text-xs bg-indigo-500/20 hover:bg-indigo-500/30 border-indigo-500/30 text-indigo-100 transition-colors" onClick={() => { handleClose(); window.location.href = '/vaults'; }}>Try Yield-to-Tickets</Button>

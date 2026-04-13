@@ -25,7 +25,7 @@ export function useLottery() {
   const mountedRef = useRef(true);
 
   /**
-  * PERFORMANT: Fetch jackpot data from API (reliable and tested)
+  * Jackpot is supporting content on the homepage, not a hard dependency.
   */
   const fetchJackpotData = useCallback(async (showLoading = false) => {
     if (!mountedRef.current) return;
@@ -35,11 +35,7 @@ export function useLottery() {
     }
 
     try {
-      // Use reliable API - this is working and tested
       const jackpotStats = await megapotService.getJackpotStats();
-      if (!jackpotStats?.prizeUsd) {
-        throw new Error('Invalid jackpot data from API');
-      }
 
       if (!mountedRef.current) return;
 
@@ -53,11 +49,10 @@ export function useLottery() {
     } catch (error) {
       if (!mountedRef.current) return;
 
-      console.error('Jackpot fetch failed:', error);
       setState(prev => ({
         ...prev,
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to load jackpot data',
+        error: error instanceof Error ? error.message : null,
       }));
     }
   }, []); // No dependencies needed since setState and mountedRef are stable
@@ -72,11 +67,7 @@ export function useLottery() {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      // Use reliable API - this is working and tested
       const jackpotStats = await megapotService.getJackpotStats();
-      if (!jackpotStats?.prizeUsd) {
-        throw new Error('Invalid jackpot data from API');
-      }
 
       if (!mountedRef.current) return;
 
@@ -90,11 +81,10 @@ export function useLottery() {
     } catch (error) {
       if (!mountedRef.current) return;
 
-      console.error('Jackpot refresh failed:', error);
       setState(prev => ({
         ...prev,
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to load jackpot data',
+        error: error instanceof Error ? error.message : null,
       }));
     }
   }, []); // No dependencies to avoid circular refs
