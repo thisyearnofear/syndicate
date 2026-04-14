@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
-// NOTE: The layout.tsx in the parent directory exports dynamic='force-dynamic'
-// and the fetch.cache polyfill in next.config.js prevents build crashes.
+// Uses query param ?txId=xxx instead of dynamic segment [txId]
+// to avoid Next.js buildAppStaticPaths crash during build.
 
 interface PurchaseStep {
   name: string;
@@ -24,9 +24,9 @@ interface PurchaseStatus {
   error?: string;
 }
 
-export default function PurchaseStatusPage() {
-  const params = useParams();
-  const txId = params?.txId as string | undefined;
+export default function PurchaseStatusTrackPage() {
+  const searchParams = useSearchParams();
+  const txId = searchParams?.get('txId');
   const [status, setStatus] = useState<PurchaseStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,7 +46,6 @@ export default function PurchaseStatusPage() {
 
     fetchStatus();
     const interval = setInterval(fetchStatus, 3000); // Poll every 3 seconds
-
     return () => clearInterval(interval);
   }, [txId]);
 

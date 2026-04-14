@@ -97,7 +97,7 @@ const renderTrackerSection = ({
         <div className="mt-4">
           {customLink || (sourceTxHash && (
             <div className="flex items-center gap-3">
-              <a href={`/purchase-status/${sourceTxHash}/track`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1">
+              <a href={`/purchase-status/track?txId=${sourceTxHash}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1">
                 Open Live Tracker →
               </a>
               {onCopyLink && (
@@ -277,7 +277,7 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
 
   const handleCopyStatusLink = async () => {
     if (!sourceTxHash || !sourceChain) return;
-    const url = `${window.location.origin}/purchase-status/${sourceTxHash}/track`;
+    const url = `${window.location.origin}/purchase-status/track?txId=${sourceTxHash}`;
     try { await navigator.clipboard.writeText(url); setStatusLinkCopied(true); setTimeout(() => setStatusLinkCopied(false), 2000); } catch {}
   };
 
@@ -601,7 +601,7 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
         if (showTracker && effectiveChain && isCrossChain) {
           return renderTrackerSection({
             chain: effectiveChain, sourceTxHash, destinationTxHash, status, error, ticketCount, walletInfo, showActions: true,
-            customLink: sourceTxHash && isCrossChain ? <a href={`/purchase-status/${sourceTxHash}?chain=${effectiveChain}`} className="inline-block text-sm text-blue-400 hover:text-blue-300">Open Status Page</a> : undefined,
+            customLink: sourceTxHash && isCrossChain ? <a href={`/purchase-status?txId=${sourceTxHash}&chain=${effectiveChain}`} className="inline-block text-sm text-blue-400 hover:text-blue-300">Open Status Page</a> : undefined,
             customButtons: (
               <div className="flex gap-3 mt-3">
                 <Button variant="outline" className="flex-1" onClick={() => { setTicketCount(1); setStep("select"); clearError(); reset(); }}>Buy More</Button>

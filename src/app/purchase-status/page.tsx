@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { CrossChainTracker } from "@/components/bridge/CrossChainTracker";
 import type { TrackerStatus } from "@/components/bridge/CrossChainTracker";
 import { mapPurchaseStatusToTracker } from "@/domains/lottery/utils/mapPurchaseStatus";
 
-// NOTE: This page uses useSearchParams() which triggers Next.js SSG evaluation.
-// The fetch.cache polyfill in next.config.js prevents the build crash.
-// The layout.tsx in this directory exports dynamic='force-dynamic' for runtime.
+// Uses query param ?txId=xxx instead of dynamic segment [txId]
+// to avoid Next.js buildAppStaticPaths crash during build.
 
 interface PurchaseStatusResponse {
   status: string;
@@ -27,9 +26,8 @@ interface PurchaseStatusResponse {
 }
 
 export default function PurchaseStatusPage() {
-  const params = useParams();
-  const txId = typeof params?.txId === "string" ? params.txId : null;
   const searchParams = useSearchParams();
+  const txId = searchParams?.get("txId");
   const chainParam = searchParams?.get("chain") || undefined;
 
   const [status, setStatus] = useState<TrackerStatus>("confirmed_source");
@@ -61,7 +59,7 @@ export default function PurchaseStatusPage() {
 
   const handleCopyLink = async () => {
     if (!txId) return;
-    const url = `${window.location.origin}/purchase-status/${txId}?chain=${sourceChain}`;
+    const url = `${window.location.origin}/purchase-status?txId=${txId}&chain=${sourceChain}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
@@ -141,7 +139,7 @@ useEffect(() => {
         {txId && (
           <div className="mt-4 flex items-center gap-3">
             <a
-              href={`/purchase-status/${txId}?chain=${sourceChain}`}
+              href={`/purchase-status?txId=${txId}&chain=${sourceChain}`}
               className="text-sm text-blue-400 hover:text-blue-300"
             >
               Share Status Page
