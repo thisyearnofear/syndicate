@@ -23,6 +23,7 @@ export interface YieldStrategyConfig {
   color: string;
   risk: 'Low' | 'Medium' | 'High';
   isOctant?: boolean;
+  isPaused?: boolean;
 }
 
 export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
@@ -37,10 +38,11 @@ export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
   {
     id: 'drift',
     name: 'Drift Delta Neutral',
-    description: 'JLP Delta Neutral Vault on Solana. 3-Month lock, ~22% APY USDC yield routed to tickets.',
+    description: 'JLP Delta Neutral Vault on Solana. 3-Month lock, ~22% APY USDC yield routed to tickets. [PAUSED - Security Incident]',
     icon: '⛵',
     color: 'bg-gradient-to-br from-sky-400 to-blue-600',
     risk: 'Medium',
+    isPaused: true,
   },
   {
     id: 'morpho',

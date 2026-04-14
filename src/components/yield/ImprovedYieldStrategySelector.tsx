@@ -122,7 +122,7 @@ export function ImprovedYieldStrategySelector({
       )}
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {YIELD_STRATEGIES.filter((s): s is YieldStrategyConfig => Boolean(s?.id)).map((strategy) => {
+        {YIELD_STRATEGIES.filter((s): s is YieldStrategyConfig => Boolean(s?.id) && !s.isPaused).map((strategy) => {
           const strategyId = strategy.id!;
           const vaultInfo = getVaultInfo(strategyId);
           const octantVault = strategy.isOctant ? octantVaults[0] : null;

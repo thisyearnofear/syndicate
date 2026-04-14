@@ -352,7 +352,8 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
                     </div>
                   </div>
                 </button>
-                {/* DRIFT */}
+                {/* DRIFT - Hidden due to security incident (April 2026) */}
+                {/* 
                 <button onClick={() => setSelectedProtocol("drift")} disabled={isPurchasing} className={`relative p-4 rounded-lg border-2 transition-all text-left ${selectedProtocol === "drift" ? "border-blue-500 bg-blue-500/20" : "border-gray-600 hover:border-gray-500 bg-gray-700/30"}`}>
                   {selectedProtocol === "drift" && <div className="absolute top-2 right-2"><Check className="w-3.5 h-3.5 text-blue-400" /></div>}
                   <div className="absolute top-2 left-2"><span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-full">~22.5% APY</span></div>
@@ -364,6 +365,7 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
                     </div>
                   </div>
                 </button>
+                */}
               </div>
             </div>
 

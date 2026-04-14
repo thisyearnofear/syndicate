@@ -590,7 +590,8 @@ export function AutoPurchaseModal({
                 </div>
               </div>
 
-              {/* ENHANCEMENT: Reusable Gamified Yield Upsell (Drift Vault) */}
+              {/* ENHANCEMENT: Reusable Gamified Yield Upsell (Drift Vault) - Hidden due to security incident */}
+              {/* 
               {config.totalAmount > 0 && (
                 <div className="bg-gradient-to-r from-indigo-500/20 to-purple-500/10 border border-indigo-500/30 rounded-lg p-4 space-y-3 relative overflow-hidden mt-4">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
@@ -620,6 +621,7 @@ export function AutoPurchaseModal({
                   </Button>
                 </div>
               )}
+              */}
 
               {/* Stacks-specific: Token and x402 info */}
               {isStacksWallet && (
