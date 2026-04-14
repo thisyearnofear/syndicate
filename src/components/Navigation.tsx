@@ -10,7 +10,7 @@
  * - PERFORMANT: Minimal re-renders
  */
 
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, Suspense, lazy, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/shared/components/ui/Button';
@@ -19,7 +19,6 @@ import { useUnifiedWallet } from '@/hooks';
 import { WalletType } from '@/domains/wallet/types';
 import WalletInfo from './wallet/WalletInfo';
 import { Home, Users, TrendingUp, Menu, X, Loader, ArrowLeftRight, LayoutDashboard } from 'lucide-react';
-import { useRef, useEffect } from 'react';
 
 // Lazy load heavy modal components
 const UnifiedModal = lazy(() => import('./modal/UnifiedModal'));
@@ -31,8 +30,7 @@ interface NavigationProps {
 
 export default function Navigation({ className = '' }: NavigationProps) {
     const pathname = usePathname();
-    const { isConnected } = useUnifiedWallet();
-    const { connect } = useUnifiedWallet();
+    const { isConnected, connect } = useUnifiedWallet();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [showWalletDetails, setShowWalletDetails] = useState(false);
     const [showWalletModal, setShowWalletModal] = useState(false);
