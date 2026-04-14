@@ -32,6 +32,7 @@ export async function fetchAttestation(messageHash: string): Promise<Attestation
   try {
     const res = await fetch(`${CIRCLE_ATTESTATION_API}/${messageHash}`, {
       headers: { Accept: 'application/json' },
+      cache: 'no-store',
     });
 
     if (!res.ok) {

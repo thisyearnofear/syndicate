@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: Request): Promise<Response> {
   try {
     const url = new URL(request.url);
@@ -7,7 +10,7 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     const target = `https://iris-api.circle.com/v1/attestations/${messageHash}`;
-    const resp = await fetch(target);
+    const resp = await fetch(target, { cache: 'no-store' });
     const text = await resp.text();
     return new Response(text, { status: resp.status, headers: { 'content-type': 'application/json' } });
   } catch {

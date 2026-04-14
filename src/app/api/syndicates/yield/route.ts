@@ -8,6 +8,9 @@
  */
 
 import { NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 import { syndicateVaultService } from '@/services/syndicate/syndicateVaultService';
 import { vaultManager } from '@/services/vaults';
 

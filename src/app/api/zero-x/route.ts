@@ -7,7 +7,10 @@ export async function GET(request: Request): Promise<Response> {
     if (!target.searchParams.get('chainId')) target.searchParams.set('chainId', '8453');
     const headers: Record<string, string> = {};
     if (apiKey) headers['0x-api-key'] = apiKey;
-    const resp = await fetch(target.toString(), { headers });
+    const resp = await fetch(target.toString(), {
+      headers,
+      cache: 'no-store',
+    });
     const text = await resp.text();
     return new Response(text, { status: resp.status, headers: { 'content-type': 'application/json' } });
   } catch {

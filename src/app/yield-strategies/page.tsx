@@ -69,10 +69,6 @@ function YieldStrategiesContent() {
   const canDepositIntoSelectedStrategy = Boolean(
     selectedStrategy && DIRECT_DEPOSIT_STRATEGIES.includes(selectedStrategy as VaultProtocol)
   );
-  const isCrossChainStrategy = Boolean(
-    selectedStrategy && CROSS_CHAIN_STRATEGIES.includes(selectedStrategy as SupportedYieldStrategyId)
-  );
-
   // Load persisted allocation from localStorage
   useEffect(() => {
     if (typeof window === 'undefined') return;

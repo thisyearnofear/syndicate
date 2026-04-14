@@ -9,7 +9,10 @@ export const dynamic = 'force-dynamic';
 const DEBRIDGE_STATS_API = 'https://stats-api.dln.trade/api/Orders';
 
 async function checkDeBridgeOrder(orderId: string) {
-  const res = await fetch(`${DEBRIDGE_STATS_API}/${orderId}`, { method: 'GET' });
+  const res = await fetch(`${DEBRIDGE_STATS_API}/${orderId}`, {
+    method: 'GET',
+    cache: 'no-store',
+  });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`deBridge stats error: ${res.status} ${text}`);

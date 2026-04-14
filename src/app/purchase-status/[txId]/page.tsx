@@ -76,7 +76,7 @@ export default function PurchaseStatusPage() {
   useEffect(() => {
     if (!txId) return;
     const fetchInitial = async () => {
-      const res = await fetch(`/api/purchase-status/${txId}`);
+      const res = await fetch(`/api/purchase-status?txId=${txId}`);
       if (!res.ok) return;
       const payload = (await res.json()) as PurchaseStatusResponse;
       updateFromResponse(payload);
@@ -88,7 +88,7 @@ export default function PurchaseStatusPage() {
 useEffect(() => {
   if (!txId) return;
   
-  const eventSource = new EventSource(`/api/purchase-status/${txId}/stream`);
+  const eventSource = new EventSource(`/api/purchase-status/stream?txId=${txId}`);
   eventSource.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
