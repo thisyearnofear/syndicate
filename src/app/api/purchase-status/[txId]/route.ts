@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getPurchaseStatusByTxId } from '@/lib/db/repositories/purchaseStatusRepository';
 
+// Prevent Next.js from trying to statically generate this dynamic route
+export const dynamic = 'force-dynamic';
+
 /**
  * ENHANCEMENT: Return receipt data with full provenance
  * DRY: Single source of truth for purchase status + receipts

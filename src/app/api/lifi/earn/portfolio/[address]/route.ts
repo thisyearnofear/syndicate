@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { LIFI_EARN_API_BASE_URL } from '@/config/lifi';
 
+// Prevent Next.js from trying to statically generate this dynamic route
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { address: string } }

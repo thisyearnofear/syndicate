@@ -1,6 +1,9 @@
 import { NextRequest } from 'next/server';
 import { getPurchaseStatusByTxId } from '@/lib/db/repositories/purchaseStatusRepository';
 
+// Prevent Next.js from trying to statically generate this dynamic route
+export const dynamic = 'force-dynamic';
+
 const POLL_INTERVAL_MS = 3000;
 const MAX_DURATION_MS = 10 * 60 * 1000; // 10 minutes
 

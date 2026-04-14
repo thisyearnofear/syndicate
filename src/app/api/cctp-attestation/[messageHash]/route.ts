@@ -9,6 +9,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchAttestation } from '@/services/bridges/cctpAttestationRelay';
 
+// This route proxies Circle's attestation API — it must never be statically
+// generated because it depends on a runtime messageHash param and external fetch.
+// Without this, Next.js tries to pre-render during build and crashes with
+// "TypeError: n.cache is not a function" (fetch.cache unavailable in SSG).
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: { messageHash: string } }
