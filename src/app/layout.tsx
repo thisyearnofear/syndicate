@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "@rainbow-me/rainbowkit/styles.css";
 import "@near-wallet-selector/modal-ui/styles.css";
+import { Suspense } from "react";
 import { ToastProvider } from "@/shared/components/ui/Toast";
 import nextDynamic from "next/dynamic";
 import DynamicNavigationHeader from "@/components/DynamicNavigationHeader";
@@ -49,7 +50,9 @@ export default function RootLayout({
             <DynamicNavigationHeader />
             <div className="flex flex-col min-h-screen">
               <div className="flex-1">
-                {children}
+                <Suspense fallback={null}>
+                  {children}
+                </Suspense>
               </div>
               <footer className="relative z-10 border-t border-white/10 bg-slate-950/50 backdrop-blur-md">
                 <div className="max-w-6xl mx-auto px-6 py-10">
