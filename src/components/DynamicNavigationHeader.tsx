@@ -1,15 +1,15 @@
 import dynamic from 'next/dynamic';
 
-// Dynamically import NavigationHeader with SSR enabled but with loading state
+// Dynamically import NavigationHeader with SSR disabled to avoid hydration/hook mismatches
 const NavigationHeader = dynamic(
   () => import('@/components/NavigationHeader'),
   {
-    ssr: true,
+    ssr: false,
     loading: () => <div className="h-16 bg-transparent"></div>
   }
 );
 
 export default function DynamicNavigationHeader() {
-  // No need for isMounted state since we're using SSR
+  // SSR is disabled to prevent React hook mismatches (Error #321)
   return <NavigationHeader />;
 }
