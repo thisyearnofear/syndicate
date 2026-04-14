@@ -7,6 +7,9 @@ import { ToastProvider } from "@/shared/components/ui/Toast";
 import dynamic from "next/dynamic";
 import DynamicNavigationHeader from "@/components/DynamicNavigationHeader";
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const inter = Inter({ subsets: ["latin"] });
 
 // Dynamically import client-side providers to prevent SSR issues
