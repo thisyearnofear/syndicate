@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { API } from '@/config';
+import { basePublicClient } from '@/lib/baseClient';
+import { MEGAPOT_ABI, MEGAPOT_V2 } from '@/config/contracts';
+import { ethers } from 'ethers';
 
 /**
  * Stats API route - uses same transport logic as /api/megapot
@@ -58,9 +61,14 @@ export async function GET() {
       if (response) break;
     }
 
-    // Return partial stats if API unavailable
+    // Return partial stats if API unavailable or outdated
     if (!response) {
-      console.warn('[Stats API] All endpoints failed, returning partial data:', lastError?.message);
+      console.warn('[Stats API] All endpoints failed, trying on-chain fallback');
+      const onChainStats = await getOnChainStats();
+      if (onChainStats) {
+        return NextResponse.json(onChainStats);
+      }
+
       return NextResponse.json({
         totalRaised: null,
         activePlayers: null,
@@ -72,6 +80,16 @@ export async function GET() {
     }
 
     const stats = await response.json();
+    const prizeUsd = stats.prizeUsd ? parseFloat(stats.prizeUsd) : 0;
+
+    // If API returns suspiciously low jackpot (old version), try on-chain
+    if (prizeUsd < 100000) {
+      console.warn(`[Stats API] API returned suspicious prize ($${prizeUsd}), trying on-chain`);
+      const onChainStats = await getOnChainStats();
+      if (onChainStats) {
+        return NextResponse.json(onChainStats);
+      }
+    }
 
     const totalRaised = stats.ticketsSoldCount && stats.ticketPrice
       ? stats.ticketsSoldCount * stats.ticketPrice
@@ -80,13 +98,16 @@ export async function GET() {
     return NextResponse.json({
       totalRaised,
       activePlayers: stats.activePlayers ?? null,
-      prizeUsd: stats.prizeUsd ? parseFloat(stats.prizeUsd) : null,
+      prizeUsd: prizeUsd || null,
       ticketsSold: stats.ticketsSoldCount ?? null,
       updatedAt: new Date().toISOString(),
       source: 'megapot-api',
     });
   } catch (error) {
     console.error('[Stats API] Unexpected error:', error);
+    const onChainStats = await getOnChainStats().catch(() => null);
+    if (onChainStats) return NextResponse.json(onChainStats);
+
     // Return partial stats instead of 500
     return NextResponse.json({
       totalRaised: null,
@@ -96,5 +117,36 @@ export async function GET() {
       updatedAt: new Date().toISOString(),
       source: 'error',
     });
+  }
+}
+
+async function getOnChainStats() {
+  try {
+    const currentId = await basePublicClient.readContract({
+      address: MEGAPOT_V2.jackpot.address,
+      abi: MEGAPOT_ABI,
+      functionName: 'currentDrawingId',
+    } as any) as bigint;
+
+    const state = await basePublicClient.readContract({
+      address: MEGAPOT_V2.jackpot.address,
+      abi: MEGAPOT_ABI,
+      functionName: 'getDrawingState',
+      args: [currentId],
+    } as any) as any;
+
+    const prizeUsd = Number(state.prizePool) / 1e6;
+    
+    return {
+      totalRaised: Number(state.lpEarnings || 0) / 1e6,
+      activePlayers: null,
+      prizeUsd,
+      ticketsSold: Number(state.globalTicketsBought || 0),
+      updatedAt: new Date().toISOString(),
+      source: 'on-chain',
+    };
+  } catch (error) {
+    console.error('[Stats API] On-chain fallback failed:', error);
+    return null;
   }
 }

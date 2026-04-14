@@ -145,6 +145,7 @@ export class ContractDataService {
 
   /**
    * Get current jackpot amount with caching
+   * V2: Fetch currentDrawingId then getDrawingState(id).prizePool
    */
   async getCurrentJackpot(): Promise<string> {
     const cacheKey = "jackpot";
@@ -155,12 +156,32 @@ export class ContractDataService {
 
     return this.deduplicateRequest(cacheKey, async () => {
       try {
-        const jackpot = await this.megapotContract.getCurrentJackpot();
-        const formatted = ethers.formatUnits(jackpot, 6);
+        // Step 1: Get the active drawing ID
+        const currentId = await this.megapotContract.currentDrawingId();
+        
+        // Step 2: Get the state for that drawing
+        const drawingState = await this.megapotContract.getDrawingState(currentId);
+        
+        // Step 3: Extract prizePool (Jackpot)
+        // drawingState is a tuple/object based on ethers configuration
+        const prizePool = drawingState.prizePool || drawingState[0];
+        
+        const formatted = ethers.formatUnits(prizePool, 6);
         this.setCache(cacheKey, formatted, CACHE_CONFIG.JACKPOT);
         return formatted;
       } catch (error) {
-        // Silently return fallback - contract may not be deployed or method doesn't exist
+        console.warn("[ContractDataService] Failed to fetch V2 jackpot, using fallback:", error);
+        
+        // Final fallback: try older version if exists (backward compatibility)
+        try {
+          if (typeof this.megapotContract.getCurrentJackpot === 'function') {
+            const jackpot = await this.megapotContract.getCurrentJackpot();
+            return ethers.formatUnits(jackpot, 6);
+          }
+        } catch (innerError) {
+          // Both failed
+        }
+        
         return "0";
       }
     });
@@ -480,8 +501,8 @@ export class ContractDataService {
 
     return this.deduplicateRequest(cacheKey, async () => {
       try {
-        const jackpotSize = await this.megapotContract.getCurrentJackpot();
-        const jackpotUSD = parseFloat(ethers.formatUnits(jackpotSize, 6));
+        const jackpotStr = await this.getCurrentJackpot();
+        const jackpotUSD = parseFloat(jackpotStr);
         const oddsPerTicket = jackpotUSD / 0.7;
 
         const result: OddsInfo = {

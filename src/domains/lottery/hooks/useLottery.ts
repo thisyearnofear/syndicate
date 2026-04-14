@@ -8,7 +8,7 @@
  * - CLEAN: Clear separation of concerns
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { megapotService } from '../services/megapotService';
 import { performance, features } from '@/config';
 import type { LotteryState } from '../types';

@@ -64,6 +64,10 @@ settings.json
 .junie
 .intent
 
+# Build and local development
+/.swc/
+/contracts/starknet/target/
+
 # Foundry
 broadcast/
 cache/

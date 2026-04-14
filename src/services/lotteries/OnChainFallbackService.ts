@@ -7,12 +7,15 @@
 
 import { Address } from 'viem';
 import { basePublicClient } from '@/lib/baseClient';
+import { MEGAPOT_ABI } from '@/config/contracts';
 
 // =============================================================================
 // CONTRACT ADDRESSES
 // =============================================================================
 
 const POOLTOGETHER_VAULT_ADDRESS: Address = '0x6B5a5c55E9dD4bb502Ce25bBfbaA49b69cf7E4dd';
+const POOLTOGETHER_PRIZE_POOL_ADDRESS: Address = '0x45b2010d8a4f08b53c9fa7544c51dfd9733732cb';
+const MEGAPOT_V2_ADDRESS: Address = '0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2';
 
 // =============================================================================
 // INTERFACES
@@ -48,6 +51,23 @@ const ERC4626_ABI = [
   },
 ] as const;
 
+const PRIZE_POOL_ABI = [
+  {
+    name: 'getTierPrizeSize',
+    type: 'function',
+    inputs: [{ name: 'tier', type: 'uint8' }],
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    name: 'numberOfTiers',
+    type: 'function',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint8' }],
+    stateMutability: 'view',
+  },
+] as const;
+
 /**
  * Read PoolTogether prize data directly from the blockchain
  */
@@ -64,13 +84,21 @@ export async function getPoolTogetherOnChainPrize(): Promise<OnChainPrizeData | 
         abi: ERC4626_ABI,
         functionName: 'totalAssets',
       } as any),
+      basePublicClient.readContract({
+        address: POOLTOGETHER_PRIZE_POOL_ADDRESS,
+        abi: PRIZE_POOL_ABI,
+        functionName: 'getTierPrizeSize',
+        args: [0], // Tier 0 is the Grand Prize
+      } as any),
     ]);
 
     const zero = BigInt(0);
     const totalSupply = results[0].status === 'fulfilled' ? results[0].value as bigint : zero;
     const totalAssets = results[1].status === 'fulfilled' ? results[1].value as bigint : zero;
+    const grandPrizeSize = results[2].status === 'fulfilled' ? results[2].value as bigint : zero;
 
     const depositsUsd = Number(totalAssets || totalSupply) / 1e6;
+    const prizeUsd = Number(grandPrizeSize) / 1e6;
 
     if (depositsUsd <= 0) {
       console.warn('[OnChainFallback] No PoolTogether data available from chain');
@@ -83,7 +111,7 @@ export async function getPoolTogetherOnChainPrize(): Promise<OnChainPrizeData | 
       return null;
     }
 
-    const estimatedPrize = depositsUsd * 0.001;
+    const estimatedPrize = prizeUsd > 0 ? prizeUsd : (depositsUsd * 0.001);
 
     return {
       prizeUsd: estimatedPrize.toFixed(2),
@@ -93,8 +121,52 @@ export async function getPoolTogetherOnChainPrize(): Promise<OnChainPrizeData | 
       nextDrawTimestamp: 0,
       chainId: 8453,
     };
-  } catch (error) {
+    } catch (error) {
     console.warn('[OnChainFallback] Failed to read PoolTogether from chain:', error);
+    return null;
+  }
+}
+
+// =============================================================================
+// MEGAPOT ON-CHAIN READ
+// =============================================================================
+
+/**
+ * Read Megapot prize data directly from the blockchain
+ */
+export async function getMegapotOnChainPrize(): Promise<OnChainPrizeData | null> {
+  try {
+    const currentId = await basePublicClient.readContract({
+      address: MEGAPOT_V2_ADDRESS,
+      abi: MEGAPOT_ABI,
+      functionName: 'currentDrawingId',
+    } as any) as bigint;
+
+    const state = await basePublicClient.readContract({
+      address: MEGAPOT_V2_ADDRESS,
+      abi: MEGAPOT_ABI,
+      functionName: 'getDrawingState',
+      args: [currentId],
+    } as any) as any;
+
+    const prizeUsd = Number(state.prizePool) / 1e6;
+    const depositsUsd = Number(state.lpEarnings || 0) / 1e6; // Approximate total deposits
+
+    if (prizeUsd <= 0) {
+      console.warn('[OnChainFallback] No Megapot prize data available from chain');
+      return null;
+    }
+
+    return {
+      prizeUsd: prizeUsd.toFixed(2),
+      totalDepositsUsd: depositsUsd.toFixed(2),
+      ticketCount: state.globalTicketsBought.toString(),
+      drawId: currentId.toString(),
+      nextDrawTimestamp: Number(state.drawingTime),
+      chainId: 8453,
+    };
+  } catch (error) {
+    console.warn('[OnChainFallback] Failed to read Megapot from chain:', error);
     return null;
   }
 }
