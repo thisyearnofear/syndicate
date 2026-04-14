@@ -14,6 +14,9 @@ import { GovernanceVoting } from "@/components/syndicate/GovernanceVoting";
 import type { SyndicateInfo } from "@/domains/lottery/types";
 import { useUnifiedWallet } from "@/hooks";
 
+// Prevent Next.js from trying to statically generate this dynamic route
+export const dynamic = 'force-dynamic';
+
 export default function SyndicateDetailPage() {
    const params = useParams<{ id: string }>();
    const id = params?.id;

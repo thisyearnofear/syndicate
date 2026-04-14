@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 
+// Prevent Next.js from trying to statically generate this dynamic route
+export const dynamic = 'force-dynamic';
+
 interface PurchaseStep {
   name: string;
   status: 'pending' | 'in_progress' | 'complete' | 'failed';
