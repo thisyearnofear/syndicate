@@ -79,7 +79,7 @@ export function SyndicateCard({ syndicate, compact = false }: SyndicateCardProps
 
   if (compact) {
     return (
-      <Link href={`/syndicate/${syndicate.id}`} className="block">
+      <Link href={`/syndicate?id=${syndicate.id}`} className="block">
         <div className="glass-premium rounded-xl p-4 border border-white/20 hover:border-white/40 transition-all duration-300 cursor-pointer">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-bold text-white truncate">{syndicate.name}</h3>
@@ -106,7 +106,7 @@ export function SyndicateCard({ syndicate, compact = false }: SyndicateCardProps
   }
 
   return (
-    <Link href={`/syndicate/${syndicate.id}`} className="block">
+    <Link href={`/syndicate?id=${syndicate.id}`} className="block">
       <div className="glass-premium rounded-2xl p-5 border border-white/20 hover:border-white/40 transition-all duration-300 cursor-pointer">
         {/* Header */}
         <div className="flex items-start justify-between mb-3">

@@ -139,8 +139,8 @@ export default function SyndicatesPage() {
                                         <SyndicateCard
                                             syndicate={syndicate}
                                             poolId={syndicate.id}
-                                            onJoin={(id) => router.push(`/syndicate/${id}`)}
-                                            onView={(id) => router.push(`/syndicate/${id}`)}
+                                            onJoin={(id) => router.push(`/syndicate?id=${id}`)}
+                                            onView={(id) => router.push(`/syndicate?id=${id}`)}
                                         />
                                     </Suspense>
                                 ))}

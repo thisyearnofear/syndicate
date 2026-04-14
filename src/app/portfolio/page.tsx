@@ -640,7 +640,7 @@ export default function PortfolioPage() {
                     <div 
                       key={syndicate.poolId}
                       className="glass-premium rounded-xl p-4 border border-white/20 hover:border-white/40 transition-all cursor-pointer"
-                      onClick={() => router.push(`/syndicate/${syndicate.poolId}`)}
+                      onClick={() => router.push(`/syndicate?id=${syndicate.poolId}`)}
                     >
                       {/* Header */}
                       <div className="flex items-center justify-between mb-3">

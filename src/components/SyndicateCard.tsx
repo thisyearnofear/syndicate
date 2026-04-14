@@ -307,7 +307,7 @@ export default function SyndicateCard({
         {/* Advanced options for yield strategies */}
         <div className="flex gap-1">
           <SocialShare
-            url={`${typeof window !== "undefined" ? window.location.origin : ""}/syndicate/${syndicate.id}`}
+            url={`${typeof window !== "undefined" ? window.location.origin : ""}/syndicate?id=${syndicate.id}`}
             title={`Join ${syndicate.name}`}
             description={syndicate.description}
           />

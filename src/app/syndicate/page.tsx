@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
 import { Users, Heart, TrendingUp, Share2, Trophy, Gift, Award, ArrowLeft, Shield, Share2 as SplitIcon, Coins, ExternalLink } from "lucide-react";
 import SyndicateJoinModal from "@/components/syndicate/SyndicateJoinModal";
@@ -14,14 +14,14 @@ import { GovernanceVoting } from "@/components/syndicate/GovernanceVoting";
 import type { SyndicateInfo } from "@/domains/lottery/types";
 import { useUnifiedWallet } from "@/hooks";
 
-// NOTE: The fetch.cache polyfill in next.config.js prevents build crashes
-// during Next.js SSG evaluation of this dynamic route.
+// Uses query param ?id=xxx instead of dynamic segment [id]
+// to avoid Next.js buildAppStaticPaths crash during build.
 
 export default function SyndicateDetailPage() {
-   const params = useParams<{ id: string }>();
-   const id = params?.id;
+   const searchParams = useSearchParams();
+   const id = searchParams?.get('id');
    const router = useRouter();
-   
+
    if (!id) {
      return <div className="p-4 text-center text-red-500">Syndicate ID is required</div>;
    }
@@ -61,10 +61,10 @@ export default function SyndicateDetailPage() {
         await navigator.share({
           title: `Join ${syndicate?.name}`,
           text: syndicate?.description,
-          url: `${window.location.origin}/syndicate/${id}`,
+          url: `${window.location.origin}/syndicate?id=${id}`,
         });
       } else {
-        await navigator.clipboard.writeText(`${window.location.origin}/syndicate/${id}`);
+        await navigator.clipboard.writeText(`${window.location.origin}/syndicate?id=${id}`);
       }
     } catch (error) {
       console.error('Error sharing:', error);
@@ -170,7 +170,7 @@ export default function SyndicateDetailPage() {
                 <p className="text-gray-400 mt-1 md:mt-2 text-sm md:text-base line-clamp-2 md:line-clamp-none">{syndicate.description}</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2 flex-wrap">
               <NotificationBell poolId={id} />
               <Button variant="outline" className="border-purple-500/50 text-purple-300 hover:bg-purple-500/10 min-h-[44px] flex-1 sm:flex-none" onClick={handleShare} disabled={isSharing}>
@@ -191,8 +191,8 @@ export default function SyndicateDetailPage() {
 
         {/* Prize Distribution */}
         <div className="mb-8">
-          <PrizeDistribution 
-            poolId={id} 
+          <PrizeDistribution
+            poolId={id}
             isCoordinator={!!address}
           />
         </div>
@@ -276,7 +276,7 @@ export default function SyndicateDetailPage() {
             </div>
           </div>
         </div>
-        
+
         <div className="glass-premium rounded-2xl p-6 border border-white/20">
           <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2"><Heart className="w-5 h-5 text-red-400" />Impact Breakdown</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -354,7 +354,7 @@ export default function SyndicateDetailPage() {
                     <span>Principal is always withdrawable</span>
                   </li>
                 </ul>
-                <a 
+                <a
                   href={`https://basescan.org/address/${syndicate.ptVaultAddress}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -416,7 +416,7 @@ export default function SyndicateDetailPage() {
                     <span>Transaction executes automatically</span>
                   </li>
                 </ul>
-                <a 
+                <a
                   href={`https://app.safe.global/bridge?safe=base:${syndicate.safeAddress}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -470,7 +470,7 @@ export default function SyndicateDetailPage() {
                     <span>No coordinator needed for distribution</span>
                   </li>
                 </ul>
-                <a 
+                <a
                   href={`https://app.splits.org/users/${syndicate.splitAddress}`}
                   target="_blank"
                   rel="noopener noreferrer"
