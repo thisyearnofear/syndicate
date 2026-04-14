@@ -2,14 +2,21 @@
 
 /**
  * CIVIC PASS GATE PROVIDER
- * 
+ *
  * Wraps Solana-connected components with Civic Pass identity verification.
  * Dynamically selects gatekeeper network based on deposit amount (tiered KYC).
- * 
+ *
  * Tiers (aligned with FATF Travel Rule):
  * - < $1,000:   CAPTCHA only (frictionless)
  * - $1K–$10K:   Liveness check (biometric selfie)
  * - ≥ $10,000:  Full ID Verification (document + sanctions screening)
+ *
+ * IMPORTANT: Always renders <GatewayProvider> so that child components
+ * calling useCivicGate() → useGateway() always have a valid React context.
+ * Previously, when no wallet was connected, we rendered <>{children}</>
+ * without the provider — this caused useGateway() to use the default
+ * context value, which could trigger React error #321 in certain render
+ * paths. Now we always provide the context, passing wallet only when available.
  */
 
 import React, { useMemo } from 'react';
@@ -33,8 +40,8 @@ interface CivicGateProviderProps {
   depositAmount?: number;
 }
 
-export function CivicGateProvider({ 
-  children, 
+export function CivicGateProvider({
+  children,
   gatekeeperNetwork,
   depositAmount,
 }: CivicGateProviderProps) {
@@ -63,10 +70,10 @@ export function CivicGateProvider({
     };
   }, [publicKey, signTransaction]);
 
-  if (!wallet) {
-    return <>{children}</>;
-  }
-
+  // Always render GatewayProvider so useGateway() always has valid context.
+  // When wallet is undefined, Civic treats it as "not connected" — status
+  // stays UNKNOWN and requestGatewayToken is a no-op. This is safe and
+  // prevents React #321 from missing context.
   return (
     <GatewayProvider
       wallet={wallet}
