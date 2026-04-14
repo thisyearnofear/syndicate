@@ -8,7 +8,8 @@
  * - MODULAR: Reusable across dashboard, overview, and other components
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useVisibilityPolling } from '@/lib/useVisibilityPolling';
 import { vaultManager, type VaultBalance, type VaultProtocol } from '@/services/vaults';
 
 export interface UserVaultPosition {
@@ -114,18 +115,13 @@ export function useUserVaults(
     }
   }, [userAddress, enabled]);
 
-  // Initial fetch
-  useEffect(() => {
-    fetchVaultPositions();
-  }, [fetchVaultPositions]);
-
-  // Auto-refresh interval
-  useEffect(() => {
-    if (!autoRefresh || !enabled) return;
-
-    const interval = setInterval(fetchVaultPositions, refreshInterval);
-    return () => clearInterval(interval);
-  }, [autoRefresh, refreshInterval, enabled, fetchVaultPositions]);
+  // Initial fetch + auto-refresh with visibility awareness
+  useVisibilityPolling({
+    callback: fetchVaultPositions,
+    intervalMs: refreshInterval,
+    enabled: autoRefresh && enabled && !!userAddress,
+    immediate: true,
+  });
 
   return {
     positions,

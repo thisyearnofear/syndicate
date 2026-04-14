@@ -8,10 +8,11 @@
  * - CLEAN: Clear separation of concerns
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { megapotService } from '../services/megapotService';
 import { performance, features } from '@/config';
 import type { LotteryState } from '../types';
+import { useVisibilityPolling } from '@/lib/useVisibilityPolling';
 
 export function useLottery() {
   const [state, setState] = useState<LotteryState>({
@@ -92,24 +93,13 @@ export function useLottery() {
   /**
    * ENHANCEMENT FIRST: Setup real-time updates if enabled
    */
-  useEffect(() => {
-    // Initial fetch
-    fetchJackpotData(true);
-
-    // PERFORMANT: Setup polling for real-time updates
-    if (features.enableRealTimeUpdates) {
-      intervalRef.current = setInterval(() => {
-        fetchJackpotData(false); // Don't show loading for background updates
-      }, performance.cache.jackpotData);
-    }
-
-    return () => {
-      mountedRef.current = false;
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [fetchJackpotData]);
+  // Visibility-aware polling for jackpot data
+  useVisibilityPolling({
+    callback: () => fetchJackpotData(false),
+    intervalMs: performance.cache.jackpotData,
+    enabled: features.enableRealTimeUpdates,
+    immediate: true,
+  });
 
   /**
    * PERFORMANT: Cleanup on unmount
