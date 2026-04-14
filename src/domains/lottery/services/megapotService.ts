@@ -99,15 +99,28 @@ class MegapotService {
   async getJackpotStats(): Promise<JackpotStats | null> {
     try {
       const stats = await this.makeRequest<JackpotStats>(api.megapot.endpoints.jackpotStats, {
-        retries: 1,
+        retries: 2,
         logFailures: false,
       });
+      
       // Validate the response has meaningful data
-      if (!stats || !stats.prizeUsd || parseFloat(stats.prizeUsd) <= 0) {
+      if (!stats || !stats.prizeUsd) {
+        console.warn('[MegapotService] API returned empty prize data');
         return null;
       }
+      
+      const prizeValue = parseFloat(stats.prizeUsd);
+      
+      // Sanity check: if value is 0 or exceeds $100M, the data is clearly wrong
+      if (prizeValue <= 0 || prizeValue > 100_000_000) {
+        console.warn('[MegapotService] Prize value looks invalid:', prizeValue);
+        return null;
+      }
+      
+      console.log('[MegapotService] Successfully fetched jackpot:', stats.prizeUsd);
       return stats;
-    } catch {
+    } catch (error) {
+      console.warn('[MegapotService] Failed to fetch jackpot stats:', error);
       return null;
     }
   }
