@@ -83,6 +83,7 @@ export function LifiEarnVaultSelector({
   const [vaults, setVaults] = useState<LifiEarnVault[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedChain, setSelectedChain] = useState<number | 'all'>('all');
+  const [sourceChain, setSourceChain] = useState<number>(8453); // Default to Base
   const [sortBy, setSortBy] = useState<'apy' | 'tvl'>('apy');
   const [showFilters, setShowFilters] = useState(false);
   const [depositSuccess, setDepositSuccess] = useState(false);
@@ -151,12 +152,13 @@ export function LifiEarnVaultSelector({
     const usdcToken = selectedVault.underlyingTokens.find(t => t.symbol === 'USDC')?.address || 
                       '0x0000000000000000000000000000000000000000';
     
+    const isCrossChain = sourceChain !== selectedVault.chainId;
     const result = await deposit({
-      fromChain: selectedVault.chainId, // Same chain deposit for now
+      fromChain: sourceChain,
       toChain: selectedVault.chainId,
       fromToken: usdcToken,
       toToken: selectedVault.address,
-      fromAmount: depositAmount, // Assume already in base units
+      fromAmount: depositAmount,
       vault: selectedVault,
     });
 
@@ -392,6 +394,25 @@ export function LifiEarnVaultSelector({
               </div>
             </div>
 
+            {/* Source chain selector */}
+            <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+              <label className="text-sm text-gray-400 mb-2 block">Deposit From</label>
+              <select
+                value={sourceChain}
+                onChange={(e) => setSourceChain(Number(e.target.value))}
+                className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500"
+              >
+                {availableChains.map((chainId) => (
+                  <option key={chainId} value={chainId}>
+                    {CHAIN_NAMES[chainId] || `Chain ${chainId}`}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-2">
+                Select the chain where your USDC is located
+              </p>
+            </div>
+
             {/* Deposit amount display */}
             <div className="p-4 rounded-lg bg-white/5 border border-white/10">
               <div className="flex items-center justify-between">
@@ -489,7 +510,7 @@ export function LifiEarnVaultSelector({
                     </span>
                   ) : (
                     <span className="flex items-center gap-2">
-                      Deposit via LI.FI Composer
+                      {sourceChain !== selectedVault.chainId ? 'Cross-Chain ' : ''}Deposit via LI.FI Composer
                       <ArrowRight className="w-4 h-4" />
                     </span>
                   )}
