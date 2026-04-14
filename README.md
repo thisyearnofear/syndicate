@@ -98,7 +98,7 @@ docs/
 - ✅ **Path**: USDC lending allocator strategy (if 10%+ APY achievable)
 - 📖 **Details**: [docs/HACKATHON.md#ranger-build-a-bear](./docs/HACKATHON.md#ranger-build-a-bear)
 
-### Lifi DeFi Mullet (deadline TBD)
+### Lifi DeFi Mullet
 - ✅ **Perfect fit**: Cross-chain bridges (8 protocols) + yield routing
 - ✅ **Novel**: TON/CCTP + Telegram Mini App integration
 - 📖 **Details**: [docs/HACKATHON.md#lifi-defi-mullet](./docs/HACKATHON.md#lifi-defi-mullet)

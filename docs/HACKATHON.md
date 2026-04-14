@@ -1,7 +1,7 @@
 # Hackathon Strategy - Consolidated Plan
 
-**Last Updated**: April 8, 2026  
-**Status**: Ready to execute (pending Lifi deadline verification)
+**Last Updated**: April 14, 2026  
+**Status**: Ready to execute
 
 ---
 
@@ -9,8 +9,8 @@
 
 | Hackathon | Alignment | Recommendation | Timeline |
 |-----------|-----------|---|---|
-| **Ranger Build-a-Bear** | Medium (⚠️ Constraints) | Optional | April 21 deadline (13 days) |
-| **Lifi DeFi Mullet** | Excellent ✅ | **RECOMMENDED** | Deadline TBD (verify ASAP) |
+| **Ranger Build-a-Bear** | Medium (⚠️ Constraints) | Optional | April 21 deadline (7 days) |
+| **Lifi DeFi Mullet** | Excellent ✅ | **RECOMMENDED** | Open submission |
 
 ---
 
@@ -143,9 +143,7 @@ Focus on:
 ## Lifi DeFi Mullet
 
 ### Overview
-- **Deadline**: TBD (unknown, verify ASAP) ⚠️
-- **Prize**: Unknown
-- **Requirement**: Cross-chain bridges, DeFi composability, innovation
+- Cross-chain bridges, DeFi composability, innovation
 - **Alignment**: Excellent ✅
 
 ### Why Syndicate Fits Perfectly
