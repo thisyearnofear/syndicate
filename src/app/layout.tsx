@@ -4,7 +4,7 @@ import { Inter } from "next/font/google";
 import "@rainbow-me/rainbowkit/styles.css";
 import "@near-wallet-selector/modal-ui/styles.css";
 import { ToastProvider } from "@/shared/components/ui/Toast";
-import dynamic from "next/dynamic";
+import nextDynamic from "next/dynamic";
 import DynamicNavigationHeader from "@/components/DynamicNavigationHeader";
 
 export const dynamic = 'force-dynamic';
@@ -13,7 +13,7 @@ export const revalidate = 0;
 const inter = Inter({ subsets: ["latin"] });
 
 // Dynamically import client-side providers to prevent SSR issues
-const ClientProviders = dynamic(
+const ClientProviders = nextDynamic(
   () => import("@/components/ClientProviders"),
   { ssr: false }
 );
