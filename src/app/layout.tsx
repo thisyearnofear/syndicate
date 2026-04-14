@@ -19,6 +19,16 @@ const ClientProviders = nextDynamic(
   { ssr: false }
 );
 
+// Dynamically import the page content wrapper to prevent SSR
+// of page components that depend on wallet/web3 context
+const DynamicPageContent = nextDynamic(
+  () => import("@/components/DynamicPageContent"),
+  {
+    ssr: false,
+    loading: () => <div className="flex-1" />,
+  }
+);
+
 
 export const metadata: Metadata = {
   title: "Syndicate - Win Prizes, Never Lose Your Deposit",
@@ -50,9 +60,7 @@ export default function RootLayout({
             <DynamicNavigationHeader />
             <div className="flex flex-col min-h-screen">
               <div className="flex-1">
-                <Suspense fallback={null}>
-                  {children}
-                </Suspense>
+                <DynamicPageContent>{children}</DynamicPageContent>
               </div>
               <footer className="relative z-10 border-t border-white/10 bg-slate-950/50 backdrop-blur-md">
                 <div className="max-w-6xl mx-auto px-6 py-10">
