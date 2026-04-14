@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { LIFI_EARN_API_BASE_URL } from '@/config/lifi';
 
-// Prevent Next.js from trying to statically generate this dynamic route
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { address: string } }
+  request: NextRequest
 ) {
-  const { address } = params;
+  const { searchParams } = new URL(request.url);
+  const address = searchParams.get('address');
+  
+  if (!address) {
+    return NextResponse.json({ error: 'Address is required' }, { status: 400 });
+  }
+
   const target = `${LIFI_EARN_API_BASE_URL}/v1/earn/portfolio/${address}/positions`;
 
   try {

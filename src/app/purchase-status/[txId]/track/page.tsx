@@ -32,7 +32,7 @@ export default function PurchaseStatusPage() {
 
     const fetchStatus = async () => {
       try {
-        const res = await fetch(`/api/purchase-status/${txId}/stream`);
+        const res = await fetch(`/api/purchase-status/stream?txId=${txId}`);
         if (!res.ok) throw new Error('Failed to fetch status');
         const data = await res.json();
         setStatus(data);

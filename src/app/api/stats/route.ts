@@ -48,6 +48,7 @@ export async function GET() {
           const attempt = await fetch(url.toString(), {
             headers,
             signal: AbortSignal.timeout(10000),
+            cache: 'no-store',
           });
           
           if (attempt.ok) {

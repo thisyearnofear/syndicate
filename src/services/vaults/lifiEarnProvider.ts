@@ -104,7 +104,7 @@ export class LifiEarnVaultProvider implements VaultProvider {
      */
     async getBalance(userAddress: string): Promise<VaultBalance> {
         try {
-            const response = await fetch(`${EARN_API_BASE_URL}/portfolio/${userAddress}`);
+            const response = await fetch(`${EARN_API_BASE_URL}/portfolio?address=${userAddress}`);
             if (!response.ok) {
                 throw new Error(`Failed to fetch portfolio: ${response.statusText}`);
             }

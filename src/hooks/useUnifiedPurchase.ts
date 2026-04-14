@@ -117,7 +117,7 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
       if (!isPollingRef.current || !txId) return;
 
       try {
-        const response = await fetch(`/api/purchase-status/${txId}`);
+        const response = await fetch(`/api/purchase-status?txId=${txId}`);
         if (response.ok) {
           const data = await response.json() as PurchaseStatusResponse;
           if (data.status !== lastStatusRef.current) {

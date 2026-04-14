@@ -6,6 +6,9 @@
  * receiveMessage() directly from the user's EVM wallet.
  */
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchAttestation } from '@/services/bridges/cctpAttestationRelay';
 
@@ -13,13 +16,11 @@ import { fetchAttestation } from '@/services/bridges/cctpAttestationRelay';
 // generated because it depends on a runtime messageHash param and external fetch.
 // Without this, Next.js tries to pre-render during build and crashes with
 // "TypeError: n.cache is not a function" (fetch.cache unavailable in SSG).
-export const dynamic = 'force-dynamic';
 
 export async function GET(
-  _req: NextRequest,
-  { params }: { params: { messageHash: string } }
+  req: NextRequest
 ): Promise<NextResponse> {
-  const { messageHash } = params;
+  const messageHash = req.nextUrl.searchParams.get('messageHash');
 
   if (!messageHash || !/^0x[0-9a-fA-F]{64}$/.test(messageHash)) {
     return NextResponse.json({ error: 'Invalid messageHash' }, { status: 400 });

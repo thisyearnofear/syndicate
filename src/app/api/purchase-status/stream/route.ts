@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server';
 import { getPurchaseStatusByTxId } from '@/lib/db/repositories/purchaseStatusRepository';
 
-// Prevent Next.js from trying to statically generate this dynamic route
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 const POLL_INTERVAL_MS = 3000;
 const MAX_DURATION_MS = 10 * 60 * 1000; // 10 minutes
@@ -35,10 +35,10 @@ function buildSteps(status: string, record: Record<string, unknown>) {
 }
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { txId: string } }
+  request: NextRequest
 ) {
-  const { txId } = params;
+  const { searchParams } = new URL(request.url);
+  const txId = searchParams.get('txId');
 
   if (!txId) {
     return new Response('Transaction ID required', { status: 400 });
