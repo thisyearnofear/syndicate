@@ -14,8 +14,8 @@ import { GovernanceVoting } from "@/components/syndicate/GovernanceVoting";
 import type { SyndicateInfo } from "@/domains/lottery/types";
 import { useUnifiedWallet } from "@/hooks";
 
-// Prevent Next.js from trying to statically generate this dynamic route
-export const dynamic = 'force-dynamic';
+// NOTE: The fetch.cache polyfill in next.config.js prevents build crashes
+// during Next.js SSG evaluation of this dynamic route.
 
 export default function SyndicateDetailPage() {
    const params = useParams<{ id: string }>();

@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 
-// Prevent Next.js from trying to statically generate this dynamic route
-export const dynamic = 'force-dynamic';
+// NOTE: The layout.tsx in the parent directory exports dynamic='force-dynamic'
+// and the fetch.cache polyfill in next.config.js prevents build crashes.
 
 interface PurchaseStep {
   name: string;
