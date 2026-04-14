@@ -31,7 +31,8 @@ export const DRIFT_CONFIG = {
         // The specific SPL Token Mint representing shares in the Drift JLP Vault
         // TODO: Replace with actual JLP vault share mint address from Drift app
         // This is a placeholder - getBalance() handles this gracefully for MVP
-        VAULT_SHARE_MINT: new PublicKey('DriftVaultJLPShareMintPlaceholder111111111111111111'),
+        // Using System Program ID (all 1s) as a safe base58 placeholder
+        VAULT_SHARE_MINT: new PublicKey('11111111111111111111111111111111'),
         CHAIN_ID: 101, // Solana Mainnet Equivalent
     },
 };
@@ -143,7 +144,7 @@ export class DriftVaultProvider implements VaultProvider {
             const userPubkey = new PublicKey(userAddress);
 
             // Check if VAULT_SHARE_MINT is a valid placeholder (MVP mode)
-            const isPlaceholder = DRIFT_CONFIG.SOLANA.VAULT_SHARE_MINT.toString().includes('Placeholder');
+            const isPlaceholder = DRIFT_CONFIG.SOLANA.VAULT_SHARE_MINT.toString() === '11111111111111111111111111111111';
             if (isPlaceholder) {
                 // MVP: Return zero balance gracefully instead of throwing errors
                 const apy = await this.getCurrentAPY();
