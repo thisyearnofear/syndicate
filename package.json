@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@0xsplits/splits-sdk": "6.5.0",
-    "@bonfida/spl-name-service": "^3.0.16",
+    "@bonfida/spl-name-service": "^3.0.21",
     "@civic/solana-gateway-react": "1.2.4",
     "@coordinationlabs/megapot-ui-kit": "^0.0.49",
     "@coral-xyz/anchor": "0.32.1",
