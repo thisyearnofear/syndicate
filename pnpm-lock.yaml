@@ -101,8 +101,8 @@ importers:
         specifier: 2.0.1
         version: 2.0.1
       '@noble/hashes':
-        specifier: 2.2.0
-        version: 2.2.0
+        specifier: 1.8.0
+        version: 1.8.0
       '@orbiter-finance/bridge-sdk':
         specifier: 0.1.15
         version: 0.1.15(a4f0e82504cfacd8b75ca95199d38661)
@@ -23705,7 +23705,7 @@ snapshots:
 
   '@wormhole-foundation/sdk-stacks@3.12.0':
     dependencies:
-      '@stacks/network': 7.2.0
+      '@stacks/network': 7.3.1
       '@stacks/transactions': 7.4.0
       '@wormhole-foundation/sdk-connect': 3.12.0
     transitivePeerDependencies:

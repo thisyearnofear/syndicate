@@ -12,6 +12,7 @@ const nextConfig = {
     '@wagmi/connectors',
     'ens-normalize',
     'noble-hashes',
+    '@noble/hashes',
     '@metamask/delegation-abis',
   ],
 
