@@ -2,6 +2,32 @@
 const path = require('path');
 const webpack = require('webpack');
 
+// ---------------------------------------------------------------------------
+// Polyfill fetch.cache for Next.js 14 build
+//
+// Next.js 14's "Collecting page data" phase evaluates dynamic route modules
+// even when they have `export const dynamic = 'force-dynamic'`. Some transitive
+// dependencies (viem, ethers, etc.) call fetch.cache() which only exists in
+// Next.js's patched fetch, not in Node.js's native fetch. This causes:
+//   TypeError: n.cache is not a function
+//
+// We patch the global fetch to add a no-op .cache before Next.js gets to it,
+// so when Next.js later patches fetch, it finds .cache already exists and
+// doesn't break. This is safe — .cache is only meaningful during actual
+// request handling, not during build-time module evaluation.
+// ---------------------------------------------------------------------------
+if (typeof globalThis.fetch?.cache !== 'function') {
+  const originalFetch = globalThis.fetch;
+  const noopCache = () => originalFetch;
+  noopCache.forceCache = noopCache;
+  noopCache.noStore = noopCache;
+  noopCache.revalidate = () => noopCache;
+  noopCache.life = () => noopCache;
+  globalThis.fetch = Object.assign(function fetch(...args) {
+    return originalFetch.apply(this, args);
+  }, { cache: noopCache });
+}
+
 const nextConfig = {
   // Basic optimizations for better performance
   reactStrictMode: true,
