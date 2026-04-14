@@ -115,7 +115,7 @@ export class PoolTogetherService {
       const prizeData: PoolTogetherPrizeData = {
         prizeUsd: onChainData.prizeUsd,
         totalDepositsUsd: onChainData.totalDepositsUsd,
-        apy: 3.5, // Approximate historical APY
+        apy: 0,
         vaultAddress: POOLTOGETHER_VAULTS[0].address,
         chainId: POOLTOGETHER_VAULTS[0].chainId,
       };
