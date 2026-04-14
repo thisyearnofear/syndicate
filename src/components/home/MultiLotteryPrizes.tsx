@@ -119,7 +119,7 @@ export function MultiLotteryPrizes({ onBuyClick }: MultiLotteryPrizesProps) {
             {/* CTA */}
             <Button
               variant="default"
-              size="md"
+              size="default"
               className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white"
               onClick={() => onBuyClick(lottery.protocol)}
             >

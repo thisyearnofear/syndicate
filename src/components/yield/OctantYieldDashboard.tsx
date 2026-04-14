@@ -5,7 +5,7 @@
  * and automatic ticket/cause allocation
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useVisibilityPolling } from '@/lib/useVisibilityPolling';
 import { Button } from '@/shared/components/ui/Button';
 import { CompactStack, CompactFlex } from '@/shared/components/premium/CompactLayout';
@@ -276,7 +276,7 @@ export function OctantYieldDashboard({
   }
 
   const hasYield = parseFloat(vaultInfo.yieldGenerated) > 0 || parseFloat(availableYield) > 0;
-  const canProcess = hasYield && (strategyStatus?.isActive || autoStrategy?.isActive);
+  const canProcess = hasYield && strategyStatus?.isActive;
 
   return (
     <div className={`w-full space-y-6 ${className}`}>

@@ -10,8 +10,8 @@ export default function UserDashboard() {
 
   if (!address) return null;
 
-  const hasTickets = userTicketInfo && userTicketInfo.totalTickets > 0;
-  const hasWinnings = userTicketInfo && userTicketInfo.totalWinnings > 0;
+  const hasTickets = userTicketInfo && userTicketInfo.ticketsPurchased > 0;
+  const hasWinnings = userTicketInfo && Number(userTicketInfo.winningsClaimable) > 0;
 
   return (
     <div className="space-y-6">
@@ -32,7 +32,7 @@ export default function UserDashboard() {
             </div>
           </div>
           <div className="text-3xl font-black text-white mb-4">
-            {hasTickets ? userTicketInfo.totalTickets : 0}
+            {hasTickets ? userTicketInfo.ticketsPurchased : 0}
           </div>
           <Link href="/my-tickets">
             <Button variant="outline" size="sm" className="w-full">
@@ -53,7 +53,7 @@ export default function UserDashboard() {
             </div>
           </div>
           <div className="text-3xl font-black text-emerald-400 mb-4">
-            ${hasWinnings ? userTicketInfo.totalWinnings.toFixed(2) : "0.00"}
+            ${hasWinnings ? parseFloat(userTicketInfo.winningsClaimable).toFixed(2) : "0.00"}
           </div>
           {hasWinnings ? (
             <Button

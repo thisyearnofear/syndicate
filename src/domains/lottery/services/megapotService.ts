@@ -11,6 +11,7 @@
 
 import { api, performance, CHAIN_IDS } from '@/config';
 import type { JackpotStats, TicketPurchase, DailyGiveawayWin, PurchaseResult } from '../types';
+import { getMegapotOnChainPrize } from '@/services/lotteries/OnChainFallbackService';
 
 class MegapotService {
   private cache = new Map<string, { data: unknown; timestamp: number }>();
@@ -127,31 +128,39 @@ class MegapotService {
     }
   }
 
-  /**
-   * Read Megapot prize data directly from the contract on Base
-   */
-  private async getOnChainFallback(): Promise<JackpotStats | null> {
-    try {
-      const { getMegapotOnChainPrize } = await import('@/services/lotteries/OnChainFallbackService');
-      const onChainData = await getMegapotOnChainPrize();
-      
-      if (!onChainData) return null;
-      
-      console.log('[MegapotService] Successfully fetched jackpot from chain:', onChainData.prizeUsd);
-      
-      return {
-        prizeUsd: onChainData.prizeUsd,
-        totalDepositsUsd: onChainData.totalDepositsUsd,
-        ticketCount: onChainData.ticketCount,
-        drawId: onChainData.drawId,
-        nextDrawTimestamp: onChainData.nextDrawTimestamp,
-        chainId: onChainData.chainId,
-      };
-    } catch (error) {
-      console.error('[MegapotService] On-chain fallback also failed:', error);
-      return null;
-    }
-  }
+   /**
+    * Read Megapot prize data directly from the contract on Base
+    */
+   private async getOnChainFallback(): Promise<JackpotStats | null> {
+     try {
+       const onChainData = await getMegapotOnChainPrize();
+       
+       if (!onChainData) return null;
+       
+       console.log('[MegapotService] Successfully fetched jackpot from chain:', onChainData.prizeUsd);
+       
+       return {
+         prizeUsd: onChainData.prizeUsd,
+         endTimestamp: String(Math.floor(Date.now() / 1000) + 86400),
+         oddsPerTicket: '1000',
+         ticketPrice: 1,
+         ticketsSoldCount: Number(onChainData.ticketCount) || 0,
+         lastTicketPurchaseBlockNumber: 0,
+         lastTicketPurchaseCount: 0,
+         lastTicketPurchaseTimestamp: String(Date.now()),
+         lastTicketPurchaseTxHash: '',
+         lpPoolTotalBps: '0',
+         userPoolTotalBps: '0',
+         feeBps: 0,
+         referralFeeBps: 0,
+         activeLps: 0,
+         activePlayers: 0,
+       };
+     } catch (error) {
+       console.error('[MegapotService] On-chain fallback also failed:', error);
+       return null;
+     }
+   }
 
   /**
   * ENHANCEMENT FIRST: Enhanced ticket purchases with wallet filtering
