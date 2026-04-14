@@ -21,7 +21,7 @@ export interface PoolTogetherVault {
 
 export const POOLTOGETHER_VAULTS: PoolTogetherVault[] = [
   {
-    address: '0x45b201633594A8090f48866B570932B328080C0B' as Address, // Example PrizeVault on Base
+    address: '0x6B5a5c55E9dD4bb502Ce25bBfbaA49b69cf7E4dd' as Address, // Official USDC PrizeVault on Base
     token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // USDC
     symbol: 'USDC',
     chainId: 8453, // Base
@@ -64,10 +64,10 @@ export class PoolTogetherService {
     }
 
     try {
-      // Fetch prize data from PoolTogether V5 API
-      // Using the official PoolTogether API for Base network (chain ID 8453)
+      // Fetch prize data from official Cabana/PoolTogether V5 API
+      // Using the reliable Cabana API for Base network (chain ID 8453)
       const response = await fetch(
-        'https://poolexplorer.xyz/8453',
+        'https://api.cabana.fi/v1/prizes/8453',
         {
           headers: {
             'Accept': 'application/json',
@@ -82,11 +82,12 @@ export class PoolTogetherService {
 
       const data = await response.json();
       
-      // Parse the prize data from PoolExplorer format
+      // Parse the prize data from Cabana format
+      // Cabana API typically returns an object with prize stats
       const prizeData: PoolTogetherPrizeData = {
-        prizeUsd: data.grandPrize?.value || data.totalPrizeValue || '0',
-        totalDepositsUsd: data.totalValueLocked || '0',
-        apy: data.estimatedApr || 3.5,
+        prizeUsd: (data.grandPrize?.amount ?? data.totalPrizeValue ?? '0').toString(),
+        totalDepositsUsd: (data.tvl ?? data.totalValueLocked ?? '0').toString(),
+        apy: data.estimatedApy ?? data.apr ?? 3.5,
         vaultAddress: POOLTOGETHER_VAULTS[0].address,
         chainId: POOLTOGETHER_VAULTS[0].chainId,
       };

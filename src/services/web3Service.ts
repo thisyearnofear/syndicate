@@ -30,17 +30,16 @@ import type {
 import type { TicketPurchaseResult } from "./base/TransactionExecutor";
 
 // Megapot V2 contract ABI (March 2026 upgrade)
-// V2 uses buyTickets() instead of purchaseTickets()
 export const MEGAPOT_ABI = [
-  "function buyTickets(tuple(uint8[] normals, uint8 bonusball)[] _tickets, address _recipient, address[] _referrers, uint256[] _referralSplit, bytes32 _source) external returns (uint256[] memory ticketIds)",
+  "function buyTickets(tuple(uint8[] normals, uint8 bonusball)[] _tickets, address _recipient, address[] _referrers, uint256[] _referralSplit, bytes32 _source) external",
   "function ticketPrice() external view returns (uint256)",
-  "function getCurrentJackpot() external view returns (uint256)",
+  "function currentDrawingId() external view returns (uint256)",
+  "function getDrawingState(uint256 drawingId) external view returns (tuple(uint256 prizePool, uint256 ticketPrice, uint256 edgePerTicket, uint256 referralWinShare, uint256 referralFee, uint256 globalTicketsBought, uint256 lpEarnings, uint256 drawingTime, uint256 winningTicket, uint8 ballMax, uint8 bonusballMax, address payoutCalculator, bool jackpotLock))",
   "function usersInfo(address) external view returns (uint256 ticketsPurchasedTotalBps, uint256 winningsClaimable, bool active)",
   "function lastWinnerAddress() external view returns (address)",
-  "function ticketCountTotalBps() external view returns (uint256)",
   "function withdrawWinnings() external",
-  "event UserTicketPurchase(address indexed recipient, uint256 ticketsPurchasedTotalBps, address indexed referrer, address indexed buyer)",
-  "event UserWinWithdrawal(address indexed user, uint256 amount)",
+  "event TicketsPurchased(address indexed buyer, uint256[] ticketIds, uint256 totalCost)",
+  "event WinningsClaimed(address indexed winner, uint256 indexed ticketId, uint256 amount)",
 ];
 
 // USDC token ABI

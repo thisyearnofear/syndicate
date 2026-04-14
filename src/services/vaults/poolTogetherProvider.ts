@@ -7,6 +7,7 @@
 
 import { formatUnits, parseUnits } from 'viem';
 import { basePublicClient } from '@/lib/baseClient';
+import { poolTogetherService } from '../lotteries/PoolTogetherService';
 import type {
     VaultProvider,
     VaultProtocol,
@@ -99,7 +100,18 @@ export class PoolTogetherVaultProvider implements VaultProvider {
       return this.cachedAPY.value;
     }
 
-    // PoolTogether V5 on Base typically yields 2-5% APY from prizes
+    try {
+      // Fetch live prize data from PoolTogether service (using reliable API)
+      const prizeData = await poolTogetherService.getPrizeData();
+      if (prizeData && prizeData.apy > 0) {
+        this.cachedAPY = { value: prizeData.apy, timestamp: Date.now() };
+        return prizeData.apy;
+      }
+    } catch (error) {
+      console.warn('[PoolTogetherVault] Failed to get live APY, using fallback:', error);
+    }
+
+    // Fallback: PoolTogether V5 on Base typically yields 2-5% APY from prizes
     const estimatedAPY = 3.5;
     this.cachedAPY = { value: estimatedAPY, timestamp: Date.now() };
     return estimatedAPY;

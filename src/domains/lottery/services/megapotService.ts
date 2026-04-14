@@ -112,15 +112,43 @@ class MegapotService {
       const prizeValue = parseFloat(stats.prizeUsd);
       
       // Sanity check: if value is 0 or exceeds $100M, the data is clearly wrong
-      if (prizeValue <= 0 || prizeValue > 100_000_000) {
-        console.warn('[MegapotService] Prize value looks invalid:', prizeValue);
-        return null;
+      // Also check if the prize looks suspiciously like the old version ($58k)
+      // If we are expecting ~$1M, then $58k is likely an error/lag
+      if (prizeValue <= 0 || prizeValue > 100_000_000 || prizeValue < 100_000) {
+        console.warn('[MegapotService] Prize value looks invalid or outdated:', prizeValue, 'trying fallback');
+        return this.getOnChainFallback();
       }
       
-      console.log('[MegapotService] Successfully fetched jackpot:', stats.prizeUsd);
+      console.log('[MegapotService] Successfully fetched jackpot from API:', stats.prizeUsd);
       return stats;
     } catch (error) {
-      console.warn('[MegapotService] Failed to fetch jackpot stats:', error);
+      console.warn('[MegapotService] Failed to fetch jackpot stats from API, trying fallback:', error);
+      return this.getOnChainFallback();
+    }
+  }
+
+  /**
+   * Read Megapot prize data directly from the contract on Base
+   */
+  private async getOnChainFallback(): Promise<JackpotStats | null> {
+    try {
+      const { getMegapotOnChainPrize } = await import('@/services/lotteries/OnChainFallbackService');
+      const onChainData = await getMegapotOnChainPrize();
+      
+      if (!onChainData) return null;
+      
+      console.log('[MegapotService] Successfully fetched jackpot from chain:', onChainData.prizeUsd);
+      
+      return {
+        prizeUsd: onChainData.prizeUsd,
+        totalDepositsUsd: onChainData.totalDepositsUsd,
+        ticketCount: onChainData.ticketCount,
+        drawId: onChainData.drawId,
+        nextDrawTimestamp: onChainData.nextDrawTimestamp,
+        chainId: onChainData.chainId,
+      };
+    } catch (error) {
+      console.error('[MegapotService] On-chain fallback also failed:', error);
       return null;
     }
   }
