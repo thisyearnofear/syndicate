@@ -86,6 +86,12 @@ export async function getPoolTogetherOnChainPrize(): Promise<OnChainPrizeData | 
       return null;
     }
 
+    // Sanity check: if value exceeds $100M, the data is clearly wrong
+    if (depositsUsd > 100_000_000) {
+      console.warn('[OnChainFallback] PoolTogether data looks invalid (too large):', depositsUsd);
+      return null;
+    }
+
     const estimatedPrize = depositsUsd * 0.001;
 
     return {

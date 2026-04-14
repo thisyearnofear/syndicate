@@ -21,7 +21,7 @@ interface PrizeData {
 
 export interface LotteryPrize {
   name: string;
-  protocol: 'megapot' | 'pooltogether' | 'drift';
+  protocol: 'megapot' | 'pooltogether';
   prizeUsd: string;
   apy?: number;
   description: string;
@@ -108,20 +108,6 @@ export function useMultiLottery() {
         }
       }
 
-      // Drift JLP (static data - yield-based)
-      lotteries.push({
-        name: 'Drift JLP Vault',
-        protocol: 'drift',
-        prizeUsd: '∞',
-        apy: 22.5,
-        description: 'Yield-powered entries with principal locked for a 3-month strategy cycle',
-        isNoLoss: true,
-        token: 'USDC',
-        chain: 'Solana',
-        color: 'from-blue-400 to-indigo-500',
-        icon: '📈',
-      });
-
       setState({
         lotteries,
         isLoading: false,
@@ -161,7 +147,8 @@ export function useMultiLottery() {
   const totalPrizeUsd = useMemo(() => {
     return state.lotteries.reduce((sum, lottery) => {
       const prize = parseFloat(lottery.prizeUsd.replace(/[^0-9.]/g, ''));
-      return sum + (isNaN(prize) ? 0 : prize);
+      if (isNaN(prize) || prize > 100_000_000) return sum;
+      return sum + prize;
     }, 0);
   }, [state.lotteries]);
 

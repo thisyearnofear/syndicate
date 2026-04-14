@@ -27,11 +27,11 @@ export function StatsPieces() {
     },
     {
       label: "Active Players",
-      value: stats?.activePlayers ?? 0,
+      value: (stats?.activePlayers ?? 0) >= 10 ? (stats?.activePlayers ?? 0) : 0,
       prefix: "",
       color: "blue",
-      isLive: stats?.activePlayers !== null,
-      note: stats?.activePlayers ? "Live data" : "Unavailable"
+      isLive: (stats?.activePlayers ?? 0) >= 10,
+      note: (stats?.activePlayers ?? 0) >= 10 ? "Live data" : "Unavailable"
     },
     {
       label: "Supported Chains",
