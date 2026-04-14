@@ -10,8 +10,8 @@
  * - TwabController: 0x7e63601f7e28c758feccf8cdf02f6598694f44c6
  */
 
-import { createPublicClient, http, formatUnits, type Address } from 'viem';
-import { base } from 'viem/chains';
+import { formatUnits, type Address } from 'viem';
+import { basePublicClient } from '@/lib/baseClient';
 
 const BASE_CHAIN_ID = 8453;
 
@@ -137,11 +137,6 @@ export interface PoolTogetherVaultStats {
   holderCount: number;
 }
 
-const publicClient = createPublicClient({
-  chain: base,
-  transport: http(),
-});
-
 /**
  * Fetch vault information from a PoolTogether PrizeVault address
  */
@@ -149,22 +144,22 @@ export async function fetchVaultInfo(vaultAddress: Address): Promise<PoolTogethe
   try {
     // Fetch vault metadata
     const [name, symbol, decimals, assetAddress] = await Promise.all([
-      publicClient.readContract({
+      basePublicClient.readContract({
         address: vaultAddress,
         abi: ERC4626_ABI,
         functionName: 'name',
       }),
-      publicClient.readContract({
+      basePublicClient.readContract({
         address: vaultAddress,
         abi: ERC4626_ABI,
         functionName: 'symbol',
       }),
-      publicClient.readContract({
+      basePublicClient.readContract({
         address: vaultAddress,
         abi: ERC4626_ABI,
         functionName: 'decimals',
       }),
-      publicClient.readContract({
+      basePublicClient.readContract({
         address: vaultAddress,
         abi: ERC4626_ABI,
         functionName: 'asset',
@@ -173,17 +168,17 @@ export async function fetchVaultInfo(vaultAddress: Address): Promise<PoolTogethe
 
     // Fetch asset metadata
     const [assetName, assetSymbol, assetDecimals] = await Promise.all([
-      publicClient.readContract({
+      basePublicClient.readContract({
         address: assetAddress,
         abi: ERC20_ABI,
         functionName: 'name',
       }),
-      publicClient.readContract({
+      basePublicClient.readContract({
         address: assetAddress,
         abi: ERC20_ABI,
         functionName: 'symbol',
       }),
-      publicClient.readContract({
+      basePublicClient.readContract({
         address: assetAddress,
         abi: ERC20_ABI,
         functionName: 'decimals',
@@ -192,12 +187,12 @@ export async function fetchVaultInfo(vaultAddress: Address): Promise<PoolTogethe
 
     // Fetch vault stats
     const [totalAssets, totalSupply] = await Promise.all([
-      publicClient.readContract({
+      basePublicClient.readContract({
         address: vaultAddress,
         abi: ERC4626_ABI,
         functionName: 'totalAssets',
       }),
-      publicClient.readContract({
+      basePublicClient.readContract({
         address: vaultAddress,
         abi: ERC4626_ABI,
         functionName: 'totalSupply',
@@ -250,7 +245,7 @@ export async function fetchUSDCVault(): Promise<PoolTogetherVault | null> {
 export async function isValidVault(vaultAddress: Address): Promise<boolean> {
   try {
     // Try to read vault metadata - if it succeeds, it's likely a valid vault
-    await publicClient.readContract({
+    await basePublicClient.readContract({
       address: vaultAddress,
       abi: ERC4626_ABI,
       functionName: 'asset',
@@ -290,20 +285,20 @@ export async function getUserVaultBalance(
 ): Promise<{ shares: string; assets: string; assetsFormatted: string } | null> {
   try {
     const [shares, assetAddress] = await Promise.all([
-      publicClient.readContract({
+      basePublicClient.readContract({
         address: vaultAddress,
         abi: ERC4626_ABI,
         functionName: 'balanceOf',
         args: [userAddress],
       }),
-      publicClient.readContract({
+      basePublicClient.readContract({
         address: vaultAddress,
         abi: ERC4626_ABI,
         functionName: 'asset',
       }),
     ]);
 
-    const assets = await publicClient.readContract({
+    const assets = await basePublicClient.readContract({
       address: vaultAddress,
       abi: ERC4626_ABI,
       functionName: 'convertToAssets',

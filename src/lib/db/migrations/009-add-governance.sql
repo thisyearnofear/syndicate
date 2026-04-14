@@ -3,7 +3,7 @@
 -- Governance proposals
 CREATE TABLE IF NOT EXISTS governance_proposals (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  pool_id TEXT NOT NULL REFERENCES syndicate_pools(id) ON DELETE CASCADE,
+  pool_id UUID NOT NULL REFERENCES syndicate_pools(id) ON DELETE CASCADE,
   type TEXT NOT NULL CHECK (type IN (
     'ticket_purchase',
     'fund_allocation',

@@ -34,29 +34,46 @@ export async function GET(request: Request) {
     }
 
     // Get user's syndicate memberships with pool info
-    const membershipsResult = await sql`
-      SELECT 
-        m.pool_id,
-        m.amount_usdc as contribution,
-        m.joined_at,
-        m.tx_hash,
-        p.name as pool_name,
-        p.description as pool_description,
-        p.pool_type,
-        p.vault_strategy,
-        p.members_count,
-        p.tickets_purchased as pool_tickets,
-        p.cause_allocation_percent,
-        p.cause_name,
-        p.is_active,
-        p.coordinator_address
-      FROM syndicate_members m
-      JOIN syndicate_pools p ON m.pool_id = p.id
-      WHERE LOWER(m.member_address) = LOWER(${walletAddress})
-      ORDER BY m.joined_at DESC
-    `;
-
-    const memberships = membershipsResult.rows;
+    let memberships: any[] = [];
+    try {
+      const membershipsResult = await sql`
+        SELECT
+          m.pool_id,
+          m.amount_usdc as contribution,
+          m.joined_at,
+          m.tx_hash,
+          p.name as pool_name,
+          p.description as pool_description,
+          p.pool_type,
+          p.vault_strategy,
+          p.members_count,
+          p.tickets_purchased as pool_tickets,
+          p.cause_allocation_percent,
+          p.cause_name,
+          p.is_active,
+          p.coordinator_address
+        FROM syndicate_members m
+        JOIN syndicate_pools p ON m.pool_id = p.id
+        WHERE LOWER(m.member_address) = LOWER(${walletAddress})
+        ORDER BY m.joined_at DESC
+      `;
+      memberships = membershipsResult.rows;
+    } catch (error) {
+      // Tables may not exist yet (fresh database) - return empty portfolio
+      console.warn('[Portfolio API] syndicate_members/pools tables not found, returning empty portfolio');
+      return NextResponse.json({
+        walletAddress,
+        summary: {
+          syndicateCount: 0,
+          totalContributed: 0,
+          totalWinnings: 0,
+          totalYield: 0,
+          totalPendingYield: 0,
+          totalReturnValue: 0,
+        },
+        syndicates: [],
+      }, { headers: corsHeaders });
+    }
 
     // Calculate totals
     let totalContributed = 0;

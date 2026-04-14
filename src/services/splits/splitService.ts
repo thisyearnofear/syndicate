@@ -9,7 +9,6 @@
  */
 
 import { 
-  createPublicClient, 
   createWalletClient, 
   http, 
   encodeFunctionData,
@@ -18,6 +17,7 @@ import {
   type PublicClient,
 } from 'viem';
 import { base } from 'viem/chains';
+import { basePublicClient } from '@/lib/baseClient';
 
 const BASE_CHAIN_ID = 8453;
 
@@ -168,10 +168,7 @@ export interface DistributeTokenParams {
   walletClient: WalletClient;
 }
 
-const publicClient = createPublicClient({
-  chain: base,
-  transport: http(),
-}) as any;
+const publicClient = basePublicClient as any;
 
 /**
  * Create a new split on Base

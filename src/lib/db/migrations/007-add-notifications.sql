@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS notifications (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  pool_id TEXT REFERENCES syndicate_pools(id) ON DELETE CASCADE,
+  pool_id UUID REFERENCES syndicate_pools(id) ON DELETE CASCADE,
   type TEXT NOT NULL CHECK (type IN (
     'deposit_received',
     'distribution_completed', 

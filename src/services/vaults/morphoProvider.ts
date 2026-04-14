@@ -10,8 +10,8 @@
  * Using Gauntlet USDC Prime vault (curated by Gauntlet)
  */
 
-import { createPublicClient, http, formatUnits, parseUnits } from 'viem';
-import { base } from 'viem/chains';
+import { formatUnits, parseUnits } from 'viem';
+import { basePublicClient } from '@/lib/baseClient';
 import type {
     VaultProvider,
     VaultProtocol,
@@ -20,11 +20,7 @@ import type {
     VaultWithdrawResult,
 } from './vaultProvider';
 
-// Create public client for Base
-const baseClient = createPublicClient({
-  chain: base,
-  transport: http(),
-});
+const baseClient = basePublicClient;
 
 // Morpho USDC Vault on Base
 // Updated March 2026 - current yield ~6.7% APY

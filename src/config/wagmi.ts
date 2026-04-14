@@ -1,5 +1,6 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { base, baseSepolia } from 'wagmi/chains';
+import { http } from 'wagmi';
 
 let cachedConfig: ReturnType<typeof getDefaultConfig> | null = null;
 let isConfigInitialized = false;
@@ -51,6 +52,11 @@ export function getConfig(): ReturnType<typeof getDefaultConfig> | null {
         base,
         baseSepolia,
       ],
+      transports: {
+        [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org', { batch: true }),
+        [baseSepolia.id]: http(),
+      },
+      pollingInterval: 30_000,
       ssr: false, // Disable SSR to prevent indexedDB access on server
     });
     (cachedConfig as RainbowConfigExt).autoConnect = false;
@@ -65,8 +71,12 @@ export function getConfig(): ReturnType<typeof getDefaultConfig> | null {
     chains: [
       base,
       baseSepolia,
-      // Add other chains as needed
     ],
+    transports: {
+      [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org', { batch: true }),
+      [baseSepolia.id]: http(),
+    },
+    pollingInterval: 30_000,
     ssr: false, // Set to false to prevent server-side indexedDB access
   });
   (cachedConfig as RainbowConfigExt).autoConnect = false;

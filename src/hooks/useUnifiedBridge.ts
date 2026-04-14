@@ -22,8 +22,8 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { bridgeManager } from '@/services/bridges';
 import type { BridgeParams, BridgeResult, BridgeProtocolType } from '@/services/bridges/types';
 import { useUnifiedWallet } from './useUnifiedWallet';
-import { createPublicClient, formatUnits, http } from 'viem';
-import { base } from 'viem/chains';
+import { formatUnits } from 'viem';
+import { basePublicClient } from '@/lib/baseClient';
 import { web3Service } from '@/services/web3Service';
 import {
   getBridgeActivityHistory,
@@ -365,7 +365,7 @@ export function useUnifiedBridge(): BridgeState & {
 
         let baseWinnings = '0';
         if (evmAddress) {
-          const client = createPublicClient({ chain: base, transport: http() });
+          const client = basePublicClient;
           const megapotAddress = web3Service.getMegapotContractAddress();
           const megapotAbi = web3Service.getMegapotAbi();
           const userInfo = await client.readContract({

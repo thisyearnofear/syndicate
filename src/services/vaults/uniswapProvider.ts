@@ -10,8 +10,8 @@
  * Provides yield through trading fees from USDC/ETH pool
  */
 
-import { createPublicClient, http, formatUnits, parseUnits } from 'viem';
-import { base } from 'viem/chains';
+import { formatUnits, parseUnits } from 'viem';
+import { basePublicClient } from '@/lib/baseClient';
 import type {
     VaultProvider,
     VaultProtocol,
@@ -21,11 +21,7 @@ import type {
 } from './vaultProvider';
 import { VaultError, VaultErrorCode } from './vaultProvider';
 
-// Create public client for Base
-const baseClient = createPublicClient({
-  chain: base,
-  transport: http(),
-});
+const baseClient = basePublicClient;
 
 // Uniswap V3 on Base
 export const UNISWAP_CONFIG = {

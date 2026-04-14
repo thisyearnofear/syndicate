@@ -11,8 +11,8 @@
  * Uses BaseScan API for transaction history.
  */
 
-import { createPublicClient, http, type Address } from 'viem';
-import { base } from 'viem/chains';
+import { type Address } from 'viem';
+import { basePublicClient } from '@/lib/baseClient';
 
 const BASE_CHAIN_ID = 8453;
 
@@ -58,10 +58,7 @@ export interface TransactionFilter {
   limit?: number;
 }
 
-const publicClient = createPublicClient({
-  chain: base,
-  transport: http(),
-}) as any;
+const publicClient = basePublicClient as any;
 
 export class TransactionHistoryService {
 
