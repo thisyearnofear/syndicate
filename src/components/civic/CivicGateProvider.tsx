@@ -22,6 +22,9 @@ import { getRequiredKycTier, CIVIC_NETWORKS } from '@/utils/kycTiers';
 // Re-export for backward compatibility
 export { CIVIC_NETWORKS } from '@/utils/kycTiers';
 
+// Override default to CAPTCHA for demo compatibility to avoid ID_VERIFICATION gatekeeper issues
+export const DEFAULT_GATEKEEPER_NETWORK = CIVIC_NETWORKS.CAPTCHA;
+
 interface CivicGateProviderProps {
   children: React.ReactNode;
   /** Override gatekeeper network — if set, takes priority over depositAmount */
