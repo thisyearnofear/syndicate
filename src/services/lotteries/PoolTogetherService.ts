@@ -65,9 +65,9 @@ export class PoolTogetherService {
 
     try {
       // Fetch prize data from PoolTogether V5 API
-      // Using the official PoolTogether API for Base network
+      // Using the official PoolTogether API for Base network (chain ID 8453)
       const response = await fetch(
-        'https://api.pooltogether.com/v5/8453/prizes',
+        'https://poolexplorer.xyz/8453',
         {
           headers: {
             'Accept': 'application/json',
@@ -76,24 +76,32 @@ export class PoolTogetherService {
       );
 
       if (!response.ok) {
-        throw new Error(`PoolTogether API error: ${response.status}`);
+        console.warn(`[PoolTogether] API returned ${response.status}, trying fallback`);
+        return this.getOnChainFallback();
       }
 
       const data = await response.json();
       
-      // Parse the prize data
+      // Parse the prize data from PoolExplorer format
       const prizeData: PoolTogetherPrizeData = {
-        prizeUsd: data.prize?.usd || '0',
-        totalDepositsUsd: data.totalDepositsUsd || '0',
-        apy: data.apy || 0,
+        prizeUsd: data.grandPrize?.value || data.totalPrizeValue || '0',
+        totalDepositsUsd: data.totalValueLocked || '0',
+        apy: data.estimatedApr || 3.5,
         vaultAddress: POOLTOGETHER_VAULTS[0].address,
         chainId: POOLTOGETHER_VAULTS[0].chainId,
       };
+
+      // Validate we got meaningful data
+      if (parseFloat(prizeData.prizeUsd) <= 0) {
+        console.warn('[PoolTogether] API returned zero prize, trying on-chain fallback');
+        return this.getOnChainFallback();
+      }
 
       // Update cache
       this.prizeCache = prizeData;
       this.lastFetchTime = now;
 
+      console.log('[PoolTogether] Successfully fetched prize data:', prizeData.prizeUsd);
       return prizeData;
     } catch (error) {
       console.warn('[PoolTogether] API unavailable, trying on-chain fallback:', error);

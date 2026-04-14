@@ -4,75 +4,30 @@ import { useState, useCallback, useEffect, Suspense, lazy } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUnifiedWallet, useTicketInfo } from "@/hooks";
-import type { UserIdentity } from '@/interfaces';
-import { socialService } from "@/services/socialService";
 import { trackEvent } from "@/services/analytics/client";
 
 // UI Components
 import { Button } from "@/shared/components/ui/Button";
-import { PuzzlePiece } from "@/shared/components/premium/PuzzlePiece";
-import {
-  CompactContainer,
-  CompactStack,
-  CompactHero,
-  CompactSection,
-  CompactFlex,
-} from "@/shared/components/premium/CompactLayout";
-
-// Home Components
-import { PremiumJackpotPiece } from "@/components/home/PremiumJackpotPiece";
-import { ActivityFeedPiece } from "@/components/home/ActivityFeedPiece";
-import { CommunityInsightsPiece } from "@/components/home/CommunityInsightsPiece";
-import { UserTicketPiece } from "@/components/home/UserTicketPiece";
-import { StatsPieces } from "@/components/home/StatsPieces";
 
 // Lazy load heavy components
 const SimplePurchaseModal = lazy(() => import("@/components/modal/SimplePurchaseModal"));
-import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
-const SocialFeed = lazy(() => import("@/components/SocialFeed"));
-const MultiLotteryPrizes = lazy(() => import("@/components/home/MultiLotteryPrizes"));
 const WalletConnectionManager = lazy(() => import("@/components/wallet/WalletConnectionManager"));
 
-// =============================================================================
-// MAIN COMPONENT
-// =============================================================================
+// Home Components - Lazy load for better performance
+const PremiumJackpotDisplay = lazy(() => import("@/components/home/PremiumJackpotDisplay"));
+const MultiLotteryPrizes = lazy(() => import("@/components/home/MultiLotteryPrizes"));
+const UserDashboard = lazy(() => import("@/components/home/UserDashboard"));
 
-export default function PremiumHome() {
+export default function Home() {
   const router = useRouter();
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
-  const [userIdentity, setUserIdentity] = useState<UserIdentity | null>(null);
-  const [identityLoading, setIdentityLoading] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const { isConnected, address } = useUnifiedWallet();
-  const { userTicketInfo, claimWinnings, isClaimingWinnings } = useTicketInfo();
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  const loadIdentity = useCallback(async () => {
-    if (!isMounted || !isConnected || !address) {
-      setUserIdentity(null);
-      return;
-    }
-    setIdentityLoading(true);
-    try {
-      const identity = await socialService.getUserIdentity(address);
-      setUserIdentity(identity);
-    } catch (error) {
-      console.error('Failed to load user identity:', error);
-      setUserIdentity(null);
-    } finally {
-      setIdentityLoading(false);
-    }
-  }, [isMounted, isConnected, address]);
-
-  useEffect(() => {
-    if (isMounted) {
-      loadIdentity();
-    }
-  }, [isMounted, loadIdentity]);
 
   const handlePurchaseAction = useCallback(() => {
     if (!isConnected) {
@@ -82,379 +37,204 @@ export default function PremiumHome() {
     }
   }, [isConnected]);
 
-  const handlePrimaryAction = useCallback(() => {
-    router.push("/vaults");
-  }, [router]);
-
-  const handleBridgeAction = useCallback(() => {
-    router.push("/bridge");
-  }, [router]);
-
   return (
-    <div className="relative overflow-hidden">
-      {/* Animated background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
-        <div
-          className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.1),transparent_50%)] animate-pulse"
-          style={{ animationDuration: "8s" }}
-        />
-        <div
-          className="absolute top-0 left-0 w-full h-full opacity-5"
-          style={{
-            backgroundImage:
-              "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.02'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
-          }}
-        />
-        <div
-          className="absolute top-1/4 left-1/4 w-4 h-4 bg-blue-500/20 rounded-full animate-bounce"
-          style={{ animationDelay: "0s", animationDuration: "3s" }}
-        />
-        <div
-          className="absolute top-3/4 right-1/3 w-3 h-3 bg-purple-500/20 rounded-full animate-bounce"
-          style={{ animationDelay: "1s", animationDuration: "4s" }}
-        />
-        <div
-          className="absolute bottom-1/4 left-1/3 w-2 h-2 bg-green-500/20 rounded-full animate-bounce"
-          style={{ animationDelay: "2s", animationDuration: "5s" }}
-        />
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950 relative overflow-hidden">
+      {/* Animated background effects */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.1),transparent_50%)] animate-pulse" style={{ animationDuration: "8s" }} />
+      
+      {/* Main content container - centered and clean */}
+      <div className="relative z-10 container mx-auto px-4 py-8 md:py-16 max-w-7xl">
+        
+        {/* Hero Section - Centered */}
+        <section className="text-center mb-16 space-y-8">
+          {/* Brand */}
+          <div className="animate-fade-in-up">
+            <h1 className="font-black text-5xl md:text-7xl lg:text-8xl leading-tight tracking-tight bg-gradient-to-r from-purple-400 via-blue-500 to-green-400 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(59,130,246,0.5)]">
+              Syndicate
+            </h1>
+          </div>
 
-      {/* Main content */}
-      <div className="relative z-10">
-        {/* ===== HERO — compact: brand + value prop + CTA + jackpot only ===== */}
-        <CompactHero height="auto" background="transparent">
-          <CompactContainer maxWidth="lg" padding="lg">
-            <CompactStack spacing="lg" align="center">
-              {/* Brand */}
-              <div className="text-center animate-fade-in-up">
-                <h1 className="font-black text-4xl md:text-6xl lg:text-7xl leading-tight tracking-tight bg-gradient-to-r from-purple-400 via-blue-500 to-green-400 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(59,130,246,0.5)] relative inline-block">
-                  Syndicate
-                  <span className="absolute inset-0 bg-gradient-to-r from-purple-400 via-blue-500 to-green-400 bg-clip-text text-transparent blur-lg opacity-30 animate-pulse" />
-                </h1>
-              </div>
+          {/* Value Proposition */}
+          <div className="animate-fade-in-up space-y-4 max-w-3xl mx-auto">
+            <h2 className="text-2xl md:text-4xl font-bold text-white leading-tight">
+              Multi-Chain Lottery Platform
+            </h2>
+            <p className="text-lg md:text-xl text-gray-300 leading-relaxed">
+              Buy tickets, join pools, and turn yield into repeat entries.
+              <br />
+              <span className="text-emerald-400 font-semibold">Transparent onchain lottery access with optional no-loss strategies.</span>
+            </p>
+          </div>
 
-              {/* Value Proposition */}
-              <div className="text-center animate-fade-in-up space-y-3">
-                <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-white leading-tight">
-                  One place to buy tickets, join pools,
-                  <br />
-                  <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-                    and turn yield into repeat entries.
-                  </span>
-                </h2>
-                <p className="text-sm md:text-base text-gray-400 max-w-lg mx-auto leading-relaxed">
-                  Syndicate is for players, communities, and treasury-minded teams that want
-                  transparent onchain lottery access, with optional no-loss vault strategies.
-                </p>
-              </div>
+          {/* Primary CTAs */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-scale-in">
+            <Button
+              variant="default"
+              size="lg"
+              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-2xl hover:shadow-emerald-500/30 border border-emerald-400/30 text-lg px-10 py-6"
+              onClick={handlePurchaseAction}
+            >
+              🎫 Buy Tickets Now
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="border-white/20 bg-white/5 text-white hover:bg-white/10 text-lg px-10 py-6"
+              onClick={() => router.push("/vaults")}
+            >
+              💰 Explore Vaults
+            </Button>
+          </div>
 
-              {/* Primary CTA */}
-              <div className="animate-scale-in flex flex-col sm:flex-row gap-3">
-                <Button
-                  variant="default"
-                  size="lg"
-                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-2xl hover:shadow-emerald-500/30 border border-emerald-400/30 text-lg px-8 py-4"
-                  onClick={handlePurchaseAction}
-                >
-                  Buy Tickets Now
-                </Button>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="border-white/15 bg-white/5 text-white hover:bg-white/10 text-lg px-8 py-4"
-                  onClick={handlePrimaryAction}
-                >
-                  Explore No-Loss Vaults
-                </Button>
-              </div>
+          {/* Social proof badges */}
+          <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-gray-400">
+            <span className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+              Live on Base
+            </span>
+            <span>•</span>
+            <span>🌉 Cross-Chain</span>
+            <span>•</span>
+            <span>🔒 Non-Custodial</span>
+            <span>•</span>
+            <span>📈 Yield Strategies</span>
+          </div>
+        </section>
 
-              {/* Social proof */}
-              <CompactFlex
-                align="center"
-                gap="sm"
-                className="text-xs text-gray-500 flex-wrap justify-center animate-fade-in-up"
-              >
-                <span>🌉 Cross-chain entry</span>
-                <span>•</span>
-                <span>👥 Built for players & syndicates</span>
-                <span>•</span>
-                <span>🔒 Non-custodial</span>
-                <span>•</span>
-                <span>📈 Optional yield strategies</span>
-              </CompactFlex>
-
-              {/* Jackpot — the visual money shot */}
-              <div
-                className="animate-scale-in relative w-full max-w-2xl"
-                style={{ position: "relative", overflow: "visible" }}
-              >
-                <PremiumJackpotPiece onBuyClick={handlePurchaseAction} />
-              </div>
-            </CompactStack>
-          </CompactContainer>
-        </CompactHero>
-
-        {/* ===== STATS — live numbers build credibility ===== */}
-        <CompactSection spacing="lg">
-          <CompactContainer maxWidth="2xl">
-            <StatsPieces />
-          </CompactContainer>
-        </CompactSection>
-
-        {/* ===== PRIZES — show what's available to win ===== */}
-        <CompactSection spacing="md">
-          <CompactContainer maxWidth="2xl">
-            <Suspense fallback={<div className="glass-premium p-6 rounded-xl h-48 animate-pulse bg-gray-700/50 w-full max-w-4xl" />}>
-              <MultiLotteryPrizes onBuyClick={handlePurchaseAction} />
-            </Suspense>
-          </CompactContainer>
-        </CompactSection>
-
-        {/* ===== PLAY FOR FREE — strongest differentiator after seeing prizes ===== */}
-        <CompactSection spacing="md">
-          <CompactContainer maxWidth="xl">
-            <div className="relative w-full rounded-2xl overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/30 via-teal-500/30 to-cyan-500/30 rounded-2xl" />
-              <div className="relative m-[1px] rounded-[calc(1rem-1px)] bg-gradient-to-r from-slate-900 via-slate-900/95 to-slate-900 p-6 md:p-8">
-                <div className="flex flex-col md:flex-row items-center gap-6">
-                  <div className="flex-shrink-0">
-                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-3xl shadow-lg shadow-emerald-500/20">
-                      ♾️
-                    </div>
-                  </div>
-                  <div className="flex-1 text-center md:text-left">
-                    <CompactStack spacing="xs">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-lg md:text-xl font-bold text-white">
-                          Turn Yield Into <span className="text-emerald-400">Lottery Entries</span>
-                        </h3>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                          🔀 Cross-Chain
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-400 leading-relaxed max-w-lg">
-                        Deposit USDC into yield-generating vaults. Earned yield automatically converts to lottery tickets. 
-                        Withdraw your principal according to each strategy's terms (some have lockup periods).
-                      </p>
-                      {/* Chain logos strip */}
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-xs text-gray-500">Supported:</span>
-                        {['Base', 'Ethereum', 'Solana'].map((chain) => (
-                          <span key={chain} className="text-xs px-2 py-0.5 rounded-full bg-white/5 text-gray-400 border border-white/10">
-                            {chain}
-                          </span>
-                        ))}
-                      </div>
-                    </CompactStack>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <Link href="/vaults">
-                      <Button
-                        variant="default"
-                        size="lg"
-                        className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/20 border border-emerald-400/30 whitespace-nowrap"
-                        onClick={() =>
-                          trackEvent({
-                            eventName: 'home_vaults_cta_click',
-                            properties: { section: 'yield-to-tickets' },
-                          })
-                        }
-                      >
-                        🎯 Explore Yield Strategies
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-                <CompactFlex justify="center" align="center" gap="md" wrap className="mt-4 pt-4 border-t border-white/5">
-                  <span className="text-xs text-gray-500">🔒 Non-custodial</span>
-                  <span className="text-xs text-gray-600">•</span>
-                  <span className="text-xs text-gray-500">📊 Strategy-dependent returns</span>
-                  <span className="text-xs text-gray-600">•</span>
-                  <span className="text-xs text-gray-500">⚠️ Check lockup terms</span>
-                </CompactFlex>
-              </div>
+        {/* Jackpot Display - Centered */}
+        <section className="mb-16">
+          <Suspense fallback={
+            <div className="max-w-4xl mx-auto h-64 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
+          }>
+            <div className="max-w-4xl mx-auto">
+              <PremiumJackpotDisplay onBuyClick={handlePurchaseAction} />
             </div>
-          </CompactContainer>
-        </CompactSection>
+          </Suspense>
+        </section>
 
-        {/* ===== WHO IT'S FOR ===== */}
-        <CompactSection spacing="md">
-          <CompactContainer maxWidth="xl">
-            <CompactStack spacing="lg" align="center">
-              <div className="text-center">
-                <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Who Syndicate Is For</h2>
-                <p className="text-gray-400 text-sm max-w-2xl mx-auto">
-                  Pick a flow based on your goal. You can switch between direct play and yield-powered play anytime.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-6xl">
-                {[
-                  {
-                    icon: "🎟️",
-                    title: "Direct Players",
-                    desc: "Buy Megapot tickets on Base and stay close to every daily draw cycle.",
-                    action: "Fastest path: Quick Buy",
-                  },
-                  {
-                    icon: "♾️",
-                    title: "Yield-Powered Players",
-                    desc: "Deposit into yield vaults and convert earnings into entries. Principal withdrawal rules vary by strategy.",
-                    action: "Best path: Vaults",
-                  },
-                  {
-                    icon: "🔀",
-                    title: "Cross-Chain Players",
-                    desc: "Bridge from Solana, Stacks, NEAR, or Starknet to buy tickets on Base.",
-                    action: "Best path: Bridge",
-                    highlight: true,
-                  },
-                  {
-                    icon: "👥",
-                    title: "Groups & Communities",
-                    desc: "Create or join syndicates to pool funds, share prizes, and coordinate causes.",
-                    action: "Best path: Syndicates",
-                  },
-                ].map((item, i) => (
-                  <PuzzlePiece 
-                    key={item.title} 
-                    variant={item.highlight ? 'primary' : 'neutral'} 
-                    size="lg" 
-                    shape="rounded" 
-                    glow={item.highlight}
-                    className={`animate-fade-in-up stagger-${i + 1}`}
-                  >
-                    <CompactStack spacing="sm">
-                      <div className="text-2xl">{item.icon}</div>
-                      <h3 className="text-lg font-bold text-white">{item.title}</h3>
-                      <p className="text-sm text-gray-400 leading-relaxed">{item.desc}</p>
-                      <p className={`text-xs ${item.highlight ? 'text-indigo-400' : 'text-emerald-400'}`}>{item.action}</p>
-                    </CompactStack>
-                  </PuzzlePiece>
-                ))}
-              </div>
-              <CompactFlex align="center" gap="sm" className="text-xs text-gray-500">
-                <span>Need funding first?</span>
-                <button
-                  onClick={handleBridgeAction}
-                  className="text-blue-400 hover:text-blue-300 underline underline-offset-2"
-                >
-                  Bridge to Base
-                </button>
-              </CompactFlex>
-            </CompactStack>
-          </CompactContainer>
-        </CompactSection>
+        {/* All Prizes - Centered */}
+        <section className="mb-16">
+          <Suspense fallback={
+            <div className="max-w-6xl mx-auto h-96 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
+          }>
+            <div className="max-w-6xl mx-auto">
+              <MultiLotteryPrizes onBuyClick={handlePurchaseAction} />
+            </div>
+          </Suspense>
+        </section>
 
-        {/* ===== HOW IT WORKS — education after interest is established ===== */}
-        <CompactSection spacing="md">
-          <CompactContainer maxWidth="xl">
-            <CompactStack spacing="lg" align="center">
-              <div className="text-center">
-                <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">How It Works</h2>
-                <p className="text-gray-400 text-sm max-w-md mx-auto">
-                  Deposit into yield strategies and use earnings for lottery entries.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
-                {[
-                  { icon: "💰", step: "Step 1", title: "Deposit", desc: "Deposit USDC into a yield vault. Each strategy has different lockup periods and withdrawal rules.", accent: "from-blue-500 to-cyan-500" },
-                  { icon: "📈", step: "Step 2", title: "Earn Yield", desc: "Your deposit generates yield based on the strategy. APYs vary and are not guaranteed.", accent: "from-purple-500 to-pink-500" },
-                  { icon: "🎰", step: "Step 3", title: "Use Yield", desc: "Earned yield automatically converts to lottery tickets. Withdraw principal according to strategy terms.", accent: "from-yellow-500 to-orange-500" },
-                ].map((s, i) => (
-                  <PuzzlePiece key={i} variant="neutral" size="lg" shape="rounded" className={`animate-fade-in-up stagger-${i + 1} text-center`}>
-                    <CompactStack spacing="md" align="center">
-                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${s.accent} flex items-center justify-center text-2xl shadow-lg`}>
-                        {s.icon}
-                      </div>
-                      <div className={`text-xs font-bold uppercase tracking-wider bg-gradient-to-r ${s.accent} bg-clip-text text-transparent`}>{s.step}</div>
-                      <h3 className="text-lg font-bold text-white">{s.title}</h3>
-                      <p className="text-sm text-gray-400 leading-relaxed">{s.desc}</p>
-                    </CompactStack>
-                  </PuzzlePiece>
-                ))}
-              </div>
-              <CompactFlex align="center" gap="sm" className="text-sm text-gray-500">
-                <span>🔒 Non-custodial</span>
-                <span>•</span>
-                <span>📊 Variable APYs</span>
-                <span>•</span>
-                <span>⚠️ Strategy-specific lockups</span>
-              </CompactFlex>
-              <p className="text-xs text-gray-600">Drift: 90-day lockup | Aave/Morpho: Flexible | PoolTogether: Flexible</p>
-            </CompactStack>
-          </CompactContainer>
-        </CompactSection>
-
-        {/* ===== CONNECTED USER SECTIONS ===== */}
-        {isMounted && isConnected && (
-          <CompactSection spacing="md">
-            <CompactContainer maxWidth="2xl">
-              <CompactStack spacing="lg" align="center">
-                {/* Personalized welcome */}
-                {!identityLoading && userIdentity && (
-                  <div className="animate-fade-in-up w-full max-w-2xl">
-                    <PuzzlePiece variant="primary" size="sm" shape="rounded" glow>
-                      <CompactStack spacing="sm" align="center">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">👋</span>
-                          <span className="text-white font-semibold">Welcome back!</span>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-300">
-                          {userIdentity.farcaster && (
-                            <div className="flex items-center gap-1">
-                              <span className="text-purple-400">💜</span>
-                              <span>@{userIdentity.farcaster.username}</span>
-                            </div>
-                          )}
-                          {userIdentity.twitter && (
-                            <div className="flex items-center gap-1">
-                              <span className="text-blue-400">🐦</span>
-                              <span>@{userIdentity.twitter.username}</span>
-                            </div>
-                          )}
-                        </div>
-                      </CompactStack>
-                    </PuzzlePiece>
+        {/* How It Works - Centered */}
+        <section className="mb-16">
+          <div className="max-w-5xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-12">
+              How It Works
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {[
+                {
+                  icon: "💰",
+                  title: "Deposit",
+                  desc: "Deposit USDC into yield vaults or buy tickets directly",
+                  color: "from-blue-500 to-cyan-500"
+                },
+                {
+                  icon: "📈",
+                  title: "Earn Yield",
+                  desc: "Your deposits generate yield based on the strategy",
+                  color: "from-purple-500 to-pink-500"
+                },
+                {
+                  icon: "🎰",
+                  title: "Win Prizes",
+                  desc: "Use yield for tickets or withdraw your principal anytime",
+                  color: "from-yellow-500 to-orange-500"
+                }
+              ].map((step, i) => (
+                <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center hover:bg-white/10 transition-all">
+                  <div className={`w-16 h-16 mx-auto mb-4 rounded-xl bg-gradient-to-br ${step.color} flex items-center justify-center text-3xl shadow-lg`}>
+                    {step.icon}
                   </div>
-                )}
+                  <h3 className="text-xl font-bold text-white mb-2">{step.title}</h3>
+                  <p className="text-gray-400 leading-relaxed">{step.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
 
-                {/* Activity feed — only renders when real data exists */}
-                <ActivityFeedPiece />
-
-                {/* Social feed */}
-                <Suspense fallback={<div className="glass-premium p-4 rounded-xl h-64 animate-pulse bg-gray-700/50 w-full max-w-2xl" />}>
-                  <SocialFeed className="w-full max-w-2xl" />
-                </Suspense>
-
-                {/* User tickets */}
-                <UserTicketPiece
-                  userTicketInfo={userTicketInfo}
-                  claimWinnings={claimWinnings}
-                  isClaimingWinnings={isClaimingWinnings}
-                />
-
-                {/* Community insights removed - was showing fabricated behavior data */}
-              </CompactStack>
-            </CompactContainer>
-          </CompactSection>
+        {/* User Dashboard - Only show when connected */}
+        {isMounted && isConnected && (
+          <section className="mb-16">
+            <Suspense fallback={
+              <div className="max-w-6xl mx-auto h-96 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
+            }>
+              <div className="max-w-6xl mx-auto">
+                <UserDashboard />
+              </div>
+            </Suspense>
+          </section>
         )}
+
+        {/* Features Grid - Centered */}
+        <section className="mb-16">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-12">
+              Why Choose Syndicate?
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                { icon: "🎟️", title: "Direct Play", desc: "Buy tickets on Base with daily draws" },
+                { icon: "♾️", title: "No-Loss Vaults", desc: "Keep principal, use yield for entries" },
+                { icon: "🔀", title: "Cross-Chain", desc: "Bridge from Solana, Stacks, NEAR, Starknet" },
+                { icon: "👥", title: "Syndicates", desc: "Pool funds and share prizes with groups" }
+              ].map((feature, i) => (
+                <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-6 text-center hover:bg-white/10 transition-all">
+                  <div className="text-4xl mb-3">{feature.icon}</div>
+                  <h3 className="text-lg font-bold text-white mb-2">{feature.title}</h3>
+                  <p className="text-sm text-gray-400">{feature.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Final CTA - Centered */}
+        <section className="text-center">
+          <div className="max-w-3xl mx-auto bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-cyan-500/20 border border-emerald-500/30 rounded-2xl p-8 md:p-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              Ready to Start Playing?
+            </h2>
+            <p className="text-lg text-gray-300 mb-8">
+              Connect your wallet and buy your first ticket in seconds
+            </p>
+            <Button
+              variant="default"
+              size="lg"
+              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-2xl text-lg px-12 py-6"
+              onClick={handlePurchaseAction}
+            >
+              Get Started Now
+            </Button>
+          </div>
+        </section>
       </div>
 
-      {/* ===== PURCHASE MODAL ===== */}
+      {/* Modals */}
       <Suspense fallback={null}>
-        <SimplePurchaseModal
-          isOpen={showPurchaseModal}
-          onClose={() => setShowPurchaseModal(false)}
-        />
+        {showPurchaseModal && (
+          <SimplePurchaseModal
+            isOpen={showPurchaseModal}
+            onClose={() => setShowPurchaseModal(false)}
+          />
+        )}
       </Suspense>
 
-      {/* ===== WALLET CONNECT MODAL ===== */}
       <Suspense fallback={null}>
         {showWalletModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
             <div className="bg-slate-900/95 border border-white/20 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-white">Connect Wallet to Play</h3>
+                <h3 className="text-lg font-bold text-white">Connect Wallet</h3>
                 <button
                   onClick={() => setShowWalletModal(false)}
                   className="text-gray-400 hover:text-white transition-colors"
@@ -462,54 +242,23 @@ export default function PremiumHome() {
                   ✕
                 </button>
               </div>
-              <Suspense fallback={<div className="h-48 animate-pulse bg-gray-700/50 rounded-xl" />}>
-                <WalletConnectionManager />
-              </Suspense>
+              <WalletConnectionManager />
             </div>
           </div>
         )}
       </Suspense>
 
-      {/* ===== MOBILE BOTTOM NAV ===== */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden no-print">
-        <div className="glass-premium border-t border-white/20 p-3">
-          <div className="flex items-center justify-around">
-            <Link href="/syndicates">
-              <Button variant="ghost" size="sm" className="flex-col gap-1 text-xs text-gray-300">
-                👥 Syndicates
-              </Button>
-            </Link>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handlePurchaseAction}
-              className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white shadow-lg px-6"
-            >
-              ⚡ Buy Tickets
-            </Button>
-            <Link href="/my-tickets">
-              <Button variant="ghost" size="sm" className="flex-col gap-1 text-xs text-gray-300">
-                🎫 Tickets
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* ===== DESKTOP FLOATING CTA ===== */}
-      <div className="fixed bottom-8 right-8 z-40 hidden md:block no-print">
+      {/* Floating CTA - Desktop only */}
+      <div className="fixed bottom-8 right-8 z-40 hidden md:block">
         <Button
           variant="default"
           size="lg"
-          className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white shadow-2xl hover:shadow-yellow-500/30 border border-yellow-400/30 shadow-premium animate-float"
+          className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white shadow-2xl animate-float"
           onClick={handlePurchaseAction}
         >
           ⚡ Quick Buy
         </Button>
       </div>
-
-      {/* Onboarding Wizard */}
-      <OnboardingWizard />
     </div>
   );
 }

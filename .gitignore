@@ -62,6 +62,7 @@ settings.json
 .zenflow
 .agent
 .junie
+.intent
 
 # Foundry
 broadcast/
