@@ -219,6 +219,16 @@ export class DriftVaultProvider implements VaultProvider {
      * USDC spot market index on Drift is 0.
      */
     async deposit(amount: string, userAddress: string): Promise<VaultDepositResult> {
+        // Vault is paused due to security incident (April 2026)
+        return {
+            success: false,
+            error: 'Drift vault is currently paused due to a security incident. Please use Aave, Morpho, or PoolTogether for deposits.',
+            vaultId: 'drift-jlp-vault',
+        };
+    }
+
+    /* original implementation preserved below for reference */
+    async deposit_OLD(amount: string, userAddress: string): Promise<VaultDepositResult> {
         const amountNum = parseFloat(amount);
         if (amountNum <= 0) {
             throw new VaultError('Deposit requires > 0 USDC', VaultErrorCode.INVALID_AMOUNT, 'drift');
@@ -371,14 +381,11 @@ export class DriftVaultProvider implements VaultProvider {
 
     /**
      * Checks if Drift Protocol & Solana RPC is currently healthy
+     * NOTE: Drift vault is currently PAUSED due to security incident (April 2026)
      */
     async isHealthy(): Promise<boolean> {
-        try {
-            const blockhashParams = await this.connection.getLatestBlockhash();
-            return !!blockhashParams.blockhash;
-        } catch {
-            return false;
-        }
+        // Vault is paused - return false to disable deposits
+        return false;
     }
 
     /**
