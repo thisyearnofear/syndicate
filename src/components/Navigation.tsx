@@ -10,7 +10,7 @@
  * - PERFORMANT: Minimal re-renders
  */
 
-import React, { useState, Suspense, lazy, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/shared/components/ui/Button';
@@ -18,11 +18,9 @@ import { CompactFlex } from '@/shared/components/premium/CompactLayout';
 import { useUnifiedWallet } from '@/hooks';
 import { WalletType } from '@/domains/wallet/types';
 import WalletInfo from './wallet/WalletInfo';
-import { Home, Users, TrendingUp, Menu, X, Loader, ArrowLeftRight, LayoutDashboard } from 'lucide-react';
-
-// Lazy load heavy modal components
-const UnifiedModal = lazy(() => import('./modal/UnifiedModal'));
-const WalletConnectionOptions = lazy(() => import('./wallet/WalletConnectionOptions'));
+import UnifiedModal from './modal/UnifiedModal';
+import WalletConnectionOptions from './wallet/WalletConnectionOptions';
+import { Home, Users, TrendingUp, Menu, X, ArrowLeftRight, LayoutDashboard } from 'lucide-react';
 
 interface NavigationProps {
     className?: string;
@@ -291,25 +289,16 @@ export default function Navigation({ className = '' }: NavigationProps) {
             </nav>
 
             {/* Enhanced Wallet Modal */}
-            <Suspense fallback={
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                    <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 flex items-center gap-3">
-                        <Loader className="w-6 h-6 animate-spin text-white" />
-                        <span className="text-white">Loading...</span>
-                    </div>
-                </div>
-            }>
-                <UnifiedModal
-                    isOpen={showWalletModal}
-                    onClose={() => setShowWalletModal(false)}
-                    title="Connect Wallet"
-                    maxWidth="lg"
-                >
-                    <WalletConnectionOptions
-                        onWalletConnect={handleWalletConnect}
-                    />
-                </UnifiedModal>
-            </Suspense>
+            <UnifiedModal
+                isOpen={showWalletModal}
+                onClose={() => setShowWalletModal(false)}
+                title="Connect Wallet"
+                maxWidth="lg"
+            >
+                <WalletConnectionOptions
+                    onWalletConnect={handleWalletConnect}
+                />
+            </UnifiedModal>
         </>
     );
 }

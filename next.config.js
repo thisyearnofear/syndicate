@@ -121,6 +121,8 @@ const nextConfig = {
       ...config.resolve,
       alias: {
         ...config.resolve.alias,
+        'react': path.resolve(__dirname, 'node_modules/react'),
+        'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
         '@react-native-async-storage/async-storage': path.resolve(__dirname, 'empty-module/index.js'),
         'thread-stream/test': path.resolve(__dirname, 'empty-module/index.js'),
         'thread-stream/test/': path.resolve(__dirname, 'empty-module/index.js'),
