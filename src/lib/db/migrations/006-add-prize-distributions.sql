@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS prize_distributions (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  pool_id TEXT NOT NULL REFERENCES syndicate_pools(id),
+  pool_id UUID NOT NULL REFERENCES syndicate_pools(id),
   prize_amount_usdc DECIMAL(20, 6) NOT NULL,
   member_count INTEGER NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('pending', 'calculating', 'distributing', 'completed', 'failed')),

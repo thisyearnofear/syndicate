@@ -5,17 +5,8 @@
  * Uses viem public client to read contract state.
  */
 
-import { createPublicClient, http, Address } from 'viem';
-import { base } from 'viem/chains';
-
-// =============================================================================
-// CHAIN CONFIGURATION
-// =============================================================================
-
-const basePublicClient = createPublicClient({
-  chain: base,
-  transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://base-mainnet.g.alchemy.com/v2/demo'),
-});
+import { Address } from 'viem';
+import { basePublicClient } from '@/lib/baseClient';
 
 // =============================================================================
 // CONTRACT ADDRESSES

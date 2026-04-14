@@ -1,17 +1,12 @@
 import { NextResponse } from 'next/server';
-import { createPublicClient, http, isHex, parseUnits } from 'viem';
-import { base } from 'viem/chains';
+import { isHex, parseUnits } from 'viem';
+import { basePublicClient } from '@/lib/baseClient';
 import { syndicateService } from '@/domains/syndicate/services/syndicateService';
 import { syndicateRepository, type SyndicatePoolRow } from '@/lib/db/repositories/syndicateRepository';
 import type { SyndicateInfo, SyndicateActivity } from '@/domains/lottery/types';
 
 // USDC on Base (6 decimals)
 const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
-
-const publicClient = createPublicClient({
-  chain: base,
-  transport: http(process.env.BASE_RPC_URL || 'https://mainnet.base.org'),
-});
 
 /**
  * Verify a USDC transfer txHash on-chain.
@@ -27,7 +22,7 @@ async function verifyUsdcTransfer({
   expectedAmountUsdc: number;
 }): Promise<{ ok: boolean; reason?: string }> {
   try {
-    const receipt = await publicClient.getTransactionReceipt({ hash: txHash });
+    const receipt = await basePublicClient.getTransactionReceipt({ hash: txHash });
 
     if (receipt.status !== 'success') {
       return { ok: false, reason: 'Transaction reverted or failed on-chain.' };

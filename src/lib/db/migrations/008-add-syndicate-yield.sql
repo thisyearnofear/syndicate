@@ -13,7 +13,7 @@ ALTER TABLE syndicate_pools
 -- Create syndicate_vault_deposits table
 CREATE TABLE IF NOT EXISTS syndicate_vault_deposits (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  pool_id TEXT NOT NULL REFERENCES syndicate_pools(id) ON DELETE CASCADE,
+  pool_id UUID NOT NULL REFERENCES syndicate_pools(id) ON DELETE CASCADE,
   member_address TEXT NOT NULL,
   amount_usdc DECIMAL(20, 6) NOT NULL,
   yield_accrued_usdc DECIMAL(20, 6) DEFAULT 0,
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS syndicate_vault_deposits (
 -- Create yield_conversions table
 CREATE TABLE IF NOT EXISTS yield_conversions (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  pool_id TEXT NOT NULL REFERENCES syndicate_pools(id) ON DELETE CASCADE,
+  pool_id UUID NOT NULL REFERENCES syndicate_pools(id) ON DELETE CASCADE,
   yield_amount_usdc DECIMAL(20, 6) NOT NULL,
   tickets_purchased INTEGER NOT NULL,
   tx_hash TEXT NOT NULL,

@@ -6,8 +6,7 @@
  */
 
 import { formatUnits, parseUnits } from 'viem';
-import { createPublicClient, http } from 'viem';
-import { base } from 'viem/chains';
+import { basePublicClient } from '@/lib/baseClient';
 import type {
     VaultProvider,
     VaultProtocol,
@@ -17,14 +16,11 @@ import type {
 } from './vaultProvider';
 import { VaultError, VaultErrorCode } from './vaultProvider';
 
-// Create public client for Base
-const baseClient = createPublicClient({
-  chain: base,
-  transport: http(),
-});
+const baseClient = basePublicClient;
 
 // PoolTogether V5 PrizeVault on Base (USDC)
-const PRIZE_VAULT = '0x45b201633594A8090f48866B570932B328080C0B' as const;
+// Source: https://dev.pooltogether.com/protocol/deployments/base
+const PRIZE_VAULT = '0x6B5a5c55E9dD4bb502Ce25bBfbaA49b69cf7E4dd' as const;
 
 // USDC on Base (6 decimals)
 const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;

@@ -71,8 +71,8 @@ export class AaveVaultProvider implements VaultProvider {
     constructor(rpcUrl?: string) {
         this.chainId = AAVE_CONFIG.BASE.CHAIN_ID;
 
-        // Use provided RPC or default to public Base RPC
-        const rpc = rpcUrl || 'https://mainnet.base.org';
+        // Use provided RPC or default to env variable or public Base RPC
+        const rpc = rpcUrl || process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
         this.provider = new ethers.JsonRpcProvider(rpc);
 
         // Initialize contracts

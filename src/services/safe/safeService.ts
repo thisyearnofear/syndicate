@@ -10,7 +10,6 @@
  */
 
 import { 
-  createPublicClient, 
   createWalletClient, 
   http, 
   encodeFunctionData,
@@ -20,6 +19,7 @@ import {
   parseUnits,
 } from 'viem';
 import { base } from 'viem/chains';
+import { basePublicClient } from '@/lib/baseClient';
 
 const BASE_CHAIN_ID = 8453;
 
@@ -179,10 +179,7 @@ export interface SafeTransaction {
   refundReceiver: Address;
 }
 
-const publicClient = createPublicClient({
-  chain: base,
-  transport: http(),
-}) as any;
+const publicClient = basePublicClient as any;
 
 /**
  * Encode the Safe setup initializer
