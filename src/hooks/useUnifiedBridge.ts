@@ -24,6 +24,7 @@ import type { BridgeParams, BridgeResult, BridgeProtocolType } from '@/services/
 import { useUnifiedWallet } from './useUnifiedWallet';
 import { formatUnits } from 'viem';
 import { basePublicClient } from '@/lib/baseClient';
+import { useVisibilityPolling } from '@/lib/useVisibilityPolling';
 import { web3Service } from '@/services/web3Service';
 import {
   getBridgeActivityHistory,
@@ -428,12 +429,16 @@ export function useUnifiedBridge(): BridgeState & {
       }
     };
 
-    void checkCrossChainWinnings();
-    const intervalId = window.setInterval(checkCrossChainWinnings, 60_000);
+    // Visibility-aware polling for cross-chain winnings
+    useVisibilityPolling({
+      callback: checkCrossChainWinnings,
+      intervalMs: 60_000,
+      enabled: wallet.isConnected && !!wallet.address && wallet.walletType === 'stacks',
+      immediate: true,
+    });
 
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
     };
   }, [wallet.address, wallet.isConnected, wallet.walletType]);
 

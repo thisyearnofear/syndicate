@@ -14,8 +14,9 @@
  * - Next execution scheduled
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useAdvancedPermissions } from './useAdvancedPermissions';
+import { useVisibilityPolling } from '@/lib/useVisibilityPolling';
 import type { AutoPurchaseConfig } from '@/domains/wallet/types';
 
 interface ExecutionEvent {
@@ -119,37 +120,23 @@ export function useAutoExecutionMonitor() {
     }
   }, [autoPurchaseConfig, permission, state.lastEvent?.txHash, recordEvent]);
 
-  // Start monitoring when config is active
-  useEffect(() => {
-    if (!autoPurchaseConfig?.enabled) {
-      setState(prev => ({ ...prev, isMonitoring: false }));
-      return;
-    }
+  // Start monitoring when config is active — with visibility-aware polling
+  const shouldMonitor = !!autoPurchaseConfig?.enabled;
+  const getPollingInterval = () => {
+    if (!autoPurchaseConfig?.nextExecution) return 60000;
+    const nextExecution = autoPurchaseConfig.nextExecution;
+    const timeUntilNext = nextExecution - Date.now();
+    if (timeUntilNext < 5 * 60 * 1000) return 1000;
+    if (timeUntilNext < 60 * 60 * 1000) return 10000;
+    return 60000;
+  };
 
-    setState(prev => ({ ...prev, isMonitoring: true }));
-
-    // Initial check
-    checkExecutionStatus();
-
-    // PERFORMANT: Exponential backoff polling
-    // Check every minute if execution is > 1 hour away
-    // Check every 10 seconds if execution is < 1 hour away
-    // Check every second if execution is < 5 minutes away
-    const getPollingInterval = () => {
-      const nextExecution = autoPurchaseConfig.nextExecution || 0;
-      const timeUntilNext = nextExecution - Date.now();
-
-      if (timeUntilNext < 5 * 60 * 1000) return 1000; // 1 second
-      if (timeUntilNext < 60 * 60 * 1000) return 10000; // 10 seconds
-      return 60000; // 1 minute
-    };
-
-    const interval = setInterval(() => {
-      checkExecutionStatus();
-    }, getPollingInterval());
-
-    return () => clearInterval(interval);
-  }, [autoPurchaseConfig?.enabled, autoPurchaseConfig?.nextExecution, checkExecutionStatus]);
+  useVisibilityPolling({
+    callback: checkExecutionStatus,
+    intervalMs: getPollingInterval(),
+    enabled: shouldMonitor,
+    immediate: true,
+  });
 
   // Format next execution time
   const getNextExecutionDisplay = useCallback(() => {

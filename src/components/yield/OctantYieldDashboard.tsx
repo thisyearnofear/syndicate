@@ -5,7 +5,8 @@
  * and automatic ticket/cause allocation
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useVisibilityPolling } from '@/lib/useVisibilityPolling';
 import { Button } from '@/shared/components/ui/Button';
 import { CompactStack, CompactFlex } from '@/shared/components/premium/CompactLayout';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
@@ -80,24 +81,26 @@ export function OctantYieldDashboard({
     : OCTANT_CONFIG.vaults.ethereumUsdcVault);
 
   // Load vault info + strategy status
-  useEffect(() => {
-    async function load() {
-      if (!address) return;
-      try {
-        const [info, status] = await Promise.all([
-          octantVaultService.getVaultInfo(resolvedVaultAddress, address).catch(() => null),
-          Promise.resolve(yieldToTicketsService.getStrategyStatus(address)),
-        ]);
-        setVaultInfo(info);
-        setStrategyStatus(status);
-      } catch (err) {
-        console.error('[OctantYieldDashboard] Failed to load:', err);
-      }
+  const loadVaultInfo = useCallback(async () => {
+    if (!address) return;
+    try {
+      const [info, status] = await Promise.all([
+        octantVaultService.getVaultInfo(resolvedVaultAddress, address).catch(() => null),
+        Promise.resolve(yieldToTicketsService.getStrategyStatus(address)),
+      ]);
+      setVaultInfo(info);
+      setStrategyStatus(status);
+    } catch (err) {
+      console.error('[OctantYieldDashboard] Failed to load:', err);
     }
-    load();
-    const interval = setInterval(load, 30000);
-    return () => clearInterval(interval);
   }, [address, resolvedVaultAddress]);
+
+  useVisibilityPolling({
+    callback: loadVaultInfo,
+    intervalMs: 30_000,
+    enabled: !!address,
+    immediate: true,
+  });
 
   // Load yield preview when strategy is active
   useEffect(() => {

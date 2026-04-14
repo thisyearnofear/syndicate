@@ -11,6 +11,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useVisibilityPolling } from '@/lib/useVisibilityPolling';
 import { 
   Wallet, 
   Users, 
@@ -112,13 +113,13 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
     }
   }, [poolId]);
 
-  useEffect(() => {
-    fetchDashboard();
-    
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(() => fetchDashboard(true), 30000);
-    return () => clearInterval(interval);
-  }, [fetchDashboard]);
+  // Initial fetch and visibility-aware polling
+  useVisibilityPolling({
+    callback: () => fetchDashboard(true),
+    intervalMs: 30_000,
+    enabled: true,
+    immediate: true,
+  });
 
   const formatAddress = (addr: string) => `${addr.slice(0, 6)}…${addr.slice(-4)}`;
   

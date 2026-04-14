@@ -1,7 +1,6 @@
-"use client";
-
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { useUnifiedWallet } from './useUnifiedWallet';
+import { useVisibilityPolling } from '@/lib/useVisibilityPolling';
 import { yieldToTicketsService, type AutoYieldStrategy } from '@/services/yieldToTicketsService';
 
 const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -27,7 +26,6 @@ export function useYieldAutoProcessor() {
     isChecking: false,
     lastChecked: null,
   });
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const checkYield = useCallback(async () => {
     if (!address) return;
@@ -63,14 +61,13 @@ export function useYieldAutoProcessor() {
     }
   }, [address]);
 
-  // Check on mount and at intervals
-  useEffect(() => {
-    checkYield();
-    intervalRef.current = setInterval(checkYield, CHECK_INTERVAL_MS);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [checkYield]);
+  // Check on mount and at intervals with visibility awareness
+  useVisibilityPolling({
+    callback: checkYield,
+    intervalMs: CHECK_INTERVAL_MS,
+    enabled: !!address,
+    immediate: true,
+  });
 
   return { ...state, checkYield };
 }

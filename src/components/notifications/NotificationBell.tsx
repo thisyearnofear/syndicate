@@ -11,7 +11,8 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useVisibilityPolling } from '@/lib/useVisibilityPolling';
 import { 
   Bell, 
   BellRing,
@@ -108,11 +109,13 @@ export function NotificationBell({ poolId, className = '' }: NotificationBellPro
     fetchNotifications();
   }, [fetchNotifications]);
 
-  // Poll for new notifications every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
-  }, [fetchUnreadCount]);
+  // Visibility-aware polling for notifications
+  useVisibilityPolling({
+    callback: fetchUnreadCount,
+    intervalMs: 30_000,
+    enabled: true,
+    immediate: true,
+  });
 
   const markAsRead = async (notificationId: string) => {
     try {

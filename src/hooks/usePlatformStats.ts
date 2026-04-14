@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import { useVisibilityPolling } from '@/lib/useVisibilityPolling';
 
 interface PlatformStats {
   totalRaised: number | null;
@@ -46,14 +47,12 @@ export function usePlatformStats(): UsePlatformStatsReturn {
     await fetchStats();
   }, [fetchStats]);
 
-  useEffect(() => {
-    fetchStats();
-    const interval = setInterval(fetchStats, 60000);
-    return () => {
-      mountedRef.current = false;
-      clearInterval(interval);
-    };
-  }, [fetchStats]);
+  useVisibilityPolling({
+    callback: fetchStats,
+    intervalMs: 60000,
+    enabled: true,
+    immediate: true,
+  });
 
   return { stats, isLoading, error, refresh };
 }
