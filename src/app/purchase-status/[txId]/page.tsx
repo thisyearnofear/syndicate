@@ -6,6 +6,11 @@ import { CrossChainTracker } from "@/components/bridge/CrossChainTracker";
 import type { TrackerStatus } from "@/components/bridge/CrossChainTracker";
 import { mapPurchaseStatusToTracker } from "@/domains/lottery/utils/mapPurchaseStatus";
 
+// Prevent Next.js from trying to statically generate this dynamic route.
+// useSearchParams() triggers fetch.cache patching during SSG which causes
+// "TypeError: n.cache is not a function" in the build.
+export const dynamic = 'force-dynamic';
+
 interface PurchaseStatusResponse {
   status: string;
   sourceChain?: "stacks" | "solana" | "near" | "ethereum" | "base";
