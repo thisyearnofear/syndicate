@@ -108,7 +108,7 @@ export default function CreateSyndicatePage() {
       });
       
       // Redirect to the new syndicate page
-      router.push(`/syndicate/${newPoolId}`);
+      router.push(`/syndicate?id=${newPoolId}`);
     } catch (err: unknown) {
       console.error('Error creating syndicate:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to create syndicate. Please try again.';
