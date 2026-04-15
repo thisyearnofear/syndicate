@@ -78,3 +78,6 @@ package-lock.json
 yarn.lock
 
 .blackboxcli/
+.vscode
+.qwen
+.letta

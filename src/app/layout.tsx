@@ -5,29 +5,17 @@ import "@rainbow-me/rainbowkit/styles.css";
 import "@near-wallet-selector/modal-ui/styles.css";
 import { Suspense } from "react";
 import { ToastProvider } from "@/shared/components/ui/Toast";
-import nextDynamic from "next/dynamic";
 import DynamicNavigationHeader from "@/components/DynamicNavigationHeader";
+// Client component wrapper imports for dynamic loading
+import ClientProvidersWrapper from "@/components/ClientProvidersWrapper";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 const inter = Inter({ subsets: ["latin"] });
 
-// Dynamically import client-side providers to prevent SSR issues
-const ClientProviders = nextDynamic(
-  () => import("@/components/ClientProviders"),
-  { ssr: false }
-);
-
-// Dynamically import the page content wrapper to prevent SSR
-// of page components that depend on wallet/web3 context
-const DynamicPageContent = nextDynamic(
-  () => import("@/components/DynamicPageContent"),
-  {
-    ssr: false,
-    loading: () => <div className="flex-1" />,
-  }
-);
+// Next.js 16: Use ClientProvidersWrapper which handles ssr:false internally
+// This pattern is required because ssr:false is no longer allowed in Server Components
 
 
 export const metadata: Metadata = {
@@ -56,11 +44,11 @@ export default function RootLayout({
           }}
         />
         <ToastProvider>
-          <ClientProviders>
+          <ClientProvidersWrapper>
             <DynamicNavigationHeader />
             <div className="flex flex-col min-h-screen">
               <div className="flex-1">
-                <DynamicPageContent>{children}</DynamicPageContent>
+                {children}
               </div>
               <footer className="relative z-10 border-t border-white/10 bg-slate-950/50 backdrop-blur-md">
                 <div className="max-w-6xl mx-auto px-6 py-10">
@@ -110,7 +98,7 @@ export default function RootLayout({
                 </div>
               </footer>
             </div>
-          </ClientProviders>
+           </ClientProvidersWrapper>
         </ToastProvider>
       </body>
     </html>
