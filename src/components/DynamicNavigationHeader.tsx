@@ -1,15 +1,7 @@
-import dynamic from 'next/dynamic';
-
-// Dynamically import NavigationHeader with SSR disabled to avoid hydration/hook mismatches
-const NavigationHeader = dynamic(
-  () => import('@/components/NavigationHeader'),
-  {
-    ssr: false,
-    loading: () => <div className="h-16 bg-transparent"></div>
-  }
-);
+// NavigationHeader is already a client component ('use client')
+// In Next.js 16, we can just import it directly instead of using dynamic with ssr:false
+import NavigationHeader from './NavigationHeader';
 
 export default function DynamicNavigationHeader() {
-  // SSR is disabled to prevent React hook mismatches (Error #321)
   return <NavigationHeader />;
 }
