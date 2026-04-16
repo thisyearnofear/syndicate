@@ -28,7 +28,7 @@ import { useERC7715 } from "@/hooks/useERC7715";
 import { AdvancedPermissionsTooltip } from "@/components/common/InfoTooltip";
 import { CONTRACTS } from "@/services/bridges/protocols/stacks";
 import { useUnifiedWallet } from "@/hooks";
-import { getPermissionPresets } from "@/domains/wallet/services/advancedPermissionsService";
+import { getPermissionPresets } from "@/services/automation/erc7715Service";
 import { stacksX402Service } from "@/domains/wallet/services/stacksX402Service";
 import type { AutoPurchaseConfig, AdvancedPermission } from "@/domains/wallet/types";
 

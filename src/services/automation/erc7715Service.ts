@@ -732,9 +732,62 @@ export class ERC7715Service {
   }
 }
 
-/**
- * Singleton instance
- */
+// =============================================================================
+// PERMISSION PRESETS (Backward Compatibility)
+// =============================================================================
+
+const DEFAULT_LIMITS = {
+  DAILY: BigInt(10 * 10 ** 6),
+  WEEKLY: BigInt(50 * 10 ** 6),
+  MONTHLY: BigInt(200 * 10 ** 6),
+} as const;
+
+export { DEFAULT_LIMITS };
+
+export function getUsdcAddressForChain(chainId: number): Address {
+  const usdcAddresses: Record<number, Address> = {
+    1: CONTRACTS.USDC_MAINNET,
+    8453: CONTRACTS.USDC_BASE,
+    84532: CONTRACTS.USDC_BASE_SEPOLIA,
+  };
+  return usdcAddresses[chainId] || CONTRACTS.USDC_BASE;
+}
+
+export interface PermissionPreset {
+  scope: 'erc20-token-periodic';
+  tokenAddress: Address;
+  limit: bigint;
+  period: 'weekly' | 'monthly';
+  description: string;
+}
+
+export function getPermissionPresets(chainId: number): {
+  weekly: PermissionPreset;
+  monthly: PermissionPreset;
+} {
+  const usdcAddress = getUsdcAddressForChain(chainId);
+  return {
+    weekly: {
+      scope: 'erc20-token-periodic',
+      tokenAddress: usdcAddress,
+      limit: DEFAULT_LIMITS.WEEKLY,
+      period: 'weekly',
+      description: 'Spend up to 50 USDC per week for automatic ticket purchases',
+    },
+    monthly: {
+      scope: 'erc20-token-periodic',
+      tokenAddress: usdcAddress,
+      limit: DEFAULT_LIMITS.MONTHLY,
+      period: 'monthly',
+      description: 'Spend up to 200 USDC per month for automatic ticket purchases',
+    },
+  };
+}
+
+// =============================================================================
+// SINGLETON INSTANCE
+// =============================================================================
+
 let serviceInstance: ERC7715Service | null = null;
 
 export function getERC7715Service(): ERC7715Service {

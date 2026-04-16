@@ -664,42 +664,22 @@ export class UnifiedBridgeManager {
                      this.registerProtocol(baseSolanaBridge);
                      return baseSolanaBridge;
                  }
-                 case 'debridge': {
-                     const { deBridgeProtocol } = await import('./protocols/deBridge');
-                     this.registerProtocol(deBridgeProtocol);
-                     return deBridgeProtocol;
-                 }
-                 case 'near': {
-                    const { nearProtocol } = await import('./protocols/nearChainSigs');
+case 'near': {
+                     const { nearProtocol } = await import('./protocols/nearChainSigs');
                     this.registerProtocol(nearProtocol);
                     return nearProtocol;
                 }
-                case 'near-intents': {
-                    const { nearIntentsProtocol } = await import('./protocols/nearIntents');
-                    this.registerProtocol(nearIntentsProtocol);
-                    return nearIntentsProtocol;
-                }
-                case 'zcash': {
-                    const { zcashProtocol } = await import('./protocols/zcash');
-                    this.registerProtocol(zcashProtocol);
-                    return zcashProtocol;
-                }
-                case 'stacks': {
-                    const { stacksProtocol } = await import('./protocols/stacks');
+case 'near-intents': {
+                     const { nearIntentsProtocol } = await import('./protocols/nearIntents');
+                     this.registerProtocol(nearIntentsProtocol);
+                     return nearIntentsProtocol;
+                 }
+                 case 'stacks': {
+                     const { stacksProtocol } = await import('./protocols/stacks');
                     this.registerProtocol(stacksProtocol);
                     return stacksProtocol;
                 }
-                case 'starknet': {
-                    const { starknetOrbiterProtocol } = await import('./protocols/starknet');
-                    this.registerProtocol(starknetOrbiterProtocol);
-                    return starknetOrbiterProtocol;
-                }
-                case 'ton': {
-                    const { tonProtocol } = await import('./protocols/ton');
-                    this.registerProtocol(tonProtocol);
-                    return tonProtocol;
-                }
-                default:
+default:
                     console.warn(`[BridgeManager] Unknown protocol: ${name}`);
                     return null;
             }

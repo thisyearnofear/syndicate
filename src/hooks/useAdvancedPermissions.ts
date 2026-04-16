@@ -18,7 +18,7 @@
 import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useERC7715 } from './useERC7715';
 import { useUnifiedWallet } from './useUnifiedWallet';
-import { getPermissionPresets } from '@/domains/wallet/services/advancedPermissionsService';
+import { getPermissionPresets } from '@/services/automation/erc7715Service';
 import { type ERC7715SupportInfo } from '@/services/automation/erc7715Service';
 import type { AdvancedPermission, AutoPurchaseConfig, PermissionRequest } from '@/domains/wallet/types';
 
