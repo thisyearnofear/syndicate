@@ -75,16 +75,14 @@ export function Providers({ children }: { children: ReactNode }) {
 
   const config = useMemo(() => getConfig(), []);
 
-  // Don't render children until client-side to avoid hydration mismatch
-  // wagmi/RainbowKit use browser APIs that cause server/client differences
-  if (!isMounted) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-gray-400 animate-pulse">Loading...</div>
-      </div>
-    );
-  }
-
+  // IMPORTANT: Always render children, even during SSR / before mount.
+  // Previously we returned a loading div when !isMounted, which DROPPED
+  // the children tree and caused React Error #321 because the client
+  // tried to evaluate Server Components from scratch without the
+  // server-side Flight payload.
+  //
+  // The opacity overlay hides wallet-related hydration flicker while
+  // still ensuring the React tree is complete on both server & client.
   return (
     <WagmiProvider config={config || ({} as any)}>
       <QueryClientProvider client={queryClient}>
@@ -95,7 +93,9 @@ export function Providers({ children }: { children: ReactNode }) {
             learnMoreUrl: 'https://docs.megapot.io',
           }}
         >
-          {children}
+          <div style={{ visibility: isMounted ? 'visible' : 'hidden' }}>
+            {children}
+          </div>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
