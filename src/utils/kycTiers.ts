@@ -1,26 +1,18 @@
-import { PublicKey } from '@solana/web3.js';
-
 /**
  * TIERED KYC THRESHOLDS
  * 
  * Aligned with FATF Travel Rule guidance (Recommendation 16) and
- * institutional DeFi best practices for the StableHacks hackathon.
+ * institutional DeFi best practices.
  *
- * Below $1,000: frictionless (CAPTCHA-only anti-bot)
+ * Below $1,000: frictionless (anti-bot only)
  * $1,000–$10,000: Liveness check (biometric selfie, no document upload)
  * Above $10,000: Full ID Verification (document + liveness + sanctions screening)
  */
 
-// Civic Gatekeeper Networks
-export const CIVIC_NETWORKS = {
-  CAPTCHA: new PublicKey('ignREusXmGrscGNUesoU9mxfds9AiYqzdam8AXsSqzC'),
-  LIVENESS: new PublicKey('uniqobk8oGh4XBLMqM68K8M2zNs3RYQ2TV8KFnk1Nh3'),
-  ID_VERIFICATION: new PublicKey('ni1jXzPTq1yTqo67tUmVgnp22b1qGAAZCtPmHtskqYG'),
-} as const;
+export type KycTier = 'captcha' | 'liveness' | 'id_verification';
 
 export interface KycTierInfo {
-  tier: 'captcha' | 'liveness' | 'id_verification';
-  gatekeeperNetwork: PublicKey;
+  tier: KycTier;
   label: string;
   description: string;
   minAmount: number;
@@ -29,21 +21,18 @@ export interface KycTierInfo {
 const KYC_TIERS: KycTierInfo[] = [
   {
     tier: 'id_verification',
-    gatekeeperNetwork: CIVIC_NETWORKS.ID_VERIFICATION,
     label: 'Full ID Verification',
     description: 'Document + liveness + sanctions screening per Travel Rule requirements.',
     minAmount: 10_000,
   },
   {
     tier: 'liveness',
-    gatekeeperNetwork: CIVIC_NETWORKS.LIVENESS,
     label: 'Liveness Verification',
     description: 'Biometric selfie check to prevent spoofing. No document upload needed.',
     minAmount: 1_000,
   },
   {
     tier: 'captcha',
-    gatekeeperNetwork: CIVIC_NETWORKS.CAPTCHA,
     label: 'Anti-Bot Check',
     description: 'Quick CAPTCHA verification — no personal data required.',
     minAmount: 0,

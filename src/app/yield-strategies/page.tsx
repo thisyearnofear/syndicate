@@ -23,9 +23,7 @@ import WalletConnectionManager from '@/components/wallet/WalletConnectionManager
 import { ImprovedYieldStrategySelector } from '@/components/yield/ImprovedYieldStrategySelector';
 import { YieldAllocationControl } from '@/components/yield/YieldAllocationControl';
 import { YieldDashboard } from '@/components/yield/YieldDashboard';
-import { CivicGateProvider } from '@/components/civic/CivicGateProvider';
-import { CivicVerificationGate } from '@/components/civic/CivicVerificationGate';
-import { getRequiredKycTier, getComplianceRationale } from '@/utils/kycTiers';
+
 import { yieldToTicketsService } from '@/services/yieldToTicketsService';
 import type { VaultProtocol } from '@/services/vaults';
 import { getStrategyById, type SupportedYieldStrategyId } from '@/config/yieldStrategies';
@@ -234,34 +232,9 @@ function YieldStrategiesContent() {
               placeholder="Enter amount to deposit"
               className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-lg"
             />
-
-            {depositAmount > 0 ? (
-              <div className="mt-3 flex items-center gap-2">
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
-                  depositAmount >= 10_000
-                    ? 'bg-red-500/20 text-red-300 border border-red-500/30'
-                    : depositAmount >= 1_000
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                    : 'bg-green-500/20 text-green-300 border border-green-500/30'
-                }`}>
-                  <Shield className="w-3.5 h-3.5" />
-                  {getRequiredKycTier(depositAmount).label}
-                </span>
-                <span className="text-xs text-gray-400">
-                  {getComplianceRationale(depositAmount)}
-                </span>
-              </div>
-            ) : null}
           </CompactCard>
 
-          <CivicVerificationGate
-            message={depositAmount < 1000 
-              ? "Quick anti-bot check needed. Takes 30 seconds."
-              : "Identity verification required for larger deposits."}
-            depositAmount={depositAmount}
-            compact={depositAmount < 1000}
-          >
-            <CompactCard variant="premium" padding="lg">
+          <CompactCard variant="premium" padding="lg">
               <div className="flex items-start gap-4">
                 <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
                   <Shield className="w-8 h-8 text-white" />
@@ -371,7 +344,7 @@ function YieldStrategiesContent() {
                 </div>
               </div>
             </CompactCard>
-          </CivicVerificationGate>
+
         </>
       ) : null}
     </CompactStack>
@@ -495,13 +468,10 @@ function YieldStrategiesContent() {
             )}
             
             {activeTab === 'strategies' && (
-              <CivicGateProvider depositAmount={depositAmount}>
-                {renderStrategyExecution(false)}
-              </CivicGateProvider>
+              renderStrategyExecution(false)
             )}
             
             {activeTab === 'allocation' && (
-              <CivicGateProvider depositAmount={depositAmount}>
                 <CompactStack spacing="lg">
                   {renderStrategyExecution(true)}
 
@@ -562,11 +532,9 @@ function YieldStrategiesContent() {
                   </div>
                 </CompactCard>
                 </CompactStack>
-              </CivicGateProvider>
             )}
             
             {activeTab === 'cross-chain' && (
-              <CivicGateProvider depositAmount={depositAmount}>
                 <CompactStack spacing="lg">
                   <CompactCard variant="premium" padding="lg">
                     <div className="flex items-start gap-4 mb-6">
@@ -604,7 +572,6 @@ function YieldStrategiesContent() {
                     />
                   </CompactCard>
                 </CompactStack>
-              </CivicGateProvider>
             )}
           </div>
         </CompactSection>
