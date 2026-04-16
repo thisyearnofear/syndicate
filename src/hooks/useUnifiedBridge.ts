@@ -158,6 +158,7 @@ export function useUnifiedBridge(): BridgeState & {
   // Refs
   const abortControllerRef = useRef<AbortController | null>(null);
   const optionsRef = useRef<BridgeOptions | null>(null);
+  const isMountedRef = useRef(true);
 
   // Cleanup
   const cleanup = useCallback(() => {
@@ -338,109 +339,102 @@ export function useUnifiedBridge(): BridgeState & {
     refreshActivity();
   }, [refreshActivity]);
 
-  useEffect(() => {
-    let cancelled = false;
+  const checkCrossChainWinnings = useCallback(async () => {
+    if (!wallet.isConnected || !wallet.address || wallet.walletType !== 'stacks') {
+      if (isMountedRef.current) {
+        setWinningsAmount('0');
+        setAssociatedEvmAddress(null);
+        setStacksClaimableWinnings('0');
+        setStacksWinningsToken(null);
+        setIsCheckingWinnings(false);
+      }
+      return;
+    }
 
-    const checkCrossChainWinnings = async () => {
-      if (!wallet.isConnected || !wallet.address || wallet.walletType !== 'stacks') {
-        if (!cancelled) {
-          setWinningsAmount('0');
-          setAssociatedEvmAddress(null);
-          setStacksClaimableWinnings('0');
-          setStacksWinningsToken(null);
-          setIsCheckingWinnings(false);
-        }
-        return;
+    if (isMountedRef.current) {
+      setIsCheckingWinnings(true);
+    }
+
+    try {
+      const response = await fetch(`/api/cross-chain-purchases?stacksAddress=${wallet.address}`);
+      if (!response.ok) {
+        throw new Error('Could not fetch cross-chain purchase history.');
       }
 
-      setIsCheckingWinnings(true);
+      const purchases = (await response.json()) as Array<{ evmAddress?: string }>;
+      const evmAddress = purchases[0]?.evmAddress ?? null;
+
+      let baseWinnings = '0';
+      if (evmAddress) {
+        const client = basePublicClient;
+        const megapotAddress = web3Service.getMegapotContractAddress();
+        const megapotAbi = web3Service.getMegapotAbi();
+        const userInfo = await client.readContract({
+          address: megapotAddress as `0x${string}`,
+          abi: megapotAbi,
+          functionName: 'usersInfo',
+          args: [evmAddress as `0x${string}`],
+        });
+        baseWinnings = formatUnits((userInfo as unknown[])[1] as bigint, 6);
+      }
+
+      let claimableStacks = '0';
+      let winningsToken: string | null = null;
 
       try {
-        const response = await fetch(`/api/cross-chain-purchases?stacksAddress=${wallet.address}`);
-        if (!response.ok) {
-          throw new Error('Could not fetch cross-chain purchase history.');
-        }
+        const contract = process.env.NEXT_PUBLIC_STACKS_LOTTERY_CONTRACT
+          || 'SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3';
+        const stacksResponse = await fetch(
+          `/api/stacks-lottery?endpoint=/v2/map_entry/${contract.split('.')[0]}/${contract.split('.')[1]}/winnings`,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              key: { type: 'principal', value: wallet.address },
+            }),
+          },
+        );
 
-        const purchases = (await response.json()) as Array<{ evmAddress?: string }>;
-        const evmAddress = purchases[0]?.evmAddress ?? null;
-
-        let baseWinnings = '0';
-        if (evmAddress) {
-          const client = basePublicClient;
-          const megapotAddress = web3Service.getMegapotContractAddress();
-          const megapotAbi = web3Service.getMegapotAbi();
-          const userInfo = await client.readContract({
-            address: megapotAddress as `0x${string}`,
-            abi: megapotAbi,
-            functionName: 'usersInfo',
-            args: [evmAddress as `0x${string}`],
-          });
-          baseWinnings = formatUnits((userInfo as unknown[])[1] as bigint, 6);
-        }
-
-        let claimableStacks = '0';
-        let winningsToken: string | null = null;
-
-        try {
-          const contract = process.env.NEXT_PUBLIC_STACKS_LOTTERY_CONTRACT
-            || 'SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3';
-          const stacksResponse = await fetch(
-            `/api/stacks-lottery?endpoint=/v2/map_entry/${contract.split('.')[0]}/${contract.split('.')[1]}/winnings`,
-            {
-              method: 'POST',
-              body: JSON.stringify({
-                key: { type: 'principal', value: wallet.address },
-              }),
-            },
-          );
-
-          if (stacksResponse.ok) {
-            const data = await stacksResponse.json();
-            const winningsData = data?.data;
-            if (winningsData && !winningsData.claimed?.value) {
-              claimableStacks = (
-                parseFloat(winningsData['total-winnings']?.value || '0') / 1_000_000
-              ).toString();
-              winningsToken = winningsData.token?.value ?? null;
-            }
+        if (stacksResponse.ok) {
+          const data = await stacksResponse.json();
+          const winningsData = data?.data;
+          if (winningsData && !winningsData.claimed?.value) {
+            claimableStacks = (
+              parseFloat(winningsData['total-winnings']?.value || '0') / 1_000_000
+            ).toString();
+            winningsToken = winningsData.token?.value ?? null;
           }
-        } catch (error) {
-          console.warn('Failed to check Stacks winnings:', error);
-        }
-
-        if (!cancelled) {
-          setAssociatedEvmAddress(evmAddress);
-          setWinningsAmount(baseWinnings);
-          setStacksClaimableWinnings(claimableStacks);
-          setStacksWinningsToken(winningsToken);
         }
       } catch (error) {
-        if (!cancelled) {
-          setError(error instanceof Error ? error : new Error(String(error)));
-          setAssociatedEvmAddress(null);
-          setWinningsAmount('0');
-          setStacksClaimableWinnings('0');
-          setStacksWinningsToken(null);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsCheckingWinnings(false);
-        }
+        console.warn('Failed to check Stacks winnings:', error);
       }
-    };
 
-    // Visibility-aware polling for cross-chain winnings
-    useVisibilityPolling({
-      callback: checkCrossChainWinnings,
-      intervalMs: 60_000,
-      enabled: wallet.isConnected && !!wallet.address && wallet.walletType === 'stacks',
-      immediate: true,
-    });
-
-    return () => {
-      cancelled = true;
-    };
+      if (isMountedRef.current) {
+        setAssociatedEvmAddress(evmAddress);
+        setWinningsAmount(baseWinnings);
+        setStacksClaimableWinnings(claimableStacks);
+        setStacksWinningsToken(winningsToken);
+      }
+    } catch (error) {
+      if (isMountedRef.current) {
+        setError(error instanceof Error ? error : new Error(String(error)));
+        setAssociatedEvmAddress(null);
+        setWinningsAmount('0');
+        setStacksClaimableWinnings('0');
+        setStacksWinningsToken(null);
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsCheckingWinnings(false);
+      }
+    }
   }, [wallet.address, wallet.isConnected, wallet.walletType]);
+
+  useVisibilityPolling({
+    callback: checkCrossChainWinnings,
+    intervalMs: 60_000,
+    enabled: wallet.isConnected && !!wallet.address && wallet.walletType === 'stacks',
+    immediate: true,
+  });
 
   // Derived state
   const derived = useMemo(() => ({
@@ -455,6 +449,7 @@ export function useUnifiedBridge(): BridgeState & {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      isMountedRef.current = false;
       cleanup();
     };
   }, [cleanup]);
