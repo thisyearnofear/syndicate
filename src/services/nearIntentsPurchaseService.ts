@@ -66,9 +66,7 @@ export async function executePurchaseViaChainSignatures(
     const ticketPrice = BigInt(1_000_000); // $1 USDC (6 decimals)
     const usdcAmount = ticketPrice * BigInt(ticketCount);
     
-    // TODO: Build and send approve tx (USDC → proxy) as a separate Chain Signature tx
-    // once multi-tx support is added to the bridge protocol.
-    // For now, approval must be handled separately or via permit.
+    // Approval must be handled separately or via permit (multi-tx support pending)
     
     const proxyIface = new ethers.Interface([
       'function purchaseTicketsFor(address recipient, address referrer, uint256 amount) external'

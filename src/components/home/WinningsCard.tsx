@@ -31,7 +31,6 @@ export function WinningsCard() {
   // Check for winnings when component mounts or wallet changes
   useEffect(() => {
     const checkForWinnings = async () => {
-      // Only check for NEAR users
       if (walletType !== WalletTypes.NEAR || !isConnected) {
         setHasWinnings(false);
         return;
@@ -40,21 +39,18 @@ export function WinningsCard() {
       try {
         setLoading(true);
 
-        // Get the NEAR account ID
         const accountId = nearWalletSelectorService.getAccountId();
         if (!accountId) {
           setHasWinnings(false);
           return;
         }
 
-        // Derive the EVM address
         const evmAddress = await nearIntentsService.deriveEvmAddress(accountId);
         if (!evmAddress) {
           setHasWinnings(false);
           return;
         }
 
-        // Check winnings on Base
         const userInfo = await web3Service.getUserInfoForAddress(evmAddress);
         if (!userInfo) {
           setHasWinnings(false);
@@ -65,7 +61,6 @@ export function WinningsCard() {
         setWinningsAmount(userInfo.winningsClaimable);
         setHasWinnings(amount > 0);
       } catch (error) {
-        console.error('Failed to check winnings:', error);
         setHasWinnings(false);
       } finally {
         setLoading(false);

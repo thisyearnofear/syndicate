@@ -293,31 +293,4 @@ export function setGelatoTaskRepository(repo: IGelatoTaskRepository): void {
   repositoryInstance = repo;
 }
 
-// =============================================================================
-// PRODUCTION INITIALIZATION
-// =============================================================================
 
-/**
- * Initialize production Postgres repository (Vercel Postgres, Neon, etc)
- * Call this in your app initialization (e.g., middleware or server startup)
- */
-export async function initializeProductionRepository(): Promise<void> {
-  // Support multiple Postgres providers
-  const hasDbConnection = 
-    process.env.POSTGRES_URL || 
-    process.env.DATABASE_URL || 
-    process.env.POSTGRES_URLCONNECTION_STRING;
-
-  if (hasDbConnection) {
-    try {
-      const { VercelPostgresGelatoRepository } = await import('../repositories/gelatoRepository');
-      repositoryInstance = new VercelPostgresGelatoRepository();
-      const provider = process.env.POSTGRES_URL ? 'Neon' : 'Vercel Postgres';
-      console.log(`[GelatoTaskRepository] Initialized with ${provider}`);
-    } catch (error) {
-      console.error('[GelatoTaskRepository] Failed to initialize Postgres:', error);
-      console.log('[GelatoTaskRepository] Falling back to mock repository');
-      repositoryInstance = new MockGelatoTaskRepository();
-    }
-  }
-}

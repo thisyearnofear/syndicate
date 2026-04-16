@@ -249,8 +249,6 @@ export default function WalletInfo({
             variant="ghost"
             size="sm"
             onClick={() => {
-              // For now, disconnect and let user reconnect with different wallet
-              // TODO: Implement proper wallet switching modal
               disconnectWallet();
             }}
             className="flex-1 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"

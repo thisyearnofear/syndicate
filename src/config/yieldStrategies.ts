@@ -8,7 +8,6 @@
 
 export type SupportedYieldStrategyId =
   | 'aave'
-  | 'drift'
   | 'morpho'
   | 'pooltogether'
   | 'octant'
@@ -34,15 +33,6 @@ export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
     icon: '🏦',
     color: 'bg-gradient-to-br from-blue-500 to-cyan-400',
     risk: 'Low',
-  },
-  {
-    id: 'drift',
-    name: 'Drift Delta Neutral',
-    description: 'JLP Delta Neutral Vault on Solana. 3-Month lock, ~22% APY USDC yield routed to tickets. [PAUSED - Security Incident]',
-    icon: '⛵',
-    color: 'bg-gradient-to-br from-sky-400 to-blue-600',
-    risk: 'Medium',
-    isPaused: true,
   },
   {
     id: 'morpho',

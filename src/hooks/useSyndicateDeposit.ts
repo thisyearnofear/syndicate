@@ -40,7 +40,8 @@ const TWAB_DELEGATOR_ABI = [
   },
 ] as const;
 
-export type PoolType = 'safe' | 'splits' | 'pooltogether';
+// Import PoolType from shared location (single source of truth)
+import type { PoolType } from '@/domains/lottery/types';
 
 const ERC20_ABI = [
   {

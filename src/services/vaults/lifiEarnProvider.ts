@@ -27,6 +27,10 @@ import { VaultError, VaultErrorCode } from './vaultProvider';
 const EARN_API_BASE_URL = '/api/lifi/earn';
 const APY_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+interface LifiEarnPortfolioPosition {
+  balanceUsd: string;
+}
+
 export interface LifiEarnVault {
     address: string;
     chainId: number;
@@ -113,7 +117,7 @@ export class LifiEarnVaultProvider implements VaultProvider {
             const positions = result.positions || [];
 
             // Aggregate all positions
-            const totalBalance = positions.reduce((sum: number, pos: any) => {
+            const totalBalance = positions.reduce((sum: number, pos: LifiEarnPortfolioPosition) => {
                 return sum + parseFloat(pos.balanceUsd || '0');
             }, 0);
 

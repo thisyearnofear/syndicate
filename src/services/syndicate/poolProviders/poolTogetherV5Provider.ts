@@ -7,7 +7,7 @@
  * March 2026: PoolTogether V5 on Base
  */
 
-import type { PoolProvider, PoolProviderConfig, PoolCreationResult } from './index';
+import type { PoolProvider, PoolProviderConfig, PoolCreationResult } from './types';
 import { poolTogetherVaultService, type PoolTogetherVault } from '@/services/poolTogether/vaultService';
 
 const BASE_CHAIN_ID = 8453;

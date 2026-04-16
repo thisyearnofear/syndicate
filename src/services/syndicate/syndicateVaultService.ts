@@ -20,6 +20,20 @@ import { sql } from '@vercel/postgres';
 import { vaultManager, type VaultProtocol, type VaultBalance } from '@/services/vaults';
 import type { Address } from 'viem';
 
+interface YieldConversionRow {
+  id: string;
+  yield_amount_usdc: string;
+  tickets_purchased: number;
+  tx_hash: string | null;
+  converted_at: string;
+}
+
+interface SyndicatePendingYieldRow {
+  id: string;
+  vault_strategy: string;
+  pending_yield: string;
+}
+
 export interface SyndicateVaultInfo {
   poolId: string;
   vaultProtocol: VaultProtocol;
@@ -268,13 +282,16 @@ export class SyndicateVaultService {
       LIMIT ${limit}
     `;
 
-    return result.rows.map((row: any) => ({
-      id: row.id,
-      yieldAmount: parseFloat(row.yield_amount_usdc),
-      ticketsPurchased: row.tickets_purchased,
-      txHash: row.tx_hash,
-      convertedAt: new Date(row.converted_at),
-    }));
+    return result.rows.map((row) => {
+      const typedRow = row as unknown as YieldConversionRow;
+      return {
+        id: typedRow.id,
+        yieldAmount: parseFloat(typedRow.yield_amount_usdc),
+        ticketsPurchased: typedRow.tickets_purchased,
+        txHash: typedRow.tx_hash || '',
+        convertedAt: new Date(typedRow.converted_at),
+      };
+    });
   }
 
   /**
@@ -300,11 +317,14 @@ export class SyndicateVaultService {
       HAVING COALESCE(SUM(d.yield_accrued_usdc), 0) - COALESCE(SUM(c.yield_amount_usdc), 0) >= p.yield_conversion_threshold
     `;
 
-    return result.rows.map((row: any) => ({
-      poolId: row.id,
-      vaultProtocol: row.vault_strategy as VaultProtocol,
-      pendingYield: parseFloat(row.pending_yield),
-    }));
+    return result.rows.map((row) => {
+      const typedRow = row as unknown as SyndicatePendingYieldRow;
+      return {
+        poolId: typedRow.id,
+        vaultProtocol: typedRow.vault_strategy as VaultProtocol,
+        pendingYield: parseFloat(typedRow.pending_yield),
+      };
+    });
   }
 
   /**

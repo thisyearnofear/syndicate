@@ -6,7 +6,34 @@
  * - MODULAR: Composable utility functions
  * - PERFORMANT: Optimized implementations
  * - CLEAN: Pure functions with clear interfaces
+ * 
+ * This file re-exports consolidated utilities from specialized modules.
+ * Import from here for standard imports throughout the codebase.
  */
+
+// Re-export consolidated utilities from specialized modules
+// eslint-disable-next-line import/no-unresolved
+export { 
+  withRetry, 
+  withTimeout, 
+  pollWithBackoff, 
+  validateConnection, 
+  CircuitBreaker,
+  type RetryOptions,
+  type TimeoutOptions
+} from '@/utils/asyncRetryHelper';
+
+// Re-export wallet utilities that are only in lib/wallet/connection
+// Note: isValidAddress in shared/utils is EVM-only, while the one in 
+// lib/wallet/connection supports multiple chains (EVM, Solana, NEAR, Stacks)
+// Use the multi-chain version where chain-agnostic validation is needed
+// eslint-disable-next-line import/no-unresolved
+export { 
+  shortenAddress, 
+  addressesEqual,
+  getWalletErrorMessage,
+  isRecoverableWalletError
+} from '@/lib/wallet/connection';
 
 // =============================================================================
 // FORMATTING UTILITIES

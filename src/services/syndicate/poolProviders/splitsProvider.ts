@@ -7,9 +7,9 @@
  * March 2026: 0xSplits is immutable on Base chain
  */
 
-import type { PoolProvider, PoolProviderConfig, PoolCreationResult } from './index';
+import type { PoolProvider, PoolProviderConfig, PoolCreationResult } from './types';
 import { splitsService, type SplitInfo } from '@/services/splits/splitService';
-import type { Address } from 'viem';
+import type { Address, WalletClient } from 'viem';
 
 const BASE_CHAIN_ID = 8453;
 
@@ -199,7 +199,7 @@ export class SplitsPoolProvider implements PoolProvider {
   async distributeFunds(
     splitAddress: string,
     tokenAddress: Address,
-    walletClient: any
+    walletClient: WalletClient
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     try {
       const result = await splitsService.distributeToken({

@@ -52,7 +52,7 @@ export interface AdvancedPermissionGrant {
   expiresAt: number | null;
   isActive: boolean;
   // MetaMask response data
-  context?: any;
+  context?: unknown;
   signerMeta?: {
     delegationManager?: Address;
   };

@@ -165,11 +165,7 @@ export function useLotteryPurchase() {
     setTxHash(null);
 
     try {
-      // NOTE: This function is a placeholder for individual ticket purchases
-      // For syndicate purchases, use the API route: POST /api/syndicates with action: 'executePurchase'
-      // For individual purchases, use the purchase orchestrator in src/domains/lottery/services/purchaseOrchestrator.ts
-      // 
-      // TODO: Implement actual purchase flow integration
+      // Use purchase orchestrator for individual purchases
       throw new Error('Individual ticket purchases should use the purchase orchestrator. See purchaseOrchestrator.ts');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Purchase failed';

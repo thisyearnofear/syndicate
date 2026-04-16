@@ -72,33 +72,6 @@ class SplitsService {
   }
 
   /**
-   * Compute distribution using distributionService (DRY principle)
-   * @deprecated Use distributionService.calculateProportionalShares() directly
-   */
-  computeDistribution(total: string, strategyId: string): DistributionResult {
-    const snap = this.snapshots.get(strategyId);
-    if (!snap) {
-      return { total, allocations: [] };
-    }
-
-    // Use distributionService for calculation (DRY)
-    const weights = snap.participants.map(p => ({
-      address: p.address,
-      weightBps: p.weightBps,
-    }));
-
-    const allocations = distributionService.calculateProportionalShares(total, weights);
-
-    return {
-      total,
-      allocations: allocations.map(a => ({
-        address: a.address,
-        amount: a.amount,
-      })),
-    };
-  }
-
-  /**
    * Distribute winnings using distributionService (DRY principle)
    * ENHANCEMENT FIRST: Refactored to use shared distribution logic
    */

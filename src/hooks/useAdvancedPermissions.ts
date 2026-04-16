@@ -19,7 +19,8 @@ import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useERC7715 } from './useERC7715';
 import { useUnifiedWallet } from './useUnifiedWallet';
 import { getPermissionPresets } from '@/domains/wallet/services/advancedPermissionsService';
-import type { AdvancedPermission, AutoPurchaseConfig } from '@/domains/wallet/types';
+import { type ERC7715SupportInfo } from '@/services/automation/erc7715Service';
+import type { AdvancedPermission, AutoPurchaseConfig, PermissionRequest } from '@/domains/wallet/types';
 
 // =============================================================================
 // TYPES (BACKWARD COMPATIBILITY)
@@ -31,7 +32,7 @@ export interface UseAdvancedPermissionsState {
   isLoading: boolean;
   isRequesting: boolean;
   isSupported: boolean;
-  support: any;
+  support: ERC7715SupportInfo | null;
   error: string | null;
   autoPurchaseConfig: AutoPurchaseConfig | null;
   canEnable: boolean;
@@ -39,7 +40,7 @@ export interface UseAdvancedPermissionsState {
 }
 
 export interface UseAdvancedPermissionsActions {
-  requestPermission: (request: any) => Promise<boolean>;
+  requestPermission: (request: PermissionRequest) => Promise<boolean>;
   requestPresetPermission: (preset: 'weekly' | 'monthly') => Promise<boolean>;
   revokePermission: () => void;
   saveAutoPurchaseConfig: (config: AutoPurchaseConfig) => void;
