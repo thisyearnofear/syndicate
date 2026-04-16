@@ -40,6 +40,63 @@ export default function RootLayout({
                 };
                 window.clearImmediate = window.clearTimeout;
               }
+
+              // === REACT ERROR #321 DIAGNOSTIC ===
+              // Detect duplicate React instances and log exactly which module causes it
+              (function() {
+                var reactInstances = [];
+                var origDefineProperty = Object.defineProperty;
+
+                // Intercept all scripts to track which chunk loads React
+                var origCreateElement = null;
+                var chunkSources = {};
+
+                // Monitor __REACT_DEVTOOLS_GLOBAL_HOOK__ for multiple renderers
+                var hookCheckInterval = setInterval(function() {
+                  var hook = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
+                  if (hook && hook.renderers && hook.renderers.size > 0) {
+                    var renderers = [];
+                    hook.renderers.forEach(function(v, k) {
+                      renderers.push({ id: k, name: v.name, version: v.version });
+                    });
+                    if (renderers.length > 1) {
+                      console.error('[REACT-321-DIAG] DUPLICATE REACT DETECTED! Renderers:', JSON.stringify(renderers));
+                    } else {
+                      console.log('[REACT-321-DIAG] Single renderer detected:', JSON.stringify(renderers));
+                    }
+                    clearInterval(hookCheckInterval);
+                  }
+                }, 100);
+
+                // After 10 seconds, report what we found
+                setTimeout(function() {
+                  clearInterval(hookCheckInterval);
+                }, 10000);
+
+                // Intercept Error #321 to capture the full stack
+                var origError = window.Error;
+                window.addEventListener('error', function(event) {
+                  var msg = event.error && event.error.message;
+                  if (msg && (msg.includes('321') || msg.includes('Invalid hook call') || msg.includes('minified react error'))) {
+                    console.error('[REACT-321-DIAG] ERROR #321 CAUGHT!');
+                    console.error('[REACT-321-DIAG] Full message:', msg);
+                    console.error('[REACT-321-DIAG] Full stack:', event.error.stack);
+                    console.error('[REACT-321-DIAG] Source file:', event.filename, 'line:', event.lineno);
+                  }
+                });
+
+                // Log all script loads to identify which chunk is the React duplicate
+                var observer = new MutationObserver(function(mutations) {
+                  mutations.forEach(function(m) {
+                    m.addedNodes.forEach(function(node) {
+                      if (node.tagName === 'SCRIPT' && node.src) {
+                        console.log('[REACT-321-DIAG] Script loaded:', node.src.split('/').pop());
+                      }
+                    });
+                  });
+                });
+                observer.observe(document.documentElement, { childList: true, subtree: true });
+              })();
             `,
           }}
         />
