@@ -26,6 +26,34 @@ const nextConfig = {
     '@coordinationlabs/megapot-ui-kit',
     'starknetkit',
   ],
+
+  // Next.js 16 uses Turbopack by default for production builds.
+  // resolveAlias forces all `import 'react'` to the single copy in
+  // node_modules, eliminating duplicate React instances.
+  // NOTE: Turbopack expects relative path strings, NOT path.resolve().
+  turbopack: {
+    resolveAlias: {
+      react: './node_modules/react',
+      'react-dom': './node_modules/react-dom',
+      'react/jsx-runtime': './node_modules/react/jsx-runtime',
+      'react/jsx-dev-runtime': './node_modules/react/jsx-dev-runtime',
+    },
+  },
+
+  // Fallback for `next dev` without --turbo (uses webpack).
+  webpack(config, { isServer }) {
+    if (!isServer) {
+      const path = require('path');
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        react: path.resolve(__dirname, 'node_modules/react'),
+        'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
+        'react/jsx-runtime': path.resolve(__dirname, 'node_modules/react/jsx-runtime'),
+        'react/jsx-dev-runtime': path.resolve(__dirname, 'node_modules/react/jsx-dev-runtime'),
+      };
+    }
+    return config;
+  },
 };
 
 module.exports = nextConfig;
