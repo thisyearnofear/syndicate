@@ -6,14 +6,17 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 
-  // Fix React Error #321 (Invalid hook call) caused by @civic/solana-gateway-react
-  // shipping pre-compiled CJS/ESM bundles that embed their own React instance.
-  // transpilePackages forces Next.js to re-compile these packages through its
-  // own webpack/turbopack pipeline so they use the app's single React instance.
+  // Force packages with bundled React to re-compile through Next.js pipeline
+  // so they use the app's single React instance.
+  // Combined with .npmrc shamefully-hoist=true this eliminates the duplicate
+  // React instance that causes React Error #321 (Invalid hook call).
   transpilePackages: [
     '@civic/solana-gateway-react',
     '@civic/gateway-client-react',
+    '@civic/gateway-client-core',
+    '@civic/solana-gateway-chain-client',
   ],
 };
 
 module.exports = nextConfig;
+

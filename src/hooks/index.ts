@@ -43,9 +43,6 @@ export { useAutoExecutionMonitor } from './useAutoExecutionMonitor';
 export { useAutomation } from './useAutomation';
 export { useYieldAutoProcessor } from './useYieldAutoProcessor';
 
-// Civic & KYC
-export { useCivicGate } from './useCivicGate';
-
 // Yield & Vaults
 export { usePoolTogetherDeposit } from './usePoolTogetherDeposit';
 export { useSyndicateDeposit } from './useSyndicateDeposit';

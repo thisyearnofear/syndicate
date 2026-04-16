@@ -4,8 +4,8 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useUnifiedWallet } from '@/hooks/useUnifiedWallet';
 import { useRouter } from 'next/navigation';
-import { Shield, AlertTriangle, Info, Globe } from 'lucide-react';
-import { useCivicGate } from '@/hooks/useCivicGate';
+import { Info, Globe } from 'lucide-react';
+
 
 /**
  * Cross‑chain discovery prompt with trust signals.
@@ -14,7 +14,7 @@ export default function CrossChainPrompt() {
   const { address, chainId } = useUnifiedWallet();
   const [hasMultiChain, setHasMultiChain] = useState<boolean>(false);
   const [totalUsdc, setTotalUsdc] = useState<string>('0');
-  const [isVerified, setIsVerified] = useState<boolean | null>(null);
+
   const router = useRouter();
 
   // Supported chains – add/remove as product expands
@@ -62,20 +62,6 @@ export default function CrossChainPrompt() {
 
     fetchBalances();
   }, [address, chainId]);
-
-  // -------------------------------------------------------------------
-  // Trust signal – Civic verification
-  // -------------------------------------------------------------------
-  const { isChecking, isVerified: checked } = useCivicGate();
-  // In production we could combine the two flags:
-  useEffect(() => {
-    if (isChecking) {
-      setIsVerified(null); // null = unknown / loading
-    } else {
-      setIsVerified(checked);
-    }
-  }, [isChecking, checked]);
-
   if (!hasMultiChain) return null;
 
   return (
@@ -84,12 +70,7 @@ export default function CrossChainPrompt() {
         {/* LI.FI logo + badge */}
         <div className="flex-shrink-0 w-10 flex flex-col items-center">
           <img src="/logo/li-fi.svg" alt="LI.FI" className="h-9 w-9" />
-          {isVerified === true && (
-            <Shield className="h-4 w-4 mt-2 text-green-600" />
-          )}
-          {isVerified === false && (
-            <AlertTriangle className="h-4 w-4 mt-2 text-yellow-600" />
-          )}
+
         </div>
 
         {/* Main message */}
@@ -110,12 +91,7 @@ export default function CrossChainPrompt() {
             >
               Explore Earn
             </Link>
-            {isVerified !== true && (
-              <span className="flex items-center text-sm text-yellow-600">
-                <AlertTriangle className="h-4 w-4 mr-1" />
-                Verify with Civic Pass for extra security
-              </span>
-            )}
+
           </div>
         </div>
       </div>
