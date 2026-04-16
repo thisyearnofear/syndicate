@@ -22,7 +22,6 @@ import type {
 } from './vaultProvider';
 import { VaultError, VaultErrorCode } from './vaultProvider';
 import { aaveProvider } from './aaveProvider';
-import { driftProvider } from './driftProvider';
 import { poolTogetherProvider } from './poolTogetherProvider';
 import { morphoProvider } from './morphoProvider';
 import { octantProvider } from './octantProvider';
@@ -69,9 +68,6 @@ export class VaultManager {
         // Register Aave provider
         this.providers.set('aave', aaveProvider);
 
-        // Register Drift provider (JLP Delta Neutral)
-        this.providers.set('drift', driftProvider);
-
         // Register PoolTogether provider (Prize Savings)
         this.providers.set('pooltogether', poolTogetherProvider);
 
@@ -86,9 +82,6 @@ export class VaultManager {
 
         // Register LI.FI Earn provider (Cross-chain vault aggregator)
         this.providers.set('lifiearn', lifiEarnProvider);
-
-        // TODO: Register Spark provider
-        // this.providers.set('spark', sparkProvider);
     }
 
     /**
@@ -264,7 +257,6 @@ export class VaultManager {
             aave: 'Aave V3',
             morpho: 'Morpho Blue',
             spark: 'Spark Protocol',
-            drift: 'Drift Delta Neutral',
             pooltogether: 'PoolTogether V5',
             octant: 'Octant V2',
             uniswap: 'Uniswap V3 LP',
@@ -278,7 +270,6 @@ export class VaultManager {
             aave: 'Decentralized lending protocol with proven track record',
             morpho: 'Curated lending vaults with optimized yields (~6.7% APY)',
             spark: 'MakerDAO lending protocol with DAI integration',
-            drift: 'Solana USDC yield via Drift Protocol with automated ticket routing',
             pooltogether: 'No-loss prize savings on Base - keep principal, win prizes',
             octant: 'Yield donating vaults with public goods funding (~10% APY)',
             uniswap: 'Concentrated liquidity positions earning trading fees (~8.5% APY)',
@@ -294,7 +285,7 @@ export const vaultManager = new VaultManager();
 // Re-export types and providers
 export * from './vaultProvider';
 export { aaveProvider } from './aaveProvider';
-export { driftProvider } from './driftProvider';
+
 export { poolTogetherProvider } from './poolTogetherProvider';
 export { morphoProvider } from './morphoProvider';
 export { octantProvider } from './octantProvider';

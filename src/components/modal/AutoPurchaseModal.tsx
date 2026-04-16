@@ -30,7 +30,7 @@ import { CONTRACTS } from "@/services/bridges/protocols/stacks";
 import { useUnifiedWallet } from "@/hooks";
 import { getPermissionPresets } from "@/domains/wallet/services/advancedPermissionsService";
 import { stacksX402Service } from "@/domains/wallet/services/stacksX402Service";
-import type { AutoPurchaseConfig } from "@/domains/wallet/types";
+import type { AutoPurchaseConfig, AdvancedPermission } from "@/domains/wallet/types";
 
 type Step = "select-type" | "configure" | "review" | "approving" | "success" | "error";
 type AgentStrategy = "scheduled" | "autonomous";
@@ -271,10 +271,10 @@ export function AutoPurchaseModal({
         const amountPerPeriod = BigInt(config.amount * 10 ** 6);
         const ticketCount = config.ticketCount;
 
-        const autoConfig: any = {
+        const autoConfig: AutoPurchaseConfig = {
           enabled: true,
-          permission,
-          frequency,
+          permission: permission as unknown as AdvancedPermission,
+          frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 'weekly' | 'biweekly' | 'monthly',
           amountPerPeriod,
           tokenAddress: CONTRACTS.USDC,
           lastExecuted: undefined,
@@ -288,7 +288,7 @@ export function AutoPurchaseModal({
         try {
           const executorConfig = {
             permissionId: permission.id,
-            frequency,
+frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 'weekly' | 'biweekly' | 'monthly',
             ticketCount,
             nextExecutionTime: autoConfig.nextExecution,
           };

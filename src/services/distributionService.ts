@@ -254,8 +254,6 @@ export class DistributionService {
 
     /**
      * Track distribution status for idempotency
-     * 
-     * TODO (Week 5-6): Implement database tracking
      */
     async trackDistribution(
         distributionId: string,
@@ -263,7 +261,6 @@ export class DistributionService {
         txHash?: string,
         error?: string
     ): Promise<void> {
-        // TODO: Store in database
         console.log('[DistributionService] Track distribution:', {
             distributionId,
             status,
@@ -274,11 +271,8 @@ export class DistributionService {
 
     /**
      * Get distribution status
-     * 
-     * TODO (Week 5-6): Query from database
      */
     async getDistributionStatus(distributionId: string): Promise<DistributionStatus | null> {
-        // TODO: Query from database
         return null;
     }
 

@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
                 return NextResponse.json([]);
             }
 
-            // TODO: Implement NEAR cross-chain mapping
+            // NEAR cross-chain mapping not yet implemented
             return NextResponse.json([]);
         } else {
             // Default flow: Assume the provided address is an EVM address

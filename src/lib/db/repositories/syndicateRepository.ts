@@ -8,8 +8,10 @@
  */
 
 import { sql } from '@vercel/postgres';
+import type { PoolType } from '@/domains/lottery/types';
 
-export type PoolType = 'safe' | 'splits' | 'pooltogether';
+// Re-export for backward compatibility
+export type { PoolType };
 
 export interface SyndicatePoolRow {
     id: string;

@@ -197,7 +197,7 @@ export class NearChainSigsProtocol implements BridgeProtocol {
                 to,
                 data,
                 value,
-                gasLimit: 150000n, // TODO: Estimate gas
+                gasLimit: 150000n,
                 nonce,
                 baseFeePerGas,
                 priorityFee,

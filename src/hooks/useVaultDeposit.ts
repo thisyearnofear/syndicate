@@ -5,7 +5,6 @@ import { useWalletClient, usePublicClient } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { parseUnits } from 'viem';
 import { useUnifiedWallet } from './useUnifiedWallet';
-import { solanaWalletService } from '@/services/solanaWalletService';
 import { AAVE_CONFIG } from '@/services/vaults/aaveProvider';
 import type { VaultProtocol } from '@/services/vaults';
 
@@ -45,60 +44,6 @@ export function useVaultDeposit() {
     approveTxHash: null,
     status: 'idle',
   });
-
-  // ─── Solana (Drift) — API builds unsigned tx, client signs via Phantom ───
-
-  const depositSolana = useCallback(
-    async (amount: string): Promise<{ success: boolean; txHash?: string }> => {
-      const buildRes = await fetch('/api/vault/deposit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ protocol: 'drift', amount, userAddress: address }),
-      });
-      const buildData = await buildRes.json();
-      if (!buildData.success || !buildData.txData) throw new Error(buildData.error || 'Failed to build deposit transaction');
-
-      if (!solanaWalletService.isReady()) {
-        const pk = await solanaWalletService.connectPhantom();
-        if (!pk) throw new Error('Failed to connect Phantom wallet');
-      }
-
-      setState(prev => ({ ...prev, status: 'signing' }));
-      const { VersionedTransaction } = await import('@solana/web3.js');
-      const txBytes = Buffer.from(buildData.txData, 'base64');
-      const transaction = VersionedTransaction.deserialize(txBytes);
-
-      setState(prev => ({ ...prev, status: 'confirming' }));
-      return { success: true, txHash: await solanaWalletService.signAndSendTransaction(transaction) };
-    },
-    [address],
-  );
-
-  const withdrawSolana = useCallback(
-    async (amount: string, yieldOnly?: boolean): Promise<{ success: boolean; txHash?: string }> => {
-      const buildRes = await fetch('/api/vault/withdraw', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ protocol: 'drift', amount, userAddress: address, yieldOnly }),
-      });
-      const buildData = await buildRes.json();
-      if (!buildData.success || !buildData.txData) throw new Error(buildData.error || 'Failed to build withdrawal transaction');
-
-      if (!solanaWalletService.isReady()) {
-        const pk = await solanaWalletService.connectPhantom();
-        if (!pk) throw new Error('Failed to connect Phantom wallet');
-      }
-
-      setState(prev => ({ ...prev, status: 'signing' }));
-      const { VersionedTransaction } = await import('@solana/web3.js');
-      const txBytes = Buffer.from(buildData.txData, 'base64');
-      const transaction = VersionedTransaction.deserialize(txBytes);
-
-      setState(prev => ({ ...prev, status: 'confirming' }));
-      return { success: true, txHash: await solanaWalletService.signAndSendTransaction(transaction) };
-    },
-    [address],
-  );
 
   // ─── EVM (Aave on Base) — approve USDC + supply / withdraw via wagmi ───
 
@@ -236,9 +181,7 @@ export function useVaultDeposit() {
         let result: { success: boolean; txHash?: string };
         
         // Route to appropriate deposit handler
-        if (protocol === 'drift') {
-          result = await depositSolana(amount);
-        } else if (protocol === 'aave') {
+        if (protocol === 'aave') {
           result = await depositAave(amount);
         } else if (protocol === 'morpho') {
           // Morpho USDC Vault on Base
@@ -277,7 +220,7 @@ export function useVaultDeposit() {
         return { success: false, error: isCancel ? 'Transaction cancelled' : msg };
       }
     },
-    [address, depositSolana, depositAave, depositERC4626],
+    [address, depositAave, depositERC4626],
   );
 
   const withdraw = useCallback(
@@ -290,9 +233,7 @@ export function useVaultDeposit() {
         let result: { success: boolean; txHash?: string };
         
         // Route to appropriate withdraw handler
-        if (protocol === 'drift') {
-          result = await withdrawSolana(amount, yieldOnly);
-        } else if (protocol === 'aave') {
+        if (protocol === 'aave') {
           result = await withdrawAave(amount);
         } else if (protocol === 'morpho') {
           // Morpho USDC Vault on Base
@@ -327,7 +268,7 @@ export function useVaultDeposit() {
         return { success: false, error: msg };
       }
     },
-    [address, withdrawSolana, withdrawAave, withdrawERC4626],
+    [address, withdrawAave, withdrawERC4626],
   );
 
   const reset = useCallback(() => {

@@ -8,9 +8,9 @@
  * March 2026: Uses Safe{Core} Protocol Kit v4+
  */
 
-import type { PoolProvider, PoolProviderConfig, PoolCreationResult } from './index';
+import type { PoolProvider, PoolProviderConfig, PoolCreationResult } from './types';
 import { safeService, type SafeInfo } from '@/services/safe/safeService';
-import type { Address } from 'viem';
+import type { Address, WalletClient } from 'viem';
 
 const BASE_CHAIN_ID = 8453;
 
@@ -163,7 +163,7 @@ export class SafePoolProvider implements PoolProvider {
   async deploySafe(
     owners: Address[],
     threshold: number,
-    walletClient: any
+    walletClient: WalletClient
   ): Promise<{ success: boolean; safeAddress?: Address; txHash?: string; error?: string }> {
     try {
       const result = await safeService.createSafe(
@@ -189,7 +189,7 @@ export class SafePoolProvider implements PoolProvider {
     safeAddress: string,
     recipient: Address,
     amountUsdc: number,
-    walletClient: any
+    walletClient: WalletClient
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     try {
       // Create the transfer transaction

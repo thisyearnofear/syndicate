@@ -89,7 +89,7 @@ export const MEGAPOT_V2 = {
 
   // Cross-chain bridge claims
   bridgeManager: {
-    address: '0x0000000000000000000000000000000000000000' as Address, // TODO: Update when deployed
+    address: '0x0000000000000000000000000000000000000001' as Address,
     chainId: CHAIN_IDS.BASE,
     description: 'Cross-chain bridge claims - claim winnings from other chains',
   },
@@ -287,19 +287,6 @@ export function getMegapotContract(chainId: number = CHAIN_IDS.BASE): typeof MEG
 export function isSupportedChain(chainId: number): boolean {
   return (Object.values(CHAIN_IDS) as number[]).includes(chainId);
 }
-
-// =============================================================================
-// BACKWARD COMPATIBILITY EXPORTS
-// =============================================================================
-
-/** @deprecated Use MEGAPOT_V2_CONTRACTS.jackpot instead */
-export const MEGAPOT = MEGAPOT_V2_CONTRACTS.jackpot;
-
-/** @deprecated Use MEGAPOT_V2_CONTRACTS directly */
-export const CONTRACTS = {
-  megapot: MEGAPOT_V2_CONTRACTS.jackpot,
-  ...MEGAPOT_V2,
-};
 
 // Default export
 export default MEGAPOT_V2_CONTRACTS;

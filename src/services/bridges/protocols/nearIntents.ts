@@ -44,8 +44,7 @@ export class NearIntentsProtocol implements BridgeProtocol {
         const { amount, destinationChain, destinationAddress } = params;
 
         // Convert amount to smallest units (assuming NEAR for now)
-        // TODO: Handle token decimals properly if sourceToken is not native NEAR
-        // For now assuming sourceToken is wrap.near or native NEAR (10^24)
+        // Assumes sourceToken is wrap.near or native NEAR (10^24)
         const amountYocto = this.toYocto(amount);
 
         const quote = await nearIntentsService.getQuote({

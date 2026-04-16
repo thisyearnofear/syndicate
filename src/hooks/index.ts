@@ -47,7 +47,6 @@ export { useYieldAutoProcessor } from './useYieldAutoProcessor';
 export { useCivicGate } from './useCivicGate';
 
 // Yield & Vaults
-export { useDriftDeposit } from './useDriftDeposit';
 export { usePoolTogetherDeposit } from './usePoolTogetherDeposit';
 export { useSyndicateDeposit } from './useSyndicateDeposit';
 export { useSyndicatePool } from './useSyndicatePool';

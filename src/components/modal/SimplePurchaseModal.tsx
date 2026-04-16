@@ -16,7 +16,7 @@ import { Loader, AlertCircle, Check, Zap, Link2, ChevronDown, TrendingUp, ArrowR
 import { useUnifiedWallet, useUnifiedPurchase } from "@/hooks";
 import { useERC7715 } from "@/hooks/useERC7715";
 import { usePoolTogetherDeposit } from "@/hooks/usePoolTogetherDeposit";
-import { useDriftDeposit } from "@/hooks/useDriftDeposit";
+// import { useDriftDeposit } from "@/hooks/useDriftDeposit";
 import WalletConnectionManager from "@/components/wallet/WalletConnectionManager";
 import {
   CompactStack,
@@ -34,7 +34,7 @@ import { TimeEstimate } from "@/components/bridge/TimeEstimate";
 import { CONTRACTS } from "@/services/bridges/protocols/stacks";
 import { STRK_ADDRESSES } from "@/services/bridges/types";
 import { PoolTogetherFlow } from "./flows/PoolTogetherFlow";
-import { DriftFlow } from "./flows/DriftFlow";
+// import { DriftFlow } from "./flows/DriftFlow";
 
 // Lazy load celebration modal
 const CelebrationModal = lazy(() => import("./CelebrationModal"));
@@ -125,13 +125,11 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
   const { purchase, isPurchasing, error, txHash, clearError, reset, status, sourceChain, sourceTxHash, destinationTxHash, walletInfo } = useUnifiedPurchase();
   const { permissions, isSupported } = useERC7715();
   const ptDeposit = usePoolTogetherDeposit();
-  const driftDeposit = useDriftDeposit();
 
   const [step, setStep] = useState<PurchaseStep>("connect");
   const [selectedProtocol, setSelectedProtocol] = useState<PurchaseProtocol>("megapot");
   const [ticketCount, setTicketCount] = useState(1);
   const [ptDepositAmount, setPtDepositAmount] = useState(10);
-  const [driftDepositAmount, setDriftDepositAmount] = useState(25);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [statusLinkCopied, setStatusLinkCopied] = useState(false);
@@ -222,16 +220,11 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
     if (ptDeposit.status === 'complete' && step === "processing") setStep("success");
   }, [ptDeposit.status, step]);
 
-  useEffect(() => {
-    if (driftDeposit.status === 'complete' && step === "processing") setStep("success");
-  }, [driftDeposit.status, step]);
-
   if (!isOpen) return null;
 
   const handleClose = () => {
     reset();
     ptDeposit.reset();
-    driftDeposit.reset();
     setStep("connect");
     onClose();
   };
@@ -250,12 +243,6 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
     if (selectedProtocol === 'pooltogether') {
       if (walletType !== 'evm') { handleClose(); window.location.href = '/vaults'; return; }
       await ptDeposit.deposit({ amountUsdc: ptDepositAmount, userAddress: address as `0x${string}` });
-      return;
-    }
-
-    if (selectedProtocol === 'drift') {
-      if (walletType !== 'solana') { handleClose(); window.location.href = '/vaults'; return; }
-      await driftDeposit.deposit({ amountUsdc: driftDepositAmount, userAddress: address });
       return;
     }
 
@@ -283,7 +270,6 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
 
   // Helper to check if PoolTogether/Drift is actively processing
   const isPtProcessing = ptDeposit.status === 'approving' || ptDeposit.status === 'depositing';
-  const isDriftProcessing = driftDeposit.status === 'preparing' || driftDeposit.status === 'signing' || driftDeposit.status === 'confirming';
 
   const renderStep = () => {
     switch (step) {
@@ -305,7 +291,7 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
           <CompactStack spacing="md">
             <div className="text-center">
               <h2 className="text-2xl font-bold text-white mb-2">
-                {selectedProtocol === 'pooltogether' ? 'Deposit to PoolTogether' : selectedProtocol === 'drift' ? 'Deposit to Drift Vault' : 'Buy Tickets'}
+                {selectedProtocol === 'pooltogether' ? 'Deposit to PoolTogether' : 'Buy Tickets'}
               </h2>
               <p className="text-gray-400 text-sm">
                 Connected: <span className="text-green-400">{walletType?.toUpperCase()}</span>
@@ -383,10 +369,6 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
             {/* ===== EXTRACTED FLOW COMPONENTS ===== */}
             {selectedProtocol === 'pooltogether' && (
               <PoolTogetherFlow step="select" depositAmount={ptDepositAmount} setDepositAmount={setPtDepositAmount} ptDeposit={ptDeposit} onDeposit={handlePurchaseClick} onBack={handleClose} onClose={handleClose} walletType={walletType} />
-            )}
-
-            {selectedProtocol === 'drift' && (
-              <DriftFlow step="select" depositAmount={driftDepositAmount} setDepositAmount={setDriftDepositAmount} driftDeposit={driftDeposit} onDeposit={handlePurchaseClick} onBack={handleClose} onClose={handleClose} walletType={walletType} />
             )}
 
             {/* ===== MEGAPOT-ONLY SECTIONS (kept inline due to cross-chain complexity) ===== */}
@@ -553,10 +535,6 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
         );
 
       case "processing":
-        // Drift processing → extracted component
-        if (selectedProtocol === 'drift') {
-          return <DriftFlow step="processing" depositAmount={driftDepositAmount} setDepositAmount={setDriftDepositAmount} driftDeposit={driftDeposit} onDeposit={handlePurchaseClick} onBack={() => { driftDeposit.reset(); setStep('select'); }} onClose={handleClose} walletType={walletType} />;
-        }
         // PoolTogether processing → extracted component
         if (selectedProtocol === 'pooltogether') {
           return <PoolTogetherFlow step="processing" depositAmount={ptDepositAmount} setDepositAmount={setPtDepositAmount} ptDeposit={ptDeposit} onDeposit={handlePurchaseClick} onBack={() => { ptDeposit.reset(); setStep('select'); }} onClose={handleClose} walletType={walletType} />;
@@ -587,10 +565,6 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
         );
 
       case "success":
-        // Drift success → extracted component
-        if (selectedProtocol === 'drift') {
-          return <DriftFlow step="success" depositAmount={driftDepositAmount} setDepositAmount={setDriftDepositAmount} driftDeposit={driftDeposit} onDeposit={handlePurchaseClick} onBack={() => { driftDeposit.reset(); setStep("select"); }} onClose={handleClose} walletType={walletType} />;
-        }
         // PoolTogether success → extracted component
         if (selectedProtocol === 'pooltogether') {
           return <PoolTogetherFlow step="success" depositAmount={ptDepositAmount} setDepositAmount={setPtDepositAmount} ptDeposit={ptDeposit} onDeposit={handlePurchaseClick} onBack={() => { ptDeposit.reset(); setStep("select"); }} onClose={handleClose} walletType={walletType} />;

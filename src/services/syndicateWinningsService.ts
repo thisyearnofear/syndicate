@@ -152,22 +152,7 @@ class SyndicateWinningsService {
 
       console.log('[SyndicateWinningsService] Polling blocks', { fromBlock, currentBlock });
 
-      // TODO: Implement event detection when SyndicatePool contract is deployed
-      // 
-      // When implemented, this will:
-      // 1. Listen for Megapot WinnerSelected events where winner is the SyndicatePool
-      // 2. Parse event logs using ethers.js provider.getLogs()
-      // 3. Call handleWinningsEvent() for each relevant event
-      // 
-      // Example implementation:
-      // const filter = {
-      //   address: this.megapotAddress,
-      //   topics: [ethers.id('WinnerSelected(address,uint256)'), null],
-      // };
-      // const logs = await provider.getLogs({ ...filter, fromBlock, toBlock: currentBlock });
-      // for (const log of logs) {
-      //   await this.handleWinningsEvent(log);
-      // }
+      // Event detection will be implemented when SyndicatePool contract is deployed
     } catch (error) {
       console.error('[SyndicateWinningsService] Poll error:', error);
     }

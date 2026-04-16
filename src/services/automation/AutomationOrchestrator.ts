@@ -39,7 +39,7 @@ export interface AutomationTask {
   lastExecutedAt?: number;
   nextExecutionAt?: number;
   lastReasoning?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ExecutionResult {

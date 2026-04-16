@@ -82,8 +82,6 @@ export class CctpProtocol implements BridgeProtocol {
 
             if (params.sourceChain === 'ethereum') {
                 result = await this.bridgeFromEvm(params);
-            } else if (params.sourceChain === 'solana') {
-                result = await this.bridgeFromSolana(params);
             } else {
                 throw new BridgeError(
                     BridgeErrorCode.UNSUPPORTED_ROUTE,
@@ -340,21 +338,6 @@ export class CctpProtocol implements BridgeProtocol {
                 rawError: errorMsg // Keep original for debugging
             };
         }
-    }
-
-    // ============================================================================
-    // Solana Bridge Implementation (Solana → Base)
-    // ============================================================================
-
-    private async bridgeFromSolana(params: BridgeParams): Promise<BridgeResult> {
-        // AGGRESSIVE CONSOLIDATION: Solana bridge removed
-        // Solana cross-chain transfers are handled by NEAR Intents
-        // This prevents code duplication and follows single responsibility principle
-        throw new BridgeError(
-            BridgeErrorCode.PROTOCOL_UNAVAILABLE,
-            'Solana bridge is not available. Use NEAR Intents for Solana cross-chain transfers.',
-            'cctp'
-        );
     }
 
     // ============================================================================
