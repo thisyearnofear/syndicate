@@ -2,12 +2,6 @@
  * Backward-compatible re-export of the consolidated SyndicateCard.
  *
  * Previously this file contained a full SyndicateCard component that imported
- * useSyndicatePool (which pulled in @vercel/postgres via syndicateService).
- * That caused client-side bundling issues.
- *
- * Consumers should migrate to importing directly from:
- *   import { SyndicateCard } from '@/components/syndicate/SyndicateCard';
- *
  * @deprecated Import from @/components/syndicate/SyndicateCard instead
  */
 

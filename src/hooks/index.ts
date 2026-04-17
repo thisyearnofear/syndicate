@@ -46,7 +46,6 @@ export { useYieldAutoProcessor } from './useYieldAutoProcessor';
 // Yield & Vaults
 export { usePoolTogetherDeposit } from './usePoolTogetherDeposit';
 export { useSyndicateDeposit } from './useSyndicateDeposit';
-export { useSyndicatePool } from './useSyndicatePool';
 export { useUserVaults } from './useUserVaults';
 export { useVaultDeposit } from './useVaultDeposit';
 export { useVaultActivity } from './useVaultActivity';
