@@ -75,14 +75,8 @@ export function Providers({ children }: { children: ReactNode }) {
 
   const config = useMemo(() => getConfig(), []);
 
-  // IMPORTANT: Always render children, even during SSR / before mount.
-  // Previously we returned a loading div when !isMounted, which DROPPED
-  // the children tree and caused React Error #321 because the client
-  // tried to evaluate Server Components from scratch without the
-  // server-side Flight payload.
-  //
-  // The opacity overlay hides wallet-related hydration flicker while
-  // still ensuring the React tree is complete on both server & client.
+  // Use visibility:hidden instead of conditionally hiding children.
+  // Replacing children with a loading div caused React Error #321.
   return (
     <WagmiProvider config={config || ({} as any)}>
       <QueryClientProvider client={queryClient}>
