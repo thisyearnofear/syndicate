@@ -21,7 +21,7 @@ export interface PoolTogetherVault {
 
 export const POOLTOGETHER_VAULTS: PoolTogetherVault[] = [
   {
-    address: '0x6B5a5c55E9dD4bb502Ce25bBfbaA49b69cf7E4dd' as Address, // Official USDC PrizeVault on Base
+    address: '0x7f5C2b379b88499aC2B997Db583f8079503f25b9' as Address, // przUSDC PrizeVault on Base
     token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // USDC
     symbol: 'USDC',
     chainId: 8453, // Base

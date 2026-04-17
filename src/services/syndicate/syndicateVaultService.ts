@@ -338,10 +338,10 @@ export class SyndicateVaultService {
 
   private getVaultAddressForProtocol(protocol: VaultProtocol): string {
     const addresses: Record<VaultProtocol, string> = {
-      aave: '0xAaveUSDCVaultOnBase', // Placeholder - actual Aave vault
-      morpho: '0x6B5a5c55E9dD4bb502Ce25bBfbaA49b69cf7E4dd', // Morpho USDC vault
+      aave: '0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB', // Aave V3 aUSDC on Base
+      morpho: '0x9CBF0184036048895e69aAFb4D0A1598085bFc82', // Morpho USDC vault
       spark: '0xSparkUSDCVaultOnBase', // Placeholder
-      pooltogether: '0x6B5a5c55E9dD4bb502Ce25bBfbaA49b69cf7E4dd', // PT PrizeVault
+      pooltogether: '0x7f5C2b379b88499aC2B997Db583f8079503f25b9', // przUSDC PrizeVault
       octant: '0xOctantUSDCVaultOnEthereum', // Placeholder
       uniswap: '0xUniswapV3StrategyOnBase', // Placeholder
       lifiearn: 'lifiearn:aggregator', // LI.FI Earn uses multiple vaults

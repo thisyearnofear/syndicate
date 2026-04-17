@@ -24,7 +24,7 @@ const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
 
 // Known USDC vaults on Base (from deployment docs)
 const KNOWN_USDC_VAULTS: Address[] = [
-  '0x6B5a5c55E9dD4bb502Ce25bBfbaA49b69cf7E4dd', // POOL Prize Vault (from docs)
+  '0x7f5C2b379b88499aC2B997Db583f8079503f25b9', // przUSDC PrizeVault on Base
 ];
 
 // ERC4626 Vault ABI (partial)

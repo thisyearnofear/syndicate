@@ -589,40 +589,6 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
                   </div>
                 </div>
               </div>
-
-              {/* ENHANCEMENT: Reusable Gamified Yield Upsell (Drift Vault) - Hidden due to security incident */}
-              {/* 
-              {config.totalAmount > 0 && (
-                <div className="bg-gradient-to-r from-indigo-500/20 to-purple-500/10 border border-indigo-500/30 rounded-lg p-4 space-y-3 relative overflow-hidden mt-4">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
-                  <div className="flex items-start gap-3 relative z-10">
-                    <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0 border border-indigo-500/40">
-                      <TrendingUp className="w-4 h-4 text-indigo-400" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-white mb-1 tracking-tight">
-                        Use Yield Instead ♾️
-                      </h4>
-                      <p className="text-xs text-indigo-200 leading-relaxed">
-                        Deposit ${Math.round((config.totalAmount * 12) / 0.225)} into <span className="text-indigo-300 font-semibold">Drift Vault</span> (90-day lockup). ~22.5% APY funds tickets. Principal withdrawable after lockup.
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="w-full text-xs bg-indigo-500/20 hover:bg-indigo-500/30 border-indigo-500/30 text-indigo-100 transition-colors"
-                    onClick={() => {
-                      onClose();
-                      window.location.href = '/vaults';
-                    }}
-                  >
-                    Explore Yield Strategies
-                  </Button>
-                </div>
-              )}
-              */}
-
               {/* Stacks-specific: Token and x402 info */}
               {isStacksWallet && (
                 <div className="bg-purple-900/30 border border-purple-700/50 rounded-lg p-4 space-y-3">

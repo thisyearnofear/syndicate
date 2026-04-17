@@ -19,9 +19,9 @@ import { VaultError, VaultErrorCode } from './vaultProvider';
 
 const baseClient = basePublicClient;
 
-// PoolTogether V5 PrizeVault on Base (USDC)
-// Source: https://dev.pooltogether.com/protocol/deployments/base
-const PRIZE_VAULT = '0x6B5a5c55E9dD4bb502Ce25bBfbaA49b69cf7E4dd' as const;
+// przUSDC PrizeVault on Base
+// https://app.cabana.fi/vault/8453/0x7f5C2b379b88499aC2B997Db583f8079503f25b9
+const PRIZE_VAULT = '0x7f5C2b379b88499aC2B997Db583f8079503f25b9' as const;
 
 // USDC on Base (6 decimals)
 const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
