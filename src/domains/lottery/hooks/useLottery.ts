@@ -22,7 +22,6 @@ export function useLottery() {
     lastUpdated: null,
   });
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const mountedRef = useRef(true);
 
   /**
@@ -93,12 +92,17 @@ export function useLottery() {
   /**
    * ENHANCEMENT FIRST: Setup real-time updates if enabled
    */
+  // Always fetch once on mount. Realtime only controls background refreshes.
+  useEffect(() => {
+    fetchJackpotData(false);
+  }, [fetchJackpotData]);
+
   // Visibility-aware polling for jackpot data
   useVisibilityPolling({
     callback: () => fetchJackpotData(false),
     intervalMs: performance.cache.jackpotData,
     enabled: features.enableRealTimeUpdates,
-    immediate: true,
+    immediate: false,
   });
 
   /**

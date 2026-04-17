@@ -6,17 +6,12 @@ import "@near-wallet-selector/modal-ui/styles.css";
 import { Suspense } from "react";
 import { ToastProvider } from "@/shared/components/ui/Toast";
 import DynamicNavigationHeader from "@/components/DynamicNavigationHeader";
-// Client component wrapper imports for dynamic loading
 import ClientProvidersWrapper from "@/components/ClientProvidersWrapper";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 const inter = Inter({ subsets: ["latin"] });
-
-// Next.js 16: Use ClientProvidersWrapper which handles ssr:false internally
-// This pattern is required because ssr:false is no longer allowed in Server Components
-
 
 export const metadata: Metadata = {
   title: "Syndicate - Win Prizes, Never Lose Your Deposit",
