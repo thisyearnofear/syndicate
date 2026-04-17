@@ -10,14 +10,13 @@
  * Manages:
  * 1. Megapot Referrer Address
  * 2. PoolTogether v5 Hook Addresses
- * 3. Drift Affiliate Codes
- * 4. General Treasury routing
+ * 3. General Treasury routing
  */
 
 import { Address } from 'viem';
 import { REFERRALS } from '@/config';
 
-export type SupportedProtocol = 'megapot' | 'pooltogether' | 'drift' | 'pancakeswap';
+export type SupportedProtocol = 'megapot' | 'pooltogether' | 'pancakeswap';
 
 export class ReferralManager {
   private static instance: ReferralManager;
@@ -40,8 +39,6 @@ export class ReferralManager {
         return REFERRALS.megapotReferrer;
       case 'pooltogether':
         return REFERRALS.poolTogetherHook;
-      case 'drift':
-        return REFERRALS.driftAffiliate;
       case 'pancakeswap':
         return REFERRALS.megapotReferrer; // Default to treasury/referrer address
       default:

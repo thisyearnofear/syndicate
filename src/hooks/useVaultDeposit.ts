@@ -6,6 +6,8 @@ import { base } from 'wagmi/chains';
 import { parseUnits } from 'viem';
 import { useUnifiedWallet } from './useUnifiedWallet';
 import { AAVE_CONFIG } from '@/services/vaults/aaveProvider';
+import { MORPHO_CONFIG } from '@/services/vaults/morphoProvider';
+import { SPARK_CONFIG } from '@/services/vaults/sparkProvider';
 import type { VaultProtocol } from '@/services/vaults';
 
 type DepositStatus = 'idle' | 'checking_allowance' | 'approving' | 'building_tx' | 'depositing' | 'signing' | 'confirming' | 'complete' | 'error';
@@ -185,10 +187,13 @@ export function useVaultDeposit() {
           result = await depositAave(amount);
         } else if (protocol === 'morpho') {
           // Morpho USDC Vault on Base
-          result = await depositERC4626(amount, '0x9CBF0184036048895e69aAFb4D0A1598085bFc82');
+          result = await depositERC4626(amount, MORPHO_CONFIG.BASE.VAULT_ADDRESS);
+        } else if (protocol === 'spark') {
+          // Spark sUSDC Vault on Base
+          result = await depositERC4626(amount, SPARK_CONFIG.BASE.VAULT_ADDRESS);
         } else if (protocol === 'pooltogether') {
           // PoolTogether PrizeVault on Base
-          result = await depositERC4626(amount, '0x45b201633594A8090f48866B570932B328080C0B');
+          result = await depositERC4626(amount, '0x7f5C2b379b88499aC2B997Db583f8079503f25b9');
         } else if (protocol === 'octant') {
           // Octant uses octantVaultService which needs initialization
           const { octantVaultService } = await import('@/services/octantVaultService');
@@ -237,10 +242,13 @@ export function useVaultDeposit() {
           result = await withdrawAave(amount);
         } else if (protocol === 'morpho') {
           // Morpho USDC Vault on Base
-          result = await withdrawERC4626(amount, '0x9CBF0184036048895e69aAFb4D0A1598085bFc82');
+          result = await withdrawERC4626(amount, MORPHO_CONFIG.BASE.VAULT_ADDRESS);
+        } else if (protocol === 'spark') {
+          // Spark sUSDC Vault on Base
+          result = await withdrawERC4626(amount, SPARK_CONFIG.BASE.VAULT_ADDRESS);
         } else if (protocol === 'pooltogether') {
           // PoolTogether PrizeVault on Base
-          result = await withdrawERC4626(amount, '0x45b201633594A8090f48866B570932B328080C0B');
+          result = await withdrawERC4626(amount, '0x7f5C2b379b88499aC2B997Db583f8079503f25b9');
         } else if (protocol === 'octant') {
           // Octant withdrawal
           const { octantVaultService } = await import('@/services/octantVaultService');

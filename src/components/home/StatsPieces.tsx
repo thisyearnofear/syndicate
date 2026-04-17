@@ -18,7 +18,7 @@ export function StatsPieces() {
       note: stats?.totalRaised ? "Live on-chain" : "Unavailable"
     },
     {
-      label: "Drift Vault APY",
+      label: "Spark Protocol APY",
       value: 22.5,
       suffix: "%",
       color: "indigo",

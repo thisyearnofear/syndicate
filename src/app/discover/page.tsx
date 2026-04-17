@@ -26,7 +26,7 @@ import { SyndicateCard } from '@/components/syndicate/SyndicateCard';
 import { useUnifiedWallet } from '@/hooks';
 
 type PoolType = 'safe' | 'splits' | 'pooltogether' | 'all';
-type VaultStrategy = 'aave' | 'morpho' | 'drift' | 'pooltogether' | 'all';
+type VaultStrategy = 'aave' | 'morpho' | 'pooltogether' | 'all';
 type SortBy = 'trending' | 'members' | 'tickets' | 'impact' | 'newest';
 
 interface SyndicateData {
@@ -35,7 +35,7 @@ interface SyndicateData {
   description: string;
   cause: string;  // Normalized from API object in fetch callback
   poolType: 'safe' | 'splits' | 'pooltogether';
-  vaultStrategy?: 'aave' | 'morpho' | 'drift' | 'pooltogether' | 'octant' | 'uniswap';
+  vaultStrategy?: 'aave' | 'morpho' | 'spark' | 'pooltogether' | 'octant' | 'uniswap';
   membersCount: number;
   ticketsPooled: number;
   totalImpact: number;
@@ -140,7 +140,6 @@ export default function SyndicateDiscoveryPage() {
     { value: 'all', label: 'All Strategies' },
     { value: 'aave', label: 'Aave V3' },
     { value: 'morpho', label: 'Morpho Blue' },
-    { value: 'drift', label: 'Drift' },
     { value: 'pooltogether', label: 'PoolTogether' },
   ];
 

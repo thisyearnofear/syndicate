@@ -84,7 +84,7 @@ export function CommunityInsightsPiece({ userIdentity }: { userIdentity: UserIde
         userInsights.push({
           icon: "💰",
           title: "High-Yield Participant",
-          description: "Engaged with high-yield opportunities like Drift Vault",
+          description: "Engaged with high-yield opportunities like Spark Protocol",
           color: "text-green-500"
         });
 
@@ -92,7 +92,7 @@ export function CommunityInsightsPiece({ userIdentity }: { userIdentity: UserIde
         userInsights.push({
           icon: "🚀",
           title: "Yield Maximizer",
-          description: "Optimizing entries via Drift Lossless Vault",
+          description: "Optimizing entries via Spark Protocol sUSDC",
           color: "text-indigo-400"
         });
 

@@ -21,7 +21,7 @@ import {
 import { Button } from '@/shared/components/ui/Button';
 
 type PoolType = 'safe' | 'splits' | 'pooltogether';
-type VaultStrategy = 'aave' | 'morpho' | 'spark' | 'drift' | 'pooltogether' | 'octant' | 'uniswap';
+type VaultStrategy = 'aave' | 'morpho' | 'spark' | 'pooltogether' | 'octant' | 'uniswap';
 
 interface SyndicateCardData {
   id: string;
@@ -61,11 +61,10 @@ export function SyndicateCard({ syndicate, compact = false }: SyndicateCardProps
 
   const getStrategyLabel = (strategy?: VaultStrategy) => {
     if (!strategy) return null;
-    const labels: Record<VaultStrategy, string> = {
+    const vaultLabels: Record<VaultStrategy, string> = {
       aave: 'Aave',
       morpho: 'Morpho',
       spark: 'Spark',
-      drift: 'Drift',
       pooltogether: 'PoolTogether',
       octant: 'Octant',
       uniswap: 'Uniswap',

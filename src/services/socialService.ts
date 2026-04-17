@@ -388,7 +388,7 @@ class SocialService {
     const { yieldGenerated, ticketsMints, apy, platformUrl } = data;
     const baseText = `⚡️ My capital is safe while my yield plays for me! Generated $${yieldGenerated} in yield and minted ${ticketsMints} lossless tickets with @syndicate_app. 
     
-Current Strategy: Drift Premium JLP (~${apy}% APY) 🚀`;
+Current Strategy: Spark Protocol (~${apy}% APY) 🚀`;
 
     const twitterText = `${baseText} #LosslessLottery #DeFi #Solana`;
     const farcasterText = `${baseText} /syndicate`;

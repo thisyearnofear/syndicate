@@ -35,7 +35,7 @@ export interface YieldConversionResult {
   ticketsPurchased: number;
   causesAmount: string;
   txHashes: string[];
-  /** If withdrawal needs client-side signing (Solana/Drift) */
+  /** If withdrawal needs client-side signing (Solana) */
   pendingWithdrawalTx?: string;
   /** Cause transfer params for client-side signing after yield conversion */
   causeTransferParams?: {
@@ -140,7 +140,7 @@ class YieldToTicketsService {
 
   /**
    * Plan a yield conversion — returns what will happen without executing.
-   * For protocols requiring client-side signing (Drift), also returns unsigned txData.
+   * For protocols requiring client-side signing (Solana), also returns unsigned txData.
    */
   async processYieldConversion(userAddress: string): Promise<YieldConversionResult> {
     const strategy = this.strategies.get(userAddress);

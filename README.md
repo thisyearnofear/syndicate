@@ -27,7 +27,7 @@ CCTP, Lifi, CCIP, deBridge, TON, Starknet, NEAR, Stacks
 
 ### 💰 Yield Strategies (6 Active)
 
-Drift (Solana, 22.5% APY) · Aave V3 (Base, 4.5%) · Morpho Blue (6.7%) · PoolTogether (3.5%) · Octant (10% mock) · Uniswap V3 (in progress)
+Aave V3 (Base, 4.5%) · Morpho Blue (6.7%) · Spark Protocol (4.0%) · PoolTogether (3.5%) · Octant (10% mock) · Uniswap V3 (in progress)
 
 Yield auto-converts to lottery tickets (Yield-to-Tickets pattern).
 
@@ -94,7 +94,7 @@ docs/
 **Two opportunities** (both viable, different scopes):
 
 ### Ranger Build-a-Bear (April 21 deadline)
-- ⚠️ **Constraint**: Ranger explicitly disallows DEX LP vaults (Drift JLP ineligible)
+- ✅ **Supported**: ERC-4626 compatible vaults (Aave, Morpho, Spark, PoolTogether)
 - ✅ **Path**: USDC lending allocator strategy (if 10%+ APY achievable)
 - 📖 **Details**: [docs/HACKATHON.md#ranger-build-a-bear](./docs/HACKATHON.md#ranger-build-a-bear)
 
@@ -113,7 +113,6 @@ docs/
 
 - **Framework**: Next.js 14
 - **Wallets**: wagmi, @stacks/connect, @tonconnect/ui-react
-- **Solana**: @drift-labs/sdk
 - **Contracts**: Solidity, Cairo, FunC
 - **UI**: Tailwind CSS
 

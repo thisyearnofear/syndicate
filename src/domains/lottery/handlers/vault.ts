@@ -1,6 +1,6 @@
 /**
  * VAULT YIELD PURCHASE HANDLER
- * Handles ticket purchases funded by vault yield (Drift JLP, Aave, etc.).
+ * Handles ticket purchases funded by vault yield (Spark, Aave, etc.).
  */
 
 import type { PurchaseRequest, PurchaseResult } from "../types/purchase";
@@ -26,7 +26,7 @@ export async function executeVaultYieldPurchase(
     );
 
     if (result.pendingWithdrawalTx) {
-      // Needs client-side signing (Solana/Drift)
+      // Needs client-side signing (Solana)
       return {
         success: true,
         status: 'pending_signature',

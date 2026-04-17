@@ -100,7 +100,7 @@ export const rangerMainTrackCandidates: RangerStrategyCandidate[] = [
       'Funding or basis capture on liquid markets',
       'Supplementary conservative venue yield on idle capital',
     ],
-    venues: ['Ranger-managed Solana vault', 'Drift-integrated execution path'],
+    venues: ['Ranger-managed vault', 'Syndicate-integrated execution path'],
     risks: [
       'More operational complexity',
       'Needs careful eligibility confirmation against the published disallowed-yield list',
@@ -129,16 +129,19 @@ export const rangerMainTrackCandidates: RangerStrategyCandidate[] = [
     ],
   },
   {
-    id: 'drift-jlp-lossless-lottery',
-    name: 'Drift JLP Lossless Lottery',
-    status: 'rejected',
+    id: 'spark-lossless-lottery',
+    name: 'Spark Protocol Lossless Lottery',
+    status: 'needs_validation',
     thesis:
-      'Route JLP yield into lottery tickets while preserving principal.',
-    returnDrivers: ['DEX LP and associated yield streams'],
-    venues: ['Drift JLP', 'Syndicate yield-to-tickets flow'],
-    risks: ['Fails the published main-track disallow list for DEX LP vaults.'],
+      'Route sUSDC yield into lottery tickets while preserving principal.',
+    returnDrivers: ['Sky Savings Rate yield streams'],
+    venues: ['Spark Protocol', 'Syndicate yield-to-tickets flow'],
+    risks: [
+      'Lower yield than alternative strategies',
+    ],
     reasons: [
-      'Useful product idea, but not a safe main-track strategy thesis.',
+      'Safe, regulated yield on Base',
+      'Simple integration with no lockup period',
     ],
     guardrails: [],
   },
