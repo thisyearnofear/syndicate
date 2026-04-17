@@ -69,7 +69,7 @@ export function SyndicateCard({ syndicate, compact = false }: SyndicateCardProps
       octant: 'Octant',
       uniswap: 'Uniswap',
     };
-    return labels[strategy];
+    return vaultLabels[strategy];
   };
 
   const formatNumber = (num: number) => {
