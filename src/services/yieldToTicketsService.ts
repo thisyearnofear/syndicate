@@ -4,7 +4,7 @@
  * Core Principles Applied:
  * - ENHANCEMENT FIRST: Enhanced to use vault providers
  * - DRY: Uses vaultManager for all vault operations
- * - MODULAR: Composable with any vault provider (Aave, Morpho, Drift)
+ * - MODULAR: Composable with any vault provider (Aave, Morpho)
  * - CLEAN: Clear separation between planning and execution
  * 
  * Handles automatic conversion of vault yield to lottery tickets
@@ -202,43 +202,6 @@ class YieldToTicketsService {
       const ticketsAmount = (availableYield * config.ticketsAllocation / 100).toFixed(6);
       const causesAmount = (availableYield * config.causesAllocation / 100).toFixed(6);
       const ticketCount = Math.floor(parseFloat(ticketsAmount) / parseFloat(config.ticketPrice));
-
-      // For Drift (Solana): return pendingWithdrawalTx for client-side signing
-      // The client signs the withdrawal, then calls completeYieldConversion() to finish
-      if (config.vaultProtocol === 'drift') {
-        const provider = vaultManager.getProvider('drift');
-        const withdrawResult = await provider.withdrawYield(config.userAddress);
-
-        if (withdrawResult.txData) {
-          // Get cause transfer params for after withdrawal completes
-          const causeTransferParams = this.getCauseTransferParams(
-            config.vaultProtocol,
-            causesAmount,
-            config.causeWallet
-          );
-          
-          return {
-            success: false, // Not complete yet — needs client signing
-            yieldAmount,
-            ticketsPurchased: 0, // Will be updated after signing
-            causesAmount,
-            txHashes: [],
-            pendingWithdrawalTx: withdrawResult.txData,
-            causeTransferParams,
-          };
-        }
-
-        if (!withdrawResult.success) {
-          return {
-            success: false,
-            error: withdrawResult.error || 'Failed to build yield withdrawal',
-            yieldAmount,
-            ticketsPurchased: 0,
-            causesAmount: '0',
-            txHashes: [],
-          };
-        }
-      }
 
       // For EVM protocols: execute ticket purchase directly
       // (EVM withdrawal may be handled via wagmi signer in future)
@@ -459,11 +422,6 @@ class YieldToTicketsService {
       const paddedAmount = BigInt(amountWei).toString(16).padStart(64, '0');
       const data = `${functionSelector}${paddedTo}${paddedAmount}`;
       return { chain: 'evm', to: causeWallet, amountWei, data };
-    }
-
-    if (vaultProtocol === 'drift') {
-      // Solana SPL transfer - client will construct instruction
-      return { chain: 'solana', to: causeWallet, amountWei };
     }
 
     return null;

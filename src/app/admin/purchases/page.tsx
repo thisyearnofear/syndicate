@@ -21,9 +21,16 @@ interface AdminPurchasesPageProps {
   };
 }
 
-export default async function AdminPurchasesPage({
-  searchParams,
-}: AdminPurchasesPageProps) {
+export default async function AdminPurchasesPage(props: {
+  searchParams: Promise<{
+    token?: string;
+    chain?: string;
+    status?: string;
+    limit?: string;
+    offset?: string;
+  }>;
+}) {
+  const searchParams = await props.searchParams;
   const adminSecret = process.env.ADMIN_SECRET;
   if (adminSecret && searchParams?.token !== adminSecret) {
     notFound();
