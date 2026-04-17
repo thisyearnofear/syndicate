@@ -10,6 +10,7 @@
 
 import { useState, Suspense, lazy, useEffect } from "react";
 import type { ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
 import { Loader, AlertCircle, Check, Zap, Link2, ChevronDown, TrendingUp, ArrowRight, Wallet, Shield, DollarSign, Bitcoin, Trophy, Coins } from "lucide-react";
 import { useUnifiedWallet, useUnifiedPurchase } from "@/hooks";
@@ -115,16 +116,18 @@ const renderTrackerSection = ({
 export interface SimplePurchaseModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialProtocol?: PurchaseProtocol;
 }
 
-export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseModalProps) {
+export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }: SimplePurchaseModalProps) {
+  const router = useRouter();
   const { isConnected, address, walletType, mirrorAddress } = useUnifiedWallet();
   const { purchase, isPurchasing, error, txHash, clearError, reset, status, sourceChain, sourceTxHash, destinationTxHash, walletInfo } = useUnifiedPurchase();
   const { permissions, isSupported } = useERC7715();
   const ptDeposit = usePoolTogetherDeposit();
 
   const [step, setStep] = useState<PurchaseStep>("connect");
-  const [selectedProtocol, setSelectedProtocol] = useState<PurchaseProtocol>("megapot");
+  const [selectedProtocol, setSelectedProtocol] = useState<PurchaseProtocol>(initialProtocol ?? "megapot");
   const [ticketCount, setTicketCount] = useState(1);
   const [ptDepositAmount, setPtDepositAmount] = useState(10);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -238,7 +241,10 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
     setBaseAddressError('');
 
     if (selectedProtocol === 'pooltogether') {
-      if (walletType !== 'evm') { handleClose(); window.location.href = '/vaults'; return; }
+      if (walletType !== 'evm') {
+        setStep('select');
+        return;
+      }
       await ptDeposit.deposit({ amountUsdc: ptDepositAmount, userAddress: address as `0x${string}` });
       return;
     }
@@ -364,9 +370,24 @@ export default function SimplePurchaseModal({ isOpen, onClose }: SimplePurchaseM
             )}
 
             {/* ===== EXTRACTED FLOW COMPONENTS ===== */}
-            {selectedProtocol === 'pooltogether' && (
+            {selectedProtocol === 'pooltogether' && walletType && walletType !== 'evm' ? (
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-amber-300">EVM wallet required</p>
+                    <p className="text-xs text-gray-300 mt-1">
+                      PoolTogether deposits require a Base (EVM) wallet. Connect an EVM wallet or explore other yield strategies.
+                    </p>
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => router.push('/vaults')}>
+                  Explore Yield Vaults →
+                </Button>
+              </div>
+            ) : selectedProtocol === 'pooltogether' ? (
               <PoolTogetherFlow step="select" depositAmount={ptDepositAmount} setDepositAmount={setPtDepositAmount} ptDeposit={ptDeposit} onDeposit={handlePurchaseClick} onBack={handleClose} onClose={handleClose} walletType={walletType} />
-            )}
+            ) : null}
 
             {/* ===== MEGAPOT-ONLY SECTIONS (kept inline due to cross-chain complexity) ===== */}
             {selectedProtocol === 'megapot' && (<>

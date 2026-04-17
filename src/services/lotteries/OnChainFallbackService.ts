@@ -14,7 +14,7 @@ import { MEGAPOT_ABI } from '@/config/contracts';
 // =============================================================================
 
 const POOLTOGETHER_VAULT_ADDRESS: Address = '0x6B5a5c55E9dD4bb502Ce25bBfbaA49b69cf7E4dd';
-const POOLTOGETHER_PRIZE_POOL_ADDRESS: Address = '0x45b2010d8a4f08b53c9fa7544c51dfd9733732cb';
+const POOLTOGETHER_PRIZE_POOL_ADDRESS: Address = '0x45717dc0f4f5e04859117ae1002794782197c9b5';
 const MEGAPOT_V2_ADDRESS: Address = '0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2';
 
 // =============================================================================
@@ -97,8 +97,12 @@ export async function getPoolTogetherOnChainPrize(): Promise<OnChainPrizeData | 
     const totalAssets = results[1].status === 'fulfilled' ? results[1].value as bigint : zero;
     const grandPrizeSize = results[2].status === 'fulfilled' ? results[2].value as bigint : zero;
 
-    const depositsUsd = Number(totalAssets || totalSupply) / 1e6;
-    const prizeUsd = Number(grandPrizeSize) / 1e6;
+    const depositsUsd = Number(totalAssets || totalSupply) / 1e6; // USDC vault: 6 decimals
+
+    // Prize Pool returns prize sizes in 18 decimals (WETH-denominated)
+    // Detect: if value > 1e12, it's 18-decimal; otherwise assume 6-decimal
+    const rawPrize = Number(grandPrizeSize);
+    const prizeUsd = rawPrize > 1e12 ? rawPrize / 1e18 : rawPrize / 1e6;
 
     if (depositsUsd <= 0) {
       console.warn('[OnChainFallback] No PoolTogether data available from chain');
