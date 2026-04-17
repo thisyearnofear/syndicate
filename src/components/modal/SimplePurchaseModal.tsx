@@ -532,6 +532,16 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
 
 
 
+              {/* Batch purchase note */}
+              {ticketCount > 10 && (
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-4 py-2.5 flex items-start gap-2.5">
+                  <Info className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-blue-200/80 leading-relaxed">
+                    Large orders are <span className="font-semibold text-blue-200">auto-batched on-chain</span> for reliability. This may take a moment longer than single-ticket purchases.
+                  </p>
+                </div>
+              )}
+
               {/* Cost Breakdown */}
               {selectedChain && selectedChain !== "ethereum" && <CostBreakdown ticketCount={ticketCount} sourceChain={selectedChain as 'stacks' | 'near' | 'solana' | 'base' | 'starknet'} />}
               {/* Time Estimate */}
