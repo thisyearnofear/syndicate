@@ -8,9 +8,12 @@ import {
   Check,
   ExternalLink,
   Globe,
-  Heart,
+  Info,
+  Layers,
   Loader,
   Shield,
+  Wallet,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/Button";
 import {
@@ -21,7 +24,8 @@ import {
 } from "@/shared/components/premium/CompactLayout";
 import { useUnifiedWallet } from "@/hooks";
 import { useVaultDeposit } from "@/hooks/useVaultDeposit";
-import WalletConnectionManager from "@/components/wallet/WalletConnectionManager";
+import { useBalance } from "wagmi";
+import { base } from "wagmi/chains";
 import { ImprovedYieldStrategySelector } from "@/components/yield/ImprovedYieldStrategySelector";
 import { YieldAllocationControl } from "@/components/yield/YieldAllocationControl";
 import { LifiEarnVaultSelector } from "@/components/yield/LifiEarnVaultSelector";
@@ -31,6 +35,7 @@ import {
   getStrategyById,
   type SupportedYieldStrategyId,
 } from "@/config/yieldStrategies";
+import { getWalletRouting } from "@/domains/wallet/types";
 import { persistVaultDepositActivityRecord } from "@/services/activity/activityClient";
 import { updateBridgeActivity } from "@/utils/bridgeStateManager";
 import {
@@ -71,6 +76,8 @@ function getInitialFlowStep(
 ): FlowStep {
   if (tabParam === "allocation") return 2;
   if (isBridgeEntry && targetStrategy) return 2;
+  // Auto-advance past strategy selection when pre-selected from card click
+  if (targetStrategy) return 2;
   return 1;
 }
 
@@ -117,14 +124,18 @@ function getStrategyRiskLabel(strategy: SupportedYieldStrategyId | null): string
 
 function getStrategyLockupLabel(strategy: SupportedYieldStrategyId | null): string {
   if (strategy === "pooltogether") return "Withdraw anytime";
+  if (strategy === "aave") return "Withdraw anytime";
+  if (strategy === "spark") return "No lockup";
+  if (strategy === "morpho") return "Withdraw anytime (may vary by vault)";
+  if (strategy === "octant") return "Epoch-based (mock)";
   if (strategy === "lifiearn") return "Depends on destination vault";
-  return "Standard vault terms";
+  return "Withdraw anytime";
 }
 
 function YieldStrategiesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { address } = useUnifiedWallet();
+  const { address, walletType } = useUnifiedWallet();
   const {
     isDepositing,
     status,
@@ -133,6 +144,19 @@ function YieldStrategiesContent() {
     deposit,
     reset,
   } = useVaultDeposit();
+
+  const walletRouting = walletType ? getWalletRouting(walletType) : null;
+
+  // Fetch USDC balance on Base for deposit context
+  const { data: usdcBalanceData } = useBalance({
+    address: address as `0x${string}` | undefined,
+    token: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    chainId: base.id,
+    query: { enabled: Boolean(address) },
+  });
+  const usdcBalance = usdcBalanceData
+    ? parseFloat(usdcBalanceData.formatted)
+    : null;
 
   const protocolParam = searchParams?.get("protocol");
   const strategyParam = searchParams?.get("strategy");
@@ -306,104 +330,30 @@ function YieldStrategiesContent() {
     }
   };
 
-  const goToStep = (step: FlowStep) => {
-    if (step === 1) {
-      setFlowStep(1);
-      return;
-    }
-
-    if (!selectedStrategy) return;
-    setFlowStep(step);
-  };
-
-  const renderStepButton = (step: (typeof FLOW_STEPS)[number]) => {
-    const isCurrent = flowStep === step.id;
-    const isComplete = flowStep > step.id;
-    const isUnlocked = step.id === 1 || Boolean(selectedStrategy);
-
-    return (
-      <button
-        key={step.id}
-        type="button"
-        onClick={() => goToStep(step.id)}
-        disabled={!isUnlocked}
-        className={`rounded-2xl border px-4 py-4 text-left transition-all ${
-          isCurrent
-            ? "border-blue-400/70 bg-blue-500/15 shadow-[0_0_0_1px_rgba(96,165,250,0.35)]"
-            : isComplete
-              ? "border-emerald-500/40 bg-emerald-500/10"
-              : isUnlocked
-                ? "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
-                : "cursor-not-allowed border-white/5 bg-white/[0.03] opacity-50"
-        }`}
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ${
-              isComplete
-                ? "bg-emerald-500/20 text-emerald-300"
-                : isCurrent
-                  ? "bg-blue-500/20 text-blue-200"
-                  : "bg-white/10 text-gray-300"
-            }`}
-          >
-            {isComplete ? <Check className="h-4 w-4" /> : step.id}
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
-              {step.eyebrow}
-            </p>
-            <p className="text-sm font-semibold text-white">{step.title}</p>
-          </div>
-        </div>
-      </button>
-    );
-  };
-
   const renderSelectedStrategySummary = () => {
     if (!selectedStrategy) return null;
 
     return (
-      <CompactCard variant="premium" padding="lg">
-        <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-          <div className="max-w-2xl">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-blue-200">
-              <Shield className="h-3.5 w-3.5" />
-              Selected strategy
+      <CompactCard variant="glass" padding="md" className="border-blue-500/20 bg-blue-500/5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className={`flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/20 text-blue-200`}>
+              {selectedStrategyConfig?.icon || <Shield className="h-5 w-5" />}
             </div>
-            <h2 className="text-2xl font-bold text-white">
-              {selectedStrategyConfig?.name ?? "Vault strategy"}
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-gray-300">
-              {selectedStrategyConfig?.description ??
-                "Your yield will be routed into tickets and causes using the split you choose next."}
-            </p>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-blue-400">Selected Vault</p>
+              <h3 className="text-lg font-bold text-white">{selectedStrategyConfig?.name}</h3>
+            </div>
           </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[320px]">
-            <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Yield</p>
-              <p className="mt-2 text-lg font-semibold text-emerald-300">
-                {getStrategyApyLabel(selectedStrategy)}
-              </p>
+          
+          <div className="flex flex-wrap gap-4">
+            <div className="text-right">
+              <p className="text-xs text-gray-500 uppercase tracking-wider">Target Yield</p>
+              <p className="font-bold text-emerald-400">{getStrategyApyLabel(selectedStrategy)}</p>
             </div>
-            <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Risk</p>
-              <p className="mt-2 text-lg font-semibold text-white">
-                {getStrategyRiskLabel(selectedStrategy)}
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Network</p>
-              <p className="mt-2 text-lg font-semibold text-white">
-                {getStrategyVenueLabel(selectedStrategy)}
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Terms</p>
-              <p className="mt-2 text-lg font-semibold text-white">
-                {getStrategyLockupLabel(selectedStrategy)}
-              </p>
+            <div className="text-right">
+              <p className="text-xs text-gray-500 uppercase tracking-wider">Risk Profile</p>
+              <p className="font-bold text-white">{getStrategyRiskLabel(selectedStrategy)}</p>
             </div>
           </div>
         </div>
@@ -413,16 +363,15 @@ function YieldStrategiesContent() {
 
   const renderStrategyStep = () => (
     <CompactStack spacing="lg">
-      <CompactCard variant="premium" padding="lg">
-        <div className="max-w-2xl">
-          <h2 className="text-2xl font-bold text-white">Pick the vault first</h2>
-          <p className="mt-2 text-sm leading-6 text-gray-300">
-            Start with the risk and yield profile that matches the user intent.
-            The page now keeps this step focused on selection only, so people are not
-            comparing strategies and entering money in the same glance.
-          </p>
-        </div>
-      </CompactCard>
+      <div className="px-1">
+        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <Layers className="h-5 w-5 text-blue-400" />
+          Choose your vault
+        </h2>
+        <p className="mt-1 text-sm text-gray-400">
+          Select a strategy that matches your risk appetite and yield goals.
+        </p>
+      </div>
 
       <ImprovedYieldStrategySelector
         selectedStrategy={selectedStrategy}
@@ -436,20 +385,18 @@ function YieldStrategiesContent() {
         showIntro={false}
       />
 
-      {selectedStrategy ? (
-        <>
-          {renderSelectedStrategySummary()}
-          <div className="flex justify-end">
-            <Button
-              variant="default"
-              className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
-              onClick={() => setFlowStep(2)}
-            >
-              Continue to allocation
-            </Button>
-          </div>
-        </>
-      ) : null}
+      {selectedStrategy && (
+        <div className="flex justify-end pt-4">
+          <Button
+            variant="default"
+            size="lg"
+            className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 min-w-[200px] shadow-lg shadow-blue-500/20"
+            onClick={() => setFlowStep(2)}
+          >
+            Continue to allocation
+          </Button>
+        </div>
+      )}
     </CompactStack>
   );
 
@@ -457,208 +404,217 @@ function YieldStrategiesContent() {
     <CompactStack spacing="lg">
       {renderSelectedStrategySummary()}
 
-      <CompactCard variant="premium" padding="lg">
-        <div className="mb-6 max-w-2xl">
-          <h2 className="text-2xl font-bold text-white">Choose the yield split</h2>
-          <p className="mt-2 text-sm leading-6 text-gray-300">
-            This controls what happens to generated yield after deposit. Keep the decision
-            separate from strategy selection so the page reads like a flow instead of a dashboard.
-          </p>
-        </div>
+      <div className="px-1">
+        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <Zap className="h-5 w-5 text-yellow-400" />
+          Set the yield split
+        </h2>
+        <p className="mt-1 text-sm text-gray-400">
+          Decide how much yield converts to lottery tickets vs supporting causes.
+        </p>
+      </div>
 
+      <CompactCard variant="premium" padding="lg" className="bg-white/[0.02]">
         <YieldAllocationControl
           ticketsAllocation={yieldToTickets}
           causesAllocation={yieldToCauses}
           onAllocationChange={handleAllocationChange}
         />
-
-        <div className="mt-6 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-4 text-sm text-emerald-100">
-          Current split: {yieldToTickets}% to tickets and {yieldToCauses}% to causes.
-        </div>
       </CompactCard>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-        <Button variant="outline" className="border-white/15" onClick={() => setFlowStep(1)}>
+      <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:justify-between">
+        <Button variant="outline" className="border-white/10 hover:bg-white/5" onClick={() => setFlowStep(1)}>
           Back to strategies
         </Button>
-        <Button
-          variant="default"
-          className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600"
-          onClick={() => setFlowStep(3)}
-        >
-          Continue to deposit
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            variant="ghost"
+            className="text-gray-400 hover:text-white"
+            onClick={() => setFlowStep(3)}
+          >
+            Use defaults ({yieldToTickets}/{yieldToCauses})
+          </Button>
+          <Button
+            variant="default"
+            size="lg"
+            className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 min-w-[200px] shadow-lg shadow-emerald-500/20"
+            onClick={() => setFlowStep(3)}
+          >
+            Continue to deposit
+          </Button>
+        </div>
       </div>
     </CompactStack>
   );
 
   const renderDirectDepositPanel = () => (
-    <CompactCard variant="premium" padding="lg">
-      <div className="mb-6 max-w-2xl">
-        <h2 className="text-2xl font-bold text-white">Fund the vault</h2>
-        <p className="mt-2 text-sm leading-6 text-gray-300">
-          Keep the amount entry and action review together in the last step. That removes
-          the biggest source of noise from the landing view while still keeping the execution path fast.
-        </p>
-      </div>
+    <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+      <div className="space-y-6">
+        <div className="px-1">
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <Info className="h-5 w-5 text-blue-400" />
+            Fund your vault
+          </h2>
+          <p className="mt-1 text-sm text-gray-400">
+            Enter the amount of USDC to deposit and start generating yield.
+          </p>
+        </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="space-y-6">
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-300">
+        <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-6">
+          <div className="flex items-center justify-between mb-3">
+            <label className="block text-sm font-semibold text-gray-400">
               Deposit amount (USDC)
             </label>
+            {usdcBalance !== null && (
+              <button
+                type="button"
+                onClick={() => setDepositAmount(Math.floor(usdcBalance))}
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors"
+              >
+                <Wallet className="h-3 w-3" />
+                Balance: <span className="font-bold text-gray-300">{usdcBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} USDC</span>
+              </button>
+            )}
+          </div>
+          <div className="relative">
             <input
               type="number"
               min={0}
               step={100}
               value={depositAmount || ""}
               onChange={(e) => setDepositAmount(Number(e.target.value) || 0)}
-              placeholder="Enter amount to deposit"
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-4 text-lg text-white outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              placeholder="0.00"
+              className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-5 text-2xl font-bold text-white outline-none transition focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
             />
-            <p className="mt-2 text-sm text-gray-400">
-              The amount stays visible here only, not in earlier steps.
-            </p>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2">
+              <span className="text-sm font-bold text-gray-500">USDC</span>
+            </div>
           </div>
-
-          {depositSuccess && txHash ? (
-            <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/20 to-teal-500/10 p-5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20">
-                  <Check className="h-5 w-5 text-emerald-300" />
-                </div>
-                <div>
-                  <p className="font-semibold text-emerald-200">Deposit complete</p>
-                  <p className="text-sm text-emerald-100/80">
-                    Your vault is active and the yield routing preferences are saved.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                <a
-                  href={`https://basescan.org/tx/${txHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center rounded-xl border border-emerald-400/30 px-4 py-3 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/10"
-                >
-                  View transaction
-                  <ExternalLink className="ml-2 h-4 w-4" />
-                </a>
-                <Link
-                  href={VAULTS_ROUTE}
-                  className="inline-flex items-center justify-center rounded-xl border border-blue-400/30 px-4 py-3 text-sm font-medium text-blue-200 transition hover:bg-blue-500/10"
-                >
-                  Return to vaults
-                </Link>
-              </div>
-            </div>
-          ) : depositError ? (
-            <div className="space-y-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-5">
-              <p className="text-sm text-red-200">{depositError}</p>
-              <Button
-                onClick={handleDeposit}
-                disabled={!depositAmount || depositAmount <= 0 || isDepositing}
-                className="w-full"
-                variant="default"
-              >
-                Retry deposit
-              </Button>
-            </div>
-          ) : canDepositIntoSelectedStrategy ? (
-            <Button
-              onClick={handleDeposit}
-              disabled={!depositAmount || depositAmount <= 0 || isDepositing}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
-              variant="default"
-            >
-              {isDepositing ? (
-                <span className="flex items-center gap-2">
-                  <Loader className="h-4 w-4 animate-spin" />
-                  {getDepositStatusLabel()}
-                </span>
-              ) : (
-                `Deposit ${depositAmount > 0 ? `${depositAmount.toLocaleString()} USDC` : "USDC"}`
-              )}
-            </Button>
-          ) : (
-            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5">
-              <p className="text-sm text-amber-100">
-                {selectedStrategyConfig?.name ?? "This strategy"} is not available for direct
-                deposit from this execution flow yet.
-              </p>
-            </div>
-          )}
+          <p className="mt-3 text-xs text-gray-500">
+            Principal is preserved. Only the yield is used for tickets/causes.
+          </p>
         </div>
 
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Review</p>
-            <div className="mt-4 space-y-4">
-              <div>
-                <p className="text-sm text-gray-400">Expected APY</p>
-                <p className="text-lg font-semibold text-emerald-300">
-                  {getStrategyApyLabel(selectedStrategy)}
-                </p>
+        {depositSuccess && txHash ? (
+          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20">
+                <Check className="h-5 w-5 text-emerald-300" />
               </div>
               <div>
-                <p className="text-sm text-gray-400">Yield routing</p>
-                <p className="text-lg font-semibold text-white">
-                  {yieldToTickets}% tickets / {yieldToCauses}% causes
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-400">Withdrawal terms</p>
-                <p className="text-lg font-semibold text-white">
-                  {getStrategyLockupLabel(selectedStrategy)}
+                <p className="font-semibold text-emerald-200">Deposit complete</p>
+                <p className="text-sm text-emerald-100/70">
+                  Your vault is active and generating yield.
                 </p>
               </div>
             </div>
-          </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-            <p className="text-sm font-semibold text-white">What changed in the UX</p>
-            <p className="mt-2 text-sm leading-6 text-gray-400">
-              The page now holds one primary decision per step. Users choose the vault,
-              then the split, then the money movement.
-            </p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <a
+                href={`https://basescan.org/tx/${txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5 text-sm font-medium text-emerald-300 transition hover:bg-emerald-500/10"
+              >
+                View Transaction
+                <ExternalLink className="ml-2 h-4 w-4" />
+              </a>
+              <Link
+                href={VAULTS_ROUTE}
+                className="inline-flex items-center rounded-xl bg-white/10 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/20"
+              >
+                Go to Portfolio
+              </Link>
+            </div>
+          </div>
+        ) : depositError ? (
+          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-5">
+            <p className="text-sm text-red-200 mb-4">{depositError}</p>
+            <Button onClick={handleDeposit} className="w-full" variant="destructive">
+              Retry Deposit
+            </Button>
+          </div>
+        ) : (
+          <Button
+            onClick={handleDeposit}
+            disabled={!depositAmount || depositAmount <= 0 || isDepositing}
+            size="lg"
+            className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 py-8 text-lg font-bold shadow-xl shadow-blue-500/20"
+          >
+            {isDepositing ? (
+              <span className="flex items-center gap-3">
+                <Loader className="h-5 w-5 animate-spin" />
+                {getDepositStatusLabel()}
+              </span>
+            ) : (
+              `Deposit ${depositAmount > 0 ? `${depositAmount.toLocaleString()} USDC` : "Funds"}`
+            )}
+          </Button>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+          <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Execution Review</h4>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-400">Expected APY</span>
+              <span className="text-sm font-bold text-emerald-400">{getStrategyApyLabel(selectedStrategy)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-400">Yield Split</span>
+              <span className="text-sm font-bold text-white">{yieldToTickets}% / {yieldToCauses}%</span>
+            </div>
+            <div className="flex items-center justify-between border-t border-white/5 pt-4">
+              <span className="text-sm text-gray-400">Terms</span>
+              <span className="text-xs text-right font-medium text-gray-300">{getStrategyLockupLabel(selectedStrategy)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-5">
+          <div className="flex gap-3">
+            <Info className="h-5 w-5 text-blue-400 shrink-0" />
+            <div>
+              <p className="text-xs font-bold text-blue-300 uppercase tracking-wider mb-1">No Loss</p>
+              <p className="text-xs leading-relaxed text-blue-100/60">
+                Your initial deposit remains safe and can be withdrawn according to vault terms. Only yield is put at risk for upside.
+              </p>
+            </div>
           </div>
         </div>
       </div>
-    </CompactCard>
+    </div>
   );
 
   const renderLifiDepositPanel = () => (
     <CompactStack spacing="lg">
-      <CompactCard variant="premium" padding="lg">
-        <div className="mb-6 max-w-2xl">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-200">
-            <Globe className="h-3.5 w-3.5" />
-            Cross-chain deposit
-          </div>
-          <h2 className="text-2xl font-bold text-white">Deposit from any supported chain</h2>
-          <p className="mt-2 text-sm leading-6 text-gray-300">
-            LI.FI Earn already has its own vault explorer, so this step should only introduce
-            the cross-chain promise and then hand off to the selector.
-          </p>
-        </div>
+      <div className="px-1">
+        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <Globe className="h-5 w-5 text-indigo-400" />
+          Cross-chain deposit
+        </h2>
+        <p className="mt-1 text-sm text-gray-400">
+          Fund your vault from any supported network. LI.FI handles the bridge automatically.
+        </p>
+      </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-          <label className="mb-2 block text-sm font-semibold text-gray-300">
-            Deposit amount (USDC)
-          </label>
+      <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-6">
+        <label className="mb-3 block text-sm font-semibold text-gray-400">
+          Amount to Bridge (USDC)
+        </label>
+        <div className="relative">
           <input
             type="number"
             min={0}
             step={100}
             value={depositAmount || ""}
             onChange={(e) => setDepositAmount(Number(e.target.value) || 0)}
-            placeholder="Enter amount to bridge and deposit"
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-4 text-lg text-white outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            placeholder="0.00"
+            className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-5 text-2xl font-bold text-white outline-none transition focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50"
           />
         </div>
-      </CompactCard>
+      </div>
 
       <LifiEarnVaultSelector
         onVaultSelect={(vault) => console.log("Selected vault:", vault)}
@@ -670,83 +626,125 @@ function YieldStrategiesContent() {
 
   if (!hasExecutionIntent) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
+      <div className="flex min-h-screen items-center justify-center bg-[#020617]">
         <div className="text-center">
-          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-white" />
-          <p className="text-sm text-gray-300">Redirecting to vaults...</p>
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-blue-500" />
+          <p className="text-sm text-gray-400">Redirecting...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.22),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.18),_transparent_28%),linear-gradient(180deg,_#020617_0%,_#0f172a_52%,_#111827_100%)] p-4">
+    <div className="min-h-screen bg-[#020617] bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.08),transparent_40%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.05),transparent_40%)] p-4 md:p-8">
       <CompactContainer maxWidth="2xl">
-        <CompactSection spacing="lg">
-          <div className="mb-2">
-            <Link href={VAULTS_ROUTE}>
-              <Button variant="ghost" className="text-gray-400 hover:text-white">
+        <CompactSection spacing="xl">
+          {/* Header Area */}
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
+              <Link href={VAULTS_ROUTE} className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-white transition-colors mb-2">
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to vaults
-              </Button>
-            </Link>
-          </div>
-
-          <CompactCard variant="premium" padding="lg">
-            <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-3xl">
-                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200">
-                  <Heart className="h-3.5 w-3.5" />
-                  Vault setup
-                </div>
-                <h1 className="mt-4 text-4xl font-black tracking-tight text-white md:text-5xl">
-                  Set up the vault in three clear steps
-                </h1>
-                <p className="mt-4 max-w-2xl text-base leading-7 text-gray-300">
-                  The old page behaved like a dense control panel. This version keeps the
-                  discovery work on <span className="font-semibold text-white">/vaults</span> and
-                  turns the execution page into a guided sequence: choose the vault, set the
-                  yield split, then complete the deposit.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="mb-3 text-xs uppercase tracking-[0.16em] text-gray-500">
-                  Wallet status
-                </p>
-                <WalletConnectionManager />
-              </div>
+                Back to Discovery
+              </Link>
+              <h1 className="text-3xl font-black tracking-tight text-white md:text-4xl lg:text-5xl">
+                {selectedStrategyConfig ? `Setting up ${selectedStrategyConfig.name}` : "Vault Setup"}
+              </h1>
+              <p className="text-gray-400 max-w-xl">
+                {selectedStrategyConfig
+                  ? `${selectedStrategyConfig.description}`
+                  : "Set up your vault strategy and yield routing in a few simple steps."}
+              </p>
             </div>
 
-            {isBridgeEntry ? (
-              <div className="mt-6 rounded-2xl border border-blue-500/30 bg-blue-500/10 px-5 py-4">
-                <p className="text-sm font-semibold text-blue-200">
-                  Bridge flow detected from {sourceChainParam || "another chain"}
-                </p>
-                <p className="mt-1 text-sm leading-6 text-blue-100/85">
-                  The funding leg has already happened. This page now focuses on the remaining
-                  decisions so the user can finish the vault setup without extra page hopping.
-                  {amountParam ? ` ${amountParam} USDC is prefilled for the final step.` : ""}
-                  {selectedStrategyConfig ? ` ${selectedStrategyConfig.name} is already selected.` : ""}
-                </p>
+            {/* Wallet Status Area */}
+            <div className="min-w-[320px] rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-2xl backdrop-blur-sm">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Wallet Status</p>
+                <div className="flex items-center gap-1.5">
+                  <div className={`h-1.5 w-1.5 rounded-full ${address ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]'}`} />
+                  <span className={`text-[10px] font-bold ${address ? 'text-emerald-500' : 'text-amber-500'}`}>{address ? 'Connected' : 'Not Connected'}</span>
+                </div>
               </div>
-            ) : null}
-          </CompactCard>
 
-          <div className="grid gap-3 md:grid-cols-3">{FLOW_STEPS.map(renderStepButton)}</div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">EVM Wallet</span>
+                  <span className="text-xs font-mono text-gray-300">{address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Not connected'}</span>
+                </div>
+                
+                {walletRouting && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">Origin Chain</span>
+                      <span className="text-xs font-bold text-white">{walletRouting.nativeChain}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">Bridge Protocol</span>
+                      <span className="text-xs font-bold text-blue-400">{walletRouting.bridgeProtocol}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">Destination</span>
+                      <span className="text-xs font-bold text-white">{walletRouting.destination}</span>
+                    </div>
+                  </>
+                )}
+                
+                <div className="pt-2 border-t border-white/5 mt-2 flex justify-end">
+                  <Button variant="ghost" size="sm" className="h-7 text-[10px] text-gray-500 hover:text-white" onClick={() => reset()}>
+                    Switch Wallet
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
 
-          <div className="w-full">
+          {/* Stepper Area */}
+          <div className="grid grid-cols-3 gap-3">
+            {FLOW_STEPS.map((step) => {
+              const isCurrent = flowStep === step.id;
+              const isComplete = flowStep > step.id;
+              const isUnlocked = step.id === 1 || Boolean(selectedStrategy);
+              
+              return (
+                <button
+                  key={step.id}
+                  onClick={() => isUnlocked && setFlowStep(step.id)}
+                  disabled={!isUnlocked}
+                  className={`relative flex flex-col gap-2 rounded-xl border p-3 text-left transition-all ${
+                    isCurrent 
+                      ? "border-blue-500/50 bg-blue-500/10 shadow-lg shadow-blue-500/5" 
+                      : isComplete
+                        ? "border-emerald-500/30 bg-emerald-500/5"
+                        : "border-white/5 bg-white/[0.02] opacity-40"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${isCurrent ? 'text-blue-400' : isComplete ? 'text-emerald-400' : 'text-gray-500'}`}>
+                      {step.eyebrow}
+                    </span>
+                    {isComplete && <Check className="h-3 w-3 text-emerald-400" />}
+                  </div>
+                  <span className={`text-xs font-bold ${isCurrent ? 'text-white' : 'text-gray-400'}`}>{step.title}</span>
+                  {isCurrent && <div className="absolute -bottom-[1px] left-0 h-[2px] w-full bg-blue-500" />}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Content Area */}
+          <div className="min-h-[400px]">
             {flowStep === 1 && renderStrategyStep()}
             {flowStep === 2 && selectedStrategy && renderAllocationStep()}
             {flowStep === 3 && selectedStrategy && (
-              <CompactStack spacing="lg">
+              <CompactStack spacing="xl">
                 {renderSelectedStrategySummary()}
                 {selectedStrategy === "lifiearn"
                   ? renderLifiDepositPanel()
                   : renderDirectDepositPanel()}
                 <div className="flex justify-start">
-                  <Button variant="outline" className="border-white/15" onClick={() => setFlowStep(2)}>
-                    Back to allocation
+                  <Button variant="ghost" className="text-gray-500 hover:text-white" onClick={() => setFlowStep(2)}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Allocation
                   </Button>
                 </div>
               </CompactStack>
