@@ -141,7 +141,8 @@ class MegapotService {
        
        return {
          prizeUsd: onChainData.prizeUsd,
-         endTimestamp: String(Math.floor(Date.now() / 1000) + 86400),
+         totalPoolUsd: onChainData.totalDepositsUsd,
+         endTimestamp: String(onChainData.nextDrawTimestamp),
          oddsPerTicket: '1000',
          ticketPrice: 1,
          ticketsSoldCount: Number(onChainData.ticketCount) || 0,

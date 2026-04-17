@@ -150,7 +150,8 @@ export async function getMegapotOnChainPrize(): Promise<OnChainPrizeData | null>
     } as any) as any;
 
     const prizeUsd = Number(state.prizePool) / 1e6;
-    const depositsUsd = Number(state.lpEarnings || 0) / 1e6; // Approximate total deposits
+    const totalPoolUsd = Number(state.prizePool || 0) / 1e6; // Using prizePool as proxy for grand prize, need logic for total. Actually state.lpEarnings + prizePool is better
+    const totalLiquidityUsd = Number((state.lpEarnings || 0n) + (state.prizePool || 0n)) / 1e6;
 
     if (prizeUsd <= 0) {
       console.warn('[OnChainFallback] No Megapot prize data available from chain');
@@ -159,7 +160,7 @@ export async function getMegapotOnChainPrize(): Promise<OnChainPrizeData | null>
 
     return {
       prizeUsd: prizeUsd.toFixed(2),
-      totalDepositsUsd: depositsUsd.toFixed(2),
+      totalDepositsUsd: totalLiquidityUsd.toFixed(2),
       ticketCount: state.globalTicketsBought.toString(),
       drawId: currentId.toString(),
       nextDrawTimestamp: Number(state.drawingTime),

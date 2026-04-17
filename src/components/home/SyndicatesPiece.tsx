@@ -6,7 +6,7 @@ import { CompactStack } from '@/shared/components/premium/CompactLayout';
 
 import type { SyndicateInfo } from '@/domains/lottery/types';
 
-const SyndicateCard = lazy(() => import('@/components/SyndicateCard'));
+const SyndicateCard = lazy(() => import('@/components/syndicate/SyndicateCard').then(m => ({ default: m.SyndicateCard })));
 
 /**
  * MODULAR: Syndicates Puzzle Piece
@@ -75,9 +75,19 @@ export function SyndicatesPiece() {
           {syndicates.map((syndicate) => (
             <Suspense key={syndicate.id} fallback={<div className="glass-premium p-4 rounded-xl h-48 animate-pulse bg-gray-700/50" />}>
               <SyndicateCard
-                syndicate={syndicate}
-                onJoin={(id) => console.log('Join syndicate:', id)}
-                onView={(id) => console.log('View syndicate:', id)}
+                syndicate={{
+                  id: syndicate.id,
+                  name: syndicate.name,
+                  description: syndicate.description,
+                  cause: syndicate.cause?.name || 'Community Impact',
+                  poolType: syndicate.poolType || 'safe',
+                  vaultStrategy: syndicate.vaultStrategy,
+                  membersCount: syndicate.membersCount,
+                  ticketsPooled: syndicate.ticketsPooled,
+                  totalImpact: syndicate.totalImpact,
+                  causePercentage: syndicate.causePercentage,
+                  isTrending: syndicate.isTrending,
+                }}
               />
             </Suspense>
           ))}

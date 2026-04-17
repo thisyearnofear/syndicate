@@ -54,6 +54,9 @@ export function PremiumJackpotPiece({ onBuyClick }: { onBuyClick: () => void }) 
   const prizeValue = jackpotStats?.prizeUsd
     ? parseFloat(jackpotStats.prizeUsd)
     : undefined;
+  const totalPoolValue = jackpotStats?.totalPoolUsd
+    ? parseFloat(jackpotStats.totalPoolUsd)
+    : undefined;
   const timeRemainingLabel = jackpotStats?.endTimestamp
     ? formatTimeRemaining(jackpotStats.endTimestamp)
     : null;
@@ -65,25 +68,28 @@ export function PremiumJackpotPiece({ onBuyClick }: { onBuyClick: () => void }) 
           <CompactFlex align="center" gap="sm">
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
             <span className="inline-flex items-center font-semibold rounded-full shadow-lg backdrop-blur-sm transform hover:scale-105 transition-transform duration-200 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-2 py-1 text-xs">
-              {hasLiveData ? "LIVE JACKPOT" : "DAILY DRAW"}
+              {hasLiveData ? "LIVE DRAW" : "DAILY DRAW"}
             </span>
             {isLoading && hasLiveData && <LoadingSpinner size="sm" color="white" />}
           </CompactFlex>
 
           <div className="text-center">
-            <div className="text-5xl md:text-7xl font-black gradient-text-rainbow mb-2">
+            <div className="text-4xl md:text-5xl font-black gradient-text-rainbow mb-1">
               {hasLiveData && prizeValue !== undefined ? (
                 <>
-                  $
-                  <CountUpText value={prizeValue} duration={2000} enableHover />
+                  $<CountUpText value={prizeValue} duration={2000} enableHover />
                 </>
               ) : (
-                <span>Daily Base Jackpot</span>
+                <span>Daily Draw</span>
               )}
             </div>
-            <span className="font-semibold text-yellow-400 drop-shadow-[0_0_20px_rgba(251,191,36,0.6)] animate-pulse text-lg">
-              {hasLiveData ? "Daily onchain draw" : "Provably fair onchain lottery"}
-            </span>
+            <p className="text-sm text-yellow-400 font-bold uppercase tracking-wider mb-4">Grand Prize</p>
+
+            {hasLiveData && totalPoolValue !== undefined && (
+              <div className="text-lg text-gray-400">
+                Total Liquidity: ${totalPoolValue.toLocaleString()}
+              </div>
+            )}
           </div>
 
           {timeRemainingLabel && hasLiveData ? (
@@ -92,15 +98,12 @@ export function PremiumJackpotPiece({ onBuyClick }: { onBuyClick: () => void }) 
             </p>
           ) : (
             <p className="text-lg text-center text-gray-300 leading-relaxed">
-              Buy tickets directly on Base or join a no-loss vault strategy instead.
+              Buy tickets directly on Base.
             </p>
           )}
 
           <p className="text-sm text-gray-400">
             🎯 {oddsDisplay}
-          </p>
-          <p className="text-xs text-gray-500 text-center">
-            LP-backed jackpot access without the brittle embedded Megapot UI.
           </p>
           <Button
             variant="default"

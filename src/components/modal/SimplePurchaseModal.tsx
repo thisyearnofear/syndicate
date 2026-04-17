@@ -4,7 +4,6 @@
  * Orchestrator for 3 protocol flows:
  * - Megapot (direct lottery tickets) — inline, cross-chain concerns
  * - PoolTogether (no-loss savings) — PoolTogetherFlow
- * - Drift (yield-powered) — DriftFlow
  *
  * Flow: Connect → Select Protocol → Execute → Success
  */
@@ -16,7 +15,6 @@ import { Loader, AlertCircle, Check, Zap, Link2, ChevronDown, TrendingUp, ArrowR
 import { useUnifiedWallet, useUnifiedPurchase } from "@/hooks";
 import { useERC7715 } from "@/hooks/useERC7715";
 import { usePoolTogetherDeposit } from "@/hooks/usePoolTogetherDeposit";
-// import { useDriftDeposit } from "@/hooks/useDriftDeposit";
 import WalletConnectionManager from "@/components/wallet/WalletConnectionManager";
 import {
   CompactStack,
@@ -34,13 +32,12 @@ import { TimeEstimate } from "@/components/bridge/TimeEstimate";
 import { CONTRACTS } from "@/services/bridges/protocols/stacks";
 import { STRK_ADDRESSES } from "@/services/bridges/types";
 import { PoolTogetherFlow } from "./flows/PoolTogetherFlow";
-// import { DriftFlow } from "./flows/DriftFlow";
 
 // Lazy load celebration modal
 const CelebrationModal = lazy(() => import("./CelebrationModal"));
 
 type PurchaseStep = "connect" | "select" | "approve" | "processing" | "success";
-type PurchaseProtocol = "megapot" | "pooltogether" | "drift";
+type PurchaseProtocol = "megapot" | "pooltogether";
 
 // Helper function to get explorer URLs
 const getExplorerUrl = (chain: SourceChainType, txHash: string): string => {
