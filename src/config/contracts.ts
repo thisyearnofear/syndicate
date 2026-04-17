@@ -77,7 +77,7 @@ export const MEGAPOT_V2 = {
   payoutCalculator: {
     address: '0x97a22361b6208aC8cd9afaea09D20feC47046CBD' as Address,
     chainId: CHAIN_IDS.BASE,
-    description: 'Prize tier calculations - guaranteed minimum payouts',
+    description: 'Prize tier calculations - ~70% of ticket sales distributed as prizes',
   },
 
   // Pyth randomness integration

@@ -16,6 +16,7 @@ import { ethers } from "ethers";
 import type { BigNumberish } from "ethers";
 import {
   CONTRACTS,
+  REFERRALS,
   getMegapotAddressForChain,
   getUsdcAddressForChain,
 } from "@/config";
@@ -252,7 +253,7 @@ class Web3Service {
     if (!this.dataService) return false;
     return this.dataService.checkUsdcAllowance(
       ticketCount,
-      this.megapotContractAddress,
+      this.randomTicketBuyerAddress,
     );
   }
 
@@ -309,8 +310,8 @@ class Web3Service {
     const purchaseData = randomBuyerIface.encodeFunctionData("buyTickets", [
       ticketCount,
       recipient,
-      [],
-      [],
+      [REFERRALS.megapotReferrer],
+      [ethers.parseEther("1")],
       source,
     ]);
     return [
@@ -329,8 +330,8 @@ class Web3Service {
     const purchaseData = randomBuyerIface.encodeFunctionData("buyTickets", [
       ticketCount,
       recipient,
-      [],
-      [],
+      [REFERRALS.megapotReferrer],
+      [ethers.parseEther("1")],
       source,
     ]);
     return {

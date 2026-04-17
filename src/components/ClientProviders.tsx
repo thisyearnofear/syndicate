@@ -40,6 +40,7 @@ import { Providers } from './Providers';
 import { WalletProvider } from '@/context/WalletContext';
 import { TelegramProvider } from '@/components/telegram/TelegramProvider';
 import { BridgeNotificationWrapper } from '@/components/bridge/BridgeNotificationWrapper';
+import { AutoPurchaseMonitor } from '@/components/automation/AutoPurchaseMonitor';
 
 export default function ClientProviders({ children }: { children: ReactNode }) {
   const solanaEndpoint = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
@@ -54,6 +55,8 @@ export default function ClientProviders({ children }: { children: ReactNode }) {
                 {children}
                 {/* Global bridge notification - shows when user returns with pending bridge */}
                 <BridgeNotificationWrapper />
+                {/* Background auto-purchase execution monitor */}
+                <AutoPurchaseMonitor />
               </TelegramProvider>
             </TonConnectUIProvider>
           </WalletProvider>

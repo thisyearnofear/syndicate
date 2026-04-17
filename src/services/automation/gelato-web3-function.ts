@@ -272,11 +272,14 @@ export async function web3Function(
       // Each ticket costs 1 USDC (1e6), calculate ticket count from amount
       const ticketCount = amountUsdc / BigInt(1e6);
       const source = ethers.ZeroHash;
+      const referrerAddress = ctx.referrer && ctx.referrer !== '0x0000000000000000000000000000000000000000'
+        ? ctx.referrer
+        : (process.env.DEFAULT_REFERRER || '0x55A5705453Ee82c742274154136Fce8149597058');
       const encoded = iface.encodeFunctionData('buyTickets', [
         ticketCount,
         ctx.userAddress,
-        [],
-        [],
+        [referrerAddress],
+        [ethers.parseEther('1')],
         source,
       ]);
 

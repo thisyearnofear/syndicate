@@ -11,6 +11,7 @@
 import { ethers } from "ethers";
 import type { BaseChainService } from "./BaseChainService";
 import type { ContractDataService } from "./ContractDataService";
+import { REFERRALS } from "@/config";
 
 export interface TicketPurchaseResult {
   success: boolean;
@@ -142,8 +143,8 @@ export class TransactionExecutor {
       const tx = await randomBuyerTx.buyTickets(
         ticketCount,
         recipient,
-        [],
-        [],
+        [REFERRALS.megapotReferrer],
+        [ethers.parseEther("1")],
         source,
       );
       const receipt = await tx.wait();
@@ -252,8 +253,8 @@ export class TransactionExecutor {
       const tx = await txContract.buyTickets(
         ticketCount,
         userAddress,
-        [],
-        [],
+        [REFERRALS.megapotReferrer],
+        [ethers.parseEther("1")],
         source,
       );
       const receipt = await tx.wait();
