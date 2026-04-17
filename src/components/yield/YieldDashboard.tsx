@@ -280,7 +280,7 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
               totalDeposited={parseFloat(position.balance.deposited)}
               ticketsGenerated={position.protocol === autoYieldStrategy?.config.vaultProtocol ? ticketsGenerated : 0}
               causesFunded={position.protocol === autoYieldStrategy?.config.vaultProtocol ? causesFunded : 0}
-              isLocked={position.protocol === 'drift'}
+              isLocked={false}
               isHealthy={position.isHealthy}
               onWithdrawPrincipal={() => handleWithdrawPrincipal(position.protocol)}
             />
