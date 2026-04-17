@@ -11,5 +11,4 @@
 
 // Re-export all wallet functionality from a single entry point
 export * from './services/unifiedWalletService';
-export * from './services/advancedPermissionsService';
 export * from './types';

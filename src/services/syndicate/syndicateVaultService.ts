@@ -341,7 +341,6 @@ export class SyndicateVaultService {
       aave: '0xAaveUSDCVaultOnBase', // Placeholder - actual Aave vault
       morpho: '0x6B5a5c55E9dD4bb502Ce25bBfbaA49b69cf7E4dd', // Morpho USDC vault
       spark: '0xSparkUSDCVaultOnBase', // Placeholder
-      drift: 'DriftVaultAddress', // Solana address
       pooltogether: '0x6B5a5c55E9dD4bb502Ce25bBfbaA49b69cf7E4dd', // PT PrizeVault
       octant: '0xOctantUSDCVaultOnEthereum', // Placeholder
       uniswap: '0xUniswapV3StrategyOnBase', // Placeholder
@@ -355,7 +354,6 @@ export class SyndicateVaultService {
       aave: 8453, // Base
       morpho: 8453, // Base
       spark: 8453, // Base
-      drift: 7565164, // Solana
       pooltogether: 8453, // Base
       octant: 1, // Ethereum
       uniswap: 8453, // Base

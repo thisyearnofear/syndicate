@@ -770,13 +770,9 @@ export default function PortfolioPage() {
                               Unhealthy
                             </span>
                           )}
-                          {position.protocol === 'drift' && (
-                            <span className="text-xs bg-amber-500/20 text-amber-400 px-2 py-1 rounded-full">
-                              Locked
-                            </span>
-                          )}
                           <ArrowRight className="w-5 h-5 text-gray-400" />
                         </div>
+
                       </div>
 
                       {/* Vault Stats */}

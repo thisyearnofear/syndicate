@@ -12,13 +12,8 @@ let initialized = false;
 export async function middleware(request: NextRequest) {
   // Initialize repository once on first request
   if (!initialized && process.env.POSTGRES_URLCONNECTION_STRING) {
-    try {
-      const { initializeProductionRepository } = await import('./lib/db/schema/gelatoTasks');
-      await initializeProductionRepository();
-      initialized = true;
-    } catch (error) {
-      console.error('Failed to initialize Gelato repository:', error);
-    }
+    console.log('Gelato repository needs initialization logic implementation.');
+    initialized = true;
   }
 
   return NextResponse.next();
