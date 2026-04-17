@@ -57,13 +57,18 @@ export function MultiLotteryPrizes({ onBuyClick }: MultiLotteryPrizesProps) {
     );
   }
 
+  // Filter out Megapot since it's already displayed as the hero jackpot
+  const gridLotteries = lotteries.filter(l => l.protocol !== 'megapot');
+
+  if (gridLotteries.length === 0) return null;
+
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-2xl">🎯</span>
-          <h3 className="text-lg font-bold text-white">All Prizes</h3>
+          <h3 className="text-lg font-bold text-white">More Ways to Win</h3>
         </div>
         <span className="text-sm text-gray-400">
           ${totalPrizeUsd.toLocaleString()} total
@@ -72,7 +77,7 @@ export function MultiLotteryPrizes({ onBuyClick }: MultiLotteryPrizesProps) {
 
       {/* Lottery Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {lotteries.map((lottery) => (
+        {gridLotteries.map((lottery) => (
           <div
             key={lottery.protocol}
             className="relative overflow-hidden rounded-2xl border border-white/20 bg-white/5 backdrop-blur-sm hover:bg-white/10 transition-all p-6"

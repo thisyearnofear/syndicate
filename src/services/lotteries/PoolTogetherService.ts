@@ -67,7 +67,7 @@ export class PoolTogetherService {
       // Fetch prize data from official Cabana/PoolTogether V5 API
       // Using the reliable Cabana API for Base network (chain ID 8453)
       const response = await fetch(
-        'https://api.cabana.fi/v1/prizes/8453',
+        'https://api.cabana.fi/api/v1/prizes/8453',
         {
           headers: {
             'Accept': 'application/json',

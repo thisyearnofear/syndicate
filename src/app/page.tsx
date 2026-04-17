@@ -22,6 +22,7 @@ export default function Home() {
   const router = useRouter();
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
+  const [selectedProtocol, setSelectedProtocol] = useState<string | undefined>(undefined);
   const [isMounted, setIsMounted] = useState(false);
   const { isConnected, address } = useUnifiedWallet();
 
@@ -29,13 +30,16 @@ export default function Home() {
     setIsMounted(true);
   }, []);
 
-  const handlePurchaseAction = useCallback(() => {
+  const handlePurchaseAction = useCallback((protocol?: string) => {
+    setSelectedProtocol(protocol === 'megapot' || protocol === 'pooltogether' ? protocol : undefined);
     if (!isConnected) {
       setShowWalletModal(true);
     } else {
       setShowPurchaseModal(true);
     }
   }, [isConnected]);
+
+  const handleBuyClick = useCallback(() => handlePurchaseAction(), [handlePurchaseAction]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950 relative overflow-hidden">
@@ -72,7 +76,7 @@ export default function Home() {
               variant="default"
               size="lg"
               className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-2xl hover:shadow-emerald-500/30 border border-emerald-400/30 text-lg px-10 py-6"
-              onClick={handlePurchaseAction}
+              onClick={handleBuyClick}
             >
               🎫 Buy Tickets Now
             </Button>
@@ -107,7 +111,7 @@ export default function Home() {
             <div className="max-w-4xl mx-auto h-64 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
           }>
             <div className="max-w-4xl mx-auto">
-              <PremiumJackpotDisplay onBuyClick={handlePurchaseAction} />
+              <PremiumJackpotDisplay onBuyClick={handleBuyClick} />
             </div>
           </Suspense>
         </section>
@@ -211,7 +215,7 @@ export default function Home() {
               variant="default"
               size="lg"
               className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-2xl text-lg px-12 py-6"
-              onClick={handlePurchaseAction}
+              onClick={handleBuyClick}
             >
               Get Started Now
             </Button>
@@ -224,7 +228,8 @@ export default function Home() {
         {showPurchaseModal && (
           <SimplePurchaseModal
             isOpen={showPurchaseModal}
-            onClose={() => setShowPurchaseModal(false)}
+            onClose={() => { setShowPurchaseModal(false); setSelectedProtocol(undefined); }}
+            initialProtocol={selectedProtocol as 'megapot' | 'pooltogether' | undefined}
           />
         )}
       </Suspense>
@@ -254,7 +259,7 @@ export default function Home() {
           variant="default"
           size="lg"
           className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white shadow-2xl animate-float"
-          onClick={handlePurchaseAction}
+          onClick={handleBuyClick}
         >
           ⚡ Quick Buy
         </Button>
