@@ -12,7 +12,7 @@ import { useState, Suspense, lazy, useEffect } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
-import { Loader, AlertCircle, Check, Zap, Link2, ChevronDown, ArrowRight, Wallet, Shield, DollarSign, Bitcoin, Trophy, Coins } from "lucide-react";
+import { Loader, AlertCircle, Check, Zap, Link2, ChevronDown, ArrowRight, Wallet, Shield, DollarSign, Bitcoin, Trophy, Coins, ExternalLink, Info, ChevronRight } from "lucide-react";
 import { useUnifiedWallet, useUnifiedPurchase } from "@/hooks";
 import { useERC7715 } from "@/hooks/useERC7715";
 import { usePoolTogetherDeposit } from "@/hooks/usePoolTogetherDeposit";
@@ -145,7 +145,29 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
   const [stacksBalance, setStacksBalance] = useState<string | null>(null);
   const [isCheckingBalance, setIsCheckingBalance] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [hasExistingAllowance, setHasExistingAllowance] = useState<boolean | null>(null);
   const hasActivePermission = permissions.length > 0 && isSupported;
+
+  // Check if user already has sufficient USDC allowance (skip approval warning if so)
+  useEffect(() => {
+    if (!isConnected || !address || walletType !== 'evm' || selectedProtocol !== 'megapot') {
+      setHasExistingAllowance(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { web3Service } = await import('@/services/web3Service');
+        await web3Service.initialize();
+        const has = await web3Service.checkUsdcAllowance(ticketCount);
+        if (!cancelled) setHasExistingAllowance(has);
+      } catch {
+        if (!cancelled) setHasExistingAllowance(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isConnected, address, walletType, selectedProtocol, ticketCount]);
 
   useEffect(() => {
     if (/^0x[a-fA-F0-9]{40}$/.test(baseAddress)) {
@@ -515,6 +537,59 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
               {/* Time Estimate */}
               {selectedChain && selectedChain !== "base" && selectedChain !== "ethereum" && <TimeEstimate sourceChain={selectedChain as 'stacks' | 'near' | 'solana' | 'starknet'} />}
 
+              {/* USDC Approval Notice — only shown when user hasn't already approved */}
+              {hasExistingAllowance === false && (
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3 flex items-start gap-2.5">
+                  <Info className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-200/80 leading-relaxed">
+                    Your wallet will ask you to <span className="font-semibold text-amber-200">approve USDC spending</span> before the purchase. This is a standard on-chain approval — you stay in control of your funds.
+                  </p>
+                </div>
+              )}
+
+              {/* How It Works — collapsible */}
+              <div className="border border-white/10 rounded-lg overflow-hidden">
+                <button type="button" onClick={() => setShowHowItWorks(!showHowItWorks)} className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/5 transition-colors">
+                  <span className="text-sm font-medium text-gray-300 flex items-center gap-2"><Trophy className="w-4 h-4 text-yellow-400" />How prizes work</span>
+                  <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${showHowItWorks ? 'rotate-180' : ''}`} />
+                </button>
+                {showHowItWorks && (
+                  <div className="px-4 pb-4 space-y-3 border-t border-white/5 pt-3">
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-gray-300 font-medium">Each $1 ticket picks 5 numbers + 1 bonusball. Match more to win more across <span className="text-white font-semibold">10 prize tiers</span>:</p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-gray-400">🏆 5 + bonus</span>
+                          <span className="text-[11px] font-bold text-yellow-400">Jackpot</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-gray-400">⭐ 5 match</span>
+                          <span className="text-[11px] font-bold text-gray-200">2nd Prize</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-gray-400">4 + bonus</span>
+                          <span className="text-[11px] font-bold text-gray-300">3rd</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-gray-400">4 match</span>
+                          <span className="text-[11px] font-bold text-gray-300">4th</span>
+                        </div>
+                        <div className="col-span-2 flex items-center justify-between">
+                          <span className="text-[11px] text-gray-500">+ 6 more tiers down to 1 match</span>
+                          <span className="text-[11px] text-gray-500">~70% of sales → prizes</span>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-gray-500 leading-relaxed">
+                      Draws daily at 17:00 UTC using Pyth Network randomness. All winners are paid instantly to their wallet — no claiming needed. Every ticket is also entered to win 31 extra guaranteed daily prizes. 100% of ticket sales go back to the community — Megapot takes 0%.
+                    </p>
+                    <a href="https://docs.megapot.io/overview/prizes" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                      Full rules & prize details <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                )}
+              </div>
+
               {/* Megapot action buttons */}
               <div className="flex gap-3">
                 <Button variant="outline" className="flex-1" onClick={handleClose} disabled={isPurchasing}>Cancel</Button>
@@ -582,8 +657,12 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
             <div className="text-center">
               <div className="inline-block mb-4"><div className="w-16 h-16 rounded-full bg-green-400/20 flex items-center justify-center"><Check className="w-8 h-8 text-green-400" /></div></div>
               <h2 className="text-2xl font-bold text-white mb-2">Purchase Successful!</h2>
-              <p className="text-gray-400 mb-4">You purchased {ticketCount} ticket{ticketCount !== 1 ? "s" : ""}</p>
-              {txHash && <a href={`https://basescan.org/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-400 hover:text-blue-300">View Transaction</a>}
+              <p className="text-gray-400 mb-2">You purchased {ticketCount} ticket{ticketCount !== 1 ? "s" : ""}</p>
+              <div className="flex flex-wrap items-center justify-center gap-3 mb-2">
+                {txHash && <a href={`https://basescan.org/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-400 hover:text-blue-300 inline-flex items-center gap-1">View Transaction <ExternalLink className="w-3 h-3" /></a>}
+                <a href="https://docs.megapot.io/overview/prizes" target="_blank" rel="noopener noreferrer" className="text-sm text-yellow-400 hover:text-yellow-300 inline-flex items-center gap-1">Prize Info <ExternalLink className="w-3 h-3" /></a>
+              </div>
+              <p className="text-xs text-gray-500">Winners are drawn on-chain. Prizes are paid instantly to your wallet — no claiming needed.</p>
             </div>
             {/* Auto-purchase upsell */}
             {!hasActivePermission && isSupported && walletType === "evm" && (

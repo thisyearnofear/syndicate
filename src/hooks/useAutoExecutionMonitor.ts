@@ -14,10 +14,11 @@
  * - Next execution scheduled
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useAdvancedPermissions } from './useAdvancedPermissions';
 import { useVisibilityPolling } from '@/lib/useVisibilityPolling';
 import type { AutoPurchaseConfig } from '@/domains/wallet/types';
+import { permittedTicketExecutor } from '@/services/automation/permittedTicketExecutor';
 
 interface ExecutionEvent {
   timestamp: number;
@@ -44,6 +45,7 @@ interface ExecutionMonitorState {
 
 export function useAutoExecutionMonitor() {
   const { autoPurchaseConfig, permission } = useAdvancedPermissions();
+  const executingRef = useRef(false);
   
   const [state, setState] = useState<ExecutionMonitorState>({
     lastEvent: null,
@@ -106,19 +108,47 @@ export function useAutoExecutionMonitor() {
     }));
 
     // Check if execution time has arrived
-    if (timeUntilNext <= 0 && !state.lastEvent?.txHash) {
-      // Time to execute - record scheduled event
+    if (timeUntilNext <= 0 && !executingRef.current) {
+      executingRef.current = true;
+
       recordEvent({
         timestamp: now,
-        type: 'scheduled',
-        nextExecution: nextExecution + (autoPurchaseConfig.frequency === 'weekly' ? 7 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000),
+        type: 'executing',
       });
 
-      // PERFORMANT: In production, this would trigger API call to backend
-      // For now, we just record that it should have executed
-      console.log('Auto-purchase should execute now', { config: autoPurchaseConfig });
+      console.log('[AutoPurchase] Executing scheduled purchase...', { config: autoPurchaseConfig });
+
+      permittedTicketExecutor.executeScheduledPurchase(autoPurchaseConfig)
+        .then((result) => {
+          executingRef.current = false;
+          if (result.success) {
+            console.log('[AutoPurchase] Purchase succeeded:', result.txHash);
+            recordEvent({
+              timestamp: Date.now(),
+              type: 'success',
+              txHash: result.txHash,
+              nextExecution: result.nextScheduledTime,
+            });
+          } else {
+            console.warn('[AutoPurchase] Purchase failed:', result.error?.message);
+            recordEvent({
+              timestamp: Date.now(),
+              type: 'failed',
+              error: result.error?.message,
+            });
+          }
+        })
+        .catch((err) => {
+          executingRef.current = false;
+          console.error('[AutoPurchase] Execution error:', err);
+          recordEvent({
+            timestamp: Date.now(),
+            type: 'failed',
+            error: err instanceof Error ? err.message : 'Unknown error',
+          });
+        });
     }
-  }, [autoPurchaseConfig, permission, state.lastEvent?.txHash, recordEvent]);
+  }, [autoPurchaseConfig, permission, recordEvent]);
 
   // Start monitoring when config is active — with visibility-aware polling
   const shouldMonitor = !!autoPurchaseConfig?.enabled;
