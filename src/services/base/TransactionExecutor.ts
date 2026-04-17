@@ -26,8 +26,10 @@ export class TransactionExecutor {
     private baseChain: BaseChainService,
     private dataService: ContractDataService,
     private megapotContract: ethers.Contract,
+    private randomTicketBuyerContract: ethers.Contract,
     private usdcContract: ethers.Contract,
     private megapotAddress: string,
+    private randomTicketBuyerAddress: string,
     private usdcAbi: any[],
   ) {}
 
@@ -56,7 +58,7 @@ export class TransactionExecutor {
       const approvalAmount = requiredAmount * BigInt(10);
 
       const tx = await usdcContract.approve(
-        this.megapotAddress,
+        this.randomTicketBuyerAddress,
         approvalAmount,
       );
       
@@ -114,7 +116,7 @@ export class TransactionExecutor {
       while (retries < 2) {
         hasAllowance = await this.dataService.checkUsdcAllowance(
           ticketCount,
-          this.megapotAddress,
+          this.randomTicketBuyerAddress,
         );
         if (hasAllowance) break;
         retries++;
@@ -126,23 +128,23 @@ export class TransactionExecutor {
         await this.approveUsdc(ticketCount);
       }
 
-      const ticketPrice = await this.megapotContract.ticketPrice();
-      const usdcAmount = ticketPrice * BigInt(ticketCount);
-      const referrer = ethers.ZeroAddress;
       const recipient = recipientOverride ?? signerAddress;
+      const source = ethers.ZeroHash;
 
       const txSigner = await this.baseChain.getFreshSigner();
-      const megapotContractTx = new ethers.Contract(
-        this.megapotAddress,
-        this.megapotContract.interface,
+      const randomBuyerTx = new ethers.Contract(
+        this.randomTicketBuyerAddress,
+        this.randomTicketBuyerContract.interface,
         txSigner,
       );
 
       console.log(`Purchasing ${ticketCount} tickets for ${recipient}...`);
-      const tx = await megapotContractTx.purchaseTickets(
-        referrer,
-        usdcAmount,
+      const tx = await randomBuyerTx.buyTickets(
+        ticketCount,
         recipient,
+        [],
+        [],
+        source,
       );
       const receipt = await tx.wait();
 
@@ -239,18 +241,20 @@ export class TransactionExecutor {
         throw new Error("Cannot execute delegated purchase in read-only mode.");
       }
       const signer = await this.baseChain.getFreshSigner();
-      const referrer = ethers.ZeroAddress;
+      const source = ethers.ZeroHash;
 
       const txContract = new ethers.Contract(
-        this.megapotAddress,
-        this.megapotContract.interface,
+        this.randomTicketBuyerAddress,
+        this.randomTicketBuyerContract.interface,
         signer,
       );
 
-      const tx = await txContract.purchaseTickets(
-        referrer,
-        amountUsdc,
+      const tx = await txContract.buyTickets(
+        ticketCount,
         userAddress,
+        [],
+        [],
+        source,
       );
       const receipt = await tx.wait();
 
