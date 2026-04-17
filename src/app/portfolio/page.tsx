@@ -10,7 +10,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Wallet, 
   Trophy, 
@@ -26,6 +26,7 @@ import {
   Clock
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { useUnifiedWallet, useUnifiedBridge } from '@/hooks';
 import { useUserVaults } from '@/hooks/useUserVaults';
 import { useVaultActivity } from '@/hooks/useVaultActivity';
@@ -94,7 +95,9 @@ export default function PortfolioPage() {
   const [portfolio, setPortfolio] = useState<PortfolioData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'syndicates' | 'vaults' | 'activity'>('overview');
+  const searchParams = useSearchParams();
+  const initialTab = searchParams?.get('tab') || 'overview';
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   // Fetch vault positions using the new hook
   const { 
@@ -333,40 +336,33 @@ export default function PortfolioPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex flex-wrap gap-2 mb-8">
-          <Button
-            variant={activeTab === 'overview' ? 'default' : 'outline'}
-            className={`border-blue-500/50 ${activeTab === 'overview' ? 'bg-blue-500/20' : 'text-blue-300 hover:bg-blue-500/10'}`}
-            onClick={() => setActiveTab('overview')}
-          >
-            <ChartPie className="w-4 h-4 mr-2" />
-            Overview
-          </Button>
-          <Button
-            variant={activeTab === 'syndicates' ? 'default' : 'outline'}
-            className={`border-purple-500/50 ${activeTab === 'syndicates' ? 'bg-purple-500/20' : 'text-purple-300 hover:bg-purple-500/10'}`}
-            onClick={() => setActiveTab('syndicates')}
-          >
-            <Users className="w-4 h-4 mr-2" />
-            Syndicates ({syndicates.length})
-          </Button>
-          <Button
-            variant={activeTab === 'vaults' ? 'default' : 'outline'}
-            className={`border-green-500/50 ${activeTab === 'vaults' ? 'bg-green-500/20' : 'text-green-300 hover:bg-green-500/10'}`}
-            onClick={() => setActiveTab('vaults')}
-          >
-            <Zap className="w-4 h-4 mr-2" />
-            Vaults ({vaultPositions.length})
-          </Button>
-          <Button
-            variant={activeTab === 'activity' ? 'default' : 'outline'}
-            className={`border-amber-500/50 ${activeTab === 'activity' ? 'bg-amber-500/20' : 'text-amber-300 hover:bg-amber-500/10'}`}
-            onClick={() => setActiveTab('activity')}
-          >
-            <Ticket className="w-4 h-4 mr-2" />
-            Activity ({totalActivityCount})
-          </Button>
-        </div>
+        <Tabs value={activeTab} onValueChange={(tab) => {
+          setActiveTab(tab);
+          const params = new URLSearchParams(searchParams?.toString());
+          params.set('tab', tab);
+          router.replace(`/portfolio?${params.toString()}`, { scroll: false });
+        }} className="w-full">
+          <TabsList className="w-full overflow-x-auto mb-8">
+            <TabsTrigger value="overview">
+              <ChartPie className="w-4 h-4" />
+              <span className="hidden sm:inline">Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="syndicates">
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline">Syndicates</span>
+              <span className="ml-1 text-xs opacity-60">({syndicates.length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="vaults">
+              <Zap className="w-4 h-4" />
+              <span className="hidden sm:inline">Vaults</span>
+              <span className="ml-1 text-xs opacity-60">({vaultPositions.length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="activity">
+              <Ticket className="w-4 h-4" />
+              <span className="hidden sm:inline">Activity</span>
+              <span className="ml-1 text-xs opacity-60">({totalActivityCount})</span>
+            </TabsTrigger>
+          </TabsList>
 
         {/* Summary Cards - Always visible */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -412,9 +408,8 @@ export default function PortfolioPage() {
           </div>
         </div>
 
-        {/* Tab Content */}
-        {activeTab === 'overview' && (
-          <>
+          {/* ── Overview Tab ─────────────────────────────────────────────── */}
+          <TabsContent value="overview">
             {/* Overview Tab */}
             {!hasAnything ? (
               <div className="glass-premium rounded-2xl p-8 border border-white/20 text-center">
@@ -610,13 +605,32 @@ export default function PortfolioPage() {
                 </div>
               </>
             )}
-          </>
-        )}
 
-        {activeTab === 'syndicates' && (
-          <>
-            {/* Syndicates Tab */}
-            {/* Syndicates Tab */}
+            {/* CTA */}
+            <div className="mt-8 glass-premium rounded-2xl p-6 border border-white/20 text-center">
+              <h2 className="text-xl font-bold text-white mb-2">Maximize Your Impact</h2>
+              <p className="text-gray-400 mb-4">
+                Diversify across syndicates and vaults to optimize returns and social impact.
+              </p>
+              <div className="flex gap-4 justify-center">
+                <Button onClick={() => router.push('/discover')}>
+                  <Users className="w-4 h-4 mr-2" />
+                  More Syndicates
+                </Button>
+                <Link href="/vaults">
+                  <Button variant="outline" className="border-green-500/50 text-green-300">
+                    <Zap className="w-4 h-4 mr-2" />
+                    More Vaults
+                  </Button>
+                </Link>
+              </div>
+            </div>
+            </>
+            )}
+          </TabsContent>
+
+          {/* ── Syndicates Tab ─────────────────────────────────────────────── */}
+          <TabsContent value="syndicates">
             {syndicates.length === 0 ? (
               <div className="glass-premium rounded-2xl p-8 border border-white/20 text-center">
                 <Users className="w-16 h-16 text-gray-500 mx-auto mb-4" />
@@ -688,11 +702,10 @@ export default function PortfolioPage() {
                 </div>
               </div>
             )}
-          </>
-        )}
+          </TabsContent>
 
-        {activeTab === 'vaults' && (
-          <>
+          {/* ── Vaults Tab ─────────────────────────────────────────────────── */}
+          <TabsContent value="vaults">
             {/* Vaults Tab */}
             {vaultPositions.length === 0 ? (
               <div className="glass-premium rounded-2xl p-8 border border-white/20 text-center">
@@ -816,33 +829,10 @@ export default function PortfolioPage() {
                 </div>
               </div>
             )}
-          </>
-        )}
+          </TabsContent>
 
-        {/* CTA - Only show on overview tab */}
-        {activeTab === 'overview' && hasAnything && (
-          <div className="mt-8 glass-premium rounded-2xl p-6 border border-white/20 text-center">
-            <h2 className="text-xl font-bold text-white mb-2">Maximize Your Impact</h2>
-            <p className="text-gray-400 mb-4">
-              Diversify across syndicates and vaults to optimize returns and social impact.
-            </p>
-            <div className="flex gap-4 justify-center">
-              <Button onClick={() => router.push('/discover')}>
-                <Users className="w-4 h-4 mr-2" />
-                More Syndicates
-              </Button>
-              <Link href="/vaults">
-                <Button variant="outline" className="border-green-500/50 text-green-300">
-                  <Zap className="w-4 h-4 mr-2" />
-                  More Vaults
-                </Button>
-              </Link>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'activity' && (
-          <>
+          {/* ── Activity Tab ──────────────────────────────────────────────── */}
+          <TabsContent value="activity">
             {totalActivityCount === 0 ? (
               <div className="glass-premium rounded-2xl p-8 border border-white/20 text-center">
                 <Ticket className="w-16 h-16 text-gray-500 mx-auto mb-4" />
@@ -935,8 +925,8 @@ export default function PortfolioPage() {
                 ) : null}
               </div>
             )}
-          </>
-        )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

@@ -24,7 +24,9 @@ import { useUnifiedWallet } from "@/hooks";
 export default function SyndicateDetailPage() {
   const searchParams = useSearchParams();
   const id = searchParams?.get("id");
+  const initialTab = searchParams?.get("tab") || "overview";
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   const [syndicate, setSyndicate] = useState<SyndicateInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -201,7 +203,13 @@ export default function SyndicateDetailPage() {
         </div>
 
         {/* ── Tabbed Content ────────────────────────────────────────────── */}
-        <Tabs defaultValue="overview" className="w-full">
+        <Tabs value={activeTab} onValueChange={(tab) => {
+          setActiveTab(tab);
+          // Update URL without full navigation so tab is deep-linkable
+          const params = new URLSearchParams(searchParams?.toString());
+          params.set("tab", tab);
+          router.replace(`/syndicate?${params.toString()}`, { scroll: false });
+        }} className="w-full">
           <TabsList className="w-full overflow-x-auto">
             <TabsTrigger value="overview">
               <LayoutDashboard className="w-4 h-4" />

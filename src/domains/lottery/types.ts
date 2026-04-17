@@ -12,7 +12,8 @@
 // =============================================================================
 
 export interface JackpotStats {
-  prizeUsd: string;
+  prizeUsd: string;        // Grand Prize (Tier 10)
+  totalPoolUsd: string;    // Total Liquidity Pool
   endTimestamp: string;
   oddsPerTicket: string;
   ticketPrice: number;
