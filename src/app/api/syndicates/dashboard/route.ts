@@ -157,19 +157,25 @@ export async function GET(request: Request) {
       console.error('[Dashboard API] Failed to fetch on-chain balance:', error);
     }
 
-    // Fetch members
+    // Fetch members — column names match the actual DB schema
+    // (amount_usdc not contribution_usdc, member_address not address)
     const membersResult = await sql`
-      SELECT address, contribution_usdc, joined_at, tx_hash
+      SELECT member_address, amount_usdc, joined_at, tx_hash
       FROM syndicate_members 
       WHERE pool_id = ${poolId}
-      ORDER BY contribution_usdc DESC
+      ORDER BY amount_usdc DESC
     `;
-    const members: DashboardMember[] = membersResult.rows as unknown as DashboardMember[];
+    const members: DashboardMember[] = membersResult.rows.map((row: any) => ({
+      address: row.member_address,
+      contribution_usdc: row.amount_usdc,
+      joined_at: row.joined_at,
+      tx_hash: row.tx_hash,
+    }));
 
     // Calculate total contributed
     const totalContributed = members.reduce((sum, m) => sum + parseFloat(m.contribution_usdc || '0'), 0);
 
-    // Fetch recent activity (simplified - would need activity table in production)
+    // Fetch recent activity (simplified — derived from member joins)
     const recentActivity: DashboardActivity[] = members.slice(0, 10).map((m, i) => ({
       id: `activity-${i}`,
       type: 'join' as const,

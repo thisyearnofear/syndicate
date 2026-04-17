@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import { X, Users, Heart, Sparkles, Target, Eye } from "lucide-react";
 import { Button } from "@/shared/components/ui/Button";
-import { syndicateService } from "@/domains/syndicate/services/syndicateService";
+// Uses fetch('/api/syndicates') instead of importing syndicateService directly
+// because the service imports @vercel/postgres which must not be client-bundled
 import { useUnifiedWallet } from "@/hooks";
 
 /**
@@ -100,13 +101,23 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
     setIsCreating(true);
 
     try {
-      // Create pool via real backend service
-      const poolId = await syndicateService.createPool({
-        name: formData.name,
-        description: formData.description,
-        coordinatorAddress: address!,
-        causeAllocationPercent: formData.causePercentage,
+      // Create pool via API route (avoids importing @vercel/postgres client-side)
+      const res = await fetch('/api/syndicates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create',
+          name: formData.name,
+          description: formData.description,
+          coordinatorAddress: address!,
+          causeAllocationPercent: formData.causePercentage,
+        }),
       });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to create syndicate');
+      }
+      const { id: poolId } = await res.json();
 
       const syndicateData = {
         ...formData,

@@ -8,14 +8,13 @@
  */
 
 import type { SyndicatePool } from '../types';
-import type { SyndicateInfo } from '@/domains/lottery/types';
 import { web3Service } from '@/services/web3Service';
 import { splitsService, type ParticipantShare } from '@/services/splitsService';
 import { distributionService } from '@/services/distributionService';
 import { syndicateRepository, type PoolType } from '@/lib/db/repositories/syndicateRepository';
 import { safeProvider, splitsProvider, poolTogetherV5Provider } from '@/services/syndicate/poolProviders';
 import type { PoolProvider, PoolProviderConfig, PoolCreationResult } from '@/services/syndicate/poolProviders';
-import { ethers } from 'ethers';
+import { isAddress } from 'viem';
 
 export class SyndicateService {
   /**
@@ -51,7 +50,7 @@ export class SyndicateService {
     }
 
     // Validate coordinator address
-    if (!ethers.isAddress(params.coordinatorAddress)) {
+    if (!isAddress(params.coordinatorAddress)) {
       throw new Error('Invalid coordinator address');
     }
 
@@ -136,7 +135,7 @@ export class SyndicateService {
     }
 
     // Validate member address
-    if (!ethers.isAddress(params.memberAddress)) {
+    if (!isAddress(params.memberAddress)) {
       throw new Error('Invalid member address');
     }
 
@@ -189,19 +188,24 @@ export class SyndicateService {
     });
   }
 
-  async getActiveSyndicates(): Promise<SyndicateInfo[]> {
-    const res = await fetch('/api/syndicates');
-    if (!res.ok) return [];
-    const data = await res.json();
-    return data as SyndicateInfo[];
-  }
-
+  /**
+   * Prepare an ad-hoc batch purchase for a syndicate
+   * Uses the repository directly instead of fetching from the API (no circular dep)
+   */
   async prepareAdHocBatchPurchase(syndicateId: string, ticketCount: number): Promise<{ success: boolean; txHash?: string; error?: string; recipient?: string }> {
-    const syndicates = await this.getActiveSyndicates();
-    const s = syndicates.find(x => x.id === syndicateId);
-    if (!s?.poolAddress) return { success: false, error: 'Pool address unavailable' };
-    const result = await web3Service.purchaseTickets(ticketCount, s.poolAddress);
-    return { success: result.success, txHash: result.txHash, error: result.error, recipient: s.poolAddress };
+    const pool = await syndicateRepository.getPoolById(syndicateId);
+    if (!pool) return { success: false, error: 'Pool not found' };
+
+    // Determine pool address from pool type
+    const poolAddress = pool.pool_type === 'splits' && pool.split_address
+      ? pool.split_address
+      : pool.pool_type === 'pooltogether' && pool.pt_vault_address
+      ? pool.pt_vault_address
+      : pool.safe_address || pool.coordinator_address;
+
+    if (!poolAddress) return { success: false, error: 'Pool address unavailable' };
+    const result = await web3Service.purchaseTickets(ticketCount, poolAddress);
+    return { success: result.success, txHash: result.txHash, error: result.error, recipient: poolAddress };
   }
 
   snapshotProportionalWeights(syndicateId: string, participants: Array<{ address: string; contributionUsd: number }>, lockMinutes: number, roundId?: string) {
