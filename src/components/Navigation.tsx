@@ -134,7 +134,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                                 return (
                                     <Link key={item.href} href={item.href}>
                                         <button
-                                            {...(item.label === 'Bridge' ? { title: 'Move USDC to Base to buy tickets' } : {})}
+                                            title={item.label === 'Bridge' ? 'Move USDC to Base to buy tickets' : item.label}
                                             className={`
                             flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium
                             ${item.active
@@ -144,26 +144,15 @@ export default function Navigation({ className = '' }: NavigationProps) {
                             `}
                                         >
                                             <Icon className="w-4 h-4" />
-                                            {item.label}
+                                            <span className="hidden lg:inline">{item.label}</span>
                                         </button>
                                     </Link>
                                 );
                             })}
                         </CompactFlex>
 
-                        {/* Wallet Status & Terms */}
+                        {/* Wallet Status */}
                         <CompactFlex align="center" gap="md">
-                            {/* Terms Link */}
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => window.open('https://docs.megapot.io/terms-of-service', '_blank')}
-                                className="text-gray-400 hover:text-white text-xs"
-                            >
-                                Terms
-                            </Button>
-
-                            {/* Wallet Status Indicator */}
                             {isConnected ? (
                                 <div className="relative">
                                     <div
@@ -253,19 +242,8 @@ export default function Navigation({ className = '' }: NavigationProps) {
                                     );
                                 })}
 
-                                {/* Terms & Wallet Status */}
+                                {/* Wallet Status */}
                                 <div className="space-y-3 mt-4 pt-4 border-t border-white/10">
-                                    {/* Terms Link */}
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => window.open('https://docs.megapot.io/terms-of-service', '_blank')}
-                                        className="w-full justify-center text-gray-400 hover:text-white text-xs"
-                                    >
-                                        📋 Terms of Service
-                                    </Button>
-
-                                    {/* Wallet Status */}
                                     {isConnected ? (
                                         <div className="flex items-center gap-2 px-3 py-2 bg-green-500/20 border border-green-500/30 rounded-lg">
                                             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
