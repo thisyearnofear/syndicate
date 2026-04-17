@@ -18,11 +18,31 @@
  * - Safer execution: Permission grants authority, Session limits execution window
  */
 
+/**
+ * UNIFIED ERC-7715 SERVICE
+ * 
+ * Core Principles Applied:
+ * - ENHANCEMENT FIRST: Consolidates permissions + sessions into single system
+ * - DRY: Single source of truth for ERC-7715 support and operations
+ * - CLEAN: Clear separation between Advanced Permissions and Smart Sessions
+ * - MODULAR: Composable permission and session operations
+ * - ORGANIZED: Unified ERC-7715 framework for hackathon submission
+ * 
+ * Manages both:
+ * 1. Advanced Permissions (ERC-7715 delegation) - For recurring automated spending
+ * 2. Smart Sessions - For temporary delegated execution with expiration
+ * 
+ * Use Cases:
+ * - Agent-to-Agent delegation: Permission→Agent→Session→Sub-Agent
+ * - Recurring automation: Permission(daily limit) + Session(execute once per day)
+ * - Safer execution: Permission grants authority, Session limits execution window
+ */
+
 import { createWalletClient, custom, WalletClient, Address } from 'viem';
 import { sepolia, base, mainnet, baseSepolia } from 'viem/chains';
 // Import directly from the specific actions entry point to ensure correct resolution
 import { erc7715ProviderActions } from '@metamask/smart-accounts-kit/actions';
-import { CONTRACTS } from '@/config';
+import MEGAPOT_V2_CONTRACTS, { TOKENS } from '@/config/contracts';
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -380,7 +400,7 @@ export class ERC7715Service {
       // MODULAR: Create session with permission for Megapot purchases
       const sessionPermissions: SessionPermissionScope[] = [
         {
-          target: CONTRACTS.megapot as Address,
+          target: MEGAPOT_V2_CONTRACTS.jackpot.address as Address,
           methods: ['buyTickets'], // V2 uses buyTickets instead of purchaseTickets
           maxGasLimit: BigInt(500000), // 500k gas per transaction
           maxValuePerTransaction: permission.limit / BigInt(numberOfPurchases), // Split limit across purchases
@@ -746,11 +766,11 @@ export { DEFAULT_LIMITS };
 
 export function getUsdcAddressForChain(chainId: number): Address {
   const usdcAddresses: Record<number, Address> = {
-    1: CONTRACTS.USDC_MAINNET,
-    8453: CONTRACTS.USDC_BASE,
-    84532: CONTRACTS.USDC_BASE_SEPOLIA,
+    1: TOKENS.usdc.address,
+    8453: TOKENS.usdc.address,
+    84532: TOKENS.usdcTestnet.address,
   };
-  return usdcAddresses[chainId] || CONTRACTS.USDC_BASE;
+  return usdcAddresses[chainId] || TOKENS.usdc.address;
 }
 
 export interface PermissionPreset {

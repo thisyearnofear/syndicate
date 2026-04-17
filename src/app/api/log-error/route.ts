@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       error: body.error,
       context: body.context || {},
       userAgent: request.headers.get('user-agent') || 'unknown',
-      ip: request.ip || 'unknown',
+      ip: request.headers.get('x-forwarded-for') || 'unknown',
     };
 
     // Log to console for immediate visibility

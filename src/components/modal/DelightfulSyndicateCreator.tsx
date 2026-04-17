@@ -464,16 +464,6 @@ export default function DelightfulSyndicateCreator({ isOpen, onClose, onCreate }
           </div>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes scale-in {
-          from { transform: scale(0.9); opacity: 0; }
-          to { transform: scale(1); opacity: 1; }
-        }
-        .animate-scale-in {
-          animation: scale-in 0.3s ease-out;
-        }
-      `}</style>
     </div>
   );
 }

@@ -625,8 +625,6 @@ export default function PortfolioPage() {
                 </Link>
               </div>
             </div>
-            </>
-            )}
           </TabsContent>
 
           {/* ── Syndicates Tab ─────────────────────────────────────────────── */}
