@@ -50,22 +50,24 @@ interface ExecutionContext {
 // CONFIGURATION
 // =============================================================================
 
-// These should match your existing contract config
-const MEGAPOT_ABI = [
+// JackpotRandomTicketBuyer ABI - V2 random ticket purchases
+const RANDOM_TICKET_BUYER_ABI = [
   {
     inputs: [
-      { internalType: 'address', name: 'referrer', type: 'address' },
-      { internalType: 'uint256', name: 'amount', type: 'uint256' },
-      { internalType: 'address', name: 'recipient', type: 'address' },
+      { internalType: 'uint256', name: '_count', type: 'uint256' },
+      { internalType: 'address', name: '_recipient', type: 'address' },
+      { internalType: 'address[]', name: '_referrers', type: 'address[]' },
+      { internalType: 'uint256[]', name: '_referralSplitBps', type: 'uint256[]' },
+      { internalType: 'bytes32', name: '_source', type: 'bytes32' },
     ],
-    name: 'purchaseTickets',
-    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
-    stateMutability: 'payable',
+    name: 'buyTickets',
+    outputs: [],
+    stateMutability: 'nonpayable',
     type: 'function',
   },
 ];
 
-const MEGAPOT_ADDRESS = process.env.MEGAPOT_ADDRESS || '0x'; // Set in Gelato env
+const RANDOM_TICKET_BUYER_ADDRESS = process.env.RANDOM_TICKET_BUYER_ADDRESS || '0xb9560b43b91dE2c1DaF5dfbb76b2CFcDaFc13aBd';
 const NEON_CONNECTION_STRING =
   process.env.NEON_DATABASE_URL || '';
 
@@ -263,17 +265,23 @@ export async function web3Function(
       };
     }
 
-    // STEP 3: Encode transaction calls
+    // STEP 3: Encode transaction calls using JackpotRandomTicketBuyer
     const calls = executablePurchases.map(({ record, context: ctx }) => {
-      const iface = new ethers.Interface(MEGAPOT_ABI);
-      const encoded = iface.encodeFunctionData('purchaseTickets', [
-        ctx.referrer,
-        ethers.parseUnits(ctx.amountUsdc, 6), // USDC has 6 decimals
+      const iface = new ethers.Interface(RANDOM_TICKET_BUYER_ABI);
+      const amountUsdc = ethers.parseUnits(ctx.amountUsdc, 6);
+      // Each ticket costs 1 USDC (1e6), calculate ticket count from amount
+      const ticketCount = amountUsdc / BigInt(1e6);
+      const source = ethers.ZeroHash;
+      const encoded = iface.encodeFunctionData('buyTickets', [
+        ticketCount,
         ctx.userAddress,
+        [],
+        [],
+        source,
       ]);
 
       return {
-        to: MEGAPOT_ADDRESS,
+        to: RANDOM_TICKET_BUYER_ADDRESS,
         data: encoded,
         value: '0',
         recordId: record.id,

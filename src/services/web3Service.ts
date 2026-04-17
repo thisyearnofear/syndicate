@@ -29,7 +29,7 @@ import type {
 } from "./base/ContractDataService";
 import type { TicketPurchaseResult } from "./base/TransactionExecutor";
 
-// Megapot V2 contract ABI (March 2026 upgrade)
+// Megapot V2 Jackpot contract ABI (March 2026 upgrade)
 export const MEGAPOT_ABI = [
   "function buyTickets(tuple(uint8[] normals, uint8 bonusball)[] _tickets, address _recipient, address[] _referrers, uint256[] _referralSplit, bytes32 _source) external",
   "function ticketPrice() external view returns (uint256)",
@@ -41,6 +41,14 @@ export const MEGAPOT_ABI = [
   "event TicketsPurchased(address indexed buyer, uint256[] ticketIds, uint256 totalCost)",
   "event WinningsClaimed(address indexed winner, uint256 indexed ticketId, uint256 amount)",
 ];
+
+// JackpotRandomTicketBuyer ABI - purchases tickets with on-chain random numbers
+export const RANDOM_TICKET_BUYER_ABI = [
+  "function buyTickets(uint256 _count, address _recipient, address[] _referrers, uint256[] _referralSplitBps, bytes32 _source) external",
+];
+
+// Random ticket buyer contract address (Base mainnet)
+const RANDOM_TICKET_BUYER_ADDRESS = "0xb9560b43b91dE2c1DaF5dfbb76b2CFcDaFc13aBd";
 
 // USDC token ABI
 const USDC_ABI = [
@@ -69,8 +77,10 @@ class Web3Service {
   private dataService: ContractDataService | null = null;
   private txExecutor: TransactionExecutor | null = null;
   private megapotContractAddress: string = CONTRACTS.megapot;
+  private randomTicketBuyerAddress: string = RANDOM_TICKET_BUYER_ADDRESS;
   private usdcContractAddress: string = CONTRACTS.usdc;
   private megapotContract: ethers.Contract | null = null;
+  private randomTicketBuyerContract: ethers.Contract | null = null;
   private usdcContract: ethers.Contract | null = null;
   private isInitialized: boolean = false;
 
@@ -105,6 +115,11 @@ class Web3Service {
         MEGAPOT_ABI,
         provider,
       );
+      this.randomTicketBuyerContract = new ethers.Contract(
+        this.randomTicketBuyerAddress,
+        RANDOM_TICKET_BUYER_ABI,
+        provider,
+      );
       this.usdcContract = new ethers.Contract(
         this.usdcContractAddress,
         USDC_ABI,
@@ -121,8 +136,10 @@ class Web3Service {
         this.baseChain,
         this.dataService,
         this.megapotContract,
+        this.randomTicketBuyerContract,
         this.usdcContract,
         this.megapotContractAddress,
+        this.randomTicketBuyerAddress,
         USDC_ABI,
       );
 
@@ -173,6 +190,7 @@ class Web3Service {
     this.dataService = null;
     this.txExecutor = null;
     this.megapotContract = null;
+    this.randomTicketBuyerContract = null;
     this.usdcContract = null;
     this.isInitialized = false;
   }
@@ -280,22 +298,24 @@ class Web3Service {
     }
     const ticketPrice = await this.megapotContract.ticketPrice();
     const usdcAmount = ticketPrice * BigInt(ticketCount);
-    const referrer = ethers.ZeroAddress;
     const recipient = recipientOverride ?? ethers.ZeroAddress;
+    const source = ethers.ZeroHash;
     const usdcIface = new ethers.Interface(USDC_ABI);
-    const megapotIface = new ethers.Interface(MEGAPOT_ABI);
+    const randomBuyerIface = new ethers.Interface(RANDOM_TICKET_BUYER_ABI);
     const approveData = usdcIface.encodeFunctionData("approve", [
-      this.megapotContractAddress,
+      this.randomTicketBuyerAddress,
       usdcAmount,
     ]);
-    const purchaseData = megapotIface.encodeFunctionData("purchaseTickets", [
-      referrer,
-      usdcAmount,
+    const purchaseData = randomBuyerIface.encodeFunctionData("buyTickets", [
+      ticketCount,
       recipient,
+      [],
+      [],
+      source,
     ]);
     return [
       { to: this.usdcContractAddress, data: approveData, value: "0" },
-      { to: this.megapotContractAddress, data: purchaseData, value: "0" },
+      { to: this.randomTicketBuyerAddress, data: purchaseData, value: "0" },
     ];
   }
 
@@ -304,17 +324,17 @@ class Web3Service {
     recipient: string,
   ): Promise<{ to: string; data: string; value: string }> {
     if (!this.megapotContract) throw new Error("Contracts not initialized");
-    const ticketPrice = await this.megapotContract.ticketPrice();
-    const usdcAmount = ticketPrice * BigInt(ticketCount);
-    const referrer = ethers.ZeroAddress;
-    const megapotIface = new ethers.Interface(MEGAPOT_ABI);
-    const purchaseData = megapotIface.encodeFunctionData("purchaseTickets", [
-      referrer,
-      usdcAmount,
+    const source = ethers.ZeroHash;
+    const randomBuyerIface = new ethers.Interface(RANDOM_TICKET_BUYER_ABI);
+    const purchaseData = randomBuyerIface.encodeFunctionData("buyTickets", [
+      ticketCount,
       recipient,
+      [],
+      [],
+      source,
     ]);
     return {
-      to: this.megapotContractAddress,
+      to: this.randomTicketBuyerAddress,
       data: purchaseData,
       value: "0",
     };
