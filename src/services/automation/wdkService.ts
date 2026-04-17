@@ -163,7 +163,7 @@ export class TetherWDKService {
     const decisions = [
       "Syndicate yield is currently high (22.5% APY). Purchasing 5 tickets to maximize prize exposure while protecting principal.",
       "Market conditions are stable. Executing scheduled weekly purchase of 10 tickets using accrued USD₮ yield.",
-      "Detected significant increase in Drift JLP vault yield. Allocating extra 2.5 USD₮ to purchase tickets for the upcoming round."
+      "Detected significant increase in Spark Protocol yield. Allocating extra 2.5 USD₮ to purchase tickets for the upcoming round."
     ];
     
     return decisions[Math.floor(Math.random() * decisions.length)];

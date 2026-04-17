@@ -46,9 +46,9 @@ import {
 
 const ALLOCATION_STORAGE_KEY = "vault_yield_allocation";
 const DIRECT_DEPOSIT_STRATEGIES = [
-  "drift",
   "aave",
   "morpho",
+  "spark",
   "pooltogether",
 ] as const;
 
@@ -76,10 +76,10 @@ function getInitialFlowStep(
 
 function getStrategyApyLabel(strategy: SupportedYieldStrategyId | null): string {
   switch (strategy) {
-    case "drift":
-      return "~22.5%";
     case "morpho":
       return "~6.7%";
+    case "spark":
+      return "~4.0%";
     case "pooltogether":
       return "~3.5%";
     case "aave":
@@ -95,8 +95,6 @@ function getStrategyApyLabel(strategy: SupportedYieldStrategyId | null): string 
 
 function getStrategyVenueLabel(strategy: SupportedYieldStrategyId | null): string {
   switch (strategy) {
-    case "drift":
-      return "Solana";
     case "lifiearn":
       return "Cross-chain";
     case "octant":
@@ -108,17 +106,16 @@ function getStrategyVenueLabel(strategy: SupportedYieldStrategyId | null): strin
 
 function getStrategyRiskLabel(strategy: SupportedYieldStrategyId | null): string {
   switch (strategy) {
-    case "drift":
-      return "Medium (hedged)";
     case "morpho":
       return "Low to medium";
+    case "spark":
+      return "Low";
     default:
       return "Low";
   }
 }
 
 function getStrategyLockupLabel(strategy: SupportedYieldStrategyId | null): string {
-  if (strategy === "drift") return "3-month lockup";
   if (strategy === "pooltogether") return "Withdraw anytime";
   if (strategy === "lifiearn") return "Depends on destination vault";
   return "Standard vault terms";
@@ -189,7 +186,7 @@ function YieldStrategiesContent() {
         } catch {}
       }
 
-      if (address && selectedStrategy && (selectedStrategy === "drift" || selectedStrategy === "aave")) {
+      if (address && selectedStrategy && (selectedStrategy === "spark" || selectedStrategy === "aave")) {
         yieldToTicketsService.setupAutoYieldStrategy(address, {
           vaultProtocol: selectedStrategy as unknown as VaultProtocol,
           userAddress: address,
@@ -214,15 +211,15 @@ function YieldStrategiesContent() {
     setFlowStep(getInitialFlowStep(tabParam ?? null, isBridgeEntry, targetStrategy ?? null));
 
     if (
-      targetStrategy === "drift" ||
       targetStrategy === "aave" ||
       targetStrategy === "morpho" ||
+      targetStrategy === "spark" ||
       targetStrategy === "pooltogether" ||
       targetStrategy === "octant" ||
       targetStrategy === "uniswap" ||
       targetStrategy === "lifiearn"
     ) {
-      setSelectedStrategy(targetStrategy);
+      setSelectedStrategy(targetStrategy as SupportedYieldStrategyId);
     }
   }, [isBridgeEntry, protocolParam, strategyParam, tabParam]);
 

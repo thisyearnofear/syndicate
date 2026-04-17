@@ -271,7 +271,7 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
     try { await navigator.clipboard.writeText(url); setStatusLinkCopied(true); setTimeout(() => setStatusLinkCopied(false), 2000); } catch {}
   };
 
-  // Helper to check if PoolTogether/Drift is actively processing
+  // Helper to check if PoolTogether is actively processing
   const isPtProcessing = ptDeposit.status === 'approving' || ptDeposit.status === 'depositing';
 
   const renderStep = () => {
@@ -342,19 +342,6 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
                   </div>
                 </button>
                 {/* DRIFT - Hidden due to security incident (April 2026) */}
-                {/* 
-                <button onClick={() => setSelectedProtocol("drift")} disabled={isPurchasing} className={`relative p-4 rounded-lg border-2 transition-all text-left ${selectedProtocol === "drift" ? "border-blue-500 bg-blue-500/20" : "border-gray-600 hover:border-gray-500 bg-gray-700/30"}`}>
-                  {selectedProtocol === "drift" && <div className="absolute top-2 right-2"><Check className="w-3.5 h-3.5 text-blue-400" /></div>}
-                  <div className="absolute top-2 left-2"><span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-full">~22.5% APY</span></div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0"><Coins className="w-5 h-5 text-blue-400" /></div>
-                    <div>
-                      <h4 className="font-semibold text-white text-sm">Drift JLP Vault</h4>
-                      <p className="text-xs text-gray-400 mt-1">Yield-powered lottery • 3-month lockup</p>
-                    </div>
-                  </div>
-                </button>
-                */}
               </div>
             </div>
 

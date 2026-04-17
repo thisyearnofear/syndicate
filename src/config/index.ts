@@ -164,7 +164,6 @@ export const REFERRALS = {
   treasury: (process.env.NEXT_PUBLIC_TREASURY_ADDRESS || '0x55A5705453Ee82c742274154136Fce8149597058') as `0x${string}`,
   megapotReferrer: (process.env.NEXT_PUBLIC_MEGAPOT_REFERRER || '0x55A5705453Ee82c742274154136Fce8149597058') as `0x${string}`,
   poolTogetherHook: (process.env.NEXT_PUBLIC_POOLTOGETHER_HOOK || '0x55A5705453Ee82c742274154136Fce8149597058') as `0x${string}`,
-  driftAffiliate: process.env.NEXT_PUBLIC_DRIFT_AFFILIATE || 'syndicate_hq',
 } as const;
 
 // =============================================================================

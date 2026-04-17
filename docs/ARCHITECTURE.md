@@ -4,14 +4,14 @@
 
 ## Overview
 
-Syndicate is a **Multi-Protocol Lottery Aggregator** with autonomous AI agents. Users participate in Megapot, PoolTogether v5, and Drift JLP lotteries from any blockchain (Stacks, NEAR, Solana, Base, EVM, TON) with KYC/AML compliance via Civic Pass.
+Syndicate is a **Multi-Protocol Lottery Aggregator** with autonomous AI agents. Users participate in Megapot, PoolTogether v5, and Spark Protocol lotteries from any blockchain (Stacks, NEAR, Solana, Base, EVM, TON) with KYC/AML compliance via Civic Pass.
 
 For the Ranger main track, the repo is being reframed around a stricter operator model: a **real Solana vault strategy on Ranger first**, with Syndicate serving as a custom frontend, reporting surface, and optional downstream yield-consumer experience.
 
 ### Core Principles
 
 - **Universal Agent**: Autonomous AI agents (Tether WDK) decide when to buy based on yield
-- **Multi-Protocol**: Aggregate Megapot, PoolTogether, Drift from single hub
+- **Multi-Protocol**: Aggregate Megapot, PoolTogether, Spark Protocol from single hub
 - **Cross-Chain**: Buy tickets from Stacks, NEAR, Solana, Base, or TON (Telegram Mini App)
 - **Trustless**: No custodial intermediaries; proxy handles purchases atomically
 - **Compliance**: KYC/AML via Civic Pass (CAPTCHA demo → Full ID production)
@@ -118,7 +118,7 @@ Syndicate generates yield from various sources which is automatically converted 
 
 ### Supported Yield Sources
 
-- **Drift JLP Vault**: Generates ~22.5% APY yield (Solana).
+- **Spark Protocol**: Savings USDC (sUSDC) with Sky Savings Rate (~4.0% APY on Base).
 - **Aave / Morpho**: Standard lending yields on Base/EVM.
 - **PoolTogether**: Prize-linked savings yield.
 - **Octant / Uniswap**: Additional strategy surfaces in MVP or in-progress state.
@@ -126,14 +126,14 @@ Syndicate generates yield from various sources which is automatically converted 
 ### Flow
 
 ```
-Solana Wallet → Civic KYC → Drift JLP Vault → Yield Accrual → Base Lottery Tickets
+Base Wallet → Civic KYC → Spark Protocol sUSDC → Yield Accrual → Lottery Tickets
 ```
 
 ### Key Properties
 
-- **Principal Safety**: 100% maintained (delta-neutral strategy)
-- **Yield Generation**: ~22.5% APY from Drift JLP perpetual futures
-- **Lockup Period**: 3 months (90 days) to normalize yield
+- **Principal Safety**: 100% maintained (no lockup)
+- **Yield Generation**: ~4.0% APY from Sky Savings Rate
+- **Lockup Period**: None (withdraw anytime)
 - **Automatic Conversion**: Yield → tickets via on-chain orchestrator
 - **Compliance**: KYC/AML via Civic Pass gates vault deposits
 
@@ -141,7 +141,7 @@ Solana Wallet → Civic KYC → Drift JLP Vault → Yield Accrual → Base Lotte
 
 | Component | File |
 |-----------|------|
-| DriftVaultProvider | `src/services/vaults/driftProvider.ts` |
+| SparkVaultProvider | `src/services/vaults/sparkProvider.ts` |
 | YieldToTicketsService | `src/services/yieldToTicketsService.ts` |
 | YieldDashboard | `src/components/yield/YieldDashboard.tsx` |
 
@@ -209,7 +209,7 @@ Verify permissions → Execute on Megapot → Update database
 |------|-------------|---------|
 | **Scheduled** | Recurring purchases (weekly/monthly) | Time-based |
 | **WDK AI Agent** | Autonomous reasoning based on yield/market | Time-based + AI decision |
-| **No-Loss** | Yield-funded tickets from PoolTogether/Drift | Yield accrual |
+| **No-Loss** | Yield-funded tickets from PoolTogether/Spark | Yield accrual |
 
 ### Database Schema
 
@@ -318,7 +318,7 @@ The current Ranger main-track plan is **strategy-first**:
 - use Syndicate as the custom frontend and reporting layer
 - keep the existing yield-to-tickets flow as optional downstream distribution, not the core strategy thesis
 
-The current Drift JLP/lossless-lottery framing in this repo should not be treated as the main-track submission thesis because the published rules explicitly disallow DEX LP vaults such as JLP. See RANGER_HACKATHON_STRATEGY.md (internal reference).
+The current Spark/lossless-lottery framing provides an optional downstream yield-to-tickets flow, but the repo also supports compliant on-chain strategies. See RANGER_HACKATHON_STRATEGY.md (internal reference).
 
 ---
 
@@ -341,7 +341,7 @@ The current Drift JLP/lossless-lottery framing in this repo should not be treate
 | 🌉 **Cross-Chain** | Buy tickets from Bitcoin/Stacks, NEAR, Solana, StarkNet, or Base |
 | ⚡ **Fast Settlement** | 30-60s from Stacks (CCTP), 1-3 min from Solana/StarkNet |
 | 🔒 **Trustless** | Proxy contract handles all purchases atomically |
-| 🎟️ **Multi-Protocol** | Megapot, PoolTogether v5 (No-Loss), Drift JLP, yield-linked vault participation |
+| 🎟️ **Multi-Protocol** | Megapot, PoolTogether v5 (No-Loss), Spark Protocol, yield-linked vault participation |
 | 🤖 **Auto-Purchase** | Recurring tickets via x402 (Stacks SIP-018) / ERC-7715 (EVM) |
 | 💰 **Fair Pricing** | Clear fees, no hidden costs |
 
@@ -352,7 +352,7 @@ The current Drift JLP/lossless-lottery framing in this repo should not be treate
 ### Overview
 
 Syndicate integrates **Civic Pass** for institutional-grade compliance. The model is:
-- **KYC gates deposits** into yield-generating vaults (Drift JLP, Aave, Morpho)
+- **KYC gates deposits** into yield-generating vaults (Aave, Morpho, Spark)
 - **Prize claims remain permissionless** (lottery payouts don't require KYC)
 
 ---
@@ -408,11 +408,11 @@ User connects ONE native wallet → System auto-detects and routes:
 
 ### Lossless Lottery (Yield-to-Tickets)
 
-**Status**: ✅ Live (Drift JLP Vault on Solana)
+**Status**: ✅ Live (Spark Protocol on Base)
 
 **Flow**:
-1. User deposits USDC into Drift delta-neutral JLP vault (Solana)
-2. Principal locked for 3 months, earning ~22.5% APY
+1. User deposits USDC into Spark sUSDC vault (Base)
+2. No lockup - yield accrues immediately via Sky Savings Rate (~4.0% APY)
 3. Yield automatically converted to lottery tickets
 4. User maintains 100% of principal while playing for free
 
@@ -426,7 +426,7 @@ User connects ONE native wallet → System auto-detects and routes:
 
 **Ticket Purchase (EVM → Base)**: Connect MetaMask → Enter 0.01 USDC → Confirm → Monitor bridge → Verify ticket purchase.
 
-**Drift Vault Deposit**: Complete Civic verification → Select Drift JLP → Enter amount → Confirm 3-month lockup → Execute → Verify principal in YieldDashboard.
+**Spark Vault Deposit**: Complete Civic verification → Select Spark Protocol → Enter amount → Execute → Verify principal in YieldDashboard.
 
 ---
 

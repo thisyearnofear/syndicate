@@ -4,7 +4,7 @@
  * Aggregates prize data from multiple lottery protocols:
  * - Megapot (Direct lottery tickets)
  * - PoolTogether v5 (No-loss prize savings)
- * - Drift JLP (Yield-based lottery)
+ * - Spark Protocol (Yield-based lottery)
  * 
  * Provides a unified view of all available prize opportunities.
  */

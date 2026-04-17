@@ -178,17 +178,12 @@ export function ImprovedYieldStrategySelector({
                         }`}>
                           {strategy.risk}
                         </span>
-                        {strategy.id === 'drift' && (
-                          <span className="text-xs bg-indigo-500/20 text-indigo-400 px-2 py-1 rounded-full whitespace-nowrap">
-                            🔒 3-Mo Lock
-                          </span>
-                        )}
                       </div>
                     </div>
                     <p className="font-bold text-indigo-400">
-                      {strategy.id === 'drift' ? 'Live on Solana 🟣' : 
-                       strategy.id === 'aave' ? 'Live on Base 🟦' : 
+                      {strategy.id === 'aave' ? 'Live on Base 🟦' : 
                        strategy.id === 'morpho' ? 'Live on Base 🟦' :
+                       strategy.id === 'spark' ? 'Live on Base 🟦 ✨' :
                        strategy.id === 'pooltogether' ? 'Live on Base 🟦' :
                        strategy.id === 'octant' ? 'MVP Mock 🧪' :
                        strategy.id === 'uniswap' ? 'Coming Soon 🚧' :
@@ -269,11 +264,6 @@ export function ImprovedYieldStrategySelector({
                 }`}>
                   {selectedStrategyObj.risk} Risk
                 </span>
-                {selectedStrategyObj.id === 'drift' && (
-                  <span className="text-xs bg-indigo-500/20 text-indigo-400 px-2 py-1 rounded-full font-bold">
-                    🔒 3-Month Lockup
-                  </span>
-                )}
                 {isLifiEarn && (
                   <span className="text-xs bg-indigo-500/20 text-indigo-400 px-2 py-1 rounded-full font-bold">
                     🔀 Cross-Chain
@@ -320,16 +310,6 @@ export function ImprovedYieldStrategySelector({
                         userAddress={userAddress}
                       />
                     </Suspense>
-                  </div>
-                </div>
-              )}
-              
-              {selectedStrategyObj.id === 'drift' && (
-                <div className="mt-4 p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex gap-3 text-sm">
-                  <span className="text-indigo-400 text-xl">ℹ️</span>
-                  <div className="text-indigo-200">
-                    <p className="font-semibold text-indigo-300 mb-1">Premium JLP Strategy</p>
-                    <p>This JLP Delta Neutral vault executes on Solana and requires a strict 3-month rolling lockup on your principal deposit. Yields (&gt;20% APY USDC) can be claimed or automatically routed to Megapot tickets at any time.</p>
                   </div>
                 </div>
               )}

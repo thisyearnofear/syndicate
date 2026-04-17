@@ -133,7 +133,7 @@ export function OctantYieldDashboard({
     try {
       const result = await yieldToTicketsService.processYieldConversion(address);
 
-      // If Drift withdrawal needs client-side signing
+      // If Solana withdrawal needs client-side signing
       if (result.pendingWithdrawalTx) {
         try {
           if (!solanaWalletService.isReady()) {

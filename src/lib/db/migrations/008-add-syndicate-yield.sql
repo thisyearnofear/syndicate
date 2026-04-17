@@ -40,6 +40,6 @@ CREATE INDEX IF NOT EXISTS idx_yield_conversions_pool_id ON yield_conversions(po
 -- Add comments
 COMMENT ON TABLE syndicate_vault_deposits IS 'Deposits to syndicate vaults with yield tracking';
 COMMENT ON TABLE yield_conversions IS 'Yield to tickets conversions';
-COMMENT ON COLUMN syndicate_pools.vault_strategy IS 'Yield strategy: aave, morpho, drift, pooltogether';
+COMMENT ON COLUMN syndicate_pools.vault_strategy IS 'Yield strategy: aave, morpho, spark, pooltogether';
 COMMENT ON COLUMN syndicate_pools.auto_convert_yield IS 'Automatically convert yield to tickets when threshold met';
 COMMENT ON COLUMN syndicate_pools.yield_conversion_threshold IS 'Minimum yield amount before auto-conversion';

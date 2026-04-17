@@ -15,7 +15,7 @@ Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, A
 |-------|----------|-------|
 | Base | CCTP + ERC-7715 | Native USDC, Advanced Permissions |
 | Stacks | USDCx + sBTC + x402 | Native Circle USDC, SIP-018 signatures |
-| Solana | Drift Vaults + Proxy | Delta-neutral JLP yield, Lossless Lottery |
+| Solana | Wormhole + Proxy | Cross-chain USDC, Lossless Lottery |
 | NEAR | Intents | Cross-chain intents |
 | Starknet | Cairo contracts | Native bridging |
 | TON | CCTP + Telegram | USDT/TON → CCTP → Base, Telegram Mini App |
@@ -23,9 +23,9 @@ Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, A
 ### Vault Providers (Yield Strategies)
 | Provider | Chain | Status | APY | Notes |
 |----------|-------|--------|-----|-------|
-| Drift | Solana | ✅ Live | ~22.5% | Delta-neutral JLP vault, 3-month lockup |
 | Aave V3 | Base | ✅ Live | ~4.5% | Stable lending with variable rates |
 | Morpho Blue | Base | ✅ Live | ~6.7% | Curated lending vaults |
+| Spark Protocol | Base | ✅ Live | ~4.0% | Savings USDC (sUSDC) via Sky Savings Rate |
 | PoolTogether V5 | Base | ✅ Live | ~3.5% | No-loss prize savings |
 | Octant V2 | Ethereum/Base | 🧪 MVP Mock | ~10% | Yield donating vaults (mock for testing) |
 | Uniswap V3 | Base | 🚧 Coming Soon | ~8.5% | Concentrated liquidity positions |
@@ -33,9 +33,9 @@ Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, A
 ### Key Files
 - `src/services/bridges/protocols/stacks.ts` - Stacks bridge with USDCx/sBTC support
 - `src/services/bridges/protocols/ton.ts` - TON→Base bridge protocol (CCTP)
-- `src/services/vaults/driftProvider.ts` - Drift Delta-Neutral Vault (Solana) ✅ Working
 - `src/services/vaults/aaveProvider.ts` - Aave V3 lending (Base) ✅ Working
 - `src/services/vaults/morphoProvider.ts` - Morpho Blue vaults (Base) ✅ Working
+- `src/services/vaults/sparkProvider.ts` - Spark Protocol sUSDC (Base) ✅ Working
 - `src/services/vaults/poolTogetherProvider.ts` - PoolTogether V5 (Base) ✅ Working
 - `src/services/vaults/octantProvider.ts` - Octant V2 yield donating (Ethereum) 🧪 MVP Mock
 - `src/services/vaults/uniswapProvider.ts` - Uniswap V3 LP positions (Base) 🚧 Coming Soon
@@ -74,8 +74,8 @@ npm run lint   # Lint (note: may have config issues)
 ```
 
 ## Lossless Lottery (Yield-to-Tickets) Flow
-1. User deposits USDC into **Drift JLP Vault** (Solana) via `DriftVaultProvider`.
-2. Principal is locked for 3 months to normalize yield (~20%+ APY).
+1. User deposits USDC into **Spark Protocol** (Base) via `SparkVaultProvider`.
+2. No lockup - yield accrues immediately via Sky Savings Rate (~4.0% APY).
 3. `YieldToTicketsService` monitors accrued yield.
 4. On-chain orchestrator (or relayer) triggers `withdrawYield()`.
 5. Yield is auto-routed to `PurchaseOrchestrator` to mint lottery tickets.
@@ -118,21 +118,20 @@ const ACTIVE_NETWORK = CIVIC_NETWORKS.ID_VERIFICATION; // or CIVIC_NETWORKS.CAPT
 
 ### Integration Points
 - **Yield Strategies page** (`src/app/yield-strategies/page.tsx`): Content wrapped in `CivicGateProvider`
-- **Drift Vault deposits**: Gated behind `CivicVerificationGate`. Unverified users see compliance gate; verified users see deposit UI with "Civic Pass Verified ✓" badge
 
-## Drift Vault (Premium JLP Strategy) Deposit Flow
-The Drift Lossless Vault is a delta-neutral yield strategy on Solana. Principal is locked for 3 months to normalize yield (~22.5% APY), with yield auto-converted to lottery tickets.
+## Spark Protocol (Savings USDC) Deposit Flow
+Spark Protocol provides savings USDC (sUSDC) with the Sky Savings Rate on Base. No lockup required - yield accrues immediately.
 
 ### UI Flow
-1. **Upsell**: `SimplePurchaseModal` and `AutoPurchaseModal` feature "Play for free forever" upsell linking to Drift vault
-2. **Strategy Selection**: `/yield-strategies` page with `ImprovedYieldStrategySelector` handles Drift strategy selection (identifier: `drift`)
-3. **Deposit Execution**: `vaultManager.deposit('drift', amount, userAddress)` → `DriftVaultProvider`
+1. **Upsell**: `SimplePurchaseModal` and `AutoPurchaseModal` feature "Play for free forever" upsell linking to Spark vault
+2. **Strategy Selection**: `/yield-strategies` page with `ImprovedYieldStrategySelector` handles Spark strategy selection (identifier: `spark`)
+3. **Deposit Execution**: `vaultManager.deposit('spark', amount, userAddress)` → `SparkVaultProvider`
 
 ### Key Files
 | Category | Files |
 |----------|-------|
 | **UI Components** | `src/components/modal/SimplePurchaseModal.tsx#L506-L535` (retail upsell)<br>`src/components/modal/AutoPurchaseModal.tsx#L442-L471` (recurring upsell)<br>`src/components/yield/ImprovedYieldStrategySelector.tsx#L160-L247` (strategy detail + 3mo lockup warning)<br>`src/app/yield-strategies/page.tsx#L110-L160` (main page) |
-| **Services** | `src/services/vaults/driftProvider.ts#L134-L145` (deposit implementation)<br>`src/services/vaults/index.ts#L187-L205` (VaultManager orchestration) |
+| **Services** | `src/services/vaults/sparkProvider.ts#L134-L145` (deposit implementation)<br>`src/services/vaults/index.ts#L187-L205` (VaultManager orchestration) |
 | **Monitoring** | `src/components/yield/YieldDashboard.tsx#L19-L45` (principal + yield view)<br>`src/components/yield/YieldPerformanceDisplay.tsx` (APY visualization + tickets generated) |
 
 ## Syndicate Pool System
@@ -173,7 +172,7 @@ Multi-chain syndicate pooling with three pool types for fund custody and prize d
 ### Syndicate Creation Flow
 1. User fills out syndicate details (name, cause, governance)
 2. User selects **Pool Type** (Safe, 0xSplits, or PoolTogether)
-3. User selects yield strategy (Aave, Morpho, PoolTogether, Drift)
+3. User selects yield strategy (Aave, Morpho, Spark, PoolTogether)
 4. System creates on-chain pool based on type
 5. Pool address stored in database with type metadata
 
@@ -191,5 +190,5 @@ Multi-chain syndicate pooling with three pool types for fund custody and prize d
 - Balance API supports EVM, Solana, NEAR, Starknet, Stacks address formats
 - Use `CONTRACTS` object from stacks.ts for contract addresses
 - **Civic**: Default gate is CAPTCHA for demos; switch to ID_VERIFICATION for production compliance
-- **Drift Vault**: 3-month lockup required; yield withdrawn automatically to purchase tickets
+- **Spark Protocol**: No lockup; yield withdrawn automatically to purchase tickets
 - **Pool Types**: Pool type selection is in create-syndicate page step 3; badges shown on syndicate detail page

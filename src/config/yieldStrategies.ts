@@ -7,9 +7,9 @@
  */
 
 export type SupportedYieldStrategyId =
-  | 'drift'
   | 'aave'
   | 'morpho'
+  | 'spark'
   | 'pooltogether'
   | 'octant'
   | 'uniswap'
@@ -28,14 +28,6 @@ export interface YieldStrategyConfig {
 
 export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
   {
-    id: 'drift',
-    name: 'Drift Vault',
-    description: 'Delta-neutral JLP vault on Solana with higher yield and a 3-month lockup.',
-    icon: '🟣',
-    color: 'bg-gradient-to-br from-violet-500 to-fuchsia-500',
-    risk: 'Medium',
-  },
-  {
     id: 'aave',
     name: 'Aave V3',
     description: 'Stable lending on Base with variable rates',
@@ -50,6 +42,14 @@ export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
     icon: '⚡',
     color: 'bg-gradient-to-br from-purple-500 to-pink-400',
     risk: 'Medium',
+  },
+  {
+    id: 'spark',
+    name: 'Spark Protocol',
+    description: 'Savings USDC (sUSDC) via Sky Savings Rate (~4.0% APY)',
+    icon: '✨',
+    color: 'bg-gradient-to-br from-indigo-500 to-blue-400',
+    risk: 'Low',
   },
   {
     id: 'pooltogether',

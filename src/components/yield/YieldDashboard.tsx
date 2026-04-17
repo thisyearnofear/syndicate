@@ -106,15 +106,6 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
         message: "Checking vault lockup status..."
       });
 
-      // Check if Drift (has 3-month lockup)
-      if (protocol === 'drift') {
-        errorToast(
-          "Principal Locked", 
-          "Drift vault requires 3-month lockup to maintain yield coverage."
-        );
-        return;
-      }
-
       // Withdraw from vault
       const result = await vaultManager.withdraw(
         protocol as any,

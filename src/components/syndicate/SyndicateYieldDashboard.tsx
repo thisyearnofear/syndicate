@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 
-type VaultProtocol = 'aave' | 'morpho' | 'spark' | 'drift' | 'pooltogether';
+type VaultProtocol = 'aave' | 'morpho' | 'spark' | 'pooltogether';
 
 interface VaultInfo {
   poolId: string;
@@ -103,8 +103,6 @@ export function SyndicateYieldDashboard({ poolId, className = '' }: SyndicateYie
         return <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">A</div>;
       case 'morpho':
         return <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">M</div>;
-      case 'drift':
-        return <div className="w-6 h-6 bg-cyan-500 rounded-full flex items-center justify-center text-white text-xs font-bold">D</div>;
       case 'pooltogether':
         return <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold">P</div>;
       default:
@@ -117,7 +115,6 @@ export function SyndicateYieldDashboard({ poolId, className = '' }: SyndicateYie
       aave: 'Aave V3',
       morpho: 'Morpho Blue',
       spark: 'Spark Protocol',
-      drift: 'Drift Delta Neutral',
       pooltogether: 'PoolTogether V5',
     };
     return names[protocol] || protocol;

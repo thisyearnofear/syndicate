@@ -340,7 +340,7 @@ export class SyndicateVaultService {
     const addresses: Record<VaultProtocol, string> = {
       aave: '0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB', // Aave V3 aUSDC on Base
       morpho: '0x9CBF0184036048895e69aAFb4D0A1598085bFc82', // Morpho USDC vault
-      spark: '0xSparkUSDCVaultOnBase', // Placeholder
+      spark: '0x3128a0F7f0ea68E7B7c9B00AFa7E41045828e858', // Savings USDC (sUSDC) on Base
       pooltogether: '0x7f5C2b379b88499aC2B997Db583f8079503f25b9', // przUSDC PrizeVault
       octant: '0xOctantUSDCVaultOnEthereum', // Placeholder
       uniswap: '0xUniswapV3StrategyOnBase', // Placeholder

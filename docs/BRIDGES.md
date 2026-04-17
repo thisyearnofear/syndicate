@@ -144,27 +144,27 @@ EVM Wallet → If on Base: Direct purchase
 
 ---
 
-## Lossless Lottery (Solana → Base Yield Routing)
+## Lossless Lottery (Base Yield Routing)
 
-The Drift JLP Vault generates ~22.5% APY yield automatically converted to lottery tickets.
+The Spark Protocol generates ~4.0% APY yield via Sky Savings Rate, automatically converted to lottery tickets.
 
 ### Flow
 
 ```
-Solana Wallet → Civic KYC → Drift JLP Vault → Yield Accrual → Base Lottery Tickets
+Base Wallet → Civic KYC → Spark Protocol sUSDC → Yield Accrual → Lottery Tickets
 ```
 
 ### Key Properties
 
-- **Principal locked**: 3 months (90 days)
-- **Delta-neutral**: No impermanent loss
+- **No lockup**: Withdraw anytime
+- **Sky Savings Rate**: ~4.0% APY
 - **KYC required**: Civic Pass before deposit
 
 ### Components
 
 | Component | File |
 |-----------|------|
-| DriftVaultProvider | `src/services/vaults/driftProvider.ts` |
+| SparkVaultProvider | `src/services/vaults/sparkProvider.ts` |
 | YieldToTicketsService | `src/services/yieldToTicketsService.ts` |
 
 ---

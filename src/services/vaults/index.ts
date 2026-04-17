@@ -24,6 +24,7 @@ import { VaultError, VaultErrorCode } from './vaultProvider';
 import { aaveProvider } from './aaveProvider';
 import { poolTogetherProvider } from './poolTogetherProvider';
 import { morphoProvider } from './morphoProvider';
+import { sparkProvider } from './sparkProvider';
 import { octantProvider } from './octantProvider';
 import { uniswapProvider } from './uniswapProvider';
 import { lifiEarnProvider } from './lifiEarnProvider';
@@ -73,6 +74,9 @@ export class VaultManager {
 
         // Register Morpho provider (Lending Vaults)
         this.providers.set('morpho', morphoProvider);
+
+        // Register Spark provider (MakerDAO/Sky Savings)
+        this.providers.set('spark', sparkProvider);
 
         // Register Octant provider (Yield Donating Vaults)
         this.providers.set('octant', octantProvider);
@@ -288,6 +292,7 @@ export { aaveProvider } from './aaveProvider';
 
 export { poolTogetherProvider } from './poolTogetherProvider';
 export { morphoProvider } from './morphoProvider';
+export { sparkProvider } from './sparkProvider';
 export { octantProvider } from './octantProvider';
 export { uniswapProvider } from './uniswapProvider';
 export { lifiEarnProvider } from './lifiEarnProvider';

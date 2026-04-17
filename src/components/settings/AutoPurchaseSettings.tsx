@@ -149,19 +149,6 @@ export function AutoPurchaseSettings() {
             </div>
           </div>
 
-          {/* DRIFT JLP */}
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all group">
-            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-              <TrendingUp className="w-6 h-6 text-blue-600" />
-            </div>
-            <h4 className="font-bold text-gray-900 text-sm">Drift JLP Vault</h4>
-            <p className="text-[10px] text-gray-500 mt-1 mb-3">High-yield delta-neutral strategy with prize exposure on Solana.</p>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">~22.5% APY</span>
-              <Button size="sm" variant="outline" onClick={() => handleActivateAgent('autonomous')}>Analyze</Button>
-            </div>
-          </div>
-
           {/* PANCAKESWAP */}
           <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all group">
             <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
@@ -227,7 +214,7 @@ export function AutoPurchaseSettings() {
             <div className="flex gap-2 text-slate-500">
               <span>[2026-03-21 14:02:12]</span>
               <span className="text-purple-400">YIELD</span>
-              <span>Drift JLP Vault: 22.5% APY (Stable)</span>
+              <span>Spark Protocol: 4.0% APY (Sky Savings Rate)</span>
             </div>
             <div className="flex gap-2 text-slate-500">
               <span>[2026-03-21 14:02:13]</span>

@@ -160,7 +160,7 @@ POSTGRES_URL=...                # Database connection
 
 ### Compliance Model
 
-- **KYC gates vault deposits**: Users must verify identity before accessing Drift JLP vault
+- **KYC gates vault deposits**: Users must verify identity before accessing yield vaults (Aave, Morpho, Spark)
 - **Prize claims permissionless**: Lottery payouts don't require KYC
 - **On-chain attestation**: Civic GatewayCredential stored on-chain
 - **Three verification tiers**: CAPTCHA (demo), Liveness (beta), ID_VERIFICATION (production)
