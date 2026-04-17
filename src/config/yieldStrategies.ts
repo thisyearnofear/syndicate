@@ -7,6 +7,7 @@
  */
 
 export type SupportedYieldStrategyId =
+  | 'drift'
   | 'aave'
   | 'morpho'
   | 'pooltogether'
@@ -26,6 +27,14 @@ export interface YieldStrategyConfig {
 }
 
 export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
+  {
+    id: 'drift',
+    name: 'Drift Vault',
+    description: 'Delta-neutral JLP vault on Solana with higher yield and a 3-month lockup.',
+    icon: '🟣',
+    color: 'bg-gradient-to-br from-violet-500 to-fuchsia-500',
+    risk: 'Medium',
+  },
   {
     id: 'aave',
     name: 'Aave V3',

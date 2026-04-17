@@ -1,185 +1,288 @@
 "use client";
 
-import { useState, useEffect, Suspense, useCallback } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/shared/components/ui/Button";
-import { 
-  TrendingUp, 
-  Shield, 
-  Heart, 
-  Trophy, 
+import {
   ArrowLeft,
-  Zap,
   Check,
   ExternalLink,
+  Globe,
+  Heart,
   Loader,
-  Globe
+  Shield,
 } from "lucide-react";
-import { CompactCard, CompactStack, CompactContainer, CompactSection } from '@/shared/components/premium/CompactLayout';
-import { useUnifiedWallet } from '@/hooks';
-import { useVaultDeposit } from '@/hooks/useVaultDeposit';
-import WalletConnectionManager from '@/components/wallet/WalletConnectionManager';
-
-import { ImprovedYieldStrategySelector } from '@/components/yield/ImprovedYieldStrategySelector';
-import { YieldAllocationControl } from '@/components/yield/YieldAllocationControl';
-import { YieldDashboard } from '@/components/yield/YieldDashboard';
-
-import { yieldToTicketsService } from '@/services/yieldToTicketsService';
-import type { VaultProtocol } from '@/services/vaults';
-import { getStrategyById, type SupportedYieldStrategyId } from '@/config/yieldStrategies';
-import { LifiEarnVaultSelector } from '@/components/yield/LifiEarnVaultSelector';
-import { persistVaultDepositActivityRecord } from '@/services/activity/activityClient';
-import { updateBridgeActivity } from '@/utils/bridgeStateManager';
-import { createVaultActivityId, recordVaultDepositActivity } from '@/utils/vaultActivityManager';
+import { Button } from "@/shared/components/ui/Button";
+import {
+  CompactCard,
+  CompactContainer,
+  CompactSection,
+  CompactStack,
+} from "@/shared/components/premium/CompactLayout";
+import { useUnifiedWallet } from "@/hooks";
+import { useVaultDeposit } from "@/hooks/useVaultDeposit";
+import WalletConnectionManager from "@/components/wallet/WalletConnectionManager";
+import { ImprovedYieldStrategySelector } from "@/components/yield/ImprovedYieldStrategySelector";
+import { YieldAllocationControl } from "@/components/yield/YieldAllocationControl";
+import { LifiEarnVaultSelector } from "@/components/yield/LifiEarnVaultSelector";
+import { yieldToTicketsService } from "@/services/yieldToTicketsService";
+import type { VaultProtocol } from "@/services/vaults";
+import {
+  getStrategyById,
+  type SupportedYieldStrategyId,
+} from "@/config/yieldStrategies";
+import { persistVaultDepositActivityRecord } from "@/services/activity/activityClient";
+import { updateBridgeActivity } from "@/utils/bridgeStateManager";
+import {
+  createVaultActivityId,
+  recordVaultDepositActivity,
+} from "@/utils/vaultActivityManager";
 import {
   VAULTS_ROUTE,
   YIELD_ENTRY_BRIDGE,
   YIELD_ENTRY_PARAM,
   hasYieldExecutionIntent,
-} from '@/constants/vaultRouting';
-import Link from "next/link";
+} from "@/constants/vaultRouting";
 
-const ALLOCATION_STORAGE_KEY = 'vault_yield_allocation';
-const DIRECT_DEPOSIT_STRATEGIES: VaultProtocol[] = ['drift', 'aave', 'morpho', 'pooltogether'];
+const ALLOCATION_STORAGE_KEY = "vault_yield_allocation";
+const DIRECT_DEPOSIT_STRATEGIES = [
+  "drift",
+  "aave",
+  "morpho",
+  "pooltogether",
+] as const;
+
+type FlowStep = 1 | 2 | 3;
+
+const FLOW_STEPS: Array<{
+  id: FlowStep;
+  title: string;
+  eyebrow: string;
+}> = [
+  { id: 1, title: "Choose strategy", eyebrow: "Step 1" },
+  { id: 2, title: "Set allocation", eyebrow: "Step 2" },
+  { id: 3, title: "Deposit", eyebrow: "Step 3" },
+];
+
+function getInitialFlowStep(
+  tabParam: string | null,
+  isBridgeEntry: boolean,
+  targetStrategy: string | null
+): FlowStep {
+  if (tabParam === "allocation") return 2;
+  if (isBridgeEntry && targetStrategy) return 2;
+  return 1;
+}
+
+function getStrategyApyLabel(strategy: SupportedYieldStrategyId | null): string {
+  switch (strategy) {
+    case "drift":
+      return "~22.5%";
+    case "morpho":
+      return "~6.7%";
+    case "pooltogether":
+      return "~3.5%";
+    case "aave":
+      return "~4.5%";
+    case "octant":
+      return "~10%";
+    case "uniswap":
+      return "~8.5%";
+    default:
+      return "Variable";
+  }
+}
+
+function getStrategyVenueLabel(strategy: SupportedYieldStrategyId | null): string {
+  switch (strategy) {
+    case "drift":
+      return "Solana";
+    case "lifiearn":
+      return "Cross-chain";
+    case "octant":
+      return "Ethereum / Base";
+    default:
+      return "Base";
+  }
+}
+
+function getStrategyRiskLabel(strategy: SupportedYieldStrategyId | null): string {
+  switch (strategy) {
+    case "drift":
+      return "Medium (hedged)";
+    case "morpho":
+      return "Low to medium";
+    default:
+      return "Low";
+  }
+}
+
+function getStrategyLockupLabel(strategy: SupportedYieldStrategyId | null): string {
+  if (strategy === "drift") return "3-month lockup";
+  if (strategy === "pooltogether") return "Withdraw anytime";
+  if (strategy === "lifiearn") return "Depends on destination vault";
+  return "Standard vault terms";
+}
 
 function YieldStrategiesContent() {
   const router = useRouter();
-  const { address } = useUnifiedWallet();
-  const { isDepositing, status, txHash, error: depositError, deposit, reset } = useVaultDeposit();
   const searchParams = useSearchParams();
-  const protocolParam = searchParams?.get('protocol');
-  const strategyParam = searchParams?.get('strategy');
-  const tabParam = searchParams?.get('tab');
+  const { address } = useUnifiedWallet();
+  const {
+    isDepositing,
+    status,
+    txHash,
+    error: depositError,
+    deposit,
+    reset,
+  } = useVaultDeposit();
+
+  const protocolParam = searchParams?.get("protocol");
+  const strategyParam = searchParams?.get("strategy");
+  const tabParam = searchParams?.get("tab");
   const entryParam = searchParams?.get(YIELD_ENTRY_PARAM);
-  const amountParam = searchParams?.get('amount');
-  const sourceChainParam = searchParams?.get('sourceChain');
-  const bridgeActivityIdParam = searchParams?.get('bridgeActivityId');
+  const amountParam = searchParams?.get("amount");
+  const sourceChainParam = searchParams?.get("sourceChain");
+  const bridgeActivityIdParam = searchParams?.get("bridgeActivityId");
   const hasExecutionIntent = hasYieldExecutionIntent(searchParams);
   const isBridgeEntry = entryParam === YIELD_ENTRY_BRIDGE;
-  
-  const [activeTab, setActiveTab] = useState<'overview' | 'strategies' | 'allocation' | 'cross-chain'>('strategies');
+
+  const [flowStep, setFlowStep] = useState<FlowStep>(1);
   const [selectedStrategy, setSelectedStrategy] = useState<SupportedYieldStrategyId | null>(null);
   const [depositAmount, setDepositAmount] = useState<number>(0);
   const [yieldToTickets, setYieldToTickets] = useState(85);
   const [yieldToCauses, setYieldToCauses] = useState(15);
   const [depositSuccess, setDepositSuccess] = useState(false);
-  const selectedStrategyConfig = selectedStrategy ? getStrategyById(selectedStrategy) : undefined;
+
+  const selectedStrategyConfig = selectedStrategy
+    ? getStrategyById(selectedStrategy)
+    : undefined;
   const canDepositIntoSelectedStrategy = Boolean(
-    selectedStrategy && DIRECT_DEPOSIT_STRATEGIES.includes(selectedStrategy as VaultProtocol)
+    selectedStrategy &&
+      DIRECT_DEPOSIT_STRATEGIES.includes(
+        selectedStrategy as (typeof DIRECT_DEPOSIT_STRATEGIES)[number]
+      )
   );
-  // Load persisted allocation from localStorage
+
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
     try {
       const saved = localStorage.getItem(ALLOCATION_STORAGE_KEY);
-      if (saved) {
-        const { tickets, causes } = JSON.parse(saved);
-        setYieldToTickets(tickets);
-        setYieldToCauses(causes);
-      }
+      if (!saved) return;
+      const { tickets, causes } = JSON.parse(saved);
+      setYieldToTickets(tickets);
+      setYieldToCauses(causes);
     } catch {}
   }, []);
 
-  // Persist allocation changes to localStorage + yieldToTicketsService
-  const handleAllocationChange = useCallback((tickets: number, causes: number) => {
-    setYieldToTickets(tickets);
-    setYieldToCauses(causes);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(ALLOCATION_STORAGE_KEY, JSON.stringify({ tickets, causes }));
-      } catch {}
-    }
-    // Update active strategy if one is selected
-    if (address && selectedStrategy && (selectedStrategy === 'drift' || selectedStrategy === 'aave')) {
-      yieldToTicketsService.setupAutoYieldStrategy(address, {
-        vaultProtocol: selectedStrategy,
-        userAddress: address,
-        ticketsAllocation: tickets,
-        causesAllocation: causes,
-        causeWallet: '0x0000000000000000000000000000000000000000',
-        ticketPrice: '1',
-      });
-    }
-  }, [address, selectedStrategy]);
+  const handleAllocationChange = useCallback(
+    (tickets: number, causes: number) => {
+      setYieldToTickets(tickets);
+      setYieldToCauses(causes);
 
-  // Redirect first-time marketing traffic to the canonical /vaults experience.
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(
+            ALLOCATION_STORAGE_KEY,
+            JSON.stringify({ tickets, causes })
+          );
+        } catch {}
+      }
+
+      if (address && selectedStrategy && (selectedStrategy === "drift" || selectedStrategy === "aave")) {
+        yieldToTicketsService.setupAutoYieldStrategy(address, {
+          vaultProtocol: selectedStrategy as unknown as VaultProtocol,
+          userAddress: address,
+          ticketsAllocation: tickets,
+          causesAllocation: causes,
+          causeWallet: "0x0000000000000000000000000000000000000000",
+          ticketPrice: "1",
+        });
+      }
+    },
+    [address, selectedStrategy]
+  );
+
   useEffect(() => {
     if (!hasExecutionIntent) {
       router.replace(VAULTS_ROUTE);
     }
   }, [hasExecutionIntent, router]);
 
-  // Pre-select tab and strategy based on URL parameters
   useEffect(() => {
-    if (tabParam === 'overview' || tabParam === 'strategies' || tabParam === 'allocation') {
-      setActiveTab(tabParam);
-    }
-
     const targetStrategy = strategyParam ?? protocolParam;
+    setFlowStep(getInitialFlowStep(tabParam ?? null, isBridgeEntry, targetStrategy ?? null));
 
-    if (targetStrategy === 'pooltogether') {
-      setSelectedStrategy('pooltogether');
-      setActiveTab(isBridgeEntry ? 'allocation' : 'strategies');
-    } else if (targetStrategy === 'drift') {
-      setSelectedStrategy('drift');
-      setActiveTab(isBridgeEntry ? 'allocation' : 'strategies');
-    } else if (targetStrategy === 'aave') {
-      setSelectedStrategy('aave');
-      setActiveTab(isBridgeEntry ? 'allocation' : 'strategies');
-    } else if (targetStrategy === 'morpho') {
-      setSelectedStrategy('morpho');
-      setActiveTab(isBridgeEntry ? 'allocation' : 'strategies');
-    } else if (targetStrategy === 'lifiearn') {
-      setSelectedStrategy('lifiearn');
-      setActiveTab(isBridgeEntry ? 'allocation' : 'cross-chain');
+    if (
+      targetStrategy === "drift" ||
+      targetStrategy === "aave" ||
+      targetStrategy === "morpho" ||
+      targetStrategy === "pooltogether" ||
+      targetStrategy === "octant" ||
+      targetStrategy === "uniswap" ||
+      targetStrategy === "lifiearn"
+    ) {
+      setSelectedStrategy(targetStrategy);
     }
-  }, [isBridgeEntry, strategyParam, protocolParam, tabParam]);
+  }, [isBridgeEntry, protocolParam, strategyParam, tabParam]);
+
+  useEffect(() => {
+    if (!selectedStrategy && flowStep !== 1) {
+      setFlowStep(1);
+    }
+  }, [flowStep, selectedStrategy]);
 
   useEffect(() => {
     if (!amountParam) return;
-
     const parsedAmount = Number(amountParam);
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) return;
-
     setDepositAmount((current) => (current > 0 ? current : parsedAmount));
   }, [amountParam]);
 
-  // Handle deposit - now supports all vault protocols
   const handleDeposit = useCallback(async () => {
     if (!selectedStrategy || depositAmount <= 0) return;
-    // Support all vault protocols (drift, aave, morpho, pooltogether)
-    const vaultProtocols: VaultProtocol[] = ['drift', 'aave', 'morpho', 'pooltogether'];
-    if (!vaultProtocols.includes(selectedStrategy as VaultProtocol)) return;
+    if (
+      !DIRECT_DEPOSIT_STRATEGIES.includes(
+        selectedStrategy as (typeof DIRECT_DEPOSIT_STRATEGIES)[number]
+      )
+    ) {
+      return;
+    }
+
+    const vaultProtocol = selectedStrategy as unknown as VaultProtocol;
 
     setDepositSuccess(false);
-    const result = await deposit(selectedStrategy as VaultProtocol, depositAmount.toString());
+    const result = await deposit(vaultProtocol, depositAmount.toString());
+
     if (result.success) {
       if (address && result.txHash) {
         const depositRecord = {
           id: createVaultActivityId(),
           walletAddress: address,
-          protocol: selectedStrategy as VaultProtocol,
+          protocol: vaultProtocol,
           amount: depositAmount.toString(),
           txHash: result.txHash,
           timestamp: Date.now(),
           bridgeActivityId: bridgeActivityIdParam || undefined,
         };
+
         recordVaultDepositActivity(depositRecord);
         void persistVaultDepositActivityRecord(depositRecord).catch((error) => {
-          console.warn('[YieldStrategies] Failed to persist vault deposit activity:', error);
+          console.warn("[YieldStrategies] Failed to persist vault deposit activity:", error);
         });
       }
+
       if (bridgeActivityIdParam && result.txHash) {
         updateBridgeActivity(bridgeActivityIdParam, {
           linkedVaultProtocol: selectedStrategy,
           linkedDepositTxHash: result.txHash,
         });
       }
+
       setDepositSuccess(true);
     }
   }, [address, bridgeActivityIdParam, deposit, depositAmount, selectedStrategy]);
 
-  // Reset deposit state when amount or strategy changes
   useEffect(() => {
     reset();
     setDepositSuccess(false);
@@ -187,391 +290,469 @@ function YieldStrategiesContent() {
 
   const getDepositStatusLabel = () => {
     switch (status) {
-      case 'building_tx': return 'Building transaction...';
-      case 'checking_allowance': return 'Checking USDC allowance...';
-      case 'approving': return 'Approving USDC spending...';
-      case 'depositing': return 'Depositing to vault...';
-      case 'signing': return 'Sign in your wallet...';
-      case 'confirming': return 'Confirming on-chain...';
-      case 'complete': return 'Deposit complete!';
-      default: return null;
+      case "building_tx":
+        return "Building transaction...";
+      case "checking_allowance":
+        return "Checking USDC allowance...";
+      case "approving":
+        return "Approving USDC spending...";
+      case "depositing":
+        return "Depositing to vault...";
+      case "signing":
+        return "Sign in your wallet...";
+      case "confirming":
+        return "Confirming on-chain...";
+      case "complete":
+        return "Deposit complete!";
+      default:
+        return null;
     }
   };
 
-  const renderStrategyExecution = (showAllocationControl: boolean) => (
-    <CompactStack spacing="lg">
-      {showAllocationControl ? (
-        <YieldAllocationControl
-          ticketsAllocation={yieldToTickets}
-          causesAllocation={yieldToCauses}
-          onAllocationChange={handleAllocationChange}
-        />
-      ) : null}
+  const goToStep = (step: FlowStep) => {
+    if (step === 1) {
+      setFlowStep(1);
+      return;
+    }
 
-      <ImprovedYieldStrategySelector 
-        selectedStrategy={selectedStrategy} 
-        onStrategySelect={(strategy) => setSelectedStrategy(strategy || null)}
+    if (!selectedStrategy) return;
+    setFlowStep(step);
+  };
+
+  const renderStepButton = (step: (typeof FLOW_STEPS)[number]) => {
+    const isCurrent = flowStep === step.id;
+    const isComplete = flowStep > step.id;
+    const isUnlocked = step.id === 1 || Boolean(selectedStrategy);
+
+    return (
+      <button
+        key={step.id}
+        type="button"
+        onClick={() => goToStep(step.id)}
+        disabled={!isUnlocked}
+        className={`rounded-2xl border px-4 py-4 text-left transition-all ${
+          isCurrent
+            ? "border-blue-400/70 bg-blue-500/15 shadow-[0_0_0_1px_rgba(96,165,250,0.35)]"
+            : isComplete
+              ? "border-emerald-500/40 bg-emerald-500/10"
+              : isUnlocked
+                ? "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
+                : "cursor-not-allowed border-white/5 bg-white/[0.03] opacity-50"
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ${
+              isComplete
+                ? "bg-emerald-500/20 text-emerald-300"
+                : isCurrent
+                  ? "bg-blue-500/20 text-blue-200"
+                  : "bg-white/10 text-gray-300"
+            }`}
+          >
+            {isComplete ? <Check className="h-4 w-4" /> : step.id}
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
+              {step.eyebrow}
+            </p>
+            <p className="text-sm font-semibold text-white">{step.title}</p>
+          </div>
+        </div>
+      </button>
+    );
+  };
+
+  const renderSelectedStrategySummary = () => {
+    if (!selectedStrategy) return null;
+
+    return (
+      <CompactCard variant="premium" padding="lg">
+        <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+          <div className="max-w-2xl">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-blue-200">
+              <Shield className="h-3.5 w-3.5" />
+              Selected strategy
+            </div>
+            <h2 className="text-2xl font-bold text-white">
+              {selectedStrategyConfig?.name ?? "Vault strategy"}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-gray-300">
+              {selectedStrategyConfig?.description ??
+                "Your yield will be routed into tickets and causes using the split you choose next."}
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[320px]">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Yield</p>
+              <p className="mt-2 text-lg font-semibold text-emerald-300">
+                {getStrategyApyLabel(selectedStrategy)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Risk</p>
+              <p className="mt-2 text-lg font-semibold text-white">
+                {getStrategyRiskLabel(selectedStrategy)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Network</p>
+              <p className="mt-2 text-lg font-semibold text-white">
+                {getStrategyVenueLabel(selectedStrategy)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Terms</p>
+              <p className="mt-2 text-lg font-semibold text-white">
+                {getStrategyLockupLabel(selectedStrategy)}
+              </p>
+            </div>
+          </div>
+        </div>
+      </CompactCard>
+    );
+  };
+
+  const renderStrategyStep = () => (
+    <CompactStack spacing="lg">
+      <CompactCard variant="premium" padding="lg">
+        <div className="max-w-2xl">
+          <h2 className="text-2xl font-bold text-white">Pick the vault first</h2>
+          <p className="mt-2 text-sm leading-6 text-gray-300">
+            Start with the risk and yield profile that matches the user intent.
+            The page now keeps this step focused on selection only, so people are not
+            comparing strategies and entering money in the same glance.
+          </p>
+        </div>
+      </CompactCard>
+
+      <ImprovedYieldStrategySelector
+        selectedStrategy={selectedStrategy}
+        onStrategySelect={(strategy) => setSelectedStrategy(strategy ?? null)}
         ticketsAllocation={yieldToTickets}
         causesAllocation={yieldToCauses}
         onAllocationChange={handleAllocationChange}
         userAddress={address || undefined}
+        allowInternalDetailView={false}
+        compactCards
+        showIntro={false}
       />
-      
+
       {selectedStrategy ? (
         <>
-          <CompactCard variant="premium" padding="lg">
-            <label className="block text-sm font-semibold text-gray-300 mb-2">
-              Deposit Amount (USDC)
-            </label>
-            <input
-              type="number"
-              min={0}
-              step={100}
-              value={depositAmount || ''}
-              onChange={(e) => setDepositAmount(Number(e.target.value) || 0)}
-              placeholder="Enter amount to deposit"
-              className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-lg"
-            />
-          </CompactCard>
-
-          <CompactCard variant="premium" padding="lg">
-              <div className="flex items-start gap-4">
-                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
-                  <Shield className="w-8 h-8 text-white" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-xl font-bold text-white">
-                      {selectedStrategyConfig?.name ?? `${selectedStrategy.toUpperCase()} Strategy`}
-                    </h3>
-                    <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full flex items-center gap-1">
-                      <Check className="w-3 h-3" /> Verified
-                    </span>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div className="glass-premium p-4 rounded-lg border border-white/10">
-                      <p className="text-sm text-gray-400 mb-1">Risk Level</p>
-                      <p className="font-bold text-white">
-                        {selectedStrategy === 'drift' ? 'Medium (Hedged)' : 'Low to Medium'}
-                      </p>
-                    </div>
-                    <div className="glass-premium p-4 rounded-lg border border-white/10">
-                      <p className="text-sm text-gray-400 mb-1">Current APY</p>
-                      <p className="font-bold text-green-400">
-                        {selectedStrategy === 'drift' ? '~22.5%' : 
-                        selectedStrategy === 'morpho' ? '~6.7%' :
-                        selectedStrategy === 'pooltogether' ? '~3.5%' :
-                        selectedStrategy === 'aave' ? '~4.5%' :
-                        selectedStrategy === 'octant' ? '~10%' :
-                        selectedStrategy === 'uniswap' ? '~8.5%' : 'Variable'}
-                      </p>
-                    </div>
-                    <div className="glass-premium p-4 rounded-lg border border-white/10">
-                      <p className="text-sm text-gray-400 mb-1">Allocation</p>
-                      <p className="font-bold text-white">
-                        {yieldToTickets}% tickets / {yieldToCauses}% causes
-                      </p>
-                    </div>
-                  </div>
-
-                  {depositSuccess && txHash ? (
-                    <div className="p-5 rounded-xl bg-gradient-to-r from-green-500/20 to-emerald-500/10 border border-green-500/30">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                          <Check className="w-6 h-6 text-green-400" />
-                        </div>
-                        <div>
-                          <p className="font-bold text-green-300">Deposit Successful!</p>
-                          <p className="text-xs text-green-200/70">Your funds are now earning yield</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-3 mt-4">
-                        <a
-                          href={`https://basescan.org/tx/${txHash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 text-center text-xs text-green-400 hover:text-green-300 underline py-2 border border-green-500/30 rounded-lg"
-                        >
-                          View TX <ExternalLink className="w-3 h-3 inline ml-1" />
-                        </a>
-                        <Link
-                          href="/vaults"
-                          className="flex-1 text-center text-xs text-blue-400 hover:text-blue-300 underline py-2 border border-blue-500/30 rounded-lg"
-                        >
-                          View Dashboard →
-                        </Link>
-                      </div>
-                    </div>
-                  ) : depositError ? (
-                    <div className="space-y-3">
-                      <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
-                        <p className="text-sm text-red-300">{depositError}</p>
-                      </div>
-                      <Button
-                        onClick={handleDeposit}
-                        disabled={!depositAmount || depositAmount <= 0 || isDepositing || !canDepositIntoSelectedStrategy}
-                        className="w-full"
-                        variant="default"
-                      >
-                        Retry Deposit
-                      </Button>
-                    </div>
-                  ) : canDepositIntoSelectedStrategy ? (
-                    <Button
-                      onClick={handleDeposit}
-                      disabled={!depositAmount || depositAmount <= 0 || isDepositing}
-                      className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
-                      variant="default"
-                    >
-                      {isDepositing ? (
-                        <span className="flex items-center gap-2">
-                          <Loader className="w-4 h-4 animate-spin" />
-                          {getDepositStatusLabel()}
-                        </span>
-                      ) : (
-                        `Deposit ${depositAmount > 0 ? `${depositAmount.toLocaleString()} USDC` : ''} into ${selectedStrategyConfig?.name ?? selectedStrategy.toUpperCase()}`
-                      )}
-                    </Button>
-                  ) : (
-                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-                      <p className="text-sm text-amber-200">
-                        {selectedStrategyConfig?.name ?? 'This strategy'} is not yet available for direct deposit from this flow.
-                        Choose Aave, Morpho, PoolTogether, or Drift to complete the current execution path.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CompactCard>
-
+          {renderSelectedStrategySummary()}
+          <div className="flex justify-end">
+            <Button
+              variant="default"
+              className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+              onClick={() => setFlowStep(2)}
+            >
+              Continue to allocation
+            </Button>
+          </div>
         </>
       ) : null}
     </CompactStack>
   );
 
+  const renderAllocationStep = () => (
+    <CompactStack spacing="lg">
+      {renderSelectedStrategySummary()}
+
+      <CompactCard variant="premium" padding="lg">
+        <div className="mb-6 max-w-2xl">
+          <h2 className="text-2xl font-bold text-white">Choose the yield split</h2>
+          <p className="mt-2 text-sm leading-6 text-gray-300">
+            This controls what happens to generated yield after deposit. Keep the decision
+            separate from strategy selection so the page reads like a flow instead of a dashboard.
+          </p>
+        </div>
+
+        <YieldAllocationControl
+          ticketsAllocation={yieldToTickets}
+          causesAllocation={yieldToCauses}
+          onAllocationChange={handleAllocationChange}
+        />
+
+        <div className="mt-6 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+          Current split: {yieldToTickets}% to tickets and {yieldToCauses}% to causes.
+        </div>
+      </CompactCard>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
+        <Button variant="outline" className="border-white/15" onClick={() => setFlowStep(1)}>
+          Back to strategies
+        </Button>
+        <Button
+          variant="default"
+          className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600"
+          onClick={() => setFlowStep(3)}
+        >
+          Continue to deposit
+        </Button>
+      </div>
+    </CompactStack>
+  );
+
+  const renderDirectDepositPanel = () => (
+    <CompactCard variant="premium" padding="lg">
+      <div className="mb-6 max-w-2xl">
+        <h2 className="text-2xl font-bold text-white">Fund the vault</h2>
+        <p className="mt-2 text-sm leading-6 text-gray-300">
+          Keep the amount entry and action review together in the last step. That removes
+          the biggest source of noise from the landing view while still keeping the execution path fast.
+        </p>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-6">
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-gray-300">
+              Deposit amount (USDC)
+            </label>
+            <input
+              type="number"
+              min={0}
+              step={100}
+              value={depositAmount || ""}
+              onChange={(e) => setDepositAmount(Number(e.target.value) || 0)}
+              placeholder="Enter amount to deposit"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-4 text-lg text-white outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+            <p className="mt-2 text-sm text-gray-400">
+              The amount stays visible here only, not in earlier steps.
+            </p>
+          </div>
+
+          {depositSuccess && txHash ? (
+            <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/20 to-teal-500/10 p-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20">
+                  <Check className="h-5 w-5 text-emerald-300" />
+                </div>
+                <div>
+                  <p className="font-semibold text-emerald-200">Deposit complete</p>
+                  <p className="text-sm text-emerald-100/80">
+                    Your vault is active and the yield routing preferences are saved.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                <a
+                  href={`https://basescan.org/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center rounded-xl border border-emerald-400/30 px-4 py-3 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/10"
+                >
+                  View transaction
+                  <ExternalLink className="ml-2 h-4 w-4" />
+                </a>
+                <Link
+                  href={VAULTS_ROUTE}
+                  className="inline-flex items-center justify-center rounded-xl border border-blue-400/30 px-4 py-3 text-sm font-medium text-blue-200 transition hover:bg-blue-500/10"
+                >
+                  Return to vaults
+                </Link>
+              </div>
+            </div>
+          ) : depositError ? (
+            <div className="space-y-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-5">
+              <p className="text-sm text-red-200">{depositError}</p>
+              <Button
+                onClick={handleDeposit}
+                disabled={!depositAmount || depositAmount <= 0 || isDepositing}
+                className="w-full"
+                variant="default"
+              >
+                Retry deposit
+              </Button>
+            </div>
+          ) : canDepositIntoSelectedStrategy ? (
+            <Button
+              onClick={handleDeposit}
+              disabled={!depositAmount || depositAmount <= 0 || isDepositing}
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+              variant="default"
+            >
+              {isDepositing ? (
+                <span className="flex items-center gap-2">
+                  <Loader className="h-4 w-4 animate-spin" />
+                  {getDepositStatusLabel()}
+                </span>
+              ) : (
+                `Deposit ${depositAmount > 0 ? `${depositAmount.toLocaleString()} USDC` : "USDC"}`
+              )}
+            </Button>
+          ) : (
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5">
+              <p className="text-sm text-amber-100">
+                {selectedStrategyConfig?.name ?? "This strategy"} is not available for direct
+                deposit from this execution flow yet.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+            <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Review</p>
+            <div className="mt-4 space-y-4">
+              <div>
+                <p className="text-sm text-gray-400">Expected APY</p>
+                <p className="text-lg font-semibold text-emerald-300">
+                  {getStrategyApyLabel(selectedStrategy)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-400">Yield routing</p>
+                <p className="text-lg font-semibold text-white">
+                  {yieldToTickets}% tickets / {yieldToCauses}% causes
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-400">Withdrawal terms</p>
+                <p className="text-lg font-semibold text-white">
+                  {getStrategyLockupLabel(selectedStrategy)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+            <p className="text-sm font-semibold text-white">What changed in the UX</p>
+            <p className="mt-2 text-sm leading-6 text-gray-400">
+              The page now holds one primary decision per step. Users choose the vault,
+              then the split, then the money movement.
+            </p>
+          </div>
+        </div>
+      </div>
+    </CompactCard>
+  );
+
+  const renderLifiDepositPanel = () => (
+    <CompactStack spacing="lg">
+      <CompactCard variant="premium" padding="lg">
+        <div className="mb-6 max-w-2xl">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-200">
+            <Globe className="h-3.5 w-3.5" />
+            Cross-chain deposit
+          </div>
+          <h2 className="text-2xl font-bold text-white">Deposit from any supported chain</h2>
+          <p className="mt-2 text-sm leading-6 text-gray-300">
+            LI.FI Earn already has its own vault explorer, so this step should only introduce
+            the cross-chain promise and then hand off to the selector.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+          <label className="mb-2 block text-sm font-semibold text-gray-300">
+            Deposit amount (USDC)
+          </label>
+          <input
+            type="number"
+            min={0}
+            step={100}
+            value={depositAmount || ""}
+            onChange={(e) => setDepositAmount(Number(e.target.value) || 0)}
+            placeholder="Enter amount to bridge and deposit"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-4 text-lg text-white outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+          />
+        </div>
+      </CompactCard>
+
+      <LifiEarnVaultSelector
+        onVaultSelect={(vault) => console.log("Selected vault:", vault)}
+        depositAmount={depositAmount.toString()}
+        userAddress={address || undefined}
+      />
+    </CompactStack>
+  );
+
   if (!hasExecutionIntent) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
         <div className="text-center">
-          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-white"></div>
-          <p className="text-sm text-gray-300">Redirecting to Vaults...</p>
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-white" />
+          <p className="text-sm text-gray-300">Redirecting to vaults...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.22),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.18),_transparent_28%),linear-gradient(180deg,_#020617_0%,_#0f172a_52%,_#111827_100%)] p-4">
       <CompactContainer maxWidth="2xl">
         <CompactSection spacing="lg">
-          {/* Header */}
-          <div className="mb-8">
+          <div className="mb-2">
             <Link href={VAULTS_ROUTE}>
-              <Button 
-                variant="ghost" 
-                className="mb-4 text-gray-400 hover:text-white"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Vaults
+              <Button variant="ghost" className="text-gray-400 hover:text-white">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to vaults
               </Button>
             </Link>
-            
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-green-500/20 to-teal-500/20 px-4 py-2 rounded-full border border-green-500/30 mb-4">
-                <Zap className="w-4 h-4 text-green-400" />
-                <span className="text-sm font-semibold text-green-300">ALLOCATION FLOW</span>
-              </div>
+          </div>
 
-              <div className="mb-4">
-                <Link href={VAULTS_ROUTE}>
-                  <Button
-                    variant="outline"
-                    className="border-emerald-500/40 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20"
-                  >
-                    Back To Vaults
-                    <ExternalLink className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-              </div>
-              
-              <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-blue-400 via-purple-500 to-pink-400 bg-clip-text text-transparent mb-4">
-                Choose Strategy, Allocation, And Deposit
-              </h1>
-              
-              <p className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-                This is the execution step after vault discovery. Compare the available strategies,
-                set how yield should be allocated, and complete the deposit flow without leaving
-                the product path.
-              </p>
-
-              {isBridgeEntry ? (
-                <div className="mx-auto mt-6 max-w-2xl rounded-2xl border border-blue-500/30 bg-blue-500/10 px-5 py-4 text-left">
-                  <p className="text-sm font-semibold text-blue-200">
-                    Funding received from {sourceChainParam || 'bridge flow'}
-                  </p>
-                  <p className="mt-1 text-sm text-blue-100/80">
-                    Your bridged capital is ready for allocation.
-                    {amountParam ? ` ${amountParam} USDC has been carried into this step so you can finish the deposit flow immediately.` : ''}
-                    {selectedStrategyConfig ? ` The destination strategy is preselected as ${selectedStrategyConfig.name}.` : ''}
-                  </p>
+          <CompactCard variant="premium" padding="lg">
+            <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-3xl">
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200">
+                  <Heart className="h-3.5 w-3.5" />
+                  Vault setup
                 </div>
-              ) : null}
-              
-              {/* Wallet Connection Status */}
-              <div className="flex justify-center mt-6">
+                <h1 className="mt-4 text-4xl font-black tracking-tight text-white md:text-5xl">
+                  Set up the vault in three clear steps
+                </h1>
+                <p className="mt-4 max-w-2xl text-base leading-7 text-gray-300">
+                  The old page behaved like a dense control panel. This version keeps the
+                  discovery work on <span className="font-semibold text-white">/vaults</span> and
+                  turns the execution page into a guided sequence: choose the vault, set the
+                  yield split, then complete the deposit.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="mb-3 text-xs uppercase tracking-[0.16em] text-gray-500">
+                  Wallet status
+                </p>
                 <WalletConnectionManager />
               </div>
             </div>
-          </div>
 
-          {/* Tab Navigation */}
-          <div className="flex flex-wrap justify-center gap-2 mb-8">
-            <Button
-              variant={activeTab === 'overview' ? 'default' : 'outline'}
-              className={`border-blue-500/50 ${activeTab === 'overview' ? 'bg-blue-500/20' : 'text-blue-300 hover:bg-blue-500/10'}`}
-              onClick={() => setActiveTab('overview')}
-            >
-              <TrendingUp className="w-4 h-4 mr-2" />
-              Overview
-            </Button>
-            <Button
-              variant={activeTab === 'strategies' ? 'default' : 'outline'}
-              className={`border-purple-500/50 ${activeTab === 'strategies' ? 'bg-purple-500/20' : 'text-purple-300 hover:bg-purple-500/10'}`}
-              onClick={() => setActiveTab('strategies')}
-            >
-              <Shield className="w-4 h-4 mr-2" />
-              Strategies
-            </Button>
-            <Button
-              variant={activeTab === 'allocation' ? 'default' : 'outline'}
-              className={`border-green-500/50 ${activeTab === 'allocation' ? 'bg-green-500/20' : 'text-green-300 hover:bg-green-500/10'}`}
-              onClick={() => setActiveTab('allocation')}
-            >
-              <Heart className="w-4 h-4 mr-2" />
-              Allocation
-            </Button>
-            <Button
-              variant={activeTab === 'cross-chain' ? 'default' : 'outline'}
-              className={`border-indigo-500/50 ${activeTab === 'cross-chain' ? 'bg-indigo-500/20' : 'text-indigo-300 hover:bg-indigo-500/10'}`}
-              onClick={() => setActiveTab('cross-chain')}
-            >
-              <Globe className="w-4 h-4 mr-2" />
-              Cross-Chain
-            </Button>
-          </div>
+            {isBridgeEntry ? (
+              <div className="mt-6 rounded-2xl border border-blue-500/30 bg-blue-500/10 px-5 py-4">
+                <p className="text-sm font-semibold text-blue-200">
+                  Bridge flow detected from {sourceChainParam || "another chain"}
+                </p>
+                <p className="mt-1 text-sm leading-6 text-blue-100/85">
+                  The funding leg has already happened. This page now focuses on the remaining
+                  decisions so the user can finish the vault setup without extra page hopping.
+                  {amountParam ? ` ${amountParam} USDC is prefilled for the final step.` : ""}
+                  {selectedStrategyConfig ? ` ${selectedStrategyConfig.name} is already selected.` : ""}
+                </p>
+              </div>
+            ) : null}
+          </CompactCard>
 
-          {/* Tab Content */}
+          <div className="grid gap-3 md:grid-cols-3">{FLOW_STEPS.map(renderStepButton)}</div>
+
           <div className="w-full">
-            {activeTab === 'overview' && (
-              <YieldDashboard />
-            )}
-            
-            {activeTab === 'strategies' && (
-              renderStrategyExecution(false)
-            )}
-            
-            {activeTab === 'allocation' && (
-                <CompactStack spacing="lg">
-                  {renderStrategyExecution(true)}
-
-                <CompactCard variant="premium" padding="lg">
-                  <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                    <Trophy className="w-5 h-5 text-yellow-400" />
-                    How It Works
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-4">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                        1
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-white">Deposit Into Vaults</h4>
-                        <p className="text-gray-400">
-                          Transfer USDC into premium delta-neutral or lending vaults (like Drift JLP or Aave).
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start gap-4">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-400 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                        2
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-white">Generate Yield</h4>
-                        <p className="text-gray-400">
-                          Your capital earns yield through selected DeFi strategies
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start gap-4">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-teal-400 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                        3
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-white">Auto-Route Yield</h4>
-                        <p className="text-gray-400">
-                          Our smart orchestrator sweeps your yield to buy lottery tickets automatically. Principal stays locked and safe.
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start gap-4">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-500 to-orange-400 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                        4
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-white">Maximize Impact</h4>
-                        <p className="text-gray-400">
-                          Reap both amplified lottery participation and consistent cause support
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </CompactCard>
-                </CompactStack>
-            )}
-            
-            {activeTab === 'cross-chain' && (
-                <CompactStack spacing="lg">
-                  <CompactCard variant="premium" padding="lg">
-                    <div className="flex items-start gap-4 mb-6">
-                      <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                        <Globe className="w-7 h-7 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-white mb-2">Cross-Chain Yield with LI.FI Earn</h3>
-                        <p className="text-gray-400 max-w-2xl">
-                          Access the best yield opportunities across 20+ protocols and 60+ chains. 
-                          Deposit from any chain with one-click Composer execution.
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                      <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-                        <div className="text-2xl font-bold text-indigo-400 mb-1">20+</div>
-                        <div className="text-sm text-gray-400">Protocols</div>
-                      </div>
-                      <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-                        <div className="text-2xl font-bold text-purple-400 mb-1">60+</div>
-                        <div className="text-sm text-gray-400">Chains Supported</div>
-                      </div>
-                      <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-                        <div className="text-2xl font-bold text-blue-400 mb-1">1 Click</div>
-                        <div className="text-sm text-gray-400">Cross-Chain Deposits</div>
-                      </div>
-                    </div>
-                    
-                    <LifiEarnVaultSelector
-                      onVaultSelect={(vault) => console.log('Selected vault:', vault)}
-                      depositAmount={depositAmount.toString()}
-                      userAddress={address || undefined}
-                    />
-                  </CompactCard>
-                </CompactStack>
+            {flowStep === 1 && renderStrategyStep()}
+            {flowStep === 2 && selectedStrategy && renderAllocationStep()}
+            {flowStep === 3 && selectedStrategy && (
+              <CompactStack spacing="lg">
+                {renderSelectedStrategySummary()}
+                {selectedStrategy === "lifiearn"
+                  ? renderLifiDepositPanel()
+                  : renderDirectDepositPanel()}
+                <div className="flex justify-start">
+                  <Button variant="outline" className="border-white/15" onClick={() => setFlowStep(2)}>
+                    Back to allocation
+                  </Button>
+                </div>
+              </CompactStack>
             )}
           </div>
         </CompactSection>
@@ -582,11 +763,13 @@ function YieldStrategiesContent() {
 
 export default function YieldStrategiesPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
+          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-white" />
+        </div>
+      }
+    >
       <YieldStrategiesContent />
     </Suspense>
   );
