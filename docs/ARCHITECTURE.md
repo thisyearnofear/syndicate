@@ -105,7 +105,7 @@ Multi-chain syndicate pooling with three custody models:
 |----------|---------|
 | Safe Proxy Factory | `0xa951BE5AF0Fb62a79a4D70954A8D69553207041E` |
 | 0xSplits SplitMain | `0x2ed6c55457632e381550485286422539B967796D` |
-| PoolTogether PrizeVault (USDC) | `0x6B5a5c55E9dD4bb502Ce25bBfbaA49b69cf7E4dd` |
+| PoolTogether PrizeVault (USDC) | `0x7f5C2b379b88499aC2B997Db583f8079503f25b9` |
 | PoolTogether TwabDelegator | `0x2d3DaECD9F5502b533Ff72CDb1e1367481F2aEa6` |
 
 ---

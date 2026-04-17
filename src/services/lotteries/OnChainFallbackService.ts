@@ -13,7 +13,7 @@ import { MEGAPOT_ABI } from '@/config/contracts';
 // CONTRACT ADDRESSES
 // =============================================================================
 
-const POOLTOGETHER_VAULT_ADDRESS: Address = '0x6B5a5c55E9dD4bb502Ce25bBfbaA49b69cf7E4dd';
+const POOLTOGETHER_VAULT_ADDRESS: Address = '0x7f5C2b379b88499aC2B997Db583f8079503f25b9';
 const POOLTOGETHER_PRIZE_POOL_ADDRESS: Address = '0x45b2010d8A4F08B53c9fa7544C51dFD9733732cb';
 const MEGAPOT_V2_ADDRESS: Address = '0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2';
 
