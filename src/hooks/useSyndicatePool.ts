@@ -5,10 +5,13 @@
  * - MODULAR: Dedicated hook for syndicate data fetching
  * - CLEAN: Separates data fetching from presentation
  * - PERFORMANT: Efficient data loading with caching
+ * 
+ * NOTE: This hook calls the /api/syndicates/dashboard endpoint instead of
+ * importing syndicateService directly. The service imports @vercel/postgres
+ * which must not be bundled into client-side code.
  */
 
 import { useState, useEffect } from 'react';
-import { syndicateService } from '@/domains/syndicate/services/syndicateService';
 import type { SyndicatePool } from '@/domains/syndicate/types';
 
 interface UseSyndicatePoolReturn {
@@ -36,16 +39,34 @@ export function useSyndicatePool(poolId: string): UseSyndicatePoolReturn {
       try {
         setIsLoading(true);
         setError(null);
-        
-        const poolDetails = await syndicateService.getPoolDetails(poolId);
-        
-        if (poolDetails) {
-          setPool(poolDetails.pool);
-          setMembers(poolDetails.members);
-          setStats(poolDetails.stats);
-        } else {
-          setError('Pool not found');
-        }
+
+        const response = await fetch(`/api/syndicates/dashboard?id=${encodeURIComponent(poolId)}`);
+        if (!response.ok) throw new Error('Failed to fetch pool data');
+
+        const data = await response.json();
+
+        setPool({
+          id: data.id,
+          name: data.name,
+          description: '',
+          memberCount: data.members_count,
+          totalTickets: data.tickets_purchased,
+          causeAllocation: data.cause_percentage,
+          isActive: true,
+        });
+        setMembers(
+          (data.members || []).map((m: { address?: string; member_address?: string; contribution_usdc?: string; amount_usdc?: string; joined_at: string }) => ({
+            address: m.address || m.member_address || '',
+            amount: m.contribution_usdc || m.amount_usdc || '0',
+            joinedAt: new Date(m.joined_at).getTime(),
+          }))
+        );
+        setStats({
+          totalPooled: data.total_contributed_usdc || '0',
+          avgContribution: data.members_count > 0
+            ? (parseFloat(data.total_contributed_usdc || '0') / data.members_count).toFixed(2)
+            : '0',
+        });
       } catch (err) {
         console.error('[useSyndicatePool] Failed to fetch pool data:', err);
         setError(err instanceof Error ? err.message : 'Failed to load pool data');

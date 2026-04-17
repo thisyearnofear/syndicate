@@ -33,9 +33,9 @@ interface SyndicateData {
   id: string;
   name: string;
   description: string;
-  cause: string;
+  cause: string;  // Normalized from API object in fetch callback
   poolType: 'safe' | 'splits' | 'pooltogether';
-  vaultStrategy?: 'aave' | 'morpho' | 'drift' | 'pooltogether';
+  vaultStrategy?: 'aave' | 'morpho' | 'drift' | 'pooltogether' | 'octant' | 'uniswap';
   membersCount: number;
   ticketsPooled: number;
   totalImpact: number;
@@ -64,8 +64,13 @@ export default function SyndicateDiscoveryPage() {
       if (response.ok) {
         const data = await response.json();
         const list = Array.isArray(data) ? data : data.syndicates || [];
-        setSyndicates(list);
-        setFilteredSyndicates(list);
+        // Normalize cause from API object to string for search/filter
+        const normalized = list.map((s: any) => ({
+          ...s,
+          cause: typeof s.cause === 'object' ? s.cause?.name || '' : s.cause || '',
+        }));
+        setSyndicates(normalized);
+        setFilteredSyndicates(normalized);
       }
     } catch (error) {
       console.error('Failed to fetch syndicates:', error);

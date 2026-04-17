@@ -68,10 +68,10 @@ export default function Navigation({ className = '' }: NavigationProps) {
             requiresWallet: true,
         },
         {
-            href: '/syndicates',
+            href: '/discover',
             label: 'Syndicates',
             icon: Users,
-            active: pathname === '/syndicates',
+            active: pathname === '/discover',
         },
         {
             href: '/vaults',
