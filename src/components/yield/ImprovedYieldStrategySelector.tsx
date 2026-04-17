@@ -33,6 +33,9 @@ interface ImprovedYieldStrategySelectorProps {
   onAllocationChange?: (tickets: number, causes: number) => void;
   showDetailView?: boolean;
   showAllocationControls?: boolean;
+  allowInternalDetailView?: boolean;
+  compactCards?: boolean;
+  showIntro?: boolean;
   className?: string;
   userAddress?: string;
 }
@@ -45,6 +48,9 @@ export function ImprovedYieldStrategySelector({
   onAllocationChange,
   showDetailView: externalDetailView = false,
   showAllocationControls = true,
+  allowInternalDetailView = true,
+  compactCards = false,
+  showIntro = true,
   className = '',
   userAddress 
 }: ImprovedYieldStrategySelectorProps) {
@@ -96,7 +102,7 @@ export function ImprovedYieldStrategySelector({
   // Handle strategy selection and transition to detail view
   const handleStrategySelect = (strategyId: typeof YIELD_STRATEGIES[0]['id']) => {
     onStrategySelect(strategyId);
-    if (!externalDetailView) {
+    if (!externalDetailView && allowInternalDetailView) {
       setIsDetailView(true);
     }
   };
@@ -109,10 +115,14 @@ export function ImprovedYieldStrategySelector({
   // Render the strategy grid view
   const renderGridView = () => (
     <div className="w-full">
-      <h3 className="text-lg font-bold text-white mb-4">Yield Strategy</h3>
-      <p className="text-gray-400 text-sm mb-6">
-        Choose how your capital generates yield to support causes and amplify your lottery participation
-      </p>
+      {showIntro ? (
+        <>
+          <h3 className="text-lg font-bold text-white mb-4">Yield Strategy</h3>
+          <p className="text-gray-400 text-sm mb-6">
+            Choose how your capital generates yield to support causes and amplify your lottery participation
+          </p>
+        </>
+      ) : null}
       
       {isLoading && (
         <div className="text-center py-8">
@@ -185,19 +195,32 @@ export function ImprovedYieldStrategySelector({
                        strategy.id === 'lifiearn' ? 'Live Cross-Chain 🔀' :
                        'Coming Soon'}
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {strategy.description}
-                      {octantVault && (
-                        <span className="block text-yellow-400 mt-1">
-                          💎 ${parseFloat(octantVault.totalDeposits).toLocaleString()} TVL
-                        </span>
-                      )}
-                      {vaultInfo && !vaultInfo.isHealthy && (
-                        <span className="block text-red-400 mt-1">
-                          ⚠️ Vault currently unavailable
-                        </span>
-                      )}
-                    </p>
+                    {compactCards ? (
+                      <>
+                        <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+                          {strategy.description}
+                        </p>
+                        {vaultInfo && !vaultInfo.isHealthy ? (
+                          <p className="text-xs text-red-400 mt-2">
+                            Vault currently unavailable
+                          </p>
+                        ) : null}
+                      </>
+                    ) : (
+                      <p className="text-xs text-gray-400 mt-1">
+                        {strategy.description}
+                        {octantVault && (
+                          <span className="block text-yellow-400 mt-1">
+                            💎 ${parseFloat(octantVault.totalDeposits).toLocaleString()} TVL
+                          </span>
+                        )}
+                        {vaultInfo && !vaultInfo.isHealthy && (
+                          <span className="block text-red-400 mt-1">
+                            ⚠️ Vault currently unavailable
+                          </span>
+                        )}
+                      </p>
+                    )}
                   </div>
                 </div>
               </PuzzlePiece>
@@ -330,7 +353,7 @@ export function ImprovedYieldStrategySelector({
 
   return (
     <div className={`w-full ${className}`}>
-      {isDetailView ? renderDetailView() : renderGridView()}
+      {allowInternalDetailView && isDetailView ? renderDetailView() : renderGridView()}
     </div>
   );
 }
