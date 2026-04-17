@@ -13,8 +13,9 @@ import { useWalletClient, usePublicClient } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { parseUnits } from 'viem';
 
-// PoolTogether V5 PrizeVault on Base (USDC)
-const PRIZE_VAULT = '0x45b201633594A8090f48866B570932B328080C0B' as const;
+// PoolTogether V5 USDC PrizeVault on Base (przUSDC)
+// https://app.cabana.fi/vault/8453/0x7f5C2b379b88499aC2B997Db583f8079503f25b9
+const PRIZE_VAULT = '0x7f5C2b379b88499aC2B997Db583f8079503f25b9' as const;
 
 // USDC on Base (6 decimals)
 const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
