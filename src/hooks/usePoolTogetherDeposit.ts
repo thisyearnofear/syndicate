@@ -9,7 +9,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { useWalletClient, usePublicClient } from 'wagmi';
+import { useWalletClient, usePublicClient, useSwitchChain } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { parseUnits } from 'viem';
 
@@ -81,8 +81,9 @@ export function usePoolTogetherDeposit(): UsePoolTogetherDepositResult {
   const [approveTxHash, setApproveTxHash] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
 
-  const { data: walletClient } = useWalletClient({ chainId: base.id });
+  const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient({ chainId: base.id });
+  const { switchChainAsync } = useSwitchChain();
 
   const reset = useCallback(() => {
     setStatus('idle');
@@ -107,6 +108,17 @@ export function usePoolTogetherDeposit(): UsePoolTogetherDepositResult {
       setError('No public client available.');
       setStatus('error');
       return;
+    }
+
+    // Switch to Base if on a different chain
+    if (walletClient.chain.id !== base.id) {
+      try {
+        await switchChainAsync({ chainId: base.id });
+      } catch {
+        setError('Please switch to Base network to deposit into PoolTogether.');
+        setStatus('error');
+        return;
+      }
     }
 
     if (amountUsdc <= 0) {
@@ -165,7 +177,7 @@ export function usePoolTogetherDeposit(): UsePoolTogetherDepositResult {
       setError(message.length > 200 ? message.slice(0, 200) + '…' : message);
       setStatus('error');
     }
-  }, [walletClient, publicClient]);
+  }, [walletClient, publicClient, switchChainAsync]);
 
   return { status, txHash, approveTxHash, error, deposit, reset };
 }
