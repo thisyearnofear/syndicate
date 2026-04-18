@@ -52,8 +52,10 @@ export class PoolTogetherService {
   }
 
   /**
-   * Fetch current prize pool data from PoolTogether API
-   * Returns null when API fails to prevent showing inaccurate data
+   * Fetch current prize pool data from on-chain contracts.
+   * PoolTogether V5 has no centralized API — all data is read directly from
+   * the PrizePool and PrizeVault contracts on Base.
+   * Prize token is WETH (18 decimals), converted to USD via ETH price feed.
    */
   async getPrizeData(): Promise<PoolTogetherPrizeData | null> {
     const now = Date.now();
@@ -63,57 +65,13 @@ export class PoolTogetherService {
       return this.prizeCache;
     }
 
-    try {
-      // Fetch prize data from official Cabana/PoolTogether V5 API
-      // Using the reliable Cabana API for Base network (chain ID 8453)
-      const response = await fetch(
-        'https://api.cabana.fi/api/v1/prizes/8453',
-        {
-          headers: {
-            'Accept': 'application/json',
-          },
-        }
-      );
-
-      if (!response.ok) {
-        console.warn(`[PoolTogether] API returned ${response.status}, trying fallback`);
-        return this.getOnChainFallback();
-      }
-
-      const data = await response.json();
-      
-      // Parse the prize data from Cabana format
-      // Cabana API typically returns an object with prize stats
-      const prizeData: PoolTogetherPrizeData = {
-        prizeUsd: (data.grandPrize?.amount ?? data.totalPrizeValue ?? '0').toString(),
-        totalDepositsUsd: (data.tvl ?? data.totalValueLocked ?? '0').toString(),
-        apy: data.estimatedApy ?? data.apr ?? 3.5,
-        vaultAddress: POOLTOGETHER_VAULTS[0].address,
-        chainId: POOLTOGETHER_VAULTS[0].chainId,
-      };
-
-      // Validate we got meaningful data
-      if (parseFloat(prizeData.prizeUsd) <= 0) {
-        console.warn('[PoolTogether] API returned zero prize, trying on-chain fallback');
-        return this.getOnChainFallback();
-      }
-
-      // Update cache
-      this.prizeCache = prizeData;
-      this.lastFetchTime = now;
-
-      console.log('[PoolTogether] Successfully fetched prize data:', prizeData.prizeUsd);
-      return prizeData;
-    } catch (error) {
-      console.warn('[PoolTogether] API unavailable, trying on-chain fallback:', error);
-      return this.getOnChainFallback();
-    }
+    return this.fetchOnChainData();
   }
 
   /**
-   * Read PoolTogether prize data directly from the vault contract on Base
+   * Read PoolTogether prize data directly from the PrizePool contract on Base
    */
-  private async getOnChainFallback(): Promise<PoolTogetherPrizeData | null> {
+  private async fetchOnChainData(): Promise<PoolTogetherPrizeData | null> {
     try {
       const { getPoolTogetherOnChainPrize } = await import('./OnChainFallbackService');
       const onChainData = await getPoolTogetherOnChainPrize();
@@ -133,7 +91,7 @@ export class PoolTogetherService {
       this.prizeCache = prizeData;
       this.lastFetchTime = Date.now();
 
-      console.log('[PoolTogether] On-chain fallback succeeded, prize:', onChainData.prizeUsd);
+      console.log('[PoolTogether] On-chain data fetched, grand prize:', onChainData.prizeUsd, 'USD');
       return prizeData;
     } catch (error) {
       console.error('[PoolTogether] On-chain fallback also failed:', error);

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/shared/components/ui/Button";
-import { Loader, AlertCircle, Check, Shield } from "lucide-react";
+import { Loader, AlertCircle, Check, Shield, ExternalLink } from "lucide-react";
 import { CompactStack } from "@/shared/components/premium/CompactLayout";
 import type { UsePoolTogetherDepositResult } from "@/hooks/usePoolTogetherDeposit";
 
@@ -207,7 +207,7 @@ export function PoolTogetherFlow({
           You deposited <span className="text-emerald-400 font-semibold">${depositAmount} USDC</span> into PoolTogether
         </p>
         <p className="text-xs text-gray-500">
-          Your principal is safe. You're now eligible for the next prize draw!
+          Your principal is safe. Prizes are awarded automatically — if you win, it goes straight to your wallet.
         </p>
         {ptDeposit.txHash && (
           <a
@@ -224,10 +224,20 @@ export function PoolTogetherFlow({
       <div className="w-full bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 space-y-2">
         <p className="text-sm font-medium text-emerald-300">What happens next?</p>
         <ul className="text-xs text-gray-300 space-y-1.5 list-disc list-inside">
-          <li>Your USDC earns yield in the PrizeVault</li>
-          <li>Yield funds the prize pool — drawn every ~24 hours</li>
-          <li>Withdraw your full principal anytime on Base</li>
+          <li>Your USDC earns yield in the PrizeVault on Base</li>
+          <li>Yield is liquidated for the prize token and funds the Prize Pool</li>
+          <li>Prizes are drawn automatically — winners are paid instantly, no claiming needed</li>
+          <li>Withdraw your full principal anytime — no lockup</li>
         </ul>
+        <a
+          href="https://dev.pooltogether.com/protocol/design/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 mt-2"
+        >
+          Learn more about PoolTogether V5
+          <ExternalLink className="w-3 h-3" />
+        </a>
       </div>
 
       <div className="flex gap-3 w-full">

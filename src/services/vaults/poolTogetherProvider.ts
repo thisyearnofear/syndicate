@@ -20,7 +20,7 @@ import { VaultError, VaultErrorCode } from './vaultProvider';
 const baseClient = basePublicClient;
 
 // przUSDC PrizeVault on Base
-// https://app.cabana.fi/vault/8453/0x7f5C2b379b88499aC2B997Db583f8079503f25b9
+// https://dev.pooltogether.com/protocol/deployments/base
 const PRIZE_VAULT = '0x7f5C2b379b88499aC2B997Db583f8079503f25b9' as const;
 
 // USDC on Base (6 decimals)
@@ -192,7 +192,7 @@ export class PoolTogetherVaultProvider implements VaultProvider {
   async withdrawYield(userAddress: string): Promise<VaultWithdrawResult> {
     return {
       success: false,
-      error: 'PoolTogether prizes are awarded separately. Withdraw from prize claim interface.',
+      error: 'PoolTogether V5 prizes are claimed automatically by bots and paid instantly to your wallet. No manual claiming needed.',
     };
   }
 }
