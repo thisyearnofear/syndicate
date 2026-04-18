@@ -87,7 +87,7 @@ export function useMultiLottery() {
         }
       }
 
-      // PoolTogether (service handles API → on-chain fallback internally)
+      // PoolTogether (reads prize data directly from on-chain contracts)
       const poolTogetherPrizeData: PrizeData | null = poolTogetherPrize.status === 'fulfilled' ? poolTogetherPrize.value : null;
 
       if (poolTogetherPrizeData) {

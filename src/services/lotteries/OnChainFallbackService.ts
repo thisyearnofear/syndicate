@@ -66,50 +66,81 @@ const PRIZE_POOL_ABI = [
     outputs: [{ name: '', type: 'uint8' }],
     stateMutability: 'view',
   },
+  {
+    name: 'drawPeriodSeconds',
+    type: 'function',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint48' }],
+    stateMutability: 'view',
+  },
+  {
+    name: 'getLastAwardedDrawId',
+    type: 'function',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint24' }],
+    stateMutability: 'view',
+  },
 ] as const;
+
+// Prize token on Base is WETH (0x4200...0006), 18 decimals.
+// We need ETH price to convert prize sizes to USD.
+async function getEthPriceUsd(): Promise<number> {
+  try {
+    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+    if (!res.ok) return 2400; // fallback
+    const data = await res.json();
+    return data.ethereum?.usd ?? 2400;
+  } catch {
+    return 2400; // reasonable fallback
+  }
+}
 
 /**
  * Read PoolTogether prize data directly from the blockchain
  */
 export async function getPoolTogetherOnChainPrize(): Promise<OnChainPrizeData | null> {
   try {
-    const results = await Promise.allSettled([
-      basePublicClient.readContract({
-        address: POOLTOGETHER_VAULT_ADDRESS,
-        abi: ERC4626_ABI,
-        functionName: 'totalSupply',
-      } as any),
+    const [ethPrice, ...results] = await Promise.all([
+      getEthPriceUsd(),
       basePublicClient.readContract({
         address: POOLTOGETHER_VAULT_ADDRESS,
         abi: ERC4626_ABI,
         functionName: 'totalAssets',
-      } as any),
+      } as any).catch(() => BigInt(0)),
       basePublicClient.readContract({
         address: POOLTOGETHER_PRIZE_POOL_ADDRESS,
         abi: PRIZE_POOL_ABI,
         functionName: 'getTierPrizeSize',
         args: [0], // Tier 0 is the Grand Prize
-      } as any),
+      } as any).catch(() => BigInt(0)),
+      basePublicClient.readContract({
+        address: POOLTOGETHER_PRIZE_POOL_ADDRESS,
+        abi: PRIZE_POOL_ABI,
+        functionName: 'getLastAwardedDrawId',
+      } as any).catch(() => 0),
+      basePublicClient.readContract({
+        address: POOLTOGETHER_PRIZE_POOL_ADDRESS,
+        abi: PRIZE_POOL_ABI,
+        functionName: 'drawPeriodSeconds',
+      } as any).catch(() => 86400),
     ]);
 
-    const zero = BigInt(0);
-    const totalSupply = results[0].status === 'fulfilled' ? results[0].value as bigint : zero;
-    const totalAssets = results[1].status === 'fulfilled' ? results[1].value as bigint : zero;
-    const grandPrizeSize = results[2].status === 'fulfilled' ? results[2].value as bigint : zero;
+    const totalAssets = results[0] as bigint;
+    const grandPrizeWeth = results[1] as bigint;
+    const lastDrawId = results[2] as number;
+    const drawPeriod = results[3] as number;
 
-    const depositsUsd = Number(totalAssets || totalSupply) / 1e6; // USDC vault: 6 decimals
+    const depositsUsd = Number(totalAssets) / 1e6; // USDC vault: 6 decimals
 
-    // Prize Pool returns prize sizes in 18 decimals (WETH-denominated)
-    // Detect: if value > 1e12, it's 18-decimal; otherwise assume 6-decimal
-    const rawPrize = Number(grandPrizeSize);
-    const prizeUsd = rawPrize > 1e12 ? rawPrize / 1e18 : rawPrize / 1e6;
+    // Prize token on Base is WETH (18 decimals) — convert to USD
+    const grandPrizeEth = Number(grandPrizeWeth) / 1e18;
+    const prizeUsd = grandPrizeEth * ethPrice;
 
     if (depositsUsd <= 0) {
       console.warn('[OnChainFallback] No PoolTogether data available from chain');
       return null;
     }
 
-    // Sanity check: if value exceeds $100M, the data is clearly wrong
     if (depositsUsd > 100_000_000) {
       console.warn('[OnChainFallback] PoolTogether data looks invalid (too large):', depositsUsd);
       return null;
@@ -121,11 +152,11 @@ export async function getPoolTogetherOnChainPrize(): Promise<OnChainPrizeData | 
       prizeUsd: estimatedPrize.toFixed(2),
       totalDepositsUsd: depositsUsd.toFixed(2),
       ticketCount: '0',
-      drawId: '0',
+      drawId: lastDrawId.toString(),
       nextDrawTimestamp: 0,
       chainId: 8453,
     };
-    } catch (error) {
+  } catch (error) {
     console.warn('[OnChainFallback] Failed to read PoolTogether from chain:', error);
     return null;
   }

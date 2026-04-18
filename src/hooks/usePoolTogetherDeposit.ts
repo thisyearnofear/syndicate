@@ -14,7 +14,7 @@ import { base } from 'wagmi/chains';
 import { parseUnits } from 'viem';
 
 // PoolTogether V5 USDC PrizeVault on Base (przUSDC)
-// https://app.cabana.fi/vault/8453/0x7f5C2b379b88499aC2B997Db583f8079503f25b9
+// https://dev.pooltogether.com/protocol/deployments/base
 const PRIZE_VAULT = '0x7f5C2b379b88499aC2B997Db583f8079503f25b9' as const;
 
 // USDC on Base (6 decimals)
