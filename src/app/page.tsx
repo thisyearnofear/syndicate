@@ -119,9 +119,9 @@ export default function Home() {
         {/* All Prizes - Centered */}
         <section className="mb-16">
           <Suspense fallback={
-            <div className="max-w-6xl mx-auto h-96 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
+            <div className="max-w-4xl mx-auto h-96 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
           }>
-            <div className="max-w-6xl mx-auto">
+            <div className="max-w-4xl mx-auto">
               <MultiLotteryPrizes onBuyClick={handlePurchaseAction} />
             </div>
           </Suspense>

@@ -71,12 +71,12 @@ export function MultiLotteryPrizes({ onBuyClick }: MultiLotteryPrizesProps) {
           <h3 className="text-lg font-bold text-white">More Ways to Win</h3>
         </div>
         <span className="text-sm text-gray-400">
-          ${totalPrizeUsd.toLocaleString()} total
+          ${Math.round(totalPrizeUsd).toLocaleString()} across all lotteries
         </span>
       </div>
 
       {/* Lottery Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-4xl mx-auto">
         {gridLotteries.map((lottery) => (
           <div
             key={lottery.protocol}
@@ -102,11 +102,14 @@ export function MultiLotteryPrizes({ onBuyClick }: MultiLotteryPrizesProps) {
 
             {/* Prize Amount */}
             <div className="mb-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">
+                {lottery.isNoLoss ? 'Current Prize Pool' : 'Next Jackpot'}
+              </p>
               {lottery.prizeUsd === '∞' ? (
                 <span className="text-3xl font-black text-white">∞</span>
               ) : (
                 <span className="text-3xl font-black text-white">
-                  ${parseFloat(lottery.prizeUsd).toLocaleString()}
+                  ${Math.round(parseFloat(lottery.prizeUsd)).toLocaleString()}
                 </span>
               )}
               {lottery.apy && (
