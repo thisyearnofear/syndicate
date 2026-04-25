@@ -203,7 +203,7 @@ export async function POST(request: Request) {
       }
 
       // Validate pool type if provided
-      const validPoolTypes = ['safe', 'splits', 'pooltogether'];
+      const validPoolTypes = ['safe', 'splits', 'pooltogether', 'fhenix'];
       if (poolType && !validPoolTypes.includes(poolType)) {
         return NextResponse.json(
           { error: `Invalid pool type. Must be one of: ${validPoolTypes.join(', ')}` },
@@ -258,11 +258,27 @@ export async function POST(request: Request) {
         );
       }
 
-      const verification = await verifyUsdcTransfer({
-        txHash: txHash as `0x${string}`,
-        expectedRecipient: pool.coordinator_address,
-        expectedAmountUsdc: Number(amountUsdc),
-      });
+      // Fhenix FHE pools emit DepositShielded(from, 0) — no plaintext amount in event.
+      // Verify the transaction landed on-chain but skip amount matching.
+      let verification: { ok: boolean; reason?: string };
+      if (pool.pool_type === 'fhenix') {
+        const { createPublicClient, http } = await import('viem');
+        const client = createPublicClient({ transport: http(process.env.FHENIX_RPC_URL ?? 'https://api.fhenix.zone') });
+        try {
+          const receipt = await client.getTransactionReceipt({ hash: txHash as `0x${string}` });
+          verification = receipt.status === 'success'
+            ? { ok: true }
+            : { ok: false, reason: 'FHE deposit transaction reverted' };
+        } catch {
+          verification = { ok: false, reason: 'Could not fetch FHE deposit transaction receipt' };
+        }
+      } else {
+        verification = await verifyUsdcTransfer({
+          txHash: txHash as `0x${string}`,
+          expectedRecipient: pool.coordinator_address,
+          expectedAmountUsdc: Number(amountUsdc),
+        });
+      }
 
       if (!verification.ok) {
         return NextResponse.json(

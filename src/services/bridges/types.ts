@@ -207,6 +207,7 @@ export const USDC_ADDRESSES: Record<ChainIdentifier, string | undefined> = {
     zcash: undefined,
     near: 'a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.factory.bridge.near',
     ton: undefined, // Uses USDT Jetton, not USDC
+    fhenix: undefined, // USDC bridged via CoFHE co-processor on Base
 };
 
 // STRK - Starknet's native gas token (can be used for bridging/gas)
@@ -221,6 +222,7 @@ export const STRK_ADDRESSES: Record<ChainIdentifier, string | undefined> = {
     zcash: undefined,
     near: undefined,
     ton: undefined,
+    fhenix: undefined,
 };
 
 // ============================================================================

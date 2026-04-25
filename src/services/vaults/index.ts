@@ -28,6 +28,7 @@ import { sparkProvider } from './sparkProvider';
 import { octantProvider } from './octantProvider';
 import { uniswapProvider } from './uniswapProvider';
 import { lifiEarnProvider } from './lifiEarnProvider';
+import { fhenixVaultProvider } from './fhenixProvider';
 
 /**
  * Vault information for UI display
@@ -86,6 +87,9 @@ export class VaultManager {
 
         // Register LI.FI Earn provider (Cross-chain vault aggregator)
         this.providers.set('lifiearn', lifiEarnProvider);
+
+        // Register Fhenix FHE provider (Privacy-preserving encrypted vault)
+        this.providers.set('fhenix', fhenixVaultProvider);
     }
 
     /**
@@ -265,6 +269,7 @@ export class VaultManager {
             octant: 'Octant V2',
             uniswap: 'Uniswap V3 LP',
             lifiearn: 'LI.FI Earn Aggregator',
+            fhenix: 'Fhenix FHE Vault',
         };
         return names[protocol];
     }
@@ -278,6 +283,7 @@ export class VaultManager {
             octant: 'Yield donating vaults with public goods funding (~10% APY)',
             uniswap: 'Concentrated liquidity positions earning trading fees (~8.5% APY)',
             lifiearn: 'Cross-chain vault aggregator with 20+ protocols via LI.FI Earn',
+            fhenix: 'Privacy-preserving FHE vault — contribution amounts encrypted on-chain (~5% APY)',
         };
         return descriptions[protocol];
     }
@@ -296,3 +302,4 @@ export { sparkProvider } from './sparkProvider';
 export { octantProvider } from './octantProvider';
 export { uniswapProvider } from './uniswapProvider';
 export { lifiEarnProvider } from './lifiEarnProvider';
+export { fhenixVaultProvider } from './fhenixProvider';

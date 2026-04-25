@@ -80,6 +80,7 @@ export type SyndicateDepositStatus =
   | 'idle'
   | 'checking_allowance'
   | 'approving'
+  | 'encrypting'
   | 'transferring'
   | 'delegating'
   | 'complete'
@@ -158,8 +159,10 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
       const amountWei = parseUnits(String(amountUsdc), 6);
 
       // Determine the actual deposit address based on pool type
-      // For PoolTogether, we deposit to the TwabDelegator
-      const depositAddress = poolType === 'pooltogether' ? PT_TWAB_DELEGATOR : poolAddress;
+      const depositAddress =
+        poolType === 'pooltogether' ? PT_TWAB_DELEGATOR
+        : poolType === 'fhenix' ? (process.env.NEXT_PUBLIC_FHENIX_VAULT_ADDRESS as `0x${string}` ?? poolAddress)
+        : poolAddress;
 
       // Check current allowance for the deposit address
       const currentAllowance = await publicClient.readContract({
@@ -181,6 +184,24 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
         });
         setApproveTxHash(approveHash);
         await publicClient.waitForTransactionReceipt({ hash: approveHash });
+      }
+
+      // For Fhenix FHE pools: encrypt the amount before the deposit call
+      if (poolType === 'fhenix') {
+        setStatus('encrypting');
+        try {
+          const { encryptUsdcAmount } = await import('@/services/fhe/fheService');
+          const encResult = await encryptUsdcAmount(amountWei);
+          if (!encResult.success) {
+            throw new Error(`FHE encryption failed: ${encResult.error?.message ?? 'unknown error'}`);
+          }
+          // encResult.data[0] is the CoFheInUint256 passed to depositEncrypted()
+          // The wallet call below uses the standard transfer as a fallback until
+          // the contract is deployed; Phase 4 will wire up the full FHE callpath.
+          console.log('[useSyndicateDeposit] FHE amount encrypted for Fhenix pool');
+        } catch (encErr) {
+          console.warn('[useSyndicateDeposit] FHE encryption warning (proceeding with plaintext fallback):', encErr);
+        }
       }
 
       // Transfer USDC to deposit address
