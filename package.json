@@ -28,7 +28,7 @@
   "dependencies": {
     "@0xsplits/splits-sdk": "6.5.0",
     "@bonfida/spl-name-service": "^3.0.20",
-    "@coordinationlabs/megapot-ui-kit": "^0.0.49",
+    "@coordinationlabs/megapot-ui-kit": "^0.0.50",
     "@coral-xyz/anchor": "0.32.1",
     "@defuse-protocol/intents-sdk": "0.33.0",
     "@defuse-protocol/one-click-sdk-typescript": "0.1.14",
