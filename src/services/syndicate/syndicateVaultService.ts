@@ -345,6 +345,7 @@ export class SyndicateVaultService {
       octant: '0xOctantUSDCVaultOnEthereum', // Placeholder
       uniswap: '0xUniswapV3StrategyOnBase', // Placeholder
       lifiearn: 'lifiearn:aggregator', // LI.FI Earn uses multiple vaults
+      fhenix: process.env.NEXT_PUBLIC_FHENIX_VAULT_ADDRESS ?? '0x0000000000000000000000000000000000000000',
     };
     return addresses[protocol];
   }
@@ -358,6 +359,7 @@ export class SyndicateVaultService {
       octant: 1, // Ethereum
       uniswap: 8453, // Base
       lifiearn: 8453, // Base (primary destination)
+      fhenix: parseInt(process.env.NEXT_PUBLIC_FHENIX_CHAIN_ID ?? '8008135', 10),
     };
     return chainIds[protocol];
   }

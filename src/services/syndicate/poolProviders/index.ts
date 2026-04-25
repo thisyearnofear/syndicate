@@ -13,3 +13,4 @@ export type { PoolType, PoolProvider, PoolProviderConfig, PoolCreationResult } f
 export { safeProvider, SafePoolProvider } from './safeProvider';
 export { splitsProvider, SplitsPoolProvider } from './splitsProvider';
 export { poolTogetherV5Provider, PoolTogetherV5Provider } from './poolTogetherV5Provider';
+export { fhenixPoolProvider, FhenixPoolProvider } from './fhenixProvider';

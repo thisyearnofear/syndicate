@@ -212,6 +212,46 @@ export function useVaultDeposit() {
         } else if (protocol === 'lifiearn') {
           // LI.FI Earn uses Composer - requires cross-chain deposit flow
           throw new Error('LI.FI Earn requires cross-chain deposit. Use useLifiEarnVaultDeposit hook for Composer execution.');
+        } else if (protocol === 'fhenix') {
+          // Fhenix FHE vault: encrypt amount then call depositEncrypted on vault
+          if (!walletClient || !publicClient || !address) throw new Error('No EVM wallet connected');
+          const amountWei = parseUnits(amount, 6);
+          const userAddr = address as `0x${string}`;
+
+          setState(prev => ({ ...prev, status: 'checking_allowance' }));
+          const { FHENIX_POOL_CONFIG } = await import('@/services/syndicate/poolProviders/fhenixProvider');
+          const vaultAddress = FHENIX_POOL_CONFIG.VAULT_ADDRESS;
+          const usdcAddress = FHENIX_POOL_CONFIG.USDC_ADDRESS as `0x${string}`;
+
+          // 1. Approve USDC for vault
+          const currentAllowance = await publicClient.readContract({
+            address: usdcAddress, abi: ERC20_ABI, functionName: 'allowance', args: [userAddr, vaultAddress],
+          });
+          if (currentAllowance < amountWei) {
+            setState(prev => ({ ...prev, status: 'approving' }));
+            const approveHash = await walletClient.writeContract({
+              address: usdcAddress, abi: ERC20_ABI, functionName: 'approve', args: [vaultAddress, amountWei], chain: base,
+            });
+            setState(prev => ({ ...prev, approveTxHash: approveHash }));
+            await publicClient.waitForTransactionReceipt({ hash: approveHash });
+          }
+
+          // 2. Encrypt amount via fheService (lazy import — browser WASM only)
+          setState(prev => ({ ...prev, status: 'building_tx' }));
+          const { encryptUsdcAmount } = await import('@/services/fhe/fheService');
+          const encResult = await encryptUsdcAmount(amountWei);
+          if (!encResult.success) throw new Error(`FHE encryption failed: ${encResult.error?.message}`);
+          const encryptedInput = encResult.data[0];
+
+          // 3. Call depositEncrypted(inEuint256, plainAmount) on vault
+          const DEPOSIT_ABI = [{ name: 'depositEncrypted', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'encryptedAmount', type: 'tuple', components: [{ name: 'data', type: 'bytes' }, { name: 'securityZone', type: 'int32' }] }, { name: 'plainAmount', type: 'uint256' }], outputs: [] }] as const;
+          setState(prev => ({ ...prev, status: 'depositing' }));
+          const depositHash = await walletClient.writeContract({
+            address: vaultAddress, abi: DEPOSIT_ABI, functionName: 'depositEncrypted',
+            args: [encryptedInput as any, amountWei], chain: base,
+          });
+          await publicClient.waitForTransactionReceipt({ hash: depositHash });
+          result = { success: true, txHash: depositHash };
         } else {
           throw new Error(`Deposit not yet supported for ${protocol}`);
         }
@@ -264,6 +304,19 @@ export function useVaultDeposit() {
         } else if (protocol === 'uniswap') {
           // Uniswap V3 requires complex position management - not yet implemented
           throw new Error('Uniswap V3 withdrawals require position management UI. Coming soon.');
+        } else if (protocol === 'fhenix') {
+          // Fhenix FHE vault withdrawal — coordinator-attested plain amount
+          if (!walletClient || !publicClient || !address) throw new Error('No EVM wallet connected');
+          const amountWei = parseUnits(amount, 6);
+          const { FHENIX_POOL_CONFIG } = await import('@/services/syndicate/poolProviders/fhenixProvider');
+          const WITHDRAW_ABI = [{ name: 'withdraw', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'plainAmount', type: 'uint256' }], outputs: [] }] as const;
+          setState(prev => ({ ...prev, status: 'signing' }));
+          const withdrawHash = await walletClient.writeContract({
+            address: FHENIX_POOL_CONFIG.VAULT_ADDRESS, abi: WITHDRAW_ABI,
+            functionName: 'withdraw', args: [amountWei], chain: base,
+          });
+          await publicClient.waitForTransactionReceipt({ hash: withdrawHash });
+          result = { success: true, txHash: withdrawHash };
         } else {
           throw new Error(`Withdrawal not yet supported for ${protocol}`);
         }

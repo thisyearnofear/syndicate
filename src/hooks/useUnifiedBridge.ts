@@ -112,6 +112,7 @@ const ESTIMATED_TIMES: Record<BridgeProtocolType, number> = {
   stacks: 600, // 10 minutes
   starknet: 600, // 10 minutes
   ton: 300, // 5 minutes
+  fhenix: 60, // ~1 minute (CoFHE co-processor on Base)
   auto: 300,
 };
 
