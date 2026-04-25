@@ -192,3 +192,81 @@ Multi-chain syndicate pooling with three pool types for fund custody and prize d
 - **Civic**: Default gate is CAPTCHA for demos; switch to ID_VERIFICATION for production compliance
 - **Spark Protocol**: No lockup; yield withdrawn automatically to purchase tickets
 - **Pool Types**: Pool type selection is in create-syndicate page step 3; badges shown on syndicate detail page
+
+---
+
+## Fhenix FHE Privacy Integration
+
+Privacy-by-design layer using Fully Homomorphic Encryption (FHE) via Fhenix. Encrypts syndicate contribution amounts and vault positions so on-chain data reveals nothing about individual stakes. Targeting the Fhenix Buildathon (Wave 1 → Wave 5, deadline June 1 2026).
+
+### Why This Project Needs FHE
+| Currently Exposed | Attack Surface |
+|---|---|
+| Syndicate member list (0xSplits — public, immutable) | Wallet identity + affiliation |
+| Contribution amounts (USDC Transfer events on Base) | Wealth fingerprinting |
+| TWAB delegations (PoolTogether) | Member→syndicate binding |
+| Vault positions (ERC-4626 events) | Position size + timing for front-running |
+| Ticket purchase history (API + on-chain) | Behavioral profiling |
+
+### FHE Vault Provider
+| Provider | Chain | Status | APY | Notes |
+|----------|-------|--------|-----|-------|
+| **Fhenix FHE Vault** | Base Sepolia / Fhenix | 🔒 Building | TBD | Encrypted deposits, sealed balances, homomorphic yield distribution |
+
+### Core Principles for FHE Implementation
+- **ENHANCEMENT FIRST**: Extend existing `PoolProvider` and `VaultProvider` interfaces — no parallel stacks
+- **CONSOLIDATION**: Single `fheService.ts` is the only file that imports from Fhenix SDK
+- **DRY**: `PoolType | 'fhenix'` and `VaultProtocol | 'fhenix'` — one-line union extensions
+- **MODULAR**: `FhenixPoolProvider` and `FhenixVaultProvider` are independently testable classes
+- **DB READY**: Schema already has `privacy_enabled`, `pool_public_key`, `amount_commitment`, `encrypted_yield_amount`, `encrypted_allocations` columns — no migration needed
+
+### FHE Key Files
+| File | Status | Purpose |
+|------|--------|---------|
+| `src/services/fhe/fheService.ts` | 🔒 Building | Single SDK wrapper: `encryptUint256`, `generatePermit`, `sealDecrypt` |
+| `src/services/syndicate/poolProviders/fhenixProvider.ts` | 🔒 Building | FHE pool: deploy vault, encrypted deposit, sealed balance reads |
+| `src/services/vaults/fhenixProvider.ts` | 🔒 Building | FHE yield vault implementing `VaultProvider` |
+| `contracts/fhenix/FhenixSyndicateVault.sol` | 🔒 Building | FHE-native vault with `depositEncrypted`, `distributeYield`, `getEncryptedBalance` |
+
+### FHE Contract (Base Sepolia / Fhenix)
+- `depositEncrypted(euint256 encryptedAmount)` — stores encrypted contribution
+- `getEncryptedBalance(Permission)` — sealed balance for permit holder only
+- `distributeYield()` — homomorphic share calculation, no plaintext leakage
+- `DepositShielded(address indexed from, uint256 placeholder)` event — satisfies existing `verifyUsdcTransfer` check
+
+### FHE Injection Seams (Surgical Extensions)
+| File | Change | Lines |
+|------|--------|-------|
+| `src/domains/lottery/types.ts` | `PoolType` union: `\| 'fhenix'` | +1 |
+| `src/services/vaults/vaultProvider.ts` | `VaultProtocol` union: `\| 'fhenix'` | +1 |
+| `src/services/bridges/types.ts` | `ChainIdentifier` + `BridgeProtocolType`: `\| 'fhenix'` | +2 |
+| `src/services/syndicate/poolProviders/index.ts` | Export `fhenixPoolProvider` | +2 |
+| `src/services/vaults/index.ts` | `VaultManager` constructor: register provider | +3 |
+| `src/hooks/useSyndicateDeposit.ts` | `poolType === 'fhenix'` routing branch + `'encrypting'` status | +6 |
+| `src/hooks/useVaultDeposit.ts` | `else if (protocol === 'fhenix')` deposit/withdraw block | +8 |
+| `src/app/api/syndicates/route.ts` | `validPoolTypes` array + `verifyFhenixDeposit` branch | +6 |
+| `src/lib/db/syndicateRepository.ts` | Populate existing privacy columns | +~20 |
+| `src/app/create-syndicate/page.tsx` | 4th PuzzlePiece card for Fhenix pool type | +1 card |
+| `src/config/yieldStrategies.ts` | Add `fhenix` strategy entry | +1 entry |
+
+### FHE SDK
+- **Client**: `cofhejs` (v0.3.1) — `cofhejs/web` for browser, `cofhejs/node` for server
+- **Contracts**: `@fhenixprotocol/contracts` (v0.3.1) — Solidity FHE primitives (`FHE.sol`, encrypted types)
+- **Install**: `pnpm add cofhejs @fhenixprotocol/contracts`
+
+### FHE Buildathon Wave Map
+| Wave | Deliverable |
+|---|---|
+| Wave 1 (done Mar 28) | Ideation + architecture |
+| Wave 2 (by Apr 8) | Phase 0+1: SDK install, `fheService.ts`, type unions |
+| Wave 3 Marathon (by May 8) | Phase 2+3: providers + hook extensions + API route |
+| Wave 4 (by May 20) | Phase 4+5: DB privacy columns + UI card + E2E test on Base Sepolia |
+| Wave 5 Final (by Jun 1) | Mainnet-ready artifacts + showcase demo |
+
+### FHE Environment Variables
+```bash
+FHENIX_RPC_URL=https://api.fhenix.zone          # Fhenix node RPC
+FHENIX_VAULT_ADDRESS=0x...                       # Deployed FhenixSyndicateVault
+FHENIX_CHAIN_ID=8008135                          # Fhenix Helium testnet
+NEXT_PUBLIC_FHENIX_CHAIN_ID=8008135
+```

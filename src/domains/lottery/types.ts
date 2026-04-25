@@ -89,7 +89,7 @@ export interface TicketPurchaseProps {
 // SYNDICATE TYPES (ENHANCEMENT FIRST: Added to existing lottery types)
 // =============================================================================
 
-export type PoolType = 'safe' | 'splits' | 'pooltogether';
+export type PoolType = 'safe' | 'splits' | 'pooltogether' | 'fhenix';
 
 export interface SyndicateInfo {
   id: string;

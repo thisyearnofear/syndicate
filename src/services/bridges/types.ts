@@ -27,7 +27,8 @@ export type ChainIdentifier =
     | 'starknet'  // Starknet ZK-rollup
     | 'zcash'     // Zcash support
     | 'near'      // NEAR as orchestration layer
-    | 'ton';      // TON blockchain
+    | 'ton'       // TON blockchain
+    | 'fhenix';   // Fhenix FHE chain (CoFHE co-processor on Base)
 
 /**
  * Bridge protocols - each protocol is a separate module
@@ -45,6 +46,7 @@ export type BridgeProtocolType =
     | 'starknet'  // Starknet → Base bridge (via Orbiter/LayerSwap)
     | 'zcash'     // Zcash-specific (uses NEAR as orchestrator)
     | 'ton'       // TON → Base bridge (CCTP)
+    | 'fhenix'    // Fhenix → Base (encrypted deposit relay)
     | 'auto';     // Automatic selection
 
 /**
