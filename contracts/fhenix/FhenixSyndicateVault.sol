@@ -37,6 +37,9 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
     mapping(address => bool) public isMember;
     address[] private _members;
 
+    /// @dev Count of currently-active members (those with non-zero membership status)
+    uint256 public activeMemberCount;
+
     /// @dev Total plaintext USDC held (for protocol-level accounting only)
     uint256 public totalDeposited;
 
@@ -68,6 +71,7 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
     error NotMember();
     error ZeroAmount();
     error TransferFailed();
+    error InvalidWithdrawAmount();
 
     // ─── Constructor ──────────────────────────────────────────────────────────
 
@@ -120,6 +124,7 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
         if (!isMember[msg.sender]) {
             _encryptedBalances[msg.sender] = eAmount;
             isMember[msg.sender] = true;
+            activeMemberCount += 1;
             _members.push(msg.sender);
         } else {
             _encryptedBalances[msg.sender] = FHE.add(
@@ -144,25 +149,28 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
      * @param permission  Permit struct generated client-side via cofhejs
      * @return            Sealed ciphertext — decryptable only by the permit holder
      */
-    function getEncryptedBalance(
+    function getEncryptedBalanceCtHash(
         Permission calldata permission
-    ) external view onlySender(permission) returns (bytes memory) {
-        return FHE.sealoutput(_encryptedBalances[msg.sender], permission.sealingKey);
+    ) external view onlySender(permission) returns (uint256) {
+        // Return the ciphertext hash (ctHash). The client unseals it via cofhejs + threshold network.
+        return euint256.unwrap(_encryptedBalances[msg.sender]);
     }
 
     /**
      * @notice Coordinator view: get total encrypted pool value.
      * @dev    Sealed to the coordinator's permit; no individual breakdown exposed.
      */
-    function getEncryptedTotal(
+    function getEncryptedTotalCtHash(
         Permission calldata permission
-    ) external view onlySender(permission) onlyCoordinator returns (bytes memory) {
-        // Sum all member balances homomorphically — result sealed to coordinator
-        euint256 total = FHE.asEuint256(FHE.asEuint8(0));
+    ) external view onlySender(permission) onlyCoordinator returns (uint256) {
+        // Sum all member balances homomorphically — return ciphertext hash for off-chain unsealing.
+        euint256 total = FHE.asEuint256(0);
         for (uint256 i = 0; i < _members.length; i++) {
-            total = FHE.add(total, _encryptedBalances[_members[i]]);
+            if (isMember[_members[i]]) {
+                total = FHE.add(total, _encryptedBalances[_members[i]]);
+            }
         }
-        return FHE.sealoutput(total, permission.sealingKey);
+        return euint256.unwrap(total);
     }
 
     // ─── Yield Distribution ───────────────────────────────────────────────────
@@ -200,10 +208,12 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
      */
     function withdraw(uint256 plainAmount) external onlyMember {
         if (plainAmount == 0) revert ZeroAmount();
+        if (plainAmount > totalDeposited) revert InvalidWithdrawAmount();
 
         // Zero out encrypted balance before transfer (reentrancy guard via CEI)
-        _encryptedBalances[msg.sender] = FHE.asEuint256(FHE.asEuint8(0));
+        _encryptedBalances[msg.sender] = FHE.asEuint256(0);
         isMember[msg.sender] = false;
+        activeMemberCount -= 1;
         totalDeposited -= plainAmount;
 
         bool ok = usdc.transfer(msg.sender, plainAmount);
@@ -225,6 +235,6 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
      * @notice Returns member count (not addresses — preserves privacy)
      */
     function memberCount() external view returns (uint256) {
-        return _members.length;
+        return activeMemberCount;
     }
 }

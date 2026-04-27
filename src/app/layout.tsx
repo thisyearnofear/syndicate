@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "@rainbow-me/rainbowkit/styles.css";
 import "@near-wallet-selector/modal-ui/styles.css";
-import { Suspense } from "react";
 import { ToastProvider } from "@/shared/components/ui/Toast";
 import DynamicNavigationHeader from "@/components/DynamicNavigationHeader";
 import ClientProvidersWrapper from "@/components/ClientProvidersWrapper";

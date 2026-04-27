@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useUnifiedWallet } from '@/hooks/useUnifiedWallet';
 import { useRouter } from 'next/navigation';
-import { Info, Globe } from 'lucide-react';
+import { Info } from 'lucide-react';
 
 
 /**

@@ -12,7 +12,7 @@
  * - PREVENT BLOAT: Streamlined UX with no repetition
  */
 
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { FocusedBridgeFlow } from "@/components/bridge/FocusedBridgeFlow";
 import { WinningsWithdrawalFlow } from "@/components/bridge/WinningsWithdrawalFlow";
@@ -50,7 +50,7 @@ interface ChainOption {
 export default function BridgePage() {
   const router = useRouter();
   const { state } = useWalletContext();
-  const { address, isConnected, walletType, chainId } = state;
+  const { address, isConnected, walletType } = state;
   const [isBridging, setIsBridging] = useState(false);
   const [bridgeAmount, setBridgeAmount] = useState("10");
   const [sourceChain, setSourceChain] = useState<SourceChain>("solana");

@@ -23,7 +23,6 @@ import {
   Trophy,
   Users,
   Heart,
-  Check,
   Play
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
@@ -60,7 +59,6 @@ const ONBOARDING_STEPS = [
 
 export function OnboardingWizard() {
   const router = useRouter();
-  const { isConnected, address } = useUnifiedWallet();
   const [currentStep, setCurrentStep] = useState(0);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -81,7 +79,7 @@ export function OnboardingWizard() {
           setCurrentStep(state.currentStep);
         }
         setShowOnboarding(true);
-      } catch (error) {
+      } catch {
         setShowOnboarding(true);
       } finally {
         setLoading(false);
@@ -363,7 +361,7 @@ function FirstStepsStep({ router }: { router: any }) {
       <div className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-500 to-green-500 flex items-center justify-center mx-auto mb-6">
         <Play className="w-10 h-10 text-white" />
       </div>
-      <h2 className="text-2xl font-bold text-white mb-4">You're Ready!</h2>
+      <h2 className="text-2xl font-bold text-white mb-4">You&apos;re Ready!</h2>
       <p className="text-gray-400 mb-6 max-w-md mx-auto">
         Start your syndicate journey. Create your own syndicate or join an existing one.
       </p>
@@ -390,7 +388,7 @@ function FirstStepsStep({ router }: { router: any }) {
       <div className="mt-6 p-4 bg-blue-500/20 rounded-lg border border-blue-500/30">
         <p className="text-sm text-blue-300">
           💡 <strong>Pro tip:</strong> Start with a small deposit to learn the flow, 
-          then scale up once you're comfortable!
+          then scale up once you&apos;re comfortable!
         </p>
       </div>
     </div>
@@ -398,3 +396,4 @@ function FirstStepsStep({ router }: { router: any }) {
 }
 
 export default OnboardingWizard;
+

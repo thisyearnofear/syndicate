@@ -199,6 +199,26 @@ Multi-chain syndicate pooling with three pool types for fund custody and prize d
 
 Privacy-by-design layer using Fully Homomorphic Encryption (FHE) via Fhenix. Encrypts syndicate contribution amounts and vault positions so on-chain data reveals nothing about individual stakes. Targeting the Fhenix Buildathon (Wave 1 → Wave 5, deadline June 1 2026).
 
+### Current Status (Implemented)
+- ✅ **Multi-network ready**: Base Sepolia (84532) or Fhenix Helium (8008135) selectable via `NEXT_PUBLIC_FHENIX_CHAIN_ID`
+  - Chain definition: `src/services/fhe/fhenixChain.ts`
+  - Wallet support: `src/config/wagmi.ts` includes `fhenixHelium`
+- ✅ **Encrypted deposits wired end-to-end**
+  - Vault deposits: `useVaultDeposit` calls `depositEncrypted(...)`
+  - Syndicate deposits: `useSyndicateDeposit` calls `depositEncrypted(...)` for `poolType === 'fhenix'`
+- ✅ **DRY action layer**: shared helper for `approve + encrypt + depositEncrypted` and withdraw
+  - `src/services/fhe/fhenixActions.ts`
+- ✅ **Permit + unseal flow in app (visible privacy win)**
+  - Hook: `src/hooks/useFhenixPrivateVaultBalance.ts`
+  - UI: Yield Dashboard shows “Reveal Private Balance” for the Fhenix vault row
+- ✅ **Server-side verification hardened**
+  - `/api/syndicates` verifies tx success + expected vault + `DepositShielded(from, 0)` event
+- ✅ **Contract hardened for app flow**
+  - `contracts/fhenix/FhenixSyndicateVault.sol` now exposes ciphertext-hash getters for client-side unsealing:
+    - `getEncryptedBalanceCtHash(Permission) -> uint256`
+    - `getEncryptedTotalCtHash(Permission) -> uint256`
+  - Active member counting fixed (`activeMemberCount`, `memberCount()`)
+
 ### Why This Project Needs FHE
 | Currently Exposed | Attack Surface |
 |---|---|
@@ -211,11 +231,11 @@ Privacy-by-design layer using Fully Homomorphic Encryption (FHE) via Fhenix. Enc
 ### FHE Vault Provider
 | Provider | Chain | Status | APY | Notes |
 |----------|-------|--------|-----|-------|
-| **Fhenix FHE Vault** | Base Sepolia / Fhenix | 🔒 Building | TBD | Encrypted deposits, sealed balances, homomorphic yield distribution |
+| **Fhenix FHE Vault** | Base Sepolia / Fhenix | ✅ Integrated | TBD | Encrypted deposits, permit-gated private balance reveal |
 
 ### Core Principles for FHE Implementation
 - **ENHANCEMENT FIRST**: Extend existing `PoolProvider` and `VaultProvider` interfaces — no parallel stacks
-- **CONSOLIDATION**: Single `fheService.ts` is the only file that imports from Fhenix SDK
+- **CONSOLIDATION**: Single `fheService.ts` is the only file that imports from `cofhejs/*` (lazy-loaded in browser)
 - **DRY**: `PoolType | 'fhenix'` and `VaultProtocol | 'fhenix'` — one-line union extensions
 - **MODULAR**: `FhenixPoolProvider` and `FhenixVaultProvider` are independently testable classes
 - **DB READY**: Schema already has `privacy_enabled`, `pool_public_key`, `amount_commitment`, `encrypted_yield_amount`, `encrypted_allocations` columns — no migration needed
@@ -223,15 +243,22 @@ Privacy-by-design layer using Fully Homomorphic Encryption (FHE) via Fhenix. Enc
 ### FHE Key Files
 | File | Status | Purpose |
 |------|--------|---------|
-| `src/services/fhe/fheService.ts` | 🔒 Building | Single SDK wrapper: `encryptUint256`, `generatePermit`, `sealDecrypt` |
-| `src/services/syndicate/poolProviders/fhenixProvider.ts` | 🔒 Building | FHE pool: deploy vault, encrypted deposit, sealed balance reads |
-| `src/services/vaults/fhenixProvider.ts` | 🔒 Building | FHE yield vault implementing `VaultProvider` |
-| `contracts/fhenix/FhenixSyndicateVault.sol` | 🔒 Building | FHE-native vault with `depositEncrypted`, `distributeYield`, `getEncryptedBalance` |
+| `src/services/fhe/fheService.ts` | ✅ Integrated | Single SDK wrapper for encrypt/permit/unseal (browser lazy-load) |
+| `src/services/fhe/fhenixChain.ts` | ✅ Integrated | Single chain selector for Base Sepolia vs Helium |
+| `src/services/fhe/fhenixActions.ts` | ✅ Integrated | DRY helpers: approve+encrypt+depositEncrypted, withdraw |
+| `src/hooks/useFhenixPrivateVaultBalance.ts` | ✅ Integrated | Permit + ctHash read + unseal flow |
+| `src/services/syndicate/poolProviders/fhenixProvider.ts` | ✅ Integrated | FHE pool provider + config (vault address, chain, USDC) |
+| `src/services/vaults/fhenixProvider.ts` | ✅ Integrated | FHE vault provider (UI metadata + fallback estimate) |
+| `src/hooks/useSyndicateDeposit.ts` | ✅ Integrated | Executes `depositEncrypted` for Fhenix pools |
+| `src/hooks/useVaultDeposit.ts` | ✅ Integrated | Executes Fhenix deposit/withdraw via `fhenixActions` |
+| `src/app/api/syndicates/route.ts` | ✅ Integrated | Fhenix deposit verification via receipt + event |
+| `contracts/fhenix/FhenixSyndicateVault.sol` | ✅ Integrated | FHE-native vault (`depositEncrypted`, ctHash getters, active member count) |
+| `test/FhenixSyndicateVault.t.sol` | 🧪 Added | Foundry unit tests with mocked FHE precompile (requires Foundry installed) |
 
 ### FHE Contract (Base Sepolia / Fhenix)
-- `depositEncrypted(euint256 encryptedAmount)` — stores encrypted contribution
-- `getEncryptedBalance(Permission)` — sealed balance for permit holder only
-- `distributeYield()` — homomorphic share calculation, no plaintext leakage
+- `depositEncrypted(inEuint256 encryptedAmount, uint256 plainAmount)` — stores encrypted contribution
+- `getEncryptedBalanceCtHash(Permission)` — returns ciphertext hash for client-side unsealing
+- `getEncryptedTotalCtHash(Permission)` — coordinator-only total (ciphertext hash)
 - `DepositShielded(address indexed from, uint256 placeholder)` event — satisfies existing `verifyUsdcTransfer` check
 
 ### FHE Injection Seams (Surgical Extensions)
@@ -242,9 +269,9 @@ Privacy-by-design layer using Fully Homomorphic Encryption (FHE) via Fhenix. Enc
 | `src/services/bridges/types.ts` | `ChainIdentifier` + `BridgeProtocolType`: `\| 'fhenix'` | +2 |
 | `src/services/syndicate/poolProviders/index.ts` | Export `fhenixPoolProvider` | +2 |
 | `src/services/vaults/index.ts` | `VaultManager` constructor: register provider | +3 |
-| `src/hooks/useSyndicateDeposit.ts` | `poolType === 'fhenix'` routing branch + `'encrypting'` status | +6 |
-| `src/hooks/useVaultDeposit.ts` | `else if (protocol === 'fhenix')` deposit/withdraw block | +8 |
-| `src/app/api/syndicates/route.ts` | `validPoolTypes` array + `verifyFhenixDeposit` branch | +6 |
+| `src/hooks/useSyndicateDeposit.ts` | `poolType === 'fhenix'` executes `depositEncrypted` | +~40 |
+| `src/hooks/useVaultDeposit.ts` | `protocol === 'fhenix'` uses `fhenixActions` | +~15 |
+| `src/app/api/syndicates/route.ts` | Verify vault + `DepositShielded` event (no amount leakage) | +~35 |
 | `src/lib/db/syndicateRepository.ts` | Populate existing privacy columns | +~20 |
 | `src/app/create-syndicate/page.tsx` | 4th PuzzlePiece card for Fhenix pool type | +1 card |
 | `src/config/yieldStrategies.ts` | Add `fhenix` strategy entry | +1 entry |
@@ -265,8 +292,16 @@ Privacy-by-design layer using Fully Homomorphic Encryption (FHE) via Fhenix. Enc
 
 ### FHE Environment Variables
 ```bash
-FHENIX_RPC_URL=https://api.fhenix.zone          # Fhenix node RPC
-FHENIX_VAULT_ADDRESS=0x...                       # Deployed FhenixSyndicateVault
-FHENIX_CHAIN_ID=8008135                          # Fhenix Helium testnet
-NEXT_PUBLIC_FHENIX_CHAIN_ID=8008135
+# Select deployment target: Base Sepolia (84532) or Fhenix Helium (8008135)
+NEXT_PUBLIC_FHENIX_CHAIN_ID=84532
+
+# RPCs (server + client)
+FHENIX_RPC_URL=https://api.fhenix.zone
+NEXT_PUBLIC_FHENIX_RPC_URL=https://api.fhenix.zone
+
+# Deployed vault contract address (FhenixSyndicateVault)
+NEXT_PUBLIC_FHENIX_VAULT_ADDRESS=0x...
+
+# USDC address on the selected Fhenix-enabled chain (optional override)
+NEXT_PUBLIC_FHENIX_USDC_ADDRESS=0x...
 ```

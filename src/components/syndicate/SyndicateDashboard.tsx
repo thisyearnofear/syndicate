@@ -10,7 +10,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useVisibilityPolling } from '@/lib/useVisibilityPolling';
 import { 
   Wallet, 

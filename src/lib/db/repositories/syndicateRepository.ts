@@ -103,7 +103,7 @@ export class SyndicateRepository {
                 RETURNING id
             `;
             return result.rows[0].id;
-        } catch (error) {
+        } catch {
             // Fallback to original schema if pool_type columns don't exist
             console.warn('[SyndicateRepository] Pool type columns may not exist, using fallback');
             const result = await sql`
@@ -317,7 +317,7 @@ export class SyndicateRepository {
     /**
      * Record ticket purchase for a pool
      */
-    async recordTicketPurchase(poolId: string, ticketCount: number, txHash?: string): Promise<void> {
+    async recordTicketPurchase(poolId: string, ticketCount: number): Promise<void> {
         const now = Date.now();
         
         // Update pool ticket count
@@ -328,9 +328,6 @@ export class SyndicateRepository {
         updated_at = ${now}
       WHERE id = ${poolId}
     `;
-
-        // If transaction hash provided, we could store it in distributions table
-        // For now, just update the pool totals
     }
 
     /**

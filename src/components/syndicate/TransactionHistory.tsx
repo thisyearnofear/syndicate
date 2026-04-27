@@ -14,12 +14,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { 
   ArrowDownLeft, 
   ArrowUpRight, 
-  Trophy, 
-  ExternalLink,
   RefreshCw,
   Filter,
   Wallet,
-  Ticket
+  Ticket,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 

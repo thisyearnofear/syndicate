@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Circle,
   ArrowRightLeft,
   Ticket,
   PartyPopper,
@@ -189,7 +188,7 @@ export function CrossChainTracker({
   const txId = sourceTxId || stacksTxId;
   
   // P1.2: Use sourceExplorer (new), fallback to stacksExplorer (deprecated) for compatibility
-  const sourceExplorer = receipt?.sourceExplorer || receipt?.stacksExplorer;
+  const _sourceExplorer = receipt?.sourceExplorer || receipt?.stacksExplorer;
 
   const getStepStatus = (
     stepId: string,

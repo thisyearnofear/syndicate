@@ -1,6 +1,6 @@
 # Hackathon Strategy - Consolidated Plan
 
-**Last Updated**: April 14, 2026  
+**Last Updated**: April 27, 2026  
 **Status**: Ready to execute
 
 ---
@@ -11,6 +11,39 @@
 |-----------|-----------|---|---|
 | **Ranger Build-a-Bear** | Medium (⚠️ Constraints) | Optional | April 21 deadline (7 days) |
 | **Lifi DeFi Mullet** | Excellent ✅ | **RECOMMENDED** | Open submission |
+| **Fhenix Privacy-by-Design Buildathon** | Excellent ✅ | **RECOMMENDED** | Final submission June 1 |
+
+---
+
+## Fhenix Privacy-by-Design Buildathon (FHE)
+
+### Goal
+Make Syndicate’s vault/pool flows **privacy-native by default** where required: encrypt deposit amounts and positions on-chain, and reveal plaintext **only to authorized users client-side** via permits.
+
+### Current progress (implemented)
+- ✅ **Encrypted deposits** wired in both vault and syndicate join flows (`depositEncrypted(...)`).
+- ✅ **Permit + private balance reveal** implemented in-app (Yield Dashboard: “Reveal Private Balance”).
+- ✅ **DRY Fhenix actions** consolidated (approve+encrypt+depositEncrypted + withdraw).
+- ✅ **Server verification hardened** for Fhenix joins (receipt + expected vault + `DepositShielded(from, 0)`).
+- ✅ **Multi-network support** via `NEXT_PUBLIC_FHENIX_CHAIN_ID` (Base Sepolia 84532 or Helium 8008135).
+
+### Next steps (remaining)
+1. **Deploy/upgrade the Fhenix vault contract** to ensure it exposes:
+   - `getEncryptedBalanceCtHash(Permission) -> uint256`
+   - `getEncryptedTotalCtHash(Permission) -> uint256`
+2. **Demo hardening**:
+   - Ensure `.env.local` includes `NEXT_PUBLIC_FHENIX_VAULT_ADDRESS` and correct RPC for the selected chain
+   - Record a short demo: deposit → reveal private balance → withdraw
+3. **Contract-level test gate**:
+   - Run Foundry tests locally (`test/FhenixSyndicateVault.t.sol`) once Foundry is installed in the environment.
+
+### Required env vars (minimum)
+```bash
+NEXT_PUBLIC_FHENIX_CHAIN_ID=84532           # or 8008135
+NEXT_PUBLIC_FHENIX_VAULT_ADDRESS=0x...      # deployed FhenixSyndicateVault
+NEXT_PUBLIC_FHENIX_RPC_URL=https://api.fhenix.zone
+FHENIX_RPC_URL=https://api.fhenix.zone
+```
 
 ---
 

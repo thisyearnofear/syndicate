@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { CompactCard, CompactStack, CompactContainer, CompactSection } from '@/shared/components/premium/CompactLayout';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
-import { ComingSoonBanner } from '@/components/ui/ComingSoonBanner';
 import { ImprovedYieldStrategySelector } from '@/components/yield/ImprovedYieldStrategySelector';
 import { useUnifiedWallet } from '@/hooks';
 import { useToast } from '@/shared/components/ui/Toast';

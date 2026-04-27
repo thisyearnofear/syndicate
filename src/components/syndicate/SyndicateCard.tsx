@@ -12,13 +12,10 @@ import {
   Users, 
   Trophy, 
   Heart, 
-  TrendingUp,
   Shield,
   Share2,
-  Coins,
-  ExternalLink
+  Coins
 } from 'lucide-react';
-import { Button } from '@/shared/components/ui/Button';
 
 type PoolType = 'safe' | 'splits' | 'pooltogether' | 'fhenix';
 type VaultStrategy = 'aave' | 'morpho' | 'spark' | 'pooltogether' | 'octant' | 'uniswap' | 'fhenix' | 'lifiearn';

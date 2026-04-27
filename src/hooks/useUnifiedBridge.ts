@@ -20,7 +20,7 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { bridgeManager } from '@/services/bridges';
-import type { BridgeParams, BridgeResult, BridgeProtocolType } from '@/services/bridges/types';
+import type { BridgeParams, BridgeProtocolType } from '@/services/bridges/types';
 import { useUnifiedWallet } from './useUnifiedWallet';
 import { formatUnits } from 'viem';
 import { basePublicClient } from '@/lib/baseClient';
@@ -97,23 +97,6 @@ const STATUS_MESSAGES: Record<BridgeStatus, string> = {
   completed: 'Bridge completed successfully!',
   failed: 'Bridge failed',
   cancelled: 'Bridge cancelled',
-};
-
-const ESTIMATED_TIMES: Record<BridgeProtocolType, number> = {
-  cctp: 180, // 3 minutes
-  ccip: 300, // 5 minutes
-  lifi: 120, // 2 minutes
-  wormhole: 600, // 10 minutes
-  'base-solana-bridge': 900, // 15 minutes
-  debridge: 180, // 3 minutes
-  near: 300, // 5 minutes
-  'near-intents': 180, // 3 minutes
-  zcash: 600, // 10 minutes
-  stacks: 600, // 10 minutes
-  starknet: 600, // 10 minutes
-  ton: 300, // 5 minutes
-  fhenix: 60, // ~1 minute (CoFHE co-processor on Base)
-  auto: 300,
 };
 
 // ============================================================================

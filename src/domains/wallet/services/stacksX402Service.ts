@@ -16,8 +16,6 @@
  */
 
 import { request } from "@stacks/connect";
-import { createError } from "@/shared/utils";
-import { stacksProtocol } from "@/services/bridges/protocols/stacks";
 
 // =============================================================================
 // TYPES
@@ -460,8 +458,7 @@ class StacksX402Service {
   async executeAutoPurchase(
     authId: string,
     amount: bigint,
-    ticketsCount: number,
-    lotteryId?: string
+    ticketsCount: number
   ): Promise<AutoPurchaseResult> {
     // Check authorization limits
     const limitCheck = this.checkAuthorizationLimits(authId, amount, ticketsCount);
@@ -472,8 +469,6 @@ class StacksX402Service {
         errorCode: 'LIMIT_EXCEEDED',
       };
     }
-
-    const auth = this.authorizations.get(authId)!;
 
     // In a full implementation, this would:
     // 1. Bridge the tokens from Stacks to Base (using the stacks protocol)
@@ -524,9 +519,6 @@ class StacksX402Service {
       if (!support.isSupported) {
         return { success: false, error: support.message };
       }
-
-      // Generate a challenge for the authorization
-      const challenge = await this.generateChallenge();
 
       // Get current user address (from wallet)
       const userAddress = await this.getCurrentUserAddress();
