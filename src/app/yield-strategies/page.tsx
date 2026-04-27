@@ -100,17 +100,6 @@ function getStrategyApyLabel(strategy: SupportedYieldStrategyId | null): string 
   }
 }
 
-function getStrategyVenueLabel(strategy: SupportedYieldStrategyId | null): string {
-  switch (strategy) {
-    case "lifiearn":
-      return "Cross-chain";
-    case "octant":
-      return "Ethereum / Base";
-    default:
-      return "Base";
-  }
-}
-
 function getStrategyRiskLabel(strategy: SupportedYieldStrategyId | null): string {
   switch (strategy) {
     case "morpho":
@@ -163,7 +152,6 @@ function YieldStrategiesContent() {
   const tabParam = searchParams?.get("tab");
   const entryParam = searchParams?.get(YIELD_ENTRY_PARAM);
   const amountParam = searchParams?.get("amount");
-  const sourceChainParam = searchParams?.get("sourceChain");
   const bridgeActivityIdParam = searchParams?.get("bridgeActivityId");
   const hasExecutionIntent = hasYieldExecutionIntent(searchParams);
   const isBridgeEntry = entryParam === YIELD_ENTRY_BRIDGE;
@@ -178,12 +166,6 @@ function YieldStrategiesContent() {
   const selectedStrategyConfig = selectedStrategy
     ? getStrategyById(selectedStrategy)
     : undefined;
-  const canDepositIntoSelectedStrategy = Boolean(
-    selectedStrategy &&
-      DIRECT_DEPOSIT_STRATEGIES.includes(
-        selectedStrategy as (typeof DIRECT_DEPOSIT_STRATEGIES)[number]
-      )
-  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;

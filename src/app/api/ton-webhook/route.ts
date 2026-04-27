@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    const { text, from, chat } = update.message;
+    const { text, chat } = update.message;
     const botToken = process.env.TON_BOT_TOKEN;
 
     if (!botToken) {

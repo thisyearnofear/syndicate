@@ -55,7 +55,7 @@ export default function WalletConnectionManager({
      [connect, dispatch]
    );
 
-  const onSocialLoginClick = () => {
+  const _onSocialLoginClick = () => {
     // Placeholder for social login functionality
     console.log("Social login clicked");
   };

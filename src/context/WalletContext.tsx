@@ -36,7 +36,6 @@ import React, {
 import { useAccount, useDisconnect } from "wagmi";
 import { useCallback } from "react";
 import { WalletType } from "@/domains/wallet/types";
-import { isEvmChain, isSolanaChain } from "@/domains/wallet/constants";
 
 // =============================================================================
 // TYPES
@@ -294,7 +293,6 @@ export function WalletProvider({ children }: WalletProviderProps) {
     address,
     isConnected: wagmiConnected,
     chainId: wagmiChainId,
-    connector,
   } = useAccount();
   const { disconnect: wagmiDisconnect } = useDisconnect();
 

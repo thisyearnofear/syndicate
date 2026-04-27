@@ -49,7 +49,7 @@ export function OctantYieldDashboard({
 }: OctantYieldDashboardProps) {
   const { address } = useUnifiedWallet();
   const { addToast } = useToast();
-  const { availableYield, estimatedTickets, isChecking: isAutoChecking, strategy: autoStrategy } = useYieldAutoProcessor();
+  const { availableYield, estimatedTickets, isChecking: _isAutoChecking, strategy: autoStrategy } = useYieldAutoProcessor();
 
   const [vaultInfo, setVaultInfo] = useState<OctantVaultInfo | null>(null);
   const [yieldPreview, setYieldPreview] = useState<{

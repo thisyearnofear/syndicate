@@ -10,8 +10,6 @@ import {
   GelatoTaskRecord,
   GelatoExecutionRecord,
   IGelatoTaskRepository,
-  serializeGelatoTask,
-  deserializeGelatoTask,
 } from '../schema/gelatoTasks';
 
 export class VercelPostgresGelatoRepository implements IGelatoTaskRepository {

@@ -14,7 +14,6 @@
 
 import { useState, useCallback } from 'react';
 import { useWalletClient, usePublicClient, useChainId } from 'wagmi';
-import { parseUnits, formatUnits } from 'viem';
 import { useUnifiedWallet } from './useUnifiedWallet';
 import {
   LIFI_STATUS_POLL_INTERVAL_MS,
@@ -55,9 +54,6 @@ const ERC20_ABI = [
   { name: 'approve', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [{ name: 'success', type: 'bool' }] },
   { name: 'allowance', type: 'function', stateMutability: 'view', inputs: [{ name: 'owner', type: 'address' }, { name: 'spender', type: 'address' }], outputs: [{ name: 'amount', type: 'uint256' }] },
 ] as const;
-
-// USDC on Base
-const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
 
 export function useLifiEarnVaultDeposit() {
   const { address } = useUnifiedWallet();
@@ -291,3 +287,4 @@ export function useLifiEarnVaultDeposit() {
 
   return { ...state, deposit, reset };
 }
+

@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Loader, TrendingUp } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/shared/components/ui/Button';
 import { useUnifiedWallet } from '@/hooks';
@@ -23,7 +23,7 @@ import { nearIntentsService } from '@/services/nearIntentsService';
 import { nearWalletSelectorService } from '@/domains/wallet/services/nearWalletSelectorService';
 
 export function WinningsCard() {
-  const { walletType, isConnected, address } = useUnifiedWallet();
+  const { walletType, isConnected } = useUnifiedWallet();
   const [winningsAmount, setWinningsAmount] = useState<string>('0');
   const [loading, setLoading] = useState(false);
   const [hasWinnings, setHasWinnings] = useState(false);
@@ -119,3 +119,4 @@ export function WinningsCard() {
     </div>
   );
 }
+

@@ -163,7 +163,7 @@ export function useLotteryPurchase() {
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
 
-  const purchaseTickets = useCallback(async (ticketCount: number) => {
+  const purchaseTickets = useCallback(async () => {
     setIsPurchasing(true);
     setError(null);
     setTxHash(null);

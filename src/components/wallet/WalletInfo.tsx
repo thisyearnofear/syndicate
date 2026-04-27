@@ -3,7 +3,7 @@
 import { useWalletContext } from "@/context/WalletContext";
 import { CHAIN_IDS } from "@/config";
 import { Button } from "@/shared/components/ui/Button";
-import { STACKS_WALLETS, getWalletRouting } from "@/domains/wallet/types";
+import { getWalletRouting } from "@/domains/wallet/types";
 import { WalletRoutingInfo } from "./WalletRoutingInfo";
 
 interface WalletInfoProps {

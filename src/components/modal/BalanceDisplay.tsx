@@ -14,7 +14,6 @@
 import React, { useMemo } from "react";
 import { AlertCircle, Zap, Check } from "lucide-react";
 import { WalletTypes, STACKS_WALLETS } from "@/domains/wallet/types";
-import { Button } from "@/shared/components/ui/Button";
 import { useNetworkInfo } from "@/hooks/useNetworkInfo";
 
 interface BalanceDisplayProps {

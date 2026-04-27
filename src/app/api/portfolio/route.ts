@@ -58,7 +58,7 @@ export async function GET(request: Request) {
         ORDER BY m.joined_at DESC
       `;
       memberships = membershipsResult.rows;
-    } catch (error) {
+    } catch {
       // Tables may not exist yet (fresh database) - return empty portfolio
       console.warn('[Portfolio API] syndicate_members/pools tables not found, returning empty portfolio');
       return NextResponse.json({
@@ -103,8 +103,9 @@ export async function GET(request: Request) {
               AND d.status = 'completed'
           `;
           winnings = parseFloat(winningsResult.rows[0]?.winnings || '0');
-        } catch (error) {
-          console.error('Failed to fetch winnings:', error);
+        } catch (err) {
+          console.error('Failed to fetch winnings:', err);
+          // winnings remains 0
         }
         totalWinnings += winnings;
 
@@ -118,7 +119,7 @@ export async function GET(request: Request) {
               AND LOWER(member_address) = LOWER(${walletAddress})
           `;
           yieldEarned = parseFloat(yieldResult.rows[0]?.yield_earned || '0');
-        } catch (error) {
+        } catch {
           // Table may not exist yet
         }
         totalYield += yieldEarned;
@@ -166,7 +167,7 @@ export async function GET(request: Request) {
         WHERE LOWER(d.member_address) = LOWER(${walletAddress})
       `;
       totalPendingYield = parseFloat(pendingResult.rows[0]?.pending || '0');
-    } catch (error) {
+    } catch {
       // Table may not exist yet
     }
 

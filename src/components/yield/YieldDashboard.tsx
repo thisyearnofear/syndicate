@@ -6,6 +6,7 @@ import { YieldPerformanceDisplay } from '@/components/yield/YieldPerformanceDisp
 import { useToast, useErrorToast, useSuccessToast } from '@/shared/components/ui/Toast';
 import { useUnifiedWallet } from '@/hooks';
 import { useUserVaults } from '@/hooks/useUserVaults';
+import { useFhenixPrivateVaultBalance } from '@/hooks/useFhenixPrivateVaultBalance';
 import { yieldToTicketsService } from '@/services/yieldToTicketsService';
 import { Button } from '@/shared/components/ui/Button';
 import { vaultManager } from '@/services/vaults';
@@ -27,11 +28,26 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
     positions, 
     totalDeposited, 
     totalYield, 
-    totalBalance,
     isLoading, 
     error: vaultError,
     refresh 
   } = useUserVaults(address ?? undefined);
+
+  const fhenixVaultAddress = (process.env.NEXT_PUBLIC_FHENIX_VAULT_ADDRESS || undefined) as
+    | `0x${string}`
+    | undefined;
+
+  const {
+    status: fhenixPrivateStatus,
+    error: fhenixPrivateError,
+    balanceMicro: fhenixPrivateBalanceMicro,
+    formattedBalance: fhenixPrivateBalanceFormatted,
+    reveal: revealFhenixPrivateBalance,
+  } = useFhenixPrivateVaultBalance({
+    userAddress: address ? (address as `0x${string}`) : undefined,
+    vaultAddress: fhenixVaultAddress,
+    enabled: true,
+  });
 
   // Get auto-yield strategy status (if any)
   const [autoYieldStrategy, setAutoYieldStrategy] = useState(
@@ -263,18 +279,50 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
         <div className="space-y-4">
           <h3 className="text-lg font-bold text-white">Your Vault Positions</h3>
           {positions.map((position) => (
-            <YieldPerformanceDisplay 
-              key={position.protocol}
-              strategy={`${position.protocol.toUpperCase()} Vault`}
-              yieldRate={position.balance.apy}
-              totalYield={parseFloat(position.balance.yieldAccrued)}
-              totalDeposited={parseFloat(position.balance.deposited)}
-              ticketsGenerated={position.protocol === autoYieldStrategy?.config.vaultProtocol ? ticketsGenerated : 0}
-              causesFunded={position.protocol === autoYieldStrategy?.config.vaultProtocol ? causesFunded : 0}
-              isLocked={false}
-              isHealthy={position.isHealthy}
-              onWithdrawPrincipal={() => handleWithdrawPrincipal(position.protocol)}
-            />
+            <div key={position.protocol} className="space-y-2">
+              {position.protocol === 'fhenix' && (
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-gray-400">
+                    {fhenixPrivateBalanceMicro != null ? (
+                      <span>
+                        Private balance revealed: <span className="text-white font-mono">${Number(fhenixPrivateBalanceFormatted ?? 0).toFixed(6)}</span>
+                      </span>
+                    ) : (
+                      <span>Fhenix balance is private. Reveal it with a permit.</span>
+                    )}
+                    {fhenixPrivateError && (
+                      <span className="ml-2 text-red-400">{fhenixPrivateError}</span>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={revealFhenixPrivateBalance}
+                    disabled={fhenixPrivateStatus === 'initializing' || fhenixPrivateStatus === 'permit' || fhenixPrivateStatus === 'reading' || fhenixPrivateStatus === 'unsealing'}
+                  >
+                    {fhenixPrivateStatus === 'initializing' || fhenixPrivateStatus === 'permit' || fhenixPrivateStatus === 'reading' || fhenixPrivateStatus === 'unsealing'
+                      ? 'Revealing…'
+                      : (fhenixPrivateBalanceMicro != null ? 'Refresh Private Balance' : 'Reveal Private Balance')}
+                  </Button>
+                </div>
+              )}
+
+              <YieldPerformanceDisplay 
+                strategy={`${position.protocol.toUpperCase()} Vault`}
+                yieldRate={position.balance.apy}
+                totalYield={parseFloat(position.balance.yieldAccrued)}
+                totalDeposited={
+                  position.protocol === 'fhenix' && fhenixPrivateBalanceMicro != null
+                    ? Number(fhenixPrivateBalanceFormatted ?? 0)
+                    : parseFloat(position.balance.deposited)
+                }
+                ticketsGenerated={position.protocol === autoYieldStrategy?.config.vaultProtocol ? ticketsGenerated : 0}
+                causesFunded={position.protocol === autoYieldStrategy?.config.vaultProtocol ? causesFunded : 0}
+                isLocked={false}
+                isHealthy={position.isHealthy}
+                onWithdrawPrincipal={() => handleWithdrawPrincipal(position.protocol)}
+              />
+            </div>
           ))}
         </div>
         

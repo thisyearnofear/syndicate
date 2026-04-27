@@ -22,11 +22,8 @@ import {
   Trophy,
   Users,
   Wallet,
-  ArrowRight,
-  Settings,
   TrendingUp
 } from 'lucide-react';
-import { Button } from '@/shared/components/ui/Button';
 
 type NotificationType = 
   | 'deposit_received'
@@ -56,7 +53,6 @@ export function NotificationBell({ poolId, className = '' }: NotificationBellPro
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -83,8 +79,8 @@ export function NotificationBell({ poolId, className = '' }: NotificationBellPro
       const data = await response.json();
       setNotifications(data.notifications || []);
       setUnreadCount(data.unreadCount || 0);
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error);
+    } catch {
+      // Silent fail for polling
     }
   }, [poolId]);
 
@@ -99,7 +95,7 @@ export function NotificationBell({ poolId, className = '' }: NotificationBellPro
       
       const data = await response.json();
       setUnreadCount(data.unreadCount || 0);
-    } catch (error) {
+    } catch {
       // Silent fail for polling
     }
   }, [poolId]);

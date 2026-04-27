@@ -4,7 +4,6 @@ import { memo } from "react";
 import { useMultiLottery } from "@/domains/lottery/hooks/useMultiLottery";
 import { Button } from "@/shared/components/ui/Button";
 import { LoadingSpinner } from "@/shared/components/LoadingSpinner";
-import { CountUpText } from "@/shared/components/ui/CountUpText";
 
 interface MultiLotteryPrizesProps {
   onBuyClick: (protocol?: string) => void;

@@ -18,6 +18,7 @@
 
 import type { PoolProvider, PoolProviderConfig, PoolCreationResult } from './types';
 import { FHENIX_CONFIG } from '@/services/fhe/fheService';
+import { FHENIX_VAULT_CHAIN } from '@/services/fhe/fhenixChain';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -28,8 +29,8 @@ const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
 // These are populated from env at runtime; pre-deploy address used for testnet demo
 export const FHENIX_POOL_CONFIG = {
   VAULT_ADDRESS: (process.env.NEXT_PUBLIC_FHENIX_VAULT_ADDRESS ?? '0x0000000000000000000000000000000000000000') as `0x${string}`,
-  CHAIN_ID: FHENIX_CONFIG.CHAIN_ID,
-  USDC_ADDRESS: USDC_BASE,
+  CHAIN_ID: FHENIX_VAULT_CHAIN.id,
+  USDC_ADDRESS: (process.env.NEXT_PUBLIC_FHENIX_USDC_ADDRESS ?? USDC_BASE) as `0x${string}`,
 } as const;
 
 // ─── ABI (minimal — only what the provider calls server-side) ────────────────

@@ -41,7 +41,7 @@ export class PublicKey {
     return this._key === other._key;
   }
   
-  static isOnCurve(_: Uint8Array): boolean {
+  static isOnCurve(): boolean {
     return true;
   }
 }
@@ -50,7 +50,7 @@ export class PublicKey {
 export class Connection {
   private _endpoint: string;
   
-  constructor(endpoint: string, _commitment?: string) {
+  constructor(endpoint: string) {
     this._endpoint = endpoint;
   }
   
@@ -58,22 +58,22 @@ export class Connection {
     return this._endpoint;
   }
   
-  async getBalance(_publicKey: PublicKey): Promise<number> {
+  async getBalance(): Promise<number> {
     console.warn('[STUB] Solana Connection.getBalance called - Solana is disabled');
     return 0;
   }
   
-  async getTokenAccountBalance(_tokenAccount: PublicKey): Promise<{ value: { uiAmount: number | null } }> {
+  async getTokenAccountBalance(): Promise<{ value: { uiAmount: number | null } }> {
     console.warn('[STUB] Solana Connection.getTokenAccountBalance called - Solana is disabled');
     return { value: { uiAmount: null } };
   }
   
-  async getAccountInfo(_publicKey: PublicKey): Promise<null> {
+  async getAccountInfo(): Promise<null> {
     console.warn('[STUB] Solana Connection.getAccountInfo called - Solana is disabled');
     return null;
   }
   
-  async sendTransaction(_transaction: Transaction): Promise<string> {
+  async sendTransaction(): Promise<string> {
     throw new Error('[STUB] Solana is disabled - re-enable Solana packages to use this feature');
   }
 }
@@ -98,8 +98,8 @@ export class VersionedTransaction {
   message: unknown;
   signatures: Uint8Array[] = [];
   
-  constructor(_message: unknown) {
-    this.message = _message;
+  constructor(message: unknown) {
+    this.message = message;
   }
   
   serialize(): Uint8Array {
@@ -115,17 +115,16 @@ export interface TransactionInstruction {
 
 // SPL Token stubs
 export async function getAssociatedTokenAddress(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _mint: PublicKey,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _owner: PublicKey
 ): Promise<PublicKey> {
   console.warn('[STUB] getAssociatedTokenAddress called - Solana is disabled');
   return new PublicKey('stub-token-address');
 }
 
-export async function getAccount(
-  _connection: Connection,
-  _address: PublicKey
-): Promise<{ amount: bigint }> {
+export async function getAccount(): Promise<{ amount: bigint }> {
   console.warn('[STUB] getAccount called - Solana is disabled');
   return { amount: BigInt(0) };
 }

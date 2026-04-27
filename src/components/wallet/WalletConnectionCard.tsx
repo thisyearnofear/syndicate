@@ -18,7 +18,7 @@ import {
   CompactStack,
   CompactFlex,
 } from "@/shared/components/premium/CompactLayout";
-import { WalletType, STACKS_WALLETS } from "@/domains/wallet/types";
+import { WalletType } from "@/domains/wallet/types";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { walletLoader } from "@/lib/walletLoader";
 import { AlertCircle } from "lucide-react";
@@ -242,7 +242,7 @@ export function WalletConnectionCard({
             {subtitle}
           </p>
           <p className="text-gray-500 text-xs max-w-sm mx-auto italic">
-            Connect your native wallet from any chain. We'll automatically bridge your assets to Base for ticket purchases.
+            Connect your native wallet from any chain. We&apos;ll automatically bridge your assets to Base for ticket purchases.
           </p>
         </div>
       )}

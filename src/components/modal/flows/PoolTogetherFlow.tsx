@@ -24,7 +24,6 @@ export function PoolTogetherFlow({
   onDeposit,
   onBack,
   onClose,
-  walletType,
 }: PoolTogetherFlowProps) {
   if (step === "select") {
     return (

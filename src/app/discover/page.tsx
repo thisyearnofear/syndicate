@@ -13,13 +13,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Search, 
-  Filter, 
   SlidersHorizontal,
-  TrendingUp,
-  Users,
-  Trophy,
-  Heart,
-  ArrowRight
+  TrendingUp
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 import { SyndicateCard } from '@/components/syndicate/SyndicateCard';
@@ -45,7 +40,7 @@ interface SyndicateData {
 
 export default function SyndicateDiscoveryPage() {
   const router = useRouter();
-  const { isConnected, address } = useUnifiedWallet();
+  const { } = useUnifiedWallet();
   
   const [syndicates, setSyndicates] = useState<SyndicateData[]>([]);
   const [filteredSyndicates, setFilteredSyndicates] = useState<SyndicateData[]>([]);

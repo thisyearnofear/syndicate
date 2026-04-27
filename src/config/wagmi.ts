@@ -1,6 +1,7 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { base, baseSepolia } from 'wagmi/chains';
 import { http } from 'wagmi';
+import { fhenixHelium } from '@/services/fhe/fhenixChain';
 
 let cachedConfig: ReturnType<typeof getDefaultConfig> | null = null;
 let isConfigInitialized = false;
@@ -20,7 +21,7 @@ export function getConfig(): ReturnType<typeof getDefaultConfig> | null {
         cachedConfig = getDefaultConfig({
           appName: 'Syndicate',
           projectId: 'server-placeholder',
-          chains: [base, baseSepolia],
+          chains: [base, baseSepolia, fhenixHelium],
           ssr: true, // Enable SSR mode for Next.js - prevents hydration mismatch
         });
       } catch {
@@ -51,10 +52,12 @@ export function getConfig(): ReturnType<typeof getDefaultConfig> | null {
       chains: [
         base,
         baseSepolia,
+        fhenixHelium,
       ],
       transports: {
         [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org', { batch: true }),
         [baseSepolia.id]: http(),
+        [fhenixHelium.id]: http(process.env.NEXT_PUBLIC_FHENIX_RPC_URL || 'https://api.fhenix.zone'),
       },
       pollingInterval: 30_000,
       ssr: false, // Disable SSR to prevent indexedDB access on server
@@ -71,10 +74,12 @@ export function getConfig(): ReturnType<typeof getDefaultConfig> | null {
     chains: [
       base,
       baseSepolia,
+      fhenixHelium,
     ],
     transports: {
       [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org', { batch: true }),
       [baseSepolia.id]: http(),
+      [fhenixHelium.id]: http(process.env.NEXT_PUBLIC_FHENIX_RPC_URL || 'https://api.fhenix.zone'),
     },
     pollingInterval: 30_000,
     ssr: false, // Set to false to prevent server-side indexedDB access

@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { API } from '@/config';
 import { basePublicClient } from '@/lib/baseClient';
 import { MEGAPOT_ABI, MEGAPOT_V2 } from '@/config/contracts';
-import { ethers } from 'ethers';
 
 /**
  * Stats API route - uses same transport logic as /api/megapot
@@ -34,7 +33,6 @@ export async function GET() {
     }
 
     let response: Response | null = null;
-    let lastError: Error | null = null;
 
     // Try all candidate URLs with both /jackpot-round-stats/active and /lottery/jackpot-round-stats/active
     for (const baseUrl of getCandidateBaseUrls()) {
@@ -55,8 +53,8 @@ export async function GET() {
             response = attempt;
             break;
           }
-        } catch (err) {
-          lastError = err as Error;
+        } catch {
+          // try next endpoint
         }
       }
       if (response) break;

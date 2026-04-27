@@ -12,15 +12,12 @@ import { useCallback } from "react";
 import { request } from "@stacks/connect";
 import { createError } from "@/shared/utils";
 import { useWalletContext } from "@/context/WalletContext";
-import type { WalletModuleFactory } from "@near-wallet-selector/core";
 import {
   WalletType,
   WalletTypes,
-  STACKS_WALLETS,
   type StacksWalletType,
 } from "../types";
 import { computeAddress } from "ethers";
-import { CHAIN_IDS, isSolanaChain } from "../constants";
 
 // =============================================================================
 // WALLET DETECTION

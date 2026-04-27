@@ -4,5 +4,15 @@
     "@typescript-eslint/no-explicit-any": "off",
     "@typescript-eslint/consistent-type-definitions": "off",
     "react-hooks/exhaustive-deps": "off"
-  }
+  },
+  "ignorePatterns": [
+    "lib/openzeppelin-contracts/**",
+    "contracts/**",
+    "dev-tools/**",
+    "empty-module/**",
+    "node_modules/**",
+    ".next/**",
+    "out/**",
+    "dist/**"
+  ]
 }

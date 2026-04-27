@@ -11,17 +11,9 @@ interface PendingRow {
   updated_at: string | null;
 }
 
-interface AdminPurchasesPageProps {
-  searchParams?: {
-    token?: string;
-    chain?: string;
-    status?: string;
-    limit?: string;
-    offset?: string;
-  };
-}
-
-export default async function AdminPurchasesPage(props: {
+export default async function AdminPurchasesPage({
+  searchParams,
+}: {
   searchParams: Promise<{
     token?: string;
     chain?: string;
@@ -30,16 +22,16 @@ export default async function AdminPurchasesPage(props: {
     offset?: string;
   }>;
 }) {
-  const searchParams = await props.searchParams;
+  const params = await searchParams;
   const adminSecret = process.env.ADMIN_SECRET;
-  if (adminSecret && searchParams?.token !== adminSecret) {
+  if (adminSecret && params?.token !== adminSecret) {
     notFound();
   }
 
-  const chain = searchParams?.chain?.trim();
-  const statusFilter = searchParams?.status?.trim();
-  const limit = Math.min(Math.max(Number(searchParams?.limit) || 50, 10), 200);
-  const offset = Math.max(Number(searchParams?.offset) || 0, 0);
+  const chain = params?.chain?.trim();
+  const statusFilter = params?.status?.trim();
+  const limit = Math.min(Math.max(Number(params?.limit) || 50, 10), 200);
+  const offset = Math.max(Number(params?.offset) || 0, 0);
 
   const where: string[] = [];
   const values: any[] = [];
@@ -96,7 +88,7 @@ export default async function AdminPurchasesPage(props: {
             <input
               type="hidden"
               name="token"
-              value={searchParams?.token || ""}
+              value={params?.token || ""}
             />
           )}
           <div className="flex flex-col gap-1">
@@ -212,7 +204,7 @@ export default async function AdminPurchasesPage(props: {
                             <input
                               type="hidden"
                               name="token"
-                              value={searchParams?.token || ""}
+                              value={params?.token || ""}
                             />
                           )}
                           <button
@@ -244,7 +236,7 @@ export default async function AdminPurchasesPage(props: {
                               <input
                                 type="hidden"
                                 name="authorization"
-                                value={`Bearer ${searchParams?.token || ""}`}
+                                value={`Bearer ${params?.token || ""}`}
                               />
                             )}
                             <button
@@ -266,7 +258,7 @@ export default async function AdminPurchasesPage(props: {
         <div className="flex gap-3 text-sm text-gray-300">
           <a
             href={`?${new URLSearchParams({
-              ...(adminSecret ? { token: searchParams?.token || "" } : {}),
+              ...(adminSecret ? { token: params?.token || "" } : {}),
               ...(chain ? { chain } : {}),
               ...(statusFilter ? { status: statusFilter } : {}),
               limit: String(limit),
@@ -278,7 +270,7 @@ export default async function AdminPurchasesPage(props: {
           </a>
           <a
             href={`?${new URLSearchParams({
-              ...(adminSecret ? { token: searchParams?.token || "" } : {}),
+              ...(adminSecret ? { token: params?.token || "" } : {}),
               ...(chain ? { chain } : {}),
               ...(statusFilter ? { status: statusFilter } : {}),
               limit: String(limit),

@@ -3,7 +3,7 @@ import { isHex, parseUnits } from 'viem';
 import { basePublicClient } from '@/lib/baseClient';
 import { syndicateService } from '@/domains/syndicate/services/syndicateService';
 import { syndicateRepository, type SyndicatePoolRow } from '@/lib/db/repositories/syndicateRepository';
-import type { SyndicateInfo, SyndicateActivity } from '@/domains/lottery/types';
+import type { SyndicateInfo } from '@/domains/lottery/types';
 
 // USDC on Base (6 decimals)
 const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
@@ -192,7 +192,7 @@ export async function POST(request: Request) {
     }
 
     if (action === 'create') {
-      const { name, description, coordinatorAddress, causeAllocationPercent, lotteryId, poolType, members } = body;
+      const { name, description, coordinatorAddress, causeAllocationPercent, poolType, members } = body;
       
       // Validation
       if (!name || !coordinatorAddress || causeAllocationPercent === undefined) {
@@ -262,13 +262,48 @@ export async function POST(request: Request) {
       // Verify the transaction landed on-chain but skip amount matching.
       let verification: { ok: boolean; reason?: string };
       if (pool.pool_type === 'fhenix') {
-        const { createPublicClient, http } = await import('viem');
-        const client = createPublicClient({ transport: http(process.env.FHENIX_RPC_URL ?? 'https://api.fhenix.zone') });
+        const { createPublicClient, http, decodeEventLog, parseAbiItem } = await import('viem');
+
+        const fhenixChainId = parseInt(process.env.NEXT_PUBLIC_FHENIX_CHAIN_ID ?? '84532', 10);
+        const rpcUrl =
+          fhenixChainId === 8008135
+            ? (process.env.FHENIX_RPC_URL ?? 'https://api.fhenix.zone')
+            : (process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL ?? 'https://sepolia.base.org');
+
+        const client = createPublicClient({ transport: http(rpcUrl) });
+
+        const expectedVault = (process.env.NEXT_PUBLIC_FHENIX_VAULT_ADDRESS ?? '').toLowerCase();
+        const depositEvent = parseAbiItem('event DepositShielded(address indexed from, uint256 placeholder)');
         try {
           const receipt = await client.getTransactionReceipt({ hash: txHash as `0x${string}` });
-          verification = receipt.status === 'success'
-            ? { ok: true }
-            : { ok: false, reason: 'FHE deposit transaction reverted' };
+          if (receipt.status !== 'success') {
+            verification = { ok: false, reason: 'FHE deposit transaction reverted' };
+          } else if (expectedVault && (receipt.to?.toLowerCase() !== expectedVault)) {
+            verification = { ok: false, reason: 'FHE deposit was not sent to the expected vault' };
+          } else {
+            // Verify the vault emitted DepositShielded(memberAddress, 0)
+            const matched = receipt.logs.some((log) => {
+              if (!expectedVault) return false;
+              if (log.address.toLowerCase() !== expectedVault) return false;
+              try {
+                const decoded = decodeEventLog({
+                  abi: [depositEvent],
+                  data: log.data,
+                  topics: log.topics,
+                });
+                return (
+                  decoded.eventName === 'DepositShielded' &&
+                  String((decoded.args as any).from).toLowerCase() === String(memberAddress).toLowerCase()
+                );
+              } catch {
+                return false;
+              }
+            });
+
+            verification = matched
+              ? { ok: true }
+              : { ok: false, reason: 'FHE deposit event not found (DepositShielded)' };
+          }
         } catch {
           verification = { ok: false, reason: 'Could not fetch FHE deposit transaction receipt' };
         }
@@ -316,7 +351,7 @@ export async function POST(request: Request) {
 
       // Record ticket purchase if successful
       if (result.success && result.txHash) {
-        await syndicateRepository.recordTicketPurchase(poolId, ticketCount, result.txHash);
+        await syndicateRepository.recordTicketPurchase(poolId, ticketCount);
       }
 
       return NextResponse.json(result, { headers: corsHeaders });

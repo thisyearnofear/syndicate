@@ -15,7 +15,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { AlertCircle as HelpCircle, X } from 'lucide-react';
-import { colors, animations, shadows, spacing, borderRadius } from '@/config/design';
+import { shadows } from '@/config/design';
 
 interface InfoTooltipProps {
   /** Tooltip content (can be text or React node) */

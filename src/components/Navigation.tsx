@@ -43,11 +43,6 @@ export default function Navigation({ className = '' }: NavigationProps) {
         }
     };
 
-    const onSocialLoginClick = () => {
-        // Placeholder for social login functionality
-        console.log("Social login clicked");
-    };
-
     // Determine if Bridge should be emphasized in nav
     // Enhancement-first: derive minimal signal from route (hide on /bridge itself)
     // Prevent bloat: no heavy balance checks here; Buy page shows full "Get Ready" panel

@@ -27,7 +27,7 @@ export function TelegramPurchaseModal({
   ticketCount,
   onSuccess,
 }: TelegramPurchaseModalProps) {
-  const { isTelegram, colorScheme, user } = useTelegram();
+  const { colorScheme, user } = useTelegram();
   const { impact, notification } = useHapticFeedback();
   const { isConnected, address } = useUnifiedWallet();
   const { pay, isPending } = useTonPay();

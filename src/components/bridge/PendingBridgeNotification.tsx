@@ -24,7 +24,7 @@ export function PendingBridgeNotification({
     onBridgeComplete
 }: PendingBridgeNotificationProps) {
     // Use unified bridge - check for pending bridges via status
-    const { status, txHash, sourceTxHash, destinationTxHash, isPending, error } = useUnifiedBridge();
+    const { status, txHash, isPending } = useUnifiedBridge();
     
     // Derive pending state from unified bridge status
     const hasPending = isPending || status === 'pending' || status === 'bridging' || status === 'confirming';

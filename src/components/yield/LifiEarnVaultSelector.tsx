@@ -13,7 +13,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { CompactCard, CompactStack } from '@/shared/components/premium/CompactLayout';
+import { CompactCard } from '@/shared/components/premium/CompactLayout';
 import { Button } from '@/shared/components/ui/Button';
 import { 
   TrendingUp, 
@@ -29,7 +29,6 @@ import {
 import { lifiEarnProvider, type LifiEarnVault } from '@/services/vaults/lifiEarnProvider';
 import { useLifiEarnVaultDeposit } from '@/hooks/useLifiEarnVaultDeposit';
 import { useUnifiedWallet } from '@/hooks/useUnifiedWallet';
-import { formatUnits } from 'viem';
 import { VaultCardSkeleton } from './VaultCardSkeleton';
 import { EmptyVaultState } from './EmptyVaultState';
 
@@ -152,7 +151,6 @@ export function LifiEarnVaultSelector({
     const usdcToken = selectedVault.underlyingTokens.find(t => t.symbol === 'USDC')?.address || 
                       '0x0000000000000000000000000000000000000000';
     
-    const isCrossChain = sourceChain !== selectedVault.chainId;
     const result = await deposit({
       fromChain: sourceChain,
       toChain: selectedVault.chainId,

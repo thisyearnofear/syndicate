@@ -17,7 +17,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { useAdvancedPermissions } from './useAdvancedPermissions';
 import { useVisibilityPolling } from '@/lib/useVisibilityPolling';
-import type { AutoPurchaseConfig } from '@/domains/wallet/types';
 import { permittedTicketExecutor } from '@/services/automation/permittedTicketExecutor';
 
 interface ExecutionEvent {

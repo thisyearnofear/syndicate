@@ -17,7 +17,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Loader, AlertCircle, CircleCheckBig as CheckCircle } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
-import { useTicketInfo, useUnifiedWallet, useUnifiedBridge } from '@/hooks';
+import { useUnifiedWallet, useUnifiedBridge } from '@/hooks';
 import { WalletTypes } from '@/domains/wallet/types';
 import { bridgeManager } from '@/services/bridges';
 import { web3Service } from '@/services/web3Service';
@@ -44,9 +44,8 @@ export function WinningsWithdrawalFlow({
   onSuccess,
   onError,
 }: WinningsWithdrawalFlowProps) {
-  const { walletType, address: stacksAddress } = useUnifiedWallet();
-  const { status: bridgeStatus, txHash: bridgeTxHash } = useUnifiedBridge();
-  const { isClaimingWinnings } = useTicketInfo();
+  const { walletType } = useUnifiedWallet();
+  const { status: bridgeStatus } = useUnifiedBridge();
   
   // Derived state for bridge monitoring
   const isWithdrawingWinningsToNear = bridgeStatus === 'bridging' || bridgeStatus === 'pending';
@@ -273,7 +272,7 @@ export function WinningsWithdrawalFlow({
         </div>
         <div className="space-y-2 bg-black/20 rounded-lg p-4">
           <p className="text-gray-300 text-sm">
-            💡 <strong>What's happening:</strong> We're claiming your $
+            💡 <strong>What&apos;s happening:</strong> We&apos;re claiming your $
             {localWinningsAmount} in winnings on Base and preparing the bridge back to your NEAR account.
           </p>
         </div>
@@ -436,7 +435,7 @@ function StacksWinningsFlow({
     }
   }, [hasWinnings, isLoading]);
 
-  const handleClaimWinnings = useCallback(async () => {
+  const _handleClaimWinnings = useCallback(async () => {
     if (!stacksAddress || !stacksWinningsToken) {
       setLocalError('Winnings information missing');
       return;
