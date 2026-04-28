@@ -1,6 +1,5 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
-import type { SyndicateInfo } from '@/domains/lottery/types';
 import { YieldAllocationControl } from './YieldAllocationControl';
 import { octantVaultService, type OctantVaultInfo } from '@/services/octantVaultService';
 import { vaultManager, type VaultInfo } from '@/services/vaults';
@@ -60,7 +59,7 @@ export function ImprovedYieldStrategySelector({
   const [isLoading, setIsLoading] = useState(false);
   // LI.FI Earn specific state
   const [selectedLifiEarnVault, setSelectedLifiEarnVault] = useState<LifiEarnVault | null>(null);
-  const [lifiEarnDepositAmount, setLifiEarnDepositAmount] = useState('');
+  const [lifiEarnDepositAmount] = useState('');
   
   // Load vault data when component mounts
   useEffect(() => {
@@ -335,5 +334,6 @@ export function ImprovedYieldStrategySelector({
     <div className={`w-full ${className}`}>
       {allowInternalDetailView && isDetailView ? renderDetailView() : renderGridView()}
     </div>
+
   );
-}
+};

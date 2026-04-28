@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CompactCard, CompactStack } from '@/shared/components/premium/CompactLayout';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
-import { TrendingUp, Wallet, Heart, Trophy, Zap, Loader, RefreshCw, ExternalLink } from 'lucide-react';
+import { TrendingUp, Wallet, Heart, Trophy, Zap, Loader, RefreshCw } from 'lucide-react';
 import { YieldPerformanceDisplay } from '@/components/yield/YieldPerformanceDisplay';
 import { useToast, useErrorToast, useSuccessToast } from '@/shared/components/ui/Toast';
 import { useUnifiedWallet } from '@/hooks';

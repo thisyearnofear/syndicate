@@ -113,7 +113,7 @@ export class PoolTogetherService {
   async prepareDepositWithHook(
     vault: PoolTogetherVault,
     amount: bigint,
-    userAddress: Address
+    _userAddress: Address
   ) {
     const hookAddress = referralManager.getReferrerFor('pooltogether') as Address;
     

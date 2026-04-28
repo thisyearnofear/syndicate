@@ -14,16 +14,16 @@
 import { type Address } from 'viem';
 import { basePublicClient } from '@/lib/baseClient';
 
-const BASE_CHAIN_ID = 8453;
+const _BASE_CHAIN_ID = 8453;
 
 // USDC on Base
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
 
 // ERC20 Transfer event signature
-const TRANSFER_EVENT = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+const _TRANSFER_EVENT = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 
 // Safe ExecutionSuccess event signature
-const SAFE_EXECUTION_SUCCESS = '0x442e7bf84c797158200b397c7c6940797432fba698b024b3e590e9b14f234082';
+const _SAFE_EXECUTION_SUCCESS = '0x442e7bf84c797158200b397c7c6940797432fba698b024b3e590e9b14f234082';
 
 export type TransactionType = 
   | 'deposit'           // Member depositing USDC
@@ -58,7 +58,7 @@ export interface TransactionFilter {
   limit?: number;
 }
 
-const publicClient = basePublicClient as any;
+const _publicClient = basePublicClient as any;
 
 export class TransactionHistoryService {
 
@@ -139,7 +139,7 @@ export class TransactionHistoryService {
   /**
    * Fetch transactions from local database (deposits recorded by the app)
    */
-  async fetchLocalTransactions(poolId: string): Promise<Transaction[]> {
+  async fetchLocalTransactions(_poolId: string): Promise<Transaction[]> {
     // This would query the database for recorded transactions
     // For now, return empty array
     return [];
@@ -241,7 +241,7 @@ export class TransactionHistoryService {
   /**
    * Get transaction summary for a pool
    */
-  async getPoolSummary(poolId: string, poolAddress: Address): Promise<{
+  async getPoolSummary(_poolId: string, poolAddress: Address): Promise<{
     totalDeposits: number;
     totalDistributions: number;
     totalTicketsPurchased: number;

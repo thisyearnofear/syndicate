@@ -22,7 +22,7 @@ import type {
 } from '../types';
 import { BridgeError, BridgeErrorCode } from '../types';
 import { CONTRACTS, cctp as CCTP } from '@/config';
-import CCTP_CONFIG from '@/config/cctpConfig';
+import _CCTP_CONFIG from '@/config/cctpConfig';
 import { pollWithBackoff, validateConnection } from '@/utils/asyncRetryHelper';
 
 // ============================================================================

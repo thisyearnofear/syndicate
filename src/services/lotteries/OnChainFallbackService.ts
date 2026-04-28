@@ -128,7 +128,7 @@ export async function getPoolTogetherOnChainPrize(): Promise<OnChainPrizeData | 
     const totalAssets = results[0] as bigint;
     const grandPrizeWeth = results[1] as bigint;
     const lastDrawId = results[2] as number;
-    const drawPeriod = results[3] as number;
+    const _drawPeriod = results[3] as number;
 
     const depositsUsd = Number(totalAssets) / 1e6; // USDC vault: 6 decimals
 
@@ -185,7 +185,7 @@ export async function getMegapotOnChainPrize(): Promise<OnChainPrizeData | null>
     } as any) as any;
 
     const prizeUsd = Number(state.prizePool) / 1e6;
-    const totalPoolUsd = Number(state.prizePool || 0) / 1e6; // Using prizePool as proxy for grand prize, need logic for total. Actually state.lpEarnings + prizePool is better
+    const _totalPoolUsd = Number(state.prizePool || 0) / 1e6; // Using prizePool as proxy for grand prize, need logic for total. Actually state.lpEarnings + prizePool is better
     const totalLiquidityUsd = Number((state.lpEarnings || 0n) + (state.prizePool || 0n)) / 1e6;
 
     if (prizeUsd <= 0) {

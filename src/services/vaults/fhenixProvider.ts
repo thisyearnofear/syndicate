@@ -202,7 +202,7 @@ export class FhenixVaultProvider implements VaultProvider {
    * Yield withdrawal is handled by the coordinator via `depositYield` + distribution.
    * Individual yield-only withdrawals are not yet supported in the FHE model.
    */
-  async withdrawYield(_userAddress: string): Promise<VaultWithdrawResult> {
+  async withdrawYield(userAddress: string): Promise<VaultWithdrawResult> {
     return {
       success: false,
       error: 'Fhenix vault distributes yield via the coordinator. Use withdraw() to claim principal + yield.',

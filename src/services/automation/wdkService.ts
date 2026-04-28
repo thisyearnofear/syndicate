@@ -5,7 +5,7 @@
  * 
  * Features:
  * - Self-custodial "Agent Wallets" derived from user identifiers.
- * - Multi-chain support (focused on Base for hackathon).
+ * - Multi-_chain support (focused on Base for hackathon).
  * - Autonomous signing and execution for USD₮ purchases.
  * - Integration with MegapotAutoPurchaseProxy.
  */
@@ -47,13 +47,13 @@ export class TetherWDKService {
    * In a real app, this seed would be derived from the user's main wallet
    * or a secure server-side secret for the agent.
    */
-  async initialize(seedPhrase: string): Promise<boolean> {
+  async initialize(_seedPhrase: string): Promise<boolean> {
     try {
       // Lazy load WDK to avoid issues if packages aren't installed yet
       // const WDK = (await import('@tetherto/wdk')).default;
       // const WalletManagerEvm = (await import('@tetherto/wdk-wallet-evm')).default;
 
-      // this.wdk = new WDK(seedPhrase);
+      // this.wdk = new WDK(_seedPhrase);
       // this.wdk.registerWallet('base', WalletManagerEvm, {
       //   rpcUrl: process.env.BASE_RPC_URL || 'https://mainnet.base.org'
       // });
@@ -67,12 +67,12 @@ export class TetherWDKService {
   }
 
   /**
-   * Get the agent's wallet address for a specific chain
+   * Get the agent's wallet address for a specific _chain
    */
-  async getAgentAddress(chain: 'base' | 'base-sepolia' = 'base'): Promise<Address | null> {
+  async getAgentAddress(_chain: 'base' | 'base-sepolia' = 'base'): Promise<Address | null> {
     if (!this.wdk) return null;
     try {
-      const account = await this.wdk.getAccount(chain, 0);
+      const account = await this.wdk.getAccount(_chain, 0);
       return await account.getAddress();
     } catch (error) {
       console.error('[WDK] Failed to get agent address:', error);
@@ -86,15 +86,15 @@ export class TetherWDKService {
     params: {
       recipient: Address;
       amount: bigint;
-      referrer?: Address;
+      _referrer?: Address;
       isTestnet?: boolean;
     }
   ): Promise<{ success: boolean; txHash?: Hash; error?: string }> {
-    const { recipient, amount, referrer = '0x0000000000000000000000000000000000000000', isTestnet = false } = params;
+    const { recipient, amount, _referrer = '0x0000000000000000000000000000000000000000', isTestnet = false } = params;
     
     try {
-      const chain = isTestnet ? 'base-sepolia' : 'base';
-      const tokenAddress = isTestnet ? TetherWDKService.USDT_BASE_SEPOLIA : TetherWDKService.USDT_BASE;
+      const _chain = isTestnet ? 'base-sepolia' : 'base';
+      const _tokenAddress = isTestnet ? TetherWDKService.USDT_BASE_SEPOLIA : TetherWDKService.USDT_BASE;
       const proxyAddress = process.env.NEXT_PUBLIC_UNIVERSAL_PROXY_ADDRESS as Address;
 
       if (!proxyAddress) {
@@ -109,7 +109,7 @@ export class TetherWDKService {
 
       /* 
       // PSEUDOCODE for WDK execution:
-      const account = await this.wdk.getAccount(chain, 0);
+      const account = await this.wdk.getAccount(_chain, 0);
       
       // Step 1: Approve
       const approveData = encodeFunctionData({
@@ -119,7 +119,7 @@ export class TetherWDKService {
       });
       
       await account.sendTransaction({
-        to: tokenAddress,
+        to: _tokenAddress,
         data: approveData
       });
 
@@ -127,7 +127,7 @@ export class TetherWDKService {
       const purchaseData = encodeFunctionData({
         abi: AUTO_PURCHASE_PROXY_ABI,
         functionName: 'purchaseTicketsFor',
-        args: [tokenAddress, recipient, referrer, amount]
+        args: [_tokenAddress, recipient, _referrer, amount]
       });
 
       const tx = await account.sendTransaction({
@@ -155,10 +155,10 @@ export class TetherWDKService {
    * Get agent reasoning for the purchase
    * Integrates with Gemini 1.5 Flash
    */
-  async getAgentReasoning(userId: string, context: any): Promise<string> {
+  async getAgentReasoning(_userId: string, _context: any): Promise<string> {
     // In a real implementation, this would call your existing Gemini service
-    // with a prompt like: "As an autonomous agent managing USD₮ for user ${userId}, 
-    // given ${context.yield} yield, should I buy tickets?"
+    // with a prompt like: "As an autonomous agent managing USD₮ for user ${_userId}, 
+    // given ${_context.yield} yield, should I buy tickets?"
     
     const decisions = [
       "Syndicate yield is currently high (22.5% APY). Purchasing 5 tickets to maximize prize exposure while protecting principal.",

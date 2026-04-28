@@ -9,7 +9,7 @@ import type { NextRequest } from 'next/server';
 
 let initialized = false;
 
-export async function middleware(request: NextRequest) {
+export async function middleware(_request: NextRequest) {
   // Initialize repository once on first request
   if (!initialized && process.env.POSTGRES_URLCONNECTION_STRING) {
     console.log('Gelato repository needs initialization logic implementation.');

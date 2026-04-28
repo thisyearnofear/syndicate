@@ -11,7 +11,7 @@
 import { useState, Suspense, lazy, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
-import { Loader, AlertCircle, Check, Zap, Link2, ChevronDown, ArrowRight, Wallet, Shield, DollarSign, Bitcoin, Trophy, Coins, ExternalLink, Info } from "lucide-react";
+import { Loader, AlertCircle, Check, Zap, Link2, ChevronDown, ArrowRight, Wallet, Shield, DollarSign, Bitcoin, Trophy, ExternalLink, Info } from "lucide-react";
 import { useUnifiedWallet, useUnifiedPurchase } from "@/hooks";
 import { useERC7715 } from "@/hooks/useERC7715";
 import { usePoolTogetherDeposit } from "@/hooks/usePoolTogetherDeposit";

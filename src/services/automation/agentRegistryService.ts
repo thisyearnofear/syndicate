@@ -51,37 +51,37 @@ export class AgentRegistryService {
   /**
    * Get all agents for the current user
    */
-  async getUserAgents(userAddress: string): Promise<AgentStatus[]> {
+  async getUserAgents(_userAddress: string): Promise<AgentStatus[]> {
     const agents: AgentStatus[] = [];
 
     // 1. Check Scheduled Agent (ERC-7715)
-    const scheduledAgent = await this.getScheduledAgent(userAddress);
+    const scheduledAgent = await this.getScheduledAgent(_userAddress);
     if (scheduledAgent) agents.push(scheduledAgent);
 
     // 2. Check Autonomous Agent (WDK)
-    const autonomousAgent = await this.getAutonomousAgent(userAddress);
+    const autonomousAgent = await this.getAutonomousAgent(_userAddress);
     if (autonomousAgent) agents.push(autonomousAgent);
 
     // 3. Check Stacks Agent (x402)
-    const stacksAgent = await this.getStacksAgent(userAddress);
+    const stacksAgent = await this.getStacksAgent(_userAddress);
     if (stacksAgent) agents.push(stacksAgent);
 
     // 4. Check No-Loss Agent (PoolTogether)
-    const noLossAgent = await this.getNoLossAgent(userAddress);
+    const noLossAgent = await this.getNoLossAgent(_userAddress);
     if (noLossAgent) agents.push(noLossAgent);
 
     // 5. Check NEAR Agent (Chain Signatures)
-    const nearAgent = await this.getNearAgent(userAddress);
+    const nearAgent = await this.getNearAgent(_userAddress);
     if (nearAgent) agents.push(nearAgent);
 
     // 6. Check TON Agent (Agentic Wallet)
-    const tonAgent = await this.getTonAgent(userAddress);
+    const tonAgent = await this.getTonAgent(_userAddress);
     if (tonAgent) agents.push(tonAgent);
 
     return agents;
   }
 
-  private async getNearAgent(userAddress: string): Promise<AgentStatus | null> {
+  private async getNearAgent(_userAddress: string): Promise<AgentStatus | null> {
     try {
       if (typeof window === 'undefined') return null;
       
@@ -90,7 +90,7 @@ export class AgentRegistryService {
       const config = configStr ? JSON.parse(configStr) : null;
       
       return {
-        id: `near-${userAddress.slice(0, 6)}`,
+        id: `near-${_userAddress.slice(0, 6)}`,
         type: 'scheduled' as any,
         name: 'The Nomad (NEAR)',
         description: 'Cross-chain automation using NEAR Chain Signatures. Gas-optimized ticket purchases.',
@@ -107,7 +107,7 @@ export class AgentRegistryService {
     }
   }
 
-  private async getNoLossAgent(userAddress: string): Promise<AgentStatus | null> {
+  private async getNoLossAgent(_userAddress: string): Promise<AgentStatus | null> {
     try {
       if (typeof window === 'undefined') return null;
       
@@ -116,7 +116,7 @@ export class AgentRegistryService {
       const config = configStr ? JSON.parse(configStr) : null;
       
       return {
-        id: `noloss-${userAddress.slice(0, 6)}`,
+        id: `noloss-${_userAddress.slice(0, 6)}`,
         type: 'scheduled' as any, // Visual tier
         name: 'Savings Sentinel',
         description: 'No-loss prize savings via PoolTogether v5. 100% principal protection.',
@@ -134,7 +134,7 @@ export class AgentRegistryService {
     }
   }
 
-  private async getScheduledAgent(userAddress: string): Promise<AgentStatus | null> {
+  private async getScheduledAgent(_userAddress: string): Promise<AgentStatus | null> {
     // In a real app, this would query local storage + database
     try {
       const configStr = typeof window !== 'undefined' ? localStorage.getItem('syndicate_autopurchase_config') : null;
@@ -159,7 +159,7 @@ export class AgentRegistryService {
     }
   }
 
-  private async getAutonomousAgent(userAddress: string): Promise<AgentStatus | null> {
+  private async getAutonomousAgent(_userAddress: string): Promise<AgentStatus | null> {
     try {
       if (typeof window === 'undefined') return null;
       
@@ -168,7 +168,7 @@ export class AgentRegistryService {
       const config = configStr ? JSON.parse(configStr) : null;
       
       return {
-        id: `wdk-${userAddress.slice(0, 6)}`,
+        id: `wdk-${_userAddress.slice(0, 6)}`,
         type: 'autonomous',
         name: 'The Voyager (AI)',
         description: 'Autonomous AI agent using Tether WDK. Decides when to buy based on yield performance.',
@@ -188,7 +188,7 @@ export class AgentRegistryService {
     }
   }
 
-  private async getStacksAgent(userAddress: string): Promise<AgentStatus | null> {
+  private async getStacksAgent(_userAddress: string): Promise<AgentStatus | null> {
     try {
       const configStr = typeof window !== 'undefined' ? localStorage.getItem('syndicate_stacks_autopurchase') : null;
       if (!configStr) return null;
@@ -212,14 +212,14 @@ export class AgentRegistryService {
     }
   }
 
-  private async getTonAgent(userAddress: string): Promise<AgentStatus | null> {
+  private async getTonAgent(_userAddress: string): Promise<AgentStatus | null> {
     try {
       const configStr = typeof window !== 'undefined' ? localStorage.getItem('syndicate_ton_agent_config') : null;
       if (!configStr) return null;
 
       const config = JSON.parse(configStr);
       return {
-        id: `ton-${userAddress.slice(0, 6)}`,
+        id: `ton-${_userAddress.slice(0, 6)}`,
         type: 'ton-agentic',
         name: 'The Conductor (TON)',
         description: 'Autonomous agent on TON via Telegram. Purchases tickets with USDT/TON yield.',

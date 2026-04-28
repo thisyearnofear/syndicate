@@ -235,7 +235,7 @@ export class TransactionExecutor {
   async purchaseTicketsWithDelegation(
     userAddress: string,
     ticketCount: number,
-    amountUsdc: bigint,
+    _amountUsdc: bigint,
   ): Promise<string> {
     try {
       if (this.baseChain.isReadOnlyMode()) {

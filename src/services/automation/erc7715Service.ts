@@ -276,7 +276,6 @@ export class ERC7715Service {
         signer: {
           type: 'account',
           data: {
-            // @ts-ignore - Handle possible disconnect
             address: provider.selectedAddress || sdkProvider.account?.address,
           },
         },

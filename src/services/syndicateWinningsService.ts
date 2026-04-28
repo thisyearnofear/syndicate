@@ -15,7 +15,7 @@ import { web3Service } from './web3Service';
 import { CONTRACTS } from '@/config';
 
 // Minimal Megapot ABI - just the events we listen to
-const MEGAPOT_ABI = [
+const _MEGAPOT_ABI = [
   {
     type: 'event',
     name: 'TicketWon',
@@ -37,7 +37,7 @@ const MEGAPOT_ABI = [
 ];
 
 // SyndicatePool ABI - methods needed to detect/record winnings
-const SYNDICATE_POOL_ABI = [
+const _SYNDICATE_POOL_ABI = [
   {
     type: 'event',
     name: 'TicketsPurchased',
@@ -171,7 +171,7 @@ class SyndicateWinningsService {
       }
 
       console.log('[SyndicateWinningsService] Detected pool winnings:', {
-        poolAddress: winnerAddress,
+        _poolAddress: winnerAddress,
         prizeAmount: prizeAmount.toString(),
         ticketCount,
       });
@@ -179,7 +179,7 @@ class SyndicateWinningsService {
       // Find which pool won (by looking for a recent TicketsPurchased event from this amount)
       // This is a simplification - in production, you'd track ticket ownership more carefully
       await this.notifyPoolWinnings({
-        poolAddress: winnerAddress,
+        _poolAddress: winnerAddress,
         winnings: prizeAmount,
         ticketCount,
       });
@@ -197,7 +197,7 @@ class SyndicateWinningsService {
    * 2. Call SyndicatePool.continueWinningsDistribution() in batches
    */
   private async notifyPoolWinnings(event: {
-    poolAddress: string;
+    _poolAddress: string;
     winnings: bigint;
     ticketCount: number;
   }): Promise<void> {
@@ -219,19 +219,19 @@ class SyndicateWinningsService {
    * Use this for MVP until you have reliable event detection
    * 
    * @param syndicatePoolAddress Address of the pool that won
-   * @param totalWinnings Total USDC winnings to distribute
-   * @param causeWalletAddress Address to send cause allocation
+   * @param _totalWinnings Total USDC winnings to distribute
+   * @param _causeWalletAddress Address to send cause allocation
    */
   async manuallyDistributeWinnings(
     syndicatePoolAddress: string,
-    totalWinnings: bigint,
-    causeWalletAddress: string
+    _totalWinnings: bigint,
+    _causeWalletAddress: string
   ): Promise<string> {
     try {
       console.log('[SyndicateWinningsService] Manually starting distribution:', {
         syndicatePoolAddress,
-        totalWinnings: totalWinnings.toString(),
-        causeWalletAddress,
+        _totalWinnings: _totalWinnings.toString(),
+        _causeWalletAddress,
       });
 
       // This would call SyndicatePool.startWinningsDistribution()
@@ -240,8 +240,8 @@ class SyndicateWinningsService {
       
       const txHash = await this.callStartDistribution(
         syndicatePoolAddress,
-        totalWinnings,
-        causeWalletAddress
+        _totalWinnings,
+        _causeWalletAddress
       );
 
       return txHash;
@@ -260,15 +260,15 @@ class SyndicateWinningsService {
    * TODO: Implement when SyndicatePool contract is deployed
    */
   private async callStartDistribution(
-    poolAddress: string,
-    totalWinnings: bigint,
-    causeWalletAddress: string
+    _poolAddress: string,
+    _totalWinnings: bigint,
+    _causeWalletAddress: string
   ): Promise<string> {
     // This is a placeholder - actual implementation depends on
     // how you're interacting with the contract (ethers.js, wagmi, etc.)
     // 
     // When implemented, this would use web3Service to call:
-    // syndicatePool.startWinningsDistribution(poolId, totalWinnings, causeWalletAddress)
+    // syndicatePool.startWinningsDistribution(poolId, _totalWinnings, _causeWalletAddress)
     
     console.warn('[SyndicateWinningsService] callStartDistribution not implemented - SyndicatePool contract not deployed');
     throw new Error('SyndicatePool contract interactions not yet implemented. Contract deployment pending.');

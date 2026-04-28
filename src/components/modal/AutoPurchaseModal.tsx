@@ -239,17 +239,19 @@ export function AutoPurchaseModal({
 
     // Handle EVM ERC-7715 flow (original logic)
     try {
-      let limit;
+      let _limit; // eslint-disable-line @typescript-eslint/no-unused-vars
       switch (config.frequency) {
         case "weekly":
-          limit = BigInt(config.amount * 7 * 10 ** 6);
+          _limit = BigInt(config.amount * 7 * 10 ** 6);
           break;
         case "monthly":
-          limit = BigInt(config.amount * 30 * 10 ** 6);
+          _limit = BigInt(config.amount * 30 * 10 ** 6);
           break;
         default:
-          limit = BigInt(config.amount * 7 * 10 ** 6);
+          _limit = BigInt(config.amount * 7 * 10 ** 6);
       }
+
+      void _limit; // Suppress unused variable warning
 
       const result = await requestPresetPermission(
         config.frequency === 'opportunistic' ? 'weekly' : config.frequency

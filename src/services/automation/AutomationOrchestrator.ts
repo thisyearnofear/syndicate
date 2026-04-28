@@ -88,7 +88,7 @@ export class AutomationOrchestrator {
     userAddress: Address,
     frequency: 'daily' | 'weekly' | 'monthly',
     amount: bigint,
-    referrer: Address = '0x0000000000000000000000000000000000000000',
+    _referrer: Address = '0x0000000000000000000000000000000000000000',
     chainId: number = 8453 // Base mainnet
   ): Promise<GelatoTaskResponse | null> {
     try {
@@ -121,8 +121,8 @@ export class AutomationOrchestrator {
 
       if (!response.ok) return null;
       return await response.json();
-    } catch (error) {
-      console.error('[Orchestrator] Gelato task creation failed:', error);
+    } catch (_error) {
+      console.error('[Orchestrator] Gelato _task creation failed:', _error);
       return null;
     }
   }
@@ -134,7 +134,7 @@ export class AutomationOrchestrator {
       });
       if (!response.ok) return null;
       return await response.json();
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }
@@ -154,7 +154,7 @@ export class AutomationOrchestrator {
         headers: { 'Authorization': `Bearer ${this.gelatoApiKey}` },
       });
       return response.ok;
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }
@@ -170,7 +170,7 @@ export class AutomationOrchestrator {
         body: JSON.stringify({ status }),
       });
       return response.ok;
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }
@@ -185,42 +185,42 @@ export class AutomationOrchestrator {
     return intervals[frequency] || 604800;
   }
 
-  async executeTask(task: AutomationTask): Promise<ExecutionResult> {
-    console.log(`[Orchestrator] Executing ${task.strategy} task for ${task.userAddress}`);
+  async executeTask(_task: AutomationTask): Promise<ExecutionResult> {
+    console.log(`[Orchestrator] Executing ${_task.strategy} _task for ${_task.userAddress}`);
 
     try {
-      switch (task.strategy) {
+      switch (_task.strategy) {
         case 'autonomous':
-          return await this.executeAutonomousWDK(task);
+          return await this.executeAutonomousWDK(_task);
         case 'scheduled':
-          return await this.executeScheduledERC7715(task);
+          return await this.executeScheduledERC7715(_task);
         case 'no-loss':
-          return await this.executeNoLossPoolTogether(task);
+          return await this.executeNoLossPoolTogether(_task);
         case 'stacks-x402':
-          return await this.executeStacksX402(task);
+          return await this.executeStacksX402(_task);
         default:
-          throw new Error(`Unsupported automation strategy: ${task.strategy}`);
+          throw new Error(`Unsupported automation strategy: ${_task.strategy}`);
       }
-    } catch (error: any) {
-      console.error(`[Orchestrator] Task execution failed:`, error);
-      return { success: false, error: error.message };
+    } catch (_error: any) {
+      console.error(`[Orchestrator] Task execution failed:`, _error);
+      return { success: false, error: _error.message };
     }
   }
 
   /**
    * STRATEGY: No-Loss PoolTogether v5
    */
-  private async executeNoLossPoolTogether(task: AutomationTask): Promise<ExecutionResult> {
+  private async executeNoLossPoolTogether(_task: AutomationTask): Promise<ExecutionResult> {
     const vault = POOLTOGETHER_VAULTS[0]; // Default to first vault for now
 
     // 1. Prepare deposit with Syndicate referral hook
-    const preparation = await poolTogetherService.prepareDepositWithHook(
+    const _preparation = await poolTogetherService.prepareDepositWithHook(
       vault,
-      task.amount,
-      task.userAddress as Address
+      _task.amount,
+      _task.userAddress as Address
     );
 
-    console.log(`[Orchestrator] Prepared PoolTogether deposit for ${task.userAddress}`);
+    console.log(`[Orchestrator] Prepared PoolTogether deposit for ${_task.userAddress}`);
 
     // 2. Execution (Simulated for consistency)
     return { 
@@ -234,10 +234,10 @@ export class AutomationOrchestrator {
    * STRATEGY: Tether WDK Autonomous AI Agent
    * Fulfills Hackathon Galactica requirements for autonomy and USD₮
    */
-  private async executeAutonomousWDK(task: AutomationTask): Promise<ExecutionResult> {
+  private async executeAutonomousWDK(_task: AutomationTask): Promise<ExecutionResult> {
     // 1. REASONING
-    const reasoning = await this.wdkService.getAgentReasoning(task.userAddress, {
-      balance: task.amount,
+    const reasoning = await this.wdkService.getAgentReasoning(_task.userAddress, {
+      balance: _task.amount,
       strategy: 'yield-optimized'
     });
 
@@ -245,9 +245,9 @@ export class AutomationOrchestrator {
     
     // 3. EXECUTION
     const result = await this.wdkService.executeAutonomousPurchase({
-      recipient: task.userAddress as Address,
-      amount: task.amount,
-      referrer: referralManager.getReferrerFor('megapot') as Address,
+      recipient: _task.userAddress as Address,
+      amount: _task.amount,
+      _referrer: referralManager.getReferrerFor('megapot') as Address,
       isTestnet: process.env.NODE_ENV !== 'production'
     });
 
@@ -260,14 +260,14 @@ export class AutomationOrchestrator {
   /**
    * STRATEGY: Scheduled MetaMask ERC-7715
    */
-  private async executeScheduledERC7715(task: AutomationTask): Promise<ExecutionResult> {
+  private async executeScheduledERC7715(_task: AutomationTask): Promise<ExecutionResult> {
     // 1. VALIDATE PERMISSION
-    const permission = this.erc7715Service.getPermission(task.id);
+    const permission = this.erc7715Service.getPermission(_task.id);
     if (!permission) {
       return { success: false, error: 'ERC-7715 Permission not found' };
     }
 
-    const validation = this.erc7715Service.validatePermissionForExecution(permission, task.amount);
+    const validation = this.erc7715Service.validatePermissionForExecution(permission, _task.amount);
     if (!validation.isValid) {
       return { success: false, error: validation.reason };
     }
@@ -280,7 +280,7 @@ export class AutomationOrchestrator {
   /**
    * STRATEGY: Stacks x402 (Placeholder for consistency)
    */
-  private async executeStacksX402(task: AutomationTask): Promise<ExecutionResult> {
+  private async executeStacksX402(_task: AutomationTask): Promise<ExecutionResult> {
     // Logic for Stacks-native recurring purchases
     return { success: true, txHash: '0x' + 's'.repeat(64) as Hash };
   }

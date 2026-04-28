@@ -26,7 +26,7 @@ import type { Address } from 'viem';
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
 
 // PoolTogether PrizePool on Base
-const PT_PRIZE_POOL = '0x45b2010d8a4f08b53c9fa7544c51dfd9733732cb' as const;
+const _PT_PRIZE_POOL = '0x45b2010d8a4f08b53c9fa7544c51dfd9733732cb' as const;
 
 export type DistributionStatus = 
   | 'pending'      // Waiting for win confirmation

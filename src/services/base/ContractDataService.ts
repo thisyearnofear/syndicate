@@ -169,8 +169,8 @@ export class ContractDataService {
         const formatted = ethers.formatUnits(prizePool, 6);
         this.setCache(cacheKey, formatted, CACHE_CONFIG.JACKPOT);
         return formatted;
-      } catch (error) {
-        console.warn("[ContractDataService] Failed to fetch V2 jackpot, using fallback:", error);
+      } catch (_error) {
+        console.warn("[ContractDataService] Failed to fetch V2 jackpot, using fallback:", _error);
         
         // Final fallback: try older version if exists (backward compatibility)
         try {
@@ -178,7 +178,7 @@ export class ContractDataService {
             const jackpot = await this.megapotContract.getCurrentJackpot();
             return ethers.formatUnits(jackpot, 6);
           }
-        } catch (innerError) {
+        } catch (_innerError) {
           // Both failed
         }
         
@@ -203,7 +203,7 @@ export class ContractDataService {
         const formatted = ethers.formatUnits(price, 6);
         this.setCache(cacheKey, formatted, CACHE_CONFIG.TICKET_PRICE);
         return formatted;
-      } catch (error) {
+      } catch (_error) {
         // Silently return fallback - contract may not be deployed or method doesn't exist
         return "1";
       }
@@ -260,7 +260,7 @@ export class ContractDataService {
 
             this.setCache(cacheKey, result, CACHE_CONFIG.USER_BALANCE);
             return result;
-          } catch (error) {
+          } catch (_error) {
             return {
               usdc: "0",
               eth: "0",
@@ -283,7 +283,7 @@ export class ContractDataService {
             hasEnoughUsdc: parseFloat(balance) >= 1,
             hasEnoughEth: false
           };
-        } catch (error) {
+        } catch (_error) {
           return { usdc: "0", eth: "0", hasEnoughUsdc: false, hasEnoughEth: false };
         }
       }
@@ -298,7 +298,7 @@ export class ContractDataService {
             hasEnoughUsdc: parseFloat(nearUsdc) >= 1,
             hasEnoughEth: false
           };
-        } catch (error) {
+        } catch (_error) {
           return { usdc: "0", eth: "0", hasEnoughUsdc: false, hasEnoughEth: false };
         }
       }
@@ -313,7 +313,7 @@ export class ContractDataService {
             hasEnoughUsdc: parseFloat(starknetUsdc) >= 1,
             hasEnoughEth: false
           };
-        } catch (error) {
+        } catch (_error) {
           return { usdc: "0", eth: "0", hasEnoughUsdc: false, hasEnoughEth: false };
         }
       }
@@ -328,13 +328,13 @@ export class ContractDataService {
             hasEnoughUsdc: parseFloat(solanaUsdc) >= 1,
             hasEnoughEth: false
           };
-        } catch (error) {
+        } catch (_error) {
           return { usdc: "0", eth: "0", hasEnoughUsdc: false, hasEnoughEth: false };
         }
       }
 
       return { usdc: "0", eth: "0", hasEnoughUsdc: false, hasEnoughEth: false };
-    } catch (error) {
+    } catch (_error) {
       return {
         usdc: "0",
         eth: "0",
@@ -394,12 +394,12 @@ export class ContractDataService {
 
           this.setCache(cacheKey, result, CACHE_CONFIG.USER_TICKETS);
           return result;
-        } catch (error) {
+        } catch (_error) {
           // Silently return null - contract may not be deployed or methods don't exist
           return null;
         }
       });
-    } catch (error) {
+    } catch (_error) {
       // Silently return null - contract may not be deployed
       return null;
     }
@@ -441,8 +441,8 @@ export class ContractDataService {
 
         this.setCache(cacheKey, result, CACHE_CONFIG.USER_TICKETS);
         return result;
-      } catch (error) {
-        console.error("Failed to get user info for address:", error);
+      } catch (_error) {
+        console.error("Failed to get user info for address:", _error);
         return null;
       }
     });
@@ -483,8 +483,8 @@ export class ContractDataService {
       const requiredAmount = ticketPrice * BigInt(ticketCount);
 
       return (allowance as bigint) >= requiredAmount;
-    } catch (error) {
-      console.error("Failed to check allowance:", error);
+    } catch (_error) {
+      console.error("Failed to check allowance:", _error);
       return false;
     }
   }
@@ -519,7 +519,7 @@ export class ContractDataService {
 
         this.setCache(cacheKey, result, CACHE_CONFIG.ODDS);
         return result;
-      } catch (error) {
+      } catch (_error) {
         // Silently return null - contract may not be deployed or method doesn't exist
         return null;
       }
@@ -549,7 +549,7 @@ export class ContractDataService {
               const ata = await getAssociatedTokenAddress(mint, owner);
               const info = await connection.getTokenAccountBalance(ata);
               return info.value.uiAmountString || "0";
-            } catch (ataError) {
+            } catch (_ataError) {
               // Priority 2: Full account scan for this mint (robust)
               const accounts = await connection.getTokenAccountsByOwner(owner, { mint });
               let totalRaw = 0n;
@@ -573,8 +573,8 @@ export class ContractDataService {
 
         this.setCache(cacheKey, balance, CACHE_CONFIG.USER_BALANCE);
         return balance;
-      } catch (error) {
-        console.error("Failed to fetch Solana balance with fallback:", error);
+      } catch (_error) {
+        console.error("Failed to fetch Solana balance with fallback:", _error);
         return "0";
       }
     });
@@ -605,8 +605,8 @@ export class ContractDataService {
         // Stacks tokens: USDCx (6 decimals), sBTC (8 decimals)
         const decimals = tokenPrincipal.toLowerCase().includes("sbtc") ? 8 : 6; 
         return (parseFloat(tokenBalance) / Math.pow(10, decimals)).toString();
-      } catch (error) {
-        console.error("Failed to fetch Stacks balance:", error);
+      } catch (_error) {
+        console.error("Failed to fetch Stacks balance:", _error);
         return "0";
       }
     });
@@ -635,8 +635,8 @@ export class ContractDataService {
         if (!response.ok) return "0";
         const data = await response.json();
         return data.balance || "0";
-      } catch (error) {
-        console.error("Failed to fetch NEAR balance:", error);
+      } catch (_error) {
+        console.error("Failed to fetch NEAR balance:", _error);
         return "0";
       }
     });
@@ -679,8 +679,8 @@ export class ContractDataService {
         const balance = (Number(balanceBN) / 1000000).toString();
         this.setCache(cacheKey, balance, CACHE_CONFIG.USER_BALANCE);
         return balance;
-      } catch (error) {
-        console.error("Failed to fetch Starknet balance:", error);
+      } catch (_error) {
+        console.error("Failed to fetch Starknet balance:", _error);
         return "0";
       }
     });

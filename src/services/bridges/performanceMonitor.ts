@@ -8,7 +8,7 @@
  * - CLEAN: Separate monitoring from execution
  * - MODULAR: Independent performance tracking
  * - PERFORMANT: Lightweight monitoring with minimal overhead
- * - DRY: Single source of truth for performance metrics
+ * - DRY: Single source of truth for performance _metrics
  */
 
 import { bridgeManager } from './index';
@@ -65,109 +65,109 @@ export class BridgePerformanceMonitor {
     }
 
     /**
-     * Check current performance and log metrics
+     * Check current performance and log _metrics
      */
     private async checkPerformance(): Promise<void> {
         try {
-            const metrics = await this.getCurrentMetrics();
-            this.logMetrics(metrics);
-            this.checkAlertConditions(metrics);
+            const _metrics = await this.getCurrentMetrics();
+            this.logMetrics(_metrics);
+            this.checkAlertConditions(_metrics);
         } catch (error) {
             console.error('[PerformanceMonitor] Error checking performance:', error);
         }
     }
 
     /**
-     * Get current performance metrics
+     * Get current performance _metrics
      */
     async getCurrentMetrics(): Promise<BridgePerformanceMetrics> {
         return bridgeManager.getPerformanceMetrics();
     }
 
     /**
-     * Log performance metrics
+     * Log performance _metrics
      */
-    private logMetrics(metrics: BridgePerformanceMetrics): void {
-        const statusEmoji = this.getStatusEmoji(metrics.systemStatus);
+    private logMetrics(_metrics: BridgePerformanceMetrics): void {
+        const statusEmoji = this.getStatusEmoji(_metrics.systemStatus);
         
-        console.log(`[PerformanceMonitor] ${statusEmoji} System Status: ${metrics.systemStatus}`);
-        console.log(`[PerformanceMonitor] 📊 Success Rate: ${(metrics.overallSuccessRate * 100).toFixed(1)}%`);
-        console.log(`[PerformanceMonitor] ❌ Total Failures: ${metrics.totalFailures}`);
-        console.log(`[PerformanceMonitor] ⏱️  Avg Bridge Time: ${Math.round(metrics.averageBridgeTimeMs / 1000)}s`);
-        console.log(`[PerformanceMonitor] 🏆 Best Protocol: ${metrics.bestPerformingProtocol}`);
+        console.log(`[PerformanceMonitor] ${statusEmoji} System Status: ${_metrics.systemStatus}`);
+        console.log(`[PerformanceMonitor] 📊 Success Rate: ${(_metrics.overallSuccessRate * 100).toFixed(1)}%`);
+        console.log(`[PerformanceMonitor] ❌ Total Failures: ${_metrics.totalFailures}`);
+        console.log(`[PerformanceMonitor] ⏱️  Avg Bridge Time: ${Math.round(_metrics.averageBridgeTimeMs / 1000)}s`);
+        console.log(`[PerformanceMonitor] 🏆 Best Protocol: ${_metrics.bestPerformingProtocol}`);
 
-        if (metrics.recommendations.length > 0) {
+        if (_metrics.recommendations.length > 0) {
             console.log('[PerformanceMonitor] 💡 Recommendations:');
-            metrics.recommendations.forEach(rec => console.log(`   • ${rec}`));
+            _metrics.recommendations.forEach(rec => console.log(`   • ${rec}`));
         }
     }
 
     /**
      * Check for alert conditions and trigger appropriate actions
      */
-    private checkAlertConditions(metrics: BridgePerformanceMetrics): void {
+    private checkAlertConditions(_metrics: BridgePerformanceMetrics): void {
         // Critical conditions
-        if (metrics.systemStatus === 'critical') {
+        if (_metrics.systemStatus === 'critical') {
             console.warn('[PerformanceMonitor] 🚨 CRITICAL: Bridge system health is critical!');
-            this.triggerCriticalAlert(metrics);
+            this.triggerCriticalAlert(_metrics);
         }
 
         // Degraded conditions
-        else if (metrics.systemStatus === 'degraded') {
+        else if (_metrics.systemStatus === 'degraded') {
             console.warn('[PerformanceMonitor] ⚠️  WARNING: Bridge system health is degraded');
-            this.triggerWarningAlert(metrics);
+            this.triggerWarningAlert(_metrics);
         }
 
         // Check individual protocol health
-        metrics.protocols.forEach(protocol => {
+        _metrics.protocols.forEach(protocol => {
             if (!protocol.isHealthy) {
                 console.warn(`[PerformanceMonitor] ⚠️  Protocol ${protocol.protocol} is unhealthy`);
             }
         });
 
         // Check for anomalies using anomaly detection
-        this.checkForAnomalies(metrics);
+        this.checkForAnomalies(_metrics);
     }
 
     /**
-     * Check for anomalies in performance metrics
+     * Check for anomalies in performance _metrics
      * Follows CLEAN principle - separate anomaly detection logic
      */
-    private checkForAnomalies(metrics: BridgePerformanceMetrics): void {
-        const anomalies = this.detectAnomalies(metrics);
+    private checkForAnomalies(_metrics: BridgePerformanceMetrics): void {
+        const anomalies = this.detectAnomalies(_metrics);
         
         if (anomalies.length > 0) {
             console.warn('[PerformanceMonitor] 🔍 Anomalies detected:');
             anomalies.forEach(anomaly => console.warn(`   • ${anomaly}`));
             
             // Trigger anomaly alert
-            this.triggerAnomalyAlert(metrics, anomalies);
+            this.triggerAnomalyAlert(_metrics, anomalies);
         }
     }
 
     /**
-     * Detect anomalies in performance metrics
+     * Detect anomalies in performance _metrics
      */
-    private detectAnomalies(metrics: BridgePerformanceMetrics): string[] {
+    private detectAnomalies(_metrics: BridgePerformanceMetrics): string[] {
         const anomalies: string[] = [];
 
         // 1. Sudden failure spike detection
-        if (this.hasSuddenFailureSpike(metrics)) {
+        if (this.hasSuddenFailureSpike(_metrics)) {
             anomalies.push('Sudden increase in bridge failures detected');
         }
 
         // 2. Performance degradation detection
-        if (this.hasPerformanceDegradation(metrics)) {
+        if (this.hasPerformanceDegradation(_metrics)) {
             anomalies.push('Significant performance degradation detected');
         }
 
         // 3. Success rate anomaly detection
-        if (this.hasSuccessRateAnomaly(metrics)) {
+        if (this.hasSuccessRateAnomaly(_metrics)) {
             anomalies.push('Unusual success rate fluctuation detected');
         }
 
         // 4. Protocol health anomaly detection
-        const protocolAnomalies = this.detectProtocolAnomalies(metrics);
+        const protocolAnomalies = this.detectProtocolAnomalies(_metrics);
         anomalies.push(...protocolAnomalies);
 
         return anomalies;
@@ -176,43 +176,43 @@ export class BridgePerformanceMonitor {
     /**
      * Detect sudden failure spikes
      */
-    private hasSuddenFailureSpike(metrics: BridgePerformanceMetrics): boolean {
+    private hasSuddenFailureSpike(_metrics: BridgePerformanceMetrics): boolean {
         // In a real implementation, we would compare with historical data
         // For now, we'll use a simple threshold-based approach
-        return metrics.totalFailures > 5 && metrics.overallSuccessRate < 0.8;
+        return _metrics.totalFailures > 5 && _metrics.overallSuccessRate < 0.8;
     }
 
     /**
      * Detect performance degradation
      */
-    private hasPerformanceDegradation(metrics: BridgePerformanceMetrics): boolean {
+    private hasPerformanceDegradation(_metrics: BridgePerformanceMetrics): boolean {
         // Performance is considered degraded if average bridge time exceeds threshold
         const thresholdMs = 1800000; // 30 minutes
-        return metrics.averageBridgeTimeMs > thresholdMs;
+        return _metrics.averageBridgeTimeMs > thresholdMs;
     }
 
     /**
      * Detect success rate anomalies
      */
-    private hasSuccessRateAnomaly(metrics: BridgePerformanceMetrics): boolean {
+    private hasSuccessRateAnomaly(_metrics: BridgePerformanceMetrics): boolean {
         // Success rate is anomalous if it's unexpectedly low
-        return metrics.overallSuccessRate < 0.7;
+        return _metrics.overallSuccessRate < 0.7;
     }
 
     /**
      * Detect protocol-specific anomalies
      */
-    private detectProtocolAnomalies(metrics: BridgePerformanceMetrics): string[] {
+    private detectProtocolAnomalies(_metrics: BridgePerformanceMetrics): string[] {
         const anomalies: string[] = [];
 
-        metrics.protocols.forEach(protocol => {
+        _metrics.protocols.forEach(protocol => {
             // Check for protocols with unexpected behavior
             if (protocol.successRate < 0.7 && protocol.consecutiveFailures > 3) {
                 anomalies.push(`Protocol ${protocol.protocol} showing unexpected failure pattern`);
             }
 
             // Check for protocols that are much slower than average
-            if (protocol.averageTimeMs > metrics.averageBridgeTimeMs * 2) {
+            if (protocol.averageTimeMs > _metrics.averageBridgeTimeMs * 2) {
                 anomalies.push(`Protocol ${protocol.protocol} is significantly slower than average`);
             }
         });
@@ -223,7 +223,7 @@ export class BridgePerformanceMonitor {
     /**
      * Trigger anomaly alert
      */
-    private triggerAnomalyAlert(metrics: BridgePerformanceMetrics, anomalies: string[]): void {
+    private triggerAnomalyAlert(_metrics: BridgePerformanceMetrics, anomalies: string[]): void {
         console.warn('[PerformanceMonitor] 🔍 ANOMALY ALERT TRIGGERED');
         console.warn('Detected anomalies:');
         anomalies.forEach(anomaly => console.warn(`  • ${anomaly}`));
@@ -249,8 +249,8 @@ export class BridgePerformanceMonitor {
 
         // Add to existing recommendations (avoid duplicates)
         newRecommendations.forEach(rec => {
-            if (!metrics.recommendations.includes(rec)) {
-                metrics.recommendations.push(rec);
+            if (!_metrics.recommendations.includes(rec)) {
+                _metrics.recommendations.push(rec);
             }
         });
     }
@@ -258,7 +258,7 @@ export class BridgePerformanceMonitor {
     /**
      * Trigger critical alert (e.g., send notification, disable protocols)
      */
-    private triggerCriticalAlert(metrics: BridgePerformanceMetrics): void {
+    private triggerCriticalAlert(_metrics: BridgePerformanceMetrics): void {
         // In production, this would send alerts to monitoring systems
         console.error('[PerformanceMonitor] CRITICAL ALERT TRIGGERED');
         console.error('Actions taken:');
@@ -274,10 +274,10 @@ export class BridgePerformanceMonitor {
     /**
      * Trigger warning alert
      */
-    private triggerWarningAlert(metrics: BridgePerformanceMetrics): void {
+    private triggerWarningAlert(_metrics: BridgePerformanceMetrics): void {
         console.warn('[PerformanceMonitor] WARNING ALERT TRIGGERED');
         console.warn('Recommendations:');
-        metrics.recommendations.forEach(rec => console.warn(`  • ${rec}`));
+        _metrics.recommendations.forEach(rec => console.warn(`  • ${rec}`));
         
         // Additional actions could include:
         // - Increasing monitoring frequency
@@ -331,34 +331,34 @@ export const performanceMonitor = new BridgePerformanceMonitor();
 // ============================================================================
 
 /**
- * Format performance metrics for display
+ * Format performance _metrics for display
  */
-export function formatPerformanceMetrics(metrics: BridgePerformanceMetrics): string {
-    const statusEmoji = performanceMonitor['getStatusEmoji'](metrics.systemStatus);
+export function formatPerformanceMetrics(_metrics: BridgePerformanceMetrics): string {
+    const statusEmoji = performanceMonitor['getStatusEmoji'](_metrics.systemStatus);
     
     return `
 📊 Bridge Performance Report
 ============================
-Status: ${statusEmoji} ${metrics.systemStatus.toUpperCase()}
-Success Rate: ${(metrics.overallSuccessRate * 100).toFixed(1)}%
-Total Failures: ${metrics.totalFailures}
-Avg Bridge Time: ${Math.round(metrics.averageBridgeTimeMs / 1000)} seconds
-Best Protocol: ${metrics.bestPerformingProtocol}
+Status: ${statusEmoji} ${_metrics.systemStatus.toUpperCase()}
+Success Rate: ${(_metrics.overallSuccessRate * 100).toFixed(1)}%
+Total Failures: ${_metrics.totalFailures}
+Avg Bridge Time: ${Math.round(_metrics.averageBridgeTimeMs / 1000)} seconds
+Best Protocol: ${_metrics.bestPerformingProtocol}
 
-Protocols (${metrics.protocols.length}):
-${metrics.protocols.map(p => 
+Protocols (${_metrics.protocols.length}):
+${_metrics.protocols.map(p => 
     `  • ${p.protocol}: ${p.isHealthy ? '🟢' : '🔴'} ${(p.successRate * 100).toFixed(1)}%`
 ).join('\n')}
 
-${metrics.recommendations.length > 0 ? '\nRecommendations:\n' + metrics.recommendations.map(r => `  • ${r}`).join('\n') : ''}
+${_metrics.recommendations.length > 0 ? '\nRecommendations:\n' + _metrics.recommendations.map(r => `  • ${r}`).join('\n') : ''}
 `;
 }
 
 /**
  * Check if any protocol is in critical state
  */
-export function hasCriticalProtocols(metrics: BridgePerformanceMetrics): boolean {
-    return metrics.protocols.some(p => 
+export function hasCriticalProtocols(_metrics: BridgePerformanceMetrics): boolean {
+    return _metrics.protocols.some(p => 
         p.consecutiveFailures > 5 || p.successRate < 0.5
     );
 }

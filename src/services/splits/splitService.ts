@@ -19,7 +19,7 @@ import {
 import { base } from 'viem/chains';
 import { basePublicClient } from '@/lib/baseClient';
 
-const BASE_CHAIN_ID = 8453;
+const _BASE_CHAIN_ID = 8453;
 
 // SplitMain contract on Base (immutable, no upgrade)
 const SPLIT_MAIN = '0x2ed6c55457632e381550485286422539B967796D' as const;
@@ -116,7 +116,7 @@ const SPLIT_MAIN_ABI = [
 ] as const;
 
 // ERC20 ABI for token distribution
-const ERC20_ABI = [
+const _ERC20_ABI = [
   {
     name: 'balanceOf',
     type: 'function',
@@ -229,8 +229,8 @@ export async function createSplit(
       distributorFee,
     });
 
-    // Wait for transaction receipt to get split address
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+    // Wait for transaction _receipt to get split address
+    const _receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
     
     // Parse logs to find the SplitCreated event
     // For now, return the txHash - the split address will be indexed by subgraph

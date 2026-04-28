@@ -100,7 +100,7 @@ export class AaveVaultProvider implements VaultProvider {
             // aUSDC balance represents deposited USDC + accrued yield
             // Yield is calculated off-chain using scaledBalanceOf (see aave documentation)
             const aTokenBalance = await this.aTokenContract.balanceOf(userAddress);
-            const scaledBalance = await this.aTokenContract.scaledBalanceOf(userAddress);
+            const _scaledBalance = await this.aTokenContract.scaledBalanceOf(userAddress);
             const totalBalance = ethers.formatUnits(aTokenBalance, 6);
 
             // Calculate yield: totalBalance - principal
@@ -117,9 +117,9 @@ export class AaveVaultProvider implements VaultProvider {
                 apy,
                 lastUpdated: Date.now(),
             };
-        } catch (error) {
+        } catch (_error) {
             throw new VaultError(
-                `Failed to get Aave balance: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                `Failed to get Aave balance: ${_error instanceof Error ? _error.message : 'Unknown error'}`,
                 VaultErrorCode.CONTRACT_ERROR,
                 'aave'
             );
@@ -161,11 +161,11 @@ export class AaveVaultProvider implements VaultProvider {
                 error: 'Deposit requires wallet signature. Use web3Service.executeVaultDeposit() with user signer.',
                 vaultId: `aave:${AAVE_CONFIG.BASE.AUSDC_ADDRESS}`,
             };
-        } catch (error) {
-            if (error instanceof VaultError) throw error;
+        } catch (_error) {
+            if (_error instanceof VaultError) throw _error;
 
             throw new VaultError(
-                `Deposit failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                `Deposit failed: ${_error instanceof Error ? _error.message : 'Unknown error'}`,
                 VaultErrorCode.TRANSACTION_FAILED,
                 'aave'
             );
@@ -199,11 +199,11 @@ export class AaveVaultProvider implements VaultProvider {
                 success: false,
                 error: 'Withdrawal requires wallet signature. Use web3Service.executeVaultWithdraw() with user signer.',
             };
-        } catch (error) {
-            if (error instanceof VaultError) throw error;
+        } catch (_error) {
+            if (_error instanceof VaultError) throw _error;
 
             throw new VaultError(
-                `Withdrawal failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                `Withdrawal failed: ${_error instanceof Error ? _error.message : 'Unknown error'}`,
                 VaultErrorCode.TRANSACTION_FAILED,
                 'aave'
             );
@@ -253,7 +253,7 @@ export class AaveVaultProvider implements VaultProvider {
             };
 
             return apy;
-        } catch (error) {
+        } catch (_error) {
             // Return cached value if available, otherwise default
             return this.cachedAPY?.value ?? 0;
         }

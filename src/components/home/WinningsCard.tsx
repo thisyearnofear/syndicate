@@ -60,7 +60,7 @@ export function WinningsCard() {
         const amount = parseFloat(userInfo.winningsClaimable);
         setWinningsAmount(userInfo.winningsClaimable);
         setHasWinnings(amount > 0);
-      } catch (error) {
+      } catch {
         setHasWinnings(false);
       } finally {
         setLoading(false);
