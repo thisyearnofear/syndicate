@@ -26,7 +26,6 @@ import {
   Play
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
-import { useUnifiedWallet } from '@/hooks';
 
 interface OnboardingState {
   currentStep: number;

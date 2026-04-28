@@ -39,7 +39,7 @@ export class BaseSolanaBridgeProtocol implements BridgeProtocol {
   /**
    * Estimate bridge cost and time
    */
-  async estimate(params: BridgeParams): Promise<BridgeEstimate> {
+  async estimate(_params: BridgeParams): Promise<BridgeEstimate> {
     return {
       fee: '0.00', // External fee unknown
       timeMs: 600_000, // ~10-15 mins manual
@@ -49,17 +49,17 @@ export class BaseSolanaBridgeProtocol implements BridgeProtocol {
   /**
    * Execute the bridge - Returns Manual Action Required
    */
-  async bridge(params: BridgeParams): Promise<BridgeResult> {
+  async bridge(_params: BridgeParams): Promise<BridgeResult> {
     const startTime = Date.now();
 
     try {
-      params.onStatus?.('validating', { protocol: 'base-solana-bridge' });
+      _params.onStatus?.('validating', { protocol: 'base-solana-bridge' });
 
       // Return "Manual Action Required" result
       // This tells the UI to show the "Click to Bridge" interface
       const portalUrl = 'https://portalbridge.com';
       
-      params.onStatus?.('manual_action_required', {
+      _params.onStatus?.('manual_action_required', {
         protocol: 'base-solana-bridge',
         message: 'Automated bridging unavailable. Please use Portal Bridge.',
         redirectUrl: portalUrl
@@ -99,7 +99,7 @@ export class BaseSolanaBridgeProtocol implements BridgeProtocol {
   /**
    * Validate bridge parameters
    */
-  async validate(params: BridgeParams): Promise<{ valid: boolean; error?: string }> {
+  async validate(_params: BridgeParams): Promise<{ valid: boolean; error?: string }> {
     return { valid: true };
   }
 }

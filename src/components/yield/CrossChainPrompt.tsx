@@ -3,8 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useUnifiedWallet } from '@/hooks/useUnifiedWallet';
-import { useRouter } from 'next/navigation';
+
 import { Info } from 'lucide-react';
+import Image from 'next/image';
 
 
 /**
@@ -14,8 +15,6 @@ export default function CrossChainPrompt() {
   const { address, chainId } = useUnifiedWallet();
   const [hasMultiChain, setHasMultiChain] = useState<boolean>(false);
   const [totalUsdc, setTotalUsdc] = useState<string>('0');
-
-  const router = useRouter();
 
   // Supported chains – add/remove as product expands
   const SUPPORTED_CHAIN_IDS = [
@@ -69,7 +68,7 @@ export default function CrossChainPrompt() {
       <div className="flex items-start gap-4">
         {/* LI.FI logo + badge */}
         <div className="flex-shrink-0 w-10 flex flex-col items-center">
-          <img src="/logo/li-fi.svg" alt="LI.FI" className="h-9 w-9" />
+          <Image src="/logo/li-fi.svg" alt="LI.FI" width={36} height={36} className="h-9 w-9" />
 
         </div>
 

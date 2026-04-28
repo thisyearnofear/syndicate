@@ -32,7 +32,7 @@ export function AutoPurchaseSettings() {
   const [agents, setAgents] = useState<AgentStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [_selectedAgentType, setSelectedAgentType] = useState<AgentType | null>(null);
+  const [, setSelectedAgentType] = useState<AgentType | null>(null);
 
   const registry = AgentRegistryService.getInstance();
 

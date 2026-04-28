@@ -78,7 +78,7 @@ export class StacksProtocol implements BridgeProtocol {
     }
 
     async bridge(params: BridgeParams): Promise<BridgeResult> {
-        const startTime = Date.now();
+        const _startTime = Date.now();
 
         try {
             // Validate parameters

@@ -187,9 +187,6 @@ export function CrossChainTracker({
   // P1.2: Prefer new prop, fallback to deprecated only for compatibility
   const txId = sourceTxId || stacksTxId;
   
-  // P1.2: Use sourceExplorer (new), fallback to stacksExplorer (deprecated) for compatibility
-  const _sourceExplorer = receipt?.sourceExplorer || receipt?.stacksExplorer;
-
   const getStepStatus = (
     stepId: string,
   ): "complete" | "in_progress" | "pending" => {

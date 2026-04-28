@@ -41,7 +41,7 @@ export interface DistributionConfig {
  */
 export interface DistributionResult {
     success: boolean;
-    distributionId?: string;
+    _distributionId?: string;
     txHash?: string;
     error?: string;
     allocations?: Allocation[];
@@ -148,12 +148,12 @@ export class DistributionService {
             }
 
             // Create distribution record in database for idempotency
-            const distributionId = `dist_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const _distributionId = `dist_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-            await this.trackDistribution(distributionId, 'pending');
+            await this.trackDistribution(_distributionId, 'pending');
 
             console.log('[DistributionService] Starting distribution:', {
-                distributionId,
+                _distributionId,
                 type: config.distributionType,
                 totalAmount: config.totalAmount,
                 recipientsCount: config.recipients.length,
@@ -161,7 +161,7 @@ export class DistributionService {
 
             // Execute batch distribution
             try {
-                await this.trackDistribution(distributionId, 'executing');
+                await this.trackDistribution(_distributionId, 'executing');
 
                 // Import web3Service dynamically to avoid circular dependencies
                 const { web3Service } = await import('./web3Service');
@@ -222,22 +222,22 @@ export class DistributionService {
                 }
 
                 // Mark as completed
-                await this.trackDistribution(distributionId, 'completed', txHashes[0]);
+                await this.trackDistribution(_distributionId, 'completed', txHashes[0]);
 
                 console.log('[DistributionService] Distribution completed:', {
-                    distributionId,
+                    _distributionId,
                     txHashes,
                 });
 
                 return {
                     success: true,
-                    distributionId,
+                    _distributionId,
                     txHash: txHashes[0], // Return first tx hash
                     allocations: config.recipients,
                 };
             } catch (error) {
                 await this.trackDistribution(
-                    distributionId,
+                    _distributionId,
                     'failed',
                     undefined,
                     error instanceof Error ? error.message : 'Unknown error'
@@ -256,13 +256,13 @@ export class DistributionService {
      * Track distribution status for idempotency
      */
     async trackDistribution(
-        distributionId: string,
+        _distributionId: string,
         status: 'pending' | 'executing' | 'completed' | 'failed',
         txHash?: string,
         error?: string
     ): Promise<void> {
         console.log('[DistributionService] Track distribution:', {
-            distributionId,
+            _distributionId,
             status,
             txHash,
             error,
@@ -272,7 +272,7 @@ export class DistributionService {
     /**
      * Get distribution status
      */
-    async getDistributionStatus(distributionId: string): Promise<DistributionStatus | null> {
+    async getDistributionStatus(_distributionId: string): Promise<DistributionStatus | null> {
         return null;
     }
 
