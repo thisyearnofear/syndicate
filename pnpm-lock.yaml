@@ -348,7 +348,7 @@ importers:
         specifier: ^5
         version: 5.9.3
       undici:
-        specifier: ^7.16.0
+        specifier: ^7.25.0
         version: 7.25.0
       util:
         specifier: 0.12.5
