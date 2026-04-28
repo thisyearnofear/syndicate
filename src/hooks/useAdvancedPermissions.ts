@@ -53,7 +53,6 @@ export interface UseAdvancedPermissionsActions {
 // HOOK (DELEGATING WRAPPER)
 // =============================================================================
 
-const STORAGE_KEY_PERMISSION = 'syndicate:advanced-permission';
 const STORAGE_KEY_AUTO_CONFIG = 'syndicate:auto-purchase-config';
 
 export function useAdvancedPermissions(): UseAdvancedPermissionsState & UseAdvancedPermissionsActions {

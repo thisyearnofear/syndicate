@@ -96,8 +96,8 @@ export class LifiEarnVaultProvider implements VaultProvider {
 
             this.cachedVaults = { data: vaults, timestamp: now };
             return vaults;
-        } catch (error) {
-            console.error('[LifiEarn] Failed to fetch vaults:', error);
+        } catch (_error) {
+            console.error('[LifiEarn] Failed to fetch vaults:', _error);
             return this.cachedVaults?.data || [];
         }
     }
@@ -130,8 +130,8 @@ export class LifiEarnVaultProvider implements VaultProvider {
                 apy,
                 lastUpdated: Date.now(),
             };
-        } catch (error) {
-            console.error('[LifiEarn] Failed to get balance:', error);
+        } catch (_error) {
+            console.error('[LifiEarn] Failed to get balance:', _error);
             return {
                 deposited: '0',
                 yieldAccrued: '0',
@@ -189,7 +189,7 @@ export class LifiEarnVaultProvider implements VaultProvider {
 
             this.cachedAPY = { value: weightedApy, timestamp: now };
             return weightedApy;
-        } catch (error) {
+        } catch (_error) {
             return this.cachedAPY?.value ?? 0;
         }
     }
@@ -199,7 +199,7 @@ export class LifiEarnVaultProvider implements VaultProvider {
      * This is handled client-side via useVaultDeposit hook
      * Returns metadata for the deposit
      */
-    async deposit(amount: string, userAddress: string): Promise<VaultDepositResult> {
+    async deposit(_amount: string, userAddress: string): Promise<VaultDepositResult> {
         // LI.FI Earn deposits require the client-side Composer flow
         // The useVaultDeposit hook handles the actual execution
         return {
@@ -213,7 +213,7 @@ export class LifiEarnVaultProvider implements VaultProvider {
      * Withdraw from LI.FI Earn vault
      * Requires Composer execution
      */
-    async withdraw(amount: string, userAddress: string): Promise<VaultWithdrawResult> {
+    async withdraw(_amount: string, userAddress: string): Promise<VaultWithdrawResult> {
         return {
             success: false,
             error: 'LI.FI Earn withdrawals require Composer execution. Use useVaultDeposit with crossChainWithdraw.',

@@ -11,19 +11,29 @@
  * Server usage: verify deposit events, read encrypted state via node RPC.
  */
 
-import {
-  cofhejs,
-  Encryptable,
-  FheTypes,
-  GenerateSealingKey,
+import type {
   Permit,
-  type Permission,
-  type Result,
-  type CoFheInUint256,
-  type AbstractSigner,
-  type AbstractProvider,
-  type Environment,
+  Permission,
+  Result,
+  CoFheInUint256,
+  Environment,
 } from 'cofhejs/web';
+
+type CofheWebModule = typeof import('cofhejs/web');
+
+let _cofheWeb: CofheWebModule | null = null;
+
+async function loadCofheWeb(): Promise<CofheWebModule> {
+  // Prevent accidental SSR/API usage. If you need server-side operations,
+  // introduce a separate `cofhejs/node` loader and keep it isolated here.
+  if (typeof window === 'undefined') {
+    throw new Error('[fheService] cofhejs/web can only be used in the browser');
+  }
+
+  if (_cofheWeb) return _cofheWeb;
+  _cofheWeb = await import('cofhejs/web');
+  return _cofheWeb;
+}
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -63,6 +73,7 @@ export async function initializeFhe(
   viemClient: unknown,
   viemWalletClient?: unknown,
 ): Promise<FheResult<Permit | undefined>> {
+  const { cofhejs } = await loadCofheWeb();
   return cofhejs.initializeWithViem({
     viemClient,
     viemWalletClient,
@@ -87,6 +98,7 @@ export async function initializeFhe(
 export async function encryptUsdcAmount(
   amountMicroUsdc: bigint,
 ): Promise<FheResult<[EncryptedUint256Input]>> {
+  const { cofhejs, Encryptable } = await loadCofheWeb();
   return cofhejs.encrypt([Encryptable.uint256(amountMicroUsdc)]);
 }
 
@@ -103,6 +115,7 @@ export async function createPermit(
   userAddress: string,
   contractAddress: string,
 ): Promise<FheResult<Permit>> {
+  const { cofhejs } = await loadCofheWeb();
   return cofhejs.createPermit({
     type: 'self',
     issuer: userAddress,
@@ -112,20 +125,31 @@ export async function createPermit(
 }
 
 /**
+ * Mark a permit as active in the cofhejs store. Useful before calling `cofhejs.unseal`.
+ */
+export async function selectActivePermit(permitHash: string): Promise<FheResult<Permit>> {
+  const { cofhejs } = await loadCofheWeb();
+  return cofhejs.selectActivePermit(permitHash);
+}
+
+/**
  * Extract the on-chain `Permission` struct from the active permit.
  * This is what Solidity's `Permissioned.sol` receives as a function argument.
  */
-export function getPermission(permitHash?: string): FheResult<FhePermission> {
+export async function getPermission(permitHash?: string): Promise<FheResult<FhePermission>> {
+  const { cofhejs } = await loadCofheWeb();
   return cofhejs.getPermission(permitHash);
 }
 
 // ─── Unsealing ────────────────────────────────────────────────────────────────
 
 /**
- * Unseal an encrypted uint256 returned by a FHE contract's `sealOutput` call.
+ * Unseal an encrypted uint256 given its ciphertext hash (ctHash).
  *
- * The contract re-encrypts the value with the user's sealing public key
- * so only the permit holder can read the plaintext.
+ * Typical flow:
+ * 1) Call the contract view to get a ciphertext hash (e.g. `getEncryptedBalanceCtHash(permission)`).
+ * 2) Call `unsealBalance(ctHash)` which will request `sealoutput` from the threshold network
+ *    using the active permit, then decrypt locally.
  *
  * @param ctHash  - Ciphertext hash (bigint) returned from the contract call
  * @returns Plaintext bigint (USDC micro-units when used for balances)
@@ -133,6 +157,7 @@ export function getPermission(permitHash?: string): FheResult<FhePermission> {
 export async function unsealBalance(
   ctHash: bigint,
 ): Promise<FheResult<bigint>> {
+  const { cofhejs, FheTypes } = await loadCofheWeb();
   return cofhejs.unseal(ctHash, FheTypes.Uint256) as Promise<FheResult<bigint>>;
 }
 
@@ -144,6 +169,7 @@ export async function unsealBalance(
  * The private key is held only by the coordinator — never stored on-chain.
  */
 export async function generateSealingKey() {
+  const { GenerateSealingKey } = await loadCofheWeb();
   return GenerateSealingKey();
 }
 
@@ -153,7 +179,8 @@ export async function generateSealingKey() {
  * Returns true if the SDK has been initialised with both a provider and signer.
  * Useful for gating UI actions that require FHE capability.
  */
-export function isFheReady(): boolean {
+export async function isFheReady(): Promise<boolean> {
+  const { cofhejs } = await loadCofheWeb();
   const state = cofhejs.store.getState();
   return state.providerInitialized && state.signerInitialized && state.fheKeysInitialized;
 }
@@ -162,7 +189,8 @@ export function isFheReady(): boolean {
  * Returns the active permit if one exists, otherwise null.
  * Use to check whether the user needs to sign a new permit.
  */
-export function getActivePermit(): Permit | null {
+export async function getActivePermit(): Promise<Permit | null> {
+  const { cofhejs } = await loadCofheWeb();
   const result = cofhejs.getPermit();
   return result.success ? result.data : null;
 }

@@ -17,13 +17,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Loader, AlertCircle, CircleCheckBig as CheckCircle } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
-import { useTicketInfo, useUnifiedWallet, useUnifiedBridge } from '@/hooks';
+import { useUnifiedWallet, useUnifiedBridge } from '@/hooks';
 import { WalletTypes } from '@/domains/wallet/types';
 import { bridgeManager } from '@/services/bridges';
 import { web3Service } from '@/services/web3Service';
-import { openContractCall } from '@stacks/connect';
-import { uintCV, contractPrincipalCV } from '@stacks/transactions';
-import { StacksMainnet } from '@stacks/network';
 
 interface WinningsWithdrawalFlowProps {
   nearAccountId?: string;
@@ -34,19 +31,14 @@ interface WinningsWithdrawalFlowProps {
 
 type WithdrawalStep = 'check' | 'confirm' | 'processing' | 'transfer' | 'success' | 'error';
 
-const STACKS_NETWORK = new StacksMainnet();
-const LOTTERY_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_STACKS_LOTTERY_CONTRACT || 'SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3';
-const LOTTERY_CONTRACT_NAME = 'stacks-lottery-v3';
-
 export function WinningsWithdrawalFlow({
   nearAccountId,
   derivedEvmAddress,
   onSuccess,
   onError,
 }: WinningsWithdrawalFlowProps) {
-  const { walletType, address: stacksAddress } = useUnifiedWallet();
-  const { status: bridgeStatus, txHash: bridgeTxHash } = useUnifiedBridge();
-  const { isClaimingWinnings } = useTicketInfo();
+  const { walletType } = useUnifiedWallet();
+  const { status: bridgeStatus } = useUnifiedBridge();
   
   // Derived state for bridge monitoring
   const isWithdrawingWinningsToNear = bridgeStatus === 'bridging' || bridgeStatus === 'pending';
@@ -158,9 +150,19 @@ export function WinningsWithdrawalFlow({
   }, [nearAccountId, derivedEvmAddress, localWinningsAmount, onSuccess, onError]);
 
   // ENHANCEMENT: Support both NEAR and Stacks
-  // For Stacks users: render Stacks-specific flow
+  // For Stacks users: Stacks integration not yet implemented
   if ((walletType as string | null) === WalletTypes.STACKS) {
-    return <StacksWinningsFlow onSuccess={onSuccess} onError={onError} />;
+    return (
+      <div className="glass-premium p-6 rounded-xl border border-blue-500/30 bg-blue-500/5">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl flex-shrink-0">🚧</span>
+          <div>
+            <h4 className="text-white font-semibold mb-1">Stacks Support Coming Soon</h4>
+            <p className="text-gray-300 text-sm">Stacks winnings withdrawal is not yet implemented.</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // For NEAR users: continue with existing NEAR flow
@@ -220,7 +222,7 @@ export function WinningsWithdrawalFlow({
             </div>
           </div>
           <p className="text-gray-300 text-sm mb-6">
-            Ready to withdraw to your NEAR account? We'll claim your winnings on Base and bridge them back to NEAR.
+            Ready to withdraw to your NEAR account? &apos;We&apos;ll claim your winnings on Base and bridge them back to NEAR.
           </p>
         </div>
 
@@ -273,7 +275,7 @@ export function WinningsWithdrawalFlow({
         </div>
         <div className="space-y-2 bg-black/20 rounded-lg p-4">
           <p className="text-gray-300 text-sm">
-            💡 <strong>What's happening:</strong> We're claiming your $
+            💡 <strong>What&apos;s happening:</strong> We&apos;re claiming your $
             {localWinningsAmount} in winnings on Base and preparing the bridge back to your NEAR account.
           </p>
         </div>
@@ -404,106 +406,3 @@ export function WinningsWithdrawalFlow({
 // STACKS WINNINGS FLOW (ENHANCEMENT: Separate pure component for Stacks)
 // ============================================================================
 
-interface StacksWinningsFlowProps {
-  onSuccess?: () => void;
-  onError?: (error: string) => void;
-}
-
-function StacksWinningsFlow({
-  onSuccess,
-  onError,
-}: StacksWinningsFlowProps) {
-  const { address: stacksAddress } = useUnifiedWallet();
-  const {
-    stacksClaimableWinnings,
-    stacksWinningsToken,
-    isCheckingWinnings: isLoading,
-  } = useUnifiedBridge();
-  const [step, setStep] = useState<WithdrawalStep>('check');
-  const [localError, setLocalError] = useState<string | null>(null);
-
-  const winningsAmount = stacksClaimableWinnings || '0';
-  const hasWinnings = parseFloat(winningsAmount) > 0;
-
-  useEffect(() => {
-    if (isLoading) {
-      setStep('check');
-    } else if (hasWinnings) {
-      setStep('confirm');
-    } else {
-      setStep('error');
-      setLocalError('No claimable winnings found on Stacks');
-    }
-  }, [hasWinnings, isLoading]);
-
-  const handleClaimWinnings = useCallback(async () => {
-    if (!stacksAddress || !stacksWinningsToken) {
-      setLocalError('Winnings information missing');
-      return;
-    }
-
-    setStep('processing');
-    setLocalError(null);
-
-    try {
-      const [tokenAddress, tokenName] = stacksWinningsToken.split('.');
-
-      return new Promise<void>((resolve) => {
-        openContractCall({
-          contractAddress: LOTTERY_CONTRACT_ADDRESS.split('.')[0],
-          contractName: LOTTERY_CONTRACT_NAME,
-          functionName: 'claim-winnings',
-          functionArgs: [
-            contractPrincipalCV(tokenAddress, tokenName)
-          ],
-          network: STACKS_NETWORK,
-          onFinish: (data) => {
-            console.log('[Stacks] Claim transaction:', data);
-            setStep('success');
-            onSuccess?.();
-            resolve();
-          },
-          onCancel: () => {
-            setLocalError('User cancelled claim');
-            setStep('error');
-            resolve();
-          },
-        });
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      setLocalError(msg);
-      setStep('error');
-      onError?.(msg);
-    }
-  }, [stacksAddress, stacksWinningsToken, onSuccess, onError]);
-
-  // Loading
-  if (step === 'check' && isLoading) {
-    return (
-      <div className="glass-premium p-8 rounded-xl border border-blue-500/30 bg-blue-500/5 flex items-center justify-center gap-4">
-        <Loader className="w-5 h-5 animate-spin text-blue-400" />
-        <span className="text-white">Checking your Stacks winnings...</span>
-      </div>
-    );
-  }
-
-  // Error
-  if (step === 'error') {
-    return (
-      <div className="glass-premium p-6 rounded-xl border border-red-500/30 bg-red-500/5">
-        <div className="flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-1" />
-          <div>
-            <h4 className="text-white font-semibold mb-1">Claim Failed</h4>
-            <p className="text-gray-300 text-sm">
-              {localError || 'An error occurred while claiming winnings.'}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return null;
-}

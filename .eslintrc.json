@@ -3,6 +3,17 @@
   "rules": {
     "@typescript-eslint/no-explicit-any": "off",
     "@typescript-eslint/consistent-type-definitions": "off",
-    "react-hooks/exhaustive-deps": "off"
-  }
+    "react-hooks/exhaustive-deps": "off",
+    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "caughtErrorsIgnorePattern": "^_" }]
+  },
+  "ignorePatterns": [
+    "lib/openzeppelin-contracts/**",
+    "contracts/**",
+    "dev-tools/**",
+    "empty-module/**",
+    "node_modules/**",
+    ".next/**",
+    "out/**",
+    "dist/**"
+  ]
 }

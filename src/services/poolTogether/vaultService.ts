@@ -16,8 +16,8 @@ import { basePublicClient } from '@/lib/baseClient';
 const BASE_CHAIN_ID = 8453;
 
 // PoolTogether V5 contracts on Base
-const PRIZE_VAULT_FACTORY = '0xa55a74A457D8a24D68DdA0b5d1E0341746d444Bf' as const;
-const PRIZE_POOL = '0x45b2010d8a4f08b53c9fa7544c51dfd9733732cb' as const;
+const _PRIZE_VAULT_FACTORY = '0xa55a74A457D8a24D68DdA0b5d1E0341746d444Bf' as const;
+const _PRIZE_POOL = '0x45b2010d8a4f08b53c9fa7544c51dfd9733732cb' as const;
 
 // USDC on Base
 const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
@@ -72,7 +72,7 @@ const ERC4626_ABI = [
     outputs: [{ name: '', type: 'string' }],
   },
   {
-    name: 'decimals',
+    name: '_decimals',
     type: 'function',
     stateMutability: 'view',
     inputs: [],
@@ -104,7 +104,7 @@ const ERC20_ABI = [
     outputs: [{ name: '', type: 'string' }],
   },
   {
-    name: 'decimals',
+    name: '_decimals',
     type: 'function',
     stateMutability: 'view',
     inputs: [],
@@ -120,7 +120,7 @@ export interface PoolTogetherVault {
     address: Address;
     name: string;
     symbol: string;
-    decimals: number;
+    _decimals: number;
   };
   totalAssets: string;
   totalAssetsFormatted: string;
@@ -143,7 +143,7 @@ export interface PoolTogetherVaultStats {
 export async function fetchVaultInfo(vaultAddress: Address): Promise<PoolTogetherVault | null> {
   try {
     // Fetch vault metadata
-    const [name, symbol, decimals, assetAddress] = await Promise.all([
+    const [name, symbol, _decimals, assetAddress] = await Promise.all([
       basePublicClient.readContract({
         address: vaultAddress,
         abi: ERC4626_ABI,
@@ -157,7 +157,7 @@ export async function fetchVaultInfo(vaultAddress: Address): Promise<PoolTogethe
       basePublicClient.readContract({
         address: vaultAddress,
         abi: ERC4626_ABI,
-        functionName: 'decimals',
+        functionName: '_decimals',
       }),
       basePublicClient.readContract({
         address: vaultAddress,
@@ -181,7 +181,7 @@ export async function fetchVaultInfo(vaultAddress: Address): Promise<PoolTogethe
       basePublicClient.readContract({
         address: assetAddress,
         abi: ERC20_ABI,
-        functionName: 'decimals',
+        functionName: '_decimals',
       }),
     ]);
 
@@ -209,7 +209,7 @@ export async function fetchVaultInfo(vaultAddress: Address): Promise<PoolTogethe
         address: assetAddress,
         name: assetName,
         symbol: assetSymbol,
-        decimals: assetDecimals,
+        _decimals: assetDecimals,
       },
       totalAssets: totalAssets.toString(),
       totalAssetsFormatted,
@@ -305,13 +305,13 @@ export async function getUserVaultBalance(
       args: [shares],
     });
 
-    // Determine decimals from asset (assume 6 for USDC)
-    const decimals = assetAddress.toLowerCase() === USDC_ADDRESS.toLowerCase() ? 6 : 18;
+    // Determine _decimals from asset (assume 6 for USDC)
+    const _decimals = assetAddress.toLowerCase() === USDC_ADDRESS.toLowerCase() ? 6 : 18;
 
     return {
       shares: shares.toString(),
       assets: assets.toString(),
-      assetsFormatted: formatUnits(assets, decimals),
+      assetsFormatted: formatUnits(assets, _decimals),
     };
   } catch (error) {
     console.error('[PoolTogetherVaultService] Failed to get user balance:', error);

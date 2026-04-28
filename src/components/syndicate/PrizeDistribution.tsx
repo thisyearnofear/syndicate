@@ -308,7 +308,7 @@ export function PrizeDistribution({
         <h4 className="text-sm font-medium text-blue-300 mb-2">How Prize Distribution Works</h4>
         <ul className="text-xs text-gray-400 space-y-1">
           <li>• When the syndicate wins the lottery, prizes are distributed to all members</li>
-          <li>• Distribution is proportional to each member's contribution</li>
+          <li>• Distribution is proportional to each member&apos;s contribution</li>
           <li>• Safe pools require multisig approval; Splits distribute automatically</li>
           <li>• All distributions are recorded on-chain and can be verified</li>
         </ul>

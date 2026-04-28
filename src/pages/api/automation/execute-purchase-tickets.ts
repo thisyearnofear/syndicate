@@ -19,8 +19,7 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { Address, createPublicClient, http, encodeFunctionData } from 'viem';
-import { base } from 'viem/chains';
+import { Address, encodeFunctionData } from 'viem';
 import { automationOrchestrator } from '@/services/automation/AutomationOrchestrator';
 import { getERC7715Service } from '@/services/automation/erc7715Service';
 import type { ERC7715Grant } from '@/services/automation/erc7715Service';

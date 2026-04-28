@@ -14,12 +14,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { 
   ArrowDownLeft, 
   ArrowUpRight, 
-  Trophy, 
-  ExternalLink,
   RefreshCw,
   Filter,
   Wallet,
-  Ticket
+  Ticket,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 
@@ -88,7 +87,6 @@ export function TransactionHistory({ poolId, className = '' }: TransactionHistor
     fetchTransactions();
   }, [fetchTransactions]);
 
-  const formatAddress = (addr: string) => `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 
   const formatDate = (timestamp: string) => {
     const date = new Date(timestamp);

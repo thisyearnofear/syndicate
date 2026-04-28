@@ -67,22 +67,24 @@ export interface Web3AuthContextConfig {
 
 // Solana provider stub
 export class SolanaPrivateKeyProvider {
-  constructor(_config: { config: { chainConfig: ChainConfig } }) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  constructor(_config?: { config?: { chainConfig?: ChainConfig } }) {
+    void _config;
     console.warn('[STUB] SolanaPrivateKeyProvider created - Web3Auth is disabled');
   }
   
-  async setupProvider(_privateKey: string): Promise<IProvider> {
+  async setupProvider(): Promise<IProvider> {
     throw new Error('[STUB] Web3Auth is disabled - re-enable Web3Auth packages to use this feature');
   }
 }
 
 // Ethereum provider stub
 export class EthereumPrivateKeyProvider {
-  constructor(_config: { config: { chainConfig: ChainConfig } }) {
+  constructor() {
     console.warn('[STUB] EthereumPrivateKeyProvider created - Web3Auth is disabled');
   }
   
-  async setupProvider(_privateKey: string): Promise<IProvider> {
+  async setupProvider(): Promise<IProvider> {
     throw new Error('[STUB] Web3Auth is disabled - re-enable Web3Auth packages to use this feature');
   }
 }
@@ -93,6 +95,8 @@ export class Web3Auth {
   provider: IProvider | null = null;
   
   constructor(_options: Web3AuthOptions) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    void _options;
     console.warn('[STUB] Web3Auth created - Web3Auth is disabled');
   }
   

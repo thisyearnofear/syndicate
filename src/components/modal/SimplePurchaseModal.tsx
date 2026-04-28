@@ -9,10 +9,9 @@
  */
 
 import { useState, Suspense, lazy, useEffect } from "react";
-import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
-import { Loader, AlertCircle, Check, Zap, Link2, ChevronDown, ArrowRight, Wallet, Shield, DollarSign, Bitcoin, Trophy, Coins, ExternalLink, Info, ChevronRight } from "lucide-react";
+import { Loader, AlertCircle, Check, Zap, Link2, ChevronDown, ArrowRight, Wallet, Shield, DollarSign, Bitcoin, Trophy, ExternalLink, Info } from "lucide-react";
 import { useUnifiedWallet, useUnifiedPurchase } from "@/hooks";
 import { useERC7715 } from "@/hooks/useERC7715";
 import { usePoolTogetherDeposit } from "@/hooks/usePoolTogetherDeposit";
@@ -293,16 +292,13 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
     try { await navigator.clipboard.writeText(url); setStatusLinkCopied(true); setTimeout(() => setStatusLinkCopied(false), 2000); } catch {}
   };
 
-  // Helper to check if PoolTogether is actively processing
-  const isPtProcessing = ptDeposit.status === 'approving' || ptDeposit.status === 'depositing';
-
   const renderStep = () => {
     switch (step) {
       case "connect":
         return (
           <CompactStack spacing="md" align="center">
             <div className="text-center">
-              <h2 className="text-2xl font-bold text-white mb-2">Let's Play</h2>
+              <h2 className="text-2xl font-bold text-white mb-2">Let&apos;s Play</h2>
               <p className="text-gray-400">Connect your wallet to purchase lottery tickets</p>
             </div>
             <WalletConnectionManager />

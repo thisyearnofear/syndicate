@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useCallback, useEffect, Suspense, lazy } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useUnifiedWallet, useTicketInfo } from "@/hooks";
-import { trackEvent } from "@/services/analytics/client";
+import { useUnifiedWallet } from "@/hooks";
 
 // UI Components
 import { Button } from "@/shared/components/ui/Button";
@@ -24,7 +22,7 @@ export default function Home() {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [selectedProtocol, setSelectedProtocol] = useState<string | undefined>(undefined);
   const [isMounted, setIsMounted] = useState(false);
-  const { isConnected, address } = useUnifiedWallet();
+  const { isConnected } = useUnifiedWallet();
 
   useEffect(() => {
     setIsMounted(true);

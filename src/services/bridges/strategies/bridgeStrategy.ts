@@ -30,12 +30,12 @@ export abstract class BaseBridgeStrategy {
     /**
      * Execute the bridge using this strategy
      */
-    abstract execute(params: BridgeParams): Promise<BridgeResult>;
+    abstract execute(_params: BridgeParams): Promise<BridgeResult>;
     
     /**
      * Check if this strategy is applicable for the given parameters
      */
-    abstract isApplicable(params: BridgeParams): boolean;
+    abstract isApplicable(_params: BridgeParams): boolean;
     
     /**
      * Get the priority of this strategy (higher = more preferred)
@@ -51,14 +51,14 @@ export abstract class BaseBridgeStrategy {
      * Check current system health and adjust strategy if needed
      */
     async adjustForSystemHealth(): Promise<void> {
-        const metrics = await bridgeManager.getPerformanceMetrics();
-        this.onSystemHealthUpdate(metrics);
+        const _metrics = await bridgeManager.getPerformanceMetrics();
+        this.onSystemHealthUpdate(_metrics);
     }
     
     /**
      * Handle system health updates
      */
-    protected onSystemHealthUpdate(metrics: BridgePerformanceMetrics): void {
+    protected onSystemHealthUpdate(_metrics: BridgePerformanceMetrics): void {
         // Base implementation does nothing
         // Subclasses can override to adjust behavior based on system health
     }
@@ -83,9 +83,9 @@ export class BridgeStrategyFactory {
     /**
      * Get the best strategy for given parameters
      */
-    static getBestStrategy(params: BridgeParams): BaseBridgeStrategy | null {
+    static getBestStrategy(_params: BridgeParams): BaseBridgeStrategy | null {
         // Find all applicable strategies
-        const applicable = this.strategies.filter(s => s.isApplicable(params));
+        const applicable = this.strategies.filter(s => s.isApplicable(_params));
         
         if (applicable.length === 0) {
             return null;
@@ -127,18 +127,18 @@ export class DefaultBridgeStrategy extends BaseBridgeStrategy {
         return 100; // High priority - default fallback
     }
     
-    isApplicable(params: BridgeParams): boolean {
+    isApplicable(_params: BridgeParams): boolean {
         return true; // Always applicable as fallback
     }
     
-    async execute(params: BridgeParams): Promise<BridgeResult> {
+    async execute(_params: BridgeParams): Promise<BridgeResult> {
         // Use bridge manager's automatic selection
-        return bridgeManager.bridge(params);
+        return bridgeManager.bridge(_params);
     }
     
-    protected onSystemHealthUpdate(metrics: BridgePerformanceMetrics): void {
+    protected onSystemHealthUpdate(_metrics: BridgePerformanceMetrics): void {
         // Adjust based on system health
-        if (metrics.systemStatus === 'critical') {
+        if (_metrics.systemStatus === 'critical') {
             console.warn('[DefaultStrategy] System in critical state, preferring most reliable protocols');
         }
     }
@@ -160,15 +160,15 @@ export class PerformanceOptimizedStrategy extends BaseBridgeStrategy {
         return 200; // Higher priority than default
     }
     
-    isApplicable(params: BridgeParams): boolean {
+    isApplicable(_params: BridgeParams): boolean {
         // Only applicable when performance is important (e.g., small amounts)
-        const amount = params.amount ? parseFloat(params.amount) : 0;
+        const amount = _params.amount ? parseFloat(_params.amount) : 0;
         return amount <= 1000; // For amounts <= $1000, optimize for speed
     }
     
-    async execute(params: BridgeParams): Promise<BridgeResult> {
+    async execute(_params: BridgeParams): Promise<BridgeResult> {
         // Get all routes and choose fastest healthy protocol
-        const routes = await bridgeManager.estimateAllRoutes(params);
+        const routes = await bridgeManager.estimateAllRoutes(_params);
         
         // Filter healthy protocols
         const healthyRoutes = routes.filter(route => {
@@ -178,7 +178,7 @@ export class PerformanceOptimizedStrategy extends BaseBridgeStrategy {
         
         if (healthyRoutes.length === 0) {
             // Fallback to default if no healthy protocols
-            return bridgeManager.bridge(params);
+            return bridgeManager.bridge(_params);
         }
         
         // Choose fastest protocol
@@ -189,7 +189,7 @@ export class PerformanceOptimizedStrategy extends BaseBridgeStrategy {
         
         // Execute with selected protocol
         return bridgeManager.bridge({
-            ...params,
+            ..._params,
             protocol: fastestProtocol
         });
     }
@@ -211,18 +211,18 @@ export class ReliabilityOptimizedStrategy extends BaseBridgeStrategy {
         return 300; // Highest priority for large amounts
     }
     
-    isApplicable(params: BridgeParams): boolean {
+    isApplicable(_params: BridgeParams): boolean {
         // Applicable for large amounts where reliability is critical
-        const amount = params.amount ? parseFloat(params.amount) : 0;
+        const amount = _params.amount ? parseFloat(_params.amount) : 0;
         return amount > 1000; // For amounts > $1000, optimize for reliability
     }
     
-    async execute(params: BridgeParams): Promise<BridgeResult> {
+    async execute(_params: BridgeParams): Promise<BridgeResult> {
         // Get all routes and choose most reliable protocol
-        const routes = await bridgeManager.estimateAllRoutes(params);
+        const routes = await bridgeManager.estimateAllRoutes(_params);
         
         if (routes.length === 0) {
-            return bridgeManager.bridge(params);
+            return bridgeManager.bridge(_params);
         }
         
         // Choose most reliable protocol (highest success rate)
@@ -233,7 +233,7 @@ export class ReliabilityOptimizedStrategy extends BaseBridgeStrategy {
         
         // Execute with selected protocol
         return bridgeManager.bridge({
-            ...params,
+            ..._params,
             protocol: mostReliableProtocol
         });
     }
@@ -255,17 +255,17 @@ export class CostOptimizedStrategy extends BaseBridgeStrategy {
         return 150; // Medium priority
     }
     
-    isApplicable(params: BridgeParams): boolean {
+    isApplicable(_params: BridgeParams): boolean {
         // Always applicable, but lower priority than performance/reliability
         return true;
     }
     
-    async execute(params: BridgeParams): Promise<BridgeResult> {
+    async execute(_params: BridgeParams): Promise<BridgeResult> {
         // Get all routes and choose cheapest protocol
-        const routes = await bridgeManager.estimateAllRoutes(params);
+        const routes = await bridgeManager.estimateAllRoutes(_params);
         
         if (routes.length === 0) {
-            return bridgeManager.bridge(params);
+            return bridgeManager.bridge(_params);
         }
         
         // Choose cheapest protocol
@@ -280,7 +280,7 @@ export class CostOptimizedStrategy extends BaseBridgeStrategy {
         
         // Execute with selected protocol
         return bridgeManager.bridge({
-            ...params,
+            ..._params,
             protocol: cheapestProtocol
         });
     }
@@ -302,18 +302,18 @@ export class SecurityOptimizedStrategy extends BaseBridgeStrategy {
         return 250; // High priority for security-critical transactions
     }
     
-    isApplicable(params: BridgeParams): boolean {
+    isApplicable(_params: BridgeParams): boolean {
         // For high-value transactions where security is paramount
-        const amount = params.amount ? parseFloat(params.amount) : 0;
+        const amount = _params.amount ? parseFloat(_params.amount) : 0;
         return amount > 10000; // Very large amounts (> $10,000)
     }
     
-    async execute(params: BridgeParams): Promise<BridgeResult> {
+    async execute(_params: BridgeParams): Promise<BridgeResult> {
         // Get all routes and choose most secure protocol
-        const routes = await bridgeManager.estimateAllRoutes(params);
+        const routes = await bridgeManager.estimateAllRoutes(_params);
         
         if (routes.length === 0) {
-            return bridgeManager.bridge(params);
+            return bridgeManager.bridge(_params);
         }
         
         // Filter for protocols with highest security guarantees
@@ -324,7 +324,7 @@ export class SecurityOptimizedStrategy extends BaseBridgeStrategy {
             // 3. Native token support (not wrapped assets)
             return route.successRate > 0.95 && 
                    ((route as { consecutiveFailures?: number }).consecutiveFailures || 0) < 2 &&
-                   this.isNativeTokenRoute(route, params);
+                   this.isNativeTokenRoute(route, _params);
         });
         
         if (secureRoutes.length === 0) {
@@ -335,7 +335,7 @@ export class SecurityOptimizedStrategy extends BaseBridgeStrategy {
             console.log(`[SecurityStrategy] No highly secure protocols, using most reliable: ${mostReliableProtocol}`);
             
             return bridgeManager.bridge({
-                ...params,
+                ..._params,
                 protocol: mostReliableProtocol
             });
         }
@@ -347,13 +347,13 @@ export class SecurityOptimizedStrategy extends BaseBridgeStrategy {
         console.log(`[SecurityStrategy] Selected most secure protocol: ${mostSecureProtocol}`);
         
         // Execute with additional security validations
-        return this.executeWithSecurityValidations(params, mostSecureProtocol);
+        return this.executeWithSecurityValidations(_params, mostSecureProtocol);
     }
     
     /**
      * Check if route uses native tokens (more secure than wrapped)
      */
-    private isNativeTokenRoute(route: BridgeRoute, params: BridgeParams): boolean {
+    private isNativeTokenRoute(route: BridgeRoute, _params: BridgeParams): boolean {
         // CCTP uses native USDC, which is more secure than wrapped versions
         if (route.protocol === 'cctp') return true;
         
@@ -367,9 +367,9 @@ export class SecurityOptimizedStrategy extends BaseBridgeStrategy {
     /**
      * Execute bridge with additional security validations
      */
-    private async executeWithSecurityValidations(params: BridgeParams, protocol: string): Promise<BridgeResult> {
+    private async executeWithSecurityValidations(_params: BridgeParams, protocol: string): Promise<BridgeResult> {
         // Add security-related validations
-        const validation = await this.validateSecurityParameters(params);
+        const validation = await this.validateSecurityParameters(_params);
         
         if (!validation.valid) {
             throw new BridgeError(
@@ -381,10 +381,10 @@ export class SecurityOptimizedStrategy extends BaseBridgeStrategy {
         
         // Execute with selected protocol
         return bridgeManager.bridge({
-            ...params,
+            ..._params,
             protocol: protocol as BridgeProtocolType,
             options: {
-                ...params.options,
+                ..._params.options,
                 securityValidated: true
             }
         });
@@ -393,14 +393,14 @@ export class SecurityOptimizedStrategy extends BaseBridgeStrategy {
     /**
      * Validate security-critical parameters
      */
-    private async validateSecurityParameters(params: BridgeParams): Promise<{ valid: boolean; error?: string }> {
+    private async validateSecurityParameters(_params: BridgeParams): Promise<{ valid: boolean; error?: string }> {
         // Validate destination address format
-        if (params.destinationChain === 'base' && (!params.destinationAddress || !params.destinationAddress.startsWith('0x'))) {
+        if (_params.destinationChain === 'base' && (!_params.destinationAddress || !_params.destinationAddress.startsWith('0x'))) {
             return { valid: false, error: 'Invalid Base destination address for security-critical transaction' };
         }
         
         // Validate amount is reasonable for security strategy
-        const amount = parseFloat(params.amount as string);
+        const amount = parseFloat(_params.amount as string);
         if (isNaN(amount) || amount <= 0) {
             return { valid: false, error: 'Invalid amount for security-critical transaction' };
         }
@@ -416,8 +416,8 @@ export class SecurityOptimizedStrategy extends BaseBridgeStrategy {
     /**
      * Adjust strategy based on system health for security
      */
-    protected onSystemHealthUpdate(metrics: BridgePerformanceMetrics): void {
-        if (metrics.systemStatus === 'degraded' || metrics.systemStatus === 'critical') {
+    protected onSystemHealthUpdate(_metrics: BridgePerformanceMetrics): void {
+        if (_metrics.systemStatus === 'degraded' || _metrics.systemStatus === 'critical') {
             console.warn('[SecurityStrategy] System health degraded, being extra cautious with protocol selection');
             // Could adjust to be even more conservative in protocol selection
         }
@@ -450,12 +450,12 @@ export class StrategyBasedBridgeExecutor {
     /**
      * Execute bridge using the best available strategy
      */
-    async executeWithBestStrategy(params: BridgeParams): Promise<BridgeResult> {
-        const strategy = this.strategyFactory.getBestStrategy(params);
+    async executeWithBestStrategy(_params: BridgeParams): Promise<BridgeResult> {
+        const strategy = this.strategyFactory.getBestStrategy(_params);
         
         if (!strategy) {
             console.warn('[StrategyExecutor] No applicable strategy found, using default');
-            return bridgeManager.bridge(params);
+            return bridgeManager.bridge(_params);
         }
         
         console.log(`[StrategyExecutor] Using strategy: ${strategy.getName()}`);
@@ -464,13 +464,13 @@ export class StrategyBasedBridgeExecutor {
         await strategy.adjustForSystemHealth();
         
         // Execute with selected strategy
-        return strategy.execute(params);
+        return strategy.execute(_params);
     }
     
     /**
      * Execute bridge using a specific strategy
      */
-    async executeWithStrategy(strategyName: string, params: BridgeParams): Promise<BridgeResult> {
+    async executeWithStrategy(strategyName: string, _params: BridgeParams): Promise<BridgeResult> {
         const allStrategies = this.strategyFactory.getAllStrategies();
         const strategy = allStrategies.find(s => s.getName() === strategyName);
         
@@ -478,7 +478,7 @@ export class StrategyBasedBridgeExecutor {
             throw new Error(`Strategy ${strategyName} not found`);
         }
         
-        return strategy.execute(params);
+        return strategy.execute(_params);
     }
     
     /**

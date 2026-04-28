@@ -23,9 +23,9 @@ import { Contract, ethers } from 'ethers';
 // =============================================================================
 
 interface TaskContext {
-  taskId: string;
-  autoBot: string;
-  chainId: number;
+  _taskId: string;
+  _autoBot: string;
+  _chainId: number;
 }
 
 interface AutoPurchaseRecord {
@@ -144,7 +144,7 @@ async function getDuePurchases(
 
 async function verifyPurchaseEligibility(
   record: AutoPurchaseRecord,
-  context: TaskContext
+  _context: TaskContext
 ): Promise<boolean> {
   try {
     // Check via API endpoint that permission is still active
@@ -195,9 +195,9 @@ async function verifyPurchaseEligibility(
  */
 export async function web3Function(
   userArgs: Record<string, unknown>,
-  context: TaskContext
+  _context: TaskContext
 ) {
-  const { taskId, autoBot, chainId } = context;
+  const { _taskId, _autoBot, _chainId } = _context;
   const currentTimestamp = Math.floor(Date.now() / 1000);
 
   console.log(`[Gelato Web3Function] Starting execution at ${currentTimestamp}`);
@@ -219,7 +219,7 @@ export async function web3Function(
     // STEP 2: Filter and verify eligible purchases
     const executablePurchases: Array<{
       record: AutoPurchaseRecord;
-      context: ExecutionContext;
+      _context: ExecutionContext;
     }> = [];
 
     for (const record of duePurchases) {
@@ -238,7 +238,7 @@ export async function web3Function(
       }
 
       // Verify permission is still valid
-      const isEligible = await verifyPurchaseEligibility(record, context);
+      const isEligible = await verifyPurchaseEligibility(record, _context);
       if (!isEligible) {
         console.log(
           `[Gelato Web3Function] Purchase ${record.id} no longer eligible`
@@ -249,7 +249,7 @@ export async function web3Function(
 
       executablePurchases.push({
         record,
-        context: {
+        _context: {
           currentTimestamp,
           userAddress: record.userAddress,
           amountUsdc: record.amountPerPeriod,
@@ -266,7 +266,7 @@ export async function web3Function(
     }
 
     // STEP 3: Encode transaction calls using JackpotRandomTicketBuyer
-    const calls = executablePurchases.map(({ record, context: ctx }) => {
+    const calls = executablePurchases.map(({ record, _context: ctx }) => {
       const iface = new ethers.Interface(RANDOM_TICKET_BUYER_ABI);
       const amountUsdc = ethers.parseUnits(ctx.amountUsdc, 6);
       // Each ticket costs 1 USDC (1e6), calculate ticket count from amount
@@ -329,7 +329,7 @@ export async function web3Function(
  */
 export async function onSuccess(
   callData: { recordIds: string[] },
-  context: TaskContext
+  _context: TaskContext
 ) {
   const currentTimestamp = Math.floor(Date.now() / 1000);
 
@@ -364,11 +364,11 @@ export async function onSuccess(
  */
 export async function onFail(
   callData: unknown,
-  context: TaskContext,
+  _context: TaskContext,
   reason: string
 ) {
   console.error(
-    `[Gelato Web3Function] Task ${context.taskId} failed: ${reason}`
+    `[Gelato Web3Function] Task ${_context._taskId} failed: ${reason}`
   );
 
   // Could notify user, disable automation, etc.

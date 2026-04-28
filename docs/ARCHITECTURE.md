@@ -296,6 +296,29 @@ psql "$POSTGRES_URL" -c "SELECT * FROM purchase_statuses ORDER BY updated_at DES
 
 ---
 
+## Privacy-by-Design (Fhenix FHE)
+
+Syndicate includes an optional **privacy-native vault / pool path** using Fhenix Fully Homomorphic Encryption (FHE). The goal is to keep sensitive position and contribution data encrypted during on-chain computation and only reveal plaintext to authorized users client-side.
+
+### What’s implemented
+- **Encrypted deposit flow**: the app encrypts amounts client-side and calls `depositEncrypted(...)` on the Fhenix vault contract.
+- **Permit + private balance reveal**: the UI can request/activate a permit and unseal a user’s private balance locally (“Reveal Private Balance”).
+- **Multi-network support**: vault can be deployed on **Base Sepolia (84532)** or **Fhenix Helium (8008135)** selected via `NEXT_PUBLIC_FHENIX_CHAIN_ID`.
+
+### Key integration points
+- Chain selection: `src/services/fhe/fhenixChain.ts`
+- FHE SDK wrapper (lazy browser import): `src/services/fhe/fheService.ts`
+- DRY action helpers: `src/services/fhe/fhenixActions.ts`
+- Private balance hook: `src/hooks/useFhenixPrivateVaultBalance.ts`
+- UI: `src/components/yield/YieldDashboard.tsx` (Fhenix row)
+
+### Contract interface (vault)
+The app expects the vault to expose ciphertext-hash getters that are unsealed client-side:
+- `getEncryptedBalanceCtHash(Permission) -> uint256`
+- `getEncryptedTotalCtHash(Permission) -> uint256` (coordinator-only)
+
+---
+
 ## References
 
 See the merged sections below for Development and Overview. Other docs: [BRIDGES.md](./BRIDGES.md), [DEPLOYMENT.md](./DEPLOYMENT.md), [SECURITY.md](./SECURITY.md)
@@ -508,4 +531,3 @@ Next steps
 2. Run npx tsx scripts/cleanup-deprecated.ts to ensure deprecated files are safe to delete
 3. Remove wrappers and run build + tests
 4. Monitor bundle size and metrics post-deploy
-

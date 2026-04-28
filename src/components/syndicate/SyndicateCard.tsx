@@ -12,16 +12,13 @@ import {
   Users, 
   Trophy, 
   Heart, 
-  TrendingUp,
   Shield,
   Share2,
-  Coins,
-  ExternalLink
+  Coins
 } from 'lucide-react';
-import { Button } from '@/shared/components/ui/Button';
 
-type PoolType = 'safe' | 'splits' | 'pooltogether';
-type VaultStrategy = 'aave' | 'morpho' | 'spark' | 'pooltogether' | 'octant' | 'uniswap';
+type PoolType = 'safe' | 'splits' | 'pooltogether' | 'fhenix';
+type VaultStrategy = 'aave' | 'morpho' | 'spark' | 'pooltogether' | 'octant' | 'uniswap' | 'fhenix' | 'lifiearn';
 
 interface SyndicateCardData {
   id: string;
@@ -48,13 +45,14 @@ export function SyndicateCard({ syndicate, compact = false }: SyndicateCardProps
       safe: { bg: 'bg-blue-500/20', text: 'text-blue-400', icon: Shield },
       splits: { bg: 'bg-green-500/20', text: 'text-green-400', icon: Share2 },
       pooltogether: { bg: 'bg-purple-500/20', text: 'text-purple-400', icon: Coins },
+      fhenix: { bg: 'bg-amber-500/20', text: 'text-amber-400', icon: Shield },
     };
-    const badge = badges[poolType];
+    const badge = badges[poolType] ?? badges['safe'];
     const Icon = badge.icon;
     return (
       <span className={`${badge.bg} ${badge.text} text-xs px-2 py-1 rounded-full flex items-center gap-1`}>
         <Icon className="w-3 h-3" />
-        {poolType === 'safe' ? 'Safe' : poolType === 'splits' ? 'Splits' : 'PT'}
+        {poolType === 'safe' ? 'Safe' : poolType === 'splits' ? 'Splits' : poolType === 'fhenix' ? 'FHE 🔒' : 'PT'}
       </span>
     );
   };
@@ -68,6 +66,8 @@ export function SyndicateCard({ syndicate, compact = false }: SyndicateCardProps
       pooltogether: 'PoolTogether',
       octant: 'Octant',
       uniswap: 'Uniswap',
+      fhenix: 'FHE Vault',
+      lifiearn: 'LI.FI Earn',
     };
     return vaultLabels[strategy];
   };

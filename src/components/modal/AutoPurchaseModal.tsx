@@ -18,14 +18,12 @@ import {
   DollarSign,
   Calendar,
   RotateCcw,
-  TrendingUp,
   Bot,
   Brain,
   Terminal,
   Coins,
 } from "lucide-react";
 import { useERC7715 } from "@/hooks/useERC7715";
-import { AdvancedPermissionsTooltip } from "@/components/common/InfoTooltip";
 import { CONTRACTS } from "@/services/bridges/protocols/stacks";
 import { useUnifiedWallet } from "@/hooks";
 import { getPermissionPresets } from "@/services/automation/erc7715Service";
@@ -74,7 +72,7 @@ export function AutoPurchaseModal({
   });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const { address, chainId, walletType } = useUnifiedWallet();
+  const { chainId, walletType } = useUnifiedWallet();
   const {
     isRequesting,
     error,
@@ -87,10 +85,8 @@ export function AutoPurchaseModal({
 
   // Check for Stacks wallet and x402 eligibility
   const isStacksWallet = walletType === 'stacks';
-  const isEvmWallet = walletType === 'evm';
   
   // For Stacks wallets, we don't need ERC7715 - use x402 instead
-  const effectiveLoading = isStacksWallet ? false : isLoading;
   const effectivePermissions = isStacksWallet ? [] : permissions;
 
   const permission = effectivePermissions[0] || null;
@@ -168,7 +164,7 @@ export function AutoPurchaseModal({
         if (onSuccess) {
           setTimeout(() => onSuccess(config as any), 2000);
         }
-      } catch (err) {
+      } catch {
         setErrorMessage(`Failed to deploy ${config.strategy} agent. Please try again.`);
         setStep("error");
       }
@@ -243,24 +239,19 @@ export function AutoPurchaseModal({
 
     // Handle EVM ERC-7715 flow (original logic)
     try {
-      let limit;
+      let _limit; // eslint-disable-line @typescript-eslint/no-unused-vars
       switch (config.frequency) {
         case "weekly":
-          limit = BigInt(config.amount * 7 * 10 ** 6);
+          _limit = BigInt(config.amount * 7 * 10 ** 6);
           break;
         case "monthly":
-          limit = BigInt(config.amount * 30 * 10 ** 6);
+          _limit = BigInt(config.amount * 30 * 10 ** 6);
           break;
         default:
-          limit = BigInt(config.amount * 7 * 10 ** 6);
+          _limit = BigInt(config.amount * 7 * 10 ** 6);
       }
 
-      const erc20Request = {
-        scope: "erc20-token-periodic",
-        tokenAddress: CONTRACTS.USDC,
-        limit,
-        period: config.frequency === 'opportunistic' ? 'weekly' : config.frequency,
-      };
+      void _limit; // Suppress unused variable warning
 
       const result = await requestPresetPermission(
         config.frequency === 'opportunistic' ? 'weekly' : config.frequency

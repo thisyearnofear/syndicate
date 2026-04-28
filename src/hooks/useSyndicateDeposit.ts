@@ -18,6 +18,8 @@ import { useState, useCallback } from 'react';
 import { useWalletClient, usePublicClient } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { parseUnits, encodeFunctionData } from 'viem';
+import { FHENIX_VAULT_CHAIN } from '@/services/fhe/fhenixChain';
+import { approveAndDepositEncrypted } from '@/services/fhe/fhenixActions';
 
 // USDC on Base (6 decimals)
 const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
@@ -80,6 +82,7 @@ export type SyndicateDepositStatus =
   | 'idle'
   | 'checking_allowance'
   | 'approving'
+  | 'encrypting'
   | 'transferring'
   | 'delegating'
   | 'complete'
@@ -110,6 +113,8 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
 
   const { data: walletClient } = useWalletClient({ chainId: base.id });
   const publicClient = usePublicClient({ chainId: base.id });
+  const { data: fhenixWalletClient } = useWalletClient({ chainId: FHENIX_VAULT_CHAIN.id });
+  const fhenixPublicClient = usePublicClient({ chainId: FHENIX_VAULT_CHAIN.id });
 
   const reset = useCallback(() => {
     setStatus('idle');
@@ -132,12 +137,20 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
     poolType?: PoolType;
     ptVaultAddress?: `0x${string}`;
   }): Promise<string | null> => {
-    if (!walletClient) {
-      setError('No EVM wallet connected. Please connect a Base-compatible wallet.');
+    const isFhenix = poolType === 'fhenix';
+    const activeWalletClient = isFhenix ? fhenixWalletClient : walletClient;
+    const activePublicClient = isFhenix ? fhenixPublicClient : publicClient;
+
+    if (!activeWalletClient) {
+      setError(
+        isFhenix
+          ? `No wallet connected for ${FHENIX_VAULT_CHAIN.name}. Please switch network and reconnect.`
+          : 'No EVM wallet connected. Please connect a Base-compatible wallet.',
+      );
       setStatus('error');
       return null;
     }
-    if (!publicClient) {
+    if (!activePublicClient) {
       setError('No public client available.');
       setStatus('error');
       return null;
@@ -158,12 +171,18 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
       const amountWei = parseUnits(String(amountUsdc), 6);
 
       // Determine the actual deposit address based on pool type
-      // For PoolTogether, we deposit to the TwabDelegator
-      const depositAddress = poolType === 'pooltogether' ? PT_TWAB_DELEGATOR : poolAddress;
+      const depositAddress =
+        poolType === 'pooltogether' ? PT_TWAB_DELEGATOR
+        : poolType === 'fhenix' ? (process.env.NEXT_PUBLIC_FHENIX_VAULT_ADDRESS as `0x${string}` ?? poolAddress)
+        : poolAddress;
 
       // Check current allowance for the deposit address
-      const currentAllowance = await publicClient.readContract({
-        address: USDC_BASE,
+      const usdcAddress = isFhenix
+        ? (await import('@/services/syndicate/poolProviders/fhenixProvider')).FHENIX_POOL_CONFIG.USDC_ADDRESS
+        : USDC_BASE;
+
+      const currentAllowance = await activePublicClient.readContract({
+        address: usdcAddress as `0x${string}`,
         abi: ERC20_ABI,
         functionName: 'allowance',
         args: [userAddress, depositAddress],
@@ -172,20 +191,39 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
       // Approve if needed
       if (currentAllowance < amountWei) {
         setStatus('approving');
-        const approveHash = await walletClient.writeContract({
-          address: USDC_BASE,
+        const approveHash = await activeWalletClient.writeContract({
+          address: usdcAddress as `0x${string}`,
           abi: ERC20_ABI,
           functionName: 'approve',
           args: [depositAddress, amountWei],
-          chain: base,
+          chain: isFhenix ? FHENIX_VAULT_CHAIN : base,
         });
         setApproveTxHash(approveHash);
-        await publicClient.waitForTransactionReceipt({ hash: approveHash });
+        await activePublicClient.waitForTransactionReceipt({ hash: approveHash });
+      }
+
+      // For Fhenix FHE pools: encrypt amount + call depositEncrypted on the vault.
+      if (isFhenix) {
+        setStatus('encrypting');
+        const { approveTxHash, depositTxHash } = await approveAndDepositEncrypted({
+          walletClient: activeWalletClient as any,
+          publicClient: activePublicClient as any,
+          userAddress,
+          vaultAddress: depositAddress,
+          usdcAddress: usdcAddress as `0x${string}`,
+          amountWei,
+        });
+
+        if (approveTxHash) setApproveTxHash(approveTxHash);
+        setStatus('transferring');
+        setTxHash(depositTxHash);
+        setStatus('complete');
+        return depositTxHash;
       }
 
       // Transfer USDC to deposit address
       setStatus('transferring');
-      const transferHash = await walletClient.writeContract({
+      const transferHash = await activeWalletClient.writeContract({
         address: USDC_BASE,
         abi: ERC20_ABI,
         functionName: 'transfer',
@@ -193,7 +231,7 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
         chain: base,
       });
       setTxHash(transferHash);
-      await publicClient.waitForTransactionReceipt({ hash: transferHash });
+      await activePublicClient.waitForTransactionReceipt({ hash: transferHash });
 
       // For PoolTogether, also execute delegation to the syndicate pool
       if (poolType === 'pooltogether' && ptVaultAddress) {
@@ -208,14 +246,14 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
           });
 
           // Execute delegation transaction
-          const delegationHash = await walletClient.sendTransaction({
+          const delegationHash = await walletClient!.sendTransaction({
             to: PT_TWAB_DELEGATOR,
             data: delegationData,
             chain: base,
           });
           
           setDelegationTxHash(delegationHash);
-          await publicClient.waitForTransactionReceipt({ hash: delegationHash });
+          await publicClient!.waitForTransactionReceipt({ hash: delegationHash });
           
           console.log('[useSyndicateDeposit] PoolTogether delegation completed:', {
             vault: ptVaultAddress,
@@ -237,7 +275,7 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
       setStatus('error');
       return null;
     }
-  }, [walletClient, publicClient]);
+  }, [walletClient, publicClient, fhenixWalletClient, fhenixPublicClient]);
 
   return { status, txHash, approveTxHash, delegationTxHash, error, deposit, reset };
 }

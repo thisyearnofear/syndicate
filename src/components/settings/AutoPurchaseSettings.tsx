@@ -19,7 +19,6 @@ import {
   Plus, 
   Brain,
   Terminal,
-  Wallet,
   Coins,
   TrendingUp
 } from "lucide-react";
@@ -33,7 +32,7 @@ export function AutoPurchaseSettings() {
   const [agents, setAgents] = useState<AgentStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [selectedAgentType, setSelectedAgentType] = useState<AgentType | null>(null);
+  const [, setSelectedAgentType] = useState<AgentType | null>(null);
 
   const registry = AgentRegistryService.getInstance();
 
@@ -123,7 +122,7 @@ export function AutoPurchaseSettings() {
               className="bg-indigo-600 hover:bg-indigo-700"
               onClick={() => handleActivateAgent('autonomous')}
             >
-              Activate "The Voyager"
+              Activate &quot;The Voyager&quot;
             </Button>
           </div>
         )}
