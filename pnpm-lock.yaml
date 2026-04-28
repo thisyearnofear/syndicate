@@ -146,8 +146,8 @@ importers:
         specifier: 8.2.6
         version: 8.2.6(@react-native-async-storage/async-storage@1.24.0(react-native@0.85.1(@babel/core@7.29.0)(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.5)(utf-8-validate@6.0.6)))(@types/react@19.2.14)(bufferutil@4.1.0)(lit@3.3.0)(react@19.2.5)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76)
       '@stacks/network':
-        specifier: ^6.4.0
-        version: 6.17.0
+        specifier: ^7.3.1
+        version: 7.3.1
       '@stacks/transactions':
         specifier: 7.4.0
         version: 7.4.0
