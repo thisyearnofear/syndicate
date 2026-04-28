@@ -78,7 +78,7 @@
     "@twa-dev/sdk": "8.0.2",
     "@vercel/postgres": "^0.10.0",
     "@walletconnect/ethereum-provider": "^2.21.10",
-    "beasties": "^0.2.0",
+    "beasties": "^0.4.2",
     "bs58": "6.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
