@@ -10,8 +10,7 @@
  * Interfaces with Gelato Relay to execute transactions on behalf of users.
  */
 
-import { Address, Hash, Hex, createPublicClient, http } from 'viem';
-import { base } from 'viem/chains';
+import { Address, Hash, Hex } from 'viem';
 
 // =============================================================================
 // TYPES

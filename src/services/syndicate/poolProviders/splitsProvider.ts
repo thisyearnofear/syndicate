@@ -8,13 +8,13 @@
  */
 
 import type { PoolProvider, PoolProviderConfig, PoolCreationResult } from './types';
-import { splitsService, type SplitInfo } from '@/services/splits/splitService';
+import { splitsService } from '@/services/splits/splitService';
 import type { Address, WalletClient } from 'viem';
 
 const BASE_CHAIN_ID = 8453;
 
 export class SplitsPoolProvider implements PoolProvider {
-  readonly name: 'splits' = 'splits';
+  readonly name = 'splits' as const;
 
   async createPool(config: PoolProviderConfig): Promise<PoolCreationResult> {
     try {
@@ -100,21 +100,21 @@ export class SplitsPoolProvider implements PoolProvider {
     }
   }
 
-  async getPoolAddress(poolId: string): Promise<string | null> {
+  async getPoolAddress(_poolId: string): Promise<string | null> {
     // Would look up from database in production
     return null;
   }
 
-  async getBalance(poolAddress: string): Promise<string> {
+  async getBalance(_poolAddress: string): Promise<string> {
     // Splits don't hold funds - they distribute on withdrawal
     return '0.00';
   }
 
   async deposit(
-    poolAddress: string,
-    amount: string,
-    token: string,
-    from: string
+    _poolAddress: string,
+    _amount: string,
+    _token: string,
+    _from: string
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     // Splits are for distribution, not deposit
     // Users should deposit to a Safe or Vault first, then distribute via split
@@ -128,8 +128,8 @@ export class SplitsPoolProvider implements PoolProvider {
     poolAddress: string,
     to: string,
     value: string,
-    data: string,
-    executor: string
+    _data: string,
+    _executor: string
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     // In production, this would distribute funds through the split
     // using the splitsService.distributeToken function

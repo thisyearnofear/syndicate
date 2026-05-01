@@ -4,6 +4,9 @@ import { basePublicClient } from '@/lib/baseClient';
 import { syndicateService } from '@/domains/syndicate/services/syndicateService';
 import { syndicateRepository, type SyndicatePoolRow } from '@/lib/db/repositories/syndicateRepository';
 import type { SyndicateInfo } from '@/domains/lottery/types';
+import { ERC20_TRANSFER_TOPIC } from '@/abis/erc20';
+import { getCorsHeaders, apiError, apiSuccess, apiValidationError, apiNotFound, checkRateLimit, rateLimitError, getSafeErrorMessage } from '@/lib/api/response';
+import { logger } from '@/lib/logger';
 
 // USDC on Base (6 decimals)
 const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
@@ -28,13 +31,10 @@ async function verifyUsdcTransfer({
       return { ok: false, reason: 'Transaction reverted or failed on-chain.' };
     }
 
-    // ERC-20 Transfer event: Transfer(address indexed from, address indexed to, uint256 value)
-    const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
-
     const transferLog = receipt.logs.find(
       (log) =>
         log.address.toLowerCase() === USDC_BASE.toLowerCase() &&
-        log.topics[0] === TRANSFER_TOPIC &&
+        log.topics[0] === ERC20_TRANSFER_TOPIC &&
         log.topics[2] &&
         `0x${log.topics[2].slice(26)}`.toLowerCase() === expectedRecipient.toLowerCase()
     );
@@ -43,32 +43,29 @@ async function verifyUsdcTransfer({
       return { ok: false, reason: 'No USDC Transfer to pool address found in transaction logs.' };
     }
 
-    // Decode the value from the log data (uint256, big-endian hex)
     const transferredWei = BigInt(transferLog.data);
     const expectedWei = parseUnits(String(expectedAmountUsdc), 6);
 
     if (transferredWei < expectedWei) {
       return {
         ok: false,
-        reason: `Transferred amount (${transferredWei}) is less than expected (${expectedWei}).`,
+        reason: `Transferred amount is less than expected.`,
       };
     }
 
     return { ok: true };
-  } catch (err) {
+  } catch {
     return {
       ok: false,
-      reason: `Receipt lookup failed: ${err instanceof Error ? err.message : String(err)}`,
+      reason: 'Receipt lookup failed.',
     };
   }
 }
 
-// CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
+// CORS headers - use shared utility
+function corsHeaders(origin?: string | null) {
+  return getCorsHeaders(origin);
+}
 
 /**
  * Map database row to SyndicateInfo interface
@@ -117,7 +114,7 @@ function mapPoolToSyndicateInfo(pool: SyndicatePoolRow): SyndicateInfo {
     },
     yieldToTicketsPercentage: 85,
     yieldToCausesPercentage: 15,
-    vaultStrategy: (pool.vault_strategy as any) || 'aave', // Use actual vault strategy
+    vaultStrategy: (pool.vault_strategy as SyndicateInfo['vaultStrategy']) || 'aave',
     lotteryId: pool.lottery_id ?? undefined,
     membersCount: pool.members_count,
     ticketsPooled: ticketsPurchased,
@@ -135,49 +132,43 @@ function mapPoolToSyndicateInfo(pool: SyndicatePoolRow): SyndicateInfo {
 }
 
 export async function GET(request: Request) {
+  // Rate limit
+  const ip = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? 'anonymous';
+  const rl = checkRateLimit(`syndicates:${ip}`);
+  if (!rl.allowed) return rateLimitError(rl.resetAt);
+
   try {
     const url = new URL(request.url);
     const syndicateId = url.searchParams.get('id');
 
     if (syndicateId) {
-      // Get single syndicate by ID
       const pool = await syndicateRepository.getPoolById(syndicateId);
-      if (!pool) {
-        return NextResponse.json(
-          { error: 'Syndicate not found' },
-          { status: 404, headers: corsHeaders }
-        );
-      }
+      if (!pool) return apiNotFound('Syndicate not found');
       const syndicate = mapPoolToSyndicateInfo(pool);
-      return NextResponse.json(syndicate, { headers: corsHeaders });
+      return apiSuccess(syndicate);
     }
 
-    // Get all active syndicates
     const pools = await syndicateRepository.getActivePools();
     const syndicates = pools.map(mapPoolToSyndicateInfo);
-    
-    return NextResponse.json(syndicates, { headers: corsHeaders });
+    return apiSuccess(syndicates);
   } catch (error) {
-    console.error('Error fetching syndicates:', error);
-    return NextResponse.json(
-      { 
-        error: 'Failed to fetch syndicates',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500, headers: corsHeaders }
-    );
+    logger.error('Error fetching syndicates', { error: getSafeErrorMessage(error) });
+    return apiError('Failed to fetch syndicates', 500);
   }
 }
 
-// Handle preflight requests
-export async function OPTIONS() {
+export async function OPTIONS(request: Request) {
   return new NextResponse(null, {
     status: 200,
-    headers: corsHeaders,
+    headers: corsHeaders(request.headers.get('origin')),
   });
 }
 
 export async function POST(request: Request) {
+  const ip = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? 'anonymous';
+  const rl = checkRateLimit(`syndicates-post:${ip}`, { windowMs: 60_000, maxRequests: 30 });
+  if (!rl.allowed) return rateLimitError(rl.resetAt);
+
   try {
     const body = await request.json();
     const action = body?.action;
@@ -188,27 +179,19 @@ export async function POST(request: Request) {
       const lockMinutes = (body?.lockMinutes ?? 60) as number;
       const roundId = body?.roundId as string | undefined;
       const snapshot = syndicateService.snapshotProportionalWeights(syndicateId, participants, lockMinutes, roundId);
-      return NextResponse.json(snapshot, { headers: corsHeaders });
+      return apiSuccess(snapshot);
     }
 
     if (action === 'create') {
       const { name, description, coordinatorAddress, causeAllocationPercent, poolType, members } = body;
       
-      // Validation
       if (!name || !coordinatorAddress || causeAllocationPercent === undefined) {
-        return NextResponse.json(
-          { error: 'Missing required fields: name, coordinatorAddress, causeAllocationPercent' },
-          { status: 400, headers: corsHeaders }
-        );
+        return apiValidationError('Missing required fields: name, coordinatorAddress, causeAllocationPercent');
       }
 
-      // Validate pool type if provided
       const validPoolTypes = ['safe', 'splits', 'pooltogether', 'fhenix'];
       if (poolType && !validPoolTypes.includes(poolType)) {
-        return NextResponse.json(
-          { error: `Invalid pool type. Must be one of: ${validPoolTypes.join(', ')}` },
-          { status: 400, headers: corsHeaders }
-        );
+        return apiValidationError(`Invalid pool type. Must be one of: ${validPoolTypes.join(', ')}`);
       }
 
       const poolId = await syndicateService.createPool({
@@ -220,46 +203,28 @@ export async function POST(request: Request) {
         members,
       });
 
-      return NextResponse.json({ id: poolId, success: true }, { headers: corsHeaders });
+      return apiSuccess({ id: poolId, success: true });
     }
 
     if (action === 'join') {
       const { poolId, memberAddress, amountUsdc, txHash } = body;
       
-      // Validation
       if (!poolId || !memberAddress || !amountUsdc) {
-        return NextResponse.json(
-          { error: 'Missing required fields: poolId, memberAddress, amountUsdc' },
-          { status: 400, headers: corsHeaders }
-        );
+        return apiValidationError('Missing required fields: poolId, memberAddress, amountUsdc');
       }
 
-      // Require on-chain proof of transfer
       if (!txHash) {
-        return NextResponse.json(
-          { error: 'Missing txHash: on-chain USDC transfer must be completed before joining' },
-          { status: 400, headers: corsHeaders }
-        );
+        return apiValidationError('Missing txHash: on-chain USDC transfer must be completed before joining');
       }
 
       if (!isHex(txHash)) {
-        return NextResponse.json(
-          { error: 'Invalid txHash format.' },
-          { status: 400, headers: corsHeaders }
-        );
+        return apiValidationError('Invalid txHash format.');
       }
 
-      // Fetch pool to get the pool address for receipt verification
       const pool = await syndicateRepository.getPoolById(poolId);
-      if (!pool) {
-        return NextResponse.json(
-          { error: 'Syndicate pool not found.' },
-          { status: 404, headers: corsHeaders }
-        );
-      }
+      if (!pool) return apiNotFound('Syndicate pool not found.');
 
       // Fhenix FHE pools emit DepositShielded(from, 0) — no plaintext amount in event.
-      // Verify the transaction landed on-chain but skip amount matching.
       let verification: { ok: boolean; reason?: string };
       if (pool.pool_type === 'fhenix') {
         const { createPublicClient, http, decodeEventLog, parseAbiItem } = await import('viem');
@@ -281,7 +246,6 @@ export async function POST(request: Request) {
           } else if (expectedVault && (receipt.to?.toLowerCase() !== expectedVault)) {
             verification = { ok: false, reason: 'FHE deposit was not sent to the expected vault' };
           } else {
-            // Verify the vault emitted DepositShielded(memberAddress, 0)
             const matched = receipt.logs.some((log) => {
               if (!expectedVault) return false;
               if (log.address.toLowerCase() !== expectedVault) return false;
@@ -293,7 +257,7 @@ export async function POST(request: Request) {
                 });
                 return (
                   decoded.eventName === 'DepositShielded' &&
-                  String((decoded.args as any).from).toLowerCase() === String(memberAddress).toLowerCase()
+                  String((decoded.args as Record<string, unknown>).from).toLowerCase() === String(memberAddress).toLowerCase()
                 );
               } catch {
                 return false;
@@ -316,10 +280,7 @@ export async function POST(request: Request) {
       }
 
       if (!verification.ok) {
-        return NextResponse.json(
-          { error: `Transaction verification failed: ${verification.reason}` },
-          { status: 400, headers: corsHeaders }
-        );
+        return apiValidationError(`Transaction verification failed: ${verification.reason}`);
       }
 
       await syndicateRepository.addMember({
@@ -329,18 +290,14 @@ export async function POST(request: Request) {
         txHash,
       });
 
-      return NextResponse.json({ success: true }, { headers: corsHeaders });
+      return apiSuccess({ success: true });
     }
 
     if (action === 'executePurchase') {
       const { poolId, ticketCount, coordinatorAddress } = body;
       
-      // Validation
       if (!poolId || !ticketCount || !coordinatorAddress) {
-        return NextResponse.json(
-          { error: 'Missing required fields: poolId, ticketCount, coordinatorAddress' },
-          { status: 400, headers: corsHeaders }
-        );
+        return apiValidationError('Missing required fields: poolId, ticketCount, coordinatorAddress');
       }
 
       const result = await syndicateService.executeSyndicatePurchase(
@@ -349,23 +306,16 @@ export async function POST(request: Request) {
         coordinatorAddress
       );
 
-      // Record ticket purchase if successful
       if (result.success && result.txHash) {
         await syndicateRepository.recordTicketPurchase(poolId, ticketCount);
       }
 
-      return NextResponse.json(result, { headers: corsHeaders });
+      return apiSuccess(result);
     }
 
-    return NextResponse.json(
-      { error: 'Unsupported action. Supported: snapshot, create, join, executePurchase' },
-      { status: 400, headers: corsHeaders }
-    );
+    return apiValidationError('Unsupported action. Supported: snapshot, create, join, executePurchase');
   } catch (error) {
-    console.error('Error in POST /api/syndicates:', error);
-    return NextResponse.json(
-      { error: 'Invalid request', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 400, headers: corsHeaders }
-    );
+    logger.error('Error in POST /api/syndicates', { error: getSafeErrorMessage(error) });
+    return apiError('Invalid request', 400);
   }
 }

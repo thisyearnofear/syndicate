@@ -11,7 +11,7 @@
  */
 
 import type { BridgeProtocol, BridgeParams, BridgeEstimate, BridgeResult, ProtocolHealth, ChainIdentifier, BridgeStatus } from '../types';
-import { BridgeErrorCode, BridgeError } from '../types';
+import { BridgeErrorCode } from '../types';
 
 export class BaseSolanaBridgeProtocol implements BridgeProtocol {
   readonly name = 'base-solana-bridge' as const;

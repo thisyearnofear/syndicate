@@ -5,27 +5,18 @@
  * - DRY: Single implementation of approve + encrypt + depositEncrypted
  * - CLEAN: No React/wagmi imports; consumers provide wallet/public clients
  * - MODULAR: Pure helpers, easy to unit test by mocking clients
+ *
+ * Note: walletClient/publicClient use `any` because wagmi's viem client types
+ * have `account` injected at the hook level, making strict typing impractical
+ * at this abstraction boundary. Consumers are the wagmi hooks in useVaultDeposit
+ * and useSyndicateDeposit.
  */
 
 import { encryptUsdcAmount } from './fheService';
 import { FHENIX_VAULT_CHAIN } from './fhenixChain';
+import { ERC20_ABI } from '@/abis/erc20';
 
-const ERC20_ABI = [
-  {
-    name: 'approve',
-    type: 'function',
-    stateMutability: 'nonpayable',
-    inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }],
-    outputs: [{ name: 'success', type: 'bool' }],
-  },
-  {
-    name: 'allowance',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: 'owner', type: 'address' }, { name: 'spender', type: 'address' }],
-    outputs: [{ name: 'amount', type: 'uint256' }],
-  },
-] as const;
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 const DEPOSIT_ENCRYPTED_ABI = [
   {
@@ -48,24 +39,21 @@ const DEPOSIT_ENCRYPTED_ABI = [
 ] as const;
 
 export async function approveAndDepositEncrypted(params: {
-  // Use `any` to accept wagmi's wallet/public client shapes without forcing callers
-  // to thread `account` into `writeContract` (wagmi injects it).
   walletClient: any;
   publicClient: any;
   userAddress: `0x${string}`;
   vaultAddress: `0x${string}`;
   usdcAddress: `0x${string}`;
-  amountWei: bigint; // USDC (6 decimals)
+  amountWei: bigint;
 }): Promise<{ approveTxHash?: `0x${string}`; depositTxHash: `0x${string}` }> {
   const { walletClient, publicClient, userAddress, vaultAddress, usdcAddress, amountWei } = params;
 
-  // 1) Approve if needed
   const currentAllowance = await publicClient.readContract({
     address: usdcAddress,
     abi: ERC20_ABI,
     functionName: 'allowance',
     args: [userAddress, vaultAddress],
-  });
+  }) as bigint;
 
   let approveTxHash: `0x${string}` | undefined;
   if (currentAllowance < amountWei) {
@@ -79,19 +67,17 @@ export async function approveAndDepositEncrypted(params: {
     await publicClient.waitForTransactionReceipt({ hash: approveTxHash });
   }
 
-  // 2) Encrypt amount client-side
   const encResult = await encryptUsdcAmount(amountWei);
   if (!encResult.success) {
     throw new Error(`FHE encryption failed: ${encResult.error?.message ?? 'unknown error'}`);
   }
   const encryptedInput = encResult.data[0];
 
-  // 3) depositEncrypted(inEuint256, plainAmount)
   const depositTxHash = await walletClient.writeContract({
     address: vaultAddress,
     abi: DEPOSIT_ENCRYPTED_ABI,
     functionName: 'depositEncrypted',
-    args: [encryptedInput as any, amountWei],
+    args: [encryptedInput, amountWei],
     chain: FHENIX_VAULT_CHAIN,
   });
   await publicClient.waitForTransactionReceipt({ hash: depositTxHash });
@@ -113,7 +99,7 @@ export async function withdrawFromFhenixVault(params: {
   walletClient: any;
   publicClient: any;
   vaultAddress: `0x${string}`;
-  amountWei: bigint; // USDC (6 decimals)
+  amountWei: bigint;
 }): Promise<{ withdrawTxHash: `0x${string}` }> {
   const { walletClient, publicClient, vaultAddress, amountWei } = params;
 

@@ -9,8 +9,6 @@
  * Phase 2: Week 1-2 Foundation
  */
 
-import type { TransactionResponse } from 'ethers';
-
 export type VaultProtocol = 'aave' | 'morpho' | 'spark' | 'pooltogether' | 'octant' | 'uniswap' | 'lifiearn' | 'fhenix';
 
 export interface VaultBalance {

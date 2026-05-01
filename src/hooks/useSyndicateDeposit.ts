@@ -20,9 +20,8 @@ import { base } from 'wagmi/chains';
 import { parseUnits, encodeFunctionData } from 'viem';
 import { FHENIX_VAULT_CHAIN } from '@/services/fhe/fhenixChain';
 import { approveAndDepositEncrypted } from '@/services/fhe/fhenixActions';
-
-// USDC on Base (6 decimals)
-const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
+import { ERC20_ABI } from '@/abis/erc20';
+import { TOKENS } from '@/config/contracts';
 
 // PoolTogether TwabDelegator on Base
 const PT_TWAB_DELEGATOR = '0x2d3DaECD9F5502b533Ff72CDb1e1367481F2aEa6' as const;
@@ -44,39 +43,6 @@ const TWAB_DELEGATOR_ABI = [
 
 // Import PoolType from shared location (single source of truth)
 import type { PoolType } from '@/domains/lottery/types';
-
-const ERC20_ABI = [
-  {
-    name: 'approve',
-    type: 'function',
-    stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'spender', type: 'address' },
-      { name: 'amount', type: 'uint256' },
-    ],
-    outputs: [{ name: 'success', type: 'bool' }],
-  },
-  {
-    name: 'allowance',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [
-      { name: 'owner', type: 'address' },
-      { name: 'spender', type: 'address' },
-    ],
-    outputs: [{ name: 'amount', type: 'uint256' }],
-  },
-  {
-    name: 'transfer',
-    type: 'function',
-    stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'to', type: 'address' },
-      { name: 'amount', type: 'uint256' },
-    ],
-    outputs: [{ name: 'success', type: 'bool' }],
-  },
-] as const;
 
 export type SyndicateDepositStatus =
   | 'idle'
@@ -179,7 +145,7 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
       // Check current allowance for the deposit address
       const usdcAddress = isFhenix
         ? (await import('@/services/syndicate/poolProviders/fhenixProvider')).FHENIX_POOL_CONFIG.USDC_ADDRESS
-        : USDC_BASE;
+        : TOKENS.usdc.address;
 
       const currentAllowance = await activePublicClient.readContract({
         address: usdcAddress as `0x${string}`,
@@ -224,7 +190,7 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
       // Transfer USDC to deposit address
       setStatus('transferring');
       const transferHash = await activeWalletClient.writeContract({
-        address: USDC_BASE,
+        address: TOKENS.usdc.address,
         abi: ERC20_ABI,
         functionName: 'transfer',
         args: [depositAddress, amountWei],

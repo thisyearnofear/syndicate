@@ -10,8 +10,8 @@ import { MORPHO_CONFIG } from '@/services/vaults/morphoProvider';
 import { SPARK_CONFIG } from '@/services/vaults/sparkProvider';
 import type { VaultProtocol } from '@/services/vaults';
 import { FHENIX_VAULT_CHAIN } from '@/services/fhe/fhenixChain';
-import { approveAndDepositEncrypted } from '@/services/fhe/fhenixActions';
-import { withdrawFromFhenixVault } from '@/services/fhe/fhenixActions';
+import { approveAndDepositEncrypted, withdrawFromFhenixVault } from '@/services/fhe/fhenixActions';
+import { ERC20_ABI } from '@/abis/erc20';
 
 type DepositStatus = 'idle' | 'checking_allowance' | 'approving' | 'building_tx' | 'depositing' | 'signing' | 'confirming' | 'complete' | 'error';
 
@@ -22,12 +22,6 @@ export interface VaultDepositState {
   approveTxHash: string | null;
   status: DepositStatus;
 }
-
-// Minimal ABIs for Aave V3 (viem-compatible)
-const ERC20_ABI = [
-  { name: 'approve', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [{ name: 'success', type: 'bool' }] },
-  { name: 'allowance', type: 'function', stateMutability: 'view', inputs: [{ name: 'owner', type: 'address' }, { name: 'spender', type: 'address' }], outputs: [{ name: 'amount', type: 'uint256' }] },
-] as const;
 
 const AAVE_POOL_ABI = [
   { name: 'supply', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'asset', type: 'address' }, { name: 'amount', type: 'uint256' }, { name: 'onBehalfOf', type: 'address' }, { name: 'referralCode', type: 'uint16' }], outputs: [] },

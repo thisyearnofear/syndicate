@@ -15,8 +15,6 @@
 import type {
     VaultProvider,
     VaultProtocol,
-    VaultProviderConfig,
-    VaultBalance,
     VaultDepositResult,
     VaultWithdrawResult,
 } from './vaultProvider';

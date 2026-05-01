@@ -21,7 +21,6 @@ import type {
     VaultWithdrawResult,
     VaultProtocol,
 } from './vaultProvider';
-import { VaultError, VaultErrorCode } from './vaultProvider';
 
 // LI.FI Earn API configuration
 const EARN_API_BASE_URL = '/api/lifi/earn';
@@ -199,7 +198,7 @@ export class LifiEarnVaultProvider implements VaultProvider {
      * This is handled client-side via useVaultDeposit hook
      * Returns metadata for the deposit
      */
-    async deposit(_amount: string, userAddress: string): Promise<VaultDepositResult> {
+    async deposit(_amount: string, _userAddress: string): Promise<VaultDepositResult> {
         // LI.FI Earn deposits require the client-side Composer flow
         // The useVaultDeposit hook handles the actual execution
         return {
@@ -213,7 +212,7 @@ export class LifiEarnVaultProvider implements VaultProvider {
      * Withdraw from LI.FI Earn vault
      * Requires Composer execution
      */
-    async withdraw(_amount: string, userAddress: string): Promise<VaultWithdrawResult> {
+    async withdraw(_amount: string, _userAddress: string): Promise<VaultWithdrawResult> {
         return {
             success: false,
             error: 'LI.FI Earn withdrawals require Composer execution. Use useVaultDeposit with crossChainWithdraw.',
@@ -223,7 +222,7 @@ export class LifiEarnVaultProvider implements VaultProvider {
     /**
      * Withdraw yield only
      */
-    async withdrawYield(userAddress: string): Promise<VaultWithdrawResult> {
+    async withdrawYield(_userAddress: string): Promise<VaultWithdrawResult> {
         return {
             success: false,
             error: 'LI.FI Earn auto-compounds yield. Withdraw full amount to access.',

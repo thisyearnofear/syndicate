@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
 import { JsonRpcProvider } from '@near-js/providers';
+import { getCorsHeaders, apiError, getSafeErrorMessage, checkRateLimit, rateLimitError } from '@/lib/api/response';
+import { logger } from '@/lib/logger';
 
 const SOLANA_RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC || '/api/solana-rpc';
 const BASE_RPC_URL = process.env.BASE_RPC_URL || 'https://mainnet.base.org';
@@ -16,11 +18,12 @@ const NEAR_USDC_ID = '17208628f84f5d6ad33f0558bac3802d3bbdd174726366e1.factory.b
 /**
  * Internal function to handle balance fetching
  */
-async function handleBalanceRequest(address: string, chainId?: number, rpcUrl?: string) {
+async function handleBalanceRequest(address: string, chainId?: number, rpcUrl?: string, corsHeaders?: Record<string, string>) {
+  const headers = corsHeaders ?? {};
   if (!address) {
     return NextResponse.json(
       { error: 'Missing address parameter' },
-      { status: 400 }
+      { status: 400, headers }
     );
   }
 // Detect wallet type from address format
@@ -60,50 +63,60 @@ if (isSolanaAddress) {
 }
 
 export async function GET(request: NextRequest) {
+  const corsHeaders = getCorsHeaders(request.headers.get('origin'));
+
+  // Rate limit by IP
+  const ip = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? 'anonymous';
+  const rl = checkRateLimit(`balance:${ip}`, { windowMs: 60_000, maxRequests: 120 });
+  if (!rl.allowed) return rateLimitError(rl.resetAt);
+
   try {
     const { searchParams } = new URL(request.url);
     const address = searchParams.get('address');
     const chainId = searchParams.get('chainId') ? parseInt(searchParams.get('chainId')!) : undefined;
     
-    // Resolve absolute URL for relative RPC paths
     let rpcUrl = SOLANA_RPC_URL;
     if (rpcUrl.startsWith('/')) {
       const url = new URL(request.url);
       rpcUrl = `${url.origin}${rpcUrl}`;
     }
 
-    return handleBalanceRequest(address || '', chainId, rpcUrl);
+    return handleBalanceRequest(address || '', chainId, rpcUrl, corsHeaders);
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error('Balance API error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch balance', details: msg },
-      { status: 500 }
-    );
+    logger.error('Balance API error', { error: getSafeErrorMessage(error) });
+    return apiError('Failed to fetch balance', 500);
   }
 }
 
 export async function POST(request: NextRequest) {
+  const corsHeaders = getCorsHeaders(request.headers.get('origin'));
+
+  const ip = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? 'anonymous';
+  const rl = checkRateLimit(`balance:${ip}`, { windowMs: 60_000, maxRequests: 120 });
+  if (!rl.allowed) return rateLimitError(rl.resetAt);
+
   try {
     const body = await request.json();
     const { address, chainId } = body;
     
-    // Resolve absolute URL for relative RPC paths
     let rpcUrl = SOLANA_RPC_URL;
     if (rpcUrl.startsWith('/')) {
       const url = new URL(request.url);
       rpcUrl = `${url.origin}${rpcUrl}`;
     }
 
-    return handleBalanceRequest(address, chainId, rpcUrl);
+    return handleBalanceRequest(address, chainId, rpcUrl, corsHeaders);
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error('Balance API error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch balance', details: msg },
-      { status: 500 }
-    );
+    logger.error('Balance API error', { error: getSafeErrorMessage(error) });
+    return apiError('Failed to fetch balance', 500);
   }
+}
+
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: getCorsHeaders(request.headers.get('origin')),
+  });
 }
 
 async function getSolanaBalance(walletAddress: string, rpcOverride?: string): Promise<NextResponse> {

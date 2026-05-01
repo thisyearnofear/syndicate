@@ -16,7 +16,6 @@ import {
   claimNextJob,
   completeJob,
   failJob,
-  enqueueJob,
   jobExistsForTxId,
   type PurchaseJob,
 } from '@/lib/db/repositories/purchaseJobRepository';

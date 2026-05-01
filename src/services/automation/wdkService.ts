@@ -10,8 +10,7 @@
  * - Integration with MegapotAutoPurchaseProxy.
  */
 
-import { Address, Hash, createWalletClient, custom, http } from 'viem';
-import { base, baseSepolia } from 'viem/chains';
+import { Address, Hash } from 'viem';
 
 // Note: These imports would be available after 'npm install @tetherto/wdk @tetherto/wdk-wallet-evm'
 // Since we are in a dev environment, we'll use a dynamic import or assume types are handled.

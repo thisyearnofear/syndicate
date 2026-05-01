@@ -126,36 +126,7 @@ const ERC4626_ABI = [
   },
 ] as const;
 
-// ERC20 ABI for allowance/approval
-const ERC20_ABI = [
-  {
-    name: 'approve',
-    type: 'function',
-    stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'spender', type: 'address' },
-      { name: 'amount', type: 'uint256' },
-    ],
-    outputs: [{ name: '', type: 'bool' }],
-  },
-  {
-    name: 'allowance',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [
-      { name: 'owner', type: 'address' },
-      { name: 'spender', type: 'address' },
-    ],
-    outputs: [{ name: '', type: 'uint256' }],
-  },
-  {
-    name: 'balanceOf',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: 'account', type: 'address' }],
-    outputs: [{ name: '', type: 'uint256' }],
-  },
-] as const;
+
 
 export class MorphoVaultProvider implements VaultProvider {
     readonly name: VaultProtocol = 'morpho';
@@ -301,7 +272,7 @@ export class MorphoVaultProvider implements VaultProvider {
      * Withdraw yield only (redeem shares, keep principal)
      * For Morpho, this is complex - would need to calculate principal vs yield shares
      */
-    async withdrawYield(userAddress: string): Promise<VaultWithdrawResult> {
+    async withdrawYield(_userAddress: string): Promise<VaultWithdrawResult> {
         // For Morpho ERC4626 vaults, yield is automatically compounded
         // To withdraw only yield, would need to calculate:
         // yieldShares = totalShares - (principalInShares)

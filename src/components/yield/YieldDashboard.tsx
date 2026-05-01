@@ -9,6 +9,7 @@ import { useUserVaults } from '@/hooks/useUserVaults';
 import { useFhenixPrivateVaultBalance } from '@/hooks/useFhenixPrivateVaultBalance';
 import { yieldToTicketsService } from '@/services/yieldToTicketsService';
 import { Button } from '@/shared/components/ui/Button';
+import type { VaultProtocol } from '@/services/vaults/vaultProvider';
 import { vaultManager } from '@/services/vaults';
 import { buildVaultExecutionHref } from '@/constants/vaultRouting';
 import Link from 'next/link';
@@ -71,18 +72,17 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
   const ticketsAllocation = autoYieldStrategy?.config.ticketsAllocation || 85;
   const causesAllocation = autoYieldStrategy?.config.causesAllocation || 15;
 
-  // Simulate real-time yield accruing (every second)
+  // Live yield ticker - updates every 5s to reduce re-renders
   useEffect(() => {
     if (totalDeposited <= 0 || weightedAPY <= 0) {
       setLiveYield(0);
       return;
     }
 
+    const yieldPerSecond = (totalDeposited * (weightedAPY / 100)) / (365 * 24 * 60 * 60);
     const interval = setInterval(() => {
-      // Calculate yield per second: (principal * APY) / (365 * 24 * 60 * 60)
-      const yieldPerSecond = (totalDeposited * (weightedAPY / 100)) / (365 * 24 * 60 * 60);
-      setLiveYield(prev => prev + yieldPerSecond);
-    }, 1000);
+      setLiveYield(prev => prev + yieldPerSecond * 5);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [totalDeposited, weightedAPY]);
@@ -124,7 +124,7 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
 
       // Withdraw from vault
       const result = await vaultManager.withdraw(
-        protocol as any,
+        protocol as VaultProtocol,
         position.balance.deposited,
         address
       );

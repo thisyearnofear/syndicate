@@ -71,7 +71,7 @@ export class NearIntentsProtocol implements BridgeProtocol {
 
     async bridge(params: BridgeParams): Promise<BridgeResult> {
         const _startTime = Date.now();
-        const { amount, destinationChain, destinationAddress, onStatus, wallet } = params;
+        const { amount, destinationChain: _destinationChain, destinationAddress, onStatus, wallet } = params;
 
         try {
             // 1. Validate Wallet
