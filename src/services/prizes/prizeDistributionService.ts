@@ -18,7 +18,6 @@
 import { sql } from '@vercel/postgres';
 import { safeService } from '@/services/safe/safeService';
 import { splitsService } from '@/services/splits/splitService';
-import { poolTogetherVaultService } from '@/services/poolTogether/vaultService';
 import type { PoolType } from '@/domains/lottery/types';
 import type { Address } from 'viem';
 
@@ -202,7 +201,7 @@ export class PrizeDistributionService {
   async distributeViaSafe(
     safeAddress: Address,
     memberShares: MemberShare[],
-    walletClient: any
+    _walletClient: any
   ): Promise<DistributionResult> {
     try {
       // Get Safe info

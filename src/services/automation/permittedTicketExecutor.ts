@@ -21,9 +21,7 @@
  */
 
 import { megapotService } from '@/domains/lottery/services/megapotService';
-import { ERC7715Service } from '@/services/automation/erc7715Service';
 import type { AutoPurchaseConfig } from '@/domains/wallet/types';
-import type { PurchaseResult } from '@/domains/lottery/types';
 
 // =============================================================================
 // TYPES

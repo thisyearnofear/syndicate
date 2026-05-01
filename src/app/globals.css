@@ -61,19 +61,20 @@
   z-index: 50000 !important;
 }
 
-/* Ensure buttons in modals are clickable */
-.modal-content button,
+/* Button base styles - touch targets and interaction */
 button {
-  z-index: 10001 !important;
-  position: relative;
-  pointer-events: auto !important;
   touch-action: manipulation !important;
   min-height: 44px;
-  /* iOS minimum touch target */
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
   cursor: pointer;
+}
+
+/* Modal buttons need higher z-index for stacking context */
+.modal-content button {
+  position: relative;
+  pointer-events: auto !important;
 }
 
 /* Fix for button hover states in production */

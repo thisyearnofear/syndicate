@@ -10,7 +10,7 @@
  * Provides yield through trading fees from USDC/ETH pool
  */
 
-import { formatUnits, parseUnits } from 'viem';
+import { parseUnits } from 'viem';
 import { basePublicClient } from '@/lib/baseClient';
 import type {
     VaultProvider,
@@ -19,7 +19,6 @@ import type {
     VaultDepositResult,
     VaultWithdrawResult,
 } from './vaultProvider';
-import { VaultError, VaultErrorCode } from './vaultProvider';
 
 const baseClient = basePublicClient;
 

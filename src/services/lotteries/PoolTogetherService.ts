@@ -9,7 +9,7 @@
  * - Support for Base and Optimism networks.
  */
 
-import { Address, encodeFunctionData, Hash } from 'viem';
+import { Address } from 'viem';
 import { referralManager } from '../referral/ReferralManager';
 
 export interface PoolTogetherVault {

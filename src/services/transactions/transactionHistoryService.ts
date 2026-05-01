@@ -241,7 +241,7 @@ export class TransactionHistoryService {
   /**
    * Get transaction summary for a pool
    */
-  async getPoolSummary(_poolId: string, poolAddress: Address): Promise<{
+  async getPoolSummary(_poolId: string, _poolAddress: Address): Promise<{
     totalDeposits: number;
     totalDistributions: number;
     totalTicketsPurchased: number;

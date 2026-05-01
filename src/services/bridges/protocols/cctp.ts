@@ -21,9 +21,9 @@ import type {
     ChainIdentifier,
 } from '../types';
 import { BridgeError, BridgeErrorCode } from '../types';
-import { CONTRACTS, cctp as CCTP } from '@/config';
+import { cctp as CCTP } from '@/config';
 import _CCTP_CONFIG from '@/config/cctpConfig';
-import { pollWithBackoff, validateConnection } from '@/utils/asyncRetryHelper';
+import { pollWithBackoff } from '@/utils/asyncRetryHelper';
 
 // ============================================================================
 // CCTP Protocol Implementation

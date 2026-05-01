@@ -126,7 +126,12 @@ export interface BridgeParams {
     tokenAddress?: string; // Full token contract address (e.g., USDCx or sBTC on Stacks)
 
     // Optional parameters
-    wallet?: any;    // Wallet/signer instance
+    wallet?: Record<string, unknown> & {
+      provider?: unknown;
+      signer?: unknown;
+      address?: string;
+      sendTransaction?: (tx: unknown) => Promise<unknown>;
+    };
     protocol?: BridgeProtocolType | 'auto'; // Specific protocol or auto-select
     allowFallback?: boolean; // Allow fallback to other protocols if primary fails
     dryRun?: boolean; // Test without executing

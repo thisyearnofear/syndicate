@@ -16,7 +16,7 @@
  * 5. Gelato submits the transaction on-chain
  */
 
-import { Contract, ethers } from 'ethers';
+import { ethers } from 'ethers';
 
 // =============================================================================
 // TYPES

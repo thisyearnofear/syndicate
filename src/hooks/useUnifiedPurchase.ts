@@ -452,7 +452,7 @@ async function handleStacksWalletSign(result: PurchaseResult): Promise<string> {
 
   const { openContractCall } = await import('@stacks/connect');
   const { uintCV, stringAsciiCV, contractPrincipalCV } = await import('@stacks/transactions');
-  const { StacksMainnet } = await import('@stacks/network');
+  const { createNetwork } = await import('@stacks/network');
   const [tokenAddr, tokenName] = walletAction.functionArgs.tokenPrincipal.split('.');
 
   return new Promise<string>((resolve, reject) => {
@@ -465,7 +465,7 @@ async function handleStacksWalletSign(result: PurchaseResult): Promise<string> {
         stringAsciiCV(walletAction.functionArgs.baseAddress),
         contractPrincipalCV(tokenAddr, tokenName),
       ],
-      network: new StacksMainnet(),
+      network: createNetwork('mainnet'),
       onFinish: (data: { txId: string }) => resolve(data.txId),
       onCancel: () => reject(new Error('User cancelled Stacks transaction')),
     });

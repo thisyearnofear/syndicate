@@ -16,7 +16,7 @@ const BASE_CHAIN_ID = 8453;
 const TWAB_DELEGATOR = '0x2d3DaECD9F5502b533Ff72CDb1e1367481F2aEa6' as const;
 
 export class PoolTogetherV5Provider implements PoolProvider {
-  readonly name: 'pooltogether' = 'pooltogether';
+  readonly name = 'pooltogether' as const;
   
   private cachedVault: PoolTogetherVault | null = null;
 
@@ -86,7 +86,7 @@ export class PoolTogetherV5Provider implements PoolProvider {
     }
   }
 
-  async getPoolAddress(poolId: string): Promise<string | null> {
+  async getPoolAddress(_poolId: string): Promise<string | null> {
     // Return the known USDC vault address
     const vault = await this.getUSDCVault();
     return vault?.address || null;
@@ -102,10 +102,10 @@ export class PoolTogetherV5Provider implements PoolProvider {
   }
 
   async deposit(
-    poolAddress: string,
-    amount: string,
-    token: string,
-    from: string
+    _poolAddress: string,
+    _amount: string,
+    _token: string,
+    _from: string
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     // Deposits go through the TwabDelegator for syndicate pooling
     // The actual deposit happens in the useSyndicateDeposit hook
@@ -116,11 +116,11 @@ export class PoolTogetherV5Provider implements PoolProvider {
   }
 
   async executeTransaction(
-    poolAddress: string,
-    to: string,
-    value: string,
-    data: string,
-    executor: string
+    _poolAddress: string,
+    _to: string,
+    _value: string,
+    _data: string,
+    _executor: string
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     // Claim prizes on behalf of syndicate
     // In production, this would call the Claimer contract

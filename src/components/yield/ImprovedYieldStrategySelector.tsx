@@ -4,6 +4,7 @@ import { YieldAllocationControl } from './YieldAllocationControl';
 import { octantVaultService, type OctantVaultInfo } from '@/services/octantVaultService';
 import { vaultManager, type VaultInfo } from '@/services/vaults';
 import { TrendingUp, Globe, Zap } from 'lucide-react';
+import { logger } from '@/lib/logger';
 import {
   YIELD_STRATEGIES,
   type YieldStrategyConfig,
@@ -71,11 +72,11 @@ export function ImprovedYieldStrategySelector({
         // Load both Octant and generic vault data
         const [octantData, genericVaults] = await Promise.all([
           octantVaultService.getAvailableVaults(8453).catch(err => {
-            console.error('Failed to load Octant vaults:', err);
+            logger.warn('Failed to load Octant vaults', { error: String(err) });
             return [];
           }),
           vaultManager.getAvailableVaults().catch(err => {
-            console.error('Failed to load generic vaults:', err);
+            logger.warn('Failed to load generic vaults', { error: String(err) });
             return [];
           })
         ]);
@@ -124,9 +125,23 @@ export function ImprovedYieldStrategySelector({
       ) : null}
       
       {isLoading && (
-        <div className="text-center py-8">
-          <div className="animate-spin w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-400 text-sm">Loading vault information...</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="rounded-2xl border border-white/10 bg-white/5 p-6 animate-pulse">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-lg bg-white/10" />
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 bg-white/10 rounded w-1/2" />
+                  <div className="h-3 bg-white/10 rounded w-1/3" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="h-3 bg-white/10 rounded w-full" />
+                <div className="h-3 bg-white/10 rounded w-3/4" />
+              </div>
+              <div className="mt-4 h-8 bg-white/10 rounded" />
+            </div>
+          ))}
         </div>
       )}
       

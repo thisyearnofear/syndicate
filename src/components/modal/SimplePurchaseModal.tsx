@@ -18,7 +18,6 @@ import { usePoolTogetherDeposit } from "@/hooks/usePoolTogetherDeposit";
 import WalletConnectionManager from "@/components/wallet/WalletConnectionManager";
 import {
   CompactStack,
-  CompactCard,
 } from "@/shared/components/premium/CompactLayout";
 import { BalanceDisplay } from "@/components/modal/BalanceDisplay";
 import { AutoPurchaseModal } from "./AutoPurchaseModal";
@@ -32,6 +31,10 @@ import { TimeEstimate } from "@/components/bridge/TimeEstimate";
 import { CONTRACTS } from "@/services/bridges/protocols/stacks";
 import { STRK_ADDRESSES } from "@/services/bridges/types";
 import { PoolTogetherFlow } from "./flows/PoolTogetherFlow";
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/Dialog";
 
 // Lazy load celebration modal
 const CelebrationModal = lazy(() => import("./CelebrationModal"));
@@ -240,8 +243,6 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
   useEffect(() => {
     if (ptDeposit.status === 'complete' && step === "processing") setStep("success");
   }, [ptDeposit.status, step]);
-
-  if (!isOpen) return null;
 
   const handleClose = () => {
     reset();
@@ -696,17 +697,14 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
   };
 
   return (
-    <>
-      <div className="fixed inset-0 bg-black/50 z-40" onClick={handleClose} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <CompactCard variant="premium" padding="lg" className="w-full max-w-md max-h-[90vh] overflow-y-auto">
-          {renderStep()}
-        </CompactCard>
-      </div>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
+      <DialogContent className="w-full max-w-md max-h-[90vh] overflow-y-auto bg-slate-900 border-white/20 p-0">
+        {renderStep()}
+      </DialogContent>
       <Suspense fallback={null}>
         <CelebrationModal isOpen={showCelebration} onClose={() => setShowCelebration(false)} achievement={{ title: "Purchase Successful!", message: `You've purchased ${ticketCount} lottery ticket${ticketCount !== 1 ? "s" : ""}. Good luck!`, icon: "🎉", tickets: ticketCount }} />
       </Suspense>
       <AutoPurchaseModal isOpen={showPermissionModal} onClose={() => setShowPermissionModal(false)} onSuccess={() => setShowPermissionModal(false)} />
-    </>
+    </Dialog>
   );
 }

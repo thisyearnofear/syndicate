@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
+import { CompactCard } from '@/shared/components/premium/CompactLayout';
 import { useUnifiedWallet, useUnifiedBridge } from '@/hooks';
 import { useUserVaults } from '@/hooks/useUserVaults';
 import { useVaultActivity } from '@/hooks/useVaultActivity';
@@ -104,21 +105,21 @@ export default function PortfolioPage() {
     positions: vaultPositions, 
     totalDeposited: vaultTotalDeposited, 
     totalYield: vaultTotalYield,
-    isLoading: vaultsLoading,
+    isLoading: _vaultsLoading,
     refresh: refreshVaults 
   } = useUserVaults(address ?? undefined);
   const {
     activities: bridgeActivities,
     pendingBridge,
-    isLoading: bridgeLoading,
+    isLoading: _bridgeLoading,
     refreshActivity,
   } = useUnifiedBridge();
   const {
     deposits: vaultDeposits,
-    isLoading: vaultActivityLoading,
+    isLoading: _vaultActivityLoading,
     refreshActivity: refreshVaultActivity,
   } = useVaultActivity();
-  const { purchases: ticketHistory, isLoading: ticketsLoading, refreshHistory } = useTicketHistory();
+  const { purchases: ticketHistory, isLoading: _ticketsLoading, refreshHistory } = useTicketHistory();
 
   const fetchPortfolio = useCallback(async (showRefresh = false) => {
     if (!address) {
@@ -193,23 +194,23 @@ export default function PortfolioPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
         <div className="max-w-4xl mx-auto pt-16">
-          <div className="glass-premium rounded-2xl p-8 border border-white/20 text-center">
+          <CompactCard variant="glass" padding="lg" hover={false} className="rounded-2xl border border-white/20 text-center">
             <Wallet className="w-16 h-16 text-gray-500 mx-auto mb-4" />
             <h1 className="text-2xl font-bold text-white mb-2">Connect Your Wallet</h1>
             <p className="text-gray-400 mb-6">
               Connect your wallet to view your syndicate portfolio, contributions, and winnings.
             </p>
-            <Button onClick={() => router.push('/')} className="bg-gradient-to-r from-blue-500 to-purple-500">
-              Go to Home to Connect
-            </Button>
-          </div>
+              <Button onClick={() => router.push('/')} className="bg-gradient-to-r from-blue-500 to-purple-500">
+                Go to Home to Connect
+              </Button>
+            </CompactCard>
         </div>
       </div>
     );
   }
 
-  // Loading
-  if (loading || vaultsLoading || ticketsLoading || bridgeLoading || vaultActivityLoading) {
+  // Loading - only block on initial portfolio fetch, not all data sources
+  if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
         <div className="max-w-6xl mx-auto pt-8">
@@ -221,11 +222,12 @@ export default function PortfolioPage() {
               ))}
             </div>
             <div className="h-64 bg-gray-700 rounded"></div>
-          </div>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
+
 
   const hasAnything =
     syndicates.length > 0 ||
@@ -366,7 +368,7 @@ export default function PortfolioPage() {
 
         {/* Summary Cards - Always visible */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="glass-premium p-4 rounded-xl border border-white/20">
+          <CompactCard variant="glass" padding="sm" hover={false} className="rounded-xl border border-white/20">
             <div className="flex items-center gap-2 mb-2">
               <Wallet className="w-5 h-5 text-green-400" />
               <span className="text-sm text-gray-400">Total Deposited</span>
@@ -375,16 +377,16 @@ export default function PortfolioPage() {
             <p className="text-xs text-gray-500">
               {syndicates.length} syndicate{syndicates.length !== 1 ? 's' : ''} + {vaultPositions.length} vault{vaultPositions.length !== 1 ? 's' : ''}
             </p>
-          </div>
-          <div className="glass-premium p-4 rounded-xl border border-white/20">
+          </CompactCard>
+          <CompactCard variant="glass" padding="sm" hover={false} className="rounded-xl border border-white/20">
             <div className="flex items-center gap-2 mb-2">
               <Trophy className="w-5 h-5 text-yellow-400" />
               <span className="text-sm text-gray-400">Winnings</span>
             </div>
             <p className="text-2xl font-bold text-green-400">{formatCurrency(summary.totalWinnings)}</p>
             <p className="text-xs text-gray-500">from prize distributions</p>
-          </div>
-          <div className="glass-premium p-4 rounded-xl border border-white/20">
+          </CompactCard>
+          <CompactCard variant="glass" padding="sm" hover={false} className="rounded-xl border border-white/20">
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="w-5 h-5 text-blue-400" />
               <span className="text-sm text-gray-400">Total Yield</span>
@@ -393,8 +395,8 @@ export default function PortfolioPage() {
             <p className="text-xs text-gray-500">
               ${summary.totalYield.toFixed(2)} syndicates + ${vaultTotalYield.toFixed(2)} vaults
             </p>
-          </div>
-          <div className="glass-premium p-4 rounded-xl border border-white/20">
+          </CompactCard>
+          <CompactCard variant="glass" padding="sm" hover={false} className="rounded-xl border border-white/20">
             <div className="flex items-center gap-2 mb-2">
               <ChartPie className="w-5 h-5 text-purple-400" />
               <span className="text-sm text-gray-400">Portfolio Value</span>
@@ -405,14 +407,14 @@ export default function PortfolioPage() {
                 ? `+${formatPercent((combinedTotalValue / combinedTotalDeposited - 1) * 100)}`
                 : '0%'} return
             </p>
-          </div>
+          </CompactCard>
         </div>
 
           {/* ── Overview Tab ─────────────────────────────────────────────── */}
           <TabsContent value="overview">
             {/* Overview Tab */}
             {!hasAnything ? (
-              <div className="glass-premium rounded-2xl p-8 border border-white/20 text-center">
+              <CompactCard variant="glass" padding="lg" hover={false} className="rounded-2xl border border-white/20 text-center">
                 <Wallet className="w-16 h-16 text-gray-500 mx-auto mb-4" />
                 <h2 className="text-xl font-bold text-white mb-2">No Positions Yet</h2>
                 <p className="text-gray-400 mb-6">
@@ -434,11 +436,11 @@ export default function PortfolioPage() {
                     </Button>
                   </Link>
                 </div>
-              </div>
+              </CompactCard>
             ) : (
               <>
                 {/* Performance Summary */}
-                <div className="glass-premium rounded-2xl p-5 border border-white/20 mb-8">
+                <CompactCard variant="glass" padding="md" hover={false} className="rounded-2xl border border-white/20 mb-8">
                   <h2 className="text-xl font-bold text-white mb-4">Portfolio Breakdown</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     {/* Syndicates Summary */}
@@ -537,11 +539,11 @@ export default function PortfolioPage() {
                       </div>
                     </div>
                   </div>
-                </div>
+                </CompactCard>
 
                 {/* Quick Actions */}
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-8">
-                  <div className="glass-premium rounded-xl p-4 border border-white/20">
+                  <CompactCard variant="glass" padding="sm" hover={false} className="rounded-xl border border-white/20">
                     <h3 className="font-semibold text-white mb-2">{recommendedAction.title}</h3>
                     <p className="text-gray-400 text-sm mb-4">
                       {recommendedAction.description}
@@ -550,8 +552,8 @@ export default function PortfolioPage() {
                       <ArrowRight className="w-4 h-4 mr-2" />
                       {recommendedAction.cta}
                     </Button>
-                  </div>
-                  <div className="glass-premium rounded-xl p-4 border border-white/20">
+                  </CompactCard>
+                  <CompactCard variant="glass" padding="sm" hover={false} className="rounded-xl border border-white/20">
                     <h3 className="font-semibold text-white mb-2">Recent Funding Activity</h3>
                     <p className="text-gray-400 text-sm mb-4">
                       Keep cross-chain capital movement visible next to allocation and ticket utility.
@@ -567,8 +569,8 @@ export default function PortfolioPage() {
                         No funding routes recorded yet.
                       </div>
                     )}
-                  </div>
-                  <div className="glass-premium rounded-xl p-4 border border-white/20">
+                  </CompactCard>
+                  <CompactCard variant="glass" padding="sm" hover={false} className="rounded-xl border border-white/20">
                     <h3 className="font-semibold text-white mb-2">Recent Deposits</h3>
                     <p className="text-gray-400 text-sm mb-4">
                       Track when funded capital actually moved into a live strategy.
@@ -584,8 +586,8 @@ export default function PortfolioPage() {
                         No vault deposits recorded yet.
                       </div>
                     )}
-                  </div>
-                  <div className="glass-premium rounded-xl p-4 border border-white/20">
+                  </CompactCard>
+                  <CompactCard variant="glass" padding="sm" hover={false} className="rounded-xl border border-white/20">
                     <h3 className="font-semibold text-white mb-2">Recent Ticket Activity</h3>
                     <p className="text-gray-400 text-sm mb-4">
                       Keep the utility loop visible from the same portfolio surface.
@@ -601,13 +603,13 @@ export default function PortfolioPage() {
                         No ticket purchases recorded yet.
                       </div>
                     )}
-                  </div>
+                  </CompactCard>
                 </div>
               </>
             )}
 
             {/* CTA */}
-            <div className="mt-8 glass-premium rounded-2xl p-6 border border-white/20 text-center">
+            <CompactCard variant="glass" padding="md" hover={false} className="mt-8 rounded-2xl border border-white/20 text-center">
               <h2 className="text-xl font-bold text-white mb-2">Maximize Your Impact</h2>
               <p className="text-gray-400 mb-4">
                 Diversify across syndicates and vaults to optimize returns and social impact.
@@ -622,15 +624,15 @@ export default function PortfolioPage() {
                     <Zap className="w-4 h-4 mr-2" />
                     More Vaults
                   </Button>
-                </Link>
-              </div>
-            </div>
+                  </Link>
+                </div>
+              </CompactCard>
           </TabsContent>
 
           {/* ── Syndicates Tab ─────────────────────────────────────────────── */}
           <TabsContent value="syndicates">
             {syndicates.length === 0 ? (
-              <div className="glass-premium rounded-2xl p-8 border border-white/20 text-center">
+              <CompactCard variant="glass" padding="lg" hover={false} className="rounded-2xl border border-white/20 text-center">
                 <Users className="w-16 h-16 text-gray-500 mx-auto mb-4" />
                 <h2 className="text-xl font-bold text-white mb-2">No Syndicates Yet</h2>
                 <p className="text-gray-400 mb-6">
@@ -639,7 +641,7 @@ export default function PortfolioPage() {
                 <Button onClick={() => router.push('/discover')}>
                   Discover Syndicates
                 </Button>
-              </div>
+              </CompactCard>
             ) : (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -649,9 +651,11 @@ export default function PortfolioPage() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {syndicates.map((syndicate) => (
-                    <div 
+                    <CompactCard
                       key={syndicate.poolId}
-                      className="glass-premium rounded-xl p-4 border border-white/20 hover:border-white/40 transition-all cursor-pointer"
+                      variant="glass"
+                      padding="sm"
+                      className="rounded-xl border border-white/20 hover:border-white/40 transition-all cursor-pointer"
                       onClick={() => router.push(`/syndicate?id=${syndicate.poolId}`)}
                     >
                       {/* Header */}
@@ -695,7 +699,7 @@ export default function PortfolioPage() {
                       <div className="mt-2 pt-2 border-t border-white/10 text-xs text-gray-500">
                         Joined {new Date(syndicate.joinedAt).toLocaleDateString()}
                       </div>
-                    </div>
+                    </CompactCard>
                   ))}
                 </div>
               </div>
@@ -706,7 +710,7 @@ export default function PortfolioPage() {
           <TabsContent value="vaults">
             {/* Vaults Tab */}
             {vaultPositions.length === 0 ? (
-              <div className="glass-premium rounded-2xl p-8 border border-white/20 text-center">
+              <CompactCard variant="glass" padding="lg" hover={false} className="rounded-2xl border border-white/20 text-center">
                 <Zap className="w-16 h-16 text-gray-500 mx-auto mb-4" />
                 <h2 className="text-xl font-bold text-white mb-2">No Vault Positions</h2>
                 <p className="text-gray-400 mb-6">
@@ -718,7 +722,7 @@ export default function PortfolioPage() {
                     Explore Yield Vaults
                   </Button>
                 </Link>
-              </div>
+              </CompactCard>
             ) : (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -736,9 +740,11 @@ export default function PortfolioPage() {
                     const latestDepositActivity = findLatestVaultDepositForProtocol(vaultDeposits, position.protocol);
 
                     return (
-                    <div 
+                    <CompactCard
                       key={position.protocol}
-                      className="glass-premium rounded-xl p-4 border border-white/20 hover:border-white/40 transition-all cursor-pointer"
+                      variant="glass"
+                      padding="sm"
+                      className="rounded-xl border border-white/20 hover:border-white/40 transition-all cursor-pointer"
                       onClick={() => router.push('/vaults')}
                     >
                       {/* Header */}
@@ -804,12 +810,12 @@ export default function PortfolioPage() {
                           +{((parseFloat(position.balance.yieldAccrued) / parseFloat(position.balance.deposited)) * 100).toFixed(2)}%
                         </span>
                       </div>
-                    </div>
+                    </CompactCard>
                   )})}
                 </div>
 
                 {/* Vault Actions */}
-                <div className="glass-premium rounded-xl p-4 border border-white/20 text-center mt-6">
+                <CompactCard variant="glass" padding="sm" hover={false} className="rounded-xl border border-white/20 text-center mt-6">
                   <h3 className="font-semibold text-white mb-2">Manage Your Vaults</h3>
                   <p className="text-gray-400 text-sm mb-4">
                     View detailed performance, withdraw funds, or deposit into more vaults
@@ -820,7 +826,7 @@ export default function PortfolioPage() {
                       Go to Yield Dashboard
                     </Button>
                   </Link>
-                </div>
+                </CompactCard>
               </div>
             )}
           </TabsContent>
@@ -828,7 +834,7 @@ export default function PortfolioPage() {
           {/* ── Activity Tab ──────────────────────────────────────────────── */}
           <TabsContent value="activity">
             {totalActivityCount === 0 ? (
-              <div className="glass-premium rounded-2xl p-8 border border-white/20 text-center">
+              <CompactCard variant="glass" padding="lg" hover={false} className="rounded-2xl border border-white/20 text-center">
                 <Ticket className="w-16 h-16 text-gray-500 mx-auto mb-4" />
                 <h2 className="text-xl font-bold text-white mb-2">No Activity Yet</h2>
                 <p className="text-gray-400 mb-6">
@@ -838,14 +844,14 @@ export default function PortfolioPage() {
                   <ArrowRight className="w-4 h-4 mr-2" />
                   Start Funding
                 </Button>
-              </div>
+              </CompactCard>
             ) : (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-bold text-white">Lifecycle Activity</h2>
                   <span className="text-gray-400 text-sm">{totalActivityCount} event{totalActivityCount !== 1 ? 's' : ''}</span>
                 </div>
-                <div className="glass-premium rounded-xl p-4 border border-white/20">
+                <CompactCard variant="glass" padding="sm" hover={false} className="rounded-xl border border-white/20">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-semibold text-white">Capital Lifecycle</h3>
                     <span className="text-gray-400 text-sm">bridge → deposit → tickets</span>
@@ -861,7 +867,7 @@ export default function PortfolioPage() {
                       No lifecycle events recorded yet.
                     </div>
                   )}
-                </div>
+                </CompactCard>
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -986,7 +992,7 @@ function VaultDepositActivityRow({ deposit }: { deposit: VaultDepositActivityRec
 
 function TicketActivityCard({ purchase }: { purchase: TicketPurchaseHistory }) {
   return (
-    <div className="glass-premium rounded-xl p-4 border border-white/20">
+    <CompactCard variant="glass" padding="sm" hover={false} className="rounded-xl border border-white/20">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white">
@@ -1033,7 +1039,7 @@ function TicketActivityCard({ purchase }: { purchase: TicketPurchaseHistory }) {
           </a>
         </div>
       ) : null}
-    </div>
+    </CompactCard>
   );
 }
 
@@ -1042,7 +1048,7 @@ function BridgeActivityCard({ activity }: { activity: BridgeActivityRecord }) {
   const destinationExplorerUrl = getExplorerUrl(activity.destinationChain, activity.destinationTxHash);
 
   return (
-    <div className="glass-premium rounded-xl p-4 border border-white/20">
+    <CompactCard variant="glass" padding="sm" hover={false} className="rounded-xl border border-white/20">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white">
@@ -1103,7 +1109,7 @@ function BridgeActivityCard({ activity }: { activity: BridgeActivityRecord }) {
           ) : null}
         </div>
       </div>
-    </div>
+    </CompactCard>
   );
 }
 
@@ -1115,7 +1121,7 @@ function VaultDepositActivityCard({
   bridge?: BridgeActivityRecord;
 }) {
   return (
-    <div className="glass-premium rounded-xl p-4 border border-white/20">
+    <CompactCard variant="glass" padding="sm" hover={false} className="rounded-xl border border-white/20">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white">
@@ -1151,7 +1157,7 @@ function VaultDepositActivityCard({
           </a>
         </div>
       </div>
-    </div>
+    </CompactCard>
   );
 }
 

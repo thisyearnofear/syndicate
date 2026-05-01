@@ -14,7 +14,7 @@
 
 import { OpenAPI, QuoteRequest, OneClickService } from '@defuse-protocol/one-click-sdk-typescript';
 import type { WalletSelector } from '@near-wallet-selector/core';
-import { getNearConfig, NEAR_TOKENS } from '@/config';
+import { getNearConfig } from '@/config';
 import type { ProtocolHealth } from './bridges/types';
 
 export interface IntentQuote {

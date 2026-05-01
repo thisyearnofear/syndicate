@@ -92,19 +92,6 @@ export function PuzzlePiece({
       <div className="relative z-10">
         {children}
       </div>
-
-      {/* Floating animation */}
-      <style>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          33% { transform: translateY(-10px) rotate(1deg); }
-          66% { transform: translateY(-5px) rotate(-1deg); }
-        }
-        
-        .animate-float {
-          animation: float 6s ease-in-out infinite;
-        }
-      `}</style>
     </div>
   );
 }

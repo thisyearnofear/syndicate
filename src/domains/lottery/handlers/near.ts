@@ -74,7 +74,7 @@ export async function executeNEARPurchase(
       sourceAddress: req.userAddress,
       destinationAddress: req.recipientAddress || req.userAddress,
       amount: req.ticketCount.toString(),
-      wallet: (req as unknown as Record<string, unknown>).wallet,
+      wallet: (req as unknown as Record<string, unknown>).wallet as Record<string, unknown> | undefined,
     });
 
     if (!result.success) {

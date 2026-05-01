@@ -9,16 +9,13 @@
  */
 
 import type { PoolProvider, PoolProviderConfig, PoolCreationResult } from './types';
-import { safeService, type SafeInfo } from '@/services/safe/safeService';
+import { safeService } from '@/services/safe/safeService';
 import type { Address, WalletClient } from 'viem';
 
 const BASE_CHAIN_ID = 8453;
 
-// USDC on Base
-const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
-
 export class SafePoolProvider implements PoolProvider {
-  readonly name: 'safe' = 'safe';
+  readonly name = 'safe' as const;
 
   async createPool(config: PoolProviderConfig): Promise<PoolCreationResult> {
     try {
@@ -72,7 +69,7 @@ export class SafePoolProvider implements PoolProvider {
     }
   }
 
-  async getPoolAddress(poolId: string): Promise<string | null> {
+  async getPoolAddress(_poolId: string): Promise<string | null> {
     // Would look up from database in production
     return null;
   }
@@ -82,10 +79,10 @@ export class SafePoolProvider implements PoolProvider {
   }
 
   async deposit(
-    poolAddress: string,
-    amount: string,
-    token: string,
-    from: string
+    _poolAddress: string,
+    _amount: string,
+    _token: string,
+    _from: string
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     // Deposits are just USDC transfers to the Safe address
     // This is handled by the useSyndicateDeposit hook
@@ -189,11 +186,11 @@ export class SafePoolProvider implements PoolProvider {
     safeAddress: string,
     recipient: Address,
     amountUsdc: number,
-    walletClient: WalletClient
+    _walletClient: WalletClient
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     try {
       // Create the transfer transaction
-      const tx = safeService.createUSDCTransfer(recipient, amountUsdc);
+      const _tx = safeService.createUSDCTransfer(recipient, amountUsdc);
       
       // In production, this would:
       // 1. Get current nonce from Safe

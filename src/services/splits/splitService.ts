@@ -9,12 +9,9 @@
  */
 
 import { 
-  createWalletClient, 
-  http, 
   encodeFunctionData,
   type Address,
   type WalletClient,
-  type PublicClient,
 } from 'viem';
 import { base } from 'viem/chains';
 import { basePublicClient } from '@/lib/baseClient';

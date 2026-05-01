@@ -207,6 +207,7 @@ interface CompactCardProps {
   padding?: 'sm' | 'md' | 'lg';
   hover?: boolean;
   className?: string;
+  onClick?: () => void;
 }
 
 const cardVariantStyles = {
@@ -228,17 +229,19 @@ export function CompactCard({
   padding = 'md',
   hover = true,
   className = '',
+  onClick,
 }: CompactCardProps) {
   const classes = [
     'rounded-xl',
     cardVariantStyles[variant],
     cardPaddingStyles[padding],
     hover && 'transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-current/10',
+    onClick && 'cursor-pointer',
     className,
   ].filter(Boolean).join(' ');
 
   return (
-    <div className={classes}>
+    <div className={classes} onClick={onClick}>
       {children}
     </div>
   );

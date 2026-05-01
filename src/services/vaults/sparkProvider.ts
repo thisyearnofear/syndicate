@@ -221,7 +221,7 @@ export class SparkVaultProvider implements VaultProvider {
     /**
      * Withdraw yield only
      */
-    async withdrawYield(userAddress: string): Promise<VaultWithdrawResult> {
+    async withdrawYield(_userAddress: string): Promise<VaultWithdrawResult> {
         return {
             success: false,
             error: 'Spark vault auto-compounds yield. Withdraw full amount to access yield.',

@@ -3,7 +3,7 @@
 const nextConfig = {
   reactStrictMode: true,
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
 
   // Force packages that ship pre-compiled bundles with React hooks to be

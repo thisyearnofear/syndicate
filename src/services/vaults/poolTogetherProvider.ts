@@ -15,16 +15,12 @@ import type {
     VaultDepositResult,
     VaultWithdrawResult,
 } from './vaultProvider';
-import { VaultError, VaultErrorCode } from './vaultProvider';
 
 const baseClient = basePublicClient;
 
 // przUSDC PrizeVault on Base
 // https://dev.pooltogether.com/protocol/deployments/base
 const PRIZE_VAULT = '0x7f5C2b379b88499aC2B997Db583f8079503f25b9' as const;
-
-// USDC on Base (6 decimals)
-const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
 
 // Chain ID for Base
 const BASE_CHAIN_ID = 8453;
@@ -189,7 +185,7 @@ export class PoolTogetherVaultProvider implements VaultProvider {
     };
   }
 
-  async withdrawYield(userAddress: string): Promise<VaultWithdrawResult> {
+  async withdrawYield(_userAddress: string): Promise<VaultWithdrawResult> {
     return {
       success: false,
       error: 'PoolTogether V5 prizes are claimed automatically by bots and paid instantly to your wallet. No manual claiming needed.',

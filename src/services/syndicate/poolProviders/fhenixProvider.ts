@@ -63,7 +63,7 @@ const FHENIX_VAULT_ABI = [
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export class FhenixPoolProvider implements PoolProvider {
-  readonly name: 'fhenix' = 'fhenix';
+  readonly name = 'fhenix' as const;
 
   // Cache for health checks (5 minute TTL)
   private _healthCache: { value: boolean; ts: number } | null = null;
@@ -116,7 +116,7 @@ export class FhenixPoolProvider implements PoolProvider {
     }
   }
 
-  async getPoolAddress(poolId: string): Promise<string | null> {
+  async getPoolAddress(_poolId: string): Promise<string | null> {
     // Single shared vault address for MVP; factory deployment maps poolId → address
     return FHENIX_POOL_CONFIG.VAULT_ADDRESS;
   }
@@ -159,13 +159,12 @@ export class FhenixPoolProvider implements PoolProvider {
    * 3. Call depositEncrypted(encryptedAmount, plainAmount) on the vault contract
    */
   async deposit(
-    poolAddress: string,
-    amount: string,
+    _poolAddress: string,
+    _amount: string,
     _token: string,
-    from: string,
+    _from: string,
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     // Server-side: return intent. Actual signing happens in useSyndicateDeposit.
-    const amountMicroUsdc = BigInt(Math.round(parseFloat(amount) * 1e6));
 
     return {
       success: true,

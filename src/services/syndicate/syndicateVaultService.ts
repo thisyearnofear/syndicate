@@ -17,8 +17,7 @@
  */
 
 import { sql } from '@vercel/postgres';
-import { vaultManager, type VaultProtocol, type VaultBalance } from '@/services/vaults';
-import type { Address } from 'viem';
+import { vaultManager, type VaultProtocol } from '@/services/vaults';
 
 interface YieldConversionRow {
   id: string;
