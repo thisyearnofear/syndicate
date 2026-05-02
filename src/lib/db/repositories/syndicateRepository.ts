@@ -9,6 +9,7 @@
 
 import { sql } from '@vercel/postgres';
 import type { PoolType } from '@/domains/lottery/types';
+import { logger } from '@/lib/logger';
 
 // Re-export for backward compatibility
 export type { PoolType };
@@ -105,7 +106,7 @@ export class SyndicateRepository {
             return result.rows[0].id;
         } catch {
             // Fallback to original schema if pool_type columns don't exist
-            console.warn('[SyndicateRepository] Pool type columns may not exist, using fallback');
+            logger.warn('[SyndicateRepository] Pool type columns may not exist, using fallback');
             const result = await sql`
                 INSERT INTO syndicate_pools (
                     name,

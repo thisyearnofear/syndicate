@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getPurchaseStatusByTxId } from '@/lib/db/repositories/purchaseStatusRepository';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -99,7 +100,7 @@ export async function GET(
           // Schedule next poll
           setTimeout(tick, POLL_INTERVAL_MS);
         } catch (err) {
-          console.error('[SSE] Error fetching purchase status:', err);
+          logger.error('[SSE] Error fetching purchase status', { error: String(err) });
           send({ error: 'Internal server error' });
           controller.close();
         }

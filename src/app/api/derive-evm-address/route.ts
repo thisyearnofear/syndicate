@@ -5,6 +5,7 @@ import { createHash } from 'crypto';
 import { SigningKey, keccak256, getBytes } from 'ethers';
 import { ec as EC } from 'elliptic';
 import bs58 from 'bs58';
+import { logger } from '@/lib/logger';
 
 // Define types
 interface DeriveAddressRequest {
@@ -54,14 +55,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (!rpcResponse.ok) {
-      console.error('NEAR RPC response not ok:', rpcResponse.status);
+      logger.error('NEAR RPC response not ok', { status: rpcResponse.status });
       return Response.json({ error: 'NEAR RPC request failed' }, { status: 500 });
     }
 
     const rpcData = await rpcResponse.json();
 
     if (rpcData.error || !rpcData.result?.result) {
-      console.error('NEAR RPC error or no result:', rpcData.error || 'No result');
+      logger.error('NEAR RPC error or no result', { error: rpcData.error || 'No result' });
       return Response.json({ error: 'Failed to get MPC public key' }, { status: 500 });
     }
 
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     const [keyType, keyBase58] = cleanDecoded.split(':');
     if (keyType !== 'secp256k1' || !keyBase58) {
-      console.error('Invalid public key format:', cleanDecoded);
+      logger.error('Invalid public key format', { format: cleanDecoded });
       return Response.json({ error: 'Invalid MPC public key format' }, { status: 500 });
     }
 
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
     } else if (rootPubKeyBuffer.length === 65 && rootPubKeyBuffer[0] === 0x04) {
       rootPubKeyHex = '0x' + rootPubKeyBuffer.toString('hex');
     } else {
-      console.error('Unexpected public key length:', rootPubKeyBuffer.length);
+      logger.error('Unexpected public key length', { length: rootPubKeyBuffer.length });
       return Response.json({ error: 'Failed to parse MPC public key' }, { status: 500 });
     }
 
@@ -136,12 +137,12 @@ export async function POST(request: NextRequest) {
     const addressHash = keccak256(derivedPubKeyNoPrefix);
     const evmAddress = '0x' + addressHash.slice(-40);
 
-    console.log('Derived EVM address for ' + accountId + ': ' + evmAddress);
+    logger.info('Derived EVM address', { accountId, evmAddress });
 
     return Response.json({ evmAddress });
 
   } catch (error) {
-    console.error('Error deriving EVM address:', error);
+    logger.error('Error deriving EVM address', { error: String(error) });
     return Response.json(
       { error: 'Failed to derive EVM address from NEAR account' },
       { status: 500 }

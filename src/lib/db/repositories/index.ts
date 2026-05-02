@@ -6,6 +6,7 @@
  */
 
 import { setGelatoTaskRepository, MockGelatoTaskRepository, type IGelatoTaskRepository } from '../schema/gelatoTasks';
+import { logger } from '@/lib/logger';
 export { VercelPostgresGelatoRepository } from './gelatoRepository';
 
 export type {
@@ -38,11 +39,11 @@ export async function initializeProductionRepository(): Promise<void> {
       const repositoryInstance: IGelatoTaskRepository = new VercelPostgresGelatoRepository();
       setGelatoTaskRepository(repositoryInstance);
       const provider = process.env.POSTGRES_URL ? 'Neon' : 'Vercel Postgres';
-      console.log(`[GelatoTaskRepository] Initialized with ${provider}`);
+      logger.info(`[GelatoTaskRepository] Initialized with ${provider}`);
       initialized = true;
     } catch (error) {
-      console.error('[GelatoTaskRepository] Failed to initialize Postgres:', error);
-      console.log('[GelatoTaskRepository] Falling back to mock repository');
+      logger.error('[GelatoTaskRepository] Failed to initialize Postgres', { error: String(error) });
+      logger.info('[GelatoTaskRepository] Falling back to mock repository');
       setGelatoTaskRepository(new MockGelatoTaskRepository());
       initialized = true;
     }

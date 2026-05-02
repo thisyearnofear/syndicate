@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
 import { API } from '@/config';
 import { getCrossChainPurchasesByStacksAddress } from '@/lib/db/repositories/crossChainPurchaseRepository';
+import { logger } from '@/lib/logger';
 
 function normalizeBaseUrl(url: string): string {
     return url.replace(/\/+$/, '');
@@ -42,7 +43,7 @@ async function fetchPurchasesForEvmAddress(walletAddress: string) {
         }
     }
 
-    console.error(`Megapot API error for ${walletAddress}: no endpoint variant resolved`);
+    logger.error('Megapot API error - no endpoint variant resolved', { walletAddress });
     // Return empty array for a single address failure to not fail the whole batch
     return [];
 }
@@ -84,7 +85,7 @@ export async function GET(request: NextRequest) {
             if (!isNearAddress) {
                 // Don't fail hard on regex as NEAR addresses can be complex, but do basic check
                 // If it fails strict check, just return empty for now to avoid 500s
-                console.warn(`Invalid NEAR address format: ${walletAddress}`);
+                logger.warn('Invalid NEAR address format', { walletAddress });
                 return NextResponse.json([]);
             }
 
@@ -130,7 +131,7 @@ export async function GET(request: NextRequest) {
                 txTimestampCache.set(txHash, ts);
                 return ts;
             } catch (e) {
-                console.warn('Failed to resolve timestamp for tx', txHash, e);
+                logger.warn('Failed to resolve timestamp for tx', { txHash, error: String(e) });
                 return null;
             }
         };
@@ -167,7 +168,7 @@ export async function GET(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error('Proxy error:', error);
+        logger.error('Proxy error', { error: String(error) });
         if (error instanceof Error && error.name === 'AbortError') {
             return NextResponse.json({ error: 'Request timeout', details: 'The Megapot API request timed out.' }, { status: 504 });
         }

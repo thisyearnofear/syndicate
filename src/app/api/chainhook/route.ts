@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPurchaseStatusByTxId } from '@/lib/db/repositories/purchaseStatusRepository';
 import { enqueueJob, jobExistsForTxId, ensurePurchaseJobsTable } from '@/lib/db/repositories/purchaseJobRepository';
+import { logger } from '@/lib/logger';
 
 /**
  * Chainhooks 2.0 Payload Handler - DECENTRALIZED
@@ -22,7 +23,7 @@ import { enqueueJob, jobExistsForTxId, ensurePurchaseJobsTable } from '@/lib/db/
 
 export async function POST(req: NextRequest) {
   try {
-    console.log('[Chainhook] POST received at', new Date().toISOString());
+    logger.info('[Chainhook] POST received');
 
     // Ensure job queue table exists (idempotent)
     await ensurePurchaseJobsTable();
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
     const SECRET_TOKEN_MAINNET = process.env.CHAINHOOK_SECRET_TOKEN_MAINNET;
     
     if (!SECRET_TOKEN_TESTNET && !SECRET_TOKEN_MAINNET) {
-      console.error('[Chainhook] CHAINHOOK_SECRET_TOKEN not configured');
+      logger.error('[Chainhook] CHAINHOOK_SECRET_TOKEN not configured');
       return NextResponse.json({ error: 'Chainhook not configured' }, { status: 500 });
     }
 
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
     const isAuthorized = bearer === SECRET_TOKEN_TESTNET || bearer === SECRET_TOKEN_MAINNET;
     
     if (!authHeader || !isAuthorized) {
-      console.warn('[Chainhook] Unauthorized access attempt');
+      logger.warn('[Chainhook] Unauthorized access attempt');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -52,31 +53,31 @@ export async function POST(req: NextRequest) {
     // Chainhooks 2.0 structure: { event: { apply: [], rollback: [] }, chainhook: {...} }
     const blocks = body.event?.apply || [];
     
-    console.log(`[Chainhook] Received payload with ${blocks.length} blocks`);
+    logger.info('[Chainhook] Received payload', { blockCount: blocks.length });
 
     // Process each block
     for (const block of blocks) {
       const blockHash = block.block_identifier?.hash;
-      console.log(`[Chainhook] Processing block ${blockHash}`);
+      logger.info('[Chainhook] Processing block', { blockHash });
       
       const transactions = block.transactions || [];
-      console.log(`[Chainhook] Block has ${transactions.length} transactions`);
+      logger.info('[Chainhook] Block transactions', { count: transactions.length });
 
       // Process each transaction
       for (const tx of transactions) {
         const txId = tx.transaction_identifier?.hash;
-        console.log(`[Chainhook] Processing tx ${txId}`);
+        logger.info('[Chainhook] Processing tx', { txId });
 
         // Idempotency: skip if this txId was already enqueued or processed
         if (txId) {
           const alreadyQueued = await jobExistsForTxId(txId);
           if (alreadyQueued) {
-            console.log(`[Chainhook] Skipping already-queued tx ${txId}`);
+            logger.info('[Chainhook] Skipping already-queued tx', { txId });
             continue;
           }
           const existing = await getPurchaseStatusByTxId(txId);
           if (existing && existing.status !== 'error') {
-            console.log(`[Chainhook] Skipping already-processed tx ${txId} (status: ${existing.status})`);
+            logger.info('[Chainhook] Skipping already-processed tx', { txId, status: existing.status });
             continue;
           }
         }
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
 
         // Look for contract_log operations (print statements)
         for (const op of operations) {
-          console.log(`[Chainhook] Operation type: ${op.type}`);
+          logger.info('[Chainhook] Operation type', { type: op.type });
 
           // In Chainhooks 2.0, print events are contract_log operations
           if (op.type === 'contract_log') {
@@ -94,7 +95,7 @@ export async function POST(req: NextRequest) {
 
             // Check if this is our bridge event
             if (logValue.includes('bridge-purchase-initiated')) {
-              console.log(`[Chainhook] ✅ FOUND MATCHING EVENT in tx ${txId}`);
+              logger.info('[Chainhook] Found matching event', { txId });
 
               // Parse the Clarity tuple
               // In Chainhooks 2.0, the value is a string representation of the Clarity value
@@ -124,16 +125,16 @@ export async function POST(req: NextRequest) {
                       purchaseId,
                       stacksAddress: stacksUser,
                     });
-                    console.log(`[Chainhook] ✅ Enqueued job ${jobId} for tx ${txId}`);
+                    logger.info('[Chainhook] Enqueued job', { jobId, txId });
                   } catch (processingError) {
-                    console.error(`[Chainhook] ❌ Error enqueuing job:`, processingError);
+                    logger.error('[Chainhook] Error enqueuing job', { error: String(processingError) });
                     throw processingError;
                   }
                 } else {
-                  console.warn(`[Chainhook] ⚠️  Invalid event data in tx ${txId} - missing baseAddress or ticketCount`);
+                  logger.warn('[Chainhook] Invalid event data - missing baseAddress or ticketCount', { txId });
                 }
               } else {
-                console.warn(`[Chainhook] ⚠️  Event data undefined in tx ${txId}`);
+                logger.warn('[Chainhook] Event data undefined', { txId });
               }
             }
           }
@@ -146,8 +147,8 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : '';
-    console.error('[Chainhook] Error processing request:', errorMsg);
-    console.error('[Chainhook] Stack:', errorStack);
+    logger.error('[Chainhook] Error processing request', { error: errorMsg });
+    logger.error('[Chainhook] Stack', { stack: errorStack });
     return NextResponse.json({ 
       error: 'Internal Server Error',
       details: errorMsg 

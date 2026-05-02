@@ -16,6 +16,7 @@
  */
 
 import { request } from "@stacks/connect";
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // TYPES
@@ -327,7 +328,7 @@ class StacksX402Service {
         };
       }
 
-      console.error("[StacksX402] Authorization failed:", error);
+      logger.error("[StacksX402] Authorization failed", { error: String(error) });
       return {
         success: false,
         error: message,
@@ -477,7 +478,7 @@ class StacksX402Service {
 
     // For now, return a placeholder result
     // The actual implementation would integrate with the bridge service
-    console.log(`[StacksX402] Would execute auto-purchase: ${ticketsCount} tickets for ${amount} USDC`);
+    logger.info(`[StacksX402] Would execute auto-purchase: ${ticketsCount} tickets for ${amount} USDC`);
 
     return {
       success: true,

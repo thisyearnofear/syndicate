@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { sql } from '@vercel/postgres';
 import { transactionHistoryService } from '@/services/transactions/transactionHistoryService';
 import type { Address } from 'viem';
+import { logger } from '@/lib/logger';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -164,7 +165,7 @@ export async function GET(request: Request) {
       },
     }, { headers: corsHeaders });
   } catch (error) {
-    console.error('[TransactionHistory API] Error:', error);
+    logger.error('[TransactionHistory API] Error', { error: String(error) });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500, headers: corsHeaders }

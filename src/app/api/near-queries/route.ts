@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { config } from '@/config';
 const NEAR = config.near;
+import { logger } from '@/lib/logger';
 
 // Define types
 interface NearQueryRequest {
@@ -141,7 +142,7 @@ export async function POST(request: NextRequest) {
         const parsed = JSON.parse(decoded);
         return Response.json({ result: parsed });
       } catch (parseError) {
-        console.error('Error parsing signature result:', parseError);
+        logger.error('Error parsing signature result:', { error: parseError instanceof Error ? parseError.message : String(parseError) });
         return Response.json(
           { error: 'Failed to parse signature result' },
           { status: 500 }
@@ -152,7 +153,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ result: decoded });
 
   } catch (error) {
-    console.error('Error in NEAR query API:', error);
+    logger.error('Error in NEAR query API:', { error: error instanceof Error ? error.message : String(error) });
     return Response.json(
       { error: 'Failed to perform NEAR query' },
       { status: 500 }

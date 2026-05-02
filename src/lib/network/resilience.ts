@@ -17,6 +17,8 @@ export interface TimeoutOptions {
   abortSignal?: AbortSignal;
 }
 
+import { logger } from '@/lib/logger';
+
 const DEFAULT_RETRY_OPTIONS: RetryOptions = {
   maxRetries: 3,
   baseDelay: 1000,
@@ -105,7 +107,7 @@ export async function withRetry<T>(
       
       // Calculate and wait for backoff
       const delay = calculateBackoffDelay(attempt, config.baseDelay, config.maxDelay);
-      console.log(`[withRetry] Attempt ${attempt}/${config.maxRetries + 1} failed, retrying in ${delay}ms...`);
+      logger.info(`[withRetry] Attempt ${attempt}/${config.maxRetries + 1} failed, retrying in ${delay}ms...`);
       await sleep(delay);
     }
   }
@@ -206,7 +208,7 @@ export async function safeAsync<T>(
   try {
     return await fn();
   } catch (error) {
-    console.error(`[safeAsync] ${errorMessage}:`, error);
+    logger.error(`[safeAsync] ${errorMessage}`, { error: String(error) });
     return defaultValue;
   }
 }

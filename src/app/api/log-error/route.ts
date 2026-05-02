@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { NextRequest } from 'next/server';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Log to console for immediate visibility
-    console.error('🚨 API Error Log:', JSON.stringify(errorData, null, 2));
+    logger.error('API Error Log:', errorData);
 
     // Save to file for persistence (in development)
     if (process.env.NODE_ENV !== 'production') {
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
         
         await writeFile(logFile, logEntry, { flag: 'a' });
       } catch (fileError) {
-        console.error('Failed to write error log to file:', fileError);
+        logger.error('Failed to write error log to file:', { error: fileError instanceof Error ? fileError.message : String(fileError) });
       }
     }
 
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
     );
 
   } catch (error) {
-    console.error('Error in log-error endpoint:', error);
+    logger.error('Error in log-error endpoint:', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

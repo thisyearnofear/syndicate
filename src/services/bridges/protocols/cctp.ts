@@ -13,6 +13,7 @@
 
 import { ethers, Contract } from 'ethers';
 import { Buffer } from 'buffer';
+import { logger } from '@/lib/logger';
 import type {
     BridgeProtocol,
     BridgeParams,
@@ -253,7 +254,7 @@ export class CctpProtocol implements BridgeProtocol {
                     }
                 }
             } catch (mintError) {
-                console.warn('[CCTP] Automatic Base minting failed, returning attestation for manual redemption:', mintError);
+                logger.warn('Automatic Base minting failed, returning attestation for manual redemption', { error: mintError instanceof Error ? mintError.message : String(mintError) });
                 onStatus?.('minting', {
                     message,
                     attestation,
@@ -299,7 +300,7 @@ export class CctpProtocol implements BridgeProtocol {
             }
 
             const errorMsg = (error as { message?: string })?.message || String(error);
-            console.error('[CCTP EVM] Bridge failed:', errorMsg);
+            logger.error('CCTP EVM bridge failed', { error: errorMsg });
 
             // Enhanced error classification
             let classifiedError = BridgeErrorCode.TRANSACTION_FAILED;
@@ -373,7 +374,7 @@ export class CctpProtocol implements BridgeProtocol {
                             json = await resp.json().catch(() => null);
                         }
                     } catch (proxyError: unknown) {
-                        console.debug('[CCTP] Proxy fetch failed, trying direct:', (proxyError as { message?: string })?.message || String(proxyError));
+                        logger.warn('Proxy fetch failed, trying direct', { error: (proxyError as { message?: string })?.message || String(proxyError) });
                     }
 
                     // Strategy 2: Fallback to direct Circle API
@@ -388,7 +389,7 @@ export class CctpProtocol implements BridgeProtocol {
                                 json = await resp.json().catch(() => null);
                             }
                         } catch (directError: unknown) {
-                            console.debug('[CCTP] Direct fetch failed:', (directError as { message?: string })?.message || String(directError));
+                            logger.warn('Direct fetch failed', { error: (directError as { message?: string })?.message || String(directError) });
                         }
                     }
 
@@ -405,7 +406,7 @@ export class CctpProtocol implements BridgeProtocol {
                                 json = await resp.json().catch(() => null);
                             }
                         } catch (fallbackError: unknown) {
-                            console.debug('[CCTP] Fallback API failed:', (fallbackError as { message?: string })?.message || String(fallbackError));
+                            logger.warn('Fallback API failed', { error: (fallbackError as { message?: string })?.message || String(fallbackError) });
                         }
                     }
 
@@ -416,13 +417,13 @@ export class CctpProtocol implements BridgeProtocol {
 
                     // Check for complete attestation
                     if (status === 'complete' && typeof att === 'string' && att.startsWith('0x')) {
-                        console.log('[CCTP] Attestation received successfully');
+                        logger.info('Attestation received successfully');
                         return att;
                     }
 
                     // Check for error states
                     if (status === 'failed' || json?.error) {
-                        console.error('[CCTP] Attestation failed:', json?.error || 'Unknown error');
+                        logger.error('Attestation failed', { error: json?.error || 'Unknown error' });
                         throw new BridgeError(
                             BridgeErrorCode.ATTESTATION_FAILED,
                             `CCTP attestation failed: ${json?.error || 'Unknown error'}`,
@@ -431,7 +432,7 @@ export class CctpProtocol implements BridgeProtocol {
                     }
 
                     // Continue polling if still pending
-                    console.debug('[CCTP] Attestation still pending, will retry...');
+                    logger.info('Attestation still pending, will retry');
                     return null; // Keep polling
                 },
                 {
@@ -445,7 +446,7 @@ export class CctpProtocol implements BridgeProtocol {
 
             return attestation;
         } catch (error) {
-            console.error('[CCTP] Attestation fetch failed:', error);
+            logger.error('Attestation fetch failed', { error: error instanceof Error ? error.message : String(error) });
             
             if (error instanceof BridgeError) {
                 throw error; // Re-throw known bridge errors

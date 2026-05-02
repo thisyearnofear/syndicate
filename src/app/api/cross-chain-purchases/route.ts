@@ -4,6 +4,7 @@ import {
     getCrossChainPurchasesByStacksAddress,
     insertCrossChainPurchase,
 } from '@/lib/db/repositories/crossChainPurchaseRepository';
+import { logger } from '@/lib/logger';
 
 interface CrossChainPurchase {
     sourceChain: 'stacks';
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(purchases);
 
     } catch (error) {
-        console.error('Failed to read cross-chain purchases:', error);
+        logger.error('Failed to read cross-chain purchases', { error: String(error) });
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

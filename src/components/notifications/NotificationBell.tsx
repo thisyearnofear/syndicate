@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useVisibilityPolling } from '@/lib/useVisibilityPolling';
+import { logger } from '@/lib/logger';
 import { 
   Bell, 
   BellRing,
@@ -126,7 +127,7 @@ export function NotificationBell({ poolId, className = '' }: NotificationBellPro
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
-      console.error('Failed to mark as read:', error);
+      logger.error('Failed to mark as read', { error: String(error) });
     }
   };
 
@@ -141,7 +142,7 @@ export function NotificationBell({ poolId, className = '' }: NotificationBellPro
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (error) {
-      console.error('Failed to mark all as read:', error);
+      logger.error('Failed to mark all as read', { error: String(error) });
     }
   };
 

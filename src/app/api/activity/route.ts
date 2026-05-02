@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@vercel/postgres';
+import { logger } from '@/lib/logger';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -98,7 +99,7 @@ export async function GET(request: Request) {
       { headers: corsHeaders }
     );
   } catch (error) {
-    console.error('[Activity API] GET error:', error);
+    logger.error('[Activity API] GET error', { error: String(error) });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500, headers: corsHeaders }
@@ -204,7 +205,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {
-    console.error('[Activity API] POST error:', error);
+    logger.error('[Activity API] POST error', { error: String(error) });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500, headers: corsHeaders }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPendingPurchaseStatusesByChain, upsertPurchaseStatus } from '@/lib/db/repositories/purchaseStatusRepository';
 import { nearIntentsService } from '@/services/nearIntentsService';
+import { logger } from '@/lib/logger';
 
 // Force this route to be server-side only — never statically pre-rendered.
 // @vercel/postgres requires POSTGRES_URL which is only available at runtime, not build time.
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest) {
           updated++;
         }
       } catch (e) {
-        console.warn('[recheck-bridges] Failed to check order', record.bridgeId, e);
+        logger.warn('[recheck-bridges] Failed to check order', { bridgeId: record.bridgeId, error: e instanceof Error ? e.message : String(e) });
       }
     }
 
@@ -98,7 +99,7 @@ export async function GET(request: NextRequest) {
           updated++;
         }
       } catch (e) {
-        console.warn('[recheck-bridges] Failed to check NEAR intent', record.bridgeId, e);
+        logger.warn('[recheck-bridges] Failed to check NEAR intent', { bridgeId: record.bridgeId, error: e instanceof Error ? e.message : String(e) });
       }
     }
 
@@ -109,7 +110,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, checked: pending.length + pendingNear.length, updated });
   } catch (error) {
-    console.error('[recheck-bridges] Failed:', error);
+    logger.error('[recheck-bridges] Failed:', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

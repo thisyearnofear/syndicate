@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 const STACKS_API_BASE_URL = process.env.NEXT_PUBLIC_STACKS_API_URL || 'https://api.mainnet.hiro.so';
 const STACKS_API_KEY = process.env.NEXT_PUBLIC_STACKS_API_KEY;
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error(`Stacks API error: ${response.status} - ${errorText}`);
+            logger.error('Stacks API error', { status: response.status, error: errorText });
 
             return NextResponse.json(
                 {
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
             },
         });
     } catch (error) {
-        console.error('Stacks proxy error:', error);
+        logger.error('Stacks proxy error', { error: String(error) });
 
         // Handle timeout errors specifically
         if (error instanceof Error && error.name === 'AbortError') {
@@ -169,7 +170,7 @@ export async function POST(request: NextRequest) {
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error(`Stacks API error: ${response.status} - ${errorText}`);
+            logger.error('Stacks API error', { status: response.status, error: errorText });
 
             return NextResponse.json(
                 {
@@ -190,7 +191,7 @@ export async function POST(request: NextRequest) {
             },
         });
     } catch (error) {
-        console.error('Stacks POST proxy error:', error);
+        logger.error('Stacks POST proxy error', { error: String(error) });
 
         return NextResponse.json(
             {

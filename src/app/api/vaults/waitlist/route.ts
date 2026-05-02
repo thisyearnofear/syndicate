@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@vercel/postgres';
+import { logger } from '@/lib/logger';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,13 +44,13 @@ export async function POST(request: Request) {
       `;
       persisted = true;
     } catch (error) {
-      console.warn('[VaultWaitlist] DB insert skipped, falling back to logs:', error);
-      console.log('[VaultWaitlistLead]', { email, walletAddress, source, interest });
+      logger.warn('[VaultWaitlist] DB insert skipped, falling back to logs:', { error: error instanceof Error ? error.message : String(error) });
+      logger.info('[VaultWaitlistLead]', { email, walletAddress, source, interest });
     }
 
     return NextResponse.json({ success: true, persisted }, { headers: corsHeaders });
   } catch (error) {
-    console.error('[VaultWaitlist] POST error:', error);
+    logger.error('[VaultWaitlist] POST error:', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500, headers: corsHeaders }

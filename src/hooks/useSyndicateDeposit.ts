@@ -16,6 +16,7 @@
 
 import { useState, useCallback } from 'react';
 import { useWalletClient, usePublicClient } from 'wagmi';
+import { logger } from '@/lib/logger';
 import { base } from 'wagmi/chains';
 import { parseUnits, encodeFunctionData } from 'viem';
 import { FHENIX_VAULT_CHAIN } from '@/services/fhe/fhenixChain';
@@ -221,7 +222,7 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
           setDelegationTxHash(delegationHash);
           await publicClient!.waitForTransactionReceipt({ hash: delegationHash });
           
-          console.log('[useSyndicateDeposit] PoolTogether delegation completed:', {
+          logger.info('PoolTogether delegation completed', {
             vault: ptVaultAddress,
             delegate: poolAddress,
             tickets: amountUsdc,
@@ -229,7 +230,7 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
           });
         } catch (delegationErr) {
           // Delegation failure is non-critical - funds are still deposited
-          console.warn('[useSyndicateDeposit] Delegation failed, but deposit succeeded:', delegationErr);
+          logger.warn('Delegation failed, but deposit succeeded', { error: delegationErr instanceof Error ? delegationErr.message : String(delegationErr) });
         }
       }
 

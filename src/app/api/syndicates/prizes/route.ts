@@ -8,6 +8,7 @@
 
 import { NextResponse } from 'next/server';
 import { prizeDistributionService } from '@/services/prizes/prizeDistributionService';
+import { logger } from '@/lib/logger';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -46,7 +47,7 @@ export async function GET(request: Request) {
     const history = await prizeDistributionService.getDistributionHistory(poolId!);
     return NextResponse.json({ distributions: history }, { headers: corsHeaders });
   } catch (error) {
-    console.error('[PrizeDistribution API] GET error:', error);
+    logger.error('[PrizeDistribution API] GET error', { error: String(error) });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500, headers: corsHeaders }
@@ -160,7 +161,7 @@ export async function POST(request: Request) {
         );
     }
   } catch (error) {
-    console.error('[PrizeDistribution API] POST error:', error);
+    logger.error('[PrizeDistribution API] POST error', { error: String(error) });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500, headers: corsHeaders }

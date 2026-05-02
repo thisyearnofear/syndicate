@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPurchaseStatusByTxId, upsertPurchaseStatus } from '@/lib/db/repositories/purchaseStatusRepository';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error(`Error reading status for txId ${txId}:`, error);
+    logger.error('Error reading purchase status', { txId, error: String(error) });
     return NextResponse.json({ error: 'Failed to retrieve purchase status' }, { status: 500 });
   }
 }
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Failed to upsert purchase status:', error);
+    logger.error('Failed to upsert purchase status', { error: String(error) });
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { API } from '@/config';
+import { logger } from '@/lib/logger';
 
 function normalizeBaseUrl(url: string): string {
   return url.replace(/\/+$/, '');
@@ -100,7 +101,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (!response) {
-      console.error(`Megapot API error: ${lastStatus} - ${responseBody}`);
+      logger.error('Megapot API error', { status: lastStatus, error: responseBody });
       return NextResponse.json(
         {
           error: `Megapot API error: ${lastStatus}`,
@@ -121,7 +122,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Proxy error:', error);
+    logger.error('Proxy error', { error: String(error) });
     
     // Handle timeout errors specifically
     if (error instanceof Error && error.name === 'AbortError') {

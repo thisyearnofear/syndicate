@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
       timestamp: body?.timestamp ?? Date.now(),
     };
 
-    console.log('[AnalyticsEvent]', payload);
+    logger.info('[AnalyticsEvent]', payload);
 
     const webhookUrl = process.env.ANALYTICS_WEBHOOK_URL;
     if (webhookUrl) {
@@ -40,13 +41,13 @@ export async function POST(request: Request) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       }).catch((error) => {
-        console.warn('[AnalyticsEvent] webhook forward failed:', error);
+        logger.warn('[AnalyticsEvent] webhook forward failed', { error: String(error) });
       });
     }
 
     return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {
-    console.error('[AnalyticsEvent] POST error:', error);
+    logger.error('[AnalyticsEvent] POST error', { error: String(error) });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500, headers: corsHeaders }

@@ -22,6 +22,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getGelatoTaskRepository } from '@/lib/db/schema/gelatoTasks';
 import type { Address } from 'viem';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // TYPES
@@ -92,7 +93,7 @@ async function resolveTaskRecord(taskId: string): Promise<{ taskRecordId: string
       userId: task.userId,
     };
   } catch (error) {
-    console.error('[Gelato Webhook] Failed to resolve task record:', error);
+    logger.error('[Gelato Webhook] Failed to resolve task record', { error: String(error) });
     return null;
   }
 }
@@ -134,13 +135,13 @@ async function handleTaskExecution(
       lastError: payload.error || undefined,
     });
 
-    console.log('[Gelato Webhook] Recorded execution for task:', {
+    logger.info('[Gelato Webhook] Recorded execution', {
       taskId: payload.taskId,
       status: payload.status,
       txHash: payload.transactionHash,
     });
   } catch (error) {
-    console.error('[Gelato Webhook] Failed to record execution:', error);
+    logger.error('[Gelato Webhook] Failed to record execution', { error: String(error) });
     throw error;
   }
 }
@@ -177,12 +178,12 @@ async function handleTaskFailure(
       lastError: payload.error || 'Task execution failed',
     });
 
-    console.warn('[Gelato Webhook] Task execution failed:', {
+    logger.warn('[Gelato Webhook] Task execution failed', {
       taskId: payload.taskId,
       error: payload.error,
     });
   } catch (error) {
-    console.error('[Gelato Webhook] Failed to handle task failure:', error);
+    logger.error('[Gelato Webhook] Failed to handle task failure', { error: String(error) });
     throw error;
   }
 }
@@ -201,9 +202,9 @@ async function handleTaskCancellation(
       status: 'cancelled',
     });
 
-    console.log('[Gelato Webhook] Task cancelled:', payload.taskId);
+    logger.info('[Gelato Webhook] Task cancelled', { taskId: payload.taskId });
   } catch (error) {
-    console.error('[Gelato Webhook] Failed to handle task cancellation:', error);
+    logger.error('[Gelato Webhook] Failed to handle task cancellation', { error: String(error) });
     throw error;
   }
 }
@@ -225,7 +226,7 @@ export async function POST(request: NextRequest) {
 
     const secret = process.env.GELATO_WEBHOOK_SECRET;
     if (!secret) {
-      console.error('[Gelato Webhook] GELATO_WEBHOOK_SECRET not configured');
+      logger.error('[Gelato Webhook] GELATO_WEBHOOK_SECRET not configured');
       return NextResponse.json(
         { error: 'Webhook not configured' },
         { status: 500 }
@@ -237,7 +238,7 @@ export async function POST(request: NextRequest) {
 
     // Verify signature
     if (!verifyGelatoSignature(body, signature, secret)) {
-      console.warn('[Gelato Webhook] Invalid signature');
+      logger.warn('[Gelato Webhook] Invalid signature');
       return NextResponse.json(
         { error: 'Invalid signature' },
         { status: 401 }
@@ -248,12 +249,12 @@ export async function POST(request: NextRequest) {
     const webhook = JSON.parse(body) as GelatoWebhookRequest;
     const { taskId, event, payload } = webhook;
 
-    console.log('[Gelato Webhook] Received event:', { taskId, event });
+    logger.info('[Gelato Webhook] Received event', { taskId, event });
 
     // Resolve task record from database
     const taskRecord = await resolveTaskRecord(taskId);
     if (!taskRecord) {
-      console.warn('[Gelato Webhook] Task not found in database:', taskId);
+      logger.warn('[Gelato Webhook] Task not found in database', { taskId });
       return NextResponse.json(
         { error: 'Task not found' },
         { status: 404 }
@@ -275,7 +276,7 @@ export async function POST(request: NextRequest) {
         break;
 
       default:
-        console.warn('[Gelato Webhook] Unknown event type:', event);
+        logger.warn('[Gelato Webhook] Unknown event type', { event });
         return NextResponse.json(
           { error: 'Unknown event type' },
           { status: 400 }
@@ -288,7 +289,7 @@ export async function POST(request: NextRequest) {
       event,
     });
   } catch (error) {
-    console.error('[Gelato Webhook] Error processing webhook:', error);
+    logger.error('[Gelato Webhook] Error processing webhook', { error: String(error) });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

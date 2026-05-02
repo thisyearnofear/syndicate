@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/shared/components/ui/Button";
+import { logger } from '@/lib/logger';
 import { 
   Share2, 
   Copy, 
@@ -33,7 +34,7 @@ export default function SocialShare({
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
     } catch (error) {
-      console.error('Failed to copy:', error);
+      logger.error('Failed to copy', { error: String(error) });
     }
   };
 
@@ -66,7 +67,7 @@ export default function SocialShare({
           handleCopy();
       }
     } catch (error) {
-      console.error('Error sharing:', error);
+      logger.error('Error sharing', { error: String(error) });
       handleCopy(); // Fallback to copy
     }
   };

@@ -10,6 +10,7 @@
 
 import { NextResponse } from 'next/server';
 import { sql } from '@vercel/postgres';
+import { logger } from '@/lib/logger';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -60,7 +61,7 @@ export async function GET(request: Request) {
       memberships = membershipsResult.rows;
     } catch {
       // Tables may not exist yet (fresh database) - return empty portfolio
-      console.warn('[Portfolio API] syndicate_members/pools tables not found, returning empty portfolio');
+      logger.warn('[Portfolio API] syndicate_members/pools tables not found, returning empty portfolio');
       return NextResponse.json({
         walletAddress,
         summary: {
@@ -104,7 +105,7 @@ export async function GET(request: Request) {
           `;
           winnings = parseFloat(winningsResult.rows[0]?.winnings || '0');
         } catch (err) {
-          console.error('Failed to fetch winnings:', err);
+          logger.error('Failed to fetch winnings:', { error: err instanceof Error ? err.message : String(err) });
           // winnings remains 0
         }
         totalWinnings += winnings;
@@ -184,7 +185,7 @@ export async function GET(request: Request) {
       syndicates: syndicateDetails,
     }, { headers: corsHeaders });
   } catch (error) {
-    console.error('[Portfolio API] Error:', error);
+    logger.error('[Portfolio API] Error:', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500, headers: corsHeaders }

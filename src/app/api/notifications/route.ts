@@ -9,6 +9,7 @@
 
 import { NextResponse } from 'next/server';
 import { notificationService } from '@/services/notifications/notificationService';
+import { logger } from '@/lib/logger';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -44,7 +45,7 @@ export async function GET(request: Request) {
       unreadCount,
     }, { headers: corsHeaders });
   } catch (error) {
-    console.error('[Notifications API] GET error:', error);
+    logger.error('[Notifications API] GET error:', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500, headers: corsHeaders }
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ id, success: true }, { headers: corsHeaders });
   } catch (error) {
-    console.error('[Notifications API] POST error:', error);
+    logger.error('[Notifications API] POST error:', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500, headers: corsHeaders }
@@ -102,7 +103,7 @@ export async function PATCH(request: Request) {
     await notificationService.markAsRead(notificationId);
     return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {
-    console.error('[Notifications API] PATCH error:', error);
+    logger.error('[Notifications API] PATCH error:', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500, headers: corsHeaders }

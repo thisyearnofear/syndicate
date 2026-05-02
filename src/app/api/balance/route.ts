@@ -145,7 +145,7 @@ async function getSolanaBalance(walletAddress: string, rpcOverride?: string): Pr
     const data = await response.json();
 
     if (data.error) {
-      console.error('Solana RPC error:', data.error);
+      logger.error('Solana RPC error', { error: data.error });
       return NextResponse.json(
         { solana: '0', base: '0', total: '0' },
         { status: 200 }
@@ -171,7 +171,7 @@ async function getSolanaBalance(walletAddress: string, rpcOverride?: string): Pr
     });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error('Failed to fetch Solana balance:', error);
+    logger.error('Failed to fetch Solana balance', { error: msg });
     return NextResponse.json(
       { solana: '0', base: '0', total: '0', error: msg },
       { status: 200 }
@@ -210,7 +210,7 @@ async function getEvmBalance(walletAddress: string, chainId: number): Promise<Ne
     });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error('Failed to fetch EVM balance:', error);
+    logger.error('Failed to fetch EVM balance', { error: msg });
     return NextResponse.json(
       { usdc: '0', balance: '0', error: msg },
       { status: 200 }
@@ -260,7 +260,7 @@ async function getStacksBalance(address: string): Promise<NextResponse> {
     });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error('Failed to fetch Stacks balance:', error);
+    logger.error('Failed to fetch Stacks balance', { error: msg });
     return NextResponse.json(
       { usdcx: '0', sbtc: '0', balance: '0', error: msg },
       { status: 200 }
@@ -300,7 +300,7 @@ async function getNearBalance(accountId: string): Promise<NextResponse> {
       const parsed = JSON.parse(resultStr); 
       usdcBalance = ethers.formatUnits(parsed, 6); // USDC has 6 decimals
     } catch (e) {
-      console.warn('Failed to fetch NEAR USDC balance:', e);
+      logger.warn('Failed to fetch NEAR USDC balance', { error: String(e) });
     }
 
     return NextResponse.json({
@@ -312,7 +312,7 @@ async function getNearBalance(accountId: string): Promise<NextResponse> {
     });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error('Failed to fetch NEAR balance:', error);
+    logger.error('Failed to fetch NEAR balance', { error: msg });
     return NextResponse.json(
       { usdc: '0', balance: '0', error: msg },
       { status: 200 }
