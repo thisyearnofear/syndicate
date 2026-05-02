@@ -354,7 +354,7 @@ function YieldStep() {
   );
 }
 
-function FirstStepsStep({ router }: { router: any }) {
+function FirstStepsStep({ router }: { router: { push: (path: string) => void } }) {
   return (
     <div className="text-center">
       <div className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-500 to-green-500 flex items-center justify-center mx-auto mb-6">

@@ -7,7 +7,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { governanceService } from '@/services/governance/governanceService';
+import { governanceService, type ProposalStatus } from '@/services/governance/governanceService';
 import { logger } from '@/lib/logger';
 
 const corsHeaders = {
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
 
     // Get proposals for a pool
     if (poolId) {
-      const status = searchParams.get('status') as any;
+      const status = (searchParams.get('status') as ProposalStatus | null) ?? undefined;
       const proposals = await governanceService.getProposals(poolId, status);
       return NextResponse.json({ proposals }, { headers: corsHeaders });
     }

@@ -136,8 +136,8 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
       } else {
         errorToast("Withdrawal Failed", result.error || "Failed to withdraw principal.");
       }
-    } catch (err: any) {
-      errorToast("Withdrawal Failed", err.message || "An unexpected error occurred.");
+    } catch (err: unknown) {
+      errorToast("Withdrawal Failed", err instanceof Error ? err.message : "An unexpected error occurred.");
     }
   };
 

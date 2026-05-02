@@ -31,7 +31,7 @@ export class TransactionExecutor {
     private usdcContract: ethers.Contract,
     private megapotAddress: string,
     private randomTicketBuyerAddress: string,
-    private usdcAbi: any[],
+    private usdcAbi: unknown[],
   ) {}
 
   /**
@@ -50,7 +50,7 @@ export class TransactionExecutor {
 
       const usdcContract = new ethers.Contract(
         this.usdcContract.target as string,
-        this.usdcAbi,
+        this.usdcAbi as ethers.InterfaceAbi,
         signer,
       );
 

@@ -60,9 +60,9 @@ export default function SyndicateDiscoveryPage() {
         const data = await response.json();
         const list = Array.isArray(data) ? data : data.syndicates || [];
         // Normalize cause from API object to string for search/filter
-        const normalized = list.map((s: any) => ({
+        const normalized = list.map((s: Record<string, unknown>) => ({
           ...s,
-          cause: typeof s.cause === 'object' ? s.cause?.name || '' : s.cause || '',
+          cause: typeof s.cause === 'object' ? (s.cause as Record<string, unknown>)?.name || '' : s.cause || '',
         }));
         setSyndicates(normalized);
         setFilteredSyndicates(normalized);

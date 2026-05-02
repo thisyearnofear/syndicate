@@ -75,7 +75,7 @@ export async function GET(request: Request) {
         `;
 
     return NextResponse.json(
-      result.rows.map((row: any) => ({
+      result.rows.map((row: Record<string, unknown>) => ({
         id: row.id,
         walletAddress: row.wallet_address,
         eventType: row.event_type,

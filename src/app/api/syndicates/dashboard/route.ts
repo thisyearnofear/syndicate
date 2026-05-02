@@ -166,12 +166,12 @@ export async function GET(request: Request) {
       WHERE pool_id = ${poolId}
       ORDER BY amount_usdc DESC
     `;
-    const members: DashboardMember[] = membersResult.rows.map((row: any) => ({
+    const members = membersResult.rows.map((row: Record<string, unknown>) => ({
       address: row.member_address,
       contribution_usdc: row.amount_usdc,
       joined_at: row.joined_at,
       tx_hash: row.tx_hash,
-    }));
+    })) as DashboardMember[];
 
     // Calculate total contributed
     const totalContributed = members.reduce((sum, m) => sum + parseFloat(m.contribution_usdc || '0'), 0);

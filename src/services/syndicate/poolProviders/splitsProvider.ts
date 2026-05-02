@@ -145,7 +145,7 @@ export class SplitsPoolProvider implements PoolProvider {
     };
   }
 
-  async getPoolInfo(poolAddress: string): Promise<Record<string, any>> {
+  async getPoolInfo(poolAddress: string): Promise<Record<string, unknown>> {
     try {
       // Try to fetch real split info from chain
       const splitInfo = await splitsService.getSplitInfo(poolAddress as Address);

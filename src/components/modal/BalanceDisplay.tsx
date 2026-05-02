@@ -28,7 +28,7 @@ interface BalanceDisplayProps {
 type BalanceStatus = 'loading' | 'sufficient' | 'insufficient' | 'unknown';
 
 function getChainIcon(walletType?: string | null): { icon: string; label: string; color: string } {
-  const isStacksWallet = walletType && STACKS_WALLETS.includes(walletType as any);
+  const isStacksWallet = walletType && (STACKS_WALLETS as readonly string[]).includes(walletType);
   
   if (walletType === WalletTypes.SOLANA) {
     return { icon: '🟣', label: 'Solana', color: 'text-purple-400' };

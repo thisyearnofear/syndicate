@@ -77,8 +77,10 @@ export function Providers({ children }: { children: ReactNode }) {
 
   // Use visibility:hidden instead of conditionally hiding children.
   // Replacing children with a loading div caused React Error #321.
+  if (!config) return null;
+
   return (
-    <WagmiProvider config={config || ({} as any)}>
+    <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
           initialChain={undefined}

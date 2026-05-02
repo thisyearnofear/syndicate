@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     }
 
     // Get user's syndicate memberships with pool info
-    let memberships: any[] = [];
+    let memberships: Record<string, unknown>[] = [];
     try {
       const membershipsResult = await sql`
         SELECT
@@ -84,9 +84,9 @@ export async function GET(request: Request) {
 
     // Get winnings for each pool
     const syndicateDetails = await Promise.all(
-      memberships.map(async (membership: any) => {
+      memberships.map(async (membership: Record<string, unknown>) => {
         const poolId = membership.pool_id;
-        const contribution = parseFloat(membership.contribution || '0');
+        const contribution = parseFloat(String(membership.contribution || '0'));
         totalContributed += contribution;
 
         // Get distribution winnings for this user
@@ -99,7 +99,7 @@ export async function GET(request: Request) {
             FROM prize_distributions d
             JOIN syndicate_members m ON m.pool_id = d.pool_id
             JOIN syndicate_pools p ON p.id = d.pool_id
-            WHERE d.pool_id = ${poolId}
+            WHERE d.pool_id = ${String(poolId)}
               AND LOWER(m.member_address) = LOWER(${walletAddress})
               AND d.status = 'completed'
           `;
@@ -116,7 +116,7 @@ export async function GET(request: Request) {
           const yieldResult = await sql`
             SELECT COALESCE(SUM(yield_accrued_usdc), 0) as yield_earned
             FROM syndicate_vault_deposits
-            WHERE pool_id = ${poolId}
+            WHERE pool_id = ${String(poolId)}
               AND LOWER(member_address) = LOWER(${walletAddress})
           `;
           yieldEarned = parseFloat(yieldResult.rows[0]?.yield_earned || '0');
@@ -126,7 +126,7 @@ export async function GET(request: Request) {
         totalYield += yieldEarned;
 
         // Calculate user's share percentage
-        const totalPoolValue = parseFloat(membership.pool_tickets || '0') + contribution;
+        const totalPoolValue = parseFloat(String(membership.pool_tickets || '0')) + contribution;
         const sharePercent = totalPoolValue > 0 ? (contribution / totalPoolValue) * 100 : 0;
 
         return {
@@ -139,7 +139,7 @@ export async function GET(request: Request) {
           causeAllocationPercent: membership.cause_allocation_percent,
           membersCount: membership.members_count,
           poolTickets: membership.pool_tickets || 0,
-          isTrending: (membership.members_count || 0) > 1000,
+          isTrending: Number(membership.members_count || 0) > 1000,
           isActive: membership.is_active,
           // User-specific data
           contribution,
