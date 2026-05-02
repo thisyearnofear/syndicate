@@ -6,6 +6,7 @@
  */
 
 import type { WalletType } from '@/domains/wallet/types';
+import { logger } from '@/lib/logger';
 
 interface WalletLibraries {
   evm: unknown;
@@ -58,7 +59,7 @@ class WalletLoader {
 
       default:
         // For unknown wallet types, don't throw an error but return a resolved promise
-        console.warn(`Unknown wallet type: ${walletType}, skipping library load`);
+        logger.warn(`Unknown wallet type: ${walletType}, skipping library load`);
         return Promise.resolve({});
     }
 
@@ -112,7 +113,7 @@ class WalletLoader {
         walletAdapterUi,
       };
     } catch (error) {
-      console.error('[WalletLoader] Failed to load Solana libraries', error);
+      logger.error('[WalletLoader] Failed to load Solana libraries', { error: String(error) });
       throw error;
     }
   }

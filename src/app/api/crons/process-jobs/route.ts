@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { drainJobQueue } from '@/services/jobs/purchaseJobProcessor';
 import { ensurePurchaseJobsTable } from '@/lib/db/repositories/purchaseJobRepository';
+import { logger } from '@/lib/logger';
 
 export async function GET(req: NextRequest) {
   // Verify Vercel Cron authorization
@@ -24,11 +25,11 @@ export async function GET(req: NextRequest) {
   try {
     await ensurePurchaseJobsTable();
     const result = await drainJobQueue();
-    console.log(`[ProcessJobs] Cron complete: ${result.processed} processed, ${result.errors} errors`);
+    logger.info(`[ProcessJobs] Cron complete: ${result.processed} processed, ${result.errors} errors`);
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('[ProcessJobs] Cron failed:', message);
+    logger.error('[ProcessJobs] Cron failed:', { message });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

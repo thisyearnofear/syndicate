@@ -9,6 +9,7 @@ import { useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { fetchGraphQL } from '@/lib/envioClient';
 import { web3Service } from '@/services/web3Service';
+import { logger } from '@/lib/logger';
 
 // Query keys for consistent caching
 export const queryKeys = {
@@ -67,7 +68,7 @@ export const fetchFunctions = {
         winnings: user.totalWinnings ? user.totalWinnings.toString() : '0'
       };
     } catch (error) {
-      console.error('Error fetching user tickets from Envio:', error);
+      logger.error('Error fetching user tickets from Envio', { error: String(error) });
       return { tickets: [], totalTickets: '0', winnings: '0' };
     }
   },
@@ -164,7 +165,7 @@ export function useOptimizedPurchase() {
       queryClient.invalidateQueries({ queryKey: queryKeys.tickets });
     },
     onError: (error) => {
-      console.error('Purchase failed:', error);
+      logger.error('Purchase failed', { error: String(error) });
     },
   });
 }
@@ -184,7 +185,7 @@ export function useBackgroundSync() {
         // Add other critical data syncs here
       ]);
     } catch (error) {
-      console.warn('Background sync failed:', error);
+      logger.warn('Background sync failed', { error: String(error) });
     }
   }, [queryClient]);
 

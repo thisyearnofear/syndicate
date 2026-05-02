@@ -7,6 +7,8 @@
  * Core Principles: MODULAR, DRY, CLEAN — single place for all error alerting.
  */
 
+import { logger } from '@/lib/logger';
+
 interface ErrorContext {
   tags?: Record<string, string>;
   extra?: Record<string, unknown>;
@@ -34,13 +36,13 @@ export async function captureError(
   const stack = error instanceof Error ? error.stack : undefined;
 
   // Always log locally
-  console.error(`[captureError] ${message}`, context.extra ?? '');
+  logger.error(`[captureError] ${message}`, { extra: context.extra ?? '' });
 
   if (!dsn) return; // Sentry not configured — local log only
 
   const parsed = parseDsn(dsn);
   if (!parsed) {
-    console.warn('[captureError] Invalid SENTRY_DSN format');
+    logger.warn('[captureError] Invalid SENTRY_DSN format');
     return;
   }
 
@@ -92,6 +94,6 @@ export async function captureError(
     });
   } catch (fetchErr) {
     // Never let monitoring failures crash the app
-    console.warn('[captureError] Failed to send to Sentry:', fetchErr);
+    logger.warn('[captureError] Failed to send to Sentry', { error: String(fetchErr) });
   }
 }

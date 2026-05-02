@@ -13,6 +13,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 import { syndicateVaultService } from '@/services/syndicate/syndicateVaultService';
 import { vaultManager } from '@/services/vaults';
+import { logger } from '@/lib/logger';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -78,7 +79,7 @@ export async function GET(request: Request) {
       }
     }
   } catch (error) {
-    console.error('[SyndicateYield API] Error:', error);
+    logger.error('[SyndicateYield API] Error', { error: String(error) });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500, headers: corsHeaders }

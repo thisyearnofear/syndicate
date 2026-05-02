@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { upsertPurchaseStatus } from '@/lib/db/repositories/purchaseStatusRepository';
 import { nearIntentsService } from '@/services/nearIntentsService';
+import { logger } from '@/lib/logger';
 
 const DEBRIDGE_STATS_API = 'https://stats-api.dln.trade/api/Orders';
 
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, state: 'noop' });
   } catch (error) {
-    console.error('[admin/recheck-bridge] Failed:', error);
+    logger.error('[admin/recheck-bridge] Failed', { error: String(error) });
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

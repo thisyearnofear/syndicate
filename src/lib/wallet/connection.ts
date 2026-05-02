@@ -8,6 +8,8 @@
  * - User-friendly error messages
  */
 
+import { logger } from '@/lib/logger';
+
 export type WalletState = 
   | 'connected' 
   | 'disconnected' 
@@ -151,7 +153,7 @@ export function withWalletConnection<T extends (...args: any[]) => Promise<any>>
       
       if (isRecoverable && reconnectAttempts < maxReconnectAttempts) {
         reconnectAttempts++;
-        console.log(`[withWalletConnection] Recoverable error, attempt ${reconnectAttempts}/${maxReconnectAttempts}`);
+        logger.info(`[withWalletConnection] Recoverable error, attempt ${reconnectAttempts}/${maxReconnectAttempts}`);
         
         if (onDisconnect) {
           onDisconnect();
@@ -291,11 +293,11 @@ export function createWalletHealthCheck(
     try {
       const isConnected = await checkConnection();
       if (!isConnected) {
-        console.log('[WalletHealthCheck] Wallet disconnected');
+        logger.info('[WalletHealthCheck] Wallet disconnected');
         onDisconnect();
       }
     } catch (error) {
-      console.error('[WalletHealthCheck] Error checking connection:', error);
+      logger.error('[WalletHealthCheck] Error checking connection', { error: String(error) });
     }
   };
   

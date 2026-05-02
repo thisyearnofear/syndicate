@@ -12,6 +12,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { megapotService } from '../services/megapotService';
 import { poolTogetherService } from '@/services/lotteries/PoolTogetherService';
+import { logger } from '@/lib/logger';
 
 // Simple prize data interface that works for both APIs
 interface PrizeData {
@@ -83,7 +84,7 @@ export function useMultiLottery() {
             icon: '🎰',
           });
         } else {
-          console.warn('[useMultiLottery] Megapot returned zero/empty prize, skipping');
+          logger.warn('[useMultiLottery] Megapot returned zero/empty prize, skipping');
         }
       }
 
@@ -117,7 +118,7 @@ export function useMultiLottery() {
     } catch (error) {
       if (!mountedRef.current) return;
 
-      console.error('[useMultiLottery] Failed to fetch lottery data:', error);
+      logger.error('[useMultiLottery] Failed to fetch lottery data', { error: String(error) });
       setState(prev => ({
         ...prev,
         isLoading: false,

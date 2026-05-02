@@ -10,6 +10,7 @@ import { setupWalletSelector } from '@near-wallet-selector/core';
 import type { WalletModuleFactory } from '@near-wallet-selector/core';
 import { setupModal, type WalletSelectorModal } from "@near-wallet-selector/modal-ui";
 import { getNearConfig } from '@/config';
+import { logger } from '@/lib/logger';
 
 export type NearSelectorState = {
   ready: boolean;
@@ -52,7 +53,7 @@ class NearWalletSelectorService {
       .map((result) => (result as PromiseFulfilledResult<WalletModuleFactory>).value);
 
     if (wallets.length === 0) {
-      console.error('No NEAR wallet modules could be loaded');
+      logger.error('No NEAR wallet modules could be loaded');
       return false;
     }
 
@@ -117,7 +118,7 @@ class NearWalletSelectorService {
       }
 
       // Show modal using modal-ui
-      console.log('Showing NEAR wallet selection modal...');
+      logger.info('Showing NEAR wallet selection modal...');
       if (this.state.modal) {
         this.state.modal.show();
       }
@@ -129,13 +130,13 @@ class NearWalletSelectorService {
           if (state.accounts.length > 0) {
             subscription.unsubscribe();
             this.state.accountId = state.accounts[0].accountId;
-            console.log('NEAR account connected:', this.state.accountId);
+            logger.info('NEAR account connected', { accountId: this.state.accountId });
             resolve(this.state.accountId);
           }
         });
       });
     } catch (e) {
-      console.error('NEAR connect failed:', e);
+      logger.error('NEAR connect failed', { error: String(e) });
       return null;
     }
   }
@@ -147,7 +148,7 @@ class NearWalletSelectorService {
       await wallet.signOut();
       this.state.accountId = null;
     } catch (e) {
-      console.warn('NEAR disconnect failed:', e);
+      logger.warn('NEAR disconnect failed', { error: String(e) });
     }
   }
 }

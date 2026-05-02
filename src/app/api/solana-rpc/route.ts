@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 export async function POST(request: Request): Promise<Response> {
   const target = process.env.SOLANA_RPC_TARGET;
 
@@ -20,7 +22,7 @@ export async function POST(request: Request): Promise<Response> {
       });
       
       if (resp.status === 403 || resp.status === 429) {
-        console.warn(`[SolanaProxy] Target ${t} returned ${resp.status}, trying backup...`);
+        logger.warn(`[SolanaProxy] Target ${t} returned ${resp.status}, trying backup...`);
         continue;
       }
 
@@ -30,7 +32,7 @@ export async function POST(request: Request): Promise<Response> {
         headers: { 'content-type': 'application/json' } 
       });
     } catch (e) {
-      console.warn(`[SolanaProxy] Target ${t} failed: ${e instanceof Error ? e.message : String(e)}`);
+      logger.warn(`[SolanaProxy] Target ${t} failed: ${e instanceof Error ? e.message : String(e)}`);
       continue;
     }
   }

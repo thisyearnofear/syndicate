@@ -15,6 +15,7 @@ import { syndicateRepository, type PoolType } from '@/lib/db/repositories/syndic
 import { safeProvider, splitsProvider, poolTogetherV5Provider } from '@/services/syndicate/poolProviders';
 import type { PoolProvider, PoolProviderConfig, PoolCreationResult } from '@/services/syndicate/poolProviders';
 import { isAddress } from 'viem';
+import { logger } from '@/lib/logger';
 
 export class SyndicateService {
   /**
@@ -83,17 +84,17 @@ export class SyndicateService {
           ptVaultAddress = result.poolAddress;
         }
         
-        console.log('[SyndicateService] On-chain pool created:', {
+        logger.info('[SyndicateService] On-chain pool created:', {
           poolType,
           poolAddress,
           metadata: result.metadata,
         });
       } else {
-        console.warn('[SyndicateService] Failed to create on-chain pool:', result.error);
+        logger.warn('[SyndicateService] Failed to create on-chain pool:', { error: result.error });
         // Continue with database-only pool (graceful degradation)
       }
     } catch (error) {
-      console.warn('[SyndicateService] Pool provider error, continuing with DB-only:', error);
+      logger.warn('[SyndicateService] Pool provider error, continuing with DB-only:', { error: error instanceof Error ? error.message : String(error) });
     }
 
     // Create pool in database
@@ -109,7 +110,7 @@ export class SyndicateService {
       memberShares: params.members,
     });
 
-    console.log('[SyndicateService] Pool created:', {
+    logger.info('[SyndicateService] Pool created:', {
       poolId,
       name: params.name,
       coordinator: params.coordinatorAddress,
@@ -155,7 +156,7 @@ export class SyndicateService {
       amountUsdc: params.amountUsdc,
     });
 
-    console.log('[SyndicateService] Member joined pool:', {
+    logger.info('[SyndicateService] Member joined pool:', {
       poolId: params.poolId,
       member: params.memberAddress,
       amount: params.amountUsdc,
@@ -283,7 +284,7 @@ export class SyndicateService {
         poolOrVaultId: syndicateId,
       });
 
-      console.log('[SyndicateService] Distribution executed:', {
+      logger.info('[SyndicateService] Distribution executed:', {
         poolId: syndicateId,
         totalAmount: totalUsd,
         causeAmount,
@@ -300,7 +301,7 @@ export class SyndicateService {
         remainderUsd: remainderAmount,
       };
     } catch (error) {
-      console.error('[SyndicateService] Distribution failed:', error);
+      logger.error('[SyndicateService] Distribution failed:', { error: error instanceof Error ? error.message : String(error) });
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Distribution failed',
@@ -378,7 +379,7 @@ export class SyndicateService {
 
     await syndicateRepository.updatePoolStatus(poolId, false);
 
-    console.log('[SyndicateService] Pool deactivated:', poolId);
+    logger.info('[SyndicateService] Pool deactivated:', { poolId });
     return true;
   }
 
@@ -397,7 +398,7 @@ export class SyndicateService {
 
     await syndicateRepository.updatePoolStatus(poolId, true);
 
-    console.log('[SyndicateService] Pool reactivated:', poolId);
+    logger.info('[SyndicateService] Pool reactivated:', { poolId });
     return true;
   }
 
@@ -464,7 +465,7 @@ export class SyndicateService {
         await web3Service.initialize();
       }
 
-      console.log('[SyndicateService] Executing syndicate purchase:', {
+      logger.info('[SyndicateService] Executing syndicate purchase:', {
         poolId,
         ticketCount,
         coordinatorAddress,
@@ -486,7 +487,7 @@ export class SyndicateService {
         };
       }
 
-      console.log('[SyndicateService] Syndicate purchase executed:', {
+      logger.info('[SyndicateService] Syndicate purchase executed:', {
         poolId,
         ticketCount,
         txHash: result.txHash,
@@ -497,7 +498,7 @@ export class SyndicateService {
         txHash: result.txHash,
       };
     } catch (error) {
-      console.error('[SyndicateService] Syndicate purchase failed:', error);
+      logger.error('[SyndicateService] Syndicate purchase failed:', { error: error instanceof Error ? error.message : String(error) });
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',

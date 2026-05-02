@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { vaultManager } from '@/services/vaults';
+import { logger } from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Deposit failed';
-    console.error('[API /vault/deposit]', msg);
+    logger.error('[API /vault/deposit]', { message: msg });
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }

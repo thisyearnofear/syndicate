@@ -20,6 +20,7 @@ import type {
     BridgePerformanceMetrics,
 } from './types';
 import { BridgeError, BridgeErrorCode } from './types';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // UnifiedBridgeManager Class
@@ -61,7 +62,7 @@ export class UnifiedBridgeManager {
      */
     registerProtocol(protocol: BridgeProtocol): void {
         this.protocols.set(protocol.name, protocol);
-        console.log(`[BridgeManager] Registered protocol: ${protocol.name}`);
+        logger.info('Registered protocol', { protocol: protocol.name });
     }
 
     /**
@@ -122,7 +123,7 @@ export class UnifiedBridgeManager {
 
         } catch (error) {
             // Log error and return failed result
-            console.error('[BridgeManager] Bridge failed:', error);
+            logger.error('Bridge failed', { error: error instanceof Error ? error.message : String(error) });
 
             return {
                 success: false,
@@ -168,7 +169,7 @@ export class UnifiedBridgeManager {
             // IMPORTANT: pending_signature is NOT a failure - return to UI for user signing
             // Do NOT attempt recovery or fallback for pending_signature status
             if (result.status === 'pending_signature') {
-                console.log(`[BridgeManager] ${primaryProtocol.name} returned pending_signature - returning to UI for signing`);
+                logger.info('Protocol returned pending_signature, returning to UI for signing', { protocol: primaryProtocol.name });
                 return result;
             }
 
@@ -177,9 +178,9 @@ export class UnifiedBridgeManager {
                 (result.errorCode && this.shouldTriggerFallback(result.errorCode as BridgeErrorCode));
 
             if (shouldFallback) {
-                console.log(`[BridgeManager] ${primaryProtocol.name} suggests fallback: ${result.fallbackReason || result.error}`);
+                logger.info('Protocol suggests fallback', { protocol: primaryProtocol.name, reason: result.fallbackReason || result.error });
             } else {
-                console.warn(`[BridgeManager] ${primaryProtocol.name} returned failure:`, result.error);
+                logger.warn('Protocol returned failure', { protocol: primaryProtocol.name, error: result.error });
             }
 
             await this.updateHealthCache(primaryProtocol.name, false);
@@ -190,7 +191,7 @@ export class UnifiedBridgeManager {
             }
 
         } catch (error) {
-            console.warn(`[BridgeManager] ${primaryProtocol.name} threw error:`, error);
+            logger.warn('Protocol threw error', { protocol: primaryProtocol.name, error: error instanceof Error ? error.message : String(error) });
             await this.updateHealthCache(primaryProtocol.name, false);
             // PHASE 4: Record failed bridge attempt and error
             this.recordBridgeAttempt(primaryProtocol.name, false);
@@ -232,7 +233,7 @@ export class UnifiedBridgeManager {
             reason: 'Primary protocol failed'
         });
 
-        console.log(`[BridgeManager] Trying fallback: ${fallbackProtocol.name}`);
+        logger.info('Trying fallback protocol', { protocol: fallbackProtocol.name });
 
         try {
             const fallbackResult = await fallbackProtocol.bridge(params);
@@ -250,7 +251,7 @@ export class UnifiedBridgeManager {
             }
             return fallbackResult;
         } catch (fallbackError) {
-            console.warn(`[BridgeManager] Fallback protocol ${fallbackProtocol.name} also failed:`, fallbackError);
+            logger.warn('Fallback protocol also failed', { protocol: fallbackProtocol.name, error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError) });
             await this.updateHealthCache(fallbackProtocol.name, false);
             // PHASE 4: Record fallback protocol error
             this.recordBridgeAttempt(fallbackProtocol.name, false);
@@ -307,8 +308,7 @@ export class UnifiedBridgeManager {
         scoredRoutes.sort((a, b) => b.score - a.score);
 
         const best = scoredRoutes[0];
-        console.log(`[BridgeManager] Selected protocol: ${best.protocol} ` +
-                   `(score: ${best.score.toFixed(2)}, reason: ${best.reason})`);
+        logger.info('Selected protocol', { protocol: best.protocol, score: best.score.toFixed(2), reason: best.reason });
 
         return best.protocol;
     }
@@ -417,7 +417,7 @@ export class UnifiedBridgeManager {
                     isRecommended: false, // Will be set below
                 });
             } catch (error) {
-                console.warn(`[BridgeManager] Failed to get route for ${name}:`, error);
+                logger.warn('Failed to get route for protocol', { protocol: name, error: error instanceof Error ? error.message : String(error) });
             }
         }
 
@@ -591,7 +591,7 @@ export class UnifiedBridgeManager {
         if (cachedLoad) {
             // If there's a recent failed attempt, don't retry immediately
             if (Date.now() - cachedLoad.timestamp < 30000 && cachedLoad.attempts >= 3) {
-                console.warn(`[BridgeManager] Protocol ${name} failed to load recently, skipping retry`);
+                logger.warn('Protocol failed to load recently, skipping retry', { protocol: name });
                 return null;
             }
 
@@ -656,7 +656,7 @@ export class UnifiedBridgeManager {
                 }
                 case 'wormhole': {
                     // Wormhole NTT not yet implemented
-                    console.warn('[BridgeManager] Wormhole NTT protocol not available');
+                    logger.warn('Wormhole NTT protocol not available');
                     return null;
                 }
                  case 'base-solana-bridge': {
@@ -680,11 +680,11 @@ case 'near-intents': {
                     return stacksProtocol;
                 }
 default:
-                    console.warn(`[BridgeManager] Unknown protocol: ${name}`);
+                    logger.warn('Unknown protocol', { protocol: name });
                     return null;
             }
         } catch (error) {
-            console.error(`[BridgeManager] Failed to load protocol ${name}:`, error);
+            logger.error('Failed to load protocol', { protocol: name, error: error instanceof Error ? error.message : String(error) });
             return null;
         }
     }
@@ -694,15 +694,15 @@ default:
      * Useful when you know which protocols will be needed
      */
     async preloadProtocols(protocols: BridgeProtocolType[]): Promise<void> {
-        console.log(`[BridgeManager] Preloading protocols: ${protocols.join(', ')}`);
+        logger.info('Preloading protocols', { protocols: protocols.join(', ') });
 
         await Promise.all(protocols.map(protocol =>
             this.loadProtocol(protocol).catch(error => {
-                console.warn(`[BridgeManager] Failed to preload ${protocol}:`, error);
+                logger.warn('Failed to preload protocol', { protocol, error: error instanceof Error ? error.message : String(error) });
             })
         ));
 
-        console.log('[BridgeManager] Protocol preloading complete');
+        logger.info('Protocol preloading complete');
     }
 
     /**
@@ -710,7 +710,7 @@ default:
      */
     clearProtocolLoadCache(): void {
         this.protocolLoadCache.clear();
-        console.log('[BridgeManager] Protocol load cache cleared');
+        logger.info('Protocol load cache cleared');
     }
 
     /**
@@ -727,7 +727,7 @@ default:
             this.cleanupCaches();
         }, this.cacheConfig.cleanupInterval);
 
-        console.log('[BridgeManager] Multi-level caching system initialized');
+        logger.info('Multi-level caching system initialized');
     }
 
     /**
@@ -740,7 +740,7 @@ default:
         for (const [protocol, entry] of this.multiLevelCache.shortTerm) {
             if (now - entry.timestamp > this.cacheConfig.shortTermTTL) {
                 this.multiLevelCache.shortTerm.delete(protocol);
-                console.debug(`[BridgeManager] Cleaned up expired short-term cache for ${protocol}`);
+                logger.info('Cleaned up expired short-term cache', { protocol });
             }
         }
 
@@ -748,7 +748,7 @@ default:
         for (const [protocol, entry] of this.multiLevelCache.longTerm) {
             if (now - entry.timestamp > this.cacheConfig.longTermTTL) {
                 this.multiLevelCache.longTerm.delete(protocol);
-                console.debug(`[BridgeManager] Cleaned up expired long-term cache for ${protocol}`);
+                logger.info('Cleaned up expired long-term cache', { protocol });
             }
         }
 
@@ -756,7 +756,7 @@ default:
         for (const [protocol, entry] of this.multiLevelCache.memory) {
             if (now - entry.timestamp > entry.ttl) {
                 this.multiLevelCache.memory.delete(protocol);
-                console.debug(`[BridgeManager] Cleaned up expired memory cache for ${protocol}`);
+                logger.info('Cleaned up expired memory cache', { protocol });
             }
         }
 
@@ -779,7 +779,7 @@ default:
             const oldest = entries.shift();
             if (oldest) {
                 this.multiLevelCache.memory.delete(oldest[0]);
-                console.debug(`[BridgeManager] Evicted oldest protocol from memory cache: ${oldest[0]}`);
+                logger.info('Evicted oldest protocol from memory cache', { protocol: oldest[0] });
             }
         }
     }
@@ -826,14 +826,14 @@ default:
         // Check memory cache first (fastest)
         const memoryEntry = this.multiLevelCache.memory.get(protocolName);
         if (memoryEntry) {
-            console.debug(`[BridgeManager] Cache HIT (memory) for ${protocolName}`);
+            logger.info('Cache HIT (memory)', { protocol: protocolName });
             return memoryEntry.protocol;
         }
 
         // Check short-term cache
         const shortTermEntry = this.multiLevelCache.shortTerm.get(protocolName);
         if (shortTermEntry) {
-            console.debug(`[BridgeManager] Cache HIT (short-term) for ${protocolName}`);
+            logger.info('Cache HIT (short-term)', { protocol: protocolName });
             // Promote to memory cache since it's being used
             this.storeInMultiLevelCache(shortTermEntry.protocol, protocolName);
             return shortTermEntry.protocol;
@@ -842,7 +842,7 @@ default:
         // Check long-term cache
         const longTermEntry = this.multiLevelCache.longTerm.get(protocolName);
         if (longTermEntry) {
-            console.debug(`[BridgeManager] Cache HIT (long-term) for ${protocolName}`);
+            logger.info('Cache HIT (long-term)', { protocol: protocolName });
             // Promote to short-term cache
             this.multiLevelCache.shortTerm.set(protocolName, {
                 protocol: longTermEntry.protocol,
@@ -852,7 +852,7 @@ default:
             return longTermEntry.protocol;
         }
 
-        console.debug(`[BridgeManager] Cache MISS for ${protocolName}`);
+        logger.info('Cache MISS', { protocol: protocolName });
         return null;
     }
 
@@ -892,7 +892,7 @@ default:
             this.cacheCleanupInterval = null;
         }
 
-        console.log('[BridgeManager] All caches cleared');
+        logger.info('All caches cleared');
     }
 
 
@@ -1027,12 +1027,12 @@ default:
         primaryProtocol: BridgeProtocol,
         params: BridgeParams
     ): Promise<BridgeResult | null> {
-        console.log(`[BridgeManager] Attempting automatic recovery for ${primaryProtocol.name}`);
+        logger.info('Attempting automatic recovery', { protocol: primaryProtocol.name });
 
         try {
             // Strategy 1: Retry with same protocol (for transient errors)
             if (this.canRetryWithSameProtocol(primaryProtocol)) {
-                console.log(`[BridgeManager] Retrying with same protocol: ${primaryProtocol.name}`);
+                logger.info('Retrying with same protocol', { protocol: primaryProtocol.name });
                 return await primaryProtocol.bridge(params);
             }
 
@@ -1044,12 +1044,12 @@ default:
             // Strategy 3: Adjust parameters and retry
             const adjustedParams = this.adjustParametersForRecovery(params);
             if (adjustedParams) {
-                console.log('[BridgeManager] Retrying with adjusted parameters');
+                logger.info('Retrying with adjusted parameters');
                 return await primaryProtocol.bridge(adjustedParams);
             }
 
         } catch (recoveryError) {
-            console.warn(`[BridgeManager] Automatic recovery failed: ${(recoveryError as Error).message}`);
+            logger.warn('Automatic recovery failed', { error: (recoveryError as Error).message });
             // Continue with normal fallback process
         }
 
@@ -1069,7 +1069,7 @@ default:
      * CCTP-specific recovery with fallback attestation
      */
     private async retryCctpWithFallbackAttestation(params: BridgeParams): Promise<BridgeResult> {
-        console.log('[BridgeManager] Attempting CCTP recovery with fallback attestation');
+        logger.info('Attempting CCTP recovery with fallback attestation');
         return bridgeManager.bridge({
             ...params,
             options: {
@@ -1084,7 +1084,7 @@ default:
      * Adjust parameters for recovery attempt
      */
     private adjustParametersForRecovery(params: BridgeParams): BridgeParams | null {
-        console.log('[BridgeManager] Adjusting parameters for recovery');
+        logger.info('Adjusting parameters for recovery');
 
         return {
             ...params,
@@ -1219,7 +1219,7 @@ default:
             errorFrequency: new Map(),
             lastRecorded: new Date(),
         };
-        console.log('[BridgeManager] Analytics reset');
+        logger.info('Analytics reset');
     }
 }
 

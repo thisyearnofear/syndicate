@@ -11,6 +11,7 @@
  */
 
 import { createHmac } from 'crypto';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // TYPES
@@ -115,12 +116,12 @@ export function isWebhookTimestampFresh(
   const age = now - timestamp;
 
   if (age < 0) {
-    console.warn('[Gelato] Webhook timestamp is in the future:', { timestamp, now });
+    logger.warn('[Gelato] Webhook timestamp is in the future', { timestamp, now });
     return false;
   }
 
   if (age > maxAgeSecs) {
-    console.warn('[Gelato] Webhook timestamp is too old:', { age, maxAgeSecs });
+    logger.warn('[Gelato] Webhook timestamp is too old', { age, maxAgeSecs });
     return false;
   }
 

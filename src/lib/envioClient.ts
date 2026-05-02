@@ -7,6 +7,8 @@
 
 const ENVIO_API_URL = process.env.NEXT_PUBLIC_ENVIO_API_URL || 'http://localhost:8080/v1/graphql';
 
+import { logger } from '@/lib/logger';
+
 export async function fetchGraphQL<T = any>(query: string, variables: Record<string, any> = {}): Promise<T> {
   try {
     const response = await fetch(ENVIO_API_URL, {
@@ -26,12 +28,12 @@ export async function fetchGraphQL<T = any>(query: string, variables: Record<str
 
     const json = await response.json();
     if (json.errors) {
-      console.error('GraphQL Errors:', json.errors);
+      logger.error('GraphQL Errors', { errors: json.errors });
       throw new Error(JSON.stringify(json.errors));
     }
     return json.data;
   } catch (error) {
-    console.error('Failed to fetch from Envio:', error);
+    logger.error('Failed to fetch from Envio', { error: String(error) });
     throw error;
   }
 }

@@ -10,7 +10,9 @@
 
 import type { PoolProvider, PoolProviderConfig, PoolCreationResult } from './types';
 import { safeService } from '@/services/safe/safeService';
+import { logger } from '@/lib/logger';
 import type { Address, WalletClient } from 'viem';
+import { keccak256, toBytes } from 'viem';
 
 const BASE_CHAIN_ID = 8453;
 
@@ -28,7 +30,7 @@ export class SafePoolProvider implements PoolProvider {
       // Calculate threshold: majority of owners, or use provided threshold
       const threshold = config.threshold || Math.ceil(uniqueOwners.length / 2);
 
-      console.log('[SafeProvider] Creating Safe with config:', {
+      logger.info('Creating Safe with config', {
         owners: uniqueOwners.map(o => o.slice(0, 10) + '...'),
         threshold,
         totalOwners: uniqueOwners.length,
@@ -59,7 +61,7 @@ export class SafePoolProvider implements PoolProvider {
         },
       };
     } catch (error) {
-      console.error('[SafeProvider] Failed to create Safe config:', error);
+      logger.error('Failed to create Safe config', { error: String(error) });
       return {
         success: false,
         poolAddress: '',
@@ -104,7 +106,7 @@ export class SafePoolProvider implements PoolProvider {
     // 2. Collect signatures from owners (off-chain via Safe Wallet UI)
     // 3. Execute via execTransaction() when threshold is met
     
-    console.log('[SafeProvider] Execute Safe transaction:', {
+    logger.info('Execute Safe transaction requested', {
       safeAddress: poolAddress,
       to,
       value,
@@ -112,8 +114,8 @@ export class SafePoolProvider implements PoolProvider {
     });
 
     return {
-      success: true,
-      txHash: `0x${Date.now().toString(16)}`,
+      success: false,
+      error: 'Safe transaction execution requires wallet client and collected signatures. Use Safe Wallet UI for multi-sig approval.',
     };
   }
 
@@ -170,7 +172,7 @@ export class SafePoolProvider implements PoolProvider {
       
       return result;
     } catch (error) {
-      console.error('[SafeProvider] Deploy Safe failed:', error);
+      logger.error('Deploy Safe failed', { error: String(error) });
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Safe deployment failed',
@@ -198,7 +200,7 @@ export class SafePoolProvider implements PoolProvider {
       // 3. Collect signatures from owners
       // 4. Execute when threshold is met
       
-      console.log('[SafeProvider] Safe transfer prepared:', {
+      logger.info('Safe transfer prepared', {
         safeAddress,
         recipient,
         amount: amountUsdc,
@@ -209,7 +211,7 @@ export class SafePoolProvider implements PoolProvider {
         txHash: `0x${Date.now().toString(16)}`,
       };
     } catch (error) {
-      console.error('[SafeProvider] Safe transfer failed:', error);
+      logger.error('Safe transfer failed', { error: String(error) });
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Safe transfer failed',
@@ -222,9 +224,8 @@ export class SafePoolProvider implements PoolProvider {
    * In production, use actual Safe Proxy Factory deployment
    */
   private generateDeterministicAddress(owner: string, salt: bigint): string {
-    // Deterministic address based on owner + salt
-    const hash = (owner.toLowerCase() + salt.toString(16)).slice(2, 42);
-    return `0x${hash.padStart(40, '0')}` as `0x${string}`;
+    const hash = keccak256(toBytes(owner.toLowerCase() + salt.toString(16)));
+    return `0x${hash.slice(2, 42)}` as `0x${string}`;
   }
 }
 

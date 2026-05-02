@@ -12,6 +12,7 @@
 
 import { formatUnits, parseUnits } from 'viem';
 import { basePublicClient } from '@/lib/baseClient';
+import { logger } from '@/lib/logger';
 import type {
     VaultProvider,
     VaultProtocol,
@@ -123,7 +124,7 @@ export class SparkVaultProvider implements VaultProvider {
                 lastUpdated: Date.now(),
             };
         } catch (error) {
-            console.error('[SparkVault] Failed to get balance:', error);
+            logger.error('Failed to get Spark vault balance', { error: error instanceof Error ? error.message : String(error) });
             return {
                 deposited: '0',
                 yieldAccrued: '0',
@@ -159,7 +160,7 @@ export class SparkVaultProvider implements VaultProvider {
             this.cachedAPY = { value: estimatedAPY, timestamp: Date.now() };
             return estimatedAPY;
         } catch (error) {
-            console.error('[SparkVault] Failed to get APY:', error);
+            logger.error('Failed to get Spark APY', { error: error instanceof Error ? error.message : String(error) });
             return 0;
         }
     }

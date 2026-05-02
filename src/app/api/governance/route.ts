@@ -8,6 +8,7 @@
 
 import { NextResponse } from 'next/server';
 import { governanceService } from '@/services/governance/governanceService';
+import { logger } from '@/lib/logger';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -51,7 +52,7 @@ export async function GET(request: Request) {
       { status: 400, headers: corsHeaders }
     );
   } catch (error) {
-    console.error('[Governance API] GET error:', error);
+    logger.error('[Governance API] GET error:', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500, headers: corsHeaders }
@@ -114,7 +115,7 @@ export async function POST(request: Request) {
       { status: 400, headers: corsHeaders }
     );
   } catch (error) {
-    console.error('[Governance API] POST error:', error);
+    logger.error('[Governance API] POST error:', { error: error instanceof Error ? error.message : String(error) });
     const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
       { error: message },

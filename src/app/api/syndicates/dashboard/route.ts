@@ -14,6 +14,7 @@ import { safeService } from '@/services/safe/safeService';
 import { splitsService } from '@/services/splits/splitService';
 import { poolTogetherVaultService } from '@/services/poolTogether/vaultService';
 import type { PoolType } from '@/domains/lottery/types';
+import { logger } from '@/lib/logger';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -154,7 +155,7 @@ export async function GET(request: Request) {
         poolBalanceFormatted = `$${parseFloat(poolBalance).toLocaleString()}`;
       }
     } catch (error) {
-      console.error('[Dashboard API] Failed to fetch on-chain balance:', error);
+      logger.error('[Dashboard API] Failed to fetch on-chain balance', { error: String(error) });
     }
 
     // Fetch members — column names match the actual DB schema
@@ -225,7 +226,7 @@ export async function GET(request: Request) {
           break;
       }
     } catch (error) {
-      console.error('[Dashboard API] Failed to fetch pool-specific info:', error);
+      logger.error('[Dashboard API] Failed to fetch pool-specific info', { error: String(error) });
     }
 
     const ticketsPerMember = pool.tickets_purchased / Math.max(members.length, 1);
@@ -255,7 +256,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(dashboardData, { headers: corsHeaders });
   } catch (error) {
-    console.error('[Dashboard API] Error:', error);
+    logger.error('[Dashboard API] Error', { error: String(error) });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500, headers: corsHeaders }

@@ -19,6 +19,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from '@/lib/logger';
 
 const TON_RPC = process.env.TON_RPC_ENDPOINT || "https://toncenter.com/api/v2/jsonRPC";
 const TON_API_KEY = process.env.TON_API_KEY;
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
     const event = (await request.json()) as TonEvent;
 
     if (event.type === "PurchaseConfirmed") {
-      console.log("[TON Chainhook] Purchase confirmed:", {
+      logger.info('[TON Chainhook] Purchase confirmed', {
         purchaseId: event.purchaseId,
         sender: event.sender,
         amount: event.amount,
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (event.type === "BatchBridgeReady") {
-      console.log("[TON Chainhook] Batch bridge ready:", {
+      logger.info('[TON Chainhook] Batch bridge ready', {
         startId: event.startId,
         endId: event.endId,
         purchaseCount: event.purchaseCount,
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
         destinations.push(p.baseAddress);
       }
 
-      console.log("[TON Chainhook] Batch total:", {
+      logger.info('[TON Chainhook] Batch total', {
         totalAmount: totalAmount.toString(),
         totalTickets,
         purchaseCount: purchases.length,
@@ -119,7 +120,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ok: true, skipped: true });
   } catch (error) {
-    console.error("[TON Chainhook] Error:", error);
+    logger.error('[TON Chainhook] Error', { error: String(error) });
     return NextResponse.json({ ok: false }, { status: 500 });
   }
 }
@@ -132,7 +133,7 @@ async function fetchPurchaseRange(
   endId: bigint
 ): Promise<Array<{ sender: string; amount: string; ticketCount: number; baseAddress: string }>> {
   if (!LOTTERY_CONTRACT || !TON_RPC) {
-    console.warn("[TON Chainhook] TON_RPC or TON_LOTTERY_CONTRACT not configured");
+    logger.warn('[TON Chainhook] TON_RPC or TON_LOTTERY_CONTRACT not configured');
     return [];
   }
 
@@ -174,7 +175,7 @@ async function fetchPurchaseRange(
         });
       }
     } catch (err) {
-      console.warn(`[TON Chainhook] Failed to fetch purchase ${id}:`, err);
+      logger.warn('[TON Chainhook] Failed to fetch purchase', { id, error: String(err) });
     }
   }
 

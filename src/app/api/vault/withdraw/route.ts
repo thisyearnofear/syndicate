@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { vaultManager } from '@/services/vaults';
+import { logger } from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Withdrawal failed';
-    console.error('[API /vault/withdraw]', msg);
+    logger.error('[API /vault/withdraw]', { message: msg });
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }

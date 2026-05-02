@@ -15,6 +15,7 @@
  */
 
 import { Address } from 'viem';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // TYPES
@@ -284,7 +285,7 @@ export function getGelatoTaskRepository(): IGelatoTaskRepository {
     // For hackathon phase: use mock repository
     // In production: initialize with real DB (Supabase, etc)
     repositoryInstance = new MockGelatoTaskRepository();
-    console.log('[GelatoTaskRepository] Using mock in-memory repository. Replace with real DB in production.');
+    logger.info('[GelatoTaskRepository] Using mock in-memory repository. Replace with real DB in production.');
   }
   return repositoryInstance;
 }

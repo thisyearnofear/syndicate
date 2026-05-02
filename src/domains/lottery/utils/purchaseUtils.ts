@@ -6,6 +6,7 @@
  */
 
 import type { PurchaseChain, PurchaseResult } from "../types/purchase";
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // PERSISTENCE (localStorage)
@@ -78,7 +79,7 @@ export async function persistBridgeStatus(
       body: JSON.stringify(payload),
     });
   } catch (err) {
-    console.warn("[purchaseUtils] Failed to persist bridge status:", err);
+    logger.warn("[purchaseUtils] Failed to persist bridge status", { error: String(err) });
   }
 }
 

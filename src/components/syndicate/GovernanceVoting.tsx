@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/shared/components/ui/Button";
 import { useUnifiedWallet } from "@/hooks";
 import { Vote, Plus, CircleCheck, X, Clock, Users, AlertCircle, ChevronDown, ChevronUp, Send, Ban } from "lucide-react";
+import { logger } from '@/lib/logger';
 
 interface Proposal {
   id: string;
@@ -64,7 +65,7 @@ export function GovernanceVoting({ poolId }: GovernanceVotingProps) {
         }
       }
     } catch (err) {
-      console.error('Error fetching governance proposals:', err);
+      logger.error('Error fetching governance proposals', { error: String(err) });
       setError(err instanceof Error ? err.message : 'Failed to load proposals');
     } finally {
       setLoading(false);
@@ -98,7 +99,7 @@ export function GovernanceVoting({ poolId }: GovernanceVotingProps) {
       setUserVotes(prev => new Set([...prev, proposalId]));
       fetchProposals();
     } catch (err) {
-      console.error('Error casting vote:', err);
+      logger.error('Error casting vote', { error: String(err) });
       setError(err instanceof Error ? err.message : 'Failed to cast vote');
     } finally {
       setVotingFor(null);
@@ -423,7 +424,7 @@ function CreateProposalModal({ poolId, proposer, onClose, onSuccess }: CreatePro
       
       onSuccess();
     } catch (err) {
-      console.error('Error creating proposal:', err);
+      logger.error('Error creating proposal', { error: String(err) });
       setError(err instanceof Error ? err.message : 'Failed to create proposal');
     } finally {
       setSubmitting(false);

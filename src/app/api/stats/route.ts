@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { API } from '@/config';
 import { basePublicClient } from '@/lib/baseClient';
 import { MEGAPOT_ABI, MEGAPOT_V2 } from '@/config/contracts';
+import { logger } from '@/lib/logger';
 
 /**
  * Stats API route - uses same transport logic as /api/megapot
@@ -62,7 +63,7 @@ export async function GET() {
 
     // Return partial stats if API unavailable or outdated
     if (!response) {
-      console.warn('[Stats API] All endpoints failed, trying on-chain fallback');
+      logger.warn('[Stats API] All endpoints failed, trying on-chain fallback');
       const onChainStats = await getOnChainStats();
       if (onChainStats) {
         return NextResponse.json(onChainStats);
@@ -83,7 +84,7 @@ export async function GET() {
 
     // If API returns suspiciously low jackpot (old version), try on-chain
     if (prizeUsd < 100000) {
-      console.warn(`[Stats API] API returned suspicious prize ($${prizeUsd}), trying on-chain`);
+      logger.warn('[Stats API] API returned suspicious prize, trying on-chain', { prizeUsd });
       const onChainStats = await getOnChainStats();
       if (onChainStats) {
         return NextResponse.json(onChainStats);
@@ -103,7 +104,7 @@ export async function GET() {
       source: 'megapot-api',
     });
   } catch (error) {
-    console.error('[Stats API] Unexpected error:', error);
+    logger.error('[Stats API] Unexpected error', { error: String(error) });
     const onChainStats = await getOnChainStats().catch(() => null);
     if (onChainStats) return NextResponse.json(onChainStats);
 
@@ -145,7 +146,7 @@ async function getOnChainStats() {
       source: 'on-chain',
     };
   } catch (error) {
-    console.error('[Stats API] On-chain fallback failed:', error);
+    logger.error('[Stats API] On-chain fallback failed', { error: String(error) });
     return null;
   }
 }

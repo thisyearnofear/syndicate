@@ -12,6 +12,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { logger } from '@/lib/logger';
 import { 
   Trophy, 
   Check, 
@@ -79,7 +80,7 @@ export function PrizeDistribution({
       const data = await response.json();
       setDistributions(data.distributions || []);
     } catch (error) {
-      console.error('Failed to fetch distributions:', error);
+      logger.error('Failed to fetch distributions', { error: String(error) });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -111,7 +112,7 @@ export function PrizeDistribution({
       alert(`Distribution simulated! ${result.memberShares.length} members would receive payouts.`);
       fetchDistributions(true);
     } catch (error) {
-      console.error('Distribution trigger failed:', error);
+      logger.error('Distribution trigger failed', { error: String(error) });
       alert('Failed to trigger distribution');
     } finally {
       setTriggering(false);

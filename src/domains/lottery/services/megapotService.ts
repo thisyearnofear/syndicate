@@ -12,6 +12,7 @@
 import { api, performance, CHAIN_IDS } from '@/config';
 import type { JackpotStats, TicketPurchase, DailyGiveawayWin, PurchaseResult } from '../types';
 import { getMegapotOnChainPrize } from '@/services/lotteries/OnChainFallbackService';
+import { logger } from '@/lib/logger';
 
 class MegapotService {
   private cache = new Map<string, { data: unknown; timestamp: number }>();
@@ -78,7 +79,7 @@ class MegapotService {
         return data;
       } catch (error) {
         if (logFailures) {
-          console.warn(`Attempt ${attempt}/${retries} failed for ${endpoint}:`, error);
+          logger.warn(`Attempt ${attempt}/${retries} failed for ${endpoint}`, { error: String(error) });
         }
 
         if (attempt === retries) {
@@ -106,7 +107,7 @@ class MegapotService {
       
       // Validate the response has meaningful data
       if (!stats || !stats.prizeUsd) {
-        console.warn('[MegapotService] API returned empty prize data');
+        logger.warn('[MegapotService] API returned empty prize data');
         return null;
       }
       
@@ -116,14 +117,14 @@ class MegapotService {
       // Also check if the prize looks suspiciously like the old version ($58k)
       // If we are expecting ~$1M, then $58k is likely an error/lag
       if (prizeValue <= 0 || prizeValue > 100_000_000 || prizeValue < 100_000) {
-        console.warn('[MegapotService] Prize value looks invalid or outdated:', prizeValue, 'trying fallback');
+        logger.warn('[MegapotService] Prize value looks invalid or outdated, trying fallback', { prizeValue });
         return this.getOnChainFallback();
       }
       
-      console.log('[MegapotService] Successfully fetched jackpot from API:', stats.prizeUsd);
+      logger.info('[MegapotService] Successfully fetched jackpot from API', { prizeUsd: stats.prizeUsd });
       return stats;
     } catch (error) {
-      console.warn('[MegapotService] Failed to fetch jackpot stats from API, trying fallback:', error);
+      logger.warn('[MegapotService] Failed to fetch jackpot stats from API, trying fallback', { error: String(error) });
       return this.getOnChainFallback();
     }
   }
@@ -137,7 +138,7 @@ class MegapotService {
        
        if (!onChainData) return null;
        
-       console.log('[MegapotService] Successfully fetched jackpot from chain:', onChainData.prizeUsd);
+        logger.info('[MegapotService] Successfully fetched jackpot from chain', { prizeUsd: onChainData.prizeUsd });
        
        return {
          prizeUsd: onChainData.prizeUsd,
@@ -158,7 +159,7 @@ class MegapotService {
          activePlayers: 0,
        };
      } catch (error) {
-       console.error('[MegapotService] On-chain fallback also failed:', error);
+        logger.error('[MegapotService] On-chain fallback also failed', { error: String(error) });
        return null;
      }
    }
@@ -178,7 +179,7 @@ class MegapotService {
         cacheDuration: performance.cache.activityFeed,
       });
     } catch (error) {
-      console.error('Failed to fetch ticket purchases:', error);
+      logger.error('Failed to fetch ticket purchases', { error: String(error) });
       return [];
     }
   }
@@ -192,7 +193,7 @@ class MegapotService {
         cacheDuration: performance.cache.activityFeed,
       });
     } catch (error) {
-      console.error('Failed to fetch daily giveaway winners:', error);
+      logger.error('Failed to fetch daily giveaway winners', { error: String(error) });
       return [];
     }
   }
@@ -270,7 +271,7 @@ class MegapotService {
         mode: 'individual',
       };
     } catch (error) {
-      console.error('Failed to execute permitted purchase:', error);
+      logger.error('Failed to execute permitted purchase', { error: String(error) });
       const message = error instanceof Error ? error.message : 'Unknown error';
       
       return {
