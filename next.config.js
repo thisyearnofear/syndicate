@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 
+const { withSentryConfig } = require('@sentry/nextjs');
+
 const nextConfig = {
   reactStrictMode: true,
   typescript: {
@@ -27,4 +29,16 @@ const nextConfig = {
   ],
 };
 
-module.exports = nextConfig;
+module.exports = withSentryConfig(nextConfig, {
+  // Suppresses source map uploading logs during build
+  silent: true,
+
+  // Upload source maps in production only
+  widenClientFileUpload: true,
+
+  // Hides source maps from generated client bundles
+  hideSourceMaps: true,
+
+  // Automatically tree-shake Sentry logger statements in production
+  disableLogger: true,
+});
