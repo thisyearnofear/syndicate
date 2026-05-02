@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useUnifiedWallet } from './useUnifiedWallet';
+import { logger } from '@/lib/logger';
 import {
     getVaultActivityHistory,
     type VaultDepositActivityRecord,
 } from '@/utils/vaultActivityManager';
+import type { VaultProtocol } from '@/services/vaults';
 
 export interface VaultActivityState {
     deposits: VaultDepositActivityRecord[];
@@ -35,15 +37,15 @@ export function useVaultActivity(): VaultActivityState & VaultActivityActions {
                 if (address) {
                     const response = await fetch(`/api/activity?wallet=${encodeURIComponent(address)}&type=vault_deposit`);
                     if (response.ok) {
-                        const rows = await response.json();
-                        const mapped: VaultDepositActivityRecord[] = (rows as any[]).map((row) => ({
-                            id: row.id,
-                            walletAddress: row.walletAddress,
-                            protocol: row.protocol,
-                            amount: row.amount,
-                            txHash: row.txHash,
-                            timestamp: row.createdAt,
-                            bridgeActivityId: row.bridgeActivityId ?? undefined,
+                        const rows: Record<string, unknown>[] = await response.json();
+                        const mapped: VaultDepositActivityRecord[] = rows.map((row) => ({
+                            id: row.id as string,
+                            walletAddress: row.walletAddress as string,
+                            protocol: row.protocol as VaultProtocol,
+                            amount: row.amount as string,
+                            txHash: row.txHash as string,
+                            timestamp: row.createdAt as number,
+                            bridgeActivityId: (row.bridgeActivityId as string) ?? undefined,
                         }));
                         setDeposits(mapped.sort((a, b) => b.timestamp - a.timestamp));
                         setLastUpdated(Date.now());
@@ -52,7 +54,7 @@ export function useVaultActivity(): VaultActivityState & VaultActivityActions {
                     }
                 }
             } catch (error) {
-                console.warn('[useVaultActivity] Falling back to local activity store:', error);
+                logger.warn("Falling back to local activity store", { error: error instanceof Error ? error.message : String(error) });
             }
 
             const history = getVaultActivityHistory()

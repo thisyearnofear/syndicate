@@ -126,14 +126,14 @@ async function getOnChainStats() {
       address: MEGAPOT_V2.jackpot.address,
       abi: MEGAPOT_ABI,
       functionName: 'currentDrawingId',
-    } as any) as bigint;
+    } as unknown as Parameters<typeof basePublicClient.readContract>[0]) as bigint;
 
     const state = await basePublicClient.readContract({
       address: MEGAPOT_V2.jackpot.address,
       abi: MEGAPOT_ABI,
       functionName: 'getDrawingState',
       args: [currentId],
-    } as any) as any;
+    } as unknown as Parameters<typeof basePublicClient.readContract>[0]) as Record<string, unknown>;
 
     const prizeUsd = Number(state.prizePool) / 1e6;
     

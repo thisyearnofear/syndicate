@@ -173,8 +173,8 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
       if (isFhenix) {
         setStatus('encrypting');
         const { approveTxHash, depositTxHash } = await approveAndDepositEncrypted({
-          walletClient: activeWalletClient as any,
-          publicClient: activePublicClient as any,
+          walletClient: activeWalletClient as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- wagmi injects account
+          publicClient: activePublicClient as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- wagmi injects account
           userAddress,
           vaultAddress: depositAddress,
           usdcAddress: usdcAddress as `0x${string}`,

@@ -3,8 +3,10 @@
  * Temporary error logging solution until proper monitoring is set up
  */
 
+import { logger } from '@/lib/logger';
+
 interface ErrorContext {
-  [key: string]: any;
+  [key: string]: unknown;
   walletType?: string;
   network?: string;
   transactionHash?: string;
@@ -73,8 +75,8 @@ export class ErrorLogger {
 
     } catch (loggingError) {
       // Fallback to basic console error if logging fails
-      console.error('Failed to log error:', loggingError);
-      console.error('Original error:', error);
+      logger.error("Failed to log error", { error: loggingError instanceof Error ? loggingError.message : String(loggingError) });
+      logger.error("Original error", { error: error.message });
     }
   }
 
@@ -92,19 +94,7 @@ export class ErrorLogger {
   }
 
   private logToConsole(error: Error, context: ErrorContext): void {
-    console.groupCollapsed('🚨 ERROR:', error.message);
-    console.error('Message:', error.message);
-    console.error('Stack:', error.stack);
-    console.log('Context:', context);
-    console.groupEnd();
-
-    // Also log to error channel if available
-    if (typeof window !== 'undefined' && window.console.error) {
-      window.console.error(`[ERROR] ${error.message}`, {
-        stack: error.stack,
-        context,
-      });
-    }
+    logger.error(error.message, { stack: error.stack, context });
   }
 
   private async sendToBackendIfAvailable(): Promise<void> {
@@ -139,11 +129,11 @@ export class ErrorLogger {
       });
 
       if (!response.ok) {
-        console.warn('Failed to send error to backend:', response.status);
+        logger.warn("Failed to send error to backend", { status: response.status });
       }
 
     } catch (sendError) {
-      console.error('Failed to send error to backend:', sendError);
+      logger.error("Failed to send error to backend", { error: sendError instanceof Error ? sendError.message : String(sendError) });
     } finally {
       this.isSending = false;
       

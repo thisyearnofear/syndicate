@@ -149,7 +149,7 @@ export class ERC7715Service {
         // Initialize base client and extend with ERC-7715 actions actions
         const baseClient = createWalletClient({
           chain: this.getChainFromId(this.getCurrentChainId()),
-          transport: custom(window.ethereum as any),
+          transport: custom(window.ethereum as unknown as import('viem').EIP1193Provider),
         });
 
         // Extend client with Smart Accounts Kit actions
@@ -190,7 +190,7 @@ export class ERC7715Service {
       };
     }
 
-    const provider = window.ethereum as any;
+    const provider = window.ethereum as unknown as Record<string, unknown>;
 
     // Check if it's MetaMask
     if (!provider.isMetaMask) {
@@ -231,7 +231,7 @@ export class ERC7715Service {
 
     try {
       // FIX: Use window.ethereum directly as Viem WalletClient doesn't expose requestExecutionPermissions
-      const provider = (window as any).ethereum;
+      const provider = (window as unknown as { ethereum?: Record<string, unknown> }).ethereum;
 
       if (!provider) {
         throw new Error('MetaMask provider not found');
@@ -258,7 +258,7 @@ export class ERC7715Service {
 
       console.log('[ERC7715] Requesting permissions via Smart Accounts Kit (SDK)...');
 
-      const sdkProvider = (this.walletClient as any);
+      const sdkProvider = this.walletClient as unknown as Record<string, unknown>;
 
       // Use the SDK's requestExecutionPermissions action
       // CRITICAL: Match MetaMask Smart Accounts Kit 0.3.0 API specification
@@ -269,14 +269,15 @@ export class ERC7715Service {
       // - periodAmount: bigint (e.g., parseUnits("50", 6) for 50 USDC)
       // - periodDuration: number in seconds (e.g., 604800 for 7 days)
       // - NOT hex strings (that was the original bug causing validation failures)
-      const grantedPermissions = await sdkProvider.requestExecutionPermissions([{
+      const requestPermissions = sdkProvider.requestExecutionPermissions as (params: unknown[]) => Promise<unknown[]>;
+      const grantedPermissions = await requestPermissions([{
         chainId,
         expiry,
         isAdjustmentAllowed: true,  // MOVED: Top-level, not in permission.data
         signer: {
           type: 'account',
           data: {
-            address: provider.selectedAddress || sdkProvider.account?.address,
+            address: provider.selectedAddress || (sdkProvider.account as Record<string, unknown>)?.address,
           },
         },
         permission: {
@@ -295,10 +296,12 @@ export class ERC7715Service {
         return null; // User rejected
       }
 
-      const permissionResponse = grantedPermissions[0];
+      const permissionResponse = grantedPermissions[0] as Record<string, unknown>;
+      const context = permissionResponse.context as Record<string, unknown> | undefined;
+      const signerMeta = permissionResponse.signerMeta as { delegationManager?: `0x${string}` } | undefined;
 
       const grant: AdvancedPermissionGrant = {
-        id: permissionResponse.context?.id || `perm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: (context?.id as string) || `perm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         type,
         target,
         limit,
@@ -307,9 +310,8 @@ export class ERC7715Service {
         grantedAt: Math.floor(Date.now() / 1000),
         expiresAt: expiry,
         isActive: true,
-        // Store MetaMask response data for redemption
-        context: permissionResponse.context,
-        signerMeta: permissionResponse.signerMeta,
+        context,
+        signerMeta,
       };
 
       this.permissions.set(grant.id, grant);
@@ -506,8 +508,8 @@ export class ERC7715Service {
    */
   private getCurrentChainId(): number {
     if (typeof window === 'undefined' || !window.ethereum) return 0;
-    const provider = window.ethereum as any;
-    const chainId = provider.chainId || '0';
+    const provider = window.ethereum as unknown as Record<string, unknown>;
+    const chainId = (provider.chainId as string) || '0';
     return parseInt(chainId, 16);
   }
 

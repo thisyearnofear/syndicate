@@ -18,6 +18,7 @@
 import { sql } from '@vercel/postgres';
 import { safeService } from '@/services/safe/safeService';
 import { splitsService } from '@/services/splits/splitService';
+import { logger } from '@/lib/logger';
 import type { PoolType } from '@/domains/lottery/types';
 import type { Address } from 'viem';
 
@@ -26,6 +27,18 @@ const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
 
 // PoolTogether PrizePool on Base
 const _PT_PRIZE_POOL = '0x45b2010d8a4f08b53c9fa7544c51dfd9733732cb' as const;
+
+interface _PrizeDistributionRow {
+  id: string;
+  pool_id: string;
+  prize_amount_usdc: string;
+  member_count: string;
+  status: string;
+  tx_hash: string | null;
+  created_at: string;
+  completed_at: string | null;
+  error: string | null;
+}
 
 export type DistributionStatus = 
   | 'pending'      // Waiting for win confirmation
@@ -201,7 +214,7 @@ export class PrizeDistributionService {
   async distributeViaSafe(
     safeAddress: Address,
     memberShares: MemberShare[],
-    _walletClient: any
+    _walletClient: unknown
   ): Promise<DistributionResult> {
     try {
       // Get Safe info
@@ -214,7 +227,7 @@ export class PrizeDistributionService {
       // In production, this would use Safe's multiSend
       // For now, we'll create individual transfer transactions
       
-      console.log('[PrizeDistribution] Safe distribution:', {
+      logger.info('[PrizeDistribution] Safe distribution', {
         safeAddress,
         threshold: safeInfo.threshold,
         members: memberShares.length,
@@ -230,7 +243,7 @@ export class PrizeDistributionService {
         totalDistributed: memberShares.reduce((sum, m) => sum + m.shareAmount, 0),
       };
     } catch (error) {
-      console.error('[PrizeDistribution] Safe distribution failed:', error);
+      logger.error('[PrizeDistribution] Safe distribution failed', { error: error instanceof Error ? error.message : String(error) });
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Safe distribution failed',
@@ -245,7 +258,7 @@ export class PrizeDistributionService {
   async distributeViaSplits(
     splitAddress: Address,
     memberShares: MemberShare[],
-    walletClient: any
+    walletClient: unknown
   ): Promise<DistributionResult> {
     try {
       // Get split info to verify
@@ -267,14 +280,14 @@ export class PrizeDistributionService {
       const result = await splitsService.distributeToken({
         splitAddress,
         token: USDC_ADDRESS,
-        walletClient,
+        walletClient: walletClient as Parameters<typeof splitsService.distributeToken>[0]['walletClient'],
       });
 
       if (!result.success) {
         return { success: false, error: result.error };
       }
 
-      console.log('[PrizeDistribution] Splits distribution:', {
+      logger.info('[PrizeDistribution] Splits distribution', {
         splitAddress,
         txHash: result.txHash,
         balance: balance.toString(),
@@ -287,7 +300,7 @@ export class PrizeDistributionService {
         totalDistributed: memberShares.reduce((sum, m) => sum + m.shareAmount, 0),
       };
     } catch (error) {
-      console.error('[PrizeDistribution] Splits distribution failed:', error);
+      logger.error('[PrizeDistribution] Splits distribution failed', { error: error instanceof Error ? error.message : String(error) });
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Splits distribution failed',
@@ -303,14 +316,14 @@ export class PrizeDistributionService {
     ptVaultAddress: Address,
     safeAddress: Address | null,
     memberShares: MemberShare[],
-    walletClient: any
+    walletClient: unknown
   ): Promise<DistributionResult> {
     try {
       // PoolTogether prizes are claimed separately
       // The vault generates yield that becomes prize pool
       // For syndicates, we'd typically route through a Safe or Splits
 
-      console.log('[PrizeDistribution] PoolTogether distribution:', {
+      logger.info('[PrizeDistribution] PoolTogether distribution', {
         ptVaultAddress,
         safeAddress,
         members: memberShares.length,
@@ -327,7 +340,7 @@ export class PrizeDistributionService {
         error: 'PoolTogether prizes require a Safe or Splits for distribution',
       };
     } catch (error) {
-      console.error('[PrizeDistribution] PoolTogether distribution failed:', error);
+      logger.error('[PrizeDistribution] PoolTogether distribution failed', { error: error instanceof Error ? error.message : String(error) });
       return {
         success: false,
         error: error instanceof Error ? error.message : 'PoolTogether distribution failed',
@@ -342,7 +355,7 @@ export class PrizeDistributionService {
   async distributePrize(
     poolId: string,
     prizeAmount: number,
-    walletClient: any
+    walletClient: unknown
   ): Promise<DistributionResult> {
     try {
       // Get pool info
@@ -434,7 +447,7 @@ export class PrizeDistributionService {
         distributionId,
       };
     } catch (error) {
-      console.error('[PrizeDistribution] Distribution failed:', error);
+      logger.error('[PrizeDistribution] Distribution failed', { error: error instanceof Error ? error.message : String(error) });
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Distribution failed',
@@ -456,7 +469,7 @@ export class PrizeDistributionService {
       LIMIT 50
     `;
 
-    return result.rows.map((row: any) => ({
+    return result.rows.map((row) => ({
       id: row.id,
       poolId: row.pool_id,
       poolType: 'safe' as PoolType, // Would need to join with pools table

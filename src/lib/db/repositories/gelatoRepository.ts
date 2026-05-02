@@ -75,7 +75,7 @@ export class VercelPostgresGelatoRepository implements IGelatoTaskRepository {
 
     // Build dynamic SET clause
     const setters: string[] = ['updated_at = ' + now];
-    const values: any[] = [];
+    const values: unknown[] = [];
 
     for (const [key, value] of Object.entries(updates)) {
       if (key === 'id' || key === 'taskId') continue; // Skip immutable fields
@@ -199,42 +199,42 @@ export class VercelPostgresGelatoRepository implements IGelatoTaskRepository {
   // HELPERS
   // =============================================================================
 
-  private mapRowToTask(row: any): GelatoTaskRecord {
+  private mapRowToTask(row: Record<string, unknown>): GelatoTaskRecord {
     return {
-      id: row.id,
-      taskId: row.task_id,
-      userId: row.user_id,
-      permissionId: row.permission_id,
-      userAddress: row.user_address,
-      frequency: row.frequency,
-      amountPerPeriod: BigInt(row.amount_per_period),
-      status: row.status,
-      executionCount: row.execution_count,
-      lastExecutedAt: row.last_executed_at,
-      nextExecutionTime: row.next_execution_time,
-      lastError: row.last_error,
-      gelatoStatus: row.gelato_status,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      expiresAt: row.expires_at,
+      id: row.id as string,
+      taskId: row.task_id as string,
+      userId: row.user_id as string,
+      permissionId: row.permission_id as string,
+      userAddress: row.user_address as `0x${string}`,
+      frequency: row.frequency as GelatoTaskRecord['frequency'],
+      amountPerPeriod: BigInt(row.amount_per_period as string),
+      status: row.status as GelatoTaskRecord['status'],
+      executionCount: row.execution_count as number,
+      lastExecutedAt: row.last_executed_at as number | undefined,
+      nextExecutionTime: row.next_execution_time as number,
+      lastError: row.last_error as string | undefined,
+      gelatoStatus: row.gelato_status as GelatoTaskRecord['gelatoStatus'],
+      createdAt: row.created_at as number,
+      updatedAt: row.updated_at as number,
+      expiresAt: row.expires_at as number | undefined,
     };
   }
 
-  private mapRowToExecution(row: any): GelatoExecutionRecord {
+  private mapRowToExecution(row: Record<string, unknown>): GelatoExecutionRecord {
     return {
-      id: row.id,
-      taskId: row.task_id,
-      taskRecordId: row.task_record_id,
-      userId: row.user_id,
-      executedAt: row.executed_at,
-      transactionHash: row.transaction_hash,
-      success: row.success,
-      error: row.error,
-      amountExecuted: row.amount_executed ? BigInt(row.amount_executed) : 0n,
-      referrer: row.referrer,
-      gelatoExecutionId: row.gelato_execution_id,
-      gasUsed: row.gas_used ? BigInt(row.gas_used) : undefined,
-      createdAt: row.created_at,
+      id: row.id as string,
+      taskId: row.task_id as string,
+      taskRecordId: row.task_record_id as string,
+      userId: row.user_id as string,
+      executedAt: row.executed_at as number,
+      transactionHash: row.transaction_hash as string | undefined,
+      success: row.success as boolean,
+      error: row.error as string | undefined,
+      amountExecuted: row.amount_executed ? BigInt(row.amount_executed as string) : 0n,
+      referrer: row.referrer as `0x${string}`,
+      gelatoExecutionId: row.gelato_execution_id as string | undefined,
+      gasUsed: row.gas_used ? BigInt(row.gas_used as string) : undefined,
+      createdAt: row.created_at as number,
     };
   }
 

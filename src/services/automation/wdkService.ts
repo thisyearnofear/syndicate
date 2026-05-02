@@ -25,7 +25,7 @@ export interface AgentWalletInfo {
 
 export class TetherWDKService {
   private static instance: TetherWDKService;
-  private wdk: any = null;
+  private wdk: unknown = null;
   
   // Base Sepolia USD₮ (Bridged) - Use for testing
   public static readonly USDT_BASE_SEPOLIA = '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2' as Address;
@@ -71,7 +71,8 @@ export class TetherWDKService {
   async getAgentAddress(_chain: 'base' | 'base-sepolia' = 'base'): Promise<Address | null> {
     if (!this.wdk) return null;
     try {
-      const account = await this.wdk.getAccount(_chain, 0);
+      const wdk = this.wdk as { getAccount: (chain: string, index: number) => Promise<{ getAddress: () => Promise<Address> }> };
+      const account = await wdk.getAccount(_chain, 0);
       return await account.getAddress();
     } catch (error) {
       console.error('[WDK] Failed to get agent address:', error);
@@ -144,9 +145,9 @@ export class TetherWDKService {
         txHash: '0x' + 'f'.repeat(64) as Hash // Placeholder
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[WDK] Autonomous purchase failed:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -154,7 +155,7 @@ export class TetherWDKService {
    * Get agent reasoning for the purchase
    * Integrates with Gemini 1.5 Flash
    */
-  async getAgentReasoning(_userId: string, _context: any): Promise<string> {
+  async getAgentReasoning(_userId: string, _context: Record<string, unknown>): Promise<string> {
     // In a real implementation, this would call your existing Gemini service
     // with a prompt like: "As an autonomous agent managing USD₮ for user ${_userId}, 
     // given ${_context.yield} yield, should I buy tickets?"

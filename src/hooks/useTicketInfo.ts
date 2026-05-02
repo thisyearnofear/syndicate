@@ -11,6 +11,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useUnifiedWallet } from './useUnifiedWallet';
 import { web3Service, type UserTicketInfo, type OddsInfo, UserBalance } from '@/services/web3Service';
+import { logger } from '@/lib/logger';
 
 export interface TicketInfoState {
   userTicketInfo: UserTicketInfo | null;
@@ -98,7 +99,7 @@ export function useTicketInfo(): TicketInfoState & TicketInfoActions {
       }
     } catch (err) {
       if (!mountedRef.current) return;
-      console.error('[useTicketInfo] Error fetching info:', err);
+      logger.error("Error fetching info", { error: err instanceof Error ? err.message : String(err) });
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -124,7 +125,7 @@ export function useTicketInfo(): TicketInfoState & TicketInfoActions {
         throw new Error('Failed to claim winnings');
       }
     } catch (err) {
-      console.error('[useTicketInfo] Error claiming winnings:', err);
+      logger.error("Error claiming winnings", { error: err instanceof Error ? err.message : String(err) });
       setState(prev => ({
         ...prev,
         isClaimingWinnings: false,

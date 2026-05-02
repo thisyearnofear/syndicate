@@ -15,6 +15,7 @@
 import { useState, useCallback } from 'react';
 import { useWalletClient, usePublicClient, useChainId } from 'wagmi';
 import { useUnifiedWallet } from './useUnifiedWallet';
+import { logger } from '@/lib/logger';
 import {
   LIFI_STATUS_POLL_INTERVAL_MS,
   LIFI_STATUS_TIMEOUT_MS,
@@ -86,7 +87,7 @@ export function useLifiEarnVaultDeposit() {
       await walletClient.switchChain({ id: targetChainId });
       return true;
     } catch (error) {
-      console.error('[LifiEarn] Failed to switch chain:', error);
+      logger.error("[LifiEarn] Failed to switch chain", { error: error instanceof Error ? error.message : String(error) });
       return false;
     }
   }, [walletClient]);
@@ -175,7 +176,7 @@ export function useLifiEarnVaultDeposit() {
             abi: ERC20_ABI,
             functionName: 'approve',
             args: [approvalAddress as `0x${string}`, requiredAmount],
-            chain: { id: params.fromChain } as any,
+            chain: { id: params.fromChain } as unknown as NonNullable<Parameters<typeof walletClient.writeContract>[0]['chain']>,
             account: address as `0x${string}`,
           });
 
@@ -192,7 +193,9 @@ export function useLifiEarnVaultDeposit() {
         try { return '0x' + BigInt(value).toString(16); } catch { return undefined; }
       };
 
-      const txHash = await (window as any).ethereum.request({
+      const ethereum = (window as unknown as { ethereum?: { request: (args: { method: string; params: unknown[] }) => Promise<string> } }).ethereum;
+      if (!ethereum) throw new Error('No Ethereum provider found');
+      const txHash = await ethereum.request({
         method: 'eth_sendTransaction',
         params: [{
           from: address,

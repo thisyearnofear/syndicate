@@ -223,8 +223,8 @@ export function useVaultDeposit() {
 
           setState(prev => ({ ...prev, status: 'checking_allowance' }));
           const { approveTxHash, depositTxHash } = await approveAndDepositEncrypted({
-            walletClient: fhenixWalletClient as any,
-            publicClient: fhenixPublicClient as any,
+            walletClient: fhenixWalletClient as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- wagmi injects account
+            publicClient: fhenixPublicClient as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- wagmi injects account
             userAddress: userAddr,
             vaultAddress,
             usdcAddress,
@@ -291,8 +291,8 @@ export function useVaultDeposit() {
           const { FHENIX_POOL_CONFIG } = await import('@/services/syndicate/poolProviders/fhenixProvider');
           setState(prev => ({ ...prev, status: 'signing' }));
           const { withdrawTxHash } = await withdrawFromFhenixVault({
-            walletClient: fhenixWalletClient as any,
-            publicClient: fhenixPublicClient as any,
+            walletClient: fhenixWalletClient as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- wagmi injects account
+            publicClient: fhenixPublicClient as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- wagmi injects account
             vaultAddress: FHENIX_POOL_CONFIG.VAULT_ADDRESS,
             amountWei,
           });

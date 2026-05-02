@@ -91,7 +91,7 @@ export class AgentRegistryService {
       
       return {
         id: `near-${_userAddress.slice(0, 6)}`,
-        type: 'scheduled' as any,
+        type: 'scheduled' as AgentType,
         name: 'The Nomad (NEAR)',
         description: 'Cross-chain automation using NEAR Chain Signatures. Gas-optimized ticket purchases.',
         isEnabled: isEnabled,
@@ -117,7 +117,7 @@ export class AgentRegistryService {
       
       return {
         id: `noloss-${_userAddress.slice(0, 6)}`,
-        type: 'scheduled' as any, // Visual tier
+        type: 'scheduled' as AgentType, // Visual tier
         name: 'Savings Sentinel',
         description: 'No-loss prize savings via PoolTogether v5. 100% principal protection.',
         isEnabled: isEnabled,

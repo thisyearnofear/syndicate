@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { logger } from '@/lib/logger';
 
 const STORAGE_KEY = 'syndicate:ranger-execution-tracker';
 const STORAGE_EVENT = 'syndicate:ranger-execution-tracker:update';
@@ -72,7 +73,7 @@ export function useRangerExecutionTracker() {
         });
       }
     } catch (error) {
-      console.warn('[RangerExecutionTracker] Failed to load state:', error);
+      logger.warn("Failed to load state", { error: error instanceof Error ? error.message : String(error) });
     } finally {
       setIsLoaded(true);
     }
@@ -89,7 +90,7 @@ export function useRangerExecutionTracker() {
         })
       );
     } catch (error) {
-      console.warn('[RangerExecutionTracker] Failed to persist state:', error);
+      logger.warn("Failed to persist state", { error: error instanceof Error ? error.message : String(error) });
     }
   }, []);
 

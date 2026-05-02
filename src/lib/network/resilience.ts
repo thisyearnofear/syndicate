@@ -216,7 +216,7 @@ export async function safeAsync<T>(
 /**
  * Create a debounced version of an async function
  */
-export function debounceAsync<T extends (...args: any[]) => Promise<any>>(
+export function debounceAsync<T extends (...args: unknown[]) => Promise<unknown>>(
   fn: T,
   delay: number
 ): (...args: Parameters<T>) => Promise<ReturnType<T>> {
@@ -233,7 +233,7 @@ export function debounceAsync<T extends (...args: any[]) => Promise<any>>(
         timeoutId = setTimeout(async () => {
           try {
             const result = await fn(...args);
-            resolve(result);
+            resolve(result as ReturnType<T>);
           } catch (error) {
             reject(error);
           } finally {

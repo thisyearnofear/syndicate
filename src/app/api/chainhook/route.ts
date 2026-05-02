@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
  * Extract a string field from Clarity tuple data
  * Tries both dash and underscore variants
  */
-function extractField(data: any, dashKey: string): string {
+function extractField(data: Record<string, { repr?: string }> | undefined, dashKey: string): string {
   if (!data) return '';
   const underscoreKey = dashKey.replace(/-/g, '_');
   
@@ -172,7 +172,7 @@ function extractField(data: any, dashKey: string): string {
 /**
  * Extract a numeric field from Clarity tuple data
  */
-function extractNumericField(data: any, dashKey: string): number {
+function extractNumericField(data: Record<string, { repr?: string }> | undefined, dashKey: string): number {
   const value = extractField(data, dashKey);
   // Remove 'u' suffix if present (unsigned integer in Clarity)
   const cleaned = value.replace(/u/g, '');
@@ -182,7 +182,7 @@ function extractNumericField(data: any, dashKey: string): number {
 /**
  * Extract a BigInt field from Clarity tuple data
  */
-function extractBigIntField(data: any, dashKey: string): bigint {
+function extractBigIntField(data: Record<string, { repr?: string }> | undefined, dashKey: string): bigint {
   const value = extractField(data, dashKey);
   // Remove 'u' suffix if present (unsigned integer in Clarity)
   const cleaned = value.replace(/u/g, '');

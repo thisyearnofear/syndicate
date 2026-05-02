@@ -10,6 +10,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useUnifiedWallet } from './useUnifiedWallet';
+import { logger } from '@/lib/logger';
 
 const STACKS_WALLETS = ['stacks'] as const;
 
@@ -68,7 +69,7 @@ export function useTicketHistory(): TicketHistoryState & TicketHistoryActions {
         try {
             // Conditionally construct the API URL based on the connected wallet type.
             let apiUrl = `/api/ticket-purchases?wallet=${address}`;
-            if (STACKS_WALLETS.includes(walletType as any)) {
+            if (STACKS_WALLETS.includes(walletType as 'stacks')) {
                 apiUrl += '&chain=stacks';
             } else if (walletType === 'solana') {
                 apiUrl += '&chain=solana';
@@ -126,7 +127,7 @@ export function useTicketHistory(): TicketHistoryState & TicketHistoryActions {
                 lastUpdated: Date.now(),
             }));
         } catch (error) {
-            console.error('Failed to fetch ticket history:', error);
+            logger.error("Failed to fetch ticket history", { error: error instanceof Error ? error.message : String(error) });
             setState(prev => ({
                 ...prev,
                 isLoading: false,

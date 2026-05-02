@@ -9,7 +9,7 @@ const ENVIO_API_URL = process.env.NEXT_PUBLIC_ENVIO_API_URL || 'http://localhost
 
 import { logger } from '@/lib/logger';
 
-export async function fetchGraphQL<T = any>(query: string, variables: Record<string, any> = {}): Promise<T> {
+export async function fetchGraphQL<T = unknown>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
   try {
     const response = await fetch(ENVIO_API_URL, {
       method: 'POST',

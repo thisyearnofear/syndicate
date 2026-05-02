@@ -361,7 +361,7 @@ export class CctpProtocol implements BridgeProtocol {
             const attestation = await pollWithBackoff(
                 async () => {
                     let resp: Response | null = null;
-                    let json: any = null;
+                    let json: Record<string, unknown> | null = null;
 
                     // Strategy 1: Try proxy first (avoids CORS)
                     try {

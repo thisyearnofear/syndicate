@@ -22,7 +22,7 @@ export const queryKeys = {
 };
 
 interface UserTicketData {
-  tickets: any[];
+  tickets: Record<string, unknown>[];
   totalTickets: string;
   winnings: string;
 }
@@ -56,14 +56,15 @@ export const fetchFunctions = {
 
     try {
       const data = await fetchGraphQL(query, { address: address.toLowerCase() });
-      const user = data.User;
+      if (typeof data !== 'object' || data === null) return null;
+      const user = (data as Record<string, unknown>).User as Record<string, unknown> | undefined;
 
       if (!user) {
         return { tickets: [], totalTickets: '0', winnings: '0' };
       }
 
       return {
-        tickets: user.purchases || [],
+        tickets: (user.purchases as Record<string, unknown>[]) || [],
         totalTickets: user.totalTickets ? user.totalTickets.toString() : '0',
         winnings: user.totalWinnings ? user.totalWinnings.toString() : '0'
       };

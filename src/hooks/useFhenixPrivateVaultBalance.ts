@@ -77,6 +77,7 @@ export function useFhenixPrivateVaultBalance(params: {
       setStatus('initializing');
 
       // 1) Initialize cofhejs for this chain + wallet.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- wagmi injects account
       const initRes = await initializeFhe(publicClient as any, walletClient as any);
       if (!initRes.success) throw new Error(initRes.error?.message ?? 'Failed to initialize FHE');
 
@@ -85,13 +86,14 @@ export function useFhenixPrivateVaultBalance(params: {
       let permit = await getActivePermit();
 
       // If no permit, or it doesn't match this vault, create a new one.
-      if (!permit || String((permit as any).validatorContract).toLowerCase() !== vaultAddress.toLowerCase()) {
+      const permitObj = permit as unknown as { validatorContract?: string; getHash?: () => string };
+      if (!permit || String(permitObj.validatorContract).toLowerCase() !== vaultAddress.toLowerCase()) {
         const permitRes = await createPermit(userAddress, vaultAddress);
         if (!permitRes.success) throw new Error(permitRes.error?.message ?? 'Failed to create permit');
         permit = permitRes.data;
       }
 
-      const permitHash = (permit as any).getHash?.() as string | undefined;
+      const permitHash = permitObj.getHash?.() as string | undefined;
       if (!permitHash) throw new Error('Could not resolve permit hash');
 
       const selRes = await selectActivePermit(permitHash);
@@ -106,7 +108,7 @@ export function useFhenixPrivateVaultBalance(params: {
         address: vaultAddress,
         abi: FHENIX_BALANCE_ABI,
         functionName: 'getEncryptedBalanceCtHash',
-        args: [permissionRes.data as any],
+        args: [permissionRes.data as unknown as { publicKey: `0x${string}`; signature: `0x${string}` }],
       });
 
       // 4) Unseal via cofhejs + threshold network.

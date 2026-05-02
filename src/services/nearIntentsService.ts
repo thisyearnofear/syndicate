@@ -16,6 +16,7 @@ import { OpenAPI, QuoteRequest, OneClickService } from '@defuse-protocol/one-cli
 import type { WalletSelector } from '@near-wallet-selector/core';
 import { getNearConfig } from '@/config';
 import type { ProtocolHealth } from './bridges/types';
+import { logger } from '@/lib/logger';
 
 export interface IntentQuote {
   intentHash: string;
@@ -68,16 +69,16 @@ class NearIntentsService {
       const jwtToken = process.env.NEXT_PUBLIC_NEAR_INTENTS_JWT;
       if (jwtToken) {
         OpenAPI.TOKEN = jwtToken;
-        console.log('NEAR 1Click SDK initialized with JWT token');
+        logger.info('NEAR 1Click SDK initialized with JWT token');
       } else {
-        console.warn('NEAR 1Click SDK initialized without JWT (0.1% fee applies to swaps)');
+        logger.warn('NEAR 1Click SDK initialized without JWT (0.1% fee applies to swaps)');
       }
 
       this.isInitialized = true;
-      console.log('NEAR 1Click SDK ready for account:', accountId);
+      logger.info('NEAR 1Click SDK ready for account', { accountId });
       return true;
     } catch (error) {
-      console.error('Failed to initialize NEAR 1Click SDK:', error);
+      logger.error('Failed to initialize NEAR 1Click SDK', { error: error instanceof Error ? error.message : String(error) });
       return false;
     }
   }
@@ -132,7 +133,7 @@ class NearIntentsService {
       }
 
       const quoteTyped = quote as Record<string, unknown>;
-      console.debug('1Click Quote Response (dry):', quoteTyped);
+      logger.debug('1Click Quote Response (dry)', { quote: quoteTyped });
       
       const fee = String((quoteTyped.feeAmount as unknown) || (quoteTyped.estimatedFee as unknown) || '0');
       const destAmt = String((quoteTyped.destinationAmount as unknown) || (quoteTyped.receiveAmount as unknown) || params.sourceAmount);
@@ -148,7 +149,7 @@ class NearIntentsService {
         rawQuoteResponse: quoteTyped, // Store for debugging
       };
     } catch (error) {
-      console.error('Failed to get quote:', error);
+      logger.error('Failed to get quote', { error: error instanceof Error ? error.message : String(error) });
       return null;
     }
   }
@@ -198,7 +199,7 @@ class NearIntentsService {
       }
 
       const quoteTyped = quote as Record<string, unknown>;
-      console.debug('1Click Quote Response (executing):', quoteTyped);
+      logger.debug('1Click Quote Response (executing)', { quote: quoteTyped });
       
       // Extract from nested structure: response.quote.depositAddress
       // The 1Click API returns: { timestamp, signature, quoteRequest, quote: { depositAddress, ... } }
@@ -230,20 +231,14 @@ class NearIntentsService {
         this.failureCount++;
         this.lastFailure = new Date();
         // Log the actual response for debugging
-        console.error('Quote response missing required fields:', {
-          depositAddress,
-          quoteId,
-          quoteObjKeys: quoteObj ? Object.keys(quoteObj) : 'quote object not found',
-          rootKeys: Object.keys(quoteTyped),
-          fullResponse: quoteTyped,
-        });
+        logger.error('Quote response missing required fields', { depositAddress, quoteId, quoteObjKeys: quoteObj ? Object.keys(quoteObj) : 'quote object not found', rootKeys: Object.keys(quoteTyped) });
         return {
           success: false,
           error: 'Invalid quote response - missing deposit address',
         };
       }
 
-      console.log('Got deposit address:', depositAddress);
+      logger.info('Got deposit address', { depositAddress });
 
       this.successCount++;
       this.totalTimeMs += Date.now() - startTime;
@@ -258,7 +253,7 @@ class NearIntentsService {
     } catch (error: unknown) {
       this.failureCount++;
       this.lastFailure = new Date();
-      console.error('Failed to execute intent:', error);
+      logger.error('Failed to execute intent', { error: error instanceof Error ? error.message : String(error) });
       const errorMessage = this.parseIntentError(error);
       return {
         success: false,
@@ -338,14 +333,14 @@ class NearIntentsService {
       });
 
       if (!response.ok) {
-        console.error('Failed to derive EVM address:', response.status);
+        logger.error('Failed to derive EVM address', { status: response.status });
         return null;
       }
 
       const { evmAddress } = await response.json();
       return evmAddress || null;
     } catch (error) {
-      console.error('Error deriving EVM address:', error);
+      logger.error('Error deriving EVM address', { error: error instanceof Error ? error.message : String(error) });
       return null;
     }
   }
@@ -374,7 +369,7 @@ class NearIntentsService {
       const data = await response.json();
       return data.balance || '0';
     } catch (error) {
-      console.error('Failed to get NEAR balance:', error);
+      logger.error('Failed to get NEAR balance', { error: error instanceof Error ? error.message : String(error) });
       return '0';
     }
   }
@@ -402,7 +397,7 @@ class NearIntentsService {
         destinationTx: (st.destinationTx as string) || (st.txHash as string),
       };
     } catch (error) {
-      console.error('Failed to get intent status:', error);
+      logger.error('Failed to get intent status', { error: error instanceof Error ? error.message : String(error) });
       return {
         status: 'failed',
         error: 'Could not retrieve status',
@@ -415,7 +410,7 @@ class NearIntentsService {
    * This is the manual step required before the solver can execute
    */
   async transferUsdcToDepositAddress(params: {
-    selector: any; // WalletSelector type
+    selector: unknown; // WalletSelector type
     accountId: string;
     depositAddress: string;
     amountUsdc: string; // Amount in USDC (e.g., "100")
@@ -429,7 +424,7 @@ class NearIntentsService {
       const { selector, accountId, depositAddress, amountUsdc } = params;
 
       // Get the wallet instance
-      const wallet = await selector.wallet();
+      const wallet = await (selector as { wallet: () => Promise<{ signAndSendTransaction: (params: unknown) => Promise<unknown> }> }).wallet();
 
       // Convert USDC to smallest units (6 decimals)
       const amountUnits = String(Math.floor(parseFloat(amountUsdc) * 1_000_000));
@@ -463,23 +458,19 @@ class NearIntentsService {
         ],
       });
 
-      console.log('USDC transfer to deposit address successful:', {
-        txHash,
-        to: depositAddress,
-        amount: amountUsdc,
-      });
+      logger.info('USDC transfer to deposit address successful', { txHash, to: depositAddress, amount: amountUsdc });
 
       this.successCount++;
       this.totalTimeMs += Date.now() - startTime;
 
       return {
         success: true,
-        txHash,
+        txHash: txHash as string,
       };
     } catch (error: unknown) {
       this.failureCount++;
       this.lastFailure = new Date();
-      console.error('Failed to transfer USDC to deposit address:', error);
+      logger.error('Failed to transfer USDC to deposit address', { error: error instanceof Error ? error.message : String(error) });
       const errorMessage = this.parseTransferError(error);
       return {
         success: false,
@@ -549,7 +540,7 @@ class NearIntentsService {
       const data = await response.json();
       return data.balance || '0';
     } catch (error) {
-      console.error(`Failed to get USDC balance on ${params.chain}:`, error);
+      logger.error(`Failed to get USDC balance on ${params.chain}`, { error: error instanceof Error ? error.message : String(error) });
       return '0';
     }
   }
@@ -589,7 +580,7 @@ class NearIntentsService {
         refundTo: params.nearAccountId,
         refundType: QuoteRequest.refundType.ORIGIN_CHAIN,
         recipient: params.nearAccountId,
-        recipientType: 'ORIGIN_CHAIN' as any,
+        recipientType: 'ORIGIN_CHAIN' as unknown as QuoteRequest.recipientType,
         deadline: new Date(Date.now() + 3600000).toISOString(),
       };
 
@@ -618,25 +609,21 @@ class NearIntentsService {
       }
 
       if (!depositAddress) {
-        console.error('Quote response missing deposit address:', quoteTyped);
+        logger.error('Quote response missing deposit address', { quote: quoteTyped });
         return {
           success: false,
           error: 'Invalid quote response - missing deposit address',
         };
       }
 
-      console.log('Reverse bridge quote received:', {
-        depositAddress,
-        amountUnits,
-        nearAccountId: params.nearAccountId,
-      });
+      logger.info('Reverse bridge quote received', { depositAddress, amountUnits, nearAccountId: params.nearAccountId });
 
       return {
         success: true,
         depositAddress,
       };
     } catch (error: unknown) {
-      console.error('Failed to initiate reverse bridge:', error);
+      logger.error('Failed to initiate reverse bridge', { error: error instanceof Error ? error.message : String(error) });
       const errorMessage = this.parseIntentError(error);
       return {
         success: false,
@@ -663,7 +650,7 @@ class NearIntentsService {
     try {
       // Dynamic import to avoid requiring ethers at module level
       const { Contract } = await import('ethers');
-      const provider = params.evmProvider as any;
+      const provider = params.evmProvider as unknown as { getSigner: (address: string) => Promise<import('ethers').Signer> };
 
       const USDC_ABI = [
         'function transfer(address to, uint256 amount) external returns (bool)',
@@ -682,12 +669,7 @@ class NearIntentsService {
         Math.floor(parseFloat(params.amountUsdc) * 1_000_000)
       ).toString();
 
-      console.log('Transferring winnings to reverse bridge deposit:', {
-        from: params.evmWallet,
-        to: params.depositAddress,
-        amount: params.amountUsdc,
-        amountUnits,
-      });
+      logger.info('Transferring winnings to reverse bridge deposit', { from: params.evmWallet, to: params.depositAddress, amount: params.amountUsdc, amountUnits });
 
       const tx = await usdcContract.transfer(params.depositAddress, amountUnits);
       const receipt = await tx.wait();
@@ -697,7 +679,7 @@ class NearIntentsService {
         txHash: receipt.hash,
       };
     } catch (error: unknown) {
-      console.error('Failed to transfer winnings to deposit:', error);
+      logger.error('Failed to transfer winnings to deposit', { error: error instanceof Error ? error.message : String(error) });
       const errorStr = String(error);
       
       let errorMessage = 'Failed to transfer winnings';

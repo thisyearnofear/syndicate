@@ -127,7 +127,7 @@ export function isRecoverableWalletError(error: unknown): boolean {
 /**
  * Create a wallet connection wrapper that handles disconnections
  */
-export function withWalletConnection<T extends (...args: any[]) => Promise<any>>(
+export function withWalletConnection<T extends (...args: unknown[]) => Promise<unknown>>(
   fn: T,
   options: {
     onDisconnect?: () => void;
@@ -147,7 +147,7 @@ export function withWalletConnection<T extends (...args: any[]) => Promise<any>>
     try {
       const result = await fn(...args);
       reconnectAttempts = 0; // Reset on success
-      return result;
+      return result as ReturnType<T>;
     } catch (error) {
       const isRecoverable = isRecoverableWalletError(error);
       
@@ -167,7 +167,7 @@ export function withWalletConnection<T extends (...args: any[]) => Promise<any>>
         }
         
         // Retry the operation
-        return fn(...args);
+        return fn(...args) as ReturnType<T>;
       }
       
       throw error;
