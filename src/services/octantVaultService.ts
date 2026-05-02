@@ -8,6 +8,7 @@
 import { ethers, Contract } from 'ethers';
 import OctantV2ABI from '@/abis/OctantV2.json';
 import { OCTANT_CONFIG } from '@/config/octantConfig';
+import { logger } from '@/lib/logger';
 
 export interface OctantVaultInfo {
   address: string;
@@ -61,7 +62,7 @@ class OctantVaultService {
       this.signer = signer || null;
       return true;
     } catch (error) {
-      console.error('Failed to initialize Octant vault service:', error);
+      logger.error('Failed to initialize Octant vault service', { error: error instanceof Error ? error.message : String(error) });
       return false;
     }
   }
@@ -202,7 +203,7 @@ class OctantVaultService {
         yieldGenerated,
       };
     } catch (error) {
-      console.error('Failed to get vault info:', error);
+      logger.error('Failed to get vault info', { error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   }
@@ -237,7 +238,7 @@ class OctantVaultService {
           shares: ethers.formatUnits(addedShares, 18),
         };
       } catch (error) {
-        console.error('Mock deposit failed:', error);
+        logger.error('Mock deposit failed', { error: error instanceof Error ? error.message : String(error) });
         return { success: false, error: error instanceof Error ? error.message : 'Deposit failed' };
       }
     }
@@ -254,7 +255,7 @@ class OctantVaultService {
         shares: ethers.formatUnits(expectedShares, 18),
       };
     } catch (error) {
-      console.error('Deposit failed:', error);
+      logger.error('Deposit failed', { error: error instanceof Error ? error.message : String(error) });
       return { success: false, error: error instanceof Error ? error.message : 'Deposit failed' };
     }
   }
@@ -288,7 +289,7 @@ class OctantVaultService {
         this.mockBalances.set(key, updated);
         return { success: true, txHash: `mock-withdraw-${Date.now()}`, assets: amount };
       } catch (error) {
-        console.error('Mock withdrawal failed:', error);
+        logger.error('Mock withdrawal failed', { error: error instanceof Error ? error.message : String(error) });
         return { success: false, error: error instanceof Error ? error.message : 'Withdrawal failed' };
       }
     }
@@ -300,7 +301,7 @@ class OctantVaultService {
       const receipt = await tx.wait();
       return { success: true, txHash: receipt.hash, assets: amount };
     } catch (error) {
-      console.error('Withdrawal failed:', error);
+      logger.error('Withdrawal failed', { error: error instanceof Error ? error.message : String(error) });
       return { success: false, error: error instanceof Error ? error.message : 'Withdrawal failed' };
     }
   }
@@ -341,7 +342,7 @@ class OctantVaultService {
         assets: ethers.formatUnits(assetsBn, 6),
       };
     } catch (error) {
-      console.error('Redeem donation shares failed:', error);
+      logger.error('Redeem donation shares failed', { error: error instanceof Error ? error.message : String(error) });
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Redeem donation shares failed',

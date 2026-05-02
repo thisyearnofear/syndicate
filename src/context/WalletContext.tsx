@@ -36,6 +36,7 @@ import React, {
 import { useAccount, useDisconnect } from "wagmi";
 import { useCallback } from "react";
 import { WalletType } from "@/domains/wallet/types";
+import { logger } from "@/lib/logger";
 
 // =============================================================================
 // TYPES
@@ -318,7 +319,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
           try {
             await solanaWindow.solana.disconnect();
           } catch (solanaError) {
-            console.warn("Solana wallet disconnect failed:", solanaError);
+            logger.warn("Solana wallet disconnect failed", { error: solanaError instanceof Error ? solanaError.message : String(solanaError) });
           }
         }
       }
@@ -330,9 +331,9 @@ export function WalletProvider({ children }: WalletProviderProps) {
             "@/domains/wallet/services/nearWalletSelectorService"
           );
           await nearWalletSelectorService.disconnect();
-          console.log("NEAR wallet disconnected");
+          logger.info("NEAR wallet disconnected");
         } catch (nearError) {
-          console.warn("NEAR disconnect failed:", nearError);
+          logger.warn("NEAR disconnect failed", { error: nearError instanceof Error ? nearError.message : String(nearError) });
         }
       }
 
@@ -341,18 +342,18 @@ export function WalletProvider({ children }: WalletProviderProps) {
         try {
           // TON Connect handles its own disconnection via TonConnectUI
           // Just clear our state
-          console.log("TON wallet disconnected");
+          logger.info("TON wallet disconnected");
         } catch (tonError) {
-          console.warn("TON disconnect failed:", tonError);
+          logger.warn("TON disconnect failed", { error: tonError instanceof Error ? tonError.message : String(tonError) });
         }
       }
 
       // Always clear our internal state
       dispatch({ type: "DISCONNECT" });
 
-      console.log("Wallet disconnected successfully");
+      logger.info("Wallet disconnected successfully");
     } catch (error) {
-      console.error("Failed to disconnect wallet:", error);
+      logger.error("Failed to disconnect wallet", { error: error instanceof Error ? error.message : String(error) });
       // Still clear our state even if underlying wallet disconnect fails
       dispatch({ type: "DISCONNECT" });
     }
@@ -373,7 +374,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
         }
       }
     } catch (error) {
-      console.warn("Failed to persist wallet state:", error);
+      logger.warn("Failed to persist wallet state", { error: error instanceof Error ? error.message : String(error) });
     }
   }, [state]);
 
@@ -475,7 +476,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
               const phantomConnected = solanaWindow.solana?.isConnected && solanaWindow.solana?.publicKey;
               
               if (phantomConnected) {
-                console.log("WalletContext: Restoring Solana/Phantom session", savedState.address);
+                logger.info("Restoring Solana/Phantom session", { address: savedState.address });
                 
                 // Sync solanaWalletService singleton state
                 import("@/services/solanaWalletService").then(({ solanaWalletService }) => {
@@ -497,9 +498,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
             // Handle NEAR Persistence
             else if (savedState.walletType === "near") {
-              console.log(
-                "WalletContext: Attempting to restore NEAR session..."
-              );
+              logger.info("Attempting to restore NEAR session");
               const { nearWalletSelectorService } = await import(
                 "@/domains/wallet/services/nearWalletSelectorService"
               );
@@ -509,10 +508,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
               const activeAccount = nearWalletSelectorService.getAccountId();
 
               if (initialized && activeAccount) {
-                console.log(
-                  "WalletContext: Restoring NEAR session",
-                  activeAccount
-                );
+                logger.info("Restoring NEAR session", { accountId: activeAccount });
                 dispatch({
                   type: "RESTORE_STATE",
                   payload: {
@@ -526,7 +522,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
           }
         }
       } catch (error) {
-        console.warn("Failed to restore wallet state:", error);
+        logger.warn("Failed to restore wallet state", { error: error instanceof Error ? error.message : String(error) });
       }
     };
 

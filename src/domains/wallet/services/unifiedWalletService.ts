@@ -12,12 +12,28 @@ import { useCallback } from "react";
 import { request } from "@stacks/connect";
 import { createError } from "@/shared/utils";
 import { useWalletContext } from "@/context/WalletContext";
+import { logger } from "@/lib/logger";
 import {
   WalletType,
   WalletTypes,
   type StacksWalletType,
 } from "../types";
 import { computeAddress } from "ethers";
+
+interface WalletProviders {
+  LeatherProvider?: unknown;
+  XverseProviders?: unknown;
+  AsignaProvider?: unknown;
+  FordefiProvider?: unknown;
+  starknet_argentX?: { enable(): Promise<void>; selectedAddress?: string; account?: { address?: string } };
+  starknet_braavos?: { enable(): Promise<void>; selectedAddress?: string; account?: { address?: string } };
+  starknet?: { enable(): Promise<void>; selectedAddress?: string; account?: { address?: string } };
+  ethereum?: Eip1193Provider;
+}
+
+interface Eip1193Provider {
+  request(args: { method: string; params?: unknown[] }): Promise<unknown>;
+}
 
 // =============================================================================
 // WALLET DETECTION
@@ -40,11 +56,12 @@ export function getAvailableWallets(): WalletType[] {
   // Check for any Stacks wallet (Leather, Xverse, Asigna, Fordefi)
   // @stacks/connect auto-detects which one is available
   if (typeof window !== "undefined") {
+    const walletWindow = window as unknown as WalletProviders;
     const hasStacksWallet =
-      (window as any).LeatherProvider ||
-      (window as any).XverseProviders ||
-      (window as any).AsignaProvider ||
-      (window as any).FordefiProvider;
+      walletWindow.LeatherProvider ||
+      walletWindow.XverseProviders ||
+      walletWindow.AsignaProvider ||
+      walletWindow.FordefiProvider;
 
     if (hasStacksWallet) {
       available.push(WalletTypes.STACKS);
@@ -53,8 +70,9 @@ export function getAvailableWallets(): WalletType[] {
 
   // Check for Starknet wallets (ArgentX or Braavos)
   if (typeof window !== "undefined") {
+    const starknetWindow = window as unknown as WalletProviders;
     const hasStarknetWallet =
-      (window as any).starknet_argentX || (window as any).starknet_braavos || (window as any).starknet;
+      starknetWindow.starknet_argentX || starknetWindow.starknet_braavos || starknetWindow.starknet;
     if (hasStarknetWallet) {
       available.push(WalletTypes.STARKNET);
     }
@@ -98,10 +116,10 @@ export function getWalletStatus(walletType: WalletType): {
       // Check if any Stacks wallet is available
       const hasStacksWallet =
         typeof window !== "undefined" &&
-        (!!(window as any).LeatherProvider ||
-          !!(window as any).XverseProviders ||
-          !!(window as any).AsignaProvider ||
-          !!(window as any).FordefiProvider);
+        (!!(window as unknown as WalletProviders).LeatherProvider ||
+          !!(window as unknown as WalletProviders).XverseProviders ||
+          !!(window as unknown as WalletProviders).AsignaProvider ||
+          !!(window as unknown as WalletProviders).FordefiProvider);
       return {
         isAvailable: hasStacksWallet,
         isInstalled: hasStacksWallet,
@@ -111,9 +129,9 @@ export function getWalletStatus(walletType: WalletType): {
     case WalletTypes.STARKNET:
       const hasStarknetWallet =
         typeof window !== "undefined" &&
-        (!!(window as any).starknet_argentX ||
-          !!(window as any).starknet_braavos ||
-          !!(window as any).starknet);
+        (!!(window as unknown as WalletProviders).starknet_argentX ||
+          !!(window as unknown as WalletProviders).starknet_braavos ||
+          !!(window as unknown as WalletProviders).starknet);
       return {
         isAvailable: hasStarknetWallet,
         isInstalled: hasStarknetWallet,
@@ -188,9 +206,7 @@ export function useUnifiedWallet(): {
           state.walletType &&
           state.walletType !== walletType
         ) {
-          console.log(
-            `Switching from ${state.walletType} to ${walletType}, disconnecting old wallet...`,
-          );
+          logger.info("Switching wallet", { from: state.walletType, to: walletType });
           dispatch({ type: "DISCONNECT" });
 
           // Give a brief moment for cleanup
@@ -216,7 +232,7 @@ export function useUnifiedWallet(): {
             // For EVM wallets, prefer wagmi/RainbowKit connection to avoid conflicts
             // wagmi will handle the connection and our WalletContext will sync with it
             // We don't need to do anything here as RainbowKit handles the connection flow
-            console.log("EVM wallet connection handled by RainbowKit");
+            logger.info("EVM wallet connection handled by RainbowKit");
             return;
             break;
 
@@ -257,15 +273,15 @@ export function useUnifiedWallet(): {
                         enumerable: true
                       });
                     } catch (e) {
-                      console.warn("Could not restore window.ethereum:", e);
+                      logger.warn("Could not restore window.ethereum", { error: e instanceof Error ? e.message : String(e) });
                     }
                   }, 1000);
                 } else {
-                  console.warn("window.ethereum is not configurable or has no setter, skipping nulling");
+                  logger.warn("window.ethereum is not configurable or has no setter, skipping nulling");
                 }
               }
             } catch (error) {
-              console.warn("Could not disable MetaMask auto-connect:", error);
+              logger.warn("Could not disable MetaMask auto-connect", { error: error instanceof Error ? error.message : String(error) });
               // Continue anyway - not critical
             }
 
@@ -311,18 +327,13 @@ export function useUnifiedWallet(): {
                   await solanaWalletService.connectPhantom();
                 }
               } catch (solanaServiceError) {
-                console.warn(
-                  "Solana wallet service initialization failed:",
-                  solanaServiceError,
-                );
+                logger.warn("Solana wallet service initialization failed", { error: solanaServiceError instanceof Error ? solanaServiceError.message : String(solanaServiceError) });
                 // Continue without service for basic wallet functionality
               }
 
               // Note: For lottery purchases, users will use the cross-chain bridge
               // via useCrossChainPurchase hook to bridge Solana USDC -> Base -> Purchase
-              console.log(
-                "Phantom connected via Solana. Cross-chain purchases available via CCTP bridge.",
-              );
+              logger.info("Phantom connected via Solana. Cross-chain purchases available via CCTP bridge.");
             } catch (error: unknown) {
               const code = (error as { code?: number }).code;
               const message = (error as { message?: string }).message || "";
@@ -347,7 +358,7 @@ export function useUnifiedWallet(): {
                 "Social login is coming soon. Please use MetaMask for now.",
               );
             } catch (error: unknown) {
-              console.error("Social login error:", error);
+              logger.error("Social login error", { error: error instanceof Error ? error.message : String(error) });
               throw error as Error;
             }
             break;
@@ -370,10 +381,10 @@ export function useUnifiedWallet(): {
               address = accountId; // Store NEAR accountId in address field
               chainId = 0; // Sentinel for NEAR (non-EVM)
 
-              console.log("NEAR wallet connected:", accountId);
+              logger.info("NEAR wallet connected", { accountId });
             } catch (error: unknown) {
               const message = (error as { message?: string }).message || "";
-              console.error("NEAR connection error:", error);
+              logger.error("NEAR connection error", { error: error instanceof Error ? error.message : String(error) });
 
               // Provide more specific error message
               if (
@@ -408,10 +419,10 @@ export function useUnifiedWallet(): {
               // METAMASK CONFLICT PREVENTION: Disable MetaMask auto-connection while using Stacks
               // This prevents wagmi from interfering with Stacks wallet connections (like Leather)
               try {
-                if (typeof window !== "undefined" && (window as any).ethereum) {
+                if (typeof window !== "undefined" && (window as unknown as WalletProviders).ethereum) {
                   const descriptor = Object.getOwnPropertyDescriptor(window, 'ethereum');
                   if (descriptor && (descriptor.configurable || (descriptor.set && descriptor.get))) {
-                    const originalProvider = (window as any).ethereum;
+                    const originalProvider = (window as unknown as WalletProviders).ethereum;
                     
                     Object.defineProperty(window, 'ethereum', {
                       value: null,
@@ -429,18 +440,15 @@ export function useUnifiedWallet(): {
                           enumerable: true
                         });
                       } catch (e) {
-                        console.warn("Could not restore window.ethereum for Stacks:", e);
+                        logger.warn("Could not restore window.ethereum for Stacks", { error: e instanceof Error ? e.message : String(e) });
                       }
                     }, 1000);
                   } else {
-                    console.warn("window.ethereum is not configurable or has no setter for Stacks, skipping nulling");
+                    logger.warn("window.ethereum is not configurable or has no setter for Stacks, skipping nulling");
                   }
                 }
               } catch (error) {
-                console.warn(
-                  "Could not disable MetaMask auto-connect for Stacks:",
-                  error,
-                );
+                logger.warn("Could not disable MetaMask auto-connect for Stacks", { error: error instanceof Error ? error.message : String(error) });
               }
 
               const stacksWallet = await connectStacksWallet(
@@ -462,7 +470,7 @@ export function useUnifiedWallet(): {
               return;
             } catch (error: unknown) {
               const message = (error as { message?: string }).message || "";
-              console.error("Stacks wallet connection error:", error);
+              logger.error("Stacks wallet connection error", { error: error instanceof Error ? error.message : String(error) });
 
               if (
                 message.includes("timeout") ||
@@ -495,9 +503,9 @@ export function useUnifiedWallet(): {
             try {
               // Dynamically import starknet wallet connector to avoid bundling when unused
               const starknetProvider =
-                (window as any).starknet_argentX ||
-                (window as any).starknet_braavos ||
-                (window as any).starknet;
+                (window as unknown as WalletProviders).starknet_argentX ||
+                (window as unknown as WalletProviders).starknet_braavos ||
+                (window as unknown as WalletProviders).starknet;
 
               if (!starknetProvider) {
                 throw createError(
@@ -519,10 +527,10 @@ export function useUnifiedWallet(): {
               address = starknetAddress;
               chainId = 0; // Non-EVM sentinel
 
-              console.log("Starknet wallet connected:", address);
+              logger.info("Starknet wallet connected", { address });
             } catch (error: unknown) {
               const message = (error as { message?: string }).message || "";
-              console.error("Starknet wallet connection error:", error);
+              logger.error("Starknet wallet connection error", { error: error instanceof Error ? error.message : String(error) });
 
               if (message.includes("rejected") || message.includes("cancelled")) {
                 throw createError(
@@ -604,7 +612,7 @@ export function useUnifiedWallet(): {
               );
             }
 
-            await (window.ethereum as any).request({
+            await (window.ethereum as unknown as Eip1193Provider).request({
               method: "wallet_switchEthereumChain",
               params: [{ chainId: `0x${targetChainId.toString(16)}` }],
             });
@@ -686,7 +694,7 @@ export function deriveMirrorAddress(publicKey: string): string {
       : `0x${publicKey}`;
     return computeAddress(cleanPubKey);
   } catch (error) {
-    console.error("Failed to derive mirror address:", error);
+    logger.error("Failed to derive mirror address", { error: error instanceof Error ? error.message : String(error) });
     return "";
   }
 }
@@ -707,7 +715,7 @@ async function connectStacksWallet(
 ): Promise<{ address: string; publicKey: string; mirrorAddress: string }> {
   // All Stacks wallets use the same @stacks/connect interface now
   // The walletType parameter is for logging/tracking purposes only
-  console.log(`Connecting with Stacks wallet type: ${walletType}`);
+  logger.info("Connecting with Stacks wallet", { walletType });
   return connectStacksWalletWithConnect();
 }
 
@@ -721,21 +729,27 @@ async function connectStacksWallet(
  * they may fail to serialize the response properly, causing "setImmedia... is not valid JSON" errors.
  * We wrap the call to ensure clean serialization of the result.
  */
+interface StacksAddressEntry {
+  address: string;
+  publicKey: string;
+  symbol: string;
+}
+
 async function connectStacksWalletWithConnect(): Promise<{
   address: string;
   publicKey: string;
   mirrorAddress: string;
 }> {
   try {
-    console.log("Initiating Stacks wallet connection with @stacks/connect...");
+    logger.info("Initiating Stacks wallet connection with @stacks/connect");
 
     // Check if any Stacks wallet provider is available
     const hasStacksWallet =
       typeof window !== "undefined" &&
-      (!!(window as any).LeatherProvider ||
-        !!(window as any).XverseProviders ||
-        !!(window as any).AsignaProvider ||
-        !!(window as any).FordefiProvider);
+      (!!(window as unknown as WalletProviders).LeatherProvider ||
+        !!(window as unknown as WalletProviders).XverseProviders ||
+        !!(window as unknown as WalletProviders).AsignaProvider ||
+        !!(window as unknown as WalletProviders).FordefiProvider);
 
     if (!hasStacksWallet) {
       throw createError(
@@ -757,7 +771,7 @@ async function connectStacksWalletWithConnect(): Promise<{
         // We manually extract only the serializable data we need
         if (res && typeof res === 'object') {
           return {
-            addresses: (res.addresses || []).map((addr: any) => ({
+            addresses: (res.addresses as StacksAddressEntry[] || []).map((addr) => ({
               address: String(addr.address || ''),
               publicKey: String(addr.publicKey || ''),
               symbol: String(addr.symbol || '')
@@ -766,14 +780,14 @@ async function connectStacksWalletWithConnect(): Promise<{
         }
         return res;
       } catch (e) {
-        console.warn("Stacks request failed, attempting minimal data extraction:", e);
+        logger.warn("Stacks request failed, attempting minimal data extraction", { error: e instanceof Error ? e.message : String(e) });
         // If the above fails, it might be because the provider returned something unexpected
         // Attempt a direct call if possible or re-throw
         throw e;
       }
     })();
 
-    console.log("Stacks wallet connection successful");
+    logger.info("Stacks wallet connection successful");
 
     // Response format from @stacks/connect:
     // { addresses: [{ address: string, publicKey: string, symbol: string, ... }, ...] }
@@ -788,7 +802,7 @@ async function connectStacksWalletWithConnect(): Promise<{
     // ENHANCEMENT: Filter for STX address to avoid picking BTC address (which Leather often returns first)
     // Leather returns symbols like 'STX' and 'BTC'
     const stxAddress = response.addresses.find(
-      (addr: any) =>
+      (addr: StacksAddressEntry) =>
         addr.symbol === "STX" ||
         addr.address.startsWith("SP") ||
         addr.address.startsWith("ST"),
@@ -815,9 +829,8 @@ async function connectStacksWalletWithConnect(): Promise<{
       mirrorAddress,
     };
   } catch (error) {
-    console.error("Stacks wallet connection error:", error);
-
     const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error("Stacks wallet connection error", { error: errorMessage });
 
     // Check for user rejection
     if (

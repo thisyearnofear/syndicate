@@ -14,6 +14,7 @@
 import { vaultManager, type VaultProtocol } from './vaults';
 import { web3Service } from './web3Service';
 import { CHAINS } from '@/config';
+import { logger } from '@/lib/logger';
 
 const STORAGE_KEY = 'vault_yield_strategies';
 
@@ -95,7 +96,7 @@ class YieldToTicketsService {
       const provider = vaultManager.getProvider(vaultProtocol);
       return await provider.getYieldAccrued(userAddress);
     } catch (error) {
-      console.error('[YieldToTicketsService] Failed to get yield:', error);
+      logger.error("Failed to get yield", { error: error instanceof Error ? error.message : String(error) });
       return '0';
     }
   }
@@ -133,7 +134,7 @@ class YieldToTicketsService {
       this.saveToStorage();
       return true;
     } catch (error) {
-      console.error('[YieldToTicketsService] Failed to setup strategy:', error);
+      logger.error("Failed to setup strategy", { error: error instanceof Error ? error.message : String(error) });
       return false;
     }
   }
@@ -216,7 +217,7 @@ class YieldToTicketsService {
             if (purchaseResult.txHash) txHashes.push(purchaseResult.txHash);
           }
         } catch (err) {
-          console.error('[YieldToTicketsService] Ticket purchase failed:', err);
+          logger.error("Ticket purchase failed", { error: err instanceof Error ? err.message : String(err) });
         }
       }
 
@@ -246,7 +247,7 @@ class YieldToTicketsService {
         causeTransferParams,
       };
     } catch (error) {
-      console.error('[YieldToTicketsService] Yield conversion failed:', error);
+      logger.error("Yield conversion failed", { error: error instanceof Error ? error.message : String(error) });
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Yield conversion failed',
@@ -297,7 +298,7 @@ class YieldToTicketsService {
           if (purchaseResult.txHash) txHashes.push(purchaseResult.txHash);
         }
       } catch (err) {
-        console.error('[YieldToTicketsService] Post-withdrawal ticket purchase failed:', err);
+        logger.error("Post-withdrawal ticket purchase failed", { error: err instanceof Error ? err.message : String(err) });
       }
     }
 
@@ -363,7 +364,7 @@ class YieldToTicketsService {
 
       return { yieldAmount, ticketsAmount, ticketCount, causesAmount };
     } catch (error) {
-      console.error('[YieldToTicketsService] Failed to preview conversion:', error);
+      logger.error("Failed to preview conversion", { error: error instanceof Error ? error.message : String(error) });
       return { yieldAmount: '0', ticketsAmount: '0', ticketCount: 0, causesAmount: '0' };
     }
   }
@@ -399,7 +400,7 @@ class YieldToTicketsService {
     
     // Validate amount
     if (isNaN(amount) || amount <= 0) {
-      console.warn('[YieldToTickets] Invalid cause amount:', amountUsdc);
+      logger.warn("Invalid cause amount", { amount: amountUsdc });
       return null;
     }
     
@@ -407,7 +408,7 @@ class YieldToTicketsService {
     if (!causeWallet || 
         causeWallet === '0x0000000000000000000000000000000000000000' ||
         causeWallet.length < 32) {
-      console.warn('[YieldToTickets] Invalid cause wallet:', causeWallet);
+      logger.warn("Invalid cause wallet", { causeWallet });
       return null;
     }
 

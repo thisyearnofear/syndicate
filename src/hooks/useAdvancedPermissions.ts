@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useERC7715 } from './useERC7715';
 import { useUnifiedWallet } from './useUnifiedWallet';
+import { logger } from '@/lib/logger';
 import { getPermissionPresets } from '@/services/automation/erc7715Service';
 import { type ERC7715SupportInfo } from '@/services/automation/erc7715Service';
 import type { AdvancedPermission, AutoPurchaseConfig, PermissionRequest } from '@/domains/wallet/types';
@@ -72,7 +73,7 @@ export function useAdvancedPermissions(): UseAdvancedPermissionsState & UseAdvan
         setAutoPurchaseConfig(JSON.parse(stored));
       }
     } catch (error) {
-      console.error('Failed to load auto-purchase config:', error);
+      logger.error("Failed to load auto-purchase config", { error: error instanceof Error ? error.message : String(error) });
     }
   }, []);
 
@@ -97,14 +98,14 @@ export function useAdvancedPermissions(): UseAdvancedPermissionsState & UseAdvan
 
   // Request permission (delegates to erc7715)
   const requestPermission = useCallback(
-    async (request: any): Promise<boolean> => {
+    async (request: PermissionRequest): Promise<boolean> => {
       if (!erc7715.isSupported) {
         return false;
       }
 
       const result = await erc7715.requestAdvancedPermission(
         request.scope || 'erc20:spend',
-        request.tokenAddress,
+        request.tokenAddress as `0x${string}`,
         request.limit,
         request.period
       );
@@ -148,7 +149,7 @@ export function useAdvancedPermissions(): UseAdvancedPermissionsState & UseAdvan
       try {
         localStorage.setItem(STORAGE_KEY_AUTO_CONFIG, JSON.stringify(config));
       } catch (error) {
-        console.error('Failed to save auto-purchase config:', error);
+        logger.error("Failed to save auto-purchase config", { error: error instanceof Error ? error.message : String(error) });
       }
     }
   }, []);
@@ -160,7 +161,7 @@ export function useAdvancedPermissions(): UseAdvancedPermissionsState & UseAdvan
       try {
         localStorage.removeItem(STORAGE_KEY_AUTO_CONFIG);
       } catch (error) {
-        console.error('Failed to clear auto-purchase config:', error);
+        logger.error("Failed to clear auto-purchase config", { error: error instanceof Error ? error.message : String(error) });
       }
     }
   }, []);

@@ -14,6 +14,7 @@ import { Connection, PublicKey } from "@solana/web3.js";
 import { getAssociatedTokenAddress } from "@solana/spl-token";
 import { CONTRACTS } from "@/config";
 import { RpcProvider, uint256 } from "starknet";
+import { logger } from "@/lib/logger";
 
 interface CacheEntry<T> {
   value: T;
@@ -54,8 +55,8 @@ export interface OddsInfo {
 }
 
 export class ContractDataService {
-  private cache = new Map<string, CacheEntry<any>>();
-  private pendingRequests = new Map<string, Promise<any>>();
+  private cache = new Map<string, CacheEntry<unknown>>();
+  private pendingRequests = new Map<string, Promise<unknown>>();
 
   constructor(
     private baseChain: BaseChainService,
@@ -116,7 +117,7 @@ export class ContractDataService {
   invalidateCache(pattern?: string): void {
     if (!pattern) {
       this.cache.clear();
-      console.log("Cache cleared");
+      logger.info("Cache cleared");
       return;
     }
 
@@ -128,9 +129,7 @@ export class ContractDataService {
     }
 
     keysToDelete.forEach((key) => this.cache.delete(key));
-    console.log(
-      `Invalidated ${keysToDelete.length} cache entries matching: ${pattern}`,
-    );
+    logger.info("Invalidated cache entries", { count: keysToDelete.length, pattern });
   }
 
   /**
@@ -170,7 +169,7 @@ export class ContractDataService {
         this.setCache(cacheKey, formatted, CACHE_CONFIG.JACKPOT);
         return formatted;
       } catch (_error) {
-        console.warn("[ContractDataService] Failed to fetch V2 jackpot, using fallback:", _error);
+        logger.warn("Failed to fetch V2 jackpot, using fallback", { error: _error instanceof Error ? _error.message : String(_error) });
         
         // Final fallback: try older version if exists (backward compatibility)
         try {
@@ -442,7 +441,7 @@ export class ContractDataService {
         this.setCache(cacheKey, result, CACHE_CONFIG.USER_TICKETS);
         return result;
       } catch (_error) {
-        console.error("Failed to get user info for address:", _error);
+        logger.error("Failed to get user info for address", { error: _error instanceof Error ? _error.message : String(_error) });
         return null;
       }
     });
@@ -484,7 +483,7 @@ export class ContractDataService {
 
       return (allowance as bigint) >= requiredAmount;
     } catch (_error) {
-      console.error("Failed to check allowance:", _error);
+      logger.error("Failed to check allowance", { error: _error instanceof Error ? _error.message : String(_error) });
       return false;
     }
   }
@@ -574,7 +573,7 @@ export class ContractDataService {
         this.setCache(cacheKey, balance, CACHE_CONFIG.USER_BALANCE);
         return balance;
       } catch (_error) {
-        console.error("Failed to fetch Solana balance with fallback:", _error);
+        logger.error("Failed to fetch Solana balance with fallback", { error: _error instanceof Error ? _error.message : String(_error) });
         return "0";
       }
     });
@@ -597,7 +596,7 @@ export class ContractDataService {
         // Stacks balances response structure contains fungible_tokens
         // Hiro API keys are "contractPrincipal::assetName" (e.g., "SP...usdcx::usdcx")
         // Match by prefix since we only store the contract principal
-        const fungibleTokens = (data as any).fungible_tokens || {};
+        const fungibleTokens = (data as Record<string, unknown>).fungible_tokens as Record<string, { balance?: string }> || {};
         const matchingKey = Object.keys(fungibleTokens).find(key => key.startsWith(tokenPrincipal));
         const tokenData = matchingKey ? fungibleTokens[matchingKey] : undefined;
         const tokenBalance = tokenData?.balance || "0";
@@ -606,7 +605,7 @@ export class ContractDataService {
         const decimals = tokenPrincipal.toLowerCase().includes("sbtc") ? 8 : 6; 
         return (parseFloat(tokenBalance) / Math.pow(10, decimals)).toString();
       } catch (_error) {
-        console.error("Failed to fetch Stacks balance:", _error);
+        logger.error("Failed to fetch Stacks balance", { error: _error instanceof Error ? _error.message : String(_error) });
         return "0";
       }
     });
@@ -636,7 +635,7 @@ export class ContractDataService {
         const data = await response.json();
         return data.balance || "0";
       } catch (_error) {
-        console.error("Failed to fetch NEAR balance:", _error);
+        logger.error("Failed to fetch NEAR balance", { error: _error instanceof Error ? _error.message : String(_error) });
         return "0";
       }
     });
@@ -680,7 +679,7 @@ export class ContractDataService {
         this.setCache(cacheKey, balance, CACHE_CONFIG.USER_BALANCE);
         return balance;
       } catch (_error) {
-        console.error("Failed to fetch Starknet balance:", _error);
+        logger.error("Failed to fetch Starknet balance", { error: _error instanceof Error ? _error.message : String(_error) });
         return "0";
       }
     });

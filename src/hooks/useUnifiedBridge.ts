@@ -18,6 +18,7 @@
  * });
  */
 
+import { logger } from '@/lib/logger';
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { bridgeManager } from '@/services/bridges';
 import type { BridgeParams, BridgeProtocolType } from '@/services/bridges/types';
@@ -191,7 +192,7 @@ export function useUnifiedBridge(): BridgeState & {
         timeSeconds: Math.round(bestRoute.estimatedTimeMs / 1000),
       };
     } catch (err) {
-      console.error('Failed to get bridge quote:', err);
+      logger.error("Failed to get bridge quote", { error: err instanceof Error ? err.message : String(err) });
       return null;
     }
   }, []);
@@ -389,7 +390,7 @@ export function useUnifiedBridge(): BridgeState & {
           }
         }
       } catch (error) {
-        console.warn('Failed to check Stacks winnings:', error);
+        logger.warn("Failed to check Stacks winnings", { error: error instanceof Error ? error.message : String(error) });
       }
 
       if (isMountedRef.current) {

@@ -217,7 +217,7 @@ describe('Pool Providers', () => {
         const result = await splitsProvider.createPool(config);
         expect(result.success).toBe(true);
         expect(result.metadata?.recipients).toBeDefined();
-        expect(result.metadata?.recipients.length).toBeGreaterThan(0);
+        expect((result.metadata?.recipients as unknown[]).length).toBeGreaterThan(0);
       });
     });
 

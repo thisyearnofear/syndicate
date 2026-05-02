@@ -20,6 +20,7 @@ import type {
 } from '../types';
 import { bridgeManager } from '../index';
 import { BridgeError, BridgeErrorCode } from '../types';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // Base Bridge Strategy
@@ -139,7 +140,7 @@ export class DefaultBridgeStrategy extends BaseBridgeStrategy {
     protected onSystemHealthUpdate(_metrics: BridgePerformanceMetrics): void {
         // Adjust based on system health
         if (_metrics.systemStatus === 'critical') {
-            console.warn('[DefaultStrategy] System in critical state, preferring most reliable protocols');
+            logger.warn("System in critical state, preferring most reliable protocols", { strategy: 'DefaultStrategy' });
         }
     }
 }
@@ -185,7 +186,7 @@ export class PerformanceOptimizedStrategy extends BaseBridgeStrategy {
         healthyRoutes.sort((a, b) => a.estimatedTimeMs - b.estimatedTimeMs);
         const fastestProtocol = healthyRoutes[0].protocol;
         
-        console.log(`[PerformanceStrategy] Selected fastest healthy protocol: ${fastestProtocol}`);
+        logger.info("Selected fastest healthy protocol", { strategy: 'PerformanceStrategy', protocol: fastestProtocol });
         
         // Execute with selected protocol
         return bridgeManager.bridge({
@@ -229,7 +230,7 @@ export class ReliabilityOptimizedStrategy extends BaseBridgeStrategy {
         routes.sort((a, b) => b.successRate - a.successRate);
         const mostReliableProtocol = routes[0].protocol;
         
-        console.log(`[ReliabilityStrategy] Selected most reliable protocol: ${mostReliableProtocol}`);
+        logger.info("Selected most reliable protocol", { strategy: 'ReliabilityStrategy', protocol: mostReliableProtocol });
         
         // Execute with selected protocol
         return bridgeManager.bridge({
@@ -276,7 +277,7 @@ export class CostOptimizedStrategy extends BaseBridgeStrategy {
         });
         const cheapestProtocol = routes[0].protocol;
         
-        console.log(`[CostStrategy] Selected cheapest protocol: ${cheapestProtocol}`);
+        logger.info("Selected cheapest protocol", { strategy: 'CostStrategy', protocol: cheapestProtocol });
         
         // Execute with selected protocol
         return bridgeManager.bridge({
@@ -332,7 +333,7 @@ export class SecurityOptimizedStrategy extends BaseBridgeStrategy {
             routes.sort((a, b) => b.successRate - a.successRate);
             const mostReliableProtocol = routes[0].protocol;
             
-            console.log(`[SecurityStrategy] No highly secure protocols, using most reliable: ${mostReliableProtocol}`);
+            logger.info("No highly secure protocols, using most reliable", { strategy: 'SecurityStrategy', protocol: mostReliableProtocol });
             
             return bridgeManager.bridge({
                 ..._params,
@@ -344,7 +345,7 @@ export class SecurityOptimizedStrategy extends BaseBridgeStrategy {
         secureRoutes.sort((a, b) => b.successRate - a.successRate);
         const mostSecureProtocol = secureRoutes[0].protocol;
         
-        console.log(`[SecurityStrategy] Selected most secure protocol: ${mostSecureProtocol}`);
+        logger.info("Selected most secure protocol", { strategy: 'SecurityStrategy', protocol: mostSecureProtocol });
         
         // Execute with additional security validations
         return this.executeWithSecurityValidations(_params, mostSecureProtocol);
@@ -418,7 +419,7 @@ export class SecurityOptimizedStrategy extends BaseBridgeStrategy {
      */
     protected onSystemHealthUpdate(_metrics: BridgePerformanceMetrics): void {
         if (_metrics.systemStatus === 'degraded' || _metrics.systemStatus === 'critical') {
-            console.warn('[SecurityStrategy] System health degraded, being extra cautious with protocol selection');
+            logger.warn("System health degraded, being extra cautious with protocol selection", { strategy: 'SecurityStrategy' });
             // Could adjust to be even more conservative in protocol selection
         }
     }
@@ -454,11 +455,11 @@ export class StrategyBasedBridgeExecutor {
         const strategy = this.strategyFactory.getBestStrategy(_params);
         
         if (!strategy) {
-            console.warn('[StrategyExecutor] No applicable strategy found, using default');
+            logger.warn("No applicable strategy found, using default");
             return bridgeManager.bridge(_params);
         }
         
-        console.log(`[StrategyExecutor] Using strategy: ${strategy.getName()}`);
+        logger.info("Using strategy", { strategy: strategy.getName() });
         
         // Adjust strategy based on current system health
         await strategy.adjustForSystemHealth();

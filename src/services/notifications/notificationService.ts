@@ -193,15 +193,15 @@ export class NotificationService {
             LIMIT ${limit}
           `;
 
-      return result.rows.map((row: any) => ({
-        id: row.id,
-        poolId: row.pool_id,
-        type: row.type,
-        title: row.title,
-        message: row.message,
-        data: row.data ? (typeof row.data === 'string' ? JSON.parse(row.data) : row.data) : undefined,
-        read: row.read,
-        createdAt: new Date(row.created_at).toISOString(),
+      return result.rows.map((row: Record<string, unknown>) => ({
+        id: row.id as string,
+        poolId: row.pool_id as string | null,
+        type: row.type as NotificationType,
+        title: row.title as string,
+        message: row.message as string,
+        data: row.data ? (typeof row.data === 'string' ? JSON.parse(row.data as string) : row.data as Record<string, unknown>) : undefined,
+        read: row.read as boolean,
+        createdAt: new Date(row.created_at as number).toISOString(),
       }));
     } catch (error) {
       console.error('[NotificationService] Failed to get notifications:', error);

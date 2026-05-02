@@ -106,23 +106,23 @@ export async function getPoolTogetherOnChainPrize(): Promise<OnChainPrizeData | 
         address: POOLTOGETHER_VAULT_ADDRESS,
         abi: ERC4626_ABI,
         functionName: 'totalAssets',
-      } as any).catch(() => BigInt(0)),
+      }).catch(() => BigInt(0)),
       basePublicClient.readContract({
         address: POOLTOGETHER_PRIZE_POOL_ADDRESS,
         abi: PRIZE_POOL_ABI,
         functionName: 'getTierPrizeSize',
         args: [0], // Tier 0 is the Grand Prize
-      } as any).catch(() => BigInt(0)),
+      }).catch(() => BigInt(0)),
       basePublicClient.readContract({
         address: POOLTOGETHER_PRIZE_POOL_ADDRESS,
         abi: PRIZE_POOL_ABI,
         functionName: 'getLastAwardedDrawId',
-      } as any).catch(() => 0),
+      }).catch(() => 0),
       basePublicClient.readContract({
         address: POOLTOGETHER_PRIZE_POOL_ADDRESS,
         abi: PRIZE_POOL_ABI,
         functionName: 'drawPeriodSeconds',
-      } as any).catch(() => 86400),
+      }).catch(() => 86400),
     ]);
 
     const totalAssets = results[0] as bigint;
@@ -175,14 +175,14 @@ export async function getMegapotOnChainPrize(): Promise<OnChainPrizeData | null>
       address: MEGAPOT_V2_ADDRESS,
       abi: MEGAPOT_ABI,
       functionName: 'currentDrawingId',
-    } as any) as bigint;
+    }) as bigint;
 
     const state = await basePublicClient.readContract({
       address: MEGAPOT_V2_ADDRESS,
       abi: MEGAPOT_ABI,
       functionName: 'getDrawingState',
       args: [currentId],
-    } as any) as any;
+    }) as { prizePool: bigint; lpEarnings: bigint; globalTicketsBought: bigint; drawingTime: bigint };
 
     const prizeUsd = Number(state.prizePool) / 1e6;
     const _totalPoolUsd = Number(state.prizePool || 0) / 1e6; // Using prizePool as proxy for grand prize, need logic for total. Actually state.lpEarnings + prizePool is better

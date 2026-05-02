@@ -10,6 +10,7 @@
 
 import { ethers } from "ethers";
 import { CHAINS } from "@/config";
+import { logger } from "@/lib/logger";
 import { executeWithRpcFallback, getBaseRpcUrls } from "@/utils/rpcFallback";
 
 export interface NetworkConfig {
@@ -37,32 +38,32 @@ export class BaseChainService {
 
   async initializeWithWallet(chainId?: number): Promise<boolean> {
     if (this.connectionLock) {
-      console.warn("Wallet initialization already in progress");
+      logger.warn("Wallet initialization already in progress");
       return false;
     }
     this.connectionLock = true;
 
     try {
       if (!this.isBrowser()) {
-        console.warn("BaseChainService requires browser environment");
+        logger.warn("BaseChainService requires browser environment");
         return false;
       }
 
       if (!window.ethereum) {
-        console.warn("No wallet found, falling back to read-only mode");
+        logger.warn("No wallet found, falling back to read-only mode");
         return this.initializeReadOnly(undefined, chainId);
       }
 
       // Create provider and keep reference
-      const provider = new ethers.BrowserProvider(window.ethereum as any);
+      const provider = new ethers.BrowserProvider(window.ethereum as unknown as ethers.Eip1193Provider);
       this.provider = provider;
 
       try {
         await this.ensureCorrectNetwork(chainId);
       } catch (networkError) {
-        console.warn(
-          "Network switch failed, continuing with current network:",
-          networkError,
+        logger.warn(
+          "Network switch failed, continuing with current network",
+          { error: networkError instanceof Error ? networkError.message : String(networkError) },
         );
         // Don't fail initialization just because network switch failed
         // User might be on a compatible chain or will be prompted later
@@ -70,7 +71,7 @@ export class BaseChainService {
 
       // Double-check provider is still valid (it should be unless something went wrong)
       if (!this.provider || this.provider !== provider) {
-        console.warn("Provider reference changed during initialization, resetting");
+        logger.warn("Provider reference changed during initialization, resetting");
         this.provider = provider;
       }
 
@@ -78,19 +79,19 @@ export class BaseChainService {
       try {
         await this.provider.getSigner();
       } catch (signerError) {
-        console.warn("Could not get signer, wallet may be locked:", signerError);
+        logger.warn("Could not get signer, wallet may be locked", { error: signerError instanceof Error ? signerError.message : String(signerError) });
         // Don't fail completely - provider is still usable for read operations
       }
       
       this.isReadOnly = false;
       this.currentChainId = chainId ?? 8453;
 
-      console.log("BaseChainService initialized with wallet");
+      logger.info("BaseChainService initialized with wallet");
       return true;
     } catch (error) {
-      console.warn(
-        "Failed to initialize BaseChainService with wallet:",
-        error,
+      logger.warn(
+        "Failed to initialize BaseChainService with wallet",
+        { error: error instanceof Error ? error.message : String(error) },
       );
       // Don't throw - just return false
       return false;
@@ -116,7 +117,7 @@ export class BaseChainService {
       // Try each RPC with fallback
       const provider = await executeWithRpcFallback(
         async (url) => {
-          console.log(`Attempting to connect to RPC: ${url}`);
+          logger.info("Attempting to connect to RPC", { url });
           const provider = new ethers.JsonRpcProvider(url);
 
           // Test the connection
@@ -133,14 +134,15 @@ export class BaseChainService {
       this.isReadOnly = true;
       this.currentChainId = targetChainId;
 
-      console.log(
-        `BaseChainService initialized in read-only mode with RPC: ${this.currentRpcUrl}`,
+      logger.info(
+        "BaseChainService initialized in read-only mode",
+        { rpcUrl: this.currentRpcUrl },
       );
       return true;
     } catch (error) {
-      console.error(
-        "Failed to initialize read-only BaseChainService with all RPCs:",
-        error,
+      logger.error(
+        "Failed to initialize read-only BaseChainService with all RPCs",
+        { error: error instanceof Error ? error.message : String(error) },
       );
       return false;
     }
@@ -191,7 +193,7 @@ export class BaseChainService {
    */
   async switchRpcEndpoint(rpcUrl: string): Promise<boolean> {
     if (!this.isReadOnly) {
-      console.warn("Cannot switch RPC endpoint in wallet mode");
+      logger.warn("Cannot switch RPC endpoint in wallet mode");
       return false;
     }
 
@@ -202,10 +204,10 @@ export class BaseChainService {
       this.provider = provider;
       this.currentRpcUrl = rpcUrl;
 
-      console.log(`Switched to RPC: ${rpcUrl}`);
+      logger.info("Switched to RPC", { rpcUrl });
       return true;
     } catch (error) {
-      console.error(`Failed to switch to RPC ${rpcUrl}:`, error);
+      logger.error("Failed to switch to RPC", { rpcUrl, error: error instanceof Error ? error.message : String(error) });
       return false;
     }
   }
@@ -233,12 +235,12 @@ export class BaseChainService {
 
       // Validate hexChainId format before request
       if (!config.hexChainId || !config.hexChainId.startsWith("0x")) {
-        console.error("Invalid chain ID format:", config.hexChainId);
+        logger.error("Invalid chain ID format", { hexChainId: config.hexChainId });
         return;
       }
 
       try {
-        await (window.ethereum as any).request({
+        await (window.ethereum as unknown as { request: (args: { method: string; params: unknown[] }) => Promise<unknown> }).request({
           method: "wallet_switchEthereumChain",
           params: [{ chainId: config.hexChainId }],
         });
@@ -246,7 +248,7 @@ export class BaseChainService {
         // This error code indicates that the chain has not been added to MetaMask.
         const code = (switchError as { code?: number }).code;
         if (code === 4902) {
-          await (window.ethereum as any).request({
+          await (window.ethereum as unknown as { request: (args: { method: string; params: unknown[] }) => Promise<unknown> }).request({
             method: "wallet_addEthereumChain",
             params: [
               {
@@ -260,9 +262,9 @@ export class BaseChainService {
           });
         } else {
           // Log but re-throw so we know switching failed
-          console.warn(
-            `Failed to switch to chain ${targetChainId}:`,
-            switchError,
+          logger.warn(
+            "Failed to switch to chain",
+            { targetChainId: targetChainId.toString(), error: switchError instanceof Error ? switchError.message : String(switchError) },
           );
           throw switchError;
         }

@@ -131,21 +131,23 @@ export function isWebhookTimestampFresh(
 /**
  * Validate webhook payload structure
  */
-export function validateWebhookPayload(payload: any): payload is GelatoWebhookPayload {
+export function validateWebhookPayload(payload: unknown): payload is GelatoWebhookPayload {
   if (!payload || typeof payload !== 'object') {
     return false;
   }
 
+  const p = payload as Record<string, unknown>;
+
   // Must have taskId
-  if (!payload.taskId || typeof payload.taskId !== 'string') {
+  if (!p.taskId || typeof p.taskId !== 'string') {
     return false;
   }
 
   // Either has taskReceipt or executedData
-  const hasTaskReceipt = payload.taskReceipt && typeof payload.taskReceipt === 'object';
-  const hasExecutedData = payload.executedData && typeof payload.executedData === 'object';
+  const hasTaskReceipt = p.taskReceipt && typeof p.taskReceipt === 'object';
+  const hasExecutedData = p.executedData && typeof p.executedData === 'object';
 
-  return hasTaskReceipt || hasExecutedData;
+  return (hasTaskReceipt || hasExecutedData) as boolean;
 }
 
 /**

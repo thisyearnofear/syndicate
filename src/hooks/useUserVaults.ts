@@ -11,6 +11,7 @@
 import { useState, useCallback } from 'react';
 import { useVisibilityPolling } from '@/lib/useVisibilityPolling';
 import { vaultManager, type VaultBalance, type VaultProtocol } from '@/services/vaults';
+import { logger } from '@/lib/logger';
 
 export interface UserVaultPosition {
   protocol: VaultProtocol;
@@ -95,7 +96,7 @@ export function useUserVaults(
           }
           return null;
         } catch (err) {
-          console.error(`[useUserVaults] Failed to fetch ${protocol}:`, err);
+          logger.error(`Failed to fetch ${protocol}`, { error: err instanceof Error ? err.message : String(err) });
           return null;
         }
       });
@@ -108,7 +109,7 @@ export function useUserVaults(
       setPositions(validPositions);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch vault positions';
-      console.error('[useUserVaults] Error:', err);
+      logger.error("useUserVaults error", { error: err instanceof Error ? err.message : String(err) });
       setError(message);
     } finally {
       setIsLoading(false);

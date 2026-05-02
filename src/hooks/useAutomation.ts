@@ -21,6 +21,7 @@ import {
   type GelatoTaskResponse,
 } from '@/services/automation/AutomationOrchestrator';
 import type { AdvancedPermissionGrant } from '@/services/automation/erc7715Service';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // TYPES
@@ -103,7 +104,7 @@ export function useAutomation(
         }
       }
     } catch (err) {
-      console.error('Failed to load automation task from storage:', err);
+      logger.error("Failed to load automation task from storage", { error: err instanceof Error ? err.message : String(err) });
     }
   }, [isSupported]);
 
@@ -118,7 +119,7 @@ export function useAutomation(
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Failed to fetch task status';
-        console.error('[Automation] Error refreshing task status:', err);
+        logger.error("Error refreshing task status", { error: err instanceof Error ? err.message : String(err) });
         setError(msg);
       } finally {
         setIsLoading(false);
@@ -142,11 +143,7 @@ export function useAutomation(
       setError(null);
 
       try {
-        console.log('[UseAutomation] Creating task for permission:', {
-          permissionId: permission.id,
-          frequency,
-          amount: permission.limit.toString(),
-        });
+        logger.info("Creating task for permission", { permissionId: permission.id, frequency, amount: permission.limit.toString() });
 
         // Create task via Orchestrator
         const response = await automationOrchestrator.createGelatoTask(
@@ -179,12 +176,12 @@ export function useAutomation(
         setTaskStatus(response);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(newTask));
 
-        console.log('[UseAutomation] Task created:', newTask.id);
+        logger.info("Task created", { taskId: newTask.id });
         return true;
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Failed to create task';
         setError(msg);
-        console.error('[UseAutomation] Error creating task:', err);
+        logger.error("Error creating task", { error: err instanceof Error ? err.message : String(err) });
         return false;
       } finally {
         setIsUpdating(false);
@@ -210,7 +207,7 @@ export function useAutomation(
         const updatedTask = { ...activeTask, status: 'paused' as const };
         setActiveTask(updatedTask);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedTask));
-        console.log('[UseAutomation] Task paused:', activeTask.taskId);
+        logger.info("Task paused", { taskId: activeTask.taskId });
       } else {
         setError('Failed to pause task');
       }
@@ -242,7 +239,7 @@ export function useAutomation(
         const updatedTask = { ...activeTask, status: 'active' as const };
         setActiveTask(updatedTask);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedTask));
-        console.log('[UseAutomation] Task resumed:', activeTask.taskId);
+        logger.info("Task resumed", { taskId: activeTask.taskId });
       } else {
         setError('Failed to resume task');
       }
@@ -274,7 +271,7 @@ export function useAutomation(
         setActiveTask(null);
         setTaskStatus(null);
         localStorage.removeItem(STORAGE_KEY);
-        console.log('[UseAutomation] Task cancelled:', activeTask.taskId);
+        logger.info("Task cancelled", { taskId: activeTask.taskId });
       } else {
         setError('Failed to cancel task');
       }

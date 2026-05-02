@@ -9,6 +9,7 @@
  */
 
 import { features } from '@/config';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // TYPES
@@ -105,7 +106,7 @@ class PerformanceMonitor {
     this.errorCount++;
     
     if (features.enableDebugMode) {
-      console.error(`[Performance Monitor] Error in ${context}:`, error);
+      logger.error(`Error in ${context}`, { error: error.message });
     }
   }
 
@@ -257,13 +258,11 @@ if (features.enableDebugMode && typeof window !== 'undefined') {
     const report = performanceMonitor.getReport();
     const stats = performanceMonitor.getRealTimeStats();
     
-    console.group('🚀 Performance Report');
-    console.log('API Average:', `${report.summary.averageApiTime.toFixed(2)}ms`);
-    console.log('Render Average:', `${report.summary.averageRenderTime.toFixed(2)}ms`);
-    console.log('Error Rate:', `${(report.summary.errorRate * 100).toFixed(2)}%`);
-    console.log('Memory Usage:', `${stats.memoryUsage.toFixed(2)}MB`);
-    console.log('Connection:', stats.connectionType);
-    console.log('Online:', stats.isOnline);
-    console.groupEnd();
+    logger.info("API Average", { value: `${report.summary.averageApiTime.toFixed(2)}ms` });
+    logger.info("Render Average", { value: `${report.summary.averageRenderTime.toFixed(2)}ms` });
+    logger.info("Error Rate", { value: `${(report.summary.errorRate * 100).toFixed(2)}%` });
+    logger.info("Memory Usage", { value: `${stats.memoryUsage.toFixed(2)}MB` });
+    logger.info("Connection", { type: stats.connectionType });
+    logger.info("Online", { isOnline: stats.isOnline });
   }, 30000);
 }

@@ -15,6 +15,7 @@ import {
 } from 'viem';
 import { base } from 'viem/chains';
 import { basePublicClient } from '@/lib/baseClient';
+import { logger } from '@/lib/logger';
 
 const _BASE_CHAIN_ID = 8453;
 
@@ -165,7 +166,10 @@ export interface DistributeTokenParams {
   walletClient: WalletClient;
 }
 
-const publicClient = basePublicClient as any;
+const publicClient = basePublicClient as unknown as {
+  waitForTransactionReceipt: (args: { hash: string }) => Promise<unknown>;
+  readContract: (args: unknown) => Promise<unknown>;
+};
 
 /**
  * Create a new split on Base
@@ -220,11 +224,7 @@ export async function createSplit(
       chain: base,
     });
 
-    console.log('[SplitsService] Create split transaction sent:', {
-      txHash,
-      recipients,
-      distributorFee,
-    });
+    logger.info("Create split transaction sent", { txHash, recipients: recipients.length, distributorFee });
 
     // Wait for transaction _receipt to get split address
     const _receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
@@ -236,7 +236,7 @@ export async function createSplit(
       txHash,
     };
   } catch (error) {
-    console.error('[SplitsService] Failed to create split:', error);
+    logger.error("Failed to create split", { error: error instanceof Error ? error.message : String(error) });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to create split',
@@ -271,7 +271,7 @@ export async function getSplitInfo(splitAddress: Address): Promise<SplitInfo | n
       controller: controller === '0x0000000000000000000000000000000000000000' ? null : controller,
     };
   } catch (error) {
-    console.error('[SplitsService] Failed to get split info:', error);
+    logger.error("Failed to get split info", { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -290,9 +290,9 @@ export async function getSplitBalance(
       functionName: 'getSplitBalance',
       args: [splitAddress, token],
     });
-    return balance;
+    return balance as bigint;
   } catch (error) {
-    console.error('[SplitsService] Failed to get split balance:', error);
+    logger.error("Failed to get split balance", { error: error instanceof Error ? error.message : String(error) });
     return 0n;
   }
 }
@@ -337,16 +337,11 @@ export async function distributeToken(
       chain: base,
     });
 
-    console.log('[SplitsService] Distribute token transaction sent:', {
-      txHash,
-      splitAddress,
-      token,
-      recipients: splitInfo.recipients.length,
-    });
+    logger.info("Distribute token transaction sent", { txHash, splitAddress, token, recipients: splitInfo.recipients.length });
 
     return { success: true, txHash };
   } catch (error) {
-    console.error('[SplitsService] Failed to distribute token:', error);
+    logger.error("Failed to distribute token", { error: error instanceof Error ? error.message : String(error) });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to distribute token',
@@ -392,15 +387,11 @@ export async function distributeETH(
       chain: base,
     });
 
-    console.log('[SplitsService] Distribute ETH transaction sent:', {
-      txHash,
-      splitAddress,
-      recipients: splitInfo.recipients.length,
-    });
+    logger.info("Distribute ETH transaction sent", { txHash, splitAddress, recipients: splitInfo.recipients.length });
 
     return { success: true, txHash };
   } catch (error) {
-    console.error('[SplitsService] Failed to distribute ETH:', error);
+    logger.error("Failed to distribute ETH", { error: error instanceof Error ? error.message : String(error) });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to distribute ETH',

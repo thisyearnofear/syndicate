@@ -26,7 +26,7 @@ export interface PoolCreationResult {
   poolType: PoolType;
   txHash?: string;
   error?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface PoolProvider {
@@ -43,5 +43,5 @@ export interface PoolProvider {
     data: string,
     executor: string
   ): Promise<{ success: boolean; txHash?: string; error?: string }>;
-  getPoolInfo(poolAddress: string): Promise<Record<string, any>>;
+  getPoolInfo(poolAddress: string): Promise<Record<string, unknown>>;
 }

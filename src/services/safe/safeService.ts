@@ -176,7 +176,10 @@ export interface SafeTransaction {
   refundReceiver: Address;
 }
 
-const publicClient = basePublicClient as any;
+const publicClient = basePublicClient as unknown as {
+  waitForTransactionReceipt: (args: { hash: string }) => Promise<{ logs: Array<{ topics: string[] }> }>;
+  readContract: (args: unknown) => Promise<unknown>;
+};
 
 /**
  * Encode the Safe setup initializer

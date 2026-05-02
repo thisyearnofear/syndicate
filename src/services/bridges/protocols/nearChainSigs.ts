@@ -360,7 +360,7 @@ export class NearChainSigsProtocol implements BridgeProtocol {
                             deposit: this.ONE_NEAR_YOCTO,
                         },
                     }],
-                } as any);
+                    } as unknown as Parameters<typeof w.signAndSendTransaction>[0]);
 
                 const oc = outcome as unknown as Record<string, unknown>;
                 const txo = oc.transaction_outcome as { id?: string } | undefined;

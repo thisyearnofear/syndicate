@@ -18,6 +18,7 @@ import { useState, useCallback, useRef } from 'react';
 import { useAdvancedPermissions } from './useAdvancedPermissions';
 import { useVisibilityPolling } from '@/lib/useVisibilityPolling';
 import { permittedTicketExecutor } from '@/services/automation/permittedTicketExecutor';
+import { logger } from '@/lib/logger';
 
 interface ExecutionEvent {
   timestamp: number;
@@ -64,7 +65,7 @@ export function useAutoExecutionMonitor() {
         return JSON.parse(stored) as ExecutionEvent[];
       }
     } catch (error) {
-      console.warn('Failed to load execution history:', error);
+      logger.warn("Failed to load execution history", { error: error instanceof Error ? error.message : String(error) });
     }
     
     return [];
@@ -85,7 +86,7 @@ export function useAutoExecutionMonitor() {
         recentEvents: updated,
       }));
     } catch (error) {
-      console.warn('Failed to save execution event:', error);
+      logger.warn("Failed to save execution event", { error: error instanceof Error ? error.message : String(error) });
     }
   }, [loadExecutionHistory]);
 
@@ -115,13 +116,13 @@ export function useAutoExecutionMonitor() {
         type: 'executing',
       });
 
-      console.log('[AutoPurchase] Executing scheduled purchase...', { config: autoPurchaseConfig });
+      logger.info("Executing scheduled purchase", { config: autoPurchaseConfig });
 
       permittedTicketExecutor.executeScheduledPurchase(autoPurchaseConfig)
         .then((result) => {
           executingRef.current = false;
           if (result.success) {
-            console.log('[AutoPurchase] Purchase succeeded:', result.txHash);
+            logger.info("Purchase succeeded", { txHash: result.txHash });
             recordEvent({
               timestamp: Date.now(),
               type: 'success',
@@ -129,7 +130,7 @@ export function useAutoExecutionMonitor() {
               nextExecution: result.nextScheduledTime,
             });
           } else {
-            console.warn('[AutoPurchase] Purchase failed:', result.error?.message);
+            logger.warn("Purchase failed", { error: result.error?.message });
             recordEvent({
               timestamp: Date.now(),
               type: 'failed',
@@ -139,7 +140,7 @@ export function useAutoExecutionMonitor() {
         })
         .catch((err) => {
           executingRef.current = false;
-          console.error('[AutoPurchase] Execution error:', err);
+          logger.error("Execution error", { error: err instanceof Error ? err.message : String(err) });
           recordEvent({
             timestamp: Date.now(),
             type: 'failed',

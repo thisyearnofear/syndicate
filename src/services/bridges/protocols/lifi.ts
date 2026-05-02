@@ -131,7 +131,7 @@ export class LifiProtocol implements BridgeProtocol {
         tool: quote.toolDetails?.name || quote.tool,
       });
 
-      const txHash = await (window as any).ethereum.request({
+      const txHash = await (window as unknown as { ethereum: { request: (args: { method: string; params: unknown[] }) => Promise<string> } }).ethereum.request({
         method: 'eth_sendTransaction',
         params: [{
           from: signerAddress,
@@ -290,7 +290,7 @@ export class LifiProtocol implements BridgeProtocol {
   }
 
   private async getBrowserProvider(): Promise<BrowserProvider> {
-    if (typeof window === 'undefined' || !(window as any).ethereum) {
+    if (typeof window === 'undefined' || !(window as unknown as { ethereum?: unknown }).ethereum) {
       throw new BridgeError(
         BridgeErrorCode.WALLET_REJECTED,
         'An EVM wallet is required for LI.FI transfers.',
@@ -298,7 +298,7 @@ export class LifiProtocol implements BridgeProtocol {
       );
     }
 
-    return new BrowserProvider((window as any).ethereum);
+    return new BrowserProvider((window as unknown as { ethereum: import('ethers').Eip1193Provider }).ethereum);
   }
 
   private async ensureCorrectChain(provider: BrowserProvider, sourceChainId: number): Promise<void> {
@@ -307,7 +307,7 @@ export class LifiProtocol implements BridgeProtocol {
       return;
     }
 
-    await (window as any).ethereum.request({
+    await (window as unknown as { ethereum: { request: (args: { method: string; params: unknown[] }) => Promise<unknown> } }).ethereum.request({
       method: 'wallet_switchEthereumChain',
       params: [{ chainId: `0x${sourceChainId.toString(16)}` }],
     });

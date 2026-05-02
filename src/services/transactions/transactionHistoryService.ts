@@ -58,7 +58,7 @@ export interface TransactionFilter {
   limit?: number;
 }
 
-const _publicClient = basePublicClient as any;
+const _publicClient = basePublicClient as unknown as Record<string, unknown>;
 
 export class TransactionHistoryService {
 

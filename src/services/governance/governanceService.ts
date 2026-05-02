@@ -193,26 +193,26 @@ export class GovernanceService {
           ORDER BY created_at DESC
         `;
 
-    return result.rows.map((row: any) => ({
-      id: row.id,
-      poolId: row.pool_id,
-      type: row.type,
-      title: row.title,
-      description: row.description,
-      proposer: row.proposer,
-      status: row.status,
-      forVotes: row.for_votes,
-      againstVotes: row.against_votes,
-      abstainVotes: row.abstain_votes,
-      totalVoters: row.for_votes + row.against_votes + row.abstain_votes,
-      quorumRequired: row.quorum_required,
-      createdAt: new Date(row.created_at),
-      expiresAt: new Date(row.expires_at),
-      executedAt: row.executed_at ? new Date(row.executed_at) : null,
-      executionTxHash: row.execution_tx_hash,
+    return result.rows.map((row: Record<string, unknown>) => ({
+      id: row.id as string,
+      poolId: row.pool_id as string,
+      type: row.type as ProposalType,
+      title: row.title as string,
+      description: row.description as string,
+      proposer: row.proposer as string,
+      status: row.status as ProposalStatus,
+      forVotes: row.for_votes as number,
+      againstVotes: row.against_votes as number,
+      abstainVotes: row.abstain_votes as number,
+      totalVoters: (row.for_votes as number) + (row.against_votes as number) + (row.abstain_votes as number),
+      quorumRequired: row.quorum_required as number,
+      createdAt: new Date(row.created_at as number),
+      expiresAt: new Date(row.expires_at as number),
+      executedAt: row.executed_at ? new Date(row.executed_at as number) : null,
+      executionTxHash: row.execution_tx_hash as string | null,
       proposalData: typeof row.proposal_data === 'string' 
         ? JSON.parse(row.proposal_data) 
-        : row.proposal_data,
+        : row.proposal_data as Record<string, unknown>,
     }));
   }
 
@@ -226,13 +226,13 @@ export class GovernanceService {
       ORDER BY created_at DESC
     `;
 
-    return result.rows.map((row: any) => ({
-      id: row.id,
-      proposalId: row.proposal_id,
-      voter: row.voter,
-      choice: row.choice,
-      reason: row.reason,
-      createdAt: new Date(row.created_at),
+    return result.rows.map((row: Record<string, unknown>) => ({
+      id: row.id as string,
+      proposalId: row.proposal_id as string,
+      voter: row.voter as string,
+      choice: row.choice as VoteChoice,
+      reason: row.reason as string | null,
+      createdAt: new Date(row.created_at as number),
     }));
   }
 

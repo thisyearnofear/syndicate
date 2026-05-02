@@ -91,7 +91,7 @@ export function serializeGelatoTask(
   return {
     ...task,
     amountPerPeriod: task.amountPerPeriod.toString(),
-  } as any;
+  } as Omit<GelatoTaskRecord, 'amountPerPeriod'> & { amountPerPeriod: string };
 }
 
 /**

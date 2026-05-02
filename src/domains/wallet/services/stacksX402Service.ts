@@ -18,6 +18,20 @@
 import { request } from "@stacks/connect";
 import { logger } from '@/lib/logger';
 
+interface StacksWalletProviders {
+  LeatherProvider?: { getAddresses: () => Promise<{ addresses: { address: string }[] }> };
+  XverseProviders?: { getAddress: (network: string) => Promise<string> };
+  AsignaProvider?: unknown;
+  FordefiProvider?: unknown;
+}
+
+interface StacksWalletWindow extends Window {
+  LeatherProvider?: StacksWalletProviders['LeatherProvider'];
+  XverseProviders?: StacksWalletProviders['XverseProviders'];
+  AsignaProvider?: StacksWalletProviders['AsignaProvider'];
+  FordefiProvider?: StacksWalletProviders['FordefiProvider'];
+}
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -150,10 +164,10 @@ class StacksX402Service {
       // Check if any Stacks wallet is available
       const hasStacksWallet =
         typeof window !== "undefined" &&
-        (!!(window as any).LeatherProvider ||
-          !!(window as any).XverseProviders ||
-          !!(window as any).AsignaProvider ||
-          !!(window as any).FordefiProvider);
+        (!!(window as StacksWalletWindow).LeatherProvider ||
+          !!(window as StacksWalletWindow).XverseProviders ||
+          !!(window as StacksWalletWindow).AsignaProvider ||
+          !!(window as StacksWalletWindow).FordefiProvider);
 
       if (!hasStacksWallet) {
         return {
@@ -164,10 +178,10 @@ class StacksX402Service {
 
       // Determine wallet type
       let walletType = "Unknown";
-      if ((window as any).LeatherProvider) walletType = "Leather";
-      else if ((window as any).XverseProviders) walletType = "Xverse";
-      else if ((window as any).AsignaProvider) walletType = "Asigna";
-      else if ((window as any).FordefiProvider) walletType = "Fordefi";
+      if ((window as StacksWalletWindow).LeatherProvider) walletType = "Leather";
+      else if ((window as StacksWalletWindow).XverseProviders) walletType = "Xverse";
+      else if ((window as StacksWalletWindow).AsignaProvider) walletType = "Asigna";
+      else if ((window as StacksWalletWindow).FordefiProvider) walletType = "Fordefi";
 
       return {
         isSupported: true,
@@ -564,16 +578,16 @@ class StacksX402Service {
   private async getCurrentUserAddress(): Promise<string | null> {
     try {
       // Try to get address from Leather
-      if ((window as any).LeatherProvider) {
-        const provider = (window as any).LeatherProvider;
+      if ((window as StacksWalletWindow).LeatherProvider) {
+        const provider = (window as StacksWalletWindow).LeatherProvider!;
         const result = await provider.getAddresses();
         if (result && result.addresses && result.addresses.length > 0) {
           return result.addresses[0].address;
         }
       }
       // Try Xverse
-      if ((window as any).XverseProviders) {
-        const provider = (window as any).XverseProviders;
+      if ((window as StacksWalletWindow).XverseProviders) {
+        const provider = (window as StacksWalletWindow).XverseProviders!;
         const result = await provider.getAddress('stacks');
         if (result) return result;
       }

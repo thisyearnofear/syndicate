@@ -12,6 +12,7 @@
  */
 
 import { bridgeManager } from './index';
+import { logger } from '@/lib/logger';
 import type { BridgePerformanceMetrics, ProtocolHealth } from './types';
 
 // ============================================================================
@@ -30,12 +31,12 @@ export class BridgePerformanceMonitor {
      */
     startMonitoring(): void {
         if (this.isMonitoring) {
-            console.log('[PerformanceMonitor] Already monitoring');
+            logger.info('[PerformanceMonitor] Already monitoring');
             return;
         }
 
         this.isMonitoring = true;
-        console.log(`[PerformanceMonitor] Starting monitoring (interval: ${this.intervalMs}ms)`);
+        logger.info('[PerformanceMonitor] Starting monitoring', { intervalMs: this.intervalMs });
 
         // Initial check
         this.checkPerformance();
@@ -51,7 +52,7 @@ export class BridgePerformanceMonitor {
      */
     stopMonitoring(): void {
         if (!this.isMonitoring) {
-            console.log('[PerformanceMonitor] Not currently monitoring');
+            logger.info('[PerformanceMonitor] Not currently monitoring');
             return;
         }
 
@@ -61,7 +62,7 @@ export class BridgePerformanceMonitor {
         }
 
         this.isMonitoring = false;
-        console.log('[PerformanceMonitor] Stopped monitoring');
+        logger.info('[PerformanceMonitor] Stopped monitoring');
     }
 
     /**
@@ -73,7 +74,7 @@ export class BridgePerformanceMonitor {
             this.logMetrics(_metrics);
             this.checkAlertConditions(_metrics);
         } catch (error) {
-            console.error('[PerformanceMonitor] Error checking performance:', error);
+            logger.error('[PerformanceMonitor] Error checking performance', { error: error instanceof Error ? error.message : String(error) });
         }
     }
 
@@ -90,15 +91,15 @@ export class BridgePerformanceMonitor {
     private logMetrics(_metrics: BridgePerformanceMetrics): void {
         const statusEmoji = this.getStatusEmoji(_metrics.systemStatus);
         
-        console.log(`[PerformanceMonitor] ${statusEmoji} System Status: ${_metrics.systemStatus}`);
-        console.log(`[PerformanceMonitor] 📊 Success Rate: ${(_metrics.overallSuccessRate * 100).toFixed(1)}%`);
-        console.log(`[PerformanceMonitor] ❌ Total Failures: ${_metrics.totalFailures}`);
-        console.log(`[PerformanceMonitor] ⏱️  Avg Bridge Time: ${Math.round(_metrics.averageBridgeTimeMs / 1000)}s`);
-        console.log(`[PerformanceMonitor] 🏆 Best Protocol: ${_metrics.bestPerformingProtocol}`);
+        logger.info(`[PerformanceMonitor] ${statusEmoji} System Status: ${_metrics.systemStatus}`);
+        logger.info(`[PerformanceMonitor] 📊 Success Rate: ${(_metrics.overallSuccessRate * 100).toFixed(1)}%`);
+        logger.info(`[PerformanceMonitor] ❌ Total Failures: ${_metrics.totalFailures}`);
+        logger.info(`[PerformanceMonitor] ⏱️  Avg Bridge Time: ${Math.round(_metrics.averageBridgeTimeMs / 1000)}s`);
+        logger.info(`[PerformanceMonitor] 🏆 Best Protocol: ${_metrics.bestPerformingProtocol}`);
 
         if (_metrics.recommendations.length > 0) {
-            console.log('[PerformanceMonitor] 💡 Recommendations:');
-            _metrics.recommendations.forEach(rec => console.log(`   • ${rec}`));
+            logger.info('[PerformanceMonitor] 💡 Recommendations:');
+            _metrics.recommendations.forEach(rec => logger.info(`   • ${rec}`));
         }
     }
 
@@ -108,20 +109,20 @@ export class BridgePerformanceMonitor {
     private checkAlertConditions(_metrics: BridgePerformanceMetrics): void {
         // Critical conditions
         if (_metrics.systemStatus === 'critical') {
-            console.warn('[PerformanceMonitor] 🚨 CRITICAL: Bridge system health is critical!');
+            logger.warn('[PerformanceMonitor] 🚨 CRITICAL: Bridge system health is critical!');
             this.triggerCriticalAlert(_metrics);
         }
 
         // Degraded conditions
         else if (_metrics.systemStatus === 'degraded') {
-            console.warn('[PerformanceMonitor] ⚠️  WARNING: Bridge system health is degraded');
+            logger.warn('[PerformanceMonitor] ⚠️  WARNING: Bridge system health is degraded');
             this.triggerWarningAlert(_metrics);
         }
 
         // Check individual protocol health
         _metrics.protocols.forEach(protocol => {
             if (!protocol.isHealthy) {
-                console.warn(`[PerformanceMonitor] ⚠️  Protocol ${protocol.protocol} is unhealthy`);
+                logger.warn(`[PerformanceMonitor] ⚠️  Protocol ${protocol.protocol} is unhealthy`);
             }
         });
 
@@ -137,8 +138,7 @@ export class BridgePerformanceMonitor {
         const anomalies = this.detectAnomalies(_metrics);
         
         if (anomalies.length > 0) {
-            console.warn('[PerformanceMonitor] 🔍 Anomalies detected:');
-            anomalies.forEach(anomaly => console.warn(`   • ${anomaly}`));
+            logger.warn('[PerformanceMonitor] Anomalies detected', { anomalies });
             
             // Trigger anomaly alert
             this.triggerAnomalyAlert(_metrics, anomalies);
@@ -224,9 +224,7 @@ export class BridgePerformanceMonitor {
      * Trigger anomaly alert
      */
     private triggerAnomalyAlert(_metrics: BridgePerformanceMetrics, anomalies: string[]): void {
-        console.warn('[PerformanceMonitor] 🔍 ANOMALY ALERT TRIGGERED');
-        console.warn('Detected anomalies:');
-        anomalies.forEach(anomaly => console.warn(`  • ${anomaly}`));
+        logger.warn('[PerformanceMonitor] ANOMALY ALERT TRIGGERED', { anomalies });
 
         // In production, this would:
         // - Send notifications to operations team
@@ -260,10 +258,7 @@ export class BridgePerformanceMonitor {
      */
     private triggerCriticalAlert(_metrics: BridgePerformanceMetrics): void {
         // In production, this would send alerts to monitoring systems
-        console.error('[PerformanceMonitor] CRITICAL ALERT TRIGGERED');
-        console.error('Actions taken:');
-        console.error('  • Logging detailed error information');
-        console.error('  • Recommend manual intervention');
+        logger.error('[PerformanceMonitor] CRITICAL ALERT TRIGGERED', { actions: ['Logging detailed error information', 'Recommend manual intervention'] });
         
         // Additional actions could include:
         // - Disabling failing protocols
@@ -275,9 +270,7 @@ export class BridgePerformanceMonitor {
      * Trigger warning alert
      */
     private triggerWarningAlert(_metrics: BridgePerformanceMetrics): void {
-        console.warn('[PerformanceMonitor] WARNING ALERT TRIGGERED');
-        console.warn('Recommendations:');
-        _metrics.recommendations.forEach(rec => console.warn(`  • ${rec}`));
+        logger.warn('[PerformanceMonitor] WARNING ALERT TRIGGERED', { recommendations: _metrics.recommendations });
         
         // Additional actions could include:
         // - Increasing monitoring frequency

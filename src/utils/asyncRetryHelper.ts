@@ -10,6 +10,8 @@
  * - CLEAN: Clear error messages with actionable context
  */
 
+import { logger } from '@/lib/logger';
+
 export interface RetryOptions {
   maxAttempts?: number;
   initialDelayMs?: number;
@@ -83,7 +85,7 @@ export async function withRetry<T>(
         : await promise;
 
       if (attempt > 1) {
-        console.log(`✅ Succeeded on attempt ${attempt}`);
+        logger.info(`Succeeded on attempt ${attempt}`);
       }
       return result;
     } catch (error) {
@@ -91,8 +93,8 @@ export async function withRetry<T>(
 
       if (attempt < maxAttempts) {
         onAttempt?.(attempt, lastError);
-        console.warn(
-          `Attempt ${attempt} failed: ${lastError.message}. Retrying in ${delayMs}ms...`
+        logger.warn(
+          `Attempt ${attempt} failed, retrying`, { error: lastError.message, delayMs }
         );
         await new Promise((r) => setTimeout(r, delayMs));
         delayMs = Math.min(delayMs * backoffMultiplier, maxDelayMs);
@@ -139,11 +141,11 @@ export async function pollWithBackoff<T>(
       const result = await fn();
       if (result !== null) {
         const elapsedMs = Date.now() - startTime;
-        console.log(`✅ ${context} succeeded after ${elapsedMs}ms`);
+        logger.info(`${context} succeeded`, { elapsedMs });
         return result;
       }
     } catch (error) {
-      console.warn(`${context} error: ${error instanceof Error ? error.message : String(error)}`);
+      logger.warn(`${context} error`, { error: error instanceof Error ? error.message : String(error) });
     }
 
     await new Promise((r) => setTimeout(r, delayMs));
@@ -151,7 +153,7 @@ export async function pollWithBackoff<T>(
   }
 
   const elapsedMs = Date.now() - startTime;
-  console.warn(`${context} timeout after ${elapsedMs}ms`);
+  logger.warn(`${context} timeout`, { elapsedMs });
   return null;
 }
 
@@ -173,16 +175,16 @@ export async function validateConnection<T>(
 
   for (let i = 0; i < maxAttempts; i++) {
     try {
-      console.log(`Validating ${context}... (attempt ${i + 1}/${maxAttempts})`);
+      logger.info(`Validating ${context}`, { attempt: i + 1, maxAttempts });
       const result = await withTimeout(validator(), {
         timeoutMs,
         context,
       });
-      console.log(`✅ ${context} validated`);
+      logger.info(`${context} validated`);
       return result;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      console.warn(`${context} validation failed: ${lastError.message}`);
+      logger.warn(`${context} validation failed`, { error: lastError.message });
 
       if (i < maxAttempts - 1) {
         await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
@@ -235,8 +237,8 @@ export class CircuitBreaker {
     this.failures.set(key, state);
 
     if (state.count === this.failureThreshold) {
-      console.warn(
-        `⚠️ Circuit breaker opened for: ${key} (${this.failureThreshold} failures)`
+      logger.warn(
+        `Circuit breaker opened`, { key, failureThreshold: this.failureThreshold }
       );
     }
   }

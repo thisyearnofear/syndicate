@@ -480,11 +480,12 @@ async function handleStarknetWalletSign(result: PurchaseResult): Promise<string>
 
   const { connect } = await import('starknetkit');
   const { wallet } = await connect({ modalMode: 'neverAsk' });
-  if (!wallet || !(wallet as any).account) {
+  const starknetWallet = wallet as unknown as { account?: { execute: (calls: unknown[]) => Promise<{ transaction_hash: string }> } };
+  if (!starknetWallet.account) {
     throw new Error('Starknet wallet not connected or account not found');
   }
 
-  const response = await (wallet as any).account.execute(calls);
+  const response = await starknetWallet.account.execute(calls);
   return response.transaction_hash;
 }
 
