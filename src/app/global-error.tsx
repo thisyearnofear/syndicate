@@ -6,9 +6,11 @@
  * Core Principles Applied:
  * - CLEAN: Catches unhandled errors at the app root
  * - SECURE: No stack traces in production
+ * - Reports to Sentry via captureException
  */
 
 import { useEffect } from 'react';
+import * as Sentry from '@sentry/nextjs';
 
 export default function GlobalError({
   error,
@@ -18,19 +20,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log to monitoring service in production
-    if (process.env.NODE_ENV === 'production') {
-      fetch('/api/log-error', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: error.message,
-          digest: error.digest,
-          url: window.location.href,
-          timestamp: new Date().toISOString(),
-        }),
-      }).catch(() => {});
-    }
+    Sentry.captureException(error);
   }, [error]);
 
   return (
