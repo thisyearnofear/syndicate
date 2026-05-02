@@ -31,7 +31,7 @@ import { stacksX402Service } from "@/domains/wallet/services/stacksX402Service";
 import type { AutoPurchaseConfig, AdvancedPermission } from "@/domains/wallet/types";
 
 type Step = "select-type" | "configure" | "review" | "approving" | "success" | "error";
-type AgentStrategy = "scheduled" | "autonomous";
+type AgentStrategy = "scheduled" | "autonomous" | "no-loss";
 
 interface PurchaseConfig {
   strategy: AgentStrategy;
@@ -144,7 +144,7 @@ export function AutoPurchaseModal({
     setErrorMessage(null);
 
     // Handle Autonomous WDK or No-Loss Flow
-    if (config.strategy === 'autonomous' || config.strategy === 'no-loss' as any) {
+    if (config.strategy === 'autonomous' || config.strategy === 'no-loss') {
       try {
         console.log(`[Automation] Activating ${config.strategy} strategy...`);
         // Simulate activation
@@ -162,7 +162,7 @@ export function AutoPurchaseModal({
 
         setStep("success");
         if (onSuccess) {
-          setTimeout(() => onSuccess(config as any), 2000);
+          setTimeout(() => onSuccess(config), 2000);
         }
       } catch {
         setErrorMessage(`Failed to deploy ${config.strategy} agent. Please try again.`);
@@ -448,7 +448,7 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
               {/* NO-LOSS OPTION (PoolTogether) */}
               <button
                 onClick={() => {
-                  setConfig(prev => ({ ...prev, strategy: 'no-loss' as any, paymentToken: 'usdc', frequency: 'weekly' }));
+                  setConfig(prev => ({ ...prev, strategy: 'no-loss', paymentToken: 'usdc', frequency: 'weekly' }));
                   setStep('configure');
                 }}
                 className="group relative p-4 rounded-xl border-2 border-slate-700 bg-slate-800/50 hover:border-emerald-500 hover:bg-slate-800 transition-all text-left"

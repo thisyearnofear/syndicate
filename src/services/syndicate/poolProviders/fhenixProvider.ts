@@ -194,7 +194,7 @@ export class FhenixPoolProvider implements PoolProvider {
     return { success: true };
   }
 
-  async getPoolInfo(poolAddress: string): Promise<Record<string, any>> {
+  async getPoolInfo(poolAddress: string): Promise<Record<string, unknown>> {
     try {
       const { createPublicClient, http } = await import('viem');
       const client = createPublicClient({

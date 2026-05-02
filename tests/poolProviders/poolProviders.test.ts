@@ -295,7 +295,7 @@ describe('Pool Providers', () => {
         expect(info.chain).toBe('Base');
         // Features may vary depending on whether vault info is fetched
         expect(info.features).toBeDefined();
-        expect(info.features.length).toBeGreaterThan(0);
+        expect((info.features as string[]).length).toBeGreaterThan(0);
       });
     });
   });

@@ -11,9 +11,10 @@ global.TextDecoder = TextDecoder;
 
 // Polyfill Request/Response for Next.js API route testing
 if (typeof Request === 'undefined') {
-  global.Request = class Request {
+  const OriginalRequest = class Request {
     constructor(input, init = {}) {
-      this.url = typeof input === 'string' ? input : input.url;
+      const url = typeof input === 'string' ? input : input.url;
+      Object.defineProperty(this, 'url', { value: url, writable: false, enumerable: true, configurable: true });
       this.method = init.method || 'GET';
       this.headers = new Headers(init.headers);
       this.body = init.body || null;
@@ -25,6 +26,7 @@ if (typeof Request === 'undefined') {
       return this.body || '';
     }
   };
+  global.Request = OriginalRequest;
 }
 
 if (typeof Response === 'undefined') {

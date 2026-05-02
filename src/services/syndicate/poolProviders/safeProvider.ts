@@ -119,7 +119,7 @@ export class SafePoolProvider implements PoolProvider {
     };
   }
 
-  async getPoolInfo(poolAddress: string): Promise<Record<string, any>> {
+  async getPoolInfo(poolAddress: string): Promise<Record<string, unknown>> {
     try {
       // Try to fetch real Safe info from chain
       const safeInfo = await safeService.getSafeInfo(poolAddress as Address);

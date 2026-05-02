@@ -34,7 +34,7 @@ export default async function AdminPurchasesPage({
   const offset = Math.max(Number(params?.offset) || 0, 0);
 
   const where: string[] = [];
-  const values: any[] = [];
+  const values: (string | number)[] = [];
 
   if (chain) {
     values.push(chain);

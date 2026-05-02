@@ -34,7 +34,7 @@ export default function PurchaseStatusPage() {
   const [data, setData] = useState<PurchaseStatusResponse | null>(null);
   const [sourceChain, setSourceChain] = useState<
     "stacks" | "solana" | "near" | "ethereum" | "base"
-  >((chainParam as any) || "stacks");
+  >((chainParam as "stacks" | "solana" | "near" | "ethereum" | "base") || "stacks");
   const [copied, setCopied] = useState(false);
   const showSolanaAdapterWarning =
     sourceChain === "solana" && !process.env.NEXT_PUBLIC_DEBRIDGE_ADAPTER;

@@ -130,7 +130,7 @@ export class PoolTogetherV5Provider implements PoolProvider {
     };
   }
 
-  async getPoolInfo(poolAddress: string): Promise<Record<string, any>> {
+  async getPoolInfo(poolAddress: string): Promise<Record<string, unknown>> {
     try {
       const vault = await poolTogetherVaultService.fetchVaultInfo(poolAddress as `0x${string}`);
       

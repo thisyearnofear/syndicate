@@ -201,9 +201,9 @@ export class AutomationOrchestrator {
         default:
           throw new Error(`Unsupported automation strategy: ${_task.strategy}`);
       }
-    } catch (_error: any) {
+    } catch (_error: unknown) {
       console.error(`[Orchestrator] Task execution failed:`, _error);
-      return { success: false, error: _error.message };
+      return { success: false, error: _error instanceof Error ? _error.message : String(_error) };
     }
   }
 

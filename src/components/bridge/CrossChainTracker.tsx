@@ -60,7 +60,7 @@ interface CrossChainTrackerProps {
 interface Step {
   id: string;
   title: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   description: string;
   tip?: string;
   estimatedMinutes?: number;

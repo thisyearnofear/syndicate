@@ -41,7 +41,7 @@ export default async function handler(
 
   try {
     // 1. Query due tasks (Consolidated SELECT)
-    const { rows: tasks } = await sql<any>`
+    const { rows: tasks } = await sql<{ id: string; user_address: string; agent_type: string; token_address: string; amount_per_period: string; frequency: 'daily' | 'weekly' | 'monthly' | 'opportunistic'; last_executed_at: number; last_reasoning: string; }>`
       SELECT * FROM auto_purchases 
       WHERE is_active = true 
       AND (last_executed_at IS NULL OR last_executed_at + 3600 <= ${currentTimestamp})
@@ -54,7 +54,7 @@ export default async function handler(
       const task: AutomationTask = {
         id: row.id,
         userAddress: row.user_address,
-        strategy: (row.agent_type || 'scheduled') as any,
+        strategy: (row.agent_type || 'scheduled') as AutomationTask['strategy'],
         status: 'active',
         tokenAddress: row.token_address || '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
         tokenSymbol: row.token_address?.includes('fde4') ? 'USD₮' : 'USDC',
@@ -92,8 +92,9 @@ export default async function handler(
       errors
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(`[Cron] Fatal error:`, error);
-    return res.status(500).json({ success: false, executed: executedCount, attempted: attemptedCount, errors: [error.message] });
+    const message = error instanceof Error ? error.message : String(error);
+    return res.status(500).json({ success: false, executed: executedCount, attempted: attemptedCount, errors: [message] });
   }
 }

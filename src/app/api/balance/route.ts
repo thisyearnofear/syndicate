@@ -274,23 +274,23 @@ async function getNearBalance(accountId: string): Promise<NextResponse> {
     
     // Get native NEAR balance
     // Note: We handle type any here because near-api-js types can be tricky in Next.js edge/server environment
-    const account = await provider.query<any>({
+    const account = await provider.query({
       request_type: 'view_account',
       finality: 'final',
       account_id: accountId,
-    });
+    }) as unknown as { amount: string };
     const nearBalance = ethers.formatUnits(account.amount, 24); // NEAR has 24 decimals
 
     // Get USDC balance (view call)
     let usdcBalance = '0';
     try {
-      const res = await provider.query<any>({
+      const res = await provider.query({
         request_type: 'call_function',
         account_id: NEAR_USDC_ID,
         method_name: 'ft_balance_of',
         args_base64: Buffer.from(JSON.stringify({ account_id: accountId })).toString('base64'),
         finality: 'final',
-      });
+      }) as unknown as { result: number[] };
       // Result is an array of bytes (ASCII digits string for balance)
       const resultBuffer = Buffer.from(res.result);
       const resultStr = resultBuffer.toString();
