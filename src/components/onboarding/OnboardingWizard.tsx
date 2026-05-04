@@ -23,7 +23,6 @@ import {
   TrendingUp,
   Trophy,
   Users,
-  Heart,
   Play
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';

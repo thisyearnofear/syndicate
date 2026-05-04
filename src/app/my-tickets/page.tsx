@@ -9,7 +9,7 @@
  * - CLEAN: Clear separation of concerns between history display, stats, and the new guided flow.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useUnifiedWallet } from "@/hooks";
 import { useTicketInfo } from "@/hooks/useTicketInfo";
 import { useTicketHistory } from "@/hooks/useTicketHistory";
