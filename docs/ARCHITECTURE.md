@@ -4,9 +4,17 @@
 
 ## Overview
 
-Syndicate is a **Multi-Protocol Lottery Aggregator** with autonomous AI agents. Users participate in Megapot, PoolTogether v5, and Spark Protocol lotteries from any blockchain (Stacks, NEAR, Solana, Base, EVM, TON) with KYC/AML compliance via Civic Pass.
+Syndicate is a **Base-native coordination and vault product** with optional public play and privacy-native flows. Users can fund the system from external ecosystems such as Solana, Stacks, NEAR, and EVM chains, while core execution happens on Base. Fhenix powers private vault mode and selective disclosure.
 
 For the Ranger main track, the repo is being reframed around a stricter operator model: a **real Solana vault strategy on Ranger first**, with Syndicate serving as a custom frontend, reporting surface, and optional downstream yield-consumer experience.
+
+### Chain Roles
+
+- **Base**: execution layer for vaults, syndicates, and settlement
+- **Fhenix**: privacy layer for private vault mode and selective disclosure
+- **Solana / Stacks / NEAR / Ethereum / Starknet**: funding rails into the Base-native experience
+
+For a more concise product-facing version, see `docs/CHAIN_ARCHITECTURE_BRIEF.md`.
 
 ### Core Principles
 
