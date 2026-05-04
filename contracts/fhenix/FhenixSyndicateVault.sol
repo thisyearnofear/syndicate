@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {FHE, euint256, inEuint256} from "@fhenixprotocol/contracts/FHE.sol";
+import {FHE, euint64, inEuint64} from "@fhenixprotocol/contracts/FHE.sol";
 import {Permissioned, Permission} from "@fhenixprotocol/contracts/access/Permissioned.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -18,7 +18,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
  *         Coordinator is the syndicate creator; members deposit via {depositEncrypted}.
  *
  * Architecture:
- *  - Uses @fhenixprotocol/contracts FHE library (v0.3.1)
+ *  - Uses FhenixProtocol FHE library (v0.3.1)
  *  - Extends Permissioned.sol for sealed-output access control
  *  - USDC (6 decimals) is the settlement token
  *  - Emits {DepositShielded} with a zero placeholder so the existing
@@ -30,8 +30,8 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
     /// @dev USDC token on Base (6 decimals)
     IERC20 public immutable usdc;
 
-    /// @dev Encrypted contribution per member address
-    mapping(address => euint256) private _encryptedBalances;
+    /// @dev Encrypted contribution per member address (euint64 — USDC 6 dec, max ~18.4T)
+    mapping(address => euint64) private _encryptedBalances;
 
     /// @dev Tracks which addresses have ever deposited (for member enumeration)
     mapping(address => bool) public isMember;
@@ -47,7 +47,7 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
     address public coordinator;
 
     /// @dev FHE-encrypted cumulative yield accrued (updated by coordinator)
-    euint256 private _encryptedYield;
+    euint64 private _encryptedYield;
 
     // ─── Events ───────────────────────────────────────────────────────────────
 
@@ -104,11 +104,11 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
      *         The `plainAmount` is used only for the ERC-20 transfer; it is never
      *         stored in plaintext — only the FHE ciphertext is retained.
      *
-     * @param encryptedAmount  FHE-encrypted uint256 produced client-side via cofhejs
+     * @param encryptedAmount  FHE-encrypted euint64 produced client-side via cofhejs
      * @param plainAmount      Plaintext USDC micro-units (6 dec) for the ERC-20 transfer
      */
     function depositEncrypted(
-        inEuint256 calldata encryptedAmount,
+        inEuint64 calldata encryptedAmount,
         uint256 plainAmount
     ) external {
         if (plainAmount == 0) revert ZeroAmount();
@@ -117,8 +117,8 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
         bool ok = usdc.transferFrom(msg.sender, address(this), plainAmount);
         if (!ok) revert TransferFailed();
 
-        // Convert the client-supplied encrypted input to an on-chain euint256
-        euint256 eAmount = FHE.asEuint256(encryptedAmount);
+        // Convert the client-supplied encrypted input to an on-chain euint64
+        euint64 eAmount = FHE.asEuint64(encryptedAmount);
 
         // Accumulate: if first deposit, initialise; otherwise add homomorphically
         if (!isMember[msg.sender]) {
@@ -153,7 +153,7 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
         Permission calldata permission
     ) external view onlySender(permission) returns (uint256) {
         // Return the ciphertext hash (ctHash). The client unseals it via cofhejs + threshold network.
-        return euint256.unwrap(_encryptedBalances[msg.sender]);
+        return euint64.unwrap(_encryptedBalances[msg.sender]);
     }
 
     /**
@@ -164,13 +164,13 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
         Permission calldata permission
     ) external view onlySender(permission) onlyCoordinator returns (uint256) {
         // Sum all member balances homomorphically — return ciphertext hash for off-chain unsealing.
-        euint256 total = FHE.asEuint256(0);
+        euint64 total = FHE.asEuint64(0);
         for (uint256 i = 0; i < _members.length; i++) {
             if (isMember[_members[i]]) {
                 total = FHE.add(total, _encryptedBalances[_members[i]]);
             }
         }
-        return euint256.unwrap(total);
+        return euint64.unwrap(total);
     }
 
     // ─── Yield Distribution ───────────────────────────────────────────────────
@@ -185,14 +185,14 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
      * @param plainYield      Plaintext amount for ERC-20 transfer
      */
     function depositYield(
-        inEuint256 calldata encryptedYield,
+        inEuint64 calldata encryptedYield,
         uint256 plainYield
     ) external onlyCoordinator {
         if (plainYield == 0) revert ZeroAmount();
         bool ok = usdc.transferFrom(msg.sender, address(this), plainYield);
         if (!ok) revert TransferFailed();
 
-        _encryptedYield = FHE.add(_encryptedYield, FHE.asEuint256(encryptedYield));
+        _encryptedYield = FHE.add(_encryptedYield, FHE.asEuint64(encryptedYield));
         emit YieldDistributed(block.timestamp);
     }
 
@@ -211,7 +211,7 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
         if (plainAmount > totalDeposited) revert InvalidWithdrawAmount();
 
         // Zero out encrypted balance before transfer (reentrancy guard via CEI)
-        _encryptedBalances[msg.sender] = FHE.asEuint256(0);
+        _encryptedBalances[msg.sender] = FHE.asEuint64(0);
         isMember[msg.sender] = false;
         activeMemberCount -= 1;
         totalDeposited -= plainAmount;
