@@ -128,7 +128,7 @@ contract FhenixSyndicateVaultTest is Test {
     vm.startPrank(member1);
     usdc.approve(address(vault), amount);
 
-    inEuint256 memory enc = inEuint256({ data: abi.encode(amount), securityZone: 0 });
+    inEuint64 memory enc = inEuint64({ data: abi.encode(amount), securityZone: 0 });
 
     vm.expectEmit(true, false, false, true, address(vault));
     emit DepositShielded(member1, 0);
@@ -147,7 +147,7 @@ contract FhenixSyndicateVaultTest is Test {
 
     vm.startPrank(member1);
     usdc.approve(address(vault), amount);
-    inEuint256 memory enc = inEuint256({ data: abi.encode(amount), securityZone: 0 });
+    inEuint64 memory enc = inEuint64({ data: abi.encode(amount), securityZone: 0 });
     vault.depositEncrypted(enc, amount);
 
     Permission memory permission = _permission(member1, member1Pk, bytes32(uint256(123)));
@@ -164,8 +164,8 @@ contract FhenixSyndicateVaultTest is Test {
 
     vm.startPrank(member1);
     usdc.approve(address(vault), a + b);
-    vault.depositEncrypted(inEuint256({ data: abi.encode(a), securityZone: 0 }), a);
-    vault.depositEncrypted(inEuint256({ data: abi.encode(b), securityZone: 0 }), b);
+    vault.depositEncrypted(inEuint64({ data: abi.encode(a), securityZone: 0 }), a);
+    vault.depositEncrypted(inEuint64({ data: abi.encode(b), securityZone: 0 }), b);
 
     Permission memory permission = _permission(member1, member1Pk, bytes32(uint256(456)));
     uint256 ctHash = vault.getEncryptedBalanceCtHash(permission);
@@ -178,7 +178,7 @@ contract FhenixSyndicateVaultTest is Test {
 
     vm.startPrank(member1);
     usdc.approve(address(vault), amount);
-    vault.depositEncrypted(inEuint256({ data: abi.encode(amount), securityZone: 0 }), amount);
+    vault.depositEncrypted(inEuint64({ data: abi.encode(amount), securityZone: 0 }), amount);
     vm.stopPrank();
 
     assertEq(vault.memberCount(), 1);

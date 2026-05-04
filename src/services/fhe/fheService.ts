@@ -15,6 +15,7 @@ import type {
   Permit,
   Permission,
   Result,
+  CoFheInUint64,
   CoFheInUint256,
   Environment,
 } from 'cofhejs/web';
@@ -49,6 +50,9 @@ export const FHENIX_CONFIG = {
 } as const;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
+
+/** Encrypted uint64 input ready for on-chain submission (USDC amounts) */
+export type EncryptedUint64Input = CoFheInUint64;
 
 /** Encrypted uint256 input ready for on-chain submission */
 export type EncryptedUint256Input = CoFheInUint256;
@@ -89,17 +93,16 @@ export async function initializeFhe(
 /**
  * Encrypt a USDC amount (6 decimal integer) for submission to a FHE contract.
  *
- * Produces a `CoFheInUint256` — the struct Solidity expects as `inEuint256`.
- * USDC amounts fit comfortably in euint64 but we use euint256 to match the
- * FhenixSyndicateVault contract's storage type (forward-compatible with large pools).
+ * Produces a `CoFheInUint64` — the struct Solidity expects as `inEuint64`.
+ * euint64 handles up to ~18.4T USDC, more than sufficient for any pool.
  *
  * @param amountMicroUsdc - Amount in USDC micro-units (e.g., 1_000_000 = 1 USDC)
  */
 export async function encryptUsdcAmount(
   amountMicroUsdc: bigint,
-): Promise<FheResult<[EncryptedUint256Input]>> {
+): Promise<FheResult<[EncryptedUint64Input]>> {
   const { cofhejs, Encryptable } = await loadCofheWeb();
-  return cofhejs.encrypt([Encryptable.uint256(amountMicroUsdc)]);
+  return cofhejs.encrypt([Encryptable.uint64(amountMicroUsdc)]);
 }
 
 // ─── Permits ─────────────────────────────────────────────────────────────────
@@ -158,7 +161,7 @@ export async function unsealBalance(
   ctHash: bigint,
 ): Promise<FheResult<bigint>> {
   const { cofhejs, FheTypes } = await loadCofheWeb();
-  return cofhejs.unseal(ctHash, FheTypes.Uint256) as Promise<FheResult<bigint>>;
+  return cofhejs.unseal(ctHash, FheTypes.Uint64) as Promise<FheResult<bigint>>;
 }
 
 // ─── Sealing Keys (off-chain) ─────────────────────────────────────────────────
