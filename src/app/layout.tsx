@@ -4,8 +4,8 @@ import { Inter } from "next/font/google";
 import "@rainbow-me/rainbowkit/styles.css";
 import "@near-wallet-selector/modal-ui/styles.css";
 import { ToastProvider } from "@/shared/components/ui/Toast";
-import DynamicNavigationHeader from "@/components/DynamicNavigationHeader";
-import ClientProvidersWrapper from "@/components/ClientProvidersWrapper";
+import NavigationHeader from "@/components/NavigationHeader";
+import ClientProviders from "@/components/ClientProviders";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -13,8 +13,8 @@ export const revalidate = 0;
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Syndicate - Win Prizes, Never Lose Your Deposit",
-  description: "Deposit USDC, earn yield, and play the lottery for free. Your principal stays 100% yours. Cross-chain. Cause-driven.",
+  title: "Syndicate - Private Vaults, Yield-Powered Participation, Public Play",
+  description: "Coordinate capital privately, let yield generate participation automatically, or access public play directly on Base through Syndicate.",
 };
 
 export default function RootLayout({
@@ -40,8 +40,8 @@ export default function RootLayout({
           }}
         />
         <ToastProvider>
-          <ClientProvidersWrapper>
-            <DynamicNavigationHeader />
+          <ClientProviders>
+            <NavigationHeader />
             <div className="flex flex-col min-h-screen">
               <div className="flex-1">
                 {children}
@@ -57,7 +57,7 @@ export default function RootLayout({
                         <span className="font-bold text-white">Syndicate</span>
                       </div>
                       <p className="text-xs text-gray-500 leading-relaxed">
-                        Social lottery coordination. Cross-chain. Cause-driven.
+                        Private vaults, yield-powered participation, and public play on Base.
                       </p>
                     </div>
                     <div>
@@ -88,13 +88,13 @@ export default function RootLayout({
                     </div>
                   </div>
                   <div className="pt-6 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
-                    <p className="text-xs text-gray-600">Built on Base, Solana, Stacks, NEAR & Starknet</p>
+                    <p className="text-xs text-gray-600">Base-native execution with Fhenix privacy mode and multi-chain funding rails</p>
                     <p className="text-xs text-gray-600">Smart contracts are open-source on <a href="https://github.com/thisyearnofear/syndicate" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-white transition-colors underline">GitHub</a></p>
                   </div>
                 </div>
               </footer>
             </div>
-           </ClientProvidersWrapper>
+           </ClientProviders>
         </ToastProvider>
       </body>
     </html>

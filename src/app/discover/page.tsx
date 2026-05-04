@@ -20,8 +20,8 @@ import { Button } from '@/shared/components/ui/Button';
 import { SyndicateCard } from '@/components/syndicate/SyndicateCard';
 import { useUnifiedWallet } from '@/hooks';
 
-type PoolType = 'safe' | 'splits' | 'pooltogether' | 'all';
-type VaultStrategy = 'aave' | 'morpho' | 'pooltogether' | 'all';
+type PoolType = 'safe' | 'splits' | 'pooltogether' | 'fhenix' | 'all';
+type VaultStrategy = 'aave' | 'morpho' | 'pooltogether' | 'fhenix' | 'all';
 type SortBy = 'trending' | 'members' | 'tickets' | 'impact' | 'newest';
 
 interface SyndicateData {
@@ -29,8 +29,8 @@ interface SyndicateData {
   name: string;
   description: string;
   cause: string;  // Normalized from API object in fetch callback
-  poolType: 'safe' | 'splits' | 'pooltogether';
-  vaultStrategy?: 'aave' | 'morpho' | 'spark' | 'pooltogether' | 'octant' | 'uniswap';
+  poolType: 'safe' | 'splits' | 'pooltogether' | 'fhenix';
+  vaultStrategy?: 'aave' | 'morpho' | 'spark' | 'pooltogether' | 'octant' | 'uniswap' | 'fhenix';
   membersCount: number;
   ticketsPooled: number;
   totalImpact: number;
@@ -129,6 +129,7 @@ export default function SyndicateDiscoveryPage() {
     { value: 'safe', label: 'Safe Multisig' },
     { value: 'splits', label: '0xSplits' },
     { value: 'pooltogether', label: 'PoolTogether' },
+    { value: 'fhenix', label: 'Private Vaults' },
   ];
 
   const vaultOptions: { value: VaultStrategy; label: string }[] = [
@@ -136,6 +137,7 @@ export default function SyndicateDiscoveryPage() {
     { value: 'aave', label: 'Aave V3' },
     { value: 'morpho', label: 'Morpho Blue' },
     { value: 'pooltogether', label: 'PoolTogether' },
+    { value: 'fhenix', label: 'Fhenix Private' },
   ];
 
   const sortOptions: { value: SortBy; label: string }[] = [
@@ -149,13 +151,19 @@ export default function SyndicateDiscoveryPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
       <div className="max-w-6xl mx-auto pt-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col gap-6 mb-8 md:flex-row md:items-end md:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">Discover Syndicates</h1>
-            <p className="text-gray-400">Find and join syndicates that align with your values</p>
+            <p className="text-gray-400">Explore public and privacy-native syndicates built for coordinated capital, shared strategies, and selective disclosure.</p>
+            <div className="mt-4 inline-flex flex-wrap items-center gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-gray-200">
+              <span className="rounded-full bg-amber-500/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
+                Private vaults
+              </span>
+              <span>Contribution amounts can stay encrypted while authorized members reveal balances selectively.</span>
+            </div>
           </div>
-          <Button onClick={() => router.push('/create-syndicate')} className="bg-gradient-to-r from-blue-500 to-purple-500">
-            Create Syndicate
+          <Button onClick={() => router.push('/create-syndicate')} className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700">
+            Create Private Syndicate
           </Button>
         </div>
 

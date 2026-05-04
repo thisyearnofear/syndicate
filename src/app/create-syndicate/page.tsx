@@ -20,7 +20,7 @@ import { useToast } from '@/shared/components/ui/Toast';
 import type { SupportedYieldStrategyId } from '@/config/yieldStrategies';
 
 type GovernanceModel = 'leader' | 'dao' | 'hybrid';
-type PoolType = 'safe' | 'splits' | 'pooltogether';
+type PoolType = 'safe' | 'splits' | 'pooltogether' | 'fhenix';
 
 type SyndicateFormData = {
   name: string;
@@ -353,8 +353,18 @@ export default function CreateSyndicatePage() {
               </div>
               <div>
                 <h2 className="text-xl font-bold text-white">Pool Type</h2>
-                <p className="text-gray-400">Choose how funds are pooled and managed</p>
+                <p className="text-gray-400">Choose whether your syndicate should be public by default or privacy-native</p>
               </div>
+            </div>
+
+            <div className="mb-6 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-gray-200">Public modes</span>
+                <span className="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-medium text-amber-300">Private mode</span>
+              </div>
+              <p className="text-sm text-gray-300 leading-relaxed">
+                Public modes optimize for transparency and familiar on-chain coordination. The private Fhenix mode keeps contribution amounts encrypted and supports selective disclosure for members.
+              </p>
             </div>
             
             <CompactStack spacing="md">
@@ -416,6 +426,40 @@ export default function CreateSyndicatePage() {
                 </PuzzlePiece>
               </div>
               
+              <div 
+                className="cursor-pointer border-2 border-transparent hover:border-amber-500/50 rounded-xl transition-all duration-300"
+                onClick={() => handleInputChange('poolType', 'fhenix')}
+              >
+                <PuzzlePiece 
+                  variant={formData.poolType === 'fhenix' ? 'primary' : 'neutral'} 
+                  size="md" 
+                  shape="rounded"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-yellow-400 flex items-center justify-center">
+                      <Shield className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-bold text-white">Fhenix Private Vault</h3>
+                        <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300">
+                          Private by default
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-400 mb-2">
+                        Privacy-native syndicate coordination with encrypted contribution amounts
+                      </p>
+                      <ul className="text-xs text-gray-400 space-y-1">
+                        <li>• Contribution amounts encrypted on-chain</li>
+                        <li>• Selective disclosure for authorized users</li>
+                        <li>• Best for: Sensitive group coordination and higher-trust capital pools</li>
+                        <li>• Member activity may remain visible while balances stay private</li>
+                      </ul>
+                    </div>
+                  </div>
+                </PuzzlePiece>
+              </div>
+
               <div 
                 className="cursor-pointer border-2 border-transparent hover:border-blue-500/50 rounded-xl transition-all duration-300"
                 onClick={() => handleInputChange('poolType', 'pooltogether')}
