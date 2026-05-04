@@ -10,6 +10,7 @@ import {
   type YieldStrategyConfig,
   type SupportedYieldStrategyId,
 } from '@/config/yieldStrategies';
+import { getProductModeById } from '@/config/productModes';
 import type { LifiEarnVault } from '@/services/vaults/lifiEarnProvider';
 
 // Lazy load LI.FI Earn vault selector to prevent bloat
@@ -54,6 +55,7 @@ export function ImprovedYieldStrategySelector({
   className = '',
   userAddress 
 }: ImprovedYieldStrategySelectorProps) {
+  const yieldMode = getProductModeById('yield_to_tickets');
   const [octantVaults, setOctantVaults] = useState<OctantVaultInfo[]>([]);
   const [vaultInfos, setVaultInfos] = useState<VaultInfo[]>([]);
   const [isDetailView, setIsDetailView] = useState(externalDetailView);
@@ -119,7 +121,7 @@ export function ImprovedYieldStrategySelector({
         <>
           <h3 className="text-lg font-bold text-white mb-4">Yield Strategy</h3>
           <p className="text-gray-400 text-sm mb-6">
-            Choose how your capital generates yield to support causes and amplify your lottery participation
+            {yieldMode?.description}
           </p>
         </>
       ) : null}

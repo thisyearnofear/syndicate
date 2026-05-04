@@ -140,10 +140,10 @@ export function PoolTogetherFlow({
             </div>
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">
-            {ptDeposit.status === 'error' ? 'Deposit Failed' : 'Depositing to PoolTogether'}
+            {ptDeposit.status === 'error' ? 'Prize Savings Deposit Failed' : 'Entering Prize Savings'}
           </h2>
           <p className="text-gray-400 text-sm">
-            Depositing ${depositAmount} USDC into the PrizeVault
+            Depositing ${depositAmount} USDC into the PrizeVault on Base
           </p>
         </div>
 
@@ -200,10 +200,10 @@ export function PoolTogetherFlow({
           </div>
         </div>
         <h2 className="text-2xl font-bold text-white mb-2">
-          Deposit Successful! 🎰
+          Prize Savings Active! 🎰
         </h2>
         <p className="text-gray-400 mb-2">
-          You deposited <span className="text-emerald-400 font-semibold">${depositAmount} USDC</span> into PoolTogether
+          You deposited <span className="text-emerald-400 font-semibold">${depositAmount} USDC</span> into PoolTogether prize savings
         </p>
         <p className="text-xs text-gray-500">
           Your principal is safe. Prizes are awarded automatically — if you win, it goes straight to your wallet.

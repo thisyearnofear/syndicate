@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 
-type PoolType = 'safe' | 'splits' | 'pooltogether';
+type PoolType = 'safe' | 'splits' | 'pooltogether' | 'fhenix';
 
 interface DashboardMember {
   address: string;
@@ -138,6 +138,7 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
       case 'safe': return <Shield className="w-5 h-5 text-blue-400" />;
       case 'splits': return <Share2 className="w-5 h-5 text-green-400" />;
       case 'pooltogether': return <Coins className="w-5 h-5 text-purple-400" />;
+      case 'fhenix': return <Shield className="w-5 h-5 text-amber-400" />;
     }
   };
 
@@ -146,6 +147,7 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
       case 'safe': return `https://app.safe.global/bridge?safe=base:${address}`;
       case 'splits': return `https://app.splits.org/users/${address}`;
       case 'pooltogether': return `https://basescan.org/address/${address}`;
+      case 'fhenix': return `https://explorer.fhenix.zone/address/${address}`;
     }
   };
 
@@ -183,10 +185,20 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
     <div className={`space-y-6 ${className}`}>
       {/* Header with refresh */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          {getPoolIcon(data.pool_type)}
-          Syndicate Dashboard
-        </h2>
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            {getPoolIcon(data.pool_type)}
+            {data.pool_type === 'fhenix' ? 'Private Syndicate Dashboard' : 'Syndicate Dashboard'}
+          </h2>
+          {data.pool_type === 'fhenix' && (
+            <div className="inline-flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-gray-200">
+              <span className="rounded-full bg-amber-500/20 px-2 py-1 font-semibold uppercase tracking-wide text-amber-300">
+                Private by default
+              </span>
+              <span>Contribution amounts are encrypted. Activity may remain visible while balances require authorized reveal.</span>
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-3">
           {lastUpdated && (
             <span className="text-xs text-gray-400 flex items-center gap-1">
@@ -209,9 +221,13 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
       <div className="grid grid-cols-2 gap-3 md:gap-4">
         <MetricCard
           icon={<Wallet className="w-5 h-5 text-green-400" />}
-          label="Pool Balance"
+          label={data.pool_type === 'fhenix' ? 'Pool Balance / TVL' : 'Pool Balance'}
           value={data.pool_balance_formatted}
-          subtext={`${data.pool_type.charAt(0).toUpperCase() + data.pool_type.slice(1)} ${data.pool_type === 'pooltogether' ? '(TVL)' : ''}`}
+          subtext={
+            data.pool_type === 'fhenix'
+              ? 'Aggregate pool value. Member balances remain private.'
+              : `${data.pool_type.charAt(0).toUpperCase() + data.pool_type.slice(1)} ${data.pool_type === 'pooltogether' ? '(TVL)' : ''}`
+          }
         />
         <MetricCard
           icon={<Users className="w-5 h-5 text-blue-400" />}
@@ -240,6 +256,11 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
             <Users className="w-5 h-5 text-blue-400" />
             Members ({data.members_count})
           </h3>
+          {data.pool_type === 'fhenix' && (
+            <div className="mb-3 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-gray-300">
+              Individual contribution amounts may be intentionally withheld or minimized in privacy-native pools.
+            </div>
+          )}
           <div className="space-y-2 max-h-48 md:max-h-64 overflow-y-auto -mx-2 px-2">
             {data.members.length === 0 ? (
               <p className="text-gray-400 text-center py-4">No members yet</p>

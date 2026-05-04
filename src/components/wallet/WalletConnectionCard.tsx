@@ -42,7 +42,7 @@ interface WalletSection {
 
 const WALLET_SECTIONS: WalletSection[] = [
   {
-    title: "Multi-Chain",
+    title: "Funding & Access Wallets",
     wallets: [
       {
         name: "WalletConnect",
@@ -99,7 +99,7 @@ interface WalletConnectionCardProps {
 export function WalletConnectionCard({
   onConnect,
   title = "Connect Wallet",
-  subtitle = "Connect your wallet to start participating in syndicates and join the community",
+  subtitle = "Connect the wallet you use to fund or access Syndicate’s Base-native vault flows",
   compact = false,
 }: WalletConnectionCardProps) {
   const [isConnecting, setIsConnecting] = useState(false);
@@ -242,7 +242,7 @@ export function WalletConnectionCard({
             {subtitle}
           </p>
           <p className="text-gray-500 text-xs max-w-sm mx-auto italic">
-            Connect your native wallet from any chain. We&apos;ll automatically bridge your assets to Base for ticket purchases.
+            Base is the execution layer. Fhenix powers private vault mode. Wallets from ecosystems like Solana and Stacks act as funding or access rails into the product.
           </p>
         </div>
       )}

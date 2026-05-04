@@ -98,7 +98,7 @@ export function PremiumJackpotPiece({ onBuyClick }: { onBuyClick: () => void }) 
             </p>
           ) : (
             <p className="text-lg text-center text-gray-300 leading-relaxed">
-              Buy tickets directly on Base.
+              Play Megapot directly on Base.
             </p>
           )}
 
@@ -111,7 +111,7 @@ export function PremiumJackpotPiece({ onBuyClick }: { onBuyClick: () => void }) 
             className="bg-white/10 hover:bg-white/20 text-white border border-white/20"
             onClick={onBuyClick}
           >
-            Buy Tickets
+            Play Directly
           </Button>
         </div>
       </CompactStack>

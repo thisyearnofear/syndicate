@@ -40,6 +40,8 @@ interface SyndicateCardProps {
 }
 
 export function SyndicateCard({ syndicate, compact = false }: SyndicateCardProps) {
+  const isPrivateVault = syndicate.poolType === 'fhenix' || syndicate.vaultStrategy === 'fhenix';
+
   const getPoolTypeBadge = (poolType: PoolType) => {
     const badges: Record<PoolType, { bg: string; text: string; icon: typeof Shield }> = {
       safe: { bg: 'bg-blue-500/20', text: 'text-blue-400', icon: Shield },
@@ -81,11 +83,20 @@ export function SyndicateCard({ syndicate, compact = false }: SyndicateCardProps
   if (compact) {
     return (
       <Link href={`/syndicate?id=${syndicate.id}`} className="block">
-        <div className="glass-premium rounded-xl p-4 border border-white/20 hover:border-white/40 transition-all duration-300 cursor-pointer">
+        <div className={`glass-premium rounded-xl p-4 border transition-all duration-300 cursor-pointer ${
+          isPrivateVault ? 'border-amber-500/30 hover:border-amber-400/50' : 'border-white/20 hover:border-white/40'
+        }`}>
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-bold text-white truncate">{syndicate.name}</h3>
             {getPoolTypeBadge(syndicate.poolType)}
           </div>
+          {isPrivateVault && (
+            <div className="mb-2">
+              <span className="inline-flex rounded-full bg-amber-500/15 px-2 py-1 text-[11px] font-medium text-amber-300">
+                Private by default
+              </span>
+            </div>
+          )}
           <p className="text-gray-400 text-sm mb-3 line-clamp-2">{syndicate.description}</p>
           <div className="flex items-center gap-4 text-sm text-gray-400">
             <span className="flex items-center gap-1">
@@ -108,7 +119,9 @@ export function SyndicateCard({ syndicate, compact = false }: SyndicateCardProps
 
   return (
     <Link href={`/syndicate?id=${syndicate.id}`} className="block">
-      <div className="glass-premium rounded-2xl p-5 border border-white/20 hover:border-white/40 transition-all duration-300 cursor-pointer">
+      <div className={`glass-premium rounded-2xl p-5 border transition-all duration-300 cursor-pointer ${
+        isPrivateVault ? 'border-amber-500/30 hover:border-amber-400/50 bg-gradient-to-br from-amber-500/10 via-white/5 to-transparent' : 'border-white/20 hover:border-white/40'
+      }`}>
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
@@ -132,6 +145,22 @@ export function SyndicateCard({ syndicate, compact = false }: SyndicateCardProps
 
         {/* Description */}
         <p className="text-gray-400 text-sm mb-4 line-clamp-2">{syndicate.description}</p>
+
+        {isPrivateVault && (
+          <div className="mb-4 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span className="rounded-full bg-amber-500/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
+                Private Vault
+              </span>
+              <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] text-gray-200">
+                Selective disclosure
+              </span>
+            </div>
+            <p className="text-xs leading-relaxed text-gray-300">
+              Contribution amounts stay private by default. Activity can remain visible while balances are revealed only to authorized users.
+            </p>
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-4 gap-3 mb-4">

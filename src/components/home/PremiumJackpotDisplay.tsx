@@ -64,7 +64,7 @@ export default function PremiumJackpotDisplay({ onBuyClick }: PremiumJackpotDisp
         <div className="flex items-center justify-center gap-2">
           <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
           <span className="text-sm font-semibold text-green-400 uppercase tracking-wider">
-            {hasValidData ? "Live Jackpot" : "Daily Draw"}
+            {hasValidData ? "Public Play Mode" : "Daily Draw"}
           </span>
         </div>
 
@@ -108,14 +108,19 @@ export default function PremiumJackpotDisplay({ onBuyClick }: PremiumJackpotDisp
             className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-xl text-lg px-10 py-4"
             onClick={onBuyClick}
           >
-            Buy Tickets Now
+            Play Megapot Directly
           </Button>
         </div>
 
         {/* Info */}
-        <p className="text-xs text-gray-500">
-          Powered by Megapot V2 on Base • Non-custodial • Provably fair
-        </p>
+        <div className="space-y-1">
+          <p className="text-xs text-gray-500">
+            Powered by Megapot V2 on Base • Non-custodial • Provably fair
+          </p>
+          <p className="text-xs text-gray-500">
+            Fastest path in. For smarter participation, use vaults and let yield buy tickets for you.
+          </p>
+        </div>
       </div>
     </div>
   );

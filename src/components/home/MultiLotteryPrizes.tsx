@@ -67,7 +67,7 @@ export function MultiLotteryPrizes({ onBuyClick }: MultiLotteryPrizesProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-2xl">🎯</span>
-          <h3 className="text-lg font-bold text-white">More Ways to Win</h3>
+          <h3 className="text-lg font-bold text-white">More Public Prize Modes</h3>
         </div>
         <span className="text-sm text-gray-400">
           ${Math.round(totalPrizeUsd).toLocaleString()} across all lotteries
@@ -130,7 +130,7 @@ export function MultiLotteryPrizes({ onBuyClick }: MultiLotteryPrizesProps) {
               className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white"
               onClick={() => onBuyClick(lottery.protocol)}
             >
-              {lottery.isNoLoss ? '💰 Deposit Now' : '🎫 Buy Tickets'}
+              {lottery.isNoLoss ? '💰 Enter Prize Savings' : '🎫 Enter Public Play'}
             </Button>
           </div>
         ))}

@@ -29,6 +29,7 @@ import { useUnifiedWallet } from "@/hooks";
 import { getPermissionPresets } from "@/services/automation/erc7715Service";
 import { stacksX402Service } from "@/domains/wallet/services/stacksX402Service";
 import type { AutoPurchaseConfig, AdvancedPermission } from "@/domains/wallet/types";
+import { AUTOMATION_MODE_META } from "@/config/automationModes";
 
 type Step = "select-type" | "configure" | "review" | "approving" | "success" | "error";
 type AgentStrategy = "scheduled" | "autonomous" | "no-loss";
@@ -54,12 +55,14 @@ interface AutoPurchaseModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (config: PurchaseConfig | AutoPurchaseConfig) => void;
+  initialStrategy?: AgentStrategy;
 }
 
 export function AutoPurchaseModal({
   isOpen,
   onClose,
   onSuccess,
+  initialStrategy,
 }: AutoPurchaseModalProps) {
   const [step, setStep] = useState<Step>("select-type");
   const [config, setConfig] = useState<PurchaseConfig>({
@@ -90,6 +93,7 @@ export function AutoPurchaseModal({
   const effectivePermissions = isStacksWallet ? [] : permissions;
 
   const permission = effectivePermissions[0] || null;
+  const strategyMeta = AUTOMATION_MODE_META[config.strategy];
 
   const requestPresetPermission = async (preset: 'weekly' | 'monthly'): Promise<boolean> => {
     if (!chainId) return false;
@@ -116,6 +120,18 @@ export function AutoPurchaseModal({
         config.frequency === "weekly" ? config.amount * 5 : config.amount * 20,
     }));
   }, [config.amount, config.frequency]);
+
+  useEffect(() => {
+    if (!isOpen || !initialStrategy) return;
+
+    setConfig(prev => ({
+      ...prev,
+      strategy: initialStrategy,
+      paymentToken: initialStrategy === 'autonomous' ? 'usdt' : initialStrategy === 'no-loss' ? 'usdc' : 'usdc',
+      frequency: initialStrategy === 'autonomous' ? 'opportunistic' : 'weekly',
+    }));
+    setStep('configure');
+  }, [initialStrategy, isOpen]);
 
   if (isOpen && isLoading) {
     return (
@@ -383,10 +399,10 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
                 </div>
               </div>
               <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
-                Choose Your Strategy
+                Choose Your Automation Mode
               </DialogTitle>
               <DialogDescription className="text-gray-300">
-                How would you like to automate your syndicate participation?
+                Automate public play, prize savings, or more adaptive participation using the mode that fits your goal.
               </DialogDescription>
             </DialogHeader>
 
@@ -411,9 +427,9 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
                     <Clock className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-white">Scheduled Automation</h4>
+                    <h4 className="font-bold text-white">{AUTOMATION_MODE_META.scheduled.title}</h4>
                     <p className="text-xs text-gray-400 mt-1">
-                      Set a fixed amount and frequency. Uses <strong>USDC</strong> on Base.
+                      {AUTOMATION_MODE_META.scheduled.shortDescription} Uses <strong>USDC</strong> on Base.
                     </p>
                   </div>
                 </div>
@@ -437,9 +453,9 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
                     <Brain className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-white">Autonomous AI Agent</h4>
+                    <h4 className="font-bold text-white">{AUTOMATION_MODE_META.autonomous.title}</h4>
                     <p className="text-xs text-gray-400 mt-1">
-                      AI decides when to buy based on yield. Uses <strong>USD₮</strong> and Tether WDK.
+                      {AUTOMATION_MODE_META.autonomous.shortDescription} Uses <strong>USD₮</strong> and Tether WDK.
                     </p>
                   </div>
                 </div>
@@ -458,9 +474,9 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
                     <Coins className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-white">No-Loss Savings Agent</h4>
+                    <h4 className="font-bold text-white">{AUTOMATION_MODE_META['no-loss'].title}</h4>
                     <p className="text-xs text-gray-400 mt-1">
-                      100% principal protection via <strong>PoolTogether v5</strong>. Keep your funds, win prizes.
+                      {AUTOMATION_MODE_META['no-loss'].shortDescription}
                     </p>
                   </div>
                 </div>
@@ -486,12 +502,12 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
                 </div>
               </div>
               <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                Enable Auto-Purchase
+                {strategyMeta.configureTitle}
               </DialogTitle>
               <DialogDescription className="text-gray-300">
                 {isStacksWallet 
-                  ? 'Recurring purchases via SIP-018 on Stacks'
-                  : 'Automated ticket purchases on your schedule'}
+                  ? 'Recurring authorization via SIP-018 on Stacks'
+                  : strategyMeta.configureDescription}
               </DialogDescription>
             </DialogHeader>
 
@@ -631,7 +647,7 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
                     </p>
                     <ul className="text-xs text-blue-200 space-y-1">
                       <li>• Approve spending up to ${config.amount}/{config.frequency}</li>
-                      <li>• Tickets purchased automatically by syndicate</li>
+                      <li>• Actions execute automatically using your chosen automation mode</li>
                       <li>• Revoke anytime from settings</li>
                     </ul>
                   </div>
@@ -666,12 +682,12 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
                 </div>
               </div>
               <DialogTitle className="text-2xl font-bold">
-                Review Your Setup
+                {strategyMeta.reviewTitle}
               </DialogTitle>
               <DialogDescription className="text-gray-300">
                 {isStacksWallet 
-                  ? 'Confirm the auto-purchase details before signing'
-                  : 'Confirm the auto-purchase details before approving'}
+                  ? 'Confirm the recurring authorization details before signing'
+                  : 'Confirm the automation details before approving'}
               </DialogDescription>
             </DialogHeader>
 
@@ -728,9 +744,7 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
                   <Zap className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm text-purple-200">
-                      You will sign this authorization with your Stacks wallet. 
-                      Your x402 permission enables automatic ticket purchases without 
-                      signing each transaction.
+                      {strategyMeta.approvalDescriptionStacks}
                     </p>
                   </div>
                 </div>
@@ -741,8 +755,7 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
                   <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm text-blue-200">
-                      You will approve this permission in MetaMask. You can
-                      revoke it anytime from settings.
+                      {strategyMeta.approvalDescriptionEvm}
                     </p>
                   </div>
                 </div>
@@ -794,8 +807,8 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
                 </p>
                 <p className="text-gray-300 max-w-md">
                   {isStacksWallet
-                    ? 'Please sign the SIP-018 authorization in your Stacks wallet. This enables recurring ticket purchases.'
-                    : 'Please approve the permission request in your MetaMask wallet. This allows Syndicate to purchase tickets automatically.'}
+                    ? 'Please sign the SIP-018 authorization in your Stacks wallet. This enables your selected automation mode to run without manual confirmation each time.'
+                    : 'Please approve the permission request in MetaMask. This allows Syndicate to execute your selected automation mode automatically.'}
                 </p>
               </div>
             </div>
@@ -814,7 +827,7 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
               <DialogDescription className="text-gray-300">
                 {isStacksWallet 
                   ? 'x402 authorization is now active'
-                  : 'Auto-purchase is now enabled'}
+                  : strategyMeta.successTitle}
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col items-center justify-center py-4 space-y-4">
@@ -822,12 +835,12 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
                 <p className="text-lg font-semibold text-white">
                   {isStacksWallet 
                     ? 'x402 Authorization Granted'
-                    : 'Permission granted successfully'}
+                    : strategyMeta.successTitle}
                 </p>
                 <p className="text-gray-300 max-w-sm">
                   {isStacksWallet 
-                    ? `Your ${(config.paymentToken || 'usdcx').toUpperCase()} is now authorized for automatic ticket purchases. No manual signing required for recurring buys.`
-                    : 'Your auto-purchase is now active. Tickets will be purchased automatically according to your schedule. You can manage this in Settings.'}
+                    ? strategyMeta.successDescriptionStacks.replace('Your selected token', `Your ${(config.paymentToken || 'usdcx').toUpperCase()}`)
+                    : strategyMeta.successDescriptionEvm}
                 </p>
               </div>
             </div>
@@ -852,7 +865,7 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
                 Setup Failed
               </DialogTitle>
               <DialogDescription className="text-gray-300">
-                Unable to enable automatic ticket purchases
+                {strategyMeta.failureDescription}
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col items-center justify-center py-4 space-y-6">
