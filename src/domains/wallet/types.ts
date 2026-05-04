@@ -16,8 +16,8 @@
  * 
  * ADVANCED PERMISSIONS (ERC-7715):
  * - Supported on MetaMask (EVM) with EIP-7702 enabled chains (Base, Ethereum, Avalanche)
- * - Allows automated ticket purchases with user-granted permissions
- * - User sets limit (e.g., 10 USDC/week) and Syndicate executes purchases automatically
+ * - Allows automated participation with user-granted permissions
+ * - User sets limits and Syndicate executes scheduled public play or prize-savings actions automatically
  */
 
 export type WalletType = 'evm' | 'solana' | 'social' | 'near' | 'stacks' | 'starknet' | 'ton';

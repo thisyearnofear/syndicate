@@ -1,4 +1,4 @@
-import type { TrackerStatus } from '@/components/bridge/CrossChainTracker';
+import type { TrackerStatus } from '@/domains/participation/types';
 
 export function mapPurchaseStatusToTracker(status?: string | null): TrackerStatus {
   if (!status) return 'idle';

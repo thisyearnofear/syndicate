@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { purchaseOrchestrator, type PurchaseRequest, type PurchaseResult } from '@/domains/lottery/services/purchaseOrchestrator';
 import { useUnifiedWallet } from './useUnifiedWallet';
-import type { TrackerStatus, SourceChainType } from '@/components/bridge/CrossChainTracker';
+import type { PurchaseStatusResponse, TrackerStatus, SourceChainType } from '@/domains/participation/types';
 import { mapPurchaseStatusToTracker } from '@/domains/lottery/utils/mapPurchaseStatus';
+import {
+  clearPendingPurchaseState,
+  getPendingPurchaseState,
+  savePendingPurchaseState,
+} from '@/domains/participation/utils/pendingPurchaseState';
 import { solanaWalletService } from '@/services/solanaWalletService';
-
-const PENDING_PURCHASE_KEY = 'pending_cross_chain_purchase';
 const BASE_POLLING_INTERVAL = 5000;
 const MAX_POLLING_INTERVAL = 30000;
 
@@ -33,12 +36,6 @@ export interface PurchaseActions {
   purchase: (request: PurchaseParams, permissionId?: string) => Promise<PurchaseResult>;
   clearError: () => void;
   reset: () => void;
-}
-
-interface PurchaseStatusResponse {
-  status: string;
-  baseTxId?: string;
-  error?: string;
 }
 
 export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
@@ -74,11 +71,7 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
     setState((prev) => {
       const newStatus = mapPurchaseStatusToTracker(data.status);
       if (newStatus === 'complete' || newStatus === 'error') {
-        if (typeof window !== 'undefined') {
-          try {
-            localStorage.removeItem(PENDING_PURCHASE_KEY);
-          } catch {}
-        }
+        clearPendingPurchaseState();
       }
 
       return {
@@ -143,19 +136,10 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
   }, [handleStatusChange, state.sourceTxHash, state.status, stopPolling]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    const pending = getPendingPurchaseState();
+    if (!pending) return;
+
     try {
-      const saved = localStorage.getItem(PENDING_PURCHASE_KEY);
-      if (!saved) return;
-      const pending = JSON.parse(saved) as {
-        sourceTxHash: string;
-        chain: SourceChainType;
-        timestamp: number;
-      };
-      if (Date.now() - pending.timestamp > 3600_000) {
-        localStorage.removeItem(PENDING_PURCHASE_KEY);
-        return;
-      }
       setState((prev) => ({
         ...prev,
         isPurchasing: true,
@@ -164,9 +148,7 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
         status: 'confirmed_source',
       }));
     } catch {
-      try {
-        localStorage.removeItem(PENDING_PURCHASE_KEY);
-      } catch {}
+      clearPendingPurchaseState();
     }
   }, []);
 
@@ -250,20 +232,13 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
               throw new Error(`Unsupported chain for wallet signing: ${chain}`);
             }
 
-            if (typeof window !== 'undefined') {
-              try {
-                localStorage.setItem(
-                  PENDING_PURCHASE_KEY,
-                  JSON.stringify({
-                    sourceTxHash,
-                    chain,
-                    bridgeId: result.bridgeId,
-                    ticketCount: request.ticketCount || 1,
-                    timestamp: Date.now(),
-                  }),
-                );
-              } catch {}
-            }
+            savePendingPurchaseState({
+              sourceTxHash,
+              chain,
+              bridgeId: result.bridgeId,
+              ticketCount: request.ticketCount || 1,
+              timestamp: Date.now(),
+            });
 
             setState((prev) => ({ ...prev, status: 'confirmed_source' }));
 
@@ -282,11 +257,7 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
           } catch (signError) {
             const msg = signError instanceof Error ? signError.message : 'Wallet signing failed';
             const isCancel = msg.includes('cancel') || msg.includes('reject') || msg.includes('denied');
-            if (typeof window !== 'undefined') {
-              try {
-                localStorage.removeItem(PENDING_PURCHASE_KEY);
-              } catch {}
-            }
+            clearPendingPurchaseState();
             setState((prev) => ({
               ...prev,
               isPurchasing: false,
@@ -333,11 +304,7 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
               status: nextStatus,
             }));
           } else {
-            if (typeof window !== 'undefined') {
-              try {
-                localStorage.removeItem(PENDING_PURCHASE_KEY);
-              } catch {}
-            }
+            clearPendingPurchaseState();
             setState((prev) => ({
               ...prev,
               isPurchasing: false,
@@ -350,11 +317,7 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
             }));
           }
         } else {
-          if (typeof window !== 'undefined') {
-            try {
-              localStorage.removeItem(PENDING_PURCHASE_KEY);
-            } catch {}
-          }
+          clearPendingPurchaseState();
           setState((prev) => ({
             ...prev,
             isPurchasing: false,
@@ -367,11 +330,7 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
         return result;
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Purchase failed';
-        if (typeof window !== 'undefined') {
-          try {
-            localStorage.removeItem(PENDING_PURCHASE_KEY);
-          } catch {}
-        }
+        clearPendingPurchaseState();
         setState((prev) => ({
           ...prev,
           isPurchasing: false,
