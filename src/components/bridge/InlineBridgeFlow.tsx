@@ -9,21 +9,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { design } from '@/config';
-import { Loader, CircleCheck, AlertCircle, ExternalLink } from 'lucide-react';
+import { Loader, ExternalLink, CircleCheck } from 'lucide-react';
 import { bridgeManager } from '@/services/bridges';
 import type { BridgeResult } from '@/services/bridges/types';
 import { Button } from '@/shared/components/ui/Button';
+import { BridgeStatusPanel } from './BridgeStatusPanel';
+import { useBridgeActivityTracker } from '@/domains/participation/hooks/useBridgeActivityTracker';
+import { getSourceExplorerUrl } from '@/domains/participation/utils/getSourceExplorerUrl';
 import {
-    createBridgeActivityId,
-    getBridgeActivityHistory,
-    getSolanaExplorerLink,
     savePendingBridge,
-    updateBridgeActivity,
-    upsertBridgeActivity,
 } from '@/utils/bridgeStateManager';
 import { useUnifiedWallet } from '@/hooks';
-import { getStatusMessage, getStatusDescription } from '@/utils/bridgeStatusMessages';
-import { persistBridgeActivityRecord } from '@/services/activity/activityClient';
 
 export interface InlineBridgeFlowProps {
     sourceChain: 'solana' | 'ethereum';
@@ -56,26 +52,7 @@ export function InlineBridgeFlow({
     const [txHash, setTxHash] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [events, setEvents] = useState<Array<{ status: string; info?: Record<string, unknown>; ts: number }>>([]);
-    const [bridgeActivityId] = useState(() => createBridgeActivityId());
-
-    const syncBridgeActivity = React.useCallback(() => {
-        const record = getBridgeActivityHistory().find((entry) => entry.id === bridgeActivityId);
-        if (!record) return;
-
-        void persistBridgeActivityRecord(record).catch((persistError) => {
-            console.warn('[InlineBridgeFlow] Failed to persist bridge activity:', persistError);
-        });
-    }, [bridgeActivityId]);
-
-    const createBridgeActivity = React.useCallback((record: Parameters<typeof upsertBridgeActivity>[0]) => {
-        upsertBridgeActivity(record);
-        syncBridgeActivity();
-    }, [syncBridgeActivity]);
-
-    const patchBridgeActivity = React.useCallback((updates: Parameters<typeof updateBridgeActivity>[1]) => {
-        updateBridgeActivity(bridgeActivityId, updates);
-        syncBridgeActivity();
-    }, [bridgeActivityId, syncBridgeActivity]);
+    const { bridgeActivityId, createBridgeActivity, patchBridgeActivity } = useBridgeActivityTracker();
 
     const startBridge = React.useCallback(async () => {
         setIsStarted(true);
@@ -266,18 +243,6 @@ export function InlineBridgeFlow({
         }
     }, [autoStart, isStarted, startBridge]);
 
-    const getStatusIcon = () => {
-        if (error) return <AlertCircle className="w-6 h-6 text-red-400" />;
-        if (currentStatus === 'complete') return <CircleCheck className="w-6 h-6 text-green-400" />;
-        return <Loader className="w-6 h-6 animate-spin text-blue-400" />;
-    };
-
-    const getStatusColor = () => {
-        if (error) return 'border-red-500/30 bg-red-500/5';
-        if (currentStatus === 'complete') return 'border-green-500/30 bg-green-500/5';
-        return 'border-blue-500/30 bg-blue-500/5';
-    };
-
     if (!isStarted) {
         return (
             <div className="text-center py-8">
@@ -320,34 +285,12 @@ export function InlineBridgeFlow({
             </div>
 
             {/* Status Display */}
-            <div className={`glass-premium rounded-lg p-5 border ${getStatusColor()}`}>
-                <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 mt-1">
-                        {getStatusIcon()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-white font-semibold text-lg mb-1">
-                            {getStatusMessage(currentStatus, error)}
-                        </p>
-                        <p className="text-gray-400 text-sm leading-relaxed">
-                            {getStatusDescription(currentStatus, error)}
-                        </p>
-
-                        {/* Transaction Link */}
-                        {txHash && (
-                            <a
-                                href={`https://explorer.solana.com/tx/${txHash}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 mt-3 text-blue-400 hover:text-blue-300 text-sm"
-                            >
-                                <ExternalLink className="w-4 h-4" />
-                                View on Solana Explorer
-                            </a>
-                        )}
-                    </div>
-                </div>
-            </div>
+            <BridgeStatusPanel
+                currentStatus={currentStatus}
+                error={error}
+                sourceChain={sourceChain}
+                txHash={txHash}
+            />
 
             {events.length > 0 && (
                 <div className="rounded-lg p-4 bg-white/5 border border-white/10">
@@ -397,13 +340,13 @@ export function InlineBridgeFlow({
                                 The transaction is confirmed on Solana and will finish in {protocol === 'cctp' ? '15-20' : '5-10'} minutes.
                             </p>
                             <a
-                                href={getSolanaExplorerLink(txHash)}
+                                href={getSourceExplorerUrl(sourceChain, txHash) || '#'}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm font-medium"
                             >
                                 <ExternalLink className="w-4 h-4" />
-                                Track on Solana Explorer
+                                Track on Explorer
                             </a>
                         </div>
                     </div>

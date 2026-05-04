@@ -45,6 +45,7 @@ interface ChainOption {
   gradient: string;
   walletTypes: string[];
   features: string[];
+  role: string;
 }
 
 export default function BridgePage() {
@@ -98,43 +99,47 @@ export default function BridgePage() {
     deriveDerivedAddress();
   }, [walletType, isConnected]);
 
-  // Chain configurations with equal prominence
+  // Funding rails into the Base-native product
   const chainOptions: ChainOption[] = useMemo(() => [
     {
       id: "solana",
       name: "Solana",
       icon: "⚡",
-      description: "Fast & low-cost Solana network",
+      description: "Fast source chain for funding Base-native vault flows",
       gradient: "from-purple-500 to-pink-500",
       walletTypes: ["Phantom", "Solflare"],
       features: ["CCTP Bridge", "Wormhole Bridge", "~15-20 min"],
+      role: "Funding rail",
     },
     {
       id: "near",
       name: "NEAR",
       icon: "🌌",
-      description: "NEAR Protocol - Bridge USDC via Intents",
+      description: "Source chain with intent-based funding into Base",
       gradient: "from-blue-500 to-cyan-500",
       walletTypes: ["Nightly", "MyNearWallet"],
       features: ["NEAR Intents", "1Click SDK", "~10-15 min"],
+      role: "Funding rail",
     },
     {
       id: "ethereum",
       name: "Ethereum",
       icon: "💎",
-      description: "Ethereum mainnet & L2s",
+      description: "EVM funding route into Base execution",
       gradient: "from-blue-400 to-purple-500",
       walletTypes: ["MetaMask", "WalletConnect", "Rainbow"],
       features: ["Native CCTP", "Secure", "~15-20 min"],
+      role: "Funding rail",
     },
     {
       id: "starknet",
       name: "Starknet",
       icon: "⚡",
-      description: "ZK-rollup on Ethereum",
+      description: "Advanced funding route for ZK-native users",
       gradient: "from-blue-600 to-indigo-600",
       walletTypes: ["ArgentX", "Braavos"],
       features: ["Orbiter Bridge", "Fast", "~2-5 min"],
+      role: "Funding rail",
     },
   ], []);
 
@@ -200,12 +205,12 @@ export default function BridgePage() {
               Bridge USDC to Base
             </h1>
             <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Move USDC from Solana, NEAR, or Ethereum to Base Network
+              Fund the Base-native product from external ecosystems like Solana, NEAR, Ethereum, or Starknet.
             </p>
             <div className="mt-8 max-w-2xl mx-auto">
               <div className="glass-premium p-4 rounded-xl border border-blue-500/30 bg-blue-500/5">
                 <p className="text-sm text-blue-200">
-                  💡 <strong>Tip:</strong> To purchase lottery tickets directly from NEAR, use the main purchase flow which combines bridging + automatic ticket purchase via Chain Signatures.
+                  💡 <strong>System model:</strong> Base is the execution layer. Fhenix powers private vault mode. Other chains primarily fund or route users into the Base-native experience.
                 </p>
               </div>
             </div>
@@ -255,7 +260,7 @@ export default function BridgePage() {
                       <div>
                         <h3 className="text-white font-semibold text-lg mb-4 flex items-center gap-2">
                           <span className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-sm">1</span>
-                          Select Source Chain
+                          Select Funding Chain
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                           {chainOptions.map((chain) => (
@@ -271,7 +276,12 @@ export default function BridgePage() {
                               <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${chain.gradient} flex items-center justify-center text-xl mb-3`}>
                                 {chain.icon}
                               </div>
-                              <div className="text-white font-semibold mb-1">{chain.name}</div>
+                              <div className="flex items-center justify-between gap-2 mb-1">
+                                <div className="text-white font-semibold">{chain.name}</div>
+                                <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-gray-300">
+                                  {chain.role}
+                                </span>
+                              </div>
                               <div className="text-gray-400 text-xs mb-2">{chain.description}</div>
                               <div className="flex flex-wrap gap-1">
                                 {chain.features.map((feature, idx) => (
@@ -303,7 +313,7 @@ export default function BridgePage() {
                                     Connect {selectedChainConfig?.name} Wallet
                                   </h4>
                                   <p className="text-gray-300 text-sm mb-3">
-                                    Required to send USDC from {selectedChainConfig?.name}
+                                    Required to fund Base from {selectedChainConfig?.name}
                                   </p>
                                   <div className="flex flex-wrap gap-2 text-xs text-gray-400">
                                     <span>Supported wallets:</span>
@@ -317,7 +327,7 @@ export default function BridgePage() {
                               </div>
                               <WalletConnectionCard
                                 title={`Connect ${selectedChainConfig?.name} Wallet`}
-                                subtitle={`Connect your ${selectedChainConfig?.name} wallet to continue`}
+                                subtitle={`Connect your ${selectedChainConfig?.name} wallet to continue funding the Base-native flow`}
                                 compact
                               />
                             </div>
@@ -331,12 +341,12 @@ export default function BridgePage() {
                                <span className="text-2xl flex-shrink-0">🎯</span>
                                <div className="flex-1">
                                  <h4 className="text-white font-semibold mb-1">
-                                   Connect Base Wallet (Destination)
+                                   Connect Base Wallet
                                  </h4>
                                  <p className="text-gray-300 text-sm mb-3">
                                    {sourceChain === 'near' 
-                                     ? 'Your NEAR account has a deterministically derived Base address. You can provide it here, or connect any Base wallet to receive the bridged USDC.'
-                                     : 'Required to receive USDC on Base Network'
+                                     ? 'Your NEAR account has a deterministically derived Base address. You can provide it here, or connect any Base wallet to receive bridged funds and continue into a strategy.'
+                                     : 'Required to receive funds on Base and continue into a vault or strategy'
                                    }
                                  </p>
                                 <div className="flex flex-wrap gap-2 text-xs text-gray-400">
@@ -348,8 +358,8 @@ export default function BridgePage() {
                               </div>
                             </div>
                             <WalletConnectionCard
-                              title="Connect EVM Wallet"
-                              subtitle="Connect to receive bridged USDC on Base"
+                              title="Connect Base Wallet"
+                              subtitle="Connect to receive bridged funds on Base, the product execution layer"
                               compact
                             />
                           </div>
@@ -364,7 +374,7 @@ export default function BridgePage() {
                               </div>
                               <div>
                                 <div className="text-white font-semibold">Wallets Connected</div>
-                                <div className="text-gray-300 text-sm">Ready to bridge from {selectedChainConfig?.name} to Base</div>
+                                <div className="text-gray-300 text-sm">Ready to move funds from {selectedChainConfig?.name} into Base</div>
                               </div>
                             </div>
                           </div>
@@ -377,6 +387,9 @@ export default function BridgePage() {
                           <span className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-sm">3</span>
                           Choose Destination Strategy
                         </h3>
+                        <div className="mb-4 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-gray-200">
+                          After funds arrive on Base, you can continue into public yield strategies or the Fhenix-powered private vault experience.
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {bridgeTargetStrategies.map((strategy) => (
                             <button
@@ -409,7 +422,7 @@ export default function BridgePage() {
                           ))}
                         </div>
                         <p className="mt-3 text-sm text-gray-400">
-                          Funding will continue into {selectedStrategyConfig?.name ?? "the selected strategy"} after the bridge completes.
+                          Funding will continue into {selectedStrategyConfig?.name ?? "the selected strategy"} after Base settlement completes.
                         </p>
                       </div>
 

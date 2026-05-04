@@ -9,7 +9,7 @@
 
 import React, { useState, useEffect } from "react";
 import { design } from "@/config";
-import { Loader, CircleCheck, AlertCircle, ExternalLink } from "lucide-react";
+import { Loader, ExternalLink, CircleCheck } from "lucide-react";
 import { bridgeManager } from "@/services/bridges";
 import { nearWalletSelectorService } from "@/domains/wallet/services/nearWalletSelectorService";
 import { nearIntentsService } from "@/services/nearIntentsService";
@@ -18,17 +18,13 @@ import { ethers } from "ethers";
 import type { BridgeResult } from "@/services/bridges/types";
 import { Button } from "@/shared/components/ui/Button";
 import { ProtocolSelector, ProtocolOption } from "./ProtocolSelector";
+import { BridgeStatusPanel } from "./BridgeStatusPanel";
+import { useBridgeActivityTracker } from "@/domains/participation/hooks/useBridgeActivityTracker";
 import { useUnifiedWallet } from "@/hooks";
-import { getStatusMessage, getStatusDescription } from "@/utils/bridgeStatusMessages";
 import {
-  createBridgeActivityId,
-  getBridgeActivityHistory,
   savePendingBridge,
-  updateBridgeActivity,
-  upsertBridgeActivity,
 } from "@/utils/bridgeStateManager";
 import type { SupportedYieldStrategyId } from "@/config/yieldStrategies";
-import { persistBridgeActivityRecord } from "@/services/activity/activityClient";
 
 export interface FocusedBridgeFlowProps {
   sourceChain: "solana" | "ethereum" | "near" | "starknet";
@@ -77,26 +73,7 @@ export function FocusedBridgeFlow({
   >([]);
   const [amountInput, setAmountInput] = useState<string>(amount);
   const [manualActionUrl, setManualActionUrl] = useState<string | null>(null);
-  const [bridgeActivityId] = useState(() => createBridgeActivityId());
-
-  const syncBridgeActivity = React.useCallback(() => {
-    const record = getBridgeActivityHistory().find((entry) => entry.id === bridgeActivityId);
-    if (!record) return;
-
-    void persistBridgeActivityRecord(record).catch((persistError) => {
-      console.warn("[FocusedBridgeFlow] Failed to persist bridge activity:", persistError);
-    });
-  }, [bridgeActivityId]);
-
-  const createBridgeActivity = React.useCallback((record: Parameters<typeof upsertBridgeActivity>[0]) => {
-    upsertBridgeActivity(record);
-    syncBridgeActivity();
-  }, [syncBridgeActivity]);
-
-  const patchBridgeActivity = React.useCallback((updates: Parameters<typeof updateBridgeActivity>[1]) => {
-    updateBridgeActivity(bridgeActivityId, updates);
-    syncBridgeActivity();
-  }, [bridgeActivityId, syncBridgeActivity]);
+  const { bridgeActivityId, createBridgeActivity, patchBridgeActivity } = useBridgeActivityTracker();
 
   useEffect(() => {
     setAmountInput(amount);
@@ -521,20 +498,6 @@ export function FocusedBridgeFlow({
     }
   }, [selectedProtocol, preselectedProtocol, stage, startBridge]);
 
-  const getStatusIcon = () => {
-    if (error) return <AlertCircle className="w-6 h-6 text-red-400" />;
-    if (currentStatus === "complete")
-      return <CircleCheck className="w-6 h-6 text-green-400" />;
-    return <Loader className="w-6 h-6 animate-spin text-blue-400" />;
-  };
-
-  const getStatusColor = () => {
-    if (error) return "border-red-500/30 bg-red-500/5";
-    if (currentStatus === "complete")
-      return "border-green-500/30 bg-green-500/5";
-    return "border-blue-500/30 bg-blue-500/5";
-  };
-
   // Render protocol selection stage
   if (stage === "select") {
     return (
@@ -641,53 +604,25 @@ export function FocusedBridgeFlow({
         </div>
 
         {/* Status Display */}
-        <div
-          className={`glass-premium rounded-lg p-5 border ${getStatusColor()}`}
-        >
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 mt-1">{getStatusIcon()}</div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white font-semibold text-lg mb-1">
-                {getStatusMessage(currentStatus, error)}
-              </p>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                {getStatusDescription(currentStatus, error)}
-              </p>
-
-              {/* Show Deposit Address if available (Unique to deBridge flow) */}
-              {currentStatus === "solver_waiting_deposit" && events.some(e => e.info?.depositAddress) && (
-                <div className="mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
-                  <p className="text-xs text-blue-300 font-semibold mb-1">Deposit Address:</p>
-                  <div className="flex items-center justify-between text-sm text-white font-mono bg-black/20 p-2 rounded">
-                    <span className="truncate">{events.find(e => e.info?.depositAddress)?.info?.depositAddress as string}</span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 w-6 p-0"
-                      onClick={() => navigator.clipboard.writeText(events.find(e => e.info?.depositAddress)?.info?.depositAddress as string)}
-                    >
-                      📋
-                    </Button>
-                  </div>
-                  <p className="text-xs text-blue-300/80 mt-2">Send the exact amount to this address on Solana.</p>
-                </div>
-              )}
-
-              {/* Transaction Link */}
-              {txHash && (
-                <a
-                  href={`https://explorer.solana.com/tx/${txHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 mt-3 text-blue-400 hover:text-blue-300 text-sm"
+        <BridgeStatusPanel currentStatus={currentStatus} error={error} sourceChain={sourceChain} txHash={txHash}>
+          {currentStatus === "solver_waiting_deposit" && events.some(e => e.info?.depositAddress) && (
+            <div className="mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
+              <p className="text-xs text-blue-300 font-semibold mb-1">Deposit Address:</p>
+              <div className="flex items-center justify-between text-sm text-white font-mono bg-black/20 p-2 rounded">
+                <span className="truncate">{events.find(e => e.info?.depositAddress)?.info?.depositAddress as string}</span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 w-6 p-0"
+                  onClick={() => navigator.clipboard.writeText(events.find(e => e.info?.depositAddress)?.info?.depositAddress as string)}
                 >
-                  <ExternalLink className="w-4 h-4" />
-                  View on Explorer
-                </a>
-              )}
+                  📋
+                </Button>
+              </div>
+              <p className="text-xs text-blue-300/80 mt-2">Send the exact amount to this address on Solana.</p>
             </div>
-          </div>
-        </div>
+          )}
+        </BridgeStatusPanel>
 
         {/* Recent Events (limited to 3) */}
         {events.length > 0 && (

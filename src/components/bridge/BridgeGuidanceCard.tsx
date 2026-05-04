@@ -52,9 +52,13 @@ export function BridgeGuidanceCard({
                     <span className="text-2xl">🌉</span>
                 </div>
                 <div>
-                    <h3 className="text-white font-bold text-lg">Bridge Required</h3>
-                    <p className="text-gray-400 text-sm">Move USDC to Base Network</p>
+                    <h3 className="text-white font-bold text-lg">Funding Rail Required</h3>
+                    <p className="text-gray-400 text-sm">Move USDC onto Base, where Syndicate executes vault and pool flows</p>
                 </div>
+            </div>
+
+            <div className="mb-4 rounded-lg border border-blue-500/20 bg-blue-500/10 p-3 text-xs text-gray-200">
+                Base is the execution layer. If you choose a private vault, Fhenix adds privacy on top of that flow after funding lands.
             </div>
 
             {/* Balance Comparison */}
@@ -166,7 +170,7 @@ export function BridgeGuidanceCard({
                             <div>
                                 <p className="text-yellow-300 font-semibold text-sm mb-1">EVM Wallet Required</p>
                                 <p className="text-yellow-200/80 text-xs leading-relaxed">
-                                    Connect an EVM wallet (MetaMask, Rainbow, or Phantom EVM) to receive on Base
+                                    Connect an EVM wallet (MetaMask, Rainbow, or Phantom EVM) to receive funds on Base, the product’s execution layer
                                 </p>
                             </div>
                         </div>
