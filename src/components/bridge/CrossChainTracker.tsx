@@ -11,29 +11,8 @@ import {
   Loader,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// CONSOLIDATED: Supports all chains (Stacks, Solana, NEAR, Base, Ethereum)
-export type TrackerStatus =
-  | "idle"
-  | "connecting_wallet"
-  | "linking_wallets"
-  | "checking_balance"
-  | "signing"
-  | "broadcasting"
-  | "confirmed_stacks"
-  | "confirmed_source"
-  | "bridging"
-  | "purchasing"
-  | "complete"
-  | "error";
-
-export type SourceChainType =
-  | "base"
-  | "solana"
-  | "near"
-  | "stacks"
-  | "ethereum"
-  | "starknet";
+import type { PurchaseReceiptLinks, SourceChainType, TrackerStatus } from "@/domains/participation/types";
+import { getSourceExplorerName } from "@/domains/participation/utils/getSourceExplorerUrl";
 
 interface CrossChainTrackerProps {
   status: TrackerStatus;
@@ -49,12 +28,7 @@ interface CrossChainTrackerProps {
     baseAddress?: string;
     isLinked?: boolean;
   };
-  receipt?: {
-    stacksExplorer?: string; // DEPRECATED: Use sourceExplorer
-    sourceExplorer?: string; // NEW: Generic source explorer
-    baseExplorer?: string | null;
-    megapotApp?: string | null;
-  };
+  receipt?: PurchaseReceiptLinks;
 }
 
 interface Step {
@@ -131,10 +105,10 @@ const getStepsForChain = (sourceChain?: SourceChainType): Step[] => {
 
   baseSteps.push({
     id: "purchasing",
-    title: "Buying Tickets",
+    title: "Minting Public-Play Tickets",
     icon: Ticket,
     description:
-      "Finalizing your purchase on Base. Your tickets are being minted!",
+      "Finalizing public play on Base. Your tickets are being minted.",
     estimatedMinutes: 1,
   });
 
@@ -142,27 +116,10 @@ const getStepsForChain = (sourceChain?: SourceChainType): Step[] => {
     id: "complete",
     title: "Success!",
     icon: PartyPopper,
-    description: "Your tickets are confirmed and ready for the draw!",
+    description: "Your public-play tickets are confirmed and ready for the draw.",
   });
 
   return baseSteps;
-};
-
-const getExplorerName = (chain?: SourceChainType): string => {
-  switch (chain) {
-    case "solana":
-      return "Solscan";
-    case "near":
-      return "NEAR Explorer";
-    case "stacks":
-      return "Stacks Explorer";
-    case "base":
-      return "Basescan";
-    case "ethereum":
-      return "Etherscan";
-    default:
-      return "Explorer";
-  }
 };
 
 const formatAddress = (address?: string): string => {
@@ -222,12 +179,12 @@ export function CrossChainTracker({
       {/* Header */}
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 mb-2">
-          {isCrossChain ? "🌉 Cross-Chain Purchase" : "🎫 Purchase in Progress"}
+          {isCrossChain ? "🌉 Cross-Chain Funding" : "🎫 Public Play In Progress"}
         </h2>
         <p className="text-center text-gray-300 text-sm">
           {isCrossChain
-            ? `Bridging from ${sourceChain.toUpperCase()} to Base`
-            : "Processing your transaction on Base"}
+            ? `Funding Base from ${sourceChain.toUpperCase()}`
+            : "Processing your public-play transaction on Base"}
         </p>
         <div className="mt-3 h-1 w-full bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-pink-500/30 rounded-full"></div>
       </div>
@@ -252,7 +209,7 @@ export function CrossChainTracker({
               <ArrowRightLeft className="w-3 h-3 text-gray-500" />
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">Tickets to:</span>
+              <span className="text-gray-400">Delivery on Base:</span>
               <span className="text-white font-mono">
                 {formatAddress(walletInfo.baseAddress)}
               </span>
@@ -350,7 +307,7 @@ export function CrossChainTracker({
                     rel="noopener noreferrer"
                     className="text-xs text-blue-400 hover:text-blue-300 hover:underline mt-2 block"
                   >
-                    View on {getExplorerName(sourceChain)} →
+                    View on {getSourceExplorerName(sourceChain)} →
                   </a>
                 )}
                 {/* Show base transaction link */}
@@ -393,12 +350,12 @@ export function CrossChainTracker({
           <div className="text-center">
             <div className="text-4xl animate-bounce mb-2">🎉</div>
             <h3 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-400 mb-2">
-              {ticketCount} Ticket{ticketCount !== 1 ? "s" : ""} Purchased!
+              {ticketCount} Public-Play Ticket{ticketCount !== 1 ? "s" : ""} Confirmed!
             </h3>
             <p className="text-sm text-gray-300 mb-4">
               {isCrossChain
-                ? `Your ${sourceChain.toUpperCase()} payment was bridged to Base and tickets minted to your wallet.`
-                : "Your tickets have been minted and are ready for the draw!"}
+                ? `Your ${sourceChain.toUpperCase()} payment was bridged to Base and tickets were minted to your wallet.`
+                : "Your tickets have been minted on Base and are ready for the draw."}
             </p>
             <div className="space-y-2">
               <a
@@ -407,7 +364,7 @@ export function CrossChainTracker({
                 rel="noopener noreferrer"
                 className="inline-block w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3 px-6 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/50 border border-green-400/30"
               >
-                🎟️ View Tickets on Megapot
+                🎟️ View Public-Play Tickets
               </a>
             </div>
           </div>
@@ -426,7 +383,7 @@ export function CrossChainTracker({
                   className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 break-all"
                 >
                   <span>📋</span>
-                  <span>View on {getExplorerName(sourceChain)}</span>
+                  <span>View on {getSourceExplorerName(sourceChain)}</span>
                 </a>
               )}
               {receipt?.baseExplorer && (
@@ -444,7 +401,7 @@ export function CrossChainTracker({
           </div>
 
           <p className="text-xs text-gray-400 text-center">
-            ✨ Your tickets are now active for the next Megapot draw
+            ✨ Your tickets are now active for the next Megapot draw on Base
           </p>
         </div>
       )}
