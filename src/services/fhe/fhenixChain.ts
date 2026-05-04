@@ -36,5 +36,5 @@ export const FHENIX_VAULT_CHAIN =
 
 export const FHENIX_VAULT_RPC_URL =
   process.env.NEXT_PUBLIC_FHENIX_RPC_URL ??
-  (FHENIX_VAULT_CHAIN_ID === fhenixHelium.id ? 'https://api.fhenix.zone' : undefined);
+  (FHENIX_VAULT_CHAIN_ID === fhenixHelium.id ? 'https://api.fhenix.zone' : 'https://base-sepolia-rpc.publicnode.com');
 
