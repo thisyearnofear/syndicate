@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, Suspense, lazy } from "react";
 import { useRouter } from "next/navigation";
 import { useUnifiedWallet } from "@/hooks";
+import { PRODUCT_MODES, getProductModeById } from "@/config/productModes";
 
 // UI Components
 import { Button } from "@/shared/components/ui/Button";
@@ -38,6 +39,11 @@ export default function Home() {
   }, [isConnected]);
 
   const handleBuyClick = useCallback(() => handlePurchaseAction(), [handlePurchaseAction]);
+  const handleCreatePrivateVault = useCallback(() => router.push('/create-syndicate'), [router]);
+  const handleSeePrivateVaults = useCallback(() => router.push('/vaults'), [router]);
+  const privateVaultMode = getProductModeById('private_vaults');
+  const yieldMode = getProductModeById('yield_to_tickets');
+  const publicPlayMode = getProductModeById('public_play');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950 relative overflow-hidden">
@@ -59,12 +65,12 @@ export default function Home() {
           {/* Value Proposition */}
           <div className="animate-fade-in-up space-y-4 max-w-3xl mx-auto">
             <h2 className="text-2xl md:text-4xl font-bold text-white leading-tight">
-              Multi-Chain Lottery Platform
+              Private Syndicate Vaults For Coordinated Capital
             </h2>
             <p className="text-lg md:text-xl text-gray-300 leading-relaxed">
-              Buy tickets, join pools, and turn yield into repeat entries.
+              Coordinate capital on-chain without exposing every contributor&apos;s balance.
               <br />
-              <span className="text-emerald-400 font-semibold">Transparent onchain lottery access with optional no-loss strategies.</span>
+              <span className="text-emerald-400 font-semibold">{privateVaultMode?.tagline} {yieldMode?.shortTitle} gives users a smarter path into participation, and {publicPlayMode?.shortTitle} stays available for fast entry.</span>
             </p>
           </div>
 
@@ -74,17 +80,17 @@ export default function Home() {
               variant="default"
               size="lg"
               className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-2xl hover:shadow-emerald-500/30 border border-emerald-400/30 text-lg px-10 py-6"
-              onClick={handleBuyClick}
+              onClick={handleCreatePrivateVault}
             >
-              🎫 Buy Tickets Now
+              Create Private Vault
             </Button>
             <Button
               variant="outline"
               size="lg"
               className="border-white/20 bg-white/5 text-white hover:bg-white/10 text-lg px-10 py-6"
-              onClick={() => router.push("/vaults")}
+              onClick={handleSeePrivateVaults}
             >
-              💰 Explore Vaults
+              See Private Balance Demo
             </Button>
           </div>
 
@@ -92,19 +98,66 @@ export default function Home() {
           <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-gray-400">
             <span className="flex items-center gap-2">
               <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              Live on Base
+              Built on Base + Fhenix
             </span>
             <span>•</span>
-            <span>🌉 Cross-Chain</span>
+            <span>🔒 Encrypted On-Chain State</span>
             <span>•</span>
-            <span>🔒 Non-Custodial</span>
+            <span>🪪 Selective Disclosure</span>
             <span>•</span>
-            <span>📈 Yield Strategies</span>
+            <span>🏦 Non-Custodial Vaults</span>
           </div>
         </section>
 
-        {/* Jackpot Display - Centered */}
+        {/* Privacy Explainer */}
         <section className="mb-16">
+          <div className="max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                {
+                  icon: "🔐",
+                  title: "Deposit Privately",
+                  desc: "Sensitive amounts are encrypted client-side before entering the Fhenix-enabled flow.",
+                  color: "from-emerald-500 to-teal-500"
+                },
+                {
+                  icon: "🧠",
+                  title: "Keep Positions Encrypted",
+                  desc: "On-chain activity can remain visible while confidential numeric state stays private by default.",
+                  color: "from-blue-500 to-cyan-500"
+                },
+                {
+                  icon: "👁️",
+                  title: "Reveal Selectively",
+                  desc: "Authorized users can reveal balances locally with permits instead of exposing them to everyone.",
+                  color: "from-purple-500 to-pink-500"
+                }
+              ].map((item, i) => (
+                <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover:bg-white/10 transition-all">
+                  <div className={`w-14 h-14 mb-4 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center text-2xl shadow-lg`}>
+                    {item.icon}
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">{item.title}</h3>
+                  <p className="text-gray-400 leading-relaxed">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Optional Public Play - Centered */}
+        <section className="mb-16">
+          <div className="max-w-4xl mx-auto text-center mb-8">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-300">
+              {publicPlayMode?.badge ?? 'Optional public play'}
+            </span>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mt-4 mb-3">
+              {publicPlayMode?.title} stays available, without becoming the whole story
+            </h2>
+            <p className="text-gray-400 text-lg">
+              {publicPlayMode?.description}
+            </p>
+          </div>
           <Suspense fallback={
             <div className="max-w-4xl mx-auto h-64 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
           }>
@@ -125,39 +178,44 @@ export default function Home() {
           </Suspense>
         </section>
 
-        {/* How It Works - Centered */}
+        {/* Product Ladder */}
         <section className="mb-16">
           <div className="max-w-5xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-12">
-              How It Works
+              Three Ways To Use Syndicate
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {[
-                {
-                  icon: "💰",
-                  title: "Deposit",
-                  desc: "Deposit USDC into yield vaults or buy tickets directly",
-                  color: "from-blue-500 to-cyan-500"
-                },
-                {
-                  icon: "📈",
-                  title: "Earn Yield",
-                  desc: "Your deposits generate yield based on the strategy",
-                  color: "from-purple-500 to-pink-500"
-                },
-                {
-                  icon: "🎰",
-                  title: "Win Prizes",
-                  desc: "Use yield for tickets or withdraw your principal anytime",
-                  color: "from-yellow-500 to-orange-500"
-                }
-              ].map((step, i) => (
-                <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center hover:bg-white/10 transition-all">
-                  <div className={`w-16 h-16 mx-auto mb-4 rounded-xl bg-gradient-to-br ${step.color} flex items-center justify-center text-3xl shadow-lg`}>
-                    {step.icon}
+              {PRODUCT_MODES.map((mode, i) => (
+                <div key={mode.id} className="bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover:bg-white/10 transition-all">
+                  <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide mb-4 ${
+                    mode.id === 'private_vaults'
+                      ? 'bg-emerald-500/15 text-emerald-300'
+                      : mode.id === 'yield_to_tickets'
+                        ? 'bg-blue-500/15 text-blue-300'
+                        : 'bg-white/10 text-gray-200'
+                  }`}>
+                    <span>{mode.badge}</span>
+                    <span>•</span>
+                    <span>{mode.audience}</span>
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">{step.title}</h3>
-                  <p className="text-gray-400 leading-relaxed">{step.desc}</p>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl shadow-lg ${
+                      mode.id === 'private_vaults'
+                        ? 'bg-gradient-to-br from-emerald-500 to-teal-500'
+                        : mode.id === 'yield_to_tickets'
+                          ? 'bg-gradient-to-br from-blue-500 to-cyan-500'
+                          : 'bg-gradient-to-br from-yellow-500 to-orange-500'
+                    }`}>
+                      {mode.icon}
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Mode {i + 1}</p>
+                      <h3 className="text-xl font-bold text-white">{mode.title}</h3>
+                    </div>
+                  </div>
+                  <p className="text-white font-medium mb-2">{mode.tagline}</p>
+                  <p className="text-gray-400 leading-relaxed text-sm">{mode.description}</p>
+                  <p className="text-xs text-gray-500 mt-3">{mode.supportingCopy}</p>
                 </div>
               ))}
             </div>
@@ -185,10 +243,10 @@ export default function Home() {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
-                { icon: "🎟️", title: "Direct Play", desc: "Buy tickets on Base with daily draws" },
-                { icon: "♾️", title: "No-Loss Vaults", desc: "Keep principal, use yield for entries" },
-                { icon: "🔀", title: "Cross-Chain", desc: "Bridge from Solana, Stacks, NEAR, Starknet" },
-                { icon: "👥", title: "Syndicates", desc: "Pool funds and share prizes with groups" }
+                { icon: "🔒", title: "Private By Default", desc: "Encrypted balances and contribution flows for privacy-sensitive coordination." },
+                { icon: "🪪", title: "Selective Disclosure", desc: "Reveal only what you choose, when you choose, to the people who need it." },
+                { icon: "📈", title: "Yield That Plays For You", desc: "Auto-convert earnings into tickets or causes instead of manually re-entering every cycle." },
+                { icon: "🎫", title: "Direct Megapot Access", desc: "Start with public play instantly, then graduate into smarter or more private participation modes." }
               ].map((feature, i) => (
                 <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-6 text-center hover:bg-white/10 transition-all">
                   <div className="text-4xl mb-3">{feature.icon}</div>
@@ -204,18 +262,18 @@ export default function Home() {
         <section className="text-center">
           <div className="max-w-3xl mx-auto bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-cyan-500/20 border border-emerald-500/30 rounded-2xl p-8 md:p-12">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Ready to Start Playing?
+              Create A Private Vault In Minutes
             </h2>
             <p className="text-lg text-gray-300 mb-8">
-              Connect your wallet and buy your first ticket in seconds
+              Launch a privacy-native syndicate, coordinate capital on-chain, and reveal balances only when needed.
             </p>
             <Button
               variant="default"
               size="lg"
               className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-2xl text-lg px-12 py-6"
-              onClick={handleBuyClick}
+              onClick={handleCreatePrivateVault}
             >
-              Get Started Now
+              Launch Private Vault
             </Button>
           </div>
         </section>
@@ -257,9 +315,9 @@ export default function Home() {
           variant="default"
           size="lg"
           className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white shadow-2xl animate-float"
-          onClick={handleBuyClick}
+          onClick={handleCreatePrivateVault}
         >
-          ⚡ Quick Buy
+          Launch Private Vault
         </Button>
       </div>
     </div>

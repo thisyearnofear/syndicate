@@ -1,107 +1,24 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { CrossChainTracker } from "@/components/bridge/CrossChainTracker";
-import type { TrackerStatus } from "@/components/bridge/CrossChainTracker";
-import { mapPurchaseStatusToTracker } from "@/domains/lottery/utils/mapPurchaseStatus";
-
-// Uses query param ?txId=xxx instead of dynamic segment [txId]
-// to avoid Next.js buildAppStaticPaths crash during build.
-
-interface PurchaseStatusResponse {
-  status: string;
-  sourceChain?: "stacks" | "solana" | "near" | "ethereum" | "base";
-  sourceTxId?: string;
-  stacksTxId?: string;
-  baseTxId?: string;
-  error?: string;
-  updatedAt?: string | null;
-  receipt?: {
-    stacksExplorer?: string;
-    sourceExplorer?: string;
-    baseExplorer?: string | null;
-    megapotApp?: string | null;
-  };
-}
+import { usePurchaseStatusTracker } from "@/domains/participation/hooks/usePurchaseStatusTracker";
+import type { SourceChainType } from "@/domains/participation/types";
 
 export default function PurchaseStatusPage() {
   const searchParams = useSearchParams();
-  const txId = searchParams?.get("txId");
-  const chainParam = searchParams?.get("chain") || undefined;
+  const txId = searchParams?.get("txId") ?? null;
+  const chainParam = (searchParams?.get("chain") as SourceChainType | null) || undefined;
 
-  const [status, setStatus] = useState<TrackerStatus>("confirmed_source");
-  const [data, setData] = useState<PurchaseStatusResponse | null>(null);
-  const [sourceChain, setSourceChain] = useState<
-    "stacks" | "solana" | "near" | "ethereum" | "base"
-  >((chainParam as "stacks" | "solana" | "near" | "ethereum" | "base") || "stacks");
-  const [copied, setCopied] = useState(false);
-  const showSolanaAdapterWarning =
-    sourceChain === "solana" && !process.env.NEXT_PUBLIC_DEBRIDGE_ADAPTER;
-
-  const sourceExplorerUrl = (() => {
-    if (!txId) return undefined;
-    switch (sourceChain) {
-      case "solana":
-        return `https://solscan.io/tx/${txId}`;
-      case "near":
-        return `https://explorer.near.org/transactions/${txId}`;
-      case "stacks":
-        return `https://explorer.stacks.co/txid/${txId}?chain=mainnet`;
-      case "ethereum":
-        return `https://etherscan.io/tx/${txId}`;
-      case "base":
-        return `https://basescan.org/tx/${txId}`;
-      default:
-        return undefined;
-    }
-  })();
-
-  const handleCopyLink = async () => {
-    if (!txId) return;
-    const url = `${window.location.origin}/purchase-status?txId=${txId}&chain=${sourceChain}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {}
-  };
-
-  const updateFromResponse = useCallback((response: PurchaseStatusResponse) => {
-    setData(response);
-    setStatus(mapPurchaseStatusToTracker(response.status));
-    if (response.sourceChain) {
-      setSourceChain(response.sourceChain);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!txId) return;
-    const fetchInitial = async () => {
-      const res = await fetch(`/api/purchase-status?txId=${txId}`);
-      if (!res.ok) return;
-      const payload = (await res.json()) as PurchaseStatusResponse;
-      updateFromResponse(payload);
-    };
-    fetchInitial();
-  }, [txId, updateFromResponse]);
-
-// Subscribe to status changes via SSE
-useEffect(() => {
-  if (!txId) return;
-  
-  const eventSource = new EventSource(`/api/purchase-status/stream?txId=${txId}`);
-  eventSource.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      updateFromResponse(data);
-    } catch (e) {
-      console.error('Failed to parse SSE data:', e);
-    }
-  };
-  
-  return () => eventSource.close();
-}, [txId]);
+  const {
+    trackerStatus,
+    data,
+    sourceChain,
+    copied,
+    sourceExplorerUrl,
+    showSolanaAdapterWarning,
+    copyShareLink,
+  } = usePurchaseStatusTracker(txId, chainParam);
 
   return (
     <div className="min-h-screen px-4 py-10">
@@ -119,7 +36,7 @@ useEffect(() => {
         </div>
 
         <CrossChainTracker
-          status={status}
+          status={trackerStatus}
           sourceChain={sourceChain}
           sourceTxId={txId || undefined}
           baseTxId={data?.baseTxId}
@@ -146,7 +63,7 @@ useEffect(() => {
             </a>
             <button
               type="button"
-              onClick={handleCopyLink}
+              onClick={copyShareLink}
               className="text-xs text-gray-300 hover:text-white"
             >
               {copied ? "Copied" : "Copy Link"}

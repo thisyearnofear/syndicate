@@ -21,6 +21,13 @@ import { PuzzlePiece } from "@/shared/components/premium/PuzzlePiece";
 import { ExternalLink, ArrowLeft, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { WinningsGuide } from "@/components/wallet/WinningsGuide"; // Import the new component
+import { getSourceExplorerUrl } from "@/domains/participation/utils/getSourceExplorerUrl";
+import {
+    formatTicketHistoryDate,
+    getTicketHistoryStatusMeta,
+    getTicketHistorySummary,
+    sortTicketHistoryByRecency,
+} from "@/domains/participation/utils/ticketHistoryPresentation";
 
 import type { UserTicketInfo } from "@/services/web3Service";
 import type { TicketPurchaseHistory } from "@/hooks/useTicketHistory";
@@ -28,21 +35,15 @@ import type { TicketPurchaseHistory } from "@/hooks/useTicketHistory";
 
 
 function TicketHistoryCard({ ticket }: { ticket: TicketPurchaseHistory }) {
-    const getStatusColor = () => 'text-blue-400 bg-blue-500/20 border-blue-500/30';
-
-    const getStatusIcon = () => '✅';
-
-    const getStatusText = () => 'Completed';
-
-    const formattedDate = ticket.timestamp
-        ? new Date(ticket.timestamp).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-        : '';
+    const statusMeta = getTicketHistoryStatusMeta(ticket.status);
+    const formattedDate = formatTicketHistoryDate(ticket.timestamp);
+    const baseExplorerUrl = getSourceExplorerUrl('base', ticket.txHash);
 
     return (
         <div className="glass-premium rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 hover:scale-[1.02]">
             <CompactFlex align="center" justify="between" className="mb-4">
                 <div className="flex items-center gap-3">
-                    <span className="text-2xl">{getStatusIcon()}</span>
+                    <span className="text-2xl">{statusMeta.icon}</span>
                     <div>
                         <h3 className="font-semibold text-white">
                             {ticket.ticketCount} Ticket{ticket.ticketCount > 1 ? 's' : ''}
@@ -60,8 +61,8 @@ function TicketHistoryCard({ ticket }: { ticket: TicketPurchaseHistory }) {
                     </div>
                 </div>
 
-                <div className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor()}`}>
-                    {getStatusText()}
+                <div className={`px-3 py-1 rounded-full text-xs font-semibold border ${statusMeta.className}`}>
+                    {statusMeta.label}
                 </div>
             </CompactFlex>
 
@@ -83,7 +84,7 @@ function TicketHistoryCard({ ticket }: { ticket: TicketPurchaseHistory }) {
 
             <CompactFlex align="center" justify="between">
                 <a
-                    href={`https://basescan.org/tx/${ticket.txHash}`}
+                    href={baseExplorerUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm transition-colors"
@@ -104,9 +105,7 @@ function TicketStats({ userTicketInfo, ticketHistory, onClaimWinnings, isClaimin
     onClaimWinnings: () => void;
     isClaimingWinnings: boolean;
 }) {
-// Calculate total tickets from history
-    const totalTickets = ticketHistory.reduce((sum, ticket) => sum + ticket.ticketCount, 0);
-const totalSpent = ticketHistory.reduce((sum, ticket) => sum + parseFloat(ticket.totalCost), 0);
+    const { totalTickets, totalSpent, totalPurchases } = getTicketHistorySummary(ticketHistory);
 
 return (
 <PuzzlePiece variant="primary" size="lg" shape="rounded" glow>
@@ -130,7 +129,7 @@ return (
 
 <div className="text-center">
 <div className="text-3xl font-black text-purple-400 mb-2">
-    {ticketHistory.length}
+    {totalPurchases}
     </div>
         <p className="text-sm text-gray-400">Total Purchases</p>
                     </div>
@@ -163,21 +162,12 @@ export default function MyTicketsPage() {
     const { purchases: ticketHistory, isLoading, refreshHistory } = useTicketHistory();
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-const loadTicketData = useCallback(async () => {
-        try {
-            // Load user ticket info from blockchain
-            await getCurrentTicketInfo();
-        } catch (error) {
-            console.error('Failed to load ticket data:', error);
-        }
-    }, [getCurrentTicketInfo]);
-
     // Load ticket data when component mounts or wallet connects
     useEffect(() => {
         if (isConnected) {
-            loadTicketData();
+            void getCurrentTicketInfo();
         }
-    }, [isConnected, loadTicketData]);
+    }, [isConnected, getCurrentTicketInfo]);
 
     const handleRefresh = async () => {
         setIsRefreshing(true);
@@ -337,13 +327,7 @@ const loadTicketData = useCallback(async () => {
 function TicketsList({ ticketHistory }: { ticketHistory: TicketPurchaseHistory[] }) {
     const [showAll, setShowAll] = useState(false);
 
-    // Sort by timestamp desc when available, fallback to jackpot round
-    const sorted = [...ticketHistory].sort((a, b) => {
-        const ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-        const tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
-        if (tb !== ta) return tb - ta;
-        return (b.jackpotRoundId || 0) - (a.jackpotRoundId || 0);
-    });
+    const sorted = sortTicketHistoryByRecency(ticketHistory);
     const displayed = showAll ? sorted : sorted.slice(0, 10);
 
     return (
