@@ -6,7 +6,7 @@ import {FhenixSyndicateVault} from "../contracts/fhenix/FhenixSyndicateVault.sol
 
 contract DeployFhenixVault is Script {
     // Base Sepolia USDC
-    address constant USDC = 0x036cBD53842C5426634e7929541EC2318f3dcD01;
+    address constant USDC = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
 
     function run() external {
         address deployer = msg.sender;

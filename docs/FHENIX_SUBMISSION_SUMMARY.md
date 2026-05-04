@@ -51,6 +51,14 @@ That creates a better path for:
 - `src/app/api/syndicates/route.ts`
 
 ## What Judges Can Verify Quickly
+
+### On-Chain (Base Sepolia)
+- **Contract**: [`0xE11c8FF006dFAc43F952Ad394E56f1a50a2BdB63`](https://sepolia.basescan.org/address/0xE11c8FF006dFAc43F952Ad394E56f1a50a2BdB63)
+- **Network**: Base Sepolia (chain ID 84532)
+- **USDC**: `0x036CbD53842c5426634e7929541eC2318f3dCF7e`
+- **Constructor args**: USDC address + coordinator (deployer)
+
+### Code & Architecture
 - encrypted deposits are wired into real app flows
 - privacy is visible in the UI through the “Reveal Private Balance” flow
 - permit-based selective disclosure is implemented
