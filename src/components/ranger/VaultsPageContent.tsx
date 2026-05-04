@@ -17,6 +17,7 @@ import {
 } from '@/shared/components/premium/CompactLayout';
 import { YIELD_STRATEGIES } from '@/config/yieldStrategies';
 import type { SupportedYieldStrategyId } from '@/config/yieldStrategies';
+import { getProductModeById } from '@/config/productModes';
 import { buildVaultExecutionHref } from '@/constants/vaultRouting';
 import { trackEvent } from '@/services/analytics/client';
 
@@ -47,6 +48,9 @@ const STATUS_MAP: Record<SupportedYieldStrategyId, { label: string; style: strin
 export function VaultsPageContent({
   showOperatorTools = false,
 }: VaultsPageContentProps) {
+  const yieldMode = getProductModeById('yield_to_tickets');
+  const privateVaultMode = getProductModeById('private_vaults');
+
   return (
     <div className="min-h-screen bg-[#020617] bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.08),transparent_40%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.05),transparent_40%)] px-4 py-8">
       <CompactContainer maxWidth="2xl">
@@ -79,8 +83,14 @@ export function VaultsPageContent({
               Vaults
             </h1>
             <p className="max-w-xl text-gray-400">
-              Deposit USDC, earn yield, and put the upside to work — as lottery tickets, cause funding, or compounding.
+              {yieldMode?.description} For the strongest demo path, pair that with {privateVaultMode?.shortTitle.toLowerCase()} and reveal the Fhenix balance from your portfolio after depositing.
             </p>
+            <div className="inline-flex flex-wrap items-center gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-gray-200">
+              <span className="rounded-full bg-amber-500/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
+                Demo path
+              </span>
+              <span>Deposit into the Fhenix vault, then reveal the encrypted balance locally from your portfolio.</span>
+            </div>
           </div>
 
           {/* Vault cards */}
@@ -139,7 +149,7 @@ export function VaultsPageContent({
             <div className="flex items-center gap-3">
               <Shield className="h-4 w-4 text-blue-400" />
               <p className="text-sm text-gray-400">
-                Principal preserved. Only yield is used for tickets and causes.
+                Vaults support both public yield flows and privacy-native coordinated capital experiences.
               </p>
             </div>
             <div className="flex gap-3">

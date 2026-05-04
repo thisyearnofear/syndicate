@@ -129,7 +129,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                                 return (
                                     <Link key={item.href} href={item.href}>
                                         <button
-                                            title={item.label === 'Bridge' ? 'Move USDC to Base to buy tickets' : item.label}
+                                            title={item.label === 'Bridge' ? 'Fund Base-native vaults and strategies from external chains' : item.label}
                                             className={`
                             flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium
                             ${item.active
@@ -221,7 +221,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                                             onClick={() => setIsMobileMenuOpen(false)}
                                         >
                                             <button
-                                                aria-label={item.label === 'Bridge' ? 'Bridge USDC to Base to buy tickets' : undefined}
+                                                aria-label={item.label === 'Bridge' ? 'Bridge USDC to Base-native vaults and strategies' : undefined}
                                                 className={`
                                 w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-left
                                 ${item.active

@@ -26,13 +26,14 @@ import { Button } from "@/shared/components/ui/Button";
 import { AgentRegistryService, AgentStatus, AgentType } from "@/services/automation/agentRegistryService";
 import { useUnifiedWallet } from "@/hooks";
 import { AutoPurchaseModal } from "@/components/modal/AutoPurchaseModal";
+import { AUTOMATION_MODE_META } from "@/config/automationModes";
 
 export function AutoPurchaseSettings() {
   const { address, walletType } = useUnifiedWallet();
   const [agents, setAgents] = useState<AgentStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [, setSelectedAgentType] = useState<AgentType | null>(null);
+  const [selectedStrategy, setSelectedStrategy] = useState<'scheduled' | 'autonomous' | 'no-loss'>('scheduled');
 
   const registry = AgentRegistryService.getInstance();
 
@@ -56,8 +57,8 @@ export function AutoPurchaseSettings() {
     fetchAgents();
   }, [address]);
 
-  const handleActivateAgent = (type: AgentType) => {
-    setSelectedAgentType(type);
+  const handleActivateAgent = (type: AgentType | 'no-loss') => {
+    setSelectedStrategy(type === 'autonomous' ? 'autonomous' : type === 'no-loss' ? 'no-loss' : 'scheduled');
     setShowModal(true);
   };
 
@@ -80,7 +81,7 @@ export function AutoPurchaseSettings() {
             Syndicate Agent Hub
           </h2>
           <p className="text-sm text-gray-500 mt-1">
-            Deploy and manage autonomous bots that maximize your prize exposure.
+            Manage recurring public play, prize savings, and adaptive participation from one place.
           </p>
         </div>
         <Button 
@@ -112,9 +113,9 @@ export function AutoPurchaseSettings() {
               <Plus className="w-6 h-6 text-indigo-600" />
             </div>
             <div>
-              <h4 className="font-semibold text-gray-900">Deploy AI Agent</h4>
+              <h4 className="font-semibold text-gray-900">{AUTOMATION_MODE_META.autonomous.title}</h4>
               <p className="text-xs text-gray-500 max-w-[200px] mx-auto mt-1">
-                Deploy an autonomous WDK bot to manage your USD₮ purchases.
+                {AUTOMATION_MODE_META.autonomous.shortDescription}
               </p>
             </div>
             <Button 
@@ -132,7 +133,7 @@ export function AutoPurchaseSettings() {
       <div>
         <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-4">
           <Zap className="w-5 h-5 text-amber-500" />
-          Discover Diverse Lotteries
+          Automation Paths
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* POOLTOGETHER V5 */}
@@ -140,23 +141,23 @@ export function AutoPurchaseSettings() {
             <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
               <Coins className="w-6 h-6 text-indigo-600" />
             </div>
-            <h4 className="font-bold text-gray-900 text-sm">PoolTogether v5</h4>
-            <p className="text-[10px] text-gray-500 mt-1 mb-3">No-loss prize savings. 100% principal protection on Base.</p>
+            <h4 className="font-bold text-gray-900 text-sm">{AUTOMATION_MODE_META['no-loss'].title}</h4>
+            <p className="text-[10px] text-gray-500 mt-1 mb-3">{AUTOMATION_MODE_META['no-loss'].shortDescription}</p>
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Yield + Prizes</span>
-              <Button size="sm" variant="outline" onClick={() => handleActivateAgent('scheduled')}>Explore</Button>
+              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">{AUTOMATION_MODE_META['no-loss'].hubLabel}</span>
+              <Button size="sm" variant="outline" onClick={() => handleActivateAgent('no-loss')}>Explore</Button>
             </div>
           </div>
 
-          {/* PANCAKESWAP */}
+          {/* SCHEDULED PUBLIC PLAY */}
           <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all group">
             <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
               <Zap className="w-6 h-6 text-orange-600" />
             </div>
-            <h4 className="font-bold text-gray-900 text-sm">PancakeSwap</h4>
-            <p className="text-[10px] text-gray-500 mt-1 mb-3">High-frequency lottery with multi-chain jackpots.</p>
+            <h4 className="font-bold text-gray-900 text-sm">{AUTOMATION_MODE_META.scheduled.title}</h4>
+            <p className="text-[10px] text-gray-500 mt-1 mb-3">{AUTOMATION_MODE_META.scheduled.shortDescription}</p>
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">High Volume</span>
+              <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">{AUTOMATION_MODE_META.scheduled.hubLabel}</span>
               <Button size="sm" variant="outline" onClick={() => handleActivateAgent('scheduled')}>View</Button>
             </div>
           </div>
@@ -166,11 +167,11 @@ export function AutoPurchaseSettings() {
             <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
               <Zap className="w-6 h-6 text-emerald-600" />
             </div>
-            <h4 className="font-bold text-gray-900 text-sm">NEAR Nomad</h4>
-            <p className="text-[10px] text-gray-500 mt-1 mb-3">Atomic cross-chain purchases via NEAR Chain Signatures.</p>
+            <h4 className="font-bold text-gray-900 text-sm">{AUTOMATION_MODE_META.autonomous.title}</h4>
+            <p className="text-[10px] text-gray-500 mt-1 mb-3">{AUTOMATION_MODE_META.autonomous.shortDescription}</p>
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">MPC Powered</span>
-              <Button size="sm" variant="outline" onClick={() => handleActivateAgent('scheduled')}>Activate</Button>
+              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">{AUTOMATION_MODE_META.autonomous.hubLabel}</span>
+              <Button size="sm" variant="outline" onClick={() => handleActivateAgent('autonomous')}>Activate</Button>
             </div>
           </div>
 
@@ -180,9 +181,9 @@ export function AutoPurchaseSettings() {
               <TrendingUp className="w-6 h-6 text-orange-600" />
             </div>
             <h4 className="font-bold text-gray-900 text-sm">Stacks Sentinel</h4>
-            <p className="text-[10px] text-gray-500 mt-1 mb-3">Bitcoin-secured automation using SIP-018 signatures.</p>
+            <p className="text-[10px] text-gray-500 mt-1 mb-3">Bitcoin-secured recurring participation using SIP-018 signatures.</p>
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">BTC Security</span>
+              <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">Funding rail</span>
               <Button size="sm" variant="outline" onClick={() => handleActivateAgent('scheduled')}>Deploy</Button>
             </div>
           </div>
@@ -231,6 +232,7 @@ export function AutoPurchaseSettings() {
       <AutoPurchaseModal 
         isOpen={showModal} 
         onClose={() => setShowModal(false)} 
+        initialStrategy={selectedStrategy}
         onSuccess={() => {
           setShowModal(false);
           fetchAgents();

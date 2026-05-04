@@ -21,11 +21,8 @@ import {
 } from "@/shared/components/premium/CompactLayout";
 import { BalanceDisplay } from "@/components/modal/BalanceDisplay";
 import { AutoPurchaseModal } from "./AutoPurchaseModal";
-import {
-  CrossChainTracker,
-  type SourceChainType,
-  type TrackerStatus,
-} from "@/components/bridge/CrossChainTracker";
+import { CrossChainTracker } from "@/components/bridge/CrossChainTracker";
+import type { SourceChainType, TrackerStatus } from "@/domains/participation/types";
 import { CostBreakdown } from "@/components/bridge/CostBreakdown";
 import { TimeEstimate } from "@/components/bridge/TimeEstimate";
 import { CONTRACTS } from "@/services/bridges/protocols/stacks";
@@ -41,6 +38,23 @@ const CelebrationModal = lazy(() => import("./CelebrationModal"));
 
 type PurchaseStep = "connect" | "select" | "approve" | "processing" | "success";
 type PurchaseProtocol = "megapot" | "pooltogether";
+
+const PROTOCOL_COPY: Record<PurchaseProtocol, {
+  entryTitle: string;
+  optionTitle: string;
+  optionDescription: string;
+}> = {
+  megapot: {
+    entryTitle: "Enter Public Play",
+    optionTitle: "Megapot",
+    optionDescription: "Public play on Base • $1 per ticket",
+  },
+  pooltogether: {
+    entryTitle: "Enter Prize Savings",
+    optionTitle: "PoolTogether v5",
+    optionDescription: "No-loss prize savings • Keep your principal",
+  },
+};
 
 // Helper function to get explorer URLs
 const getExplorerUrl = (chain: SourceChainType, txHash: string): string => {
@@ -150,6 +164,7 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [hasExistingAllowance, setHasExistingAllowance] = useState<boolean | null>(null);
   const hasActivePermission = permissions.length > 0 && isSupported;
+  const selectedProtocolCopy = PROTOCOL_COPY[selectedProtocol];
 
   // Check if user already has sufficient USDC allowance (skip approval warning if so)
   useEffect(() => {
@@ -299,8 +314,8 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
         return (
           <CompactStack spacing="md" align="center">
             <div className="text-center">
-              <h2 className="text-2xl font-bold text-white mb-2">Let&apos;s Play</h2>
-              <p className="text-gray-400">Connect your wallet to purchase lottery tickets</p>
+              <h2 className="text-2xl font-bold text-white mb-2">Choose Your Participation Mode</h2>
+              <p className="text-gray-400">Connect your wallet to enter public play or no-loss prize savings on Base</p>
             </div>
             <WalletConnectionManager />
             <Button variant="outline" className="w-full" onClick={handleClose}>Close</Button>
@@ -313,7 +328,7 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
           <CompactStack spacing="md">
             <div className="text-center">
               <h2 className="text-2xl font-bold text-white mb-2">
-                {selectedProtocol === 'pooltogether' ? 'Deposit to PoolTogether' : 'Buy Tickets'}
+                {selectedProtocolCopy.entryTitle}
               </h2>
               <p className="text-gray-400 text-sm">
                 Connected: <span className="text-green-400">{walletType?.toUpperCase()}</span>
@@ -335,7 +350,7 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
 
             {/* PROTOCOL SELECTOR */}
             <div className="space-y-3">
-              <label className="block text-sm font-medium text-gray-300">Choose Your Lottery</label>
+              <label className="block text-sm font-medium text-gray-300">Choose Your Participation Flow</label>
               <div className="grid grid-cols-1 gap-3">
                 {/* MEGAPOT */}
                 <button onClick={() => setSelectedProtocol("megapot")} disabled={isPurchasing} className={`relative p-4 rounded-lg border-2 transition-all text-left ${selectedProtocol === "megapot" ? "border-yellow-500 bg-yellow-500/20" : "border-gray-600 hover:border-gray-500 bg-gray-700/30"}`}>
@@ -343,8 +358,8 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center flex-shrink-0"><Trophy className="w-5 h-5 text-yellow-400" /></div>
                     <div>
-                      <h4 className="font-semibold text-white text-sm">Megapot</h4>
-                      <p className="text-xs text-gray-400 mt-1">Direct lottery tickets • $1 per ticket</p>
+                      <h4 className="font-semibold text-white text-sm">{PROTOCOL_COPY.megapot.optionTitle}</h4>
+                      <p className="text-xs text-gray-400 mt-1">{PROTOCOL_COPY.megapot.optionDescription}</p>
                     </div>
                   </div>
                 </button>
@@ -355,8 +370,8 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center flex-shrink-0"><Shield className="w-5 h-5 text-emerald-400" /></div>
                     <div>
-                      <h4 className="font-semibold text-white text-sm">PoolTogether v5</h4>
-                      <p className="text-xs text-gray-400 mt-1">No-loss prize savings • Keep your principal</p>
+                      <h4 className="font-semibold text-white text-sm">{PROTOCOL_COPY.pooltogether.optionTitle}</h4>
+                      <p className="text-xs text-gray-400 mt-1">{PROTOCOL_COPY.pooltogether.optionDescription}</p>
                     </div>
                   </div>
                 </button>
@@ -404,7 +419,7 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
                     <Zap className="w-5 h-5 text-indigo-400 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-indigo-300 mb-1">Enable Auto-Purchase</p>
-                      <p className="text-xs text-gray-300">Set up automatic weekly or monthly ticket purchases using MetaMask Advanced Permissions. No signing required after setup.</p>
+                      <p className="text-xs text-gray-300">Set up automatic weekly or monthly public-play purchases using MetaMask Advanced Permissions. No signing required after setup.</p>
                     </div>
                   </div>
                   <Button variant="secondary" size="sm" className="w-full text-xs" onClick={() => setShowPermissionModal(true)}>
@@ -418,7 +433,7 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
                     <Zap className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-purple-300 mb-1">Enable x402 Auto-Purchase</p>
-                      <p className="text-xs text-gray-300">Set up automatic weekly or monthly ticket purchases on Stacks. Sign once with SIP-018 — no manual signing after setup.</p>
+                      <p className="text-xs text-gray-300">Set up automatic weekly or monthly public-play purchases on Stacks. Sign once with SIP-018 — no manual signing after setup.</p>
                     </div>
                   </div>
                   <Button variant="secondary" size="sm" className="w-full text-xs" onClick={() => setShowPermissionModal(true)}>
@@ -443,7 +458,7 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
                       <span className="text-xs text-gray-400 font-medium">Base</span>
                     </div>
                   </div>
-                  <p className="text-[10px] text-gray-500 text-center mt-2">Your payment is bridged to Base where lottery tickets are minted</p>
+                  <p className="text-[10px] text-gray-500 text-center mt-2">Your payment is bridged to Base, where public-play tickets are minted</p>
                 </div>
               )}
 
@@ -454,13 +469,13 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
                     <label className="flex items-center gap-1.5 text-sm font-medium text-gray-300"><Wallet className="w-3.5 h-3.5 text-blue-400" /> Delivery Address (Base)</label>
                     {baseAddressSource === 'auto' && isValidBaseAddress && <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/30">Auto-detected</span>}
                   </div>
-                  <p className="text-xs text-gray-500">Tickets are minted on Base. {mirrorAddress ? 'We detected your linked EVM address — you can change it below.' : 'Paste your MetaMask or other EVM wallet address.'}</p>
+                  <p className="text-xs text-gray-500">Public-play tickets are minted on Base. {mirrorAddress ? 'We detected your linked EVM address — you can change it below.' : 'Paste your MetaMask or other EVM wallet address.'}</p>
                   <div className="relative">
                     <input type="text" value={baseAddress} onChange={(e) => { handleBaseAddressChange(e.target.value.trim()); setBaseAddressError(''); }} placeholder="0x... (your Base/EVM wallet address)" disabled={isPurchasing} className={`w-full px-4 py-3 rounded-lg bg-gray-700/50 border text-white text-sm font-mono placeholder-gray-500 focus:outline-none focus:ring-2 transition-colors ${baseAddressError ? 'border-red-500 focus:ring-red-500/50' : baseAddress && isValidBaseAddress ? 'border-green-500/60 focus:ring-green-500/50' : 'border-gray-600 focus:ring-indigo-500/50'}`} />
                     {baseAddress && isValidBaseAddress && <div className="absolute right-3 top-1/2 -translate-y-1/2"><Check className="w-4 h-4 text-green-400" /></div>}
                   </div>
                   {baseAddressError && <p className="text-xs text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{baseAddressError}</p>}
-                  {baseAddress && isValidBaseAddress && !baseAddressError && <div className="flex items-center gap-1.5 text-xs text-green-400/80"><Shield className="w-3 h-3" /><span>Verified address — tickets will be delivered here</span></div>}
+                  {baseAddress && isValidBaseAddress && !baseAddressError && <div className="flex items-center gap-1.5 text-xs text-green-400/80"><Shield className="w-3 h-3" /><span>Verified address — public-play tickets will be delivered here</span></div>}
                   {baseAddress && !isValidBaseAddress && !baseAddressError && <p className="text-xs text-yellow-400">Enter a valid 0x... address (42 characters)</p>}
                 </div>
               )}
@@ -622,11 +637,11 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
         return (
           <div className="text-center py-8">
             <div className="inline-block mb-6"><Loader className="w-12 h-12 text-blue-400 animate-spin" /></div>
-            <h2 className="text-2xl font-bold text-white mb-2">Processing Purchase</h2>
+            <h2 className="text-2xl font-bold text-white mb-2">Processing Public Play</h2>
             <p className="text-gray-400 mb-6">{walletType === "stacks" || walletType === "near" || walletType === "solana" ? "Bridging across chains — this takes 2-3 minutes" : "Executing transaction..."}</p>
             {(walletType === "stacks" || walletType === "near" || walletType === "solana") && (
               <div className="text-left space-y-3 max-w-xs mx-auto">
-                {[{ label: "Signing transaction", done: !!sourceTxHash }, { label: "Waiting for confirmation", done: status === "bridging" || status === "purchasing" || status === "complete" }, { label: "Bridging to Base", done: status === "purchasing" || status === "complete" }, { label: "Purchasing tickets", done: status === "complete" }].map((s, i) => (
+                {[{ label: "Signing transaction", done: !!sourceTxHash }, { label: "Waiting for confirmation", done: status === "bridging" || status === "purchasing" || status === "complete" }, { label: "Bridging to Base", done: status === "purchasing" || status === "complete" }, { label: "Minting public-play tickets", done: status === "complete" }].map((s, i) => (
                   <div key={i} className="flex items-center gap-3">
                     {s.done ? <Check className="w-4 h-4 text-green-400 flex-shrink-0" /> : <div className="w-4 h-4 rounded-full border-2 border-gray-600 flex-shrink-0" />}
                     <span className={`text-sm ${s.done ? "text-green-300" : "text-gray-500"}`}>{s.label}</span>
@@ -663,7 +678,7 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
           <CompactStack spacing="md" align="center">
             <div className="text-center">
               <div className="inline-block mb-4"><div className="w-16 h-16 rounded-full bg-green-400/20 flex items-center justify-center"><Check className="w-8 h-8 text-green-400" /></div></div>
-              <h2 className="text-2xl font-bold text-white mb-2">Purchase Successful!</h2>
+              <h2 className="text-2xl font-bold text-white mb-2">Public Play Confirmed!</h2>
               <p className="text-gray-400 mb-2">You purchased {ticketCount} ticket{ticketCount !== 1 ? "s" : ""}</p>
               <div className="flex flex-wrap items-center justify-center gap-3 mb-2">
                 {txHash && <a href={`https://basescan.org/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-400 hover:text-blue-300 inline-flex items-center gap-1">View Transaction <ExternalLink className="w-3 h-3" /></a>}

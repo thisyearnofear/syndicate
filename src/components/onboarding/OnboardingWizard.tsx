@@ -12,6 +12,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { getProductModeById } from '@/config/productModes';
 import { 
   Sparkles, 
   ArrowRight, 
@@ -27,6 +28,10 @@ import {
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 
+const privateVaultMode = getProductModeById('private_vaults');
+const yieldMode = getProductModeById('yield_to_tickets');
+const publicPlayMode = getProductModeById('public_play');
+
 interface OnboardingState {
   currentStep: number;
   completed: boolean;
@@ -37,7 +42,7 @@ const ONBOARDING_STEPS = [
   {
     id: 'welcome',
     title: 'Welcome to Syndicate',
-    description: 'Pool tickets, share winnings, fund causes together',
+    description: 'Private vaults, smart yield, and direct public play',
   },
   {
     id: 'pool_types',
@@ -197,25 +202,24 @@ function WelcomeStep() {
       </div>
       <h2 className="text-2xl font-bold text-white mb-4">Welcome to Syndicate</h2>
       <p className="text-gray-400 mb-6 max-w-md mx-auto">
-        Syndicate lets you pool lottery tickets with others, share winnings, and fund causes together. 
-        Your principal is always preserved while yield generates tickets automatically.
+        Syndicate gives you three ways to participate: private vault coordination, yield that plays for you, and direct public access to Megapot when you want the fastest path in.
       </p>
 
       <div className="grid grid-cols-3 gap-4 mt-8">
         <div className="bg-white/5 rounded-xl p-4">
+          <Shield className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
+          <p className="text-white font-medium">{privateVaultMode?.shortTitle}</p>
+          <p className="text-xs text-gray-400">Private by default</p>
+        </div>
+        <div className="bg-white/5 rounded-xl p-4">
+          <TrendingUp className="w-8 h-8 text-blue-400 mx-auto mb-2" />
+          <p className="text-white font-medium">{yieldMode?.shortTitle}</p>
+          <p className="text-xs text-gray-400">Let yield play for you</p>
+        </div>
+        <div className="bg-white/5 rounded-xl p-4">
           <Trophy className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
-          <p className="text-white font-medium">Pool Tickets</p>
-          <p className="text-xs text-gray-400">More tickets = better odds</p>
-        </div>
-        <div className="bg-white/5 rounded-xl p-4">
-          <Heart className="w-8 h-8 text-red-400 mx-auto mb-2" />
-          <p className="text-white font-medium">Fund Causes</p>
-          <p className="text-xs text-gray-400">10-20% to charity</p>
-        </div>
-        <div className="bg-white/5 rounded-xl p-4">
-          <TrendingUp className="w-8 h-8 text-green-400 mx-auto mb-2" />
-          <p className="text-white font-medium">Earn Yield</p>
-          <p className="text-xs text-gray-400">Principal preserved</p>
+          <p className="text-white font-medium">{publicPlayMode?.shortTitle}</p>
+          <p className="text-xs text-gray-400">Fast public entry</p>
         </div>
       </div>
     </div>
@@ -227,7 +231,7 @@ function PoolTypesStep() {
     <div>
       <h2 className="text-2xl font-bold text-white mb-4 text-center">Choose Your Pool Type</h2>
       <p className="text-gray-400 mb-6 text-center">
-        Each pool type offers different security and distribution models.
+        Choose the right coordination model for your group, from transparent flows to privacy-native vaults.
       </p>
 
       <div className="space-y-4">
@@ -290,6 +294,26 @@ function PoolTypesStep() {
             </div>
           </div>
         </div>
+
+        {/* Fhenix */}
+        <div className="bg-white/5 rounded-xl p-4 border border-amber-500/30">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-6 h-6 text-amber-400" />
+            </div>
+            <div>
+              <h3 className="text-white font-bold mb-1">Fhenix Private Vault</h3>
+              <p className="text-gray-400 text-sm mb-2">
+                Privacy-native coordination with encrypted contribution amounts and selective disclosure.
+              </p>
+              <ul className="text-xs text-gray-500 space-y-1">
+                <li>• Contribution amounts stay private by default</li>
+                <li>• Authorized users reveal balances only when needed</li>
+                <li>• Best for: Sensitive coordinated capital</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -300,15 +324,15 @@ function YieldStep() {
     <div>
       <h2 className="text-2xl font-bold text-white mb-4 text-center">Earn While You Wait</h2>
       <p className="text-gray-400 mb-6 text-center">
-        Your deposits earn yield automatically, which is converted to lottery tickets.
+        Deposit into Base-native vaults and let yield auto-convert into participation instead of re-entering manually.
       </p>
 
       <div className="bg-gradient-to-r from-green-900/30 to-blue-900/30 rounded-xl p-6 mb-6 border border-green-500/30">
         <div className="flex items-center gap-3 mb-4">
           <TrendingUp className="w-8 h-8 text-green-400" />
           <div>
-            <h3 className="text-white font-bold">Yield-to-Tickets</h3>
-            <p className="text-sm text-gray-400">Your money works for you</p>
+            <h3 className="text-white font-bold">{yieldMode?.shortTitle}</h3>
+            <p className="text-sm text-gray-400">{yieldMode?.tagline}</p>
           </div>
         </div>
         
@@ -395,4 +419,3 @@ function FirstStepsStep({ router }: { router: { push: (path: string) => void } }
 }
 
 export default OnboardingWizard;
-
