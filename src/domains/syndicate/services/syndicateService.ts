@@ -12,7 +12,7 @@ import { web3Service } from '@/services/web3Service';
 import { splitsService, type ParticipantShare } from '@/services/splitsService';
 import { distributionService } from '@/services/distributionService';
 import { syndicateRepository, type PoolType } from '@/lib/db/repositories/syndicateRepository';
-import { safeProvider, splitsProvider, poolTogetherV5Provider } from '@/services/syndicate/poolProviders';
+import { safeProvider, splitsProvider, poolTogetherV5Provider, fhenixPoolProvider } from '@/services/syndicate/poolProviders';
 import type { PoolProvider, PoolProviderConfig, PoolCreationResult } from '@/services/syndicate/poolProviders';
 import { isAddress } from 'viem';
 import { logger } from '@/lib/logger';
@@ -29,6 +29,8 @@ export class SyndicateService {
         return splitsProvider;
       case 'pooltogether':
         return poolTogetherV5Provider;
+      case 'fhenix':
+        return fhenixPoolProvider;
       default:
         return safeProvider;
     }
@@ -61,6 +63,7 @@ export class SyndicateService {
     let poolAddress: string | undefined;
     let splitAddress: string | undefined;
     let ptVaultAddress: string | undefined;
+    let poolPublicKey: string | undefined;
     
     try {
       const provider = this.getPoolProvider(poolType);
@@ -83,6 +86,9 @@ export class SyndicateService {
         } else if (poolType === 'pooltogether') {
           ptVaultAddress = result.poolAddress;
         }
+        
+        // Extract FHE sealing public key from pool provider metadata (fhenix pools)
+        poolPublicKey = result.metadata?.fhePubKey as string | undefined;
         
         logger.info('[SyndicateService] On-chain pool created:', {
           poolType,
@@ -108,6 +114,7 @@ export class SyndicateService {
       splitAddress,
       ptVaultAddress,
       memberShares: params.members,
+      poolPublicKey,
     });
 
     logger.info('[SyndicateService] Pool created:', {

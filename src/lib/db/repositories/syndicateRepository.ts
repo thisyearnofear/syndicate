@@ -62,6 +62,8 @@ export interface CreatePoolParams {
     splitAddress?: string;
     ptVaultAddress?: string;
     memberShares?: Array<{ address: string; sharePercent: number }>;
+    /** FHE sealing public key (hex string) — persisted in pool_public_key BYTEA column */
+    poolPublicKey?: string;
 }
 
 export class SyndicateRepository {
@@ -85,6 +87,7 @@ export class SyndicateRepository {
                     split_address,
                     pt_vault_address,
                     member_shares,
+                    pool_public_key,
                     created_at,
                     updated_at
                 ) VALUES (
@@ -98,6 +101,7 @@ export class SyndicateRepository {
                     ${params.splitAddress || null},
                     ${params.ptVaultAddress || null},
                     ${params.memberShares ? JSON.stringify(params.memberShares) : null},
+                    ${params.poolPublicKey ? ('\\x' + params.poolPublicKey.replace('0x', '')) : null},
                     ${now},
                     ${now}
                 )
@@ -114,6 +118,7 @@ export class SyndicateRepository {
                     coordinator_address,
                     lottery_id,
                     cause_allocation_percent,
+                    pool_public_key,
                     created_at,
                     updated_at
                 ) VALUES (
@@ -122,6 +127,7 @@ export class SyndicateRepository {
                     ${params.coordinatorAddress},
                     ${params.lotteryId ?? null},
                     ${params.causeAllocationPercent},
+                    ${params.poolPublicKey ? ('\\x' + params.poolPublicKey.replace('0x', '')) : null},
                     ${now},
                     ${now}
                 )
