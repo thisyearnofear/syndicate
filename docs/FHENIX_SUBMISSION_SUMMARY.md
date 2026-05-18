@@ -13,10 +13,19 @@ With Fhenix, we are making privacy a first-class primitive inside our existing p
 ### 1. Encrypted Deposit Flow
 Users deposit into a Fhenix-enabled vault through an application flow that encrypts the amount client-side and submits encrypted input to the contract via `depositEncrypted(...)`.
 
-### 2. Selective Disclosure via Permits
-Authorized users can request and activate a permit, fetch their encrypted balance ciphertext hash from the vault, and unseal it locally in the browser. This creates a privacy-preserving but usable account experience.
+### 2. Selective Disclosure via Sealed Output (no threshold round-trip)
+Authorized users can request and activate a permit, fetch their encrypted balance as a sealed EthEncryptedData JSON string from the contract (via `FHE.sealoutput()`), and decrypt it locally in the browser using the active permit. This eliminates the threshold network round-trip for balance queries — the contract re-encrypts the value for the user's key at view-call time.
 
-### 3. Product-Native Integration
+### 3. On-Chain APY Oracle
+A coordinator-settable APY (`setApy()`) in basis points on the vault contract, with a provider fallback chain: on-chain → cache → hardcoded 5.0%. The Fhenix vault row in the Yield Dashboard displays the live APY alongside other strategies.
+
+### 4. Coordinator-Signed Withdrawal Attestation
+`withdrawSigned()` uses EIP-712 typed signature verification instead of raw amount trust. The coordinator (who can decrypt balances off-chain) signs `(member, amount, nonce)`, and the contract verifies the signature via `ecrecover`. Per-member nonces prevent replay attacks. The legacy `withdraw()` is kept with a deprecation notice for backwards compatibility.
+
+### 5. Encrypted Yield Distribution
+`distributeYield()` allows the coordinator to distribute encrypted yield to all active members, tracked per-member via `getAccumulatedYieldCtHash` and `getYieldDistributedCtHash`.
+
+### 6. Product-Native Integration
 We did not build a separate hackathon demo stack. We extended our existing architecture:
 - vault flows
 - syndicate join flows
@@ -41,14 +50,16 @@ That creates a better path for:
 - future institutional or compliance-sensitive flows
 
 ## Key Technical Components
-- `contracts/fhenix/FhenixSyndicateVault.sol`
-- `src/services/fhe/fheService.ts`
-- `src/services/fhe/fhenixActions.ts`
-- `src/hooks/useFhenixPrivateVaultBalance.ts`
-- `src/hooks/useVaultDeposit.ts`
-- `src/hooks/useSyndicateDeposit.ts`
-- `src/components/yield/YieldDashboard.tsx`
-- `src/app/api/syndicates/route.ts`
+- `contracts/fhenix/FhenixSyndicateVault.sol` — vault contract: `depositEncrypted`, sealoutput getters, `withdrawSigned`, `setApy`, `distributeYield`, active member count
+- `src/services/fhe/fheService.ts` — SDK wrapper: `encrypt`, `createPermit`, `activatePermit`, `decryptSealedOutput`
+- `src/services/fhe/fhenixActions.ts` — DRY helpers: `approve+encrypt+depositEncrypted`, withdraw
+- `src/services/vaults/fhenixProvider.ts` — vault provider with on-chain APY oracle read + fallback
+- `src/hooks/useFhenixPrivateVaultBalance.ts` — permit + sealed output read + local decrypt flow
+- `src/hooks/useVaultDeposit.ts` — unified deposit/withdraw for all vault protocols
+- `src/hooks/useSyndicateDeposit.ts` — syndicate deposit with Fhenix pool type support
+- `src/components/yield/YieldDashboard.tsx` — Fhenix vault row with APY and private balance reveal
+- `src/services/fhe/fhenixChain.ts` — multi-network support (Base Sepolia / Fhenix Helium)
+- `test/FhenixSyndicateVault.t.sol` — **31 Foundry unit tests** (encrypted deposits, APY oracle, signed withdrawals, sealoutput, yield distribution)
 
 ## What Judges Can Verify Quickly
 
@@ -57,28 +68,33 @@ That creates a better path for:
 - **Network**: Base Sepolia (chain ID 84532)
 - **USDC**: `0x036CbD53842c5426634e7929541eC2318f3dCF7e`
 - **Constructor args**: USDC address + coordinator (deployer)
+- **Contract functions**: `setApy(500)`, `withdrawSigned(amount, sig)`, `distributeYield()`, sealoutput-based balance getters
 
 ### Code & Architecture
 - encrypted deposits are wired into real app flows
 - privacy is visible in the UI through the “Reveal Private Balance” flow
-- permit-based selective disclosure is implemented
+- permit-based selective disclosure uses `FHE.sealoutput()` — no threshold network round-trip
+- on-chain APY oracle with coordinator control and provider fallback
+- withdrawals require EIP-712 coordinator attestation with nonce replay protection
+- encrypted yield distribution supports multi-member payout tracking
 - the Fhenix path is integrated across contract, frontend, and API verification layers
 - the implementation follows an extensible, modular architecture rather than a one-off demo
+- **31 Foundry unit tests** covering all contract functions
 
-## Current MVP Scope
-Our strongest implemented path today is:
-1. encrypted deposit
-2. private balance retrieval
-3. client-side unsealing for authorized users
-
-We are intentionally treating withdrawal hardening as a security-critical next step rather than overstating production readiness.
+## Current Scope
+Our implemented paths today:
+1. encrypted deposit with client-side encryption
+2. private balance retrieval via `FHE.sealoutput()` with local decryption
+3. APY oracle with on-chain coordinator control and provider fallback
+4. coordinator-signed withdrawal attestation via EIP-712
+5. encrypted yield distribution to active members
+6. 31 comprehensive Foundry unit tests
 
 ## Why We Think This Is Privacy-by-Design
 We are using encrypted state as a product primitive, not just a hidden frontend field. Sensitive financial values remain confidential during the core contract flow, and only the user with the relevant permit can reveal them. That is the core value of privacy-by-design in an on-chain application.
 
 ## Next Milestones
-- harden withdrawal correctness against encrypted state
 - expand private balance flows into more product surfaces
-- strengthen local and contract-level testing around the Fhenix path
 - extend privacy-native coordination flows beyond vault balances into broader syndicate interactions
+- production deployment to Fhenix Helium mainnet
 

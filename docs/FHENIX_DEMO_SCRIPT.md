@@ -6,7 +6,7 @@ Show one clean privacy-native user journey:
 2. show that the amount is not exposed as a normal public balance flow
 3. reveal the private balance only for the authorized user
 
-Target duration: **2 minutes**
+Target duration: **2–3 minutes**
 
 ---
 
@@ -18,6 +18,7 @@ Before recording or presenting:
 - use a wallet/account with a completed Fhenix deposit
 - preload the Yield Dashboard page
 - keep one explorer tab ready for the transaction if you want to show receipt metadata
+- ensure APY oracle is set (coordinator calls `setApy(500)` for 5.0% APY)
 
 ---
 
@@ -48,20 +49,32 @@ Say:
 If you are not doing the deposit live:
 - reference a recently completed Fhenix deposit already visible in the app
 
-### 1:15 - 1:45 | Selective Disclosure
+### 1:15 - 1:45 | Selective Disclosure (Sealed Output)
 Go to the Fhenix vault row in the Yield Dashboard and click **Reveal Private Balance**.
 
 Say:
 
-> Now we request and activate a permit, fetch the encrypted balance ciphertext hash from the vault, and unseal it locally in the browser. Only the authorized user can reveal this value.
+> Now we request and activate a permit, and fetch the balance as a sealed output from the contract — re-encrypted for the user's key via `FHE.sealoutput()`. The browser decrypts it locally using the active permit, without any threshold network round-trip.
 
 Pause long enough for the balance to appear.
 
 Then say:
 
-> So the position stays private by default on-chain, but still remains usable for the account owner.
+> So the position stays private by default on-chain, but still remains usable for the account owner — the contract re-encrypts the value for the requesting user at view-call time.
 
-### 1:45 - 2:00 | Why It Matters
+### 1:45 - 2:15 | APY Oracle (Optional)
+If time permits and APY is set, point to the Fhenix vault row showing the live APY.
+
+Say:
+
+> The vault has an on-chain APY oracle. The coordinator sets the rate in basis points directly on the contract, and the provider reads it with a fallback chain — so the Yield Dashboard always displays the current rate alongside other strategies.
+
+### 2:15 - 2:30 | Withdrawal Security (Optional)
+If asked about withdrawal flow:
+
+> Withdrawals require a coordinator-signed EIP-712 attestation. The coordinator can decrypt the balance off-chain, then signs `(member, amount, nonce)`. The contract verifies the signature and prevents replay attacks. This replaces raw amount trust with cryptographic proof.
+
+### 2:30 - 2:45 | Why It Matters
 Say:
 
 > This turns privacy into a first-class primitive inside our existing product. We are not building a separate demo stack. We extended real vault, API, and dashboard flows so confidential balances and participation can become native product behavior.
@@ -81,7 +94,6 @@ Do not over-explain this unless the explorer evidence is clean and easy to inter
 - do not jump between too many unrelated product areas
 - do not lead with bridge or non-Fhenix features
 - do not emphasize unfinished production-hardening work
-- do not show withdrawal unless you are fully ready to defend the implementation
 
 ---
 
