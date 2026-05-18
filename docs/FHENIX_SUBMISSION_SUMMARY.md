@@ -34,15 +34,21 @@ Key features:
 - **Deadline enforcement** (1h–30d)
 - **Quorum** in basis points (settled by coordinator)
 - **Coordinator management** — `transferCoordinator()` and `setQuorum()`
-- **UI** — `GovernancePanel` component with proposal list, vote buttons (For/Against/Abstain), create form, reveal & finalize, execute
-- **21 Foundry unit tests** covering all paths
+- **UI** — `GovernancePanel` component with proposal list, vote buttons (For/Against/Abstain), create form (with target/data payload), reveal & finalize, execute
+- **25 Foundry unit tests** covering all paths, including treasury transfers
 
-Client service: `fhenixGovernorService.ts` — `getProposals()`, `castVote()` (encrypts via cofhejs), `revealAndDecryptTally()`, `createProposal()`, `finalizeProposal()`, `executeProposal()`
+### 7. Encrypted Treasury Execution (NEW)
+The Governor can now trigger actual financial actions from the `FhenixSyndicateVault` after a successful vote.
+- **Execution Payloads**: Proposals store a `target` address and `data` bytes.
+- **Vault Integration**: The vault allows the authorized `governor` to call `executeTransfer` and `distributeYield`.
+- **Atomic Execution**: `executeProposal()` performs a low-level call to the target, ensuring governance decisions result in on-chain action.
+- **Security**: Only the Governor or Coordinator can trigger vault payouts.
+- **Manual Reveal**: While voting is encrypted, the execution payload is plaintext, providing transparency for where funds are intended to go.
 
-### 7. Member Privacy Gating (NEW)
+### 8. Member Privacy Gating (NEW)
 Fhenix pool member lists are privacy-gated at the API layer. The dashboard API (`/api/syndicates/dashboard`) checks a `?viewer=` query param: non-members see only the member count and an empty list, not individual addresses or contribution amounts. Members see the full list.
 
-### 8. Product-Native Integration
+### 9. Product-Native Integration
 We did not build a separate hackathon demo stack. We extended our existing architecture:
 - vault flows
 - syndicate join flows
@@ -67,7 +73,7 @@ That creates a better path for:
 - future institutional or compliance-sensitive flows
 
 ## Key Technical Components
-- `contracts/fhenix/FhenixSyndicateVault.sol` — vault contract: `depositEncrypted`, sealoutput getters, `withdrawSigned`, `setApy`, `distributeYield`, active member count
+- `contracts/fhenix/FhenixSyndicateVault.sol` — vault contract: `depositEncrypted`, sealoutput getters, `withdrawSigned`, `setApy`, `distributeYield`, `executeTransfer`, `setGovernor`, active member count
 - `src/services/fhe/fheService.ts` — SDK wrapper: `encrypt`, `createPermit`, `activatePermit`, `decryptSealedOutput`
 - `src/services/fhe/fhenixActions.ts` — DRY helpers: `approve+encrypt+depositEncrypted`, withdraw
 - `src/services/vaults/fhenixProvider.ts` — vault provider with on-chain APY oracle read + fallback
@@ -77,10 +83,10 @@ That creates a better path for:
 - `src/components/yield/YieldDashboard.tsx` — Fhenix vault row with APY and private balance reveal
 - `src/services/fhe/fhenixChain.ts` — multi-network support (Base Sepolia / Fhenix Helium)
 - `test/FhenixSyndicateVault.t.sol` — **31 Foundry unit tests** (encrypted deposits, APY oracle, signed withdrawals, sealoutput, yield distribution)
-- `contracts/fhenix/FhenixGovernor.sol` — FHE-encrypted governance contract: createProposal, vote, revealTally, finalizeProposal, executeProposal
-- `test/FhenixGovernor.t.sol` — **21 Foundry unit tests** (proposal creation, voting, tally reveal, finalization, coordinator management, edge cases)
-- `src/services/governance/fhenixGovernorService.ts` — client-side governance service: getProposals, castVote (encrypts via cofhejs), revealAndDecryptTally, createProposal, finalizeProposal, executeProposal
-- `src/components/governance/GovernancePanel.tsx` — governance UI: proposal list, vote buttons, create form, reveal & finalize, execute, status badges
+- `contracts/fhenix/FhenixGovernor.sol` — FHE-encrypted governance contract: createProposal, vote, revealTally, finalizeProposal, executeProposal (with execution payload)
+- `test/FhenixGovernor.t.sol` — **25 Foundry unit tests** (proposal creation, voting, tally reveal, finalization, treasury execution, coordinator management, edge cases)
+- `src/services/governance/fhenixGovernorService.ts` — client-side governance service: getProposals, castVote (encrypts via cofhejs), revealAndDecryptTally, createProposal (with payload), finalizeProposal, executeProposal, `encodeVaultTransfer` helper
+- `src/components/governance/GovernancePanel.tsx` — governance UI: proposal list, vote buttons, create form (with target/data), reveal & finalize, execute, status badges
 - `src/components/syndicate/SyndicateDashboard.tsx` — integrates GovernancePanel for Fhenix pools
 - `src/app/api/syndicates/dashboard/route.ts` — member privacy gating: non-members see only count for Fhenix pools
 
@@ -91,7 +97,7 @@ That creates a better path for:
 - **Network**: Base Sepolia (chain ID 84532)
 - **USDC**: `0x036CbD53842c5426634e7929541eC2318f3dCF7e`
 - **Constructor args**: USDC address + coordinator (deployer)
-- **Contract functions**: `setApy(500)`, `withdrawSigned(amount, sig)`, `distributeYield()`, sealoutput-based balance getters
+- **Contract functions**: `setApy(500)`, `withdrawSigned(amount, sig)`, `distributeYield()`, `executeTransfer()`, `setGovernor()`, sealoutput-based balance getters
 
 ### Code & Architecture
 - encrypted deposits are wired into real app flows
@@ -100,9 +106,11 @@ That creates a better path for:
 - on-chain APY oracle with coordinator control and provider fallback
 - withdrawals require EIP-712 coordinator attestation with nonce replay protection
 - encrypted yield distribution supports multi-member payout tracking
+- FHE-encrypted voting with homomorphic tally accumulation
+- **Atomic treasury execution** linking governance decisions to vault actions
 - the Fhenix path is integrated across contract, frontend, and API verification layers
 - the implementation follows an extensible, modular architecture rather than a one-off demo
-- **52 total Foundry unit tests** (31 vault + 21 governor) covering all contract functions
+- **56 total Foundry unit tests** (31 vault + 25 governor) covering all contract functions
 
 ## Current Scope
 Our implemented paths today:
@@ -112,15 +120,15 @@ Our implemented paths today:
 4. coordinator-signed withdrawal attestation via EIP-712
 5. encrypted yield distribution to active members
 6. encrypted on-chain governance with FHE-encrypted voting
-7. member privacy gating at the API layer
-8. 52 comprehensive Foundry unit tests (31 vault + 21 governor)
+7. atomic treasury execution (Governor → Vault transfers)
+8. member privacy gating at the API layer
+9. 56 comprehensive Foundry unit tests (31 vault + 25 governor)
 
 ## Why We Think This Is Privacy-by-Design
 We are using encrypted state as a product primitive, not just a hidden frontend field. Sensitive financial values remain confidential during the core contract flow, and only the user with the relevant permit can reveal them. That is the core value of privacy-by-design in an on-chain application.
 
 ## Next Milestones
 - expand private balance flows into more product surfaces
-- extend privacy-native coordination flows (governance) to support token-based treasury execution
+- automated encrypted yield compounding (multiplier-based)
 - production deployment to Fhenix Helium mainnet
 - deploy FhenixGovernor alongside vault for new FHE syndicates
-

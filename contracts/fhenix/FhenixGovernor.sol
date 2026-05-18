@@ -54,6 +54,8 @@ contract FhenixGovernor is Permissioned {
     struct Proposal {
         string title;
         string description;
+        address target;              // Execution target (e.g., Vault)
+        bytes data;                  // Execution payload
         uint256 createdAt;
         uint256 deadline;
         uint256 voteCount;           // Total number of votes cast (plaintext counter)
@@ -98,7 +100,7 @@ contract FhenixGovernor is Permissioned {
 
     // ─── Events ──────────────────────────────────────────────────────────────
 
-    event ProposalCreated(uint256 indexed proposalId, string title, uint256 deadline);
+    event ProposalCreated(uint256 indexed proposalId, string title, address target, uint256 deadline);
     event VoteCast(uint256 indexed proposalId, address indexed voter);
     event TallyRevealed(uint256 indexed proposalId);
     event ProposalFinalized(uint256 indexed proposalId, ProposalState state, uint256 forVotes, uint256 againstVotes, uint256 abstainVotes);
@@ -115,6 +117,7 @@ contract FhenixGovernor is Permissioned {
     error InvalidVoteChoice();
     error TallyAlreadyRevealed();
     error InvalidStateTransition();
+    error ExecutionFailed();
 
     // ─── Constructor ─────────────────────────────────────────────────────────
 
@@ -143,11 +146,15 @@ contract FhenixGovernor is Permissioned {
      *
      * @param title        Short proposal title
      * @param description  Detailed proposal description
+     * @param target       Execution target (address(0) for no-op)
+     * @param data         Execution payload
      * @param deadline     Unix timestamp when voting ends (must be at least 1 hour, max 30 days from now)
      */
     function createProposal(
         string calldata title,
         string calldata description,
+        address target,
+        bytes calldata data,
         uint256 deadline
     ) external onlyCoordinator {
         if (deadline <= block.timestamp + MIN_DEADLINE_DURATION) revert InvalidDeadline();
@@ -159,6 +166,8 @@ contract FhenixGovernor is Permissioned {
         Proposal storage p = _proposals[proposalId];
         p.title = title;
         p.description = description;
+        p.target = target;
+        p.data = data;
         p.createdAt = block.timestamp;
         p.deadline = deadline;
         p.state = ProposalState.Active;
@@ -168,7 +177,7 @@ contract FhenixGovernor is Permissioned {
         p.encryptedAgainstVotes = FHE.asEuint64(0);
         p.encryptedAbstainVotes = FHE.asEuint64(0);
 
-        emit ProposalCreated(proposalId, title, deadline);
+        emit ProposalCreated(proposalId, title, target, deadline);
     }
 
     /**
@@ -184,6 +193,8 @@ contract FhenixGovernor is Permissioned {
     function getProposal(uint256 proposalId) external view returns (
         string memory title,
         string memory description,
+        address target,
+        bytes memory data,
         uint256 createdAt,
         uint256 deadline,
         uint256 voteCount,
@@ -198,6 +209,8 @@ contract FhenixGovernor is Permissioned {
         return (
             p.title,
             p.description,
+            p.target,
+            p.data,
             p.createdAt,
             p.deadline,
             p.voteCount,
@@ -350,7 +363,6 @@ contract FhenixGovernor is Permissioned {
 
         // Determine outcome
         uint256 totalVotes = forVotes + againstVotes;
-        uint256 totalVoters = p.voteCount;
 
         // Simple majority: forVotes > againstVotes
         if (totalVotes > 0 && forVotes > againstVotes) {
@@ -363,14 +375,21 @@ contract FhenixGovernor is Permissioned {
     }
 
     /**
-     * @notice Mark a passed proposal as executed.
-     * @dev    Only the coordinator can execute proposals. The execution itself
-     *         (e.g., distributing funds) happens in a separate transaction.
+     * @notice Mark a passed proposal as executed and perform the on-chain action.
+     * @dev    Only the coordinator can trigger execution.
      */
     function executeProposal(uint256 proposalId) external onlyCoordinator {
         Proposal storage p = _proposals[proposalId];
         if (p.state != ProposalState.Passed) revert InvalidStateTransition();
+        
         p.state = ProposalState.Executed;
+
+        // Perform execution if target is set
+        if (p.target != address(0)) {
+            (bool success, ) = p.target.call(p.data);
+            if (!success) revert ExecutionFailed();
+        }
+
         emit ProposalExecuted(proposalId);
     }
 
