@@ -164,35 +164,34 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
     // ─── Balance Query (Sealed) ────────────────────────────────────────────────
 
     /**
-     * @notice Return a member's encrypted balance, re-encrypted for their sealing key.
-     * @dev    Only the permit holder (the member themselves) can unseal the output.
-     *         Uses Fhenix's `sealoutput` to re-encrypt with the user's ephemeral key.
+     * @notice Return the member's encrypted balance sealed for their key.
+     * @dev    FHE.sealoutput re-encrypts the encrypted value with the user's public key
+     *         from the permission, producing a sealed string only they can decrypt
+     *         locally via their SealingKey (nacl.box). No threshold network round-trip needed.
      *
      * @param permission  Permit struct generated client-side via cofhejs
-     * @return            Sealed ciphertext — decryptable only by the permit holder
+     * @return            Sealed ciphertext (JSON EthEncryptedData) — decryptable only by the permit holder
      */
     function getEncryptedBalanceCtHash(
         Permission calldata permission
-    ) external view onlySender(permission) returns (uint256) {
-        // Return the ciphertext hash (ctHash). The client unseals it via cofhejs + threshold network.
-        return euint64.unwrap(_encryptedBalances[msg.sender]);
+    ) external view onlySender(permission) returns (string memory) {
+        return FHE.sealoutput(_encryptedBalances[msg.sender], permission.publicKey);
     }
 
     /**
-     * @notice Coordinator view: get total encrypted pool value.
-     * @dev    Sealed to the coordinator's permit; no individual breakdown exposed.
+     * @notice Coordinator view: get total encrypted pool value sealed for coordinator's key.
+     * @dev    Sums all member balances homomorphously, then seals the result for the coordinator.
      */
     function getEncryptedTotalCtHash(
         Permission calldata permission
-    ) external view onlySender(permission) onlyCoordinator returns (uint256) {
-        // Sum all member balances homomorphically — return ciphertext hash for off-chain unsealing.
+    ) external view onlySender(permission) onlyCoordinator returns (string memory) {
         euint64 total = FHE.asEuint64(0);
         for (uint256 i = 0; i < _members.length; i++) {
             if (isMember[_members[i]]) {
                 total = FHE.add(total, _encryptedBalances[_members[i]]);
             }
         }
-        return euint64.unwrap(total);
+        return FHE.sealoutput(total, permission.publicKey);
     }
 
     // ─── Yield Distribution ───────────────────────────────────────────────────
@@ -267,26 +266,27 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
     }
 
     /**
-     * @notice View the accumulated encrypted yield (ctHash — coordinator only).
-     * @dev    The coordinator can unseal this to see how much yield is available
-     *         for distribution.
+     * @notice View the accumulated encrypted yield sealed for the coordinator's key.
+     * @dev    The coordinator can unseal the sealed output locally to see how much
+     *         yield is available for distribution.
      */
     function getAccumulatedYieldCtHash(
         Permission calldata permission
-    ) external view onlySender(permission) onlyCoordinator returns (uint256) {
-        return euint64.unwrap(_encryptedYield);
+    ) external view onlySender(permission) onlyCoordinator returns (string memory) {
+        return FHE.sealoutput(_encryptedYield, permission.publicKey);
     }
 
     /**
-     * @notice View a member's distributed yield ctHash (sealed to that member).
-     * @dev    Allows members to verify how much yield they've received.
+     * @notice View a member's distributed yield sealed for that member's key.
+     * @dev    Allows members to verify how much yield they've received by decrypting
+     *         the sealed output locally with their SealingKey.
      */
     function getYieldDistributedCtHash(
         address member,
         Permission calldata permission
-    ) external view onlySender(permission) returns (uint256) {
+    ) external view onlySender(permission) returns (string memory) {
         if (msg.sender != member && msg.sender != coordinator) revert NotCoordinator();
-        return euint64.unwrap(_yieldDistributed[member]);
+        return FHE.sealoutput(_yieldDistributed[member], permission.publicKey);
     }
 
     // ─── Withdrawal ───────────────────────────────────────────────────────────

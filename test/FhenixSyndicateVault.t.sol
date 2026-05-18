@@ -48,8 +48,10 @@ contract MockFheOps {
     return input;
   }
 
-  function sealOutput(uint8, bytes memory, bytes memory) external pure returns (string memory) {
-    return "";
+  function sealOutput(uint8, bytes memory handle, bytes memory) external pure returns (string memory) {
+    // Decode the uint256 plaintext from the handle and return it as bytes-encoded string
+    uint256 val = abi.decode(handle, (uint256));
+    return string(abi.encode(val));
   }
 
   function decrypt(uint8, bytes memory, uint256 defaultValue) external pure returns (uint256) {
@@ -165,10 +167,10 @@ contract FhenixSyndicateVaultTest is Test {
     vault.depositEncrypted(enc, amount);
 
     Permission memory permission = _permission(member1, member1Pk, bytes32(uint256(123)));
-    uint256 ctHash = vault.getEncryptedBalanceCtHash(permission);
+    string memory output = vault.getEncryptedBalanceCtHash(permission);
 
-    // In our mock, ctHash == plaintext amount
-    assertEq(ctHash, amount);
+    // In our mock, sealed output contains the plaintext amount abi-encoded
+    assertEq(output, string(abi.encode(amount)));
     vm.stopPrank();
   }
 
@@ -182,8 +184,8 @@ contract FhenixSyndicateVaultTest is Test {
     vault.depositEncrypted(inEuint64({ data: abi.encode(b), securityZone: 0 }), b);
 
     Permission memory permission = _permission(member1, member1Pk, bytes32(uint256(456)));
-    uint256 ctHash = vault.getEncryptedBalanceCtHash(permission);
-    assertEq(ctHash, a + b);
+    string memory output = vault.getEncryptedBalanceCtHash(permission);
+    assertEq(output, string(abi.encode(a + b)));
     vm.stopPrank();
   }
 
@@ -204,8 +206,8 @@ contract FhenixSyndicateVaultTest is Test {
     vault.depositEncrypted(inEuint64({ data: abi.encode(b), securityZone: 0 }), b);
 
     Permission memory permission = _permission(member1, member1Pk, bytes32(uint256(789)));
-    uint256 ctHash = vault.getEncryptedBalanceCtHash(permission);
-    assertEq(ctHash, a + b, "FHE add should accumulate deposits");
+    string memory output = vault.getEncryptedBalanceCtHash(permission);
+    assertEq(output, string(abi.encode(a + b)), "FHE add should accumulate deposits");
     assertEq(vault.totalDeposited(), a + b, "totalDeposited should match sum");
     vm.stopPrank();
   }
@@ -249,11 +251,11 @@ contract FhenixSyndicateVaultTest is Test {
     Permission memory p3 = _permission(member3, member3Pk, bytes32(uint256(3)));
 
     vm.prank(member1);
-    assertEq(vault.getEncryptedBalanceCtHash(p1), a);
+    assertEq(vault.getEncryptedBalanceCtHash(p1), string(abi.encode(a)));
     vm.prank(member2);
-    assertEq(vault.getEncryptedBalanceCtHash(p2), b);
+    assertEq(vault.getEncryptedBalanceCtHash(p2), string(abi.encode(b)));
     vm.prank(member3);
-    assertEq(vault.getEncryptedBalanceCtHash(p3), c);
+    assertEq(vault.getEncryptedBalanceCtHash(p3), string(abi.encode(c)));
   }
 
   // ─── Withdrawal Tests ────────────────────────────────────────────────────────
@@ -352,8 +354,8 @@ contract FhenixSyndicateVaultTest is Test {
     // Verify accumulated yield ctHash (coordinator only — must prank as coordinator)
     Permission memory coordPerm = _permission(coordinator, coordinatorPk, bytes32(uint256(999)));
     vm.prank(coordinator);
-    uint256 yieldCtHash = vault.getAccumulatedYieldCtHash(coordPerm);
-    assertEq(yieldCtHash, yieldAmount, "Accumulated yield should match deposit");
+    string memory yieldOutput = vault.getAccumulatedYieldCtHash(coordPerm);
+    assertEq(yieldOutput, string(abi.encode(yieldAmount)), "Accumulated yield should match deposit");
 
     // Coordinator distributes yield to member
     address[] memory members = new address[](1);
@@ -368,18 +370,18 @@ contract FhenixSyndicateVaultTest is Test {
     // After distribution, member's balance should include yield
     Permission memory memberPerm = _permission(member1, member1Pk, bytes32(uint256(111)));
     vm.prank(member1);
-    uint256 balanceAfterYield = vault.getEncryptedBalanceCtHash(memberPerm);
-    assertEq(balanceAfterYield, depositAmount + yieldAmount, "Member balance should include yield");
+    string memory balanceOutput = vault.getEncryptedBalanceCtHash(memberPerm);
+    assertEq(balanceOutput, string(abi.encode(depositAmount + yieldAmount)), "Member balance should include yield");
 
     // Accumulated yield should be zero
     vm.prank(coordinator);
-    uint256 remainingYield = vault.getAccumulatedYieldCtHash(coordPerm);
-    assertEq(remainingYield, 0, "Accumulated yield should be zero after distribution");
+    string memory remainingOutput = vault.getAccumulatedYieldCtHash(coordPerm);
+    assertEq(remainingOutput, string(abi.encode(0)), "Accumulated yield should be zero after distribution");
 
     // Verify distributed yield tracker
     vm.prank(member1);
-    uint256 distributedCt = vault.getYieldDistributedCtHash(member1, memberPerm);
-    assertEq(distributedCt, yieldAmount, "Member yield distributed should match");
+    string memory distOutput = vault.getYieldDistributedCtHash(member1, memberPerm);
+    assertEq(distOutput, string(abi.encode(yieldAmount)), "Member yield distributed should match");
   }
 
   function test_DistributeYield_MultipleMembers() public {
@@ -426,9 +428,9 @@ contract FhenixSyndicateVaultTest is Test {
     Permission memory p2 = _permission(member2, member2Pk, bytes32(uint256(20)));
 
     vm.prank(member1);
-    assertEq(vault.getEncryptedBalanceCtHash(p1), deposit1 + alloc1);
+    assertEq(vault.getEncryptedBalanceCtHash(p1), string(abi.encode(deposit1 + alloc1)));
     vm.prank(member2);
-    assertEq(vault.getEncryptedBalanceCtHash(p2), deposit2 + alloc2);
+    assertEq(vault.getEncryptedBalanceCtHash(p2), string(abi.encode(deposit2 + alloc2)));
   }
 
   function test_DistributeYield_CoordinatorOnly() public {
@@ -474,7 +476,7 @@ contract FhenixSyndicateVaultTest is Test {
     // Only member1 should have received yield
     Permission memory p1 = _permission(member1, member1Pk, bytes32(uint256(100)));
     vm.prank(member1);
-    assertEq(vault.getEncryptedBalanceCtHash(p1), deposit1 + yieldAmount, "Member1 should receive all yield");
+    assertEq(vault.getEncryptedBalanceCtHash(p1), string(abi.encode(deposit1 + yieldAmount)), "Member1 should receive all yield");
   }
 
   function test_DistributeYield_MismatchedArrays() public {
