@@ -137,46 +137,19 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
     try {
       const amountWei = parseUnits(String(amountUsdc), 6);
 
-      // Determine the actual deposit address based on pool type
-      const depositAddress =
-        poolType === 'pooltogether' ? PT_TWAB_DELEGATOR
-        : poolType === 'fhenix' ? (process.env.NEXT_PUBLIC_FHENIX_VAULT_ADDRESS as `0x${string}` ?? poolAddress)
-        : poolAddress;
-
-      // Check current allowance for the deposit address
       const usdcAddress = isFhenix
         ? (await import('@/services/syndicate/poolProviders/fhenixProvider')).FHENIX_POOL_CONFIG.USDC_ADDRESS
         : TOKENS.usdc.address;
 
-      const currentAllowance = await activePublicClient.readContract({
-        address: usdcAddress as `0x${string}`,
-        abi: ERC20_ABI,
-        functionName: 'allowance',
-        args: [userAddress, depositAddress],
-      });
-
-      // Approve if needed
-      if (currentAllowance < amountWei) {
-        setStatus('approving');
-        const approveHash = await activeWalletClient.writeContract({
-          address: usdcAddress as `0x${string}`,
-          abi: ERC20_ABI,
-          functionName: 'approve',
-          args: [depositAddress, amountWei],
-          chain: isFhenix ? FHENIX_VAULT_CHAIN : base,
-        });
-        setApproveTxHash(approveHash);
-        await activePublicClient.waitForTransactionReceipt({ hash: approveHash });
-      }
-
-      // For Fhenix FHE pools: encrypt amount + call depositEncrypted on the vault.
+      // For Fhenix FHE pools: approveAndDepositEncrypted handles allowance check + approve + encrypt + depositEncrypted internally.
+      // Skip the duplicate allowance check here to avoid an unnecessary RPC call.
       if (isFhenix) {
         setStatus('encrypting');
         const { approveTxHash, depositTxHash } = await approveAndDepositEncrypted({
           walletClient: activeWalletClient as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- wagmi injects account
           publicClient: activePublicClient as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- wagmi injects account
           userAddress,
-          vaultAddress: depositAddress,
+          vaultAddress: (process.env.NEXT_PUBLIC_FHENIX_VAULT_ADDRESS as `0x${string}` ?? poolAddress),
           usdcAddress: usdcAddress as `0x${string}`,
           amountWei,
         });
@@ -186,6 +159,32 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
         setTxHash(depositTxHash);
         setStatus('complete');
         return depositTxHash;
+      }
+
+      // Non-Fhenix pools: manual allowance check + approve + transfer
+      const depositAddress =
+        poolType === 'pooltogether' ? PT_TWAB_DELEGATOR
+        : poolAddress;
+
+      const currentAllowance = await activePublicClient.readContract({
+        address: TOKENS.usdc.address,
+        abi: ERC20_ABI,
+        functionName: 'allowance',
+        args: [userAddress, depositAddress],
+      });
+
+      // Approve if needed
+      if (currentAllowance < amountWei) {
+        setStatus('approving');
+        const approveHash = await activeWalletClient.writeContract({
+          address: TOKENS.usdc.address,
+          abi: ERC20_ABI,
+          functionName: 'approve',
+          args: [depositAddress, amountWei],
+          chain: base,
+        });
+        setApproveTxHash(approveHash);
+        await activePublicClient.waitForTransactionReceipt({ hash: approveHash });
       }
 
       // Transfer USDC to deposit address
