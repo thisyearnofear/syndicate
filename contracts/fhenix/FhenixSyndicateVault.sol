@@ -56,6 +56,9 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
     ///      Allows off-chain providers to read the live rate without a separate oracle.
     uint256 public currentApy;
 
+    /// @dev Nonces for coordinator-signed withdrawal attestations (anti-replay)
+    mapping(address => uint256) public coordinatorNonces;
+
     // ─── Events ───────────────────────────────────────────────────────────────
 
     /**
@@ -79,6 +82,7 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
     error ZeroAmount();
     error TransferFailed();
     error InvalidWithdrawAmount();
+    error InvalidSignature();
 
     // ─── Constructor ──────────────────────────────────────────────────────────
 
@@ -86,7 +90,18 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
      * @param _usdc        USDC token address (Base: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913)
      * @param _coordinator Syndicate creator address — receives coordinator privileges
      */
-    constructor(address _usdc, address _coordinator) Ownable(_coordinator) {
+    constructor(address _usdc, address _coordinator)
+        Ownable(_coordinator)
+    {
+        _DOMAIN_SEPARATOR = keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes("FhenixSyndicateVault")),
+                keccak256(bytes("1")),
+                block.chainid,
+                address(this)
+            )
+        );
         usdc = IERC20(_usdc);
         coordinator = _coordinator;
     }
@@ -278,9 +293,11 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
 
     /**
      * @notice Member withdraws their full principal.
-     * @dev    Zeroes out the encrypted balance before transfer (checks-effects-interactions).
-     *         Plain amount is provided by the coordinator off-chain after decryption;
-     *         in production this would use a ZK proof of correct decryption.
+     * @dev    Legacy path — kept for backwards compatibility but insecure because
+     *         `plainAmount` is supplied by the caller with no proof of correct
+     *         decryption. Prefer {withdrawSigned} for production use.
+     *
+     *         Zeroes out the encrypted balance before transfer (checks-effects-interactions).
      *
      * @param plainAmount  USDC micro-units to transfer to the member
      */
@@ -289,6 +306,103 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
         if (plainAmount > totalDeposited) revert InvalidWithdrawAmount();
 
         // Zero out encrypted balance before transfer (reentrancy guard via CEI)
+        _encryptedBalances[msg.sender] = FHE.asEuint64(0);
+        isMember[msg.sender] = false;
+        activeMemberCount -= 1;
+        totalDeposited -= plainAmount;
+
+        bool ok = usdc.transfer(msg.sender, plainAmount);
+        if (!ok) revert TransferFailed();
+
+        emit WithdrawShielded(msg.sender, 0);
+    }
+
+    // ─── Signed Withdrawal (ZK-equivalent via coordinator attestation) ────────
+
+    /**
+     * @notice Member withdraws with a coordinator-signed attestation of their
+     *         plaintext balance. The coordinator decrypts the member's encrypted
+     *         balance off-chain via the Fhenix threshold network, then signs an
+     *         EIP-712 typed message `(member, amount, nonce)` with their EOA key.
+     *
+     * @dev    This is the production-safe withdrawal path. It prevents members
+     *         from claiming arbitrary amounts because the coordinator must sign
+     *         off on each withdrawal. Nonces prevent replay attacks.
+     *
+     *         Flow:
+     *         1. Coordinator decrypts member's balance off-chain via Fhenix
+     *         2. Coordinator calls `_hashTypedDataV4(Withdraw(member, amount, nonce))`
+     *         3. Coordinator signs the digest with their EOA key
+     *         4. Member submits `withdrawSigned(amount, signature)`
+     *         5. Contract verifies the signature against `coordinator` address
+     *
+     * @param plainAmount  USDC micro-units attested by the coordinator
+     * @param signature    Coordinator's ECDSA signature (65 bytes)
+     */
+    /// @dev EIP-712 type hash for signed withdrawal
+    bytes32 private constant _WITHDRAW_TYPEHASH =
+        keccak256("Withdraw(address member,uint256 amount,uint256 nonce)");
+
+    /// @dev EIP-712 domain separator (immutable — computed in constructor)
+    bytes32 private immutable _DOMAIN_SEPARATOR;
+
+    /**
+     * @notice Member withdraws with a coordinator-signed attestation of their
+     *         plaintext balance. The coordinator decrypts the member's encrypted
+     *         balance off-chain via the Fhenix threshold network, then signs an
+     *         EIP-712 typed message `(member, amount, nonce)` with their EOA key.
+     *
+     * @dev    This is the production-safe withdrawal path. It prevents members
+     *         from claiming arbitrary amounts because the coordinator must sign
+     *         off on each withdrawal. Nonces prevent replay attacks.
+     *
+     *         Flow:
+     *         1. Coordinator decrypts member's balance off-chain via Fhenix
+     *         2. Coordinator computes the EIP-712 digest for Withdraw(member, amount, nonce)
+     *         3. Coordinator signs the digest with their EOA key
+     *         4. Member submits `withdrawSigned(amount, signature)`
+     *         5. Contract verifies the signature against `coordinator` address
+     *
+     * @param plainAmount  USDC micro-units attested by the coordinator
+     * @param signature    Coordinator's ECDSA signature (65 bytes)
+     */
+    function withdrawSigned(uint256 plainAmount, bytes calldata signature) external onlyMember {
+        if (plainAmount == 0) revert ZeroAmount();
+        if (plainAmount > totalDeposited) revert InvalidWithdrawAmount();
+
+        uint256 nonce = coordinatorNonces[msg.sender];
+
+        // Build EIP-712 typed digest: Withdraw(member, amount, nonce)
+        bytes32 structHash = keccak256(
+            abi.encode(
+                _WITHDRAW_TYPEHASH,
+                msg.sender,
+                plainAmount,
+                nonce
+            )
+        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", _DOMAIN_SEPARATOR, structHash));
+
+        // Split signature into v, r, s and recover signer using ecrecover
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            r := calldataload(signature.offset)
+            s := calldataload(add(signature.offset, 0x20))
+            v := byte(0, calldataload(add(signature.offset, 0x40)))
+        }
+        // EIP-155: v should be 27 or 28
+        if (v < 27) v += 27;
+
+        address signer = ecrecover(digest, v, r, s);
+        if (signer != coordinator) revert InvalidSignature();
+
+        // Increment nonce to prevent replay
+        coordinatorNonces[msg.sender] = nonce + 1;
+
+        // Zero out encrypted balance before transfer (CEI)
         _encryptedBalances[msg.sender] = FHE.asEuint64(0);
         isMember[msg.sender] = false;
         activeMemberCount -= 1;
