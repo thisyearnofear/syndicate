@@ -45,8 +45,8 @@ At a high level:
 1. the user has a Fhenix-enabled encrypted position
 2. the client initializes the FHE SDK
 3. the user creates or activates a permit
-4. the app requests the encrypted balance ciphertext hash from the contract
-5. the client unseals the value locally for the authorized user
+4. the app requests the encrypted balance as a sealed output from the contract (`FHE.sealoutput()`) — the contract re-encrypts the value for the user's key
+5. the client parses the returned EthEncryptedData JSON string and decrypts it locally using the active permit, **no threshold network round-trip** needed
 
 ### Where is the value decrypted?
 On the client side for the authorized user, after the permit flow. The sensitive value is not treated as a normal transparent on-chain balance.
@@ -59,6 +59,9 @@ We followed enhancement-first principles. We extended existing provider, hook, a
 - keeping FHE SDK access centralized
 - making the privacy win visible in UI, not just in contract code
 - separating chain config, actions, and permit/unseal logic cleanly
+- using `FHE.sealoutput()` for local decryption instead of threshold network round-trips
+- coordinator-signed EIP-712 attestations for withdrawal correctness
+- on-chain APY oracle with provider-side fallback chain
 
 ---
 
@@ -67,12 +70,12 @@ We followed enhancement-first principles. We extended existing provider, hook, a
 ### Is this production-ready today?
 Recommended answer:
 
-> The privacy-native deposit and selective disclosure flow are real and integrated today. We are being deliberate about security hardening and treat production readiness as a separate bar from buildathon completeness.
+> The privacy-native deposit, selective disclosure, APY oracle, and signed withdrawal are all implemented and tested today. We continue to treat mainnet deployment as a separate bar from buildathon completeness.
 
 ### How do you guarantee withdrawal correctness against encrypted balances?
-If this is not fully hardened yet, use an honest answer:
+Recommended answer:
 
-> Our strongest completed path today is encrypted deposit plus selective disclosure. Withdrawal correctness is the main security-critical hardening step we identified next, and we prefer to be explicit about that rather than overclaim readiness.
+> We use a coordinator-signed EIP-712 attestation. The coordinator, who can decrypt balances off-chain via the Fhenix threshold network, signs a typed `Withdraw(member, amount, nonce)` message. The contract verifies the signature via `ecrecover` and uses per-member nonces to prevent replay attacks. This replaces raw amount trust with cryptographic proof.
 
 Do not improvise here.
 

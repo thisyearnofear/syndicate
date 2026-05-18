@@ -321,9 +321,15 @@ Syndicate includes an optional **privacy-native vault / pool path** using Fhenix
 - UI: `src/components/yield/YieldDashboard.tsx` (Fhenix row)
 
 ### Contract interface (vault)
-The app expects the vault to expose ciphertext-hash getters that are unsealed client-side:
-- `getEncryptedBalanceCtHash(Permission) -> uint256`
-- `getEncryptedTotalCtHash(Permission) -> uint256` (coordinator-only)
+The vault uses `FHE.sealoutput()` to return re-encrypted EthEncryptedData JSON strings, decrypted locally via the active permit — no threshold network round-trip:
+- `getEncryptedBalanceCtHash(Permission) -> string memory` — member's encrypted balance (sealed)
+- `getEncryptedTotalCtHash(Permission) -> string memory` — coordinator-only total (sealed)
+- `getAccumulatedYieldCtHash(Permission) -> string memory` — member's accrued yield (sealed)
+- `getYieldDistributedCtHash(Permission) -> string memory` — member's distributed yield (sealed)
+- `currentApy() -> uint256` — on-chain APY in basis points
+- `setApy(uint256 newApy)` — coordinator-settable APY oracle (max 100%)
+- `withdrawSigned(uint256 amount, bytes calldata signature)` — EIP-712 signed withdrawal with nonce replay protection
+- `distributeYield()` — coordinator distributes encrypted yield to active members
 
 ---
 

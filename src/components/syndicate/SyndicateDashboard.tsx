@@ -24,9 +24,13 @@ import {
   Shield,
   Share2,
   Coins,
-  Clock
+  Clock,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
+import { useUnifiedWallet } from '@/hooks';
+import { useFhenixPrivateVaultBalance } from '@/hooks/useFhenixPrivateVaultBalance';
 
 type PoolType = 'safe' | 'splits' | 'pooltogether' | 'fhenix';
 
@@ -86,11 +90,58 @@ interface SyndicateDashboardProps {
 }
 
 export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboardProps) {
+  const { address, isConnected } = useUnifiedWallet();
   const [data, setData] = useState<SyndicateDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [userRevealedContribution, setUserRevealedContribution] = useState(false);
+
+  const fhenixVaultAddress = (process.env.NEXT_PUBLIC_FHENIX_VAULT_ADDRESS || undefined) as
+    | `0x${string}`
+    | undefined;
+
+  const isConnectedUser = (memberAddress: string) =>
+    isConnected && address && memberAddress.toLowerCase() === address.toLowerCase();
+
+  const {
+    status: fhenixPrivateStatus,
+    error: fhenixPrivateError,
+    balanceMicro: fhenixPrivateBalanceMicro,
+    formattedBalance: fhenixPrivateBalanceFormatted,
+    reveal: revealFhenixPrivateBalance,
+  } = useFhenixPrivateVaultBalance({
+    userAddress: address ? (address as `0x${string}`) : undefined,
+    vaultAddress: fhenixVaultAddress,
+    enabled: data?.pool_type === 'fhenix',
+  });
+
+  const handleRevealClick = useCallback(async () => {
+    const result = await revealFhenixPrivateBalance();
+    if (result !== null) {
+      setUserRevealedContribution(true);
+    }
+  }, [revealFhenixPrivateBalance]);
+
+  const fhenixStatusLabel = (() => {
+    switch (fhenixPrivateStatus) {
+      case 'initializing':
+        return 'Initializing privacy layer';
+      case 'permit':
+        return 'Activating permit';
+      case 'reading':
+        return 'Reading encrypted balance';
+      case 'unsealing':
+        return 'Revealing locally';
+      case 'ready':
+        return 'Visible only to you';
+      case 'error':
+        return 'Reveal unavailable';
+      default:
+        return 'Private by default';
+    }
+  })();
 
   const fetchDashboard = useCallback(async (showRefresh = false) => {
     try {
@@ -265,24 +316,63 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
             {data.members.length === 0 ? (
               <p className="text-gray-400 text-center py-4">No members yet</p>
             ) : (
-              data.members.slice(0, 10).map((member, i) => (
+              data.members.slice(0, 10).map((member, i) => {
+                const isMe = isConnectedUser(member.address);
+                const showRevealed = isMe && userRevealedContribution && fhenixPrivateBalanceMicro != null;
+
+                return (
                 <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-lg min-h-[60px]">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs md:text-sm font-bold flex-shrink-0">
                       {i + 1}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-white font-mono text-sm truncate">{formatAddress(member.address)}</p>
+                      <p className="text-white font-mono text-sm truncate">
+                        {formatAddress(member.address)}
+                        {isMe && <span className="ml-1.5 text-[10px] text-amber-300 font-medium">(you)</span>}
+                      </p>
                       <p className="text-gray-400 text-xs">
                         Joined {new Date(member.joined_at).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right flex-shrink-0 ml-2">
-                    <p className="text-green-400 font-medium">${parseFloat(member.contribution_usdc).toFixed(2)}</p>
+                  <div className="text-right flex-shrink-0 ml-2 min-w-[100px] text-right">
+                    {data.pool_type === 'fhenix' ? (
+                      isMe ? (
+                        showRevealed ? (
+                          <div>
+                            <p className="text-emerald-400 font-medium">
+                              ${Number(fhenixPrivateBalanceFormatted ?? 0).toFixed(6)}
+                            </p>
+                            <span className="text-[10px] text-gray-500">Revealed via permit</span>
+                          </div>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 h-auto py-1 text-xs"
+                            onClick={handleRevealClick}
+                            disabled={fhenixPrivateStatus === 'initializing' || fhenixPrivateStatus === 'permit' || fhenixPrivateStatus === 'reading' || fhenixPrivateStatus === 'unsealing'}
+                          >
+                            {fhenixPrivateStatus === 'initializing' || fhenixPrivateStatus === 'permit' || fhenixPrivateStatus === 'reading' || fhenixPrivateStatus === 'unsealing' ? (
+                              <><EyeOff className="w-3 h-3 mr-1" />Revealing…</>
+                            ) : (
+                              <><Eye className="w-3 h-3 mr-1" />Reveal</>
+                            )}
+                          </Button>
+                        )
+                      ) : (
+                        <div className="flex items-center gap-1.5 justify-end">
+                          <EyeOff className="w-3 h-3 text-gray-500" />
+                          <span className="text-gray-500 text-xs">Encrypted</span>
+                        </div>
+                      )
+                    ) : (
+                      <p className="text-green-400 font-medium">${parseFloat(member.contribution_usdc).toFixed(2)}</p>
+                    )}
                   </div>
                 </div>
-              ))
+              )})
             )}
           </div>
         </div>

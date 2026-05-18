@@ -211,13 +211,33 @@ Privacy-by-design layer using Fully Homomorphic Encryption (FHE) via Fhenix. Enc
 - ✅ **Permit + unseal flow in app (visible privacy win)**
   - Hook: `src/hooks/useFhenixPrivateVaultBalance.ts`
   - UI: Yield Dashboard shows “Reveal Private Balance” for the Fhenix vault row
+- ✅ **Encrypted balance reveal via sealoutput (no threshold round-trip)**
+  - All ctHash getters use `FHE.sealoutput()` returning `string memory` (EthEncryptedData JSON)
+  - Client-side `decryptSealedOutput()` in `fheService.ts` decrypts locally via active permit
+  - Browser-compatible hex-to-Uint8Array parsing, no `Buffer` dependency
+- ✅ **On-chain APY oracle**
+  - `currentApy` public uint256 (basis points) on `FhenixSyndicateVault.sol`
+  - `setApy(newApy)` onlyCoordinator with max 100% bounds check
+  - `ApyUpdated(oldApy, newApy)` event
+  - `getCurrentAPY()` in `fhenixProvider.ts` reads on-chain with fallback chain
+  - `fhenix` entry added to `yieldStrategies.ts` config + UI display maps
+- ✅ **Coordinator-signed withdrawal attestation**
+  - `withdrawSigned(amount, signature)` with EIP-712 typed signature verification
+  - `_DOMAIN_SEPARATOR` as immutable, computed in constructor
+  - `coordinatorNonces` mapping for per-member replay protection
+  - Manual `ecrecover` via inline assembly with v-value adjustment
+  - 5 dedicated tests: valid signature, wrong signer, replay, only member, wrong amount
 - ✅ **Server-side verification hardened**
   - `/api/syndicates` verifies tx success + expected vault + `DepositShielded(from, 0)` event
 - ✅ **Contract hardened for app flow**
-  - `contracts/fhenix/FhenixSyndicateVault.sol` now exposes ciphertext-hash getters for client-side unsealing:
-    - `getEncryptedBalanceCtHash(Permission) -> uint256`
-    - `getEncryptedTotalCtHash(Permission) -> uint256`
+  - `contracts/fhenix/FhenixSyndicateVault.sol` exposes sealoutput-based getters for client-side decryption:
+    - `getEncryptedBalanceCtHash(Permission) -> string memory`
+    - `getEncryptedTotalCtHash(Permission) -> string memory`
+    - `getAccumulatedYieldCtHash(Permission) -> string memory`
+    - `getYieldDistributedCtHash(Permission) -> string memory`
   - Active member counting fixed (`activeMemberCount`, `memberCount()`)
+  - Encrypted yield distribution: `distributeYield()` allocates to all members
+  - Total test count: **31 tests** (all passing)
 
 ### Why This Project Needs FHE
 | Currently Exposed | Attack Surface |
@@ -231,7 +251,7 @@ Privacy-by-design layer using Fully Homomorphic Encryption (FHE) via Fhenix. Enc
 ### FHE Vault Provider
 | Provider | Chain | Status | APY | Notes |
 |----------|-------|--------|-----|-------|
-| **Fhenix FHE Vault** | Base Sepolia / Fhenix | ✅ Integrated | TBD | Encrypted deposits, permit-gated private balance reveal |
+| **Fhenix FHE Vault** | Base Sepolia / Fhenix | ✅ Integrated | ~5.0% (on-chain oracle) | Encrypted deposits, permit-gated private balance reveal, APY oracle with provider fallback |
 
 ### Core Principles for FHE Implementation
 - **ENHANCEMENT FIRST**: Extend existing `PoolProvider` and `VaultProvider` interfaces — no parallel stacks
@@ -243,23 +263,30 @@ Privacy-by-design layer using Fully Homomorphic Encryption (FHE) via Fhenix. Enc
 ### FHE Key Files
 | File | Status | Purpose |
 |------|--------|---------|
-| `src/services/fhe/fheService.ts` | ✅ Integrated | Single SDK wrapper for encrypt/permit/unseal (browser lazy-load) |
+| `src/services/fhe/fheService.ts` | ✅ Integrated | Single SDK wrapper for encrypt/permit/unseal (browser lazy-load). Added `decryptSealedOutput()` for local EthEncryptedData decryption |
 | `src/services/fhe/fhenixChain.ts` | ✅ Integrated | Single chain selector for Base Sepolia vs Helium |
 | `src/services/fhe/fhenixActions.ts` | ✅ Integrated | DRY helpers: approve+encrypt+depositEncrypted, withdraw |
-| `src/hooks/useFhenixPrivateVaultBalance.ts` | ✅ Integrated | Permit + ctHash read + unseal flow |
+| `src/hooks/useFhenixPrivateVaultBalance.ts` | ✅ Integrated | Permit + sealed output read + local decrypt (no threshold round-trip) |
 | `src/services/syndicate/poolProviders/fhenixProvider.ts` | ✅ Integrated | FHE pool provider + config (vault address, chain, USDC) |
-| `src/services/vaults/fhenixProvider.ts` | ✅ Integrated | FHE vault provider (UI metadata + fallback estimate) |
+| `src/services/vaults/fhenixProvider.ts` | ✅ Integrated | FHE vault provider (UI metadata + on-chain APY oracle with fallback) |
 | `src/hooks/useSyndicateDeposit.ts` | ✅ Integrated | Executes `depositEncrypted` for Fhenix pools |
 | `src/hooks/useVaultDeposit.ts` | ✅ Integrated | Executes Fhenix deposit/withdraw via `fhenixActions` |
 | `src/app/api/syndicates/route.ts` | ✅ Integrated | Fhenix deposit verification via receipt + event |
-| `contracts/fhenix/FhenixSyndicateVault.sol` | ✅ Integrated | FHE-native vault (`depositEncrypted`, ctHash getters, active member count) |
-| `test/FhenixSyndicateVault.t.sol` | 🧪 Added | Foundry unit tests with mocked FHE precompile (requires Foundry installed) |
+| `contracts/fhenix/FhenixSyndicateVault.sol` | ✅ Integrated | FHE-native vault (`depositEncrypted`, sealoutput getters, `withdrawSigned`, `setApy`, `distributeYield`, active member count) |
+| `test/FhenixSyndicateVault.t.sol` | ✅ Integrated | **31 Foundry unit tests** with mocked FHE precompile |
 
 ### FHE Contract (Base Sepolia / Fhenix)
 - `depositEncrypted(inEuint256 encryptedAmount, uint256 plainAmount)` — stores encrypted contribution
-- `getEncryptedBalanceCtHash(Permission)` — returns ciphertext hash for client-side unsealing
-- `getEncryptedTotalCtHash(Permission)` — coordinator-only total (ciphertext hash)
+- `getEncryptedBalanceCtHash(Permission)` → `string memory` — returns sealed EthEncryptedData JSON for client-side local decryption
+- `getEncryptedTotalCtHash(Permission)` → `string memory` — coordinator-only total (sealed output)
+- `getAccumulatedYieldCtHash(Permission)` → `string memory` — member's accrued yield (sealed)
+- `getYieldDistributedCtHash(Permission)` → `string memory` — member's distributed yield (sealed)
+- `currentApy()` → `uint256` — on-chain APY in basis points (public getter)
+- `setApy(uint256 newApy)` — coordinator-only APY update (max 100%, emits `ApyUpdated`)
+- `withdrawSigned(uint256 amount, bytes calldata signature)` — EIP-712 signed withdrawal with nonce replay protection
+- `distributeYield()` — coordinator distributes encrypted yield to all active members
 - `DepositShielded(address indexed from, uint256 placeholder)` event — satisfies existing `verifyUsdcTransfer` check
+- `ApyUpdated(uint256 oldApy, uint256 newApy)` event
 
 ### FHE Injection Seams (Surgical Extensions)
 | File | Change | Lines |
@@ -286,8 +313,8 @@ Privacy-by-design layer using Fully Homomorphic Encryption (FHE) via Fhenix. Enc
 |---|---|
 | Wave 1 (done Mar 28) | Ideation + architecture |
 | Wave 2 (by Apr 8) | Phase 0+1: SDK install, `fheService.ts`, type unions |
-| Wave 3 Marathon (by May 8) | Phase 2+3: providers + hook extensions + API route |
-| Wave 4 (by May 20) | Phase 4+5: DB privacy columns + UI card + E2E test on Base Sepolia |
+| Wave 3 Marathon (by May 8) | Phase 2+3: providers + hook extensions + API route + encrypted yield distribution |
+| Wave 4 (by May 20) | Phase 4+5: DB privacy columns + UI card + APY oracle + signed withdrawal + sealoutput fix |
 | Wave 5 Final (by Jun 1) | Mainnet-ready artifacts + showcase demo |
 
 ### FHE Environment Variables
