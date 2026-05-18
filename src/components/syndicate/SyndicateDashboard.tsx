@@ -6,6 +6,7 @@
  * - Member list with contributions
  * - Recent activity feed
  * - Pool-specific info (Safe owners, Split recipients, PT vault)
+ * - Fhenix governance panel (encrypted voting)
  */
 
 'use client';
@@ -31,6 +32,7 @@ import { Button } from '@/shared/components/ui/Button';
 import { useUnifiedWallet } from '@/hooks';
 import { useFhenixPrivateVaultBalance } from '@/hooks/useFhenixPrivateVaultBalance';
 import { FhenixRevealStepper } from '@/components/fhenix/FhenixRevealStepper';
+import { GovernancePanel } from '@/components/governance/GovernancePanel';
 
 type PoolType = 'safe' | 'splits' | 'pooltogether' | 'fhenix';
 
@@ -139,7 +141,8 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
       if (showRefresh) setRefreshing(true);
       else setLoading(true);
       
-      const response = await fetch(`/api/syndicates/dashboard?id=${encodeURIComponent(poolId)}`);
+      const viewerParam = address ? `&viewer=${encodeURIComponent(address.toLowerCase())}` : '';
+      const response = await fetch(`/api/syndicates/dashboard?id=${encodeURIComponent(poolId)}${viewerParam}`);
       if (!response.ok) throw new Error('Failed to fetch dashboard');
       
       const dashboardData: SyndicateDashboardData = await response.json();
@@ -291,6 +294,7 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
         />
       </div>
 
+      {/* Members + Activity Grid */}
       <div className="grid grid-cols-1 gap-4 md:gap-6">
         {/* Members List */}
         <div className="glass-premium rounded-2xl p-4 md:p-5 border border-white/20">
@@ -303,14 +307,23 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
               Individual contribution amounts may be intentionally withheld or minimized in privacy-native pools.
             </div>
           )}
-          <div className="space-y-2 max-h-48 md:max-h-64 overflow-y-auto -mx-2 px-2">
-            {data.members.length === 0 ? (
-              <p className="text-gray-400 text-center py-4">No members yet</p>
-            ) : (
-              data.members.slice(0, 10).map((member, i) => {
-                const isMe = isConnectedUser(member.address);
+          {data.pool_type === 'fhenix' && data.members.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-6 text-center">
+              <Shield className="w-8 h-8 text-amber-500/40" />
+              <p className="text-gray-400 text-sm">
+                {data.members_count} private member{data.members_count !== 1 ? 's' : ''}
+              </p>
+              <p className="text-gray-500 text-xs max-w-xs">
+                The member list is encrypted by default. Connect a wallet that is a member of this syndicate to see member details.
+              </p>
+            </div>
+          ) : data.members.length === 0 ? (
+            <p className="text-gray-400 text-center py-4">No members yet</p>
+          ) : (
+            data.members.slice(0, 10).map((member, i) => {
+              const isMe = isConnectedUser(member.address);
 
-                return (
+              return (
                 <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-lg min-h-[60px]">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs md:text-sm font-bold flex-shrink-0">
@@ -348,9 +361,9 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
                     )}
                   </div>
                 </div>
-              )})
-            )}
-          </div>
+              );
+            })
+          )}
         </div>
 
         {/* Recent Activity */}
@@ -506,6 +519,22 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
           >
             View on BaseScan <ExternalLink className="w-4 h-4" />
           </a>
+        </div>
+      )}
+
+      {/* Fhenix-specific: Governance panel */}
+      {data.pool_type === 'fhenix' && (
+        <div className="glass-premium rounded-2xl p-4 md:p-5 border border-purple-500/30">
+          <GovernancePanel
+            governorAddress={process.env.NEXT_PUBLIC_FHENIX_GOVERNOR_ADDRESS as `0x${string}` | undefined}
+            userAddress={address ?? undefined}
+            isCoordinator={isConnected && !!address && data.members.some(
+              m => m.address.toLowerCase() === address.toLowerCase()
+            ) && data.members.length <= 5 /* coordinator heuristic: early members */}
+            isMember={isConnected && !!address && data.members.some(
+              m => m.address.toLowerCase() === address.toLowerCase()
+            )}
+          />
         </div>
       )}
     </div>

@@ -158,6 +158,9 @@ export async function GET(request: Request) {
       logger.error('[Dashboard API] Failed to fetch on-chain balance', { error: String(error) });
     }
 
+    // Fetch viewer identity (for Fhenix pool privacy gating)
+    const viewerAddress = searchParams.get('viewer')?.toLowerCase();
+
     // Fetch members — column names match the actual DB schema
     // (amount_usdc not contribution_usdc, member_address not address)
     const membersResult = await sql`
@@ -166,12 +169,23 @@ export async function GET(request: Request) {
       WHERE pool_id = ${poolId}
       ORDER BY amount_usdc DESC
     `;
-    const members = membersResult.rows.map((row: Record<string, unknown>) => ({
+    const allMembers = membersResult.rows.map((row: Record<string, unknown>) => ({
       address: row.member_address,
       contribution_usdc: row.amount_usdc,
       joined_at: row.joined_at,
       tx_hash: row.tx_hash,
     })) as DashboardMember[];
+
+    // Privacy gating: For Fhenix pools, only return member addresses if the viewer
+    // is themselves a member of this pool. Non-members see only the count.
+    const isFhenixPool = poolType === 'fhenix';
+    const isViewerMember = isFhenixPool && viewerAddress
+      ? allMembers.some(m => m.address.toLowerCase() === viewerAddress)
+      : true; // non-Fhenix pools always show members
+
+    const members = isFhenixPool && !isViewerMember
+      ? [] as DashboardMember[]
+      : allMembers;
 
     // Calculate total contributed
     const totalContributed = members.reduce((sum, m) => sum + parseFloat(m.contribution_usdc || '0'), 0);
