@@ -30,6 +30,7 @@ A coordinator-settable APY (`setApy()`) in basis points on the vault contract, w
 
 Key features:
 - **Double-vote protection** via `hasVoted` mapping
+- **On-chain membership verification** — `vote()` calls `IFhenixSyndicateVault(vault).isMember(msg.sender)` to ensure only authorized members can participate
 - **Deadline enforcement** (1h–30d)
 - **Quorum** in basis points (settled by coordinator)
 - **Coordinator management** — `transferCoordinator()` and `setQuorum()`

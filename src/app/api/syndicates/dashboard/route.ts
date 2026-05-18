@@ -255,7 +255,7 @@ export async function GET(request: Request) {
       pt_vault_address: pool.pt_vault_address,
       pool_balance_usdc: poolBalance,
       pool_balance_formatted: poolBalanceFormatted,
-      members_count: members.length,
+      members_count: allMembers.length,
       members,
       total_contributed_usdc: totalContributed.toFixed(2),
       tickets_purchased: pool.tickets_purchased || 0,

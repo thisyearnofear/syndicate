@@ -4,6 +4,10 @@ pragma solidity ^0.8.24;
 import {FHE, euint64, inEuint64} from "@fhenixprotocol/contracts/FHE.sol";
 import {Permissioned, Permission} from "@fhenixprotocol/contracts/access/Permissioned.sol";
 
+interface IFhenixSyndicateVault {
+    function isMember(address member) external view returns (bool);
+}
+
 /**
  * @title  FhenixGovernor
  * @notice Encrypted on-chain governance for Fhenix syndicates.
@@ -249,9 +253,8 @@ contract FhenixGovernor is Permissioned {
         // Prevent double voting
         if (hasVoted[proposalId][msg.sender]) revert AlreadyVoted();
 
-        // For MVP, we don't validate vault membership on-chain (requires vault ABI dependency).
-        // The FhenixSyndicateVault interface is extensible; in production this would call
-        // IFhenixVault.isMember(msg.sender) to ensure only vault members can vote.
+        // Verify vault membership
+        if (!IFhenixSyndicateVault(vault).isMember(msg.sender)) revert NotMember();
 
         // Mark as voted
         hasVoted[proposalId][msg.sender] = true;
