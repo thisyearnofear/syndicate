@@ -107,6 +107,22 @@ contract FhenixGovernorTest is Test {
     usdc.mint(voter1, 1_000_000_000);
     usdc.mint(voter2, 1_000_000_000);
     usdc.mint(voter3, 1_000_000_000);
+
+    // Make voters members by depositing into the vault
+    vm.startPrank(voter1);
+    usdc.approve(address(vault), 100_000_000);
+    vault.depositEncrypted(inEuint64({ data: abi.encode(uint256(100_000_000)), securityZone: 0 }), 100_000_000);
+    vm.stopPrank();
+
+    vm.startPrank(voter2);
+    usdc.approve(address(vault), 100_000_000);
+    vault.depositEncrypted(inEuint64({ data: abi.encode(uint256(100_000_000)), securityZone: 0 }), 100_000_000);
+    vm.stopPrank();
+
+    vm.startPrank(voter3);
+    usdc.approve(address(vault), 100_000_000);
+    vault.depositEncrypted(inEuint64({ data: abi.encode(uint256(100_000_000)), securityZone: 0 }), 100_000_000);
+    vm.stopPrank();
   }
 
   function _permission(address signer, uint256 signerPk, bytes32 publicKey) internal view returns (Permission memory) {

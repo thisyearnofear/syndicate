@@ -69,15 +69,38 @@ Say:
 
 > The vault has an on-chain APY oracle. The coordinator sets the rate in basis points directly on the contract, and the provider reads it with a fallback chain — so the Yield Dashboard always displays the current rate alongside other strategies.
 
-### 2:15 - 2:30 | Withdrawal Security (Optional)
-If asked about withdrawal flow:
+### 2:15 - 2:45 | Encrypted Governance (Wave 4 NEW)
+Go to the **Governance** section for the Fhenix syndicate.
 
-> Withdrawals require a coordinator-signed EIP-712 attestation. The coordinator can decrypt the balance off-chain, then signs `(member, amount, nonce)`. The contract verifies the signature and prevents replay attacks. This replaces raw amount trust with cryptographic proof.
-
-### 2:30 - 2:45 | Why It Matters
 Say:
 
-> This turns privacy into a first-class primitive inside our existing product. We are not building a separate demo stack. We extended real vault, API, and dashboard flows so confidential balances and participation can become native product behavior.
+> For Wave 4, we’ve added privacy-native on-chain governance. Members cast votes that are encrypted client-side using FHE. The choice — For, Against, or Abstain — is never revealed in plaintext on-chain.
+
+Show the list of proposals and the vote buttons.
+
+Say:
+
+> The contract accumulates these encrypted votes homomorphically. No one, not even the coordinator, can see the running total or individual choices until the deadline has passed and the tally is revealed via sealed output.
+
+If there's a passed proposal, show the results.
+
+Say:
+
+> Once revealed, the results are finalized in plaintext, allowing the syndicate to move forward with confidential consensus.
+
+### 2:45 - 3:00 | Why It Matters
+Say:
+
+> This turns privacy into a first-class primitive inside our existing product. We are not building a separate demo stack. We extended real vault, governance, API, and dashboard flows so confidential balances, participation, and coordination can become native product behavior.
+
+---
+
+## Optional: API Privacy Gating
+If useful, show that a non-member sees the member count but not the address list.
+
+Say:
+
+> We also implemented member privacy gating at the API layer. Non-members can see the total participation count, but individual addresses and contribution amounts are only visible to authorized pool members.
 
 ---
 

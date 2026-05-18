@@ -314,9 +314,9 @@ Privacy-by-design layer using Fully Homomorphic Encryption (FHE) via Fhenix. Enc
 | Wave 1 (done Mar 28) | Ideation + architecture |
 | Wave 2 (done Apr 8) | Phase 0+1: SDK install, `fheService.ts`, type unions |
 | Wave 3 Marathon (done May 8) | Phase 2+3: providers + hook extensions + API route + encrypted yield distribution |
-| Wave 4 (done May 20) | Phase 4+5: DB privacy columns + UI card + APY oracle + signed withdrawal + sealoutput fix |
-| Wave 5 | Encrypted governance + member privacy gating + mainnet-ready artifacts |
-| Wave 6 (TBD) | Mainnet deployment + treasury execution + expanded product surfaces |
+| Wave 4 (done May 20) | Phase 4+5: DB privacy columns + UI card + APY oracle + signed withdrawal + sealoutput fix + Encrypted governance + member privacy gating |
+| Wave 5 | Mainnet-ready artifacts + treasury execution + expanded product surfaces |
+| Wave 6 (TBD) | Mainnet deployment |
 
 ### FHE Governance (Encrypted On-Chain Voting)
 
