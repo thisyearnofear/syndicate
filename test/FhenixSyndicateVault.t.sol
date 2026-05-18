@@ -70,6 +70,7 @@ contract FhenixSyndicateVaultTest is Test {
 
   event DepositShielded(address indexed from, uint256 placeholder);
   event YieldDistributed(uint256 timestamp);
+  event ApyUpdated(uint256 oldApy, uint256 newApy);
 
   uint256 internal coordinatorPk = 0xA11CE;
   uint256 internal member1Pk = 0xB0B;
@@ -501,6 +502,39 @@ contract FhenixSyndicateVaultTest is Test {
     vm.prank(member1);
     vm.expectRevert(abi.encodeWithSignature("NotCoordinator()"));
     vault.transferCoordinator(member2);
+  }
+
+  // ─── APY Oracle Tests ───────────────────────────────────────────────────────
+
+  function test_SetApy_CoordinatorOnly() public {
+    vm.prank(member1);
+    vm.expectRevert(abi.encodeWithSignature("NotCoordinator()"));
+    vault.setApy(500);
+  }
+
+  function test_SetApy_UpdatesValue() public {
+    assertEq(vault.currentApy(), 0, "Should start at 0");
+
+    vm.prank(coordinator);
+    vault.setApy(500); // 5.00%
+    assertEq(vault.currentApy(), 500);
+
+    vm.prank(coordinator);
+    vault.setApy(670); // 6.70%
+    assertEq(vault.currentApy(), 670);
+  }
+
+  function test_SetApy_EmitsEvent() public {
+    vm.expectEmit(true, false, false, true, address(vault));
+    emit ApyUpdated(0, 500);
+    vm.prank(coordinator);
+    vault.setApy(500);
+  }
+
+  function test_SetApy_RejectsOver100Percent() public {
+    vm.prank(coordinator);
+    vm.expectRevert(abi.encodeWithSignature("InvalidWithdrawAmount()"));
+    vault.setApy(10_001);
   }
 
   // ─── Edge Case Tests ─────────────────────────────────────────────────────────

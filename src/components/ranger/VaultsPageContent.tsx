@@ -33,6 +33,7 @@ const APY_MAP: Record<SupportedYieldStrategyId, string> = {
   octant: '~10%',
   uniswap: '~8.5%',
   lifiearn: '~3.5%',
+  fhenix: '~5.0%',
 };
 
 const STATUS_MAP: Record<SupportedYieldStrategyId, { label: string; style: string }> = {
@@ -43,6 +44,7 @@ const STATUS_MAP: Record<SupportedYieldStrategyId, { label: string; style: strin
   octant: { label: 'MVP Mock', style: 'text-amber-400 border-amber-500/30 bg-amber-500/10' },
   uniswap: { label: 'Coming Soon', style: 'text-gray-400 border-gray-500/30 bg-gray-500/10' },
   lifiearn: { label: 'Live Cross-Chain', style: 'text-indigo-400 border-indigo-500/30 bg-indigo-500/10' },
+  fhenix: { label: 'Live on Base', style: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' },
 };
 
 export function VaultsPageContent({

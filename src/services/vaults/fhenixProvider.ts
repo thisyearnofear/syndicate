@@ -29,7 +29,7 @@ import { FHENIX_POOL_CONFIG } from '@/services/syndicate/poolProviders/fhenixPro
 
 const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
 
-// Estimated testnet APY — replaced by on-chain oracle in production
+// Estimated testnet APY — fallback when on-chain read fails
 const FHENIX_ESTIMATED_APY = 5.0;
 
 // ─── Minimal contract ABI ─────────────────────────────────────────────────────
@@ -51,6 +51,13 @@ const FHENIX_VAULT_READ_ABI = [
   },
   {
     name: 'memberCount',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'currentApy',
     type: 'function',
     stateMutability: 'view',
     inputs: [],
@@ -254,8 +261,32 @@ export class FhenixVaultProvider implements VaultProvider {
       return this._apyCache.value;
     }
 
-    // Production: read from Fhenix on-chain rate oracle
-    // Testnet: use estimate (Spark-equivalent yield routed through FHE layer)
+    try {
+      const vaultAddress = FHENIX_POOL_CONFIG.VAULT_ADDRESS;
+      if (vaultAddress !== '0x0000000000000000000000000000000000000000') {
+        const { createPublicClient, http } = await import('viem');
+        const client = createPublicClient({
+          transport: http(process.env.FHENIX_RPC_URL ?? 'https://api.fhenix.zone'),
+        });
+
+        // Read APY from on-chain contract (basis points: 500 = 5.00%)
+        const apyBps = await client.readContract({
+          address: vaultAddress,
+          abi: FHENIX_VAULT_READ_ABI,
+          functionName: 'currentApy',
+        });
+
+        const apy = Number(apyBps) / 100; // Convert basis points to percentage
+        if (apy > 0) {
+          this._apyCache = { value: apy, ts: Date.now() };
+          return apy;
+        }
+      }
+    } catch {
+      // On-chain read failed — fall through to estimate
+    }
+
+    // Fallback: hardcoded estimate (contract not deployed or no APY set yet)
     this._apyCache = { value: FHENIX_ESTIMATED_APY, ts: Date.now() };
     return FHENIX_ESTIMATED_APY;
   }
