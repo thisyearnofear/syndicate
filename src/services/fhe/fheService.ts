@@ -164,6 +164,67 @@ export async function unsealBalance(
   return cofhejs.unseal(ctHash, FheTypes.Uint64) as Promise<FheResult<bigint>>;
 }
 
+/**
+ * Decrypt a sealed output returned from `FHE.sealoutput()` in Solidity.
+ *
+ * Unlike {unsealBalance} which takes a raw ctHash and requests re-encryption
+ * from the threshold network, this function handles output that has already
+ * been re-encrypted by the contract via `FHE.sealoutput()`.
+ *
+ * The sealed output is an EthEncryptedData JSON string (from FHE.precompile).
+ * It can be decrypted directly using the active Permit's sealing key — no
+ * threshold network round-trip required.
+ *
+ * Typical flow:
+ * 1) Call the contract view (e.g. `getEncryptedBalanceCtHash(permission)`) → sealed JSON string
+ * 2) Call `decryptSealedOutput(sealedString)` to decrypt locally
+ *
+ * @param sealedOutput  - JSON string returned from `FHE.sealoutput()` (EthEncryptedData format)
+ * @returns             Plaintext bigint (USDC micro-units when used for balances)
+ */
+export async function decryptSealedOutput(
+  sealedOutput: string,
+): Promise<FheResult<bigint>> {
+  const { cofhejs } = await loadCofheWeb();
+
+  // Get the active permit — must have been selected via selectActivePermit first
+  const permitRes = cofhejs.getPermit();
+  if (!permitRes.success || !permitRes.data) {
+    return { success: false, error: { message: 'No active permit. Call selectActivePermit first' } } as FheResult<bigint>;
+  }
+
+  const permit = permitRes.data;
+
+  try {
+    // Parse JSON EthEncryptedData: { version, nonce, ephemPublicKey, ciphertext }
+    const parsed = JSON.parse(sealedOutput);
+
+    // Convert hex fields to Uint8Arrays (browser-compatible, no Buffer dependency)
+    const toBytes = (hex: string): Uint8Array => {
+      const h = hex.replace('0x', '');
+      const bytes = new Uint8Array(h.length / 2);
+      for (let i = 0; i < bytes.length; i++) {
+        bytes[i] = parseInt(h.substring(i * 2, i * 2 + 2), 16);
+      }
+      return bytes;
+    };
+
+    const ethEncryptedData = {
+      data: toBytes(parsed.ciphertext ?? parsed.data ?? ''),
+      public_key: toBytes(parsed.ephemPublicKey ?? parsed.public_key ?? ''),
+      nonce: toBytes(parsed.nonce ?? ''),
+    };
+
+    const plaintext = permit.unseal(ethEncryptedData);
+    return { success: true, data: plaintext } as FheResult<bigint>;
+  } catch (e) {
+    return {
+      success: false,
+      error: { message: e instanceof Error ? e.message : String(e) },
+    } as FheResult<bigint>;
+  }
+}
+
 // ─── Sealing Keys (off-chain) ─────────────────────────────────────────────────
 
 /**

@@ -7,11 +7,11 @@ import { formatUnits } from 'viem';
 import { FHENIX_VAULT_CHAIN } from '@/services/fhe/fhenixChain';
 import {
   createPermit,
+  decryptSealedOutput,
   getActivePermit,
   getPermission,
   initializeFhe,
   selectActivePermit,
-  unsealBalance,
 } from '@/services/fhe/fheService';
 
 const FHENIX_BALANCE_ABI = [
@@ -29,7 +29,7 @@ const FHENIX_BALANCE_ABI = [
         ],
       },
     ],
-    outputs: [{ name: '', type: 'uint256' }],
+    outputs: [{ name: '', type: 'string' }],
   },
 ] as const;
 
@@ -102,19 +102,22 @@ export function useFhenixPrivateVaultBalance(params: {
       const permissionRes = await getPermission(permitHash);
       if (!permissionRes.success) throw new Error(permissionRes.error?.message ?? 'Failed to get permission');
 
-      // 3) Read encrypted balance ciphertext hash from the vault.
+      // 3) Read encrypted balance (sealed output) from the vault.
       setStatus('reading');
-      const ctHash = await publicClient.readContract({
+      const sealedOutput = await publicClient.readContract({
         address: vaultAddress,
         abi: FHENIX_BALANCE_ABI,
         functionName: 'getEncryptedBalanceCtHash',
         args: [permissionRes.data as unknown as { publicKey: `0x${string}`; signature: `0x${string}` }],
       });
 
-      // 4) Unseal via cofhejs + threshold network.
+      // 4) Decrypt the sealed output locally (no threshold network round-trip).
       setStatus('unsealing');
-      const unsealRes = await unsealBalance(ctHash);
-      if (!unsealRes.success) throw new Error(unsealRes.error?.message ?? 'Failed to unseal balance');
+      const unsealRes = await decryptSealedOutput(sealedOutput);
+      if (!unsealRes.success) {
+        const errMsg = 'error' in unsealRes && unsealRes.error ? unsealRes.error.message : 'Failed to decrypt sealed output';
+        throw new Error(errMsg);
+      }
 
       setBalanceMicro(unsealRes.data);
       setStatus('ready');
