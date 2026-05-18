@@ -490,6 +490,132 @@ contract FhenixSyndicateVaultTest is Test {
     vault.distributeYield(members, allocations);
   }
 
+  // ─── Signed Withdrawal Tests ────────────────────────────────────────────────
+
+  /// @dev Helper: compute EIP-712 typed data digest for a withdraw message
+  function _withdrawDigest(address member, uint256 amount, uint256 nonce) internal view returns (bytes32) {
+    bytes32 structHash = keccak256(
+      abi.encode(
+        keccak256("Withdraw(address member,uint256 amount,uint256 nonce)"),
+        member,
+        amount,
+        nonce
+      )
+    );
+
+    // Match the contract's EIP712 domain ("FhenixSyndicateVault", "1")
+    bytes32 domainSeparator = keccak256(
+      abi.encode(
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+        keccak256(bytes("FhenixSyndicateVault")),
+        keccak256(bytes("1")),
+        block.chainid,
+        address(vault)
+      )
+    );
+
+    return keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+  }
+
+  /// @dev Coordinate signs a withdrawal for member1
+  function _signWithdraw(address member, uint256 amount, uint256 nonce) internal view returns (bytes memory) {
+    bytes32 digest = _withdrawDigest(member, amount, nonce);
+    (uint8 v, bytes32 r, bytes32 s) = vm.sign(coordinatorPk, digest);
+    return abi.encodePacked(r, s, v);
+  }
+
+  function test_WithdrawSigned_ValidSignature() public {
+    uint256 amount = 25 * 1e6;
+
+    vm.startPrank(member1);
+    usdc.approve(address(vault), amount);
+    vault.depositEncrypted(inEuint64({ data: abi.encode(amount), securityZone: 0 }), amount);
+    vm.stopPrank();
+
+    bytes memory sig = _signWithdraw(member1, amount, 0);
+
+    vm.prank(member1);
+    vault.withdrawSigned(amount, sig);
+
+    assertFalse(vault.isMember(member1), "Should no longer be a member");
+    assertEq(vault.totalDeposited(), 0, "Vault should be empty");
+    assertEq(vault.coordinatorNonces(member1), 1, "Nonce should increment");
+  }
+
+  function test_WithdrawSigned_WrongSigner() public {
+    uint256 amount = 25 * 1e6;
+
+    vm.startPrank(member1);
+    usdc.approve(address(vault), amount);
+    vault.depositEncrypted(inEuint64({ data: abi.encode(amount), securityZone: 0 }), amount);
+    vm.stopPrank();
+
+    // Sign with member1's key instead of coordinator — should fail
+    bytes32 digest = _withdrawDigest(member1, amount, 0);
+    (uint8 v, bytes32 r, bytes32 s) = vm.sign(member1Pk, digest);
+    bytes memory sig = abi.encodePacked(r, s, v);
+
+    vm.prank(member1);
+    vm.expectRevert(abi.encodeWithSignature("InvalidSignature()"));
+    vault.withdrawSigned(amount, sig);
+  }
+
+  function test_WithdrawSigned_ReplayProtection() public {
+    uint256 amount = 25 * 1e6;
+
+    // Member1 deposits
+    vm.startPrank(member1);
+    usdc.approve(address(vault), amount);
+    vault.depositEncrypted(inEuint64({ data: abi.encode(amount), securityZone: 0 }), amount);
+    vm.stopPrank();
+
+    bytes memory sig = _signWithdraw(member1, amount, 0);
+
+    // First use — succeeds (nonce goes 0 → 1, member removed)
+    vm.prank(member1);
+    vault.withdrawSigned(amount, sig);
+
+    // Member re-deposits (fresh encrypted balance, but nonce is now 1)
+    usdc.mint(member1, amount);
+    vm.startPrank(member1);
+    usdc.approve(address(vault), amount);
+    vault.depositEncrypted(inEuint64({ data: abi.encode(amount), securityZone: 0 }), amount);
+    vm.stopPrank();
+
+    // Replay old signature — nonce is now 1 on-chain, but sig was for nonce 0
+    // The digest mismatch causes ecrecover to return wrong address → InvalidSignature
+    vm.prank(member1);
+    vm.expectRevert(abi.encodeWithSignature("InvalidSignature()"));
+    vault.withdrawSigned(amount, sig);
+  }
+
+  function test_WithdrawSigned_OnlyMember() public {
+    bytes memory sig = _signWithdraw(member1, 100, 0);
+    vm.prank(member1);
+    vm.expectRevert(abi.encodeWithSignature("NotMember()"));
+    vault.withdrawSigned(100, sig);
+  }
+
+  function test_WithdrawSigned_WrongAmount() public {
+    uint256 depositAmount = 100 * 1e6;
+    uint256 signedAmount = 25 * 1e6;
+
+    vm.startPrank(member1);
+    usdc.mint(member1, depositAmount);
+    usdc.approve(address(vault), depositAmount);
+    vault.depositEncrypted(inEuint64({ data: abi.encode(depositAmount), securityZone: 0 }), depositAmount);
+    vm.stopPrank();
+
+    // Coordinator signs for 25 USDC
+    bytes memory sig = _signWithdraw(member1, signedAmount, 0);
+
+    // Member submits with 50 USDC — different amount than in signature
+    // Bounds check passes (50 ≤ 100), but digest doesn't match signature → InvalidSignature
+    vm.prank(member1);
+    vm.expectRevert(abi.encodeWithSignature("InvalidSignature()"));
+    vault.withdrawSigned(50 * 1e6, sig);
+  }
+
   // ─── Coordinator Tests ───────────────────────────────────────────────────────
 
   function test_TransferCoordinator() public {
