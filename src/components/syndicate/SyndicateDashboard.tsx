@@ -25,12 +25,12 @@ import {
   Share2,
   Coins,
   Clock,
-  Eye,
   EyeOff
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 import { useUnifiedWallet } from '@/hooks';
 import { useFhenixPrivateVaultBalance } from '@/hooks/useFhenixPrivateVaultBalance';
+import { FhenixRevealStepper } from '@/components/fhenix/FhenixRevealStepper';
 
 type PoolType = 'safe' | 'splits' | 'pooltogether' | 'fhenix';
 
@@ -96,8 +96,6 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [userRevealedContribution, setUserRevealedContribution] = useState(false);
-
   const fhenixVaultAddress = (process.env.NEXT_PUBLIC_FHENIX_VAULT_ADDRESS || undefined) as
     | `0x${string}`
     | undefined;
@@ -116,13 +114,6 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
     vaultAddress: fhenixVaultAddress,
     enabled: data?.pool_type === 'fhenix',
   });
-
-  const handleRevealClick = useCallback(async () => {
-    const result = await revealFhenixPrivateBalance();
-    if (result !== null) {
-      setUserRevealedContribution(true);
-    }
-  }, [revealFhenixPrivateBalance]);
 
   const fhenixStatusLabel = (() => {
     switch (fhenixPrivateStatus) {
@@ -318,7 +309,6 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
             ) : (
               data.members.slice(0, 10).map((member, i) => {
                 const isMe = isConnectedUser(member.address);
-                const showRevealed = isMe && userRevealedContribution && fhenixPrivateBalanceMicro != null;
 
                 return (
                 <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-lg min-h-[60px]">
@@ -336,31 +326,17 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
                       </p>
                     </div>
                   </div>
-                  <div className="text-right flex-shrink-0 ml-2 min-w-[100px] text-right">
+                  <div className="flex-shrink-0 ml-2 min-w-[130px] text-right">
                     {data.pool_type === 'fhenix' ? (
                       isMe ? (
-                        showRevealed ? (
-                          <div>
-                            <p className="text-emerald-400 font-medium">
-                              ${Number(fhenixPrivateBalanceFormatted ?? 0).toFixed(6)}
-                            </p>
-                            <span className="text-[10px] text-gray-500">Revealed via permit</span>
-                          </div>
-                        ) : (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 h-auto py-1 text-xs"
-                            onClick={handleRevealClick}
-                            disabled={fhenixPrivateStatus === 'initializing' || fhenixPrivateStatus === 'permit' || fhenixPrivateStatus === 'reading' || fhenixPrivateStatus === 'unsealing'}
-                          >
-                            {fhenixPrivateStatus === 'initializing' || fhenixPrivateStatus === 'permit' || fhenixPrivateStatus === 'reading' || fhenixPrivateStatus === 'unsealing' ? (
-                              <><EyeOff className="w-3 h-3 mr-1" />Revealing…</>
-                            ) : (
-                              <><Eye className="w-3 h-3 mr-1" />Reveal</>
-                            )}
-                          </Button>
-                        )
+                        <FhenixRevealStepper
+                          compact
+                          status={fhenixPrivateStatus}
+                          balanceMicro={fhenixPrivateBalanceMicro}
+                          formattedBalance={fhenixPrivateBalanceFormatted}
+                          error={fhenixPrivateError}
+                          onReveal={revealFhenixPrivateBalance}
+                        />
                       ) : (
                         <div className="flex items-center gap-1.5 justify-end">
                           <EyeOff className="w-3 h-3 text-gray-500" />

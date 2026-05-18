@@ -30,6 +30,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { CompactCard } from '@/shared/components/premium/CompactLayout';
 import { useUnifiedWallet, useUnifiedBridge } from '@/hooks';
 import { useFhenixPrivateVaultBalance } from '@/hooks/useFhenixPrivateVaultBalance';
+import { FhenixRevealStepper } from '@/components/fhenix/FhenixRevealStepper';
 import { useUserVaults } from '@/hooks/useUserVaults';
 import { useVaultActivity } from '@/hooks/useVaultActivity';
 import { useTicketHistory, type TicketPurchaseHistory } from '@/hooks/useTicketHistory';
@@ -126,26 +127,8 @@ export default function PortfolioPage() {
     enabled: true,
   });
 
-  const fhenixStatusLabel = (() => {
-    switch (fhenixPrivateStatus) {
-      case 'initializing':
-        return 'Initializing privacy layer';
-      case 'permit':
-        return 'Activating permit';
-      case 'reading':
-        return 'Reading encrypted balance';
-      case 'unsealing':
-        return 'Revealing locally';
-      case 'ready':
-        return 'Visible only to you';
-      case 'error':
-        return 'Reveal unavailable';
-      default:
-        return 'Private by default';
-    }
-  })();
-
   const hasFhenixPosition = vaultPositions.some(position => position.protocol === 'fhenix');
+
   const {
     activities: bridgeActivities,
     pendingBridge,
@@ -770,54 +753,13 @@ export default function PortfolioPage() {
                 {/* Fhenix Private Vault reveal row */}
                 {hasFhenixPosition && (
                   <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-5">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-full bg-amber-500/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
-                            Private Vault
-                          </span>
-                          <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                            fhenixPrivateStatus === 'ready'
-                              ? 'bg-emerald-500/20 text-emerald-300'
-                              : fhenixPrivateStatus === 'error'
-                              ? 'bg-red-500/20 text-red-300'
-                              : 'bg-white/10 text-gray-200'
-                          }`}>
-                            {fhenixStatusLabel}
-                          </span>
-                        </div>
-
-                        <div className="text-xs text-gray-300">
-                          {fhenixPrivateBalanceMicro != null ? (
-                            <span>
-                              Private balance revealed: <span className="font-mono text-white">${Number(fhenixPrivateBalanceFormatted ?? 0).toFixed(6)}</span>
-                            </span>
-                          ) : (
-                            <span>This balance is encrypted on-chain and hidden by default.</span>
-                          )}
-                        </div>
-
-                        <div className="text-[11px] text-gray-400">
-                          Transaction activity may be public. The contribution amount remains private until you reveal it.
-                        </div>
-
-                        {fhenixPrivateError && (
-                          <div className="text-xs text-red-400">{fhenixPrivateError}</div>
-                        )}
-                      </div>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-amber-400/30 bg-white/5 text-white hover:bg-white/10 shrink-0"
-                        onClick={revealFhenixPrivateBalance}
-                        disabled={fhenixPrivateStatus === 'initializing' || fhenixPrivateStatus === 'permit' || fhenixPrivateStatus === 'reading' || fhenixPrivateStatus === 'unsealing'}
-                      >
-                        {fhenixPrivateStatus === 'initializing' || fhenixPrivateStatus === 'permit' || fhenixPrivateStatus === 'reading' || fhenixPrivateStatus === 'unsealing'
-                          ? 'Revealing…'
-                          : (fhenixPrivateBalanceMicro != null ? 'Refresh Private Balance' : 'Reveal Private Balance')}
-                      </Button>
-                    </div>
+                    <FhenixRevealStepper
+                      status={fhenixPrivateStatus}
+                      balanceMicro={fhenixPrivateBalanceMicro}
+                      formattedBalance={fhenixPrivateBalanceFormatted}
+                      error={fhenixPrivateError}
+                      onReveal={revealFhenixPrivateBalance}
+                    />
                   </div>
                 )}
 
