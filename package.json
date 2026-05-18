@@ -89,7 +89,7 @@
     "get-starknet": "3.3.3",
     "get-starknet-core": "3.3.5",
     "js-sha3": "^0.9.3",
-    "lucide-react": "^0.487.0",
+    "lucide-react": "^1.16.0",
     "near-api-js": "^4.0.3",
     "next": "16.2.6",
     "permissionless": "^0.2.46",
