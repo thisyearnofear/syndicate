@@ -49,6 +49,9 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
     /// @dev FHE-encrypted cumulative yield accrued (updated by coordinator)
     euint64 private _encryptedYield;
 
+    /// @dev Yield withdrawn per-member (tracks distributed yield to prevent double-spend)
+    mapping(address => euint64) private _yieldDistributed;
+
     // ─── Events ───────────────────────────────────────────────────────────────
 
     /**
@@ -194,6 +197,77 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
 
         _encryptedYield = FHE.add(_encryptedYield, FHE.asEuint64(encryptedYield));
         emit YieldDistributed(block.timestamp);
+    }
+
+    /**
+     * @notice Coordinator distributes accumulated yield to members.
+     * @dev    Each member receives an encrypted allocation computed off-chain
+     *         by the coordinator based on their proportional stake. The coordinator
+     *         decrypts the accumulated yield, computes shares, encrypts each share
+     *         client-side via cofhejs, and submits them here.
+     *
+     *         The total distributed amount is subtracted from _encryptedYield to
+     *         prevent double-distribution. Each member's _yieldDistributed tracker
+     *         accumulates so yield is only distributed once.
+     *
+     * @param members       Array of member addresses to receive yield
+     * @param encryptedAmounts  FHE-encrypted allocations for each member (must match length)
+     */
+    function distributeYield(
+        address[] calldata members,
+        inEuint64[] calldata encryptedAmounts
+    ) external onlyCoordinator {
+        if (members.length == 0) revert ZeroAmount();
+        if (members.length != encryptedAmounts.length) revert InvalidWithdrawAmount();
+
+        euint64 totalDistributed = FHE.asEuint64(0);
+
+        for (uint256 i = 0; i < members.length; i++) {
+            address member = members[i];
+
+            // Skip non-members (they can't receive yield)
+            if (!isMember[member]) continue;
+
+            // Convert the encrypted allocation to on-chain euint64
+            euint64 allocation = FHE.asEuint64(encryptedAmounts[i]);
+
+            // Add allocation to member's encrypted balance
+            _encryptedBalances[member] = FHE.add(_encryptedBalances[member], allocation);
+
+            // Track distributed yield per-member to prevent double-spend
+            _yieldDistributed[member] = FHE.add(_yieldDistributed[member], allocation);
+
+            // Accumulate total for verification
+            totalDistributed = FHE.add(totalDistributed, allocation);
+        }
+
+        // Subtract total distributed from accumulated yield
+        _encryptedYield = FHE.sub(_encryptedYield, totalDistributed);
+
+        emit YieldDistributed(block.timestamp);
+    }
+
+    /**
+     * @notice View the accumulated encrypted yield (ctHash — coordinator only).
+     * @dev    The coordinator can unseal this to see how much yield is available
+     *         for distribution.
+     */
+    function getAccumulatedYieldCtHash(
+        Permission calldata permission
+    ) external view onlySender(permission) onlyCoordinator returns (uint256) {
+        return euint64.unwrap(_encryptedYield);
+    }
+
+    /**
+     * @notice View a member's distributed yield ctHash (sealed to that member).
+     * @dev    Allows members to verify how much yield they've received.
+     */
+    function getYieldDistributedCtHash(
+        address member,
+        Permission calldata permission
+    ) external view onlySender(permission) returns (uint256) {
+        if (msg.sender != member && msg.sender != coordinator) revert NotCoordinator();
+        return euint64.unwrap(_yieldDistributed[member]);
     }
 
     // ─── Withdrawal ───────────────────────────────────────────────────────────

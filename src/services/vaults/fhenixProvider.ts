@@ -199,13 +199,18 @@ export class FhenixVaultProvider implements VaultProvider {
   }
 
   /**
-   * Yield withdrawal is handled by the coordinator via `depositYield` + distribution.
-   * Individual yield-only withdrawals are not yet supported in the FHE model.
+   * Yield withdrawal is handled by the coordinator via `distributeYield`.
+   * After yield has been distributed, individual members can withdraw their
+   * yield portion by calling withdraw() with their total principal + yield.
+   *
+   * Pure yield-only withdrawal is not available in the FHE model because
+   * the contract stores encrypted amounts — the coordinator must attest
+   * the plaintext amount for any withdrawal.
    */
   async withdrawYield(_userAddress: string): Promise<VaultWithdrawResult> {
     return {
       success: false,
-      error: 'Fhenix vault distributes yield via the coordinator. Use withdraw() to claim principal + yield.',
+      error: 'Fhenix vault distributes yield via the coordinator (distributeYield). Use withdraw() to claim principal + yield, or the coordinator can trigger distributeYield() to credit yield to your encrypted balance.',
     };
   }
 
