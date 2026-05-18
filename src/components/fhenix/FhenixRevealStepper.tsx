@@ -70,8 +70,7 @@ function getStepState(stepIdx: number, status: Status): StepState {
 
   if (currentIdx === -1) return 'pending';
   if (stepIdx < currentIdx) return 'completed';
-  return 'current';
-  return 'pending';
+  return stepIdx === currentIdx ? 'current' : 'pending';
 }
 
 function isActive(status: Status): boolean {
