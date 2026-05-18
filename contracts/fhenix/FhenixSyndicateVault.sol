@@ -52,6 +52,10 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
     /// @dev Yield withdrawn per-member (tracks distributed yield to prevent double-spend)
     mapping(address => euint64) private _yieldDistributed;
 
+    /// @dev Current APY in basis points (e.g., 500 = 5.00%). Set by coordinator.
+    ///      Allows off-chain providers to read the live rate without a separate oracle.
+    uint256 public currentApy;
+
     // ─── Events ───────────────────────────────────────────────────────────────
 
     /**
@@ -294,6 +298,26 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
         if (!ok) revert TransferFailed();
 
         emit WithdrawShielded(msg.sender, 0);
+    }
+
+    // ─── APY Oracle ────────────────────────────────────────────────────────────
+
+    /// @notice Event emitted when the coordinator updates the APY
+    event ApyUpdated(uint256 oldApy, uint256 newApy);
+
+    /**
+     * @notice Set the current APY in basis points (e.g., 500 = 5.00%).
+     * @dev    Coordinator-controlled on-chain rate that the off-chain provider
+     *         reads instead of a hardcoded value. Enables live rate updates
+     *         without a separate oracle contract.
+     *
+     * @param newApy  APY in basis points (1 bp = 0.01%). Max 10_000 (100%).
+     */
+    function setApy(uint256 newApy) external onlyCoordinator {
+        if (newApy > 10_000) revert InvalidWithdrawAmount(); // Reuse existing error for bounds
+        uint256 old = currentApy;
+        currentApy = newApy;
+        emit ApyUpdated(old, newApy);
     }
 
     // ─── Coordinator Utilities ────────────────────────────────────────────────

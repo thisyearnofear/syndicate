@@ -13,7 +13,8 @@ export type SupportedYieldStrategyId =
   | 'pooltogether'
   | 'octant'
   | 'uniswap'
-  | 'lifiearn';
+  | 'lifiearn'
+  | 'fhenix';
 
 export interface YieldStrategyConfig {
   id: SupportedYieldStrategyId;
@@ -74,6 +75,14 @@ export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
     description: 'Cross-chain vault aggregator. Access 20+ protocols across 60+ chains with one-click deposits.',
     icon: '🔀',
     color: 'bg-gradient-to-br from-indigo-500 to-purple-600',
+    risk: 'Low',
+  },
+  {
+    id: 'fhenix',
+    name: 'Fhenix FHE Vault',
+    description: 'Privacy-preserving FHE vault — encrypted on-chain deposits with coordinator-managed yield (~5% APY)',
+    icon: '🔐',
+    color: 'bg-gradient-to-br from-violet-500 to-indigo-600',
     risk: 'Low',
   },
 ];
