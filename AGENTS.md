@@ -312,10 +312,41 @@ Privacy-by-design layer using Fully Homomorphic Encryption (FHE) via Fhenix. Enc
 | Wave | Deliverable |
 |---|---|
 | Wave 1 (done Mar 28) | Ideation + architecture |
-| Wave 2 (by Apr 8) | Phase 0+1: SDK install, `fheService.ts`, type unions |
-| Wave 3 Marathon (by May 8) | Phase 2+3: providers + hook extensions + API route + encrypted yield distribution |
-| Wave 4 (by May 20) | Phase 4+5: DB privacy columns + UI card + APY oracle + signed withdrawal + sealoutput fix |
-| Wave 5 Final (by Jun 1) | Mainnet-ready artifacts + showcase demo |
+| Wave 2 (done Apr 8) | Phase 0+1: SDK install, `fheService.ts`, type unions |
+| Wave 3 Marathon (done May 8) | Phase 2+3: providers + hook extensions + API route + encrypted yield distribution |
+| Wave 4 (done May 20) | Phase 4+5: DB privacy columns + UI card + APY oracle + signed withdrawal + sealoutput fix |
+| Wave 5 | Encrypted governance + member privacy gating + mainnet-ready artifacts |
+| Wave 6 (TBD) | Mainnet deployment + treasury execution + expanded product surfaces |
+
+### FHE Governance (Encrypted On-Chain Voting)
+
+Encrypted governance for Fhenix syndicates. Members vote with FHE-encrypted choices (yes/no/abstain). Tallies accumulate homomorphically — no one sees running totals until the coordinator reveals after deadline.
+
+**Vote Encoding:** 1 = Yes, 2 = No, 3 = Abstain
+
+**Governance Flow:**
+1. Coordinator creates a proposal (title, description, deadline: 1h–30d)
+2. Members call `vote(proposalId, encryptedChoice)` — choice encrypted client-side via cofhejs
+3. Contract accumulates encrypted tallies homomorphically via `FHE.eq()` + `FHE.add()`
+4. After deadline, coordinator calls `revealTally()` (sealed output via `FHE.sealoutput()` — no threshold round-trip)
+5. Coordinator decrypts sealed outputs locally, calls `finalizeProposal()` with plaintext results
+6. Coordinator marks passed proposals as `executeProposal()`
+
+**Governance Files:**
+| File | Purpose |
+|------|---------|
+| `contracts/fhenix/FhenixGovernor.sol` | FHE-encrypted governance contract (~320 lines, 11 functions) |
+| `test/FhenixGovernor.t.sol` | **21 Foundry unit tests** |
+| `src/services/governance/fhenixGovernorService.ts` | Client-side service: getProposals, castVote, revealAndDecryptTally |
+| `src/components/governance/GovernancePanel.tsx` | Full UI: proposal list, vote buttons, create form, reveal & finalize |
+| `src/components/syndicate/SyndicateDashboard.tsx` | Integrated GovernancePanel for Fhenix pools |
+
+**Contract Features:** Coordinator management, double-vote protection, deadline enforcement (1h–30d), sealed output tally reveal, quorum (basis points), coordinator transfer
+
+### FHE Member Privacy Gating
+
+Fhenix pool member lists are privacy-gated at the API layer:
+- `src/app/api/syndicates/dashboard/route.ts` — non-members see count + empty array instead of full member list. Viewer resolved via `?viewer=` query param.
 
 ### FHE Environment Variables
 ```bash
@@ -328,6 +359,9 @@ NEXT_PUBLIC_FHENIX_RPC_URL=https://api.fhenix.zone
 
 # Deployed vault contract address (FhenixSyndicateVault)
 NEXT_PUBLIC_FHENIX_VAULT_ADDRESS=0x...
+
+# Deployed governor contract address (FhenixGovernor)
+NEXT_PUBLIC_FHENIX_GOVERNOR_ADDRESS=0x...
 
 # USDC address on the selected Fhenix-enabled chain (optional override)
 NEXT_PUBLIC_FHENIX_USDC_ADDRESS=0x...

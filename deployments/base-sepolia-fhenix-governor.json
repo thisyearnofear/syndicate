@@ -1,0 +1,9 @@
+{
+  "network": "base_sepolia",
+  "contract": "FhenixGovernor",
+  "address": "0x2d2576491fFB01a67cfd8637e9E9dACB65C55ff9",
+  "deployedAt": "2025-06-17T17:32:00Z",
+  "coordinator": "0xa7eC5dB50F40819F9AaeA8Dff3F5361efd15019f",
+  "vault": "0xE11c8FF006dFAc43F952Ad394E56f1a50a2BdB63",
+  "quorumBps": 1000
+}
