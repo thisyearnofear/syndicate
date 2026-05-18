@@ -123,6 +123,10 @@ contract FhenixGovernorTest is Test {
     usdc.approve(address(vault), 100_000_000);
     vault.depositEncrypted(inEuint64({ data: abi.encode(uint256(100_000_000)), securityZone: 0 }), 100_000_000);
     vm.stopPrank();
+
+    // Link governor to vault
+    vm.prank(coordinator);
+    vault.setGovernor(address(governor));
   }
 
   function _permission(address signer, uint256 signerPk, bytes32 publicKey) internal view returns (Permission memory) {
@@ -155,11 +159,11 @@ contract FhenixGovernorTest is Test {
     uint256 deadline = block.timestamp + 7 days;
 
     vm.prank(coordinator);
-    governor.createProposal("Test Proposal", "A test proposal", deadline);
+    governor.createProposal("Test Proposal", "A test proposal", address(0), "0x", deadline);
 
     assertEq(governor.proposalCount(), 1);
 
-    (string memory title, string memory desc, , , , , , , , , ) = governor.getProposal(0);
+    (string memory title, string memory desc, , , , , , , , , , , ) = governor.getProposal(0);
     assertEq(title, "Test Proposal");
     assertEq(desc, "A test proposal");
   }
@@ -167,19 +171,19 @@ contract FhenixGovernorTest is Test {
   function test_CreateProposal_NonCoordinatorFails() public {
     vm.prank(voter1);
     vm.expectRevert(abi.encodeWithSignature("NotCoordinator()"));
-    governor.createProposal("Bad", "Should fail", block.timestamp + 7 days);
+    governor.createProposal("Bad", "Should fail", address(0), "0x", block.timestamp + 7 days);
   }
 
   function test_CreateProposal_DeadlineTooSoon() public {
     vm.prank(coordinator);
     vm.expectRevert(abi.encodeWithSignature("InvalidDeadline()"));
-    governor.createProposal("Too Soon", "Deadline in 30 min", block.timestamp + 30 minutes);
+    governor.createProposal("Too Soon", "Deadline in 30 min", address(0), "0x", block.timestamp + 30 minutes);
   }
 
   function test_CreateProposal_DeadlineTooFar() public {
     vm.prank(coordinator);
     vm.expectRevert(abi.encodeWithSignature("InvalidDeadline()"));
-    governor.createProposal("Too Far", "Deadline in 31 days", block.timestamp + 31 days);
+    governor.createProposal("Too Far", "Deadline in 31 days", address(0), "0x", block.timestamp + 31 days);
   }
 
   // ─── Voting Tests ──────────────────────────────────────────────────────────
@@ -188,7 +192,7 @@ contract FhenixGovernorTest is Test {
     uint256 deadline = block.timestamp + 7 days;
 
     vm.prank(coordinator);
-    governor.createProposal("Vote Test", "Single yes vote", deadline);
+    governor.createProposal("Vote Test", "Single yes vote", address(0), "0x", deadline);
 
     // Vote yes (1)
     vm.prank(voter1);
@@ -203,7 +207,7 @@ contract FhenixGovernorTest is Test {
     uint256 deadline = block.timestamp + 7 days;
 
     vm.prank(coordinator);
-    governor.createProposal("Multi Vote", "All three choices", deadline);
+    governor.createProposal("Multi Vote", "All three choices", address(0), "0x", deadline);
 
     // Voter1: yes (1)
     vm.prank(voter1);
@@ -227,7 +231,7 @@ contract FhenixGovernorTest is Test {
     uint256 deadline = block.timestamp + 7 days;
 
     vm.prank(coordinator);
-    governor.createProposal("Double Vote", "No double voting", deadline);
+    governor.createProposal("Double Vote", "No double voting", address(0), "0x", deadline);
 
     vm.prank(voter1);
     governor.vote(0, inEuint64({ data: abi.encode(uint256(1)), securityZone: 0 }));
@@ -239,7 +243,7 @@ contract FhenixGovernorTest is Test {
 
   function test_Vote_AfterDeadlineFails() public {
     vm.prank(coordinator);
-    governor.createProposal("Late Vote", "Vote after deadline", block.timestamp + 2 hours);
+    governor.createProposal("Late Vote", "Vote after deadline", address(0), "0x", block.timestamp + 2 hours);
 
     // Warp 1 second past deadline (strictly > required by contract)
     vm.warp(block.timestamp + 2 hours + 1);
@@ -261,7 +265,7 @@ contract FhenixGovernorTest is Test {
     uint256 deadline = block.timestamp + 2 hours;
 
     vm.prank(coordinator);
-    governor.createProposal("Tally Test", "Reveal tally test", deadline);
+    governor.createProposal("Tally Test", "Reveal tally test", address(0), "0x", deadline);
 
     // Voter1: yes (1)
     vm.prank(voter1);
@@ -296,7 +300,7 @@ contract FhenixGovernorTest is Test {
     uint256 deadline = block.timestamp + 2 hours;
 
     vm.prank(coordinator);
-    governor.createProposal("Tally Auth", "Only coordinator reveal", deadline);
+    governor.createProposal("Tally Auth", "Only coordinator reveal", address(0), "0x", deadline);
 
     vm.prank(voter1);
     governor.vote(0, inEuint64({ data: abi.encode(uint256(1)), securityZone: 0 }));
@@ -313,7 +317,7 @@ contract FhenixGovernorTest is Test {
     uint256 deadline = block.timestamp + 7 days;
 
     vm.prank(coordinator);
-    governor.createProposal("Early Tally", "Tally before deadline", deadline);
+    governor.createProposal("Early Tally", "Tally before deadline", address(0), "0x", deadline);
 
     Permission memory perm = _permission(coordinator, coordinatorPk, bytes32(uint256(999)));
     vm.prank(coordinator);
@@ -327,7 +331,7 @@ contract FhenixGovernorTest is Test {
     uint256 deadline = block.timestamp + 2 hours;
 
     vm.prank(coordinator);
-    governor.createProposal("Finalize Pass", "Should pass", deadline);
+    governor.createProposal("Finalize Pass", "Should pass", address(0), "0x", deadline);
 
     vm.prank(voter1);
     governor.vote(0, inEuint64({ data: abi.encode(uint256(1)), securityZone: 0 }));
@@ -356,7 +360,7 @@ contract FhenixGovernorTest is Test {
     governor.finalizeProposal(0, forCount, againstCount, abstainCount);
 
     // getProposal returns state as ProposalState enum
-    (,,,,, FhenixGovernor.ProposalState state,,,,,) = governor.getProposal(0);
+    (,,,,,,, FhenixGovernor.ProposalState state,,,,,) = governor.getProposal(0);
     assertEq(uint256(state), uint256(FhenixGovernor.ProposalState.Passed), "Should be Passed");
   }
 
@@ -364,7 +368,7 @@ contract FhenixGovernorTest is Test {
     uint256 deadline = block.timestamp + 2 hours;
 
     vm.prank(coordinator);
-    governor.createProposal("Execute Test", "Should execute", deadline);
+    governor.createProposal("Execute Test", "Should execute", address(0), "0x", deadline);
 
     vm.prank(voter1);
     governor.vote(0, inEuint64({ data: abi.encode(uint256(1)), securityZone: 0 }));
@@ -383,7 +387,7 @@ contract FhenixGovernorTest is Test {
     vm.prank(coordinator);
     governor.executeProposal(0);
 
-    (,,,,, FhenixGovernor.ProposalState state,,,,,) = governor.getProposal(0);
+    (,,,,,,, FhenixGovernor.ProposalState state,,,,,) = governor.getProposal(0);
     assertEq(uint256(state), uint256(FhenixGovernor.ProposalState.Executed), "Should be Executed");
   }
 
@@ -391,7 +395,7 @@ contract FhenixGovernorTest is Test {
     uint256 deadline = block.timestamp + 2 hours;
 
     vm.prank(coordinator);
-    governor.createProposal("Finalize Fail", "Should fail", deadline);
+    governor.createProposal("Finalize Fail", "Should fail", address(0), "0x", deadline);
 
     vm.prank(voter1);
     governor.vote(0, inEuint64({ data: abi.encode(uint256(2)), securityZone: 0 })); // no
@@ -406,7 +410,7 @@ contract FhenixGovernorTest is Test {
     vm.prank(coordinator);
     governor.finalizeProposal(0, 0, againstCount, 0);
 
-    (,,,,, FhenixGovernor.ProposalState state,,,,,) = governor.getProposal(0);
+    (,,,,,,, FhenixGovernor.ProposalState state,,,,,) = governor.getProposal(0);
     assertEq(uint256(state), uint256(FhenixGovernor.ProposalState.Failed), "Should be Failed");
   }
 
@@ -414,7 +418,7 @@ contract FhenixGovernorTest is Test {
     uint256 deadline = block.timestamp + 2 hours;
 
     vm.prank(coordinator);
-    governor.createProposal("Fail Exec", "Cannot execute failed", deadline);
+    governor.createProposal("Fail Exec", "Cannot execute failed", address(0), "0x", deadline);
 
     vm.prank(voter1);
     governor.vote(0, inEuint64({ data: abi.encode(uint256(2)), securityZone: 0 }));
@@ -468,7 +472,7 @@ contract FhenixGovernorTest is Test {
     uint256 deadline = block.timestamp + 7 days;
 
     vm.prank(coordinator);
-    governor.createProposal("Accumulate", "Multiple encrypted votes", deadline);
+    governor.createProposal("Accumulate", "Multiple encrypted votes", address(0), "0x", deadline);
 
     // Three votes: yes, yes, no
     vm.prank(voter1);
@@ -494,5 +498,92 @@ contract FhenixGovernorTest is Test {
     assertEq(forCount, 2, "Two yes votes");
     assertEq(againstCount, 1, "One no vote");
     assertEq(abstainCount, 0, "No abstain");
+  }
+
+  function test_SetVault() public {
+    address newVault = address(0x456);
+    vm.prank(coordinator);
+    governor.setVault(newVault);
+    assertEq(governor.vault(), newVault);
+  }
+
+  // ─── Treasury Execution Tests ──────────────────────────────────────────────
+
+  function test_ExecuteProposal_TreasuryTransfer() public {
+    uint256 deadline = block.timestamp + 2 hours;
+    uint256 transferAmount = 50_000_000; // 50 USDC
+    address recipient = address(0xDE1);
+
+    // Encode vault.executeTransfer(recipient, transferAmount)
+    bytes memory data = abi.encodeWithSignature("executeTransfer(address,uint256)", recipient, transferAmount);
+
+    vm.prank(coordinator);
+    governor.createProposal("Treasury Payout", "Transfer 50 USDC to recipient", address(vault), data, deadline);
+
+    // Vote yes
+    vm.prank(voter1);
+    governor.vote(0, inEuint64({ data: abi.encode(uint256(1)), securityZone: 0 }));
+    vm.prank(voter2);
+    governor.vote(0, inEuint64({ data: abi.encode(uint256(1)), securityZone: 0 }));
+
+    vm.warp(deadline + 1);
+
+    // Tally and Finalize
+    Permission memory perm = _permission(coordinator, coordinatorPk, bytes32(uint256(999)));
+    vm.prank(coordinator);
+    (string memory fS, , ) = governor.revealTally(0, perm);
+    uint256 forCount = abi.decode(bytes(fS), (uint256));
+
+    vm.prank(coordinator);
+    governor.finalizeProposal(0, forCount, 0, 0);
+
+    // Execute - should trigger vault.executeTransfer
+    uint256 balBefore = usdc.balanceOf(recipient);
+    vm.prank(coordinator);
+    governor.executeProposal(0);
+    uint256 balAfter = usdc.balanceOf(recipient);
+
+    assertEq(balAfter - balBefore, transferAmount, "Recipient should receive 50 USDC");
+    
+    (,,,,,,, FhenixGovernor.ProposalState state,,,,,) = governor.getProposal(0);
+    assertEq(uint256(state), uint256(FhenixGovernor.ProposalState.Executed));
+  }
+
+  function test_Vault_ExecuteTransfer_GovernorOnly() public {
+    // Attempt to call vault.executeTransfer directly as voter1 (should fail)
+    vm.prank(voter1);
+    vm.expectRevert(abi.encodeWithSignature("NotCoordinator()"));
+    vault.executeTransfer(voter1, 10_000_000);
+
+    // Attempt as governor (should pass if we prank as governor)
+    vm.prank(address(governor));
+    vault.executeTransfer(voter1, 10_000_000);
+    assertEq(usdc.balanceOf(voter1), 1_000_000_000 - 100_000_000 + 10_000_000);
+  }
+
+  function test_ExecuteProposal_RevertsOnFailedCall() public {
+    uint256 deadline = block.timestamp + 2 hours;
+    
+    // Malicious/broken payload (e.g., transfer more than vault has)
+    bytes memory data = abi.encodeWithSignature("executeTransfer(address,uint256)", address(0xDE1), 999_999_999_999);
+
+    vm.prank(coordinator);
+    governor.createProposal("Broken Proposal", "Too much money", address(vault), data, deadline);
+
+    vm.prank(voter1);
+    governor.vote(0, inEuint64({ data: abi.encode(uint256(1)), securityZone: 0 }));
+    vm.warp(deadline + 1);
+
+    Permission memory perm = _permission(coordinator, coordinatorPk, bytes32(uint256(999)));
+    vm.prank(coordinator);
+    (string memory fS, , ) = governor.revealTally(0, perm);
+    uint256 forCount = abi.decode(bytes(fS), (uint256));
+    vm.prank(coordinator);
+    governor.finalizeProposal(0, forCount, 0, 0);
+
+    // Execute should revert because vault.executeTransfer will revert
+    vm.prank(coordinator);
+    vm.expectRevert(abi.encodeWithSignature("ExecutionFailed()"));
+    governor.executeProposal(0);
   }
 }

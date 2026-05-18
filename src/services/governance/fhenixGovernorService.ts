@@ -22,6 +22,7 @@
  */
 
 import { encryptUsdcAmount, getPermission, decryptSealedOutput } from '@/services/fhe/fheService';
+import { encodeFunctionData } from 'viem';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -33,6 +34,8 @@ export interface FhenixProposal {
   id: number;
   title: string;
   description: string;
+  target: string;
+  data: string;
   createdAt: Date;
   deadline: Date;
   voteCount: number;
@@ -70,6 +73,8 @@ const GOVERNOR_READ_ABI = [
     outputs: [
       { name: 'title', type: 'string' },
       { name: 'description', type: 'string' },
+      { name: 'target', type: 'address' },
+      { name: 'data', type: 'bytes' },
       { name: 'createdAt', type: 'uint256' },
       { name: 'deadline', type: 'uint256' },
       { name: 'voteCount', type: 'uint256' },
@@ -115,6 +120,8 @@ const GOVERNOR_WRITE_ABI_CREATE = [
     inputs: [
       { name: 'title', type: 'string' },
       { name: 'description', type: 'string' },
+      { name: 'target', type: 'address' },
+      { name: 'data', type: 'bytes' },
       { name: 'deadline', type: 'uint256' },
     ],
     outputs: [],
@@ -208,6 +215,29 @@ function encodeVoteChoice(choice: VoteChoice): bigint {
   }
 }
 
+// ─── Encoding Helpers ────────────────────────────────────────────────────────
+
+const VAULT_ABI_EXECUTE_TRANSFER = [
+  {
+    name: 'executeTransfer',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'to', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [],
+  },
+] as const;
+
+export function encodeVaultTransfer(to: string, amount: bigint): string {
+  return encodeFunctionData({
+    abi: VAULT_ABI_EXECUTE_TRANSFER,
+    functionName: 'executeTransfer',
+    args: [to as `0x${string}`, amount],
+  });
+}
+
 // ─── State mapping ───────────────────────────────────────────────────────────
 
 const PROPOSAL_STATE_MAP: Record<number, ProposalState> = {
@@ -259,9 +289,9 @@ export class FhenixGovernorService {
         abi: GOVERNOR_READ_ABI,
         functionName: 'getProposal',
         args: [BigInt(i)],
-      }) as [string, string, bigint, bigint, bigint, number, bigint, bigint, bigint, string, boolean];
+      }) as [string, string, string, string, bigint, bigint, bigint, number, bigint, bigint, bigint, string, boolean];
 
-      const [title, description, createdAt, deadline, voteCount, state, forVotes, againstVotes, abstainVotes, proposer, tallyRevealed] = result;
+      const [title, description, target, data, createdAt, deadline, voteCount, state, forVotes, againstVotes, abstainVotes, proposer, tallyRevealed] = result;
 
       let hasVoted = false;
       if (userAddress) {
@@ -277,6 +307,8 @@ export class FhenixGovernorService {
         id: i,
         title,
         description,
+        target,
+        data,
         createdAt: new Date(Number(createdAt) * 1000),
         deadline: new Date(Number(deadline) * 1000),
         voteCount: Number(voteCount),
@@ -303,6 +335,8 @@ export class FhenixGovernorService {
     publicClient: any,
     title: string,
     description: string,
+    target: string,
+    data: string,
     deadlineDays: number, // number of days from now
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     try {
@@ -312,7 +346,7 @@ export class FhenixGovernorService {
         address: this.config.governorAddress,
         abi: GOVERNOR_WRITE_ABI_CREATE,
         functionName: 'createProposal',
-        args: [title, description, deadline],
+        args: [title, description, target as `0x${string}`, data as `0x${string}`, deadline],
       });
 
       await publicClient.waitForTransactionReceipt({ hash: txHash });

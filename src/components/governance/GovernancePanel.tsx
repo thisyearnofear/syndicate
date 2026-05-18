@@ -98,6 +98,8 @@ export function GovernancePanel({
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createTitle, setCreateTitle] = useState('');
   const [createDesc, setCreateDesc] = useState('');
+  const [createTarget, setCreateTarget] = useState('');
+  const [createData, setCreateData] = useState('0x');
   const [createDeadline, setCreateDeadline] = useState(7); // days
 
   const governorService = governorAddress
@@ -143,12 +145,16 @@ export function GovernancePanel({
         fhenixPublicClient,
         createTitle.trim(),
         createDesc.trim(),
+        createTarget.trim() || '0x0000000000000000000000000000000000000000',
+        createData.trim() || '0x',
         createDeadline,
       );
       if (result.success) {
         setShowCreateForm(false);
         setCreateTitle('');
         setCreateDesc('');
+        setCreateTarget('');
+        setCreateData('0x');
         setCreateDeadline(7);
         await fetchProposals();
       } else {
@@ -347,9 +353,32 @@ export function GovernancePanel({
             placeholder="Description (optional)"
             value={createDesc}
             onChange={(e) => setCreateDesc(e.target.value)}
-            rows={3}
+            rows={2}
             className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-purple-400/50 focus:outline-none resize-none"
           />
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">Target Address (optional)</label>
+              <input
+                type="text"
+                placeholder="0x…"
+                value={createTarget}
+                onChange={(e) => setCreateTarget(e.target.value)}
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-purple-400/50 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">Payload Data (optional)</label>
+              <input
+                type="text"
+                placeholder="0x…"
+                value={createData}
+                onChange={(e) => setCreateData(e.target.value)}
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-purple-400/50 focus:outline-none"
+              />
+            </div>
+          </div>
 
           <div className="flex items-center gap-3">
             <div className="flex-1">
@@ -438,6 +467,18 @@ export function GovernancePanel({
                     <h4 className="text-sm font-semibold text-white truncate">{proposal.title}</h4>
                     {proposal.description && (
                       <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{proposal.description}</p>
+                    )}
+                    {proposal.target !== '0x0000000000000000000000000000000000000000' && (
+                      <div className="mt-2 flex items-center gap-2 rounded bg-white/5 px-2 py-1 text-[10px] text-gray-400 border border-white/5">
+                        <ExternalLink className="w-3 h-3" />
+                        <span className="truncate">Target: {formatAddress(proposal.target)}</span>
+                        {proposal.data !== '0x' && (
+                          <>
+                            <span className="text-gray-600">|</span>
+                            <span className="truncate">Data: {proposal.data.slice(0, 10)}…</span>
+                          </>
+                        )}
+                      </div>
                     )}
                   </div>
                   <span className="text-[10px] text-gray-500 shrink-0">

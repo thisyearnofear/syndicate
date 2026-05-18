@@ -56,6 +56,9 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
     ///      Allows off-chain providers to read the live rate without a separate oracle.
     uint256 public currentApy;
 
+    /// @dev Authorized governor contract
+    address public governor;
+
     /// @dev Nonces for coordinator-signed withdrawal attestations (anti-replay)
     mapping(address => uint256) public coordinatorNonces;
 
@@ -110,6 +113,11 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
 
     modifier onlyCoordinator() {
         if (msg.sender != coordinator) revert NotCoordinator();
+        _;
+    }
+
+    modifier onlyCoordinatorOrGovernor() {
+        if (msg.sender != coordinator && msg.sender != governor) revert NotCoordinator();
         _;
     }
 
@@ -234,7 +242,7 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
     function distributeYield(
         address[] calldata members,
         inEuint64[] calldata encryptedAmounts
-    ) external onlyCoordinator {
+    ) external onlyCoordinatorOrGovernor {
         if (members.length == 0) revert ZeroAmount();
         if (members.length != encryptedAmounts.length) revert InvalidWithdrawAmount();
 
@@ -435,6 +443,26 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
     }
 
     // ─── Coordinator Utilities ────────────────────────────────────────────────
+
+    /**
+     * @notice Set the authorized governor contract.
+     */
+    function setGovernor(address _governor) external onlyCoordinator {
+        governor = _governor;
+    }
+
+    /**
+     * @notice Execute a plaintext USDC transfer from the vault.
+     * @dev    Allows the Governor to trigger payouts after a successful vote.
+     */
+    function executeTransfer(address to, uint256 amount) external onlyCoordinatorOrGovernor {
+        if (amount == 0) revert ZeroAmount();
+        if (amount > totalDeposited) revert InvalidWithdrawAmount();
+        
+        totalDeposited -= amount;
+        bool ok = usdc.transfer(to, amount);
+        if (!ok) revert TransferFailed();
+    }
 
     /**
      * @notice Transfer coordinator role (e.g., to a DAO or multisig)
