@@ -55,6 +55,7 @@ const DIRECT_DEPOSIT_STRATEGIES = [
   "morpho",
   "spark",
   "pooltogether",
+  "fhenix",
 ] as const;
 
 type FlowStep = 1 | 2 | 3;

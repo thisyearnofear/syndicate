@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, Suspense, lazy } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 import { useUnifiedWallet } from "@/hooks";
 import { PRODUCT_MODES, getProductModeById } from "@/config/productModes";
 
@@ -84,13 +85,28 @@ export default function Home() {
             >
               Create Private Vault
             </Button>
+            <div className="relative">
+              <span className="absolute -top-3 -right-3 z-10 rounded-full bg-amber-500 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-lg shadow-amber-500/30 animate-float">
+                ~2 min
+              </span>
+              <Button
+                variant="default"
+                size="lg"
+                className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-2xl hover:shadow-amber-500/30 border border-amber-400/30 text-lg px-10 py-6 group"
+                onClick={handleSeePrivateVaults}
+              >
+                <span className="mr-2">🎯</span>
+                Start Demo
+                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+              </Button>
+            </div>
             <Button
               variant="outline"
               size="lg"
               className="border-white/20 bg-white/5 text-white hover:bg-white/10 text-lg px-10 py-6"
-              onClick={handleSeePrivateVaults}
+              onClick={handleCreatePrivateVault}
             >
-              See Private Balance Demo
+              {publicPlayMode?.shortTitle ?? 'Public Play'}
             </Button>
           </div>
 
