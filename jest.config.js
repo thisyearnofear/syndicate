@@ -51,6 +51,8 @@ const customJestConfig = {
     '\\.(jpg|jpeg|png|gif|webp|svg)$': '<rootDir>/tests/mocks/__mocks__/fileMock.js',
     // Mock Solana and other problematic modules in tests
     '^uuid$': '<rootDir>/tests/mocks/__mocks__/uuid.js',
+    // Mock wagmi/chains to avoid ESM parsing issues (uses export * from viem/chains)
+    '^wagmi/chains$': '<rootDir>/tests/mocks/__mocks__/wagmi-chains.js',
   },
   
   // Coverage configuration

@@ -160,7 +160,7 @@ describe('Pool Providers', () => {
     });
 
     describe('executeTransaction', () => {
-      it('should return success with tx hash', async () => {
+      it('should indicate execution requires external multi-sig approval', async () => {
         const result = await safeProvider.executeTransaction(
           '0xSafeAddress',
           '0xRecipient',
@@ -169,8 +169,10 @@ describe('Pool Providers', () => {
           '0xExecutor'
         );
 
-        expect(result.success).toBe(true);
-        expect(result.txHash).toBeDefined();
+        // Safe executeTransaction returns success:false because it requires
+        // a wallet client and collected signatures (multi-sig approval)
+        expect(result.success).toBe(false);
+        expect(result.error).toBeDefined();
       });
     });
 
