@@ -16,3 +16,11 @@ export async function register() {
     await import('../sentry.edge.config');
   }
 }
+
+export const onRequestError = (...args: any[]) => {
+  // @ts-ignore - Sentry might not have types for this hook yet in some versions
+  import('@sentry/nextjs').then((Sentry) => {
+    // @ts-ignore
+    Sentry.captureRequestError(...args);
+  });
+};
