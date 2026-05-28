@@ -880,7 +880,3 @@ async function connectStacksWalletWithConnect(): Promise<{
     );
   }
 }
-rrorMessage}`,
-    );
-  }
-}

@@ -24,8 +24,6 @@ const nextConfig = {
     '@solana/wallet-adapter-base',
     '@tonconnect/ui-react',
     '@rainbow-me/rainbowkit',
-    '@coordinationlabs/megapot-ui-kit',
-    'starknetkit',
   ],
 };
 

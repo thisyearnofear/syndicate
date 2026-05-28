@@ -1,0 +1,8 @@
+{
+  "name": "empty-stub",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Empty stub to replace react-native and native deps",
+  "main": "index.js",
+  "license": "MIT"
+}
