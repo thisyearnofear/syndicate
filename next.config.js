@@ -8,20 +8,22 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
 
+  // Reduce build memory usage by splitting webpack compilation into workers
+  // This helps prevent OOM errors on memory-constrained build environments (Vercel Hobby)
+  experimental: {
+    webpackBuildWorker: true,
+  },
+
   // Force packages that ship pre-compiled bundles with React hooks to be
   // re-compiled through Next.js's pipeline so they use the app's single
   // React instance.
+  // Note: @near-wallet-selector/* wallet packages beyond core/modal-ui are
+  // dynamically imported, so they don't need to be in transpilePackages.
+  // @solana/wallet-adapter-react-ui and -base are also dynamically imported.
   transpilePackages: [
     '@near-wallet-selector/modal-ui',
     '@near-wallet-selector/core',
-    '@near-wallet-selector/here-wallet',
-    '@near-wallet-selector/meteor-wallet',
-    '@near-wallet-selector/my-near-wallet',
-    '@near-wallet-selector/nightly',
-    '@near-wallet-selector/sender',
     '@solana/wallet-adapter-react',
-    '@solana/wallet-adapter-react-ui',
-    '@solana/wallet-adapter-base',
     '@tonconnect/ui-react',
     '@rainbow-me/rainbowkit',
   ],
