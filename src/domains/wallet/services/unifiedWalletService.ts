@@ -119,7 +119,9 @@ export function getWalletStatus(walletType: WalletType): {
         (!!(window as unknown as WalletProviders).LeatherProvider ||
           !!(window as unknown as WalletProviders).XverseProviders ||
           !!(window as unknown as WalletProviders).AsignaProvider ||
-          !!(window as unknown as WalletProviders).FordefiProvider);
+          !!(window as unknown as WalletProviders).FordefiProvider ||
+          !!(window as any).StacksProvider ||
+          !!(window as any).btc);
       return {
         isAvailable: hasStacksWallet,
         isInstalled: hasStacksWallet,
@@ -749,7 +751,9 @@ async function connectStacksWalletWithConnect(): Promise<{
       (!!(window as unknown as WalletProviders).LeatherProvider ||
         !!(window as unknown as WalletProviders).XverseProviders ||
         !!(window as unknown as WalletProviders).AsignaProvider ||
-        !!(window as unknown as WalletProviders).FordefiProvider);
+        !!(window as unknown as WalletProviders).FordefiProvider ||
+        !!(window as any).StacksProvider ||
+        !!(window as any).btc);
 
     if (!hasStacksWallet) {
       throw createError(
@@ -873,6 +877,10 @@ async function connectStacksWalletWithConnect(): Promise<{
     throw createError(
       "CONNECTION_FAILED",
       `Failed to connect Stacks wallet: ${errorMessage}`,
+    );
+  }
+}
+rrorMessage}`,
     );
   }
 }

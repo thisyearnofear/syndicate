@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
     // Validate endpoint to prevent SSRF attacks
     const allowedEndpoints = [
       '/jackpot-round-stats/active',
+      '/lottery/jackpot-round-stats/active',
       '/ticket-purchases',
       '/giveaways/daily-giveaway-winners'
     ];
