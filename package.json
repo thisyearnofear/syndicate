@@ -102,7 +102,7 @@
     "cross-fetch": "4.1.0",
     "crypto-browserify": "3.12.1",
     "eslint": "^8.57.0",
-    "eslint-config-next": "16.2.6",
+    "eslint-config-next": "15.5.18",
     "https-browserify": "1.0.0",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
