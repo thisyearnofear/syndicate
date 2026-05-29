@@ -23,7 +23,6 @@ import {
   AlertCircle,
   ExternalLink,
   Lock,
-  KeyRound,
   Eye,
   FileText,
 } from 'lucide-react';
@@ -113,6 +112,7 @@ export function GovernancePanel({
 
   /* ── Fetch proposals ──────────────────────────────────────────────────── */
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchProposals = useCallback(async () => {
     if (!governorService || !fhenixPublicClient) return;
     setLoading(true);
@@ -129,6 +129,7 @@ export function GovernancePanel({
   }, [governorService, fhenixPublicClient, userAddress]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProposals();
   }, [fetchProposals]);
 

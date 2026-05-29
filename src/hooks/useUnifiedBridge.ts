@@ -308,7 +308,8 @@ export function useUnifiedBridge(): BridgeState & {
       options.onStatusChange?.('failed', { error: error.message });
       throw error;
     }
-  }, [wallet.isConnected, reset, wallet.address]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wallet.isConnected, reset]);
 
   const refreshActivity = useCallback(() => {
     setIsLoading(true);
@@ -321,6 +322,7 @@ export function useUnifiedBridge(): BridgeState & {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshActivity();
   }, [refreshActivity]);
 

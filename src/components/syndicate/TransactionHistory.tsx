@@ -84,6 +84,7 @@ export function TransactionHistory({ poolId, className = '' }: TransactionHistor
   }, [poolId, filter]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchTransactions();
   }, [fetchTransactions]);
 

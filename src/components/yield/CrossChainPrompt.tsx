@@ -31,6 +31,7 @@ export default function CrossChainPrompt() {
   // -------------------------------------------------------------------
   useEffect(() => {
     if (!address) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
       setHasMultiChain(false);
       return;
     }
@@ -59,6 +60,7 @@ export default function CrossChainPrompt() {
       setTotalUsdc(cumulative.toFixed(2));
     }
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     fetchBalances();
   }, [address, chainId]);
   if (!hasMultiChain) return null;

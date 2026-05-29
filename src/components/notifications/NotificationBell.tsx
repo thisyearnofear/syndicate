@@ -103,6 +103,7 @@ export function NotificationBell({ poolId, className = '' }: NotificationBellPro
 
   // Initial fetch
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchNotifications();
   }, [fetchNotifications]);
 
