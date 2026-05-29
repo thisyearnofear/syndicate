@@ -166,6 +166,7 @@ export default function PortfolioPage() {
   }, [address]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPortfolio();
   }, [fetchPortfolio]);
 

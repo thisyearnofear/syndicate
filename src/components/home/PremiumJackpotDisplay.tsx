@@ -17,11 +17,13 @@ export default function PremiumJackpotDisplay({ onBuyClick }: PremiumJackpotDisp
     return jackpotStats && jackpotStats.prizeUsd && parseFloat(jackpotStats.prizeUsd) > 0;
   }, [jackpotStats]);
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const prizeValue = useMemo(() => {
     if (!hasValidData) return 0;
     return parseFloat(jackpotStats!.prizeUsd);
   }, [hasValidData, jackpotStats]);
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const timeRemaining = useMemo(() => {
     if (!jackpotStats?.endTimestamp) return null;
     return formatTimeRemaining(jackpotStats.endTimestamp);

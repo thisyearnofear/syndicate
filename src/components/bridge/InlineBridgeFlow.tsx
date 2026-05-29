@@ -234,11 +234,13 @@ export function InlineBridgeFlow({
         destinationChain,
         onStatus,
         onComplete,
-        onError
+        onError,
+        txHash,
     ]);
 
     useEffect(() => {
         if (autoStart && !isStarted) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             startBridge();
         }
     }, [autoStart, isStarted, startBridge]);

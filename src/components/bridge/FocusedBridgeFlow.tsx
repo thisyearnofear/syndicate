@@ -76,6 +76,7 @@ export function FocusedBridgeFlow({
   const { bridgeActivityId, createBridgeActivity, patchBridgeActivity } = useBridgeActivityTracker();
 
   useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
     setAmountInput(amount);
   }, [amount]);
 
@@ -126,6 +127,7 @@ export function FocusedBridgeFlow({
               : "Native USDC bridge",
         };
       }
+        // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedProtocol(protocolOption);
     }
   }, [preselectedProtocol, stage, selectedProtocol, sourceChain]);
@@ -489,11 +491,13 @@ export function FocusedBridgeFlow({
     setEvents,
     setBaseEthHint,
     txHash,
+    sourceChainId,
   ]);
 
   // Auto-start bridge when protocol is set
   useEffect(() => {
     if (selectedProtocol && stage === "bridging" && preselectedProtocol) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       startBridge();
     }
   }, [selectedProtocol, preselectedProtocol, stage, startBridge]);

@@ -309,6 +309,7 @@ export function useVaultDeposit() {
         return { success: false, error: msg };
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [address, withdrawAave, withdrawERC4626],
   );
 

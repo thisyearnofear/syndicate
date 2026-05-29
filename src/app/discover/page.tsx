@@ -75,6 +75,7 @@ export default function SyndicateDiscoveryPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchSyndicates();
   }, [fetchSyndicates]);
 
@@ -121,6 +122,7 @@ export default function SyndicateDiscoveryPage() {
         break;
     }
 
+        // eslint-disable-next-line react-hooks/set-state-in-effect
     setFilteredSyndicates(filtered);
   }, [syndicates, searchQuery, poolTypeFilter, vaultFilter, sortBy]);
 

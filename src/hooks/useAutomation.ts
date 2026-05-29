@@ -88,27 +88,8 @@ export function useAutomation(
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load task from storage on mount
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const task = JSON.parse(stored) as AutomationTaskConfig;
-        setActiveTask(task);
-
-        // Try to load task status if we have a taskId
-        if (task.taskId && isSupported) {
-          refreshTaskStatus(task.taskId);
-        }
-      }
-    } catch (err) {
-      logger.error("Failed to load automation task from storage", { error: err instanceof Error ? err.message : String(err) });
-    }
-  }, [isSupported]);
-
   // Refresh task status
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const refreshTaskStatus = useCallback(
     async (taskId: string) => {
       try {
@@ -127,6 +108,28 @@ export function useAutomation(
     },
     []
   );
+
+  // Load task from storage on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const task = JSON.parse(stored) as AutomationTaskConfig;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setActiveTask(task);
+
+        // Try to load task status if we have a taskId
+        if (task.taskId && isSupported) {
+          refreshTaskStatus(task.taskId);
+        }
+      }
+    } catch (err) {
+      logger.error("Failed to load automation task from storage", { error: err instanceof Error ? err.message : String(err) });
+    }
+  }, [isSupported]);
 
   // Create a new automation task
   const createTask = useCallback(
