@@ -17,10 +17,10 @@ export async function register() {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const onRequestError = (...args: any[]) => {
-  // @ts-ignore - Sentry might not have types for this hook yet in some versions
   import('@sentry/nextjs').then((Sentry) => {
-    // @ts-ignore
+    // @ts-expect-error - Sentry captureRequestError may not be typed
     Sentry.captureRequestError(...args);
   });
 };

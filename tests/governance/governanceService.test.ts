@@ -8,7 +8,7 @@
  * - Proposal cancellation
  */
 
-import { governanceService, GovernanceService } from '@/services/governance/governanceService';
+import { GovernanceService } from '@/services/governance/governanceService';
 
 // Mock the database
 const mockQuery = jest.fn();
@@ -75,13 +75,10 @@ describe('GovernanceService', () => {
       });
 
       // Check that quorum was calculated (6 for 11 members)
-      const insertCall = mockQuery.mock.calls[1];
-      expect(insertCall).toBeDefined();
+      expect(mockQuery.mock.calls[1]).toBeDefined();
     });
 
     it('should set expiry to 7 days from creation', async () => {
-      const beforeCreate = Date.now();
-
       mockQuery.mockResolvedValueOnce({
         rows: [{ count: '5' }],
       });
@@ -99,9 +96,6 @@ describe('GovernanceService', () => {
         proposer: '0x1234567890123456789012345678901234567890',
         proposalData: {},
       });
-
-      const afterCreate = Date.now();
-      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
 
       // Verify the insert was called
       expect(mockQuery).toHaveBeenCalledTimes(2);
@@ -410,8 +404,7 @@ describe('GovernanceService', () => {
       // Check that the query contains executed status
       expect(queryCall[0]).toContain('executed');
       // Check that tx hash is passed as parameter (second element of the array)
-      const params = queryCall[1];
-      expect(params).toContain('0xTxHash123');
+      expect(queryCall[1]).toContain('0xTxHash123');
     });
   });
 
