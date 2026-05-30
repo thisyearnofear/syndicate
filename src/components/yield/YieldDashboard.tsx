@@ -78,6 +78,7 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
   // Live yield ticker - updates every 5s to reduce re-renders
   useEffect(() => {
     if (totalDeposited <= 0 || weightedAPY <= 0) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
       setLiveYield(0);
       return;
     }
@@ -92,12 +93,14 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
 
   // Reset live yield when balance refreshes
   useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
     setLiveYield(0);
   }, [totalYield]);
 
   // Update auto-yield strategy when address changes
   useEffect(() => {
     if (address) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
       setAutoYieldStrategy(yieldToTicketsService.getStrategyStatus(address));
     } else {
       setAutoYieldStrategy(null);

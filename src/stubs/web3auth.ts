@@ -67,7 +67,7 @@ export interface Web3AuthContextConfig {
 
 // Solana provider stub
 export class SolanaPrivateKeyProvider {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   constructor(_config?: { config?: { chainConfig?: ChainConfig } }) {
     void _config;
     console.warn('[STUB] SolanaPrivateKeyProvider created - Web3Auth is disabled');
@@ -95,7 +95,7 @@ export class Web3Auth {
   provider: IProvider | null = null;
   
   constructor(_options: Web3AuthOptions) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     void _options;
     console.warn('[STUB] Web3Auth created - Web3Auth is disabled');
   }

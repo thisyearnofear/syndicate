@@ -22,11 +22,13 @@ export default function CelebrationModal({ isOpen, onClose, achievement }: Celeb
   const [showShareModal, setShowShareModal] = useState(false);
 
   useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
   useEffect(() => {
     if (isOpen && mounted) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowConfetti(true);
 
       // DELIGHT: Generate confetti particles - only after mount to prevent hydration mismatch

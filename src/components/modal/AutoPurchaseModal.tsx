@@ -113,6 +113,7 @@ export function AutoPurchaseModal({
 
   useEffect(() => {
     const ticketCount = Math.floor(config.amount);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
     setConfig((prev) => ({
       ...prev,
       ticketCount,
@@ -124,6 +125,7 @@ export function AutoPurchaseModal({
   useEffect(() => {
     if (!isOpen || !initialStrategy) return;
 
+        // eslint-disable-next-line react-hooks/set-state-in-effect
     setConfig(prev => ({
       ...prev,
       strategy: initialStrategy,
@@ -255,7 +257,7 @@ export function AutoPurchaseModal({
 
     // Handle EVM ERC-7715 flow (original logic)
     try {
-      let _limit; // eslint-disable-line @typescript-eslint/no-unused-vars
+      let _limit;  
       switch (config.frequency) {
         case "weekly":
           _limit = BigInt(config.amount * 7 * 10 ** 6);

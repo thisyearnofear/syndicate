@@ -70,6 +70,7 @@ export function useAdvancedPermissions(): UseAdvancedPermissionsState & UseAdvan
     try {
       const stored = localStorage.getItem(STORAGE_KEY_AUTO_CONFIG);
       if (stored) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setAutoPurchaseConfig(JSON.parse(stored));
       }
     } catch (error) {

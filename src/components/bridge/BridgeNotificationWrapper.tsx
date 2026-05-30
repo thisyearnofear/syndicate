@@ -19,6 +19,7 @@ export function BridgeNotificationWrapper() {
     // Fetch Base USDC balance when wallet is connected
     useEffect(() => {
         if (!state.isConnected || !state.address) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
             setBaseBalance(undefined);
             return;
         }

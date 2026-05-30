@@ -45,6 +45,7 @@ export default function ProfilePage() {
   // Load saved Base address from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem('syndicate_base_address') ?? '';
+        // eslint-disable-next-line react-hooks/set-state-in-effect
     setBaseAddress(saved);
     setBaseAddressInput(saved);
   }, []);

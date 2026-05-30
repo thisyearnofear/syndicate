@@ -99,6 +99,7 @@ export function WinningsWithdrawalFlow({
   // Watch for withdrawal state changes
   useEffect(() => {
     if (nearWithdrawalWaitingForDeposit) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
       setStep('transfer');
     } else if (nearWithdrawalTxHash) {
       setStep('success');

@@ -22,9 +22,8 @@
  */
 
 import { encryptUsdcAmount, getPermission, decryptSealedOutput } from '@/services/fhe/fheService';
-import { encodeFunctionData } from 'viem';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { encodeFunctionData } from 'viem';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -262,6 +261,7 @@ export class FhenixGovernorService {
   /**
    * Get the coordinator address from the governor contract
    */
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async getCoordinator(publicClient: any): Promise<string> {
     return publicClient.readContract({
       address: this.config.governorAddress,
@@ -273,6 +273,7 @@ export class FhenixGovernorService {
   /**
    * Fetch all proposals from the governor contract
    */
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async getProposals(publicClient: any, userAddress?: string): Promise<FhenixProposal[]> {
     const count = await publicClient.readContract({
       address: this.config.governorAddress,
@@ -331,7 +332,9 @@ export class FhenixGovernorService {
    * Create a new proposal (coordinator only)
    */
   async createProposal(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     walletClient: any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     publicClient: any,
     title: string,
     description: string,
@@ -370,7 +373,9 @@ export class FhenixGovernorService {
    * @returns Transaction hash on success
    */
   async castVote(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     walletClient: any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     publicClient: any,
     proposalId: number,
     choice: VoteChoice,
@@ -419,9 +424,10 @@ export class FhenixGovernorService {
    * @returns Decrypted for/against/abstain counts, or error
    */
   async revealAndDecryptTally(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     publicClient: any,
     proposalId: number,
-    userAddress: string,
+    _userAddress: string,
   ): Promise<{
     success: boolean;
     forVotes?: number;
@@ -482,7 +488,9 @@ export class FhenixGovernorService {
    * Finalize a proposal with decrypted tally results (coordinator only).
    */
   async finalizeProposal(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     walletClient: any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     publicClient: any,
     proposalId: number,
     forVotes: number,
@@ -512,7 +520,9 @@ export class FhenixGovernorService {
    * Execute a passed proposal (coordinator only).
    */
   async executeProposal(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     walletClient: any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     publicClient: any,
     proposalId: number,
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {

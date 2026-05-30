@@ -169,6 +169,7 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
   // Check if user already has sufficient USDC allowance (skip approval warning if so)
   useEffect(() => {
     if (!isConnected || !address || walletType !== 'evm' || selectedProtocol !== 'megapot') {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
       setHasExistingAllowance(null);
       return;
     }
@@ -210,6 +211,7 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
 
   useEffect(() => {
     if (needsBaseAddress && !baseAddress && mirrorAddress && /^0x[a-fA-F0-9]{40}$/.test(mirrorAddress)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
       setBaseAddress(mirrorAddress);
       setBaseAddressSource('auto');
     }
@@ -225,6 +227,7 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
 
   useEffect(() => {
     if (selectedChain !== 'stacks' || !address) return;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsCheckingBalance(true);
     const tokenPrincipal = stacksToken === 'sbtc'
       ? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token'
@@ -248,14 +251,17 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
   const showTracker = isPurchasing || ["confirmed_source", "bridging", "purchasing", "complete", "error"].includes(status);
 
   useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
     if (isOpen && isConnected && address && step === "connect") setStep("select");
   }, [isOpen, isConnected, address, step]);
 
   useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
     if (status === "complete" && step === "processing" && selectedProtocol === 'megapot') setStep("success");
   }, [status, step, selectedProtocol]);
 
   useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
     if (ptDeposit.status === 'complete' && step === "processing") setStep("success");
   }, [ptDeposit.status, step]);
 

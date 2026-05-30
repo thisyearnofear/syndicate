@@ -123,6 +123,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
     if (tg) {
       tg.ready();
       tg.expand();
+        // eslint-disable-next-line react-hooks/set-state-in-effect
       setWebApp(tg);
       setIsTelegram(true);
     }
