@@ -9,90 +9,13 @@
  * - MODULAR: Supports both direct and permitted (Advanced Permissions) purchases
  */
 
-import { api, performance, CHAIN_IDS } from '@/config';
+import { CHAIN_IDS } from '@/config';
 import type { JackpotStats, TicketPurchase, DailyGiveawayWin, PurchaseResult } from '../types';
 import { getMegapotOnChainPrize } from '@/services/lotteries/OnChainFallbackService';
 import { logger } from '@/lib/logger';
 
 class MegapotService {
   private cache = new Map<string, { data: unknown; timestamp: number }>();
-  private readonly baseUrl = api.megapot.baseUrl;
-  private readonly apiKey = api.megapot.apiKey;
-
-  /**
-   * PERFORMANT: Generic request method with caching and retry logic
-   */
-  private async makeRequest<T>(
-    endpoint: string,
-    options: {
-      retries?: number;
-      cache?: boolean;
-      cacheDuration?: number;
-      logFailures?: boolean;
-    } = {}
-  ): Promise<T> {
-    const {
-      retries = 3,
-      cache = true,
-      cacheDuration = performance.cache.jackpotData,
-      logFailures = true,
-    } = options;
-    const cacheKey = `${endpoint}`;
-
-    // PERFORMANT: Check cache first
-    if (cache) {
-      const cached = this.cache.get(cacheKey);
-      if (cached && Date.now() - cached.timestamp < cacheDuration) {
-        return cached.data as T;
-      }
-    }
-
-    // Use the API proxy route to avoid CORS issues
-    const url = `/api/megapot?endpoint=${encodeURIComponent(endpoint)}`;
-
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), performance.timeouts.api);
-
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-
-        // PERFORMANT: Cache successful responses
-        if (cache) {
-          this.cache.set(cacheKey, { data, timestamp: Date.now() });
-        }
-
-        return data;
-      } catch (error) {
-        if (logFailures) {
-          logger.warn(`Attempt ${attempt}/${retries} failed for ${endpoint}`, { error: String(error) });
-        }
-
-        if (attempt === retries) {
-          throw new Error(`Failed to fetch ${endpoint} after ${retries} attempts: ${error}`);
-        }
-
-        // Exponential backoff
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
-      }
-    }
-
-    throw new Error(`Unexpected error in makeRequest for ${endpoint}`);
-  }
 
   /**
    * Jackpot stats are optional homepage content.

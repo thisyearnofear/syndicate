@@ -1,27 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
-import { API } from '@/config';
 import { getCrossChainPurchasesByStacksAddress } from '@/lib/db/repositories/crossChainPurchaseRepository';
 import { logger } from '@/lib/logger';
-
-function normalizeBaseUrl(url: string): string {
-    return url.replace(/\/+$/, '');
-}
-
-function getCandidateBaseUrls(): string[] {
-    const configured = normalizeBaseUrl(API.megapot.baseUrl);
-    return [
-        configured,
-        configured.replace(/\/api\/v2$/i, ''),
-        'https://api.megapot.io/api/v2',
-    ].filter((value, index, arr) => arr.indexOf(value) === index);
-}
-
-function getEndpointVariants(endpoint: string): string[] {
-    const normalized = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const lotteryPrefixed = normalized.startsWith('/lottery/') ? normalized : `/lottery${normalized}`;
-    return [normalized, lotteryPrefixed].filter((value, index, arr) => arr.indexOf(value) === index);
-}
 
 // Helper to fetch purchases for a single EVM address
 // NOTE: The api.megapot.io REST API has been restructured and all ticket-purchase
