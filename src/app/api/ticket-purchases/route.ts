@@ -24,27 +24,9 @@ function getEndpointVariants(endpoint: string): string[] {
 }
 
 // Helper to fetch purchases for a single EVM address
-async function fetchPurchasesForEvmAddress(walletAddress: string) {
-    const endpoint = `/ticket-purchases/${walletAddress}`;
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (API.megapot.apiKey) headers['apikey'] = API.megapot.apiKey;
-
-    for (const baseUrl of getCandidateBaseUrls()) {
-        for (const endpointVariant of getEndpointVariants(endpoint)) {
-            const response = await fetch(`${baseUrl}${endpointVariant}`, {
-                method: 'GET',
-                headers,
-                signal: AbortSignal.timeout(30000),
-            });
-
-            if (response.ok) {
-                return response.json();
-            }
-        }
-    }
-
-    logger.error('Megapot API error - no endpoint variant resolved', { walletAddress });
-    // Return empty array for a single address failure to not fail the whole batch
+// NOTE: The api.megapot.io REST API has been restructured and all ticket-purchase
+// endpoints return 404. Returns empty array immediately.
+async function fetchPurchasesForEvmAddress(_walletAddress: string) {
     return [];
 }
 
