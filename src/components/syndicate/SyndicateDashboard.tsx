@@ -29,6 +29,8 @@ import {
   EyeOff
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
+import { Card } from '@/shared/components/ui/Card';
+import { Badge } from '@/shared/components/ui/Badge';
 import { useUnifiedWallet } from '@/hooks';
 import { useFhenixPrivateVaultBalance } from '@/hooks/useFhenixPrivateVaultBalance';
 import { FhenixRevealStepper } from '@/components/fhenix/FhenixRevealStepper';
@@ -198,7 +200,7 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
 
   if (loading) {
     return (
-      <div className={`glass-premium rounded-2xl p-6 border border-white/20 ${className}`}>
+      <Card variant="glass" padding="lg" className={className}>
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-700 rounded w-1/3"></div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -208,13 +210,13 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
           </div>
           <div className="h-40 bg-gray-700 rounded"></div>
         </div>
-      </div>
+      </Card>
     );
   }
 
   if (error || !data) {
     return (
-      <div className={`glass-premium rounded-2xl p-6 border border-red-500/30 ${className}`}>
+      <Card variant="glass" padding="lg" className={`border-red-500/30 ${className}`}>
         <div className="text-center">
           <p className="text-red-400 mb-4">{error || 'Failed to load dashboard'}</p>
           <Button onClick={() => fetchDashboard()} variant="outline" size="sm">
@@ -222,7 +224,7 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
             Retry
           </Button>
         </div>
-      </div>
+      </Card>
     );
   }
 
@@ -237,9 +239,9 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
           </h2>
           {data.pool_type === 'fhenix' && (
             <div className="inline-flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-gray-200">
-              <span className="rounded-full bg-amber-500/20 px-2 py-1 font-semibold uppercase tracking-wide text-amber-300">
+              <Badge variant="warning" size="sm" dot>
                 Private by default
-              </span>
+              </Badge>
               <span>Contribution amounts are encrypted. Activity may remain visible while balances require authorized reveal.</span>
             </div>
           )}
@@ -297,7 +299,7 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
       {/* Members + Activity Grid */}
       <div className="grid grid-cols-1 gap-4 md:gap-6">
         {/* Members List */}
-        <div className="glass-premium rounded-2xl p-4 md:p-5 border border-white/20">
+        <Card variant="glass" padding="md">
           <h3 className="text-lg font-bold text-white mb-3 md:mb-4 flex items-center gap-2">
             <Users className="w-5 h-5 text-blue-400" />
             Members ({data.members_count})
@@ -364,10 +366,10 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
               );
             })
           )}
-        </div>
+        </Card>
 
         {/* Recent Activity */}
-        <div className="glass-premium rounded-2xl p-4 md:p-5 border border-white/20">
+        <Card variant="glass" padding="md">
           <h3 className="text-lg font-bold text-white mb-3 md:mb-4 flex items-center gap-2">
             <Activity className="w-5 h-5 text-purple-400" />
             Recent Activity
@@ -408,12 +410,12 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
               ))
             )}
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Pool-Specific Info */}
       {data.pool_type === 'safe' && data.safe_info && (
-        <div className="glass-premium rounded-2xl p-4 md:p-5 border border-blue-500/30">
+        <Card variant="glass" padding="md" className="border-blue-500/30">
           <h3 className="text-lg font-bold text-white mb-3 md:mb-4 flex items-center gap-2">
             <Shield className="w-5 h-5 text-blue-400" />
             Safe Multisig
@@ -431,9 +433,9 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
               <p className="text-gray-400 text-xs mb-1">Owners</p>
               <div className="flex flex-wrap gap-1 mt-1">
                 {data.safe_info.owners.slice(0, 3).map((owner, i) => (
-                  <span key={i} className="text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded">
+                  <Badge key={i} variant="primary" size="sm">
                     {formatAddress(owner)}
-                  </span>
+                  </Badge>
                 ))}
                 {data.safe_info.owners.length > 3 && (
                   <span className="text-xs text-gray-400">+{data.safe_info.owners.length - 3}</span>
@@ -449,11 +451,11 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
           >
             Manage on Safe <ExternalLink className="w-4 h-4" />
           </a>
-        </div>
+        </Card>
       )}
 
       {data.pool_type === 'splits' && data.split_info && (
-        <div className="glass-premium rounded-2xl p-4 md:p-5 border border-green-500/30">
+        <Card variant="glass" padding="md" className="border-green-500/30">
           <h3 className="text-lg font-bold text-white mb-3 md:mb-4 flex items-center gap-2">
             <Share2 className="w-5 h-5 text-green-400" />
             Split Allocations
@@ -484,11 +486,11 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
           >
             View on Splits <ExternalLink className="w-4 h-4" />
           </a>
-        </div>
+        </Card>
       )}
 
       {data.pool_type === 'pooltogether' && data.pt_vault_info && (
-        <div className="glass-premium rounded-2xl p-4 md:p-5 border border-purple-500/30">
+        <Card variant="glass" padding="md" className="border-purple-500/30">
           <h3 className="text-lg font-bold text-white mb-3 md:mb-4 flex items-center gap-2">
             <Coins className="w-5 h-5 text-purple-400" />
             PoolTogether Vault
@@ -519,12 +521,12 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
           >
             View on BaseScan <ExternalLink className="w-4 h-4" />
           </a>
-        </div>
+        </Card>
       )}
 
       {/* Fhenix-specific: Governance panel */}
       {data.pool_type === 'fhenix' && (
-        <div className="glass-premium rounded-2xl p-4 md:p-5 border border-purple-500/30">
+        <Card variant="glass" padding="md" className="border-purple-500/30">
           <GovernancePanel
             governorAddress={process.env.NEXT_PUBLIC_FHENIX_GOVERNOR_ADDRESS as `0x${string}` | undefined}
             userAddress={address ?? undefined}
@@ -535,7 +537,7 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
               m => m.address.toLowerCase() === address.toLowerCase()
             )}
           />
-        </div>
+        </Card>
       )}
     </div>
   );
@@ -550,14 +552,14 @@ interface MetricCardProps {
 
 function MetricCard({ icon, label, value, subtext }: MetricCardProps) {
   return (
-    <div className="glass-premium p-3 md:p-4 rounded-xl border border-white/20 min-h-[80px] md:min-h-[100px]">
+    <Card variant="glass" padding="sm" className="border-white/20">
       <div className="flex items-center gap-2 mb-1 md:mb-2">
         {icon}
         <span className="text-xs md:text-sm text-gray-400">{label}</span>
       </div>
       <p className="text-xl md:text-2xl font-bold text-white leading-tight">{value}</p>
       {subtext && <p className="text-xs text-gray-500 mt-1 truncate">{subtext}</p>}
-    </div>
+    </Card>
   );
 }
 
