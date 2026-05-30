@@ -8,50 +8,28 @@
  * - CLEAN: Clear component interfaces
  */
 
-// Legacy components (enhanced)
-// export * from './ErrorBoundary';
-// export * from './LoadingSpinner';
-// export * from './Button';
-// export * from './Modal';
-// export * from './Toast';
+// UI Primitives (5-component library)
+export * from './ui';
 
-// Premium components (new)
-// export * from './premium/PremiumButton';
-// export * from './premium/PuzzlePiece';
-// export * from './premium/Typography';
-// export * from './premium/CompactLayout';
+// Legacy components
+export { LoadingSpinner, LoadingOverlay } from './LoadingSpinner';
+export { ErrorBoundary } from './ErrorBoundary';
 
-// Convenience exports for most commonly used premium components
-// export {
-//   PremiumButton,
-//   JackpotButton,
-//   PremiumActionButton,
-//   GhostButton,
-// } from './premium/PremiumButton';
+// Premium layout components
+export {
+  CompactContainer,
+  CompactGrid,
+  CompactStack,
+  CompactHero,
+  CompactCard,
+  CompactSection,
+  CompactFlex,
+} from './premium/CompactLayout';
 
-// export {
-//   PuzzlePiece,
-//   PuzzleGrid,
-//   OverlappingPieces,
-//   MagneticPiece,
-// } from './premium/PuzzlePiece';
-
-// export {
-//   DisplayText,
-//   HeadlineText,
-//   BodyText,
-//   GlowText,
-//   CountUpText,
-//   TypewriterText,
-//   PremiumBadge,
-// } from './premium/Typography';
-
-// export {
-//   CompactContainer,
-//   CompactGrid,
-//   CompactStack,
-//   CompactHero,
-//   CompactCard,
-//   CompactSection,
-//   CompactFlex,
-// } from './premium/CompactLayout';
+// Premium puzzle piece components
+export {
+  PuzzlePiece,
+  PuzzleGrid,
+  OverlappingPieces,
+  MagneticPiece,
+} from './premium/PuzzlePiece';
