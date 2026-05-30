@@ -77,8 +77,6 @@ export const CHAIN_IDS = {
   STACKS: 12345,
 } as const;
 
-// Default chain for development
-export const DEFAULT_CHAIN = CHAINS.base;
 
 // =============================================================================
 // CONTRACT CONFIGURATION
@@ -149,12 +147,6 @@ export function getUsdcAddressForChain(chainId: number): `0x${string}` {
   return USDC_BY_CHAIN[chainId] || CONTRACTS.usdc as `0x${string}`;
 }
 
-// Contract events
-export const CONTRACT_EVENTS = {
-  startBlock: 27077440,
-  purchaseTicketTopic: "0xd72c70202ab87b3549553b1d4ceb2a632c83cb96fa2dfe65c30282862fe11ade",
-  jackpotRunTopic: "0x3208da215cdfa0c44cf3d81565b27f57d4c505bf1a48e40957e53aaf3ba2aa82",
-} as const;
 
 // =============================================================================
 // REFERRAL CONFIGURATION
@@ -166,14 +158,26 @@ export const REFERRALS = {
   poolTogetherHook: (process.env.NEXT_PUBLIC_POOLTOGETHER_HOOK || '0x55A5705453Ee82c742274154136Fce8149597058') as `0x${string}`,
 } as const;
 
-// =============================================================================
-// LOTTERY CONFIGURATION
+
 // =============================================================================
 
-export const LOTTERY = {
-  ticketPriceUsd: 1, // $1 per ticket
-  ticketPriceWei: BigInt(1 * 10 ** 6), // 1 USDC in wei (6 decimals)
-  referrerAddress: REFERRALS.megapotReferrer, // Use consolidated referral
+// STACKS API CONFIGURATION (reserved for future use)
+
+// =============================================================================
+
+// Reserved — not currently connected to a live backend.
+// The api.megapot.io REST API was restructured, returning 404 on all known endpoints.
+// All jackpot/ticket data is now read directly from the on-chain contract.
+// Re-enable by importing STACKS_API and wiring into the appropriate services.
+
+export const STACKS_API = {
+  baseUrl: process.env.NEXT_PUBLIC_STACKS_API_URL || "https://api.mainnet.hiro.so",
+  apiKey: process.env.NEXT_PUBLIC_STACKS_API_KEY,
+  endpoints: {
+    jackpotStats: "/lottery/jackpot-round-stats/active",
+    ticketPurchases: "/lottery/ticket-purchases",
+    dailyGiveaway: "/lottery/daily-giveaway-winners",
+  },
 } as const;
 
 
@@ -456,37 +460,27 @@ export const SUPPORTED_CHAINS = CHAINS;
 
 export const config = {
 
-  chain: DEFAULT_CHAIN,
+  chain: CHAINS.base,
 
-  ethScanerUrl: DEFAULT_CHAIN.explorerUrl,
+  ethScanerUrl: CHAINS.base.explorerUrl,
 
   contracts: CONTRACTS,
 
   near: getNearConfig(),
 
 };
-
-
+export { STACKS_API as api };
 
 // Modern exports
-
 export { CHAINS as chains };
-
 export { CONTRACTS as contracts };
-
-export { LOTTERY as lottery };
-
 export { DESIGN as design };
-
 export { PERFORMANCE as performance };
-
 export { BRIDGE as bridge };
-
 export { FEATURES as features };
-
 export { CCTP as cctp };
-
 export { CCIP as ccip };
+
 
 export * from './nearConfig';
 
