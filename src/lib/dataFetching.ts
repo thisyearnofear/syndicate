@@ -29,11 +29,11 @@ interface UserTicketData {
 
 // Optimized fetch functions with error handling
 export const fetchFunctions = {
-  // Jackpot data with smart caching
+  // Jackpot data with smart caching — reads from on-chain contract
+  // since the api.megapot.io REST API has been restructured (all known endpoints return 404).
   jackpot: async () => {
-    const response = await fetch('/api/megapot?endpoint=%2Fjackpot-round-stats%2Factive');
-    if (!response.ok) throw new Error('Failed to fetch jackpot');
-    return response.json();
+    const { megapotService } = await import('@/domains/lottery/services/megapotService');
+    return megapotService.getJackpotStats();
   },
 
   // User tickets with Envio indexer

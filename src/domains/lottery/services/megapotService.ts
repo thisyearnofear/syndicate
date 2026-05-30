@@ -97,36 +97,15 @@ class MegapotService {
   /**
    * Jackpot stats are optional homepage content.
    * If the API is unavailable, fail quietly and let the UI render a stable fallback.
+   *
+   * NOTE: The api.megapot.io REST API has been restructured and all known endpoints
+   * (jackpot stats, ticket purchases, giveaways) now return 404. We read directly from
+   * the on-chain contract instead. To restore API usage when the new endpoints are known,
+   * re-add the makeRequest(this.baseUrl + api.megapot.endpoints.jackpotStats, ...) call
+   * before falling back to getOnChainFallback().
    */
   async getJackpotStats(): Promise<JackpotStats | null> {
-    try {
-      const stats = await this.makeRequest<JackpotStats>(api.megapot.endpoints.jackpotStats, {
-        retries: 2,
-        logFailures: false,
-      });
-      
-      // Validate the response has meaningful data
-      if (!stats || !stats.prizeUsd) {
-        logger.warn('[MegapotService] API returned empty prize data');
-        return null;
-      }
-      
-      const prizeValue = parseFloat(stats.prizeUsd);
-      
-      // Sanity check: if value is 0 or exceeds $100M, the data is clearly wrong
-      // Also check if the prize looks suspiciously like the old version ($58k)
-      // If we are expecting ~$1M, then $58k is likely an error/lag
-      if (prizeValue <= 0 || prizeValue > 100_000_000 || prizeValue < 100_000) {
-        logger.warn('[MegapotService] Prize value looks invalid or outdated, trying fallback', { prizeValue });
-        return this.getOnChainFallback();
-      }
-      
-      logger.info('[MegapotService] Successfully fetched jackpot from API', { prizeUsd: stats.prizeUsd });
-      return stats;
-    } catch (error) {
-      logger.warn('[MegapotService] Failed to fetch jackpot stats from API, trying fallback', { error: String(error) });
-      return this.getOnChainFallback();
-    }
+    return this.getOnChainFallback();
   }
 
    /**
