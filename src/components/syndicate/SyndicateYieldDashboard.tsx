@@ -22,6 +22,8 @@ import {
   Settings
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
+import { Card } from '@/shared/components/ui/Card';
+import { Badge } from '@/shared/components/ui/Badge';
 
 type VaultProtocol = 'aave' | 'morpho' | 'spark' | 'pooltogether';
 
@@ -123,7 +125,7 @@ export function SyndicateYieldDashboard({ poolId, className = '' }: SyndicateYie
 
   if (loading) {
     return (
-      <div className={`glass-premium rounded-2xl p-6 border border-white/20 ${className}`}>
+      <Card variant="glass" padding="md" className={className}>
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-700 rounded w-1/3"></div>
           <div className="grid grid-cols-2 gap-4">
@@ -131,14 +133,14 @@ export function SyndicateYieldDashboard({ poolId, className = '' }: SyndicateYie
             <div className="h-24 bg-gray-700 rounded"></div>
           </div>
         </div>
-      </div>
+      </Card>
     );
   }
 
   // Not configured
   if (!vaultInfo) {
     return (
-      <div className={`glass-premium rounded-2xl p-6 border border-yellow-500/30 ${className}`}>
+      <Card variant="glass" padding="md" className={`border-yellow-500/30 ${className}`}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-yellow-400" />
@@ -169,11 +171,11 @@ export function SyndicateYieldDashboard({ poolId, className = '' }: SyndicateYie
                   <p className="text-gray-400 text-xs">{vault.description}</p>
                 </div>
               </div>
-              <span className="text-green-400 font-bold">{vault.currentAPY.toFixed(2)}% APY</span>
+              <Badge variant="outline" size="sm" className="text-green-400 border-green-500/30">{vault.currentAPY.toFixed(2)}% APY</Badge>
             </div>
           ))}
         </div>
-      </div>
+      </Card>
     );
   }
 
@@ -196,7 +198,7 @@ export function SyndicateYieldDashboard({ poolId, className = '' }: SyndicateYie
       </div>
 
       {/* Main Stats */}
-      <div className="glass-premium rounded-2xl p-5 border border-white/20">
+      <Card variant="glass" padding="md">
         <div className="flex items-center gap-3 mb-4">
           {getProtocolIcon(vaultInfo.vaultProtocol)}
           <div>
@@ -224,12 +226,12 @@ export function SyndicateYieldDashboard({ poolId, className = '' }: SyndicateYie
               {vaultInfo.autoConvertToTickets ? (
                 <>
                   <Zap className="w-4 h-4 text-yellow-400" />
-                  <span className="text-sm text-white">Enabled</span>
+                  <Badge variant="success" size="sm">Enabled</Badge>
                 </>
               ) : (
                 <>
                   <Settings className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-400">Disabled</span>
+                  <Badge variant="default" size="sm">Disabled</Badge>
                 </>
               )}
             </div>
@@ -237,20 +239,20 @@ export function SyndicateYieldDashboard({ poolId, className = '' }: SyndicateYie
         </div>
 
         {vaultInfo.autoConvertToTickets && pendingYield >= vaultInfo.ticketConversionThreshold && (
-          <div className="mt-4 p-3 bg-yellow-500/20 border border-yellow-500/30 rounded-lg">
+          <Card variant="solid" padding="sm" className="mt-4 bg-yellow-500/20 border-yellow-500/30">
             <div className="flex items-center gap-2">
               <Ticket className="w-4 h-4 text-yellow-400" />
               <p className="text-yellow-300 text-sm">
                 ${pendingYield.toFixed(2)} pending - enough for {Math.floor(pendingYield)} tickets!
               </p>
             </div>
-          </div>
+          </Card>
         )}
-      </div>
+      </Card>
 
       {/* Conversion History */}
       {conversions.length > 0 && (
-        <div className="glass-premium rounded-2xl p-5 border border-white/20">
+        <Card variant="glass" padding="md">
           <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
             <Ticket className="w-5 h-5 text-yellow-400" />
             Recent Conversions
@@ -277,7 +279,7 @@ export function SyndicateYieldDashboard({ poolId, className = '' }: SyndicateYie
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Info */}

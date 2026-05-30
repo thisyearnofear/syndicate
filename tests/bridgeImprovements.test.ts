@@ -28,7 +28,7 @@ describe('Bridge Protocol Improvements', () => {
                 'request timeout'
             ];
             
-            timeoutErrors.forEach((errorMsg, index) => {
+            timeoutErrors.forEach((errorMsg) => {
                 const isTimeoutError = errorMsg.includes('timeout') || errorMsg.includes('Time-out');
                 expect(isTimeoutError).toBe(true);
             });
@@ -125,7 +125,7 @@ describe('Bridge Protocol Improvements', () => {
             ];
             
             requiredCodes.forEach(code => {
-                // @ts-ignore - TypeScript enum access
+                // @ts-expect-error - TypeScript enum access
                 expect(BridgeErrorCode[code]).toBeDefined();
             });
         });

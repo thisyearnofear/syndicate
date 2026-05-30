@@ -9,22 +9,24 @@ import Image from 'next/image';
 
 
 /**
+ * Supported chains – add/remove as product expands
+ */
+const SUPPORTED_CHAIN_IDS = [
+  '0x1', // Ethereum
+  '0x5', // Arbitrum
+  '0x138', // Optimism
+  '0x2105', // Base
+  '0x2a1', // Polygon (example)
+  // Add any additional EVM chains here
+];
+
+/**
  * Cross‑chain discovery prompt with trust signals.
  */
 export default function CrossChainPrompt() {
   const { address, chainId } = useUnifiedWallet();
   const [hasMultiChain, setHasMultiChain] = useState<boolean>(false);
   const [totalUsdc, setTotalUsdc] = useState<string>('0');
-
-  // Supported chains – add/remove as product expands
-  const SUPPORTED_CHAIN_IDS = [
-    '0x1', // Ethereum
-    '0x5', // Arbitrum
-    '0x138', // Optimism
-    '0x2105', // Base
-    '0x2a1', // Polygon (example)
-    // Add any additional EVM chains here
-  ];
 
   // -------------------------------------------------------------------
   // Detect multi‑chain balances
@@ -60,7 +62,6 @@ export default function CrossChainPrompt() {
       setTotalUsdc(cumulative.toFixed(2));
     }
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     fetchBalances();
   }, [address, chainId]);
   if (!hasMultiChain) return null;

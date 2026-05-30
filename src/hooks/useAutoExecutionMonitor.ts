@@ -152,8 +152,6 @@ export function useAutoExecutionMonitor() {
 
   // Start monitoring when config is active — with visibility-aware polling
   const shouldMonitor = !!autoPurchaseConfig?.enabled;
-  // eslint-disable-next-line react-hooks/purity
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   const getPollingInterval = () => {
     if (!autoPurchaseConfig?.nextExecution) return 60000;
     const nextExecution = autoPurchaseConfig.nextExecution;

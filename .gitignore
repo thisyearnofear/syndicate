@@ -9,6 +9,7 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+.pnpm/
 
 # testing
 /coverage
@@ -63,6 +64,14 @@ settings.json
 .agent
 .junie
 .intent
+.commandcode/
+.letta/
+.junie/
+.blackboxcli/
+.qwen/
+.swc/
+.vercel/
+.vscode/
 
 # Build and local development
 /.swc/
@@ -76,8 +85,3 @@ out/
 # Lock files (using pnpm)
 package-lock.json
 yarn.lock
-
-.blackboxcli/
-.vscode
-.qwen
-.letta

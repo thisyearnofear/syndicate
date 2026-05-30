@@ -122,7 +122,6 @@ describe('Balance API Route', () => {
     it('returns 400 for address that is too short', async () => {
       const request = makeGetRequest('0x123');
       const response = await GET(request);
-      const data = await response.json();
 
       expect(response.status).toBe(400);
     });

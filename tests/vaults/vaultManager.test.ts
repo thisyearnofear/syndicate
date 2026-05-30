@@ -8,9 +8,6 @@
 import type {
   VaultProvider,
   VaultProtocol,
-  VaultBalance,
-  VaultDepositResult,
-  VaultWithdrawResult,
 } from '@/services/vaults/vaultProvider';
 import { VaultError, VaultErrorCode } from '@/services/vaults/vaultProvider';
 

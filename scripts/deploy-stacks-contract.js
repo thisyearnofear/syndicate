@@ -5,9 +5,12 @@
  * This script deploys the Stacks lottery contract using the existing project dependencies
  */
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const fs = require('fs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const path = require('path');
-const { makeContractDeploy, broadcastTransaction, AnchorMode, PostConditionMode } = require('@stacks/transactions');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const {} = require('@stacks/transactions');
 
 // Configuration
 const CONTRACT_FILE = path.join(__dirname, '..', 'contracts', 'stacks-lottery.clar');
@@ -81,6 +84,7 @@ async function main() {
 async function getDeployerAddress() {
   // In a real scenario, this would come from a wallet connection
   // For this script, we'll prompt the user
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const readline = require('readline').createInterface({
     input: process.stdin,
     output: process.stdout
@@ -104,6 +108,7 @@ async function getDeployerAddress() {
 }
 
 async function confirmDeployment() {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const readline = require('readline').createInterface({
     input: process.stdin,
     output: process.stdout

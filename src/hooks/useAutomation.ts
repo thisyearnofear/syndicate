@@ -89,7 +89,6 @@ export function useAutomation(
   const [error, setError] = useState<string | null>(null);
 
   // Refresh task status
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const refreshTaskStatus = useCallback(
     async (taskId: string) => {
       try {
@@ -110,7 +109,6 @@ export function useAutomation(
   );
 
   // Load task from storage on mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -129,7 +127,7 @@ export function useAutomation(
     } catch (err) {
       logger.error("Failed to load automation task from storage", { error: err instanceof Error ? err.message : String(err) });
     }
-  }, [isSupported]);
+  }, [isSupported, refreshTaskStatus]);
 
   // Create a new automation task
   const createTask = useCallback(

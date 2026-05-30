@@ -5,8 +5,8 @@
  * Validates that all changes are properly implemented
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports */
 const fs = require('fs');
-const path = require('path');
 
 console.log('🔍 Final Validation Report');
 console.log('==========================\n');

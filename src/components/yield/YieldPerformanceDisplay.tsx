@@ -2,6 +2,8 @@ import React from 'react';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
 import { TrendingUp, Heart, Trophy, Wallet, Lock, ArrowUpRight } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
+import { Card } from '@/shared/components/ui/Card';
+import { Badge } from '@/shared/components/ui/Badge';
 
 interface YieldPerformanceDisplayProps {
   strategy: string;
@@ -46,14 +48,14 @@ export function YieldPerformanceDisplay({
               <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Health</p>
               <div className="flex items-center gap-1.5 justify-end">
                 {!isHealthy ? (
-                  <span className="text-xs font-bold text-red-400">Unhealthy</span>
+                  <Badge variant="error" size="sm">Unhealthy</Badge>
                 ) : isLocked ? (
-                  <>
-                    <Lock className="w-3 h-3 text-amber-400" />
-                    <span className="text-xs font-bold text-amber-400">Locked</span>
-                  </>
+                  <Badge variant="warning" size="sm">
+                    <Lock className="w-3 h-3" />
+                    Locked
+                  </Badge>
                 ) : (
-                  <span className="text-xs font-bold text-green-400">Active</span>
+                  <Badge variant="success" size="sm">Active</Badge>
                 )}
               </div>
             </div>
@@ -79,29 +81,29 @@ export function YieldPerformanceDisplay({
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="glass-premium p-3 rounded-lg border border-white/10">
+          <Card variant="glass" padding="sm" className="border-white/10">
             <div className="flex items-center gap-2 mb-1">
               <Wallet className="w-4 h-4 text-blue-400" />
               <span className="text-xs text-gray-400">Total Yield</span>
             </div>
             <p className="text-lg font-bold text-white">${totalYield.toFixed(2)}</p>
-          </div>
+          </Card>
           
-          <div className="glass-premium p-3 rounded-lg border border-white/10">
+          <Card variant="glass" padding="sm" className="border-white/10">
             <div className="flex items-center gap-2 mb-1">
               <Trophy className="w-4 h-4 text-yellow-400" />
               <span className="text-xs text-gray-400">Tickets</span>
             </div>
             <p className="text-lg font-bold text-white">{ticketsGenerated}</p>
-          </div>
+          </Card>
           
-          <div className="glass-premium p-3 rounded-lg border border-white/10">
+          <Card variant="glass" padding="sm" className="border-white/10">
             <div className="flex items-center gap-2 mb-1">
               <Heart className="w-4 h-4 text-red-400" />
               <span className="text-xs text-gray-400">To Causes</span>
             </div>
             <p className="text-lg font-bold text-white">${causesFunded.toFixed(2)}</p>
-          </div>
+          </Card>
         </div>
         
         <div className="mt-4 pt-4 border-t border-white/10">

@@ -158,7 +158,7 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
       setLoading(false);
       setRefreshing(false);
     }
-  }, [poolId]);
+  }, [poolId, address]);
 
   // Initial fetch and visibility-aware polling
   useVisibilityPolling({
