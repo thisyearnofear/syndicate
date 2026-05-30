@@ -1,5 +1,5 @@
 {
-  "buildCommand": "next build",
+  "buildCommand": "pnpm run build",
   "crons": [
     {
       "path": "/api/crons/process-jobs",
