@@ -16,7 +16,6 @@ async function diagnose() {
 
     console.log('🔍 Fetching registered chainhooks...');
     const response = await client.getChainhooks();
-    // @ts-ignore - The type definition might be slightly off in the client lib or we are seeing raw response
     const hooks = response.results || response; 
 
     if (!Array.isArray(hooks) || hooks.length === 0) {
