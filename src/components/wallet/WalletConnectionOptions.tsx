@@ -5,7 +5,7 @@ import { WalletConnectionCard } from "./WalletConnectionCard";
 import { WalletType } from "@/domains/wallet/types";
 
 interface WalletConnectionOptionsProps {
-  onWalletConnect?: (walletType: WalletType) => void;
+  onWalletConnect?: (walletType: WalletType) => void | Promise<void>;
 }
 
 /**
@@ -15,11 +15,14 @@ interface WalletConnectionOptionsProps {
 export default function WalletConnectionOptions({
   onWalletConnect,
 }: WalletConnectionOptionsProps) {
-  const handleWalletConnect = useCallback((walletType: WalletType) => {
-    if (onWalletConnect) {
-      onWalletConnect(walletType);
-    }
-  }, [onWalletConnect]);
+  // IMPORTANT: must return the promise so WalletConnectionCard can await it.
+  // Otherwise `await onConnect?.(walletType)` resolves to undefined immediately
+  // and `isConnecting` flips back to false while the real wallet flow is still
+  // in-flight, allowing the user to click the button again (re-firing Stacks).
+  const handleWalletConnect = useCallback(
+    (walletType: WalletType): void | Promise<void> => onWalletConnect?.(walletType),
+    [onWalletConnect],
+  );
 
   return (
     <WalletConnectionCard

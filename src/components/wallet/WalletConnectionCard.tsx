@@ -90,7 +90,7 @@ const WALLET_SECTIONS: WalletSection[] = [
 ];
 
 interface WalletConnectionCardProps {
-  onConnect?: (walletType: WalletType) => void;
+  onConnect?: (walletType: WalletType) => void | Promise<void>;
   title?: string;
   subtitle?: string;
   compact?: boolean;
@@ -143,18 +143,17 @@ export function WalletConnectionCard({
 
   // Prevent hydration mismatches by only rendering after mount
   useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []); // Empty dependency array to run only once
 
-  // Reset connecting state when component unmounts
-  useEffect(() => {
-    return () => {
-      if (isConnecting) {
-        setIsConnecting(false);
-        setConnectingWallet(null);
-      }
-    };
-  }, [isConnecting]);
+  // NOTE: We intentionally do NOT reset isConnecting in a cleanup effect.
+  // A modal re-render or Suspense boundary can briefly unmount this card
+  // while a wallet connection is still in flight; the previous cleanup
+  // effect would clear isConnecting on every isConnecting transition,
+  // re-enabling the button mid-flight. The in-flight guard in
+  // unifiedWalletService's connectStacksWalletWithConnect() is the source
+  // of truth that prevents duplicate wallet popups now.
 
   if (!mounted) {
     return null; // Don't render on server
