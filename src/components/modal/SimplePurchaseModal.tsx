@@ -11,6 +11,8 @@
 import { useState, Suspense, lazy, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
+import { Input } from "@/shared/components/ui/Input";
+import { Badge } from "@/shared/components/ui/Badge";
 import { Loader, AlertCircle, Check, Zap, Link2, ChevronDown, ArrowRight, Wallet, Shield, DollarSign, Bitcoin, Trophy, ExternalLink, Info } from "lucide-react";
 import { useUnifiedWallet, useUnifiedPurchase } from "@/hooks";
 import { useERC7715 } from "@/hooks/useERC7715";
@@ -372,7 +374,7 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
                 {/* POOLTOGETHER */}
                 <button onClick={() => setSelectedProtocol("pooltogether")} disabled={isPurchasing} className={`relative p-4 rounded-lg border-2 transition-all text-left ${selectedProtocol === "pooltogether" ? "border-emerald-500 bg-emerald-500/20" : "border-gray-600 hover:border-gray-500 bg-gray-700/30"}`}>
                   {selectedProtocol === "pooltogether" && <div className="absolute top-2 right-2"><Check className="w-3.5 h-3.5 text-emerald-400" /></div>}
-                  <div className="absolute top-2 left-2"><span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full">No Loss</span></div>
+                  <div className="absolute top-2 left-2"><Badge variant="success" size="sm">No Loss</Badge></div>
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center flex-shrink-0"><Shield className="w-5 h-5 text-emerald-400" /></div>
                     <div>
@@ -473,12 +475,22 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="flex items-center gap-1.5 text-sm font-medium text-gray-300"><Wallet className="w-3.5 h-3.5 text-blue-400" /> Delivery Address (Base)</label>
-                    {baseAddressSource === 'auto' && isValidBaseAddress && <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/30">Auto-detected</span>}
+                    {baseAddressSource === 'auto' && isValidBaseAddress && <Badge variant="primary" size="sm">Auto-detected</Badge>}
                   </div>
                   <p className="text-xs text-gray-500">Public-play tickets are minted on Base. {mirrorAddress ? 'We detected your linked EVM address — you can change it below.' : 'Paste your MetaMask or other EVM wallet address.'}</p>
                   <div className="relative">
-                    <input type="text" value={baseAddress} onChange={(e) => { handleBaseAddressChange(e.target.value.trim()); setBaseAddressError(''); }} placeholder="0x... (your Base/EVM wallet address)" disabled={isPurchasing} className={`w-full px-4 py-3 rounded-lg bg-gray-700/50 border text-white text-sm font-mono placeholder-gray-500 focus:outline-none focus:ring-2 transition-colors ${baseAddressError ? 'border-red-500 focus:ring-red-500/50' : baseAddress && isValidBaseAddress ? 'border-green-500/60 focus:ring-green-500/50' : 'border-gray-600 focus:ring-indigo-500/50'}`} />
-                    {baseAddress && isValidBaseAddress && <div className="absolute right-3 top-1/2 -translate-y-1/2"><Check className="w-4 h-4 text-green-400" /></div>}
+                    <Input
+                      type="text"
+                      value={baseAddress}
+                      onChange={(e) => { handleBaseAddressChange(e.target.value.trim()); setBaseAddressError(''); }}
+                      placeholder="0x... (your Base/EVM wallet address)"
+                      disabled={isPurchasing}
+                      variant={baseAddressError ? 'solid' : 'glass'}
+                      size="md"
+                      error={!!baseAddressError}
+                      className={`font-mono ${baseAddressError ? '' : baseAddress && isValidBaseAddress ? 'border-green-500/60' : ''}`}
+                      rightIcon={baseAddress && isValidBaseAddress ? <Check className="w-4 h-4 text-green-400" /> : undefined}
+                    />
                   </div>
                   {baseAddressError && <p className="text-xs text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{baseAddressError}</p>}
                   {baseAddress && isValidBaseAddress && !baseAddressError && <div className="flex items-center gap-1.5 text-xs text-green-400/80"><Shield className="w-3 h-3" /><span>Verified address — public-play tickets will be delivered here</span></div>}
