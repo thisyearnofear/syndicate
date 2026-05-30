@@ -2,10 +2,6 @@
   "buildCommand": "next build",
   "crons": [
     {
-      "path": "/api/crons/recurring-purchases",
-      "schedule": "0 0 * * *"
-    },
-    {
       "path": "/api/crons/process-jobs",
       "schedule": "0 0 * * *"
     }
