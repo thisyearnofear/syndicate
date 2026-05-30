@@ -10,6 +10,8 @@ import { useFhenixPrivateVaultBalance } from '@/hooks/useFhenixPrivateVaultBalan
 import { FhenixRevealStepper } from '@/components/fhenix/FhenixRevealStepper';
 import { yieldToTicketsService } from '@/services/yieldToTicketsService';
 import { Button } from '@/shared/components/ui/Button';
+import { Card } from '@/shared/components/ui/Card';
+import { Badge } from '@/shared/components/ui/Badge';
 import type { VaultProtocol } from '@/services/vaults/vaultProvider';
 import { vaultManager } from '@/services/vaults';
 import { buildVaultExecutionHref } from '@/constants/vaultRouting';
@@ -285,33 +287,33 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
         <div className="space-y-4">
           <h3 className="text-lg font-bold text-white">Your Vault Positions</h3>
           {hasFhenixPosition && (
-            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+            <Card variant="outline" padding="md" className="border-emerald-500/20 bg-emerald-500/10">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-emerald-500/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-300">
+                    <Badge variant="success" size="sm" className="uppercase tracking-wide">
                       Live demo flow
-                    </span>
-                    <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] text-gray-200">
+                    </Badge>
+                    <Badge variant="glass" size="sm">
                       Best Fhenix moment
-                    </span>
+                    </Badge>
                   </div>
                   <p className="text-sm text-gray-200">
                     Use the Fhenix vault row below to show the full privacy-native flow: private deposit, encrypted on-chain position, and local balance reveal through a permit.
                   </p>
-                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-300">
-                    <span className="rounded-full bg-white/10 px-2 py-1">1. Deposit privately</span>
-                    <span className="rounded-full bg-white/10 px-2 py-1">2. Open Fhenix row</span>
-                    <span className="rounded-full bg-white/10 px-2 py-1">3. Reveal balance locally</span>
+                  <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                    <Badge variant="glass" size="sm">1. Deposit privately</Badge>
+                    <Badge variant="glass" size="sm">2. Open Fhenix row</Badge>
+                    <Badge variant="glass" size="sm">3. Reveal balance locally</Badge>
                   </div>
                 </div>
               </div>
-            </div>
+            </Card>
           )}
           {positions.map((position) => (
             <div key={position.protocol} className="space-y-2">
               {position.protocol === 'fhenix' && (
-                <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4">
+                <Card variant="outline" padding="md" className="border-amber-500/20 bg-amber-500/10">
                   <FhenixRevealStepper
                     status={fhenixPrivateStatus}
                     balanceMicro={fhenixPrivateBalanceMicro}
@@ -319,7 +321,7 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
                     error={fhenixPrivateError}
                     onReveal={revealFhenixPrivateBalance}
                   />
-                </div>
+                </Card>
               )}
 
               <YieldPerformanceDisplay 

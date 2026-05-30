@@ -11,7 +11,7 @@
     "build:analyze": "ANALYZE=true next build",
     "start": "next start",
     "start:dev": "NODE_ENV=development next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "analyze": "npx @next/bundle-analyzer",
     "perf": "npm run build && npm run analyze",
     "perf:monitor": "NEXT_PUBLIC_ENABLE_ANALYTICS=true npm run dev",
@@ -87,7 +87,6 @@
     "wagmi": "^2.19.0"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
     "@fhenixprotocol/contracts": "0.3.1",
     "@next/bundle-analyzer": "14.2.35",
     "@stacks/blockchain-api-client": "8.13.5",
@@ -101,7 +100,7 @@
     "buffer": "6.0.3",
     "cross-fetch": "4.1.0",
     "crypto-browserify": "3.12.1",
-    "eslint": "^8.57.0",
+    "eslint": "^9.26.0",
     "eslint-config-next": "16.2.6",
     "https-browserify": "1.0.0",
     "jest": "^30.3.0",

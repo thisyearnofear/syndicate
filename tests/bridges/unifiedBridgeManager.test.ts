@@ -262,7 +262,7 @@ describe('UnifiedBridgeManager', () => {
         });
 
         it('returns failure for missing sourceChain', async () => {
-            const result = await manager.bridge(validParams({ sourceChain: '' as any }));
+            const result = await manager.bridge(validParams({ sourceChain: '' as ChainIdentifier }));
 
             expect(result.success).toBe(false);
             expect(result.error).toContain('Source chain required');

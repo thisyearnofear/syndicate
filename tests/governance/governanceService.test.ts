@@ -13,8 +13,9 @@ import { GovernanceService } from '@/services/governance/governanceService';
 // Mock the database
 const mockQuery = jest.fn();
 jest.mock('@vercel/postgres', () => ({
-  sql: (...args: any[]) => {
-    const query = args[0]?.join?.('?') || args[0];
+  sql: (...args: unknown[]) => {
+    const firstArg = args[0];
+    const query = Array.isArray(firstArg) ? firstArg.join('?') : String(firstArg);
     return mockQuery(query, args);
   },
 }));

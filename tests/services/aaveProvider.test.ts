@@ -6,20 +6,19 @@
  */
 
 import { VaultError, VaultErrorCode } from '@/services/vaults/vaultProvider';
-import type { VaultBalance } from '@/services/vaults/vaultProvider';
 
 // ---------------------------------------------------------------------------
 // jest.mock — ethers (hoisted above const init)
 // Use `var` so the mock factory can reference these at hoist time.
 // ---------------------------------------------------------------------------
 
-var mockBalanceOf: jest.Mock;
-var mockScaledBalanceOf: jest.Mock;
-var mockGetCode: jest.Mock;
-var mockSupply: jest.Mock;
-var mockWithdraw: jest.Mock;
-var mockApprove: jest.Mock;
-var mockAllowance: jest.Mock;
+let mockBalanceOf: jest.Mock;
+let mockScaledBalanceOf: jest.Mock;
+let mockGetCode: jest.Mock;
+let mockSupply: jest.Mock;
+let mockWithdraw: jest.Mock;
+let mockApprove: jest.Mock;
+let mockAllowance: jest.Mock;
 
 jest.mock('ethers', () => {
     const actual = jest.requireActual('ethers');

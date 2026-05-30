@@ -13,6 +13,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
+import { Badge } from '@/shared/components/ui/Badge';
 
 type Status = 'idle' | 'initializing' | 'permit' | 'reading' | 'unsealing' | 'ready' | 'error';
 
@@ -144,12 +145,8 @@ function FullRevealStepper({
     <div className="space-y-4">
       {/* Status badge */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-amber-500/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
-          Private Vault
-        </span>
-        <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${badge.color}`}>
-          {badge.text}
-        </span>
+        <Badge variant="warning" size="sm" className="uppercase tracking-wider">Private Vault</Badge>
+        <Badge size="sm" className={`${badge.color} border-0`}>{badge.text}</Badge>
       </div>
 
       {/* Step progress bar */}

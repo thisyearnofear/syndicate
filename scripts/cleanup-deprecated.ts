@@ -39,7 +39,7 @@ const DEPRECATED_HOOKS = [
 ];
 
 // Files to check for imports that need updating
-const FILES_TO_CHECK = [
+const _FILES_TO_CHECK = [
   'src/components/**/*.tsx',
   'src/app/**/*.tsx',
   'src/services/**/*.ts',

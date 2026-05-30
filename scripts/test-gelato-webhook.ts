@@ -76,7 +76,7 @@ function createSignature(body: string, secret: string): string {
     .digest('hex');
 }
 
-async function sendWebhook(eventName: string, taskId: string, event: string, payload: any) {
+async function sendWebhook(eventName: string, taskId: string, event: string, payload: Record<string, unknown>) {
   const webhook = {
     taskId,
     event,

@@ -478,7 +478,6 @@ export function FocusedBridgeFlow({
     sourceAddress,
     amountInput,
     recipient,
-    preselectedProtocol,
     targetStrategy,
     onStatus,
     onComplete,

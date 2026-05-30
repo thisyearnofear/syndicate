@@ -89,7 +89,6 @@ export function LifiEarnVaultSelector({
 
   const effectiveAddress = userAddress || address;
 
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const loadVaults = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -113,9 +112,9 @@ export function LifiEarnVaultSelector({
 
   // Load vaults on mount
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadVaults();
-  }, [selectedChain, sortBy]);
+  }, [loadVaults]);
 
   // Filter and sort vaults
   const filteredVaults = React.useMemo(() => {

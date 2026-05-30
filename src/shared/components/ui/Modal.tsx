@@ -43,8 +43,6 @@ export interface ModalProps
   children: React.ReactNode;
   /** Additional class name */
   className?: string;
-  /** Whether to show the close button in header */
-  showCloseButton?: boolean;
   /** Whether clicking the backdrop should close the modal */
   closeOnBackdropClick?: boolean;
   /** Whether pressing ESC should close the modal */
@@ -70,7 +68,6 @@ const Modal = React.forwardRef<HTMLDivElement, ModalProps>(
       children,
       size = "md",
       className,
-      showCloseButton = true,
       closeOnBackdropClick = true,
       closeOnEscape = true,
     },
@@ -207,7 +204,7 @@ const ModalDescription = React.forwardRef<
 });
 ModalDescription.displayName = "ModalDescription";
 
-interface ModalBodyProps extends React.HTMLAttributes<HTMLDivElement> {}
+type ModalBodyProps = React.HTMLAttributes<HTMLDivElement>;
 
 const ModalBody = React.forwardRef<HTMLDivElement, ModalBodyProps>(
   ({ className, children, ...props }, ref) => {
@@ -220,7 +217,7 @@ const ModalBody = React.forwardRef<HTMLDivElement, ModalBodyProps>(
 );
 ModalBody.displayName = "ModalBody";
 
-interface ModalFooterProps extends React.HTMLAttributes<HTMLDivElement> {}
+type ModalFooterProps = React.HTMLAttributes<HTMLDivElement>;
 
 const ModalFooter = React.forwardRef<HTMLDivElement, ModalFooterProps>(
   ({ className, children, ...props }, ref) => {

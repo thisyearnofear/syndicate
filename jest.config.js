@@ -4,6 +4,7 @@
  * Configured for Next.js with TypeScript support
  */
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const nextJest = require('next/jest');
 
 const createJestConfig = nextJest({

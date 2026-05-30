@@ -9,7 +9,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Vote,
   Plus,
@@ -27,6 +27,9 @@ import {
   FileText,
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
+import { Card } from '@/shared/components/ui/Card';
+import { Badge } from '@/shared/components/ui/Badge';
+import { Input } from '@/shared/components/ui/Input';
 import { useWalletClient, usePublicClient } from 'wagmi';
 import { FHENIX_VAULT_CHAIN } from '@/services/fhe/fhenixChain';
 import { FhenixGovernorService, type VoteChoice, type FhenixProposal } from '@/services/governance/fhenixGovernorService';
@@ -101,18 +104,18 @@ export function GovernancePanel({
   const [createData, setCreateData] = useState('0x');
   const [createDeadline, setCreateDeadline] = useState(7); // days
 
-  const governorService = governorAddress
-    ? new FhenixGovernorService({
-        governorAddress,
-        vaultAddress: (process.env.NEXT_PUBLIC_FHENIX_VAULT_ADDRESS || '0x') as `0x${string}`,
-        coordinatorAddress: '',
-        quorumBps: 2500,
-      })
-    : null;
+  const governorService = useMemo(() => {
+    if (!governorAddress) return null;
+    return new FhenixGovernorService({
+      governorAddress,
+      vaultAddress: (process.env.NEXT_PUBLIC_FHENIX_VAULT_ADDRESS || '0x') as `0x${string}`,
+      coordinatorAddress: '',
+      quorumBps: 2500,
+    });
+  }, [governorAddress]);
 
   /* ── Fetch proposals ──────────────────────────────────────────────────── */
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchProposals = useCallback(async () => {
     if (!governorService || !fhenixPublicClient) return;
     setLoading(true);
@@ -273,10 +276,9 @@ export function GovernancePanel({
             <span className="text-xs text-gray-400">({proposals.length} proposal{proposals.length !== 1 ? 's' : ''})</span>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="rounded-full bg-purple-500/10 px-2.5 py-1 text-[11px] font-medium text-purple-300">
-            FHE Encrypted Voting
-          </span>
+        <div className="flex items-center gap-2">            <Badge variant="premium" size="sm">
+              FHE Encrypted Voting
+            </Badge>
           <Button
             variant="ghost"
             size="sm"
@@ -289,22 +291,26 @@ export function GovernancePanel({
       </div>
 
       {/* Privacy notice */}
-      <div className="rounded-lg border border-purple-500/20 bg-purple-500/10 px-3 py-2 text-xs text-gray-300 flex items-start gap-2">
-        <Lock className="w-3.5 h-3.5 text-purple-400 mt-0.5 shrink-0" />
-        <span>
-          Votes are encrypted on-chain using FHE. No one — including the coordinator — can see how you voted until the tally is revealed after the deadline.
-        </span>
-      </div>
+      <Card variant="outline" padding="sm" className="border-purple-500/20 bg-purple-500/10">
+        <div className="flex items-start gap-2 text-xs text-gray-300">
+          <Lock className="w-3.5 h-3.5 text-purple-400 mt-0.5 shrink-0" />
+          <span>
+            Votes are encrypted on-chain using FHE. No one — including the coordinator — can see how you voted until the tally is revealed after the deadline.
+          </span>
+        </div>
+      </Card>
 
       {/* Error banner */}
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-          <span className="flex-1">{error}</span>
-          <button onClick={() => setError(null)} className="text-red-300 hover:text-red-200">
-            <X className="w-3 h-3" />
-          </button>
-        </div>
+        <Card variant="outline" padding="sm" className="border-red-500/30 bg-red-500/10">
+          <div className="flex items-center gap-2 text-xs text-red-300">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            <span className="flex-1">{error}</span>
+            <button onClick={() => setError(null)} className="text-red-300 hover:text-red-200">
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        </Card>
       )}
 
       {/* Loading state */}
@@ -336,18 +342,18 @@ export function GovernancePanel({
 
       {/* Create proposal form */}
       {showCreateForm && (
-        <div className="rounded-xl border border-purple-500/30 bg-purple-500/5 p-4 space-y-3">
+        <Card variant="outline" padding="md" className="border-purple-500/30 bg-purple-500/5 space-y-3">
           <h4 className="text-sm font-semibold text-white flex items-center gap-2">
             <Plus className="w-4 h-4 text-purple-400" />
             New Proposal
           </h4>
 
-          <input
-            type="text"
+          <Input
+            variant="glass"
+            size="sm"
             placeholder="Proposal title"
             value={createTitle}
             onChange={(e) => setCreateTitle(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-purple-400/50 focus:outline-none"
           />
 
           <textarea
@@ -361,22 +367,22 @@ export function GovernancePanel({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-gray-400 mb-1 block">Target Address (optional)</label>
-              <input
-                type="text"
+              <Input
+                variant="glass"
+                size="sm"
                 placeholder="0x…"
                 value={createTarget}
                 onChange={(e) => setCreateTarget(e.target.value)}
-                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-purple-400/50 focus:outline-none"
               />
             </div>
             <div>
               <label className="text-xs text-gray-400 mb-1 block">Payload Data (optional)</label>
-              <input
-                type="text"
+              <Input
+                variant="glass"
+                size="sm"
                 placeholder="0x…"
                 value={createData}
                 onChange={(e) => setCreateData(e.target.value)}
-                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-purple-400/50 focus:outline-none"
               />
             </div>
           </div>
@@ -384,13 +390,14 @@ export function GovernancePanel({
           <div className="flex items-center gap-3">
             <div className="flex-1">
               <label className="text-xs text-gray-400 mb-1 block">Voting period (days)</label>
-              <input
+              <Input
+                variant="glass"
+                size="sm"
                 type="number"
                 min={1}
                 max={30}
                 value={createDeadline}
                 onChange={(e) => setCreateDeadline(Math.max(1, Math.min(30, parseInt(e.target.value) || 7)))}
-                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-purple-400/50 focus:outline-none"
               />
             </div>
           </div>
@@ -421,7 +428,7 @@ export function GovernancePanel({
               Cancel
             </Button>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Create button (when form not shown) */}
@@ -445,19 +452,20 @@ export function GovernancePanel({
             const StateIcon = stateUI.icon;
 
             return (
-              <div
+                  <div
                 key={proposal.id}
-                className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3"
+                className=""
               >
+                <Card variant="outline" padding="md" className="border-white/10 bg-white/5 space-y-3">
                 {/* Header row */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xs font-mono text-gray-500">#{proposal.id}</span>
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${stateUI.color}`}>
+                      <Badge size="sm" className={`${stateUI.color} border-0`}>
                         <StateIcon className="w-3 h-3" />
                         {stateUI.label}
-                      </span>
+                      </Badge>
                       {proposal.state === 'Active' && (
                         <span className="text-[10px] text-gray-500 flex items-center gap-1">
                           <Clock className="w-3 h-3" />
@@ -470,7 +478,7 @@ export function GovernancePanel({
                       <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{proposal.description}</p>
                     )}
                     {proposal.target !== '0x0000000000000000000000000000000000000000' && (
-                      <div className="mt-2 flex items-center gap-2 rounded bg-white/5 px-2 py-1 text-[10px] text-gray-400 border border-white/5">
+                      <Badge variant="glass" size="sm" className="mt-2 gap-2 w-fit">
                         <ExternalLink className="w-3 h-3" />
                         <span className="truncate">Target: {formatAddress(proposal.target)}</span>
                         {proposal.data !== '0x' && (
@@ -479,7 +487,7 @@ export function GovernancePanel({
                             <span className="truncate">Data: {proposal.data.slice(0, 10)}…</span>
                           </>
                         )}
-                      </div>
+                      </Badge>
                     )}
                   </div>
                   <span className="text-[10px] text-gray-500 shrink-0">
@@ -490,27 +498,26 @@ export function GovernancePanel({
                 {/* Vote counts (when tally revealed) */}
                 {(proposal.tallyRevealed || proposal.state === 'Passed' || proposal.state === 'Failed' || proposal.state === 'Executed') && (
                   <div className="grid grid-cols-3 gap-2">
-                    <div className="rounded-lg bg-emerald-500/10 p-2 text-center">
+                    <Card variant="solid" padding="sm" className="bg-emerald-500/10 text-center border-0">
                       <p className="text-lg font-bold text-emerald-400">{proposal.forVotes}</p>
                       <p className="text-[10px] text-gray-400">For</p>
-                    </div>
-                    <div className="rounded-lg bg-red-500/10 p-2 text-center">
+                    </Card>
+                    <Card variant="solid" padding="sm" className="bg-red-500/10 text-center border-0">
                       <p className="text-lg font-bold text-red-400">{proposal.againstVotes}</p>
                       <p className="text-[10px] text-gray-400">Against</p>
-                    </div>
-                    <div className="rounded-lg bg-gray-500/10 p-2 text-center">
+                    </Card>
+                    <Card variant="solid" padding="sm" className="bg-gray-500/10 text-center border-0">
                       <p className="text-lg font-bold text-gray-400">{proposal.abstainVotes}</p>
                       <p className="text-[10px] text-gray-400">Abstain</p>
-                    </div>
+                    </Card>
                   </div>
                 )}
 
-                {/* Vote tally encrypting indicator */}
-                {proposal.state === 'Active' && !proposal.tallyRevealed && proposal.voteCount > 0 && (
-                  <div className="flex items-center gap-2 text-[11px] text-gray-500">
+                {/* Vote tally encrypting indicator */}                    {proposal.state === 'Active' && !proposal.tallyRevealed && proposal.voteCount > 0 && (
+                  <Badge variant="glass" size="sm" className="gap-2">
                     <Lock className="w-3 h-3" />
                     <span>{proposal.voteCount} vote{proposal.voteCount !== 1 ? 's' : ''} cast (encrypted)</span>
-                  </div>
+                  </Badge>
                 )}
 
                 {/* Action buttons */}
@@ -546,10 +553,10 @@ export function GovernancePanel({
 
                   {/* Already voted badge */}
                   {proposal.state === 'Active' && proposal.hasVoted && (
-                    <span className="text-xs text-emerald-400 flex items-center gap-1">
+                    <Badge variant="success" size="sm">
                       <Check className="w-3 h-3" />
                       Voted
-                    </span>
+                    </Badge>
                   )}
 
                   {/* Coordinator: reveal + finalize */}
@@ -588,6 +595,7 @@ export function GovernancePanel({
                     </Button>
                   )}
                 </div>
+              </Card>
               </div>
             );
           })}
@@ -596,18 +604,22 @@ export function GovernancePanel({
 
       {/* No FHE wallet notice */}
       {!fhenixPublicClient && (
-        <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
-          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-          <span>Connect a wallet on Fhenix chain to participate in governance.</span>
-        </div>
+        <Card variant="outline" padding="sm" className="border-amber-500/20 bg-amber-500/10">
+          <div className="flex items-center gap-2 text-xs text-amber-300">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            <span>Connect a wallet on Fhenix chain to participate in governance.</span>
+          </div>
+        </Card>
       )}
 
       {/* No governor address notice */}
       {!governorAddress && (
-        <div className="flex items-center gap-2 rounded-lg border border-gray-500/20 bg-gray-500/10 px-3 py-2 text-xs text-gray-400">
-          <Shield className="w-3.5 h-3.5 shrink-0" />
-          <span>Fhenix governance contract not deployed for this syndicate.</span>
-        </div>
+        <Card variant="outline" padding="sm" className="border-gray-500/20 bg-gray-500/10">
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <Shield className="w-3.5 h-3.5 shrink-0" />
+            <span>Fhenix governance contract not deployed for this syndicate.</span>
+          </div>
+        </Card>
       )}
     </div>
   );

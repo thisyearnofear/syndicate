@@ -10,7 +10,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { 
   Bot, 
   Zap, 
@@ -37,7 +37,7 @@ export function AutoPurchaseSettings() {
 
   const registry = AgentRegistryService.getInstance();
 
-  const fetchAgents = async () => {
+  const fetchAgents = useCallback(async () => {
     if (!address) return;
     setIsLoading(true);
     const userAgents = await registry.getUserAgents(address);
@@ -51,12 +51,12 @@ export function AutoPurchaseSettings() {
 
     setAgents(sortedAgents);
     setIsLoading(false);
-  };
+  }, [address, walletType, registry]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchAgents();
-  }, [address]);
+  }, [fetchAgents]);
 
   const handleActivateAgent = (type: AgentType | 'no-loss') => {
     setSelectedStrategy(type === 'autonomous' ? 'autonomous' : type === 'no-loss' ? 'no-loss' : 'scheduled');

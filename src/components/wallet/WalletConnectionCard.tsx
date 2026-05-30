@@ -14,6 +14,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/shared/components/ui/Button";
+import { Card } from "@/shared/components/ui/Card";
 import {
   CompactStack,
   CompactFlex,
@@ -171,9 +172,12 @@ export function WalletConnectionCard({
 
     if (wallet.isWalletConnect) {
       return (
-        <div
+        <Card
           key={wallet.name}
-          className={`${wallet.bgColor} hover:bg-opacity-20 border rounded-lg p-4 w-full transition-all duration-200 hover:scale-[1.02]`}
+          variant="outline"
+          padding="md"
+          hover="scale"
+          className={`${wallet.bgColor} hover:bg-opacity-20 w-full`}
         >
           <CompactFlex justify="between" className="w-full">
             <CompactFlex gap="md" align="center">
@@ -189,7 +193,7 @@ export function WalletConnectionCard({
               <ConnectButton showBalance={false} chainStatus="none" />
             </div>
           </CompactFlex>
-        </div>
+        </Card>
       );
     }
 
@@ -248,7 +252,7 @@ export function WalletConnectionCard({
 
       {/* Error Display */}
       {error && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 max-w-sm mx-auto">
+        <Card variant="outline" padding="md" className="bg-red-500/10 border-red-500/20 max-w-sm mx-auto">
           <CompactFlex align="start" gap="sm">
             <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
             <div className="text-left">
@@ -256,7 +260,7 @@ export function WalletConnectionCard({
               <div className="text-red-300/80 text-xs mt-1">{error}</div>
             </div>
           </CompactFlex>
-        </div>
+        </Card>
       )}
 
       {/* Wallet Sections */}

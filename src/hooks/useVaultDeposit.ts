@@ -245,7 +245,7 @@ export function useVaultDeposit() {
         return { success: false, error: isCancel ? 'Transaction cancelled' : msg };
       }
     },
-    [address, depositAave, depositERC4626],
+    [address, depositAave, depositERC4626, fhenixPublicClient, fhenixWalletClient],
   );
 
   const withdraw = useCallback(
@@ -309,8 +309,7 @@ export function useVaultDeposit() {
         return { success: false, error: msg };
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [address, withdrawAave, withdrawERC4626],
+    [address, withdrawAave, withdrawERC4626, fhenixPublicClient, fhenixWalletClient],
   );
 
   const reset = useCallback(() => {

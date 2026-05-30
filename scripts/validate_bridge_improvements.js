@@ -4,6 +4,7 @@
  * Validates that our bridge improvements are working correctly
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports */
 const fs = require('fs');
 const path = require('path');
 

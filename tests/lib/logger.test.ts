@@ -126,20 +126,20 @@ describe('logger', () => {
       (process.env as { NODE_ENV?: string }).NODE_ENV = originalEnv;
     });
 
-    it('suppresses debug when NODE_ENV is production', () => {
+    it('suppresses debug when NODE_ENV is production', async () => {
       (process.env as { NODE_ENV?: string }).NODE_ENV = 'production';
       jest.resetModules();
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { logger: prodLogger } = require('@/lib/logger');
-      prodLogger.debug('should not appear');
+       
+      const { logger: prodLogger } = await import('@/lib/logger');
+  prodLogger.debug('should not appear');
       expect(debugSpy).not.toHaveBeenCalled();
     });
 
-    it('still logs info/warn/error in production', () => {
+    it('still logs info/warn/error in production', async () => {
       (process.env as { NODE_ENV?: string }).NODE_ENV = 'production';
       jest.resetModules();
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { logger: prodLogger } = require('@/lib/logger');
+       
+      const { logger: prodLogger } = await import('@/lib/logger');
       prodLogger.info('visible');
       prodLogger.warn('visible');
       prodLogger.error('visible');

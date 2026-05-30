@@ -5,9 +5,9 @@
  * Tests focus on pool creation, configuration validation, and error handling.
  */
 
-import { safeProvider, SafePoolProvider } from '@/services/syndicate/poolProviders/safeProvider';
-import { splitsProvider, SplitsPoolProvider } from '@/services/syndicate/poolProviders/splitsProvider';
-import { poolTogetherV5Provider, PoolTogetherV5Provider } from '@/services/syndicate/poolProviders/poolTogetherV5Provider';
+import { safeProvider } from '@/services/syndicate/poolProviders/safeProvider';
+import { splitsProvider } from '@/services/syndicate/poolProviders/splitsProvider';
+import { poolTogetherV5Provider } from '@/services/syndicate/poolProviders/poolTogetherV5Provider';
 import type { PoolProviderConfig } from '@/services/syndicate/poolProviders';
 
 // Mock the services

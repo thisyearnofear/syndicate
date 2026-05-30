@@ -10,8 +10,6 @@ import {
   isRetryableError,
   withRetry,
   withTimeout,
-  withResilience,
-  resilientFetch,
   safeJsonParse,
   safeAsync,
   RateLimiter,

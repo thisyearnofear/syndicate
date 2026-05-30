@@ -5,14 +5,14 @@
  * Verifies APY, balance queries, deposit/withdraw flows, and health checks.
  */
 
-import type { VaultBalance } from '@/services/vaults/vaultProvider';
+
 
 // ---------------------------------------------------------------------------
 // jest.mock — viem baseClient (hoisted above const init)
 // Use `var` so the mock factory can reference these at hoist time.
 // ---------------------------------------------------------------------------
 
-var mockReadContract: jest.Mock;
+let mockReadContract: jest.Mock;
 
 jest.mock('@/lib/baseClient', () => ({
     basePublicClient: {

@@ -5,6 +5,7 @@
  * Shows how all the improvements work together
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { bridgeManager, performanceMonitor, strategyExecutor } = require('./src/services/bridges/index');
 
 console.log('🌉 Syndicate Bridge System Demo');
