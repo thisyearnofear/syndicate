@@ -9,7 +9,7 @@
  */
 
 import { useCallback } from "react";
-import { request } from "@stacks/connect";
+import { connect as stacksConnect } from "@stacks/connect";
 import { createError } from "@/shared/utils";
 import { useWalletContext } from "@/context/WalletContext";
 import { logger } from "@/lib/logger";
@@ -120,7 +120,9 @@ export function getWalletStatus(walletType: WalletType): {
           !!(window as unknown as WalletProviders).XverseProviders ||
           !!(window as unknown as WalletProviders).AsignaProvider ||
           !!(window as unknown as WalletProviders).FordefiProvider ||
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
           !!(window as any).StacksProvider ||
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
           !!(window as any).btc);
       return {
         isAvailable: hasStacksWallet,
@@ -418,40 +420,14 @@ export function useUnifiedWallet(): {
 
           case WalletTypes.STACKS:
             try {
-              // METAMASK CONFLICT PREVENTION: Disable MetaMask auto-connection while using Stacks
-              // This prevents wagmi from interfering with Stacks wallet connections (like Leather)
-              try {
-                if (typeof window !== "undefined" && (window as unknown as WalletProviders).ethereum) {
-                  const descriptor = Object.getOwnPropertyDescriptor(window, 'ethereum');
-                  if (descriptor && (descriptor.configurable || (descriptor.set && descriptor.get))) {
-                    const originalProvider = (window as unknown as WalletProviders).ethereum;
-                    
-                    Object.defineProperty(window, 'ethereum', {
-                      value: null,
-                      configurable: true,
-                      writable: true,
-                      enumerable: true
-                    });
-
-                    setTimeout(() => {
-                      try {
-                        Object.defineProperty(window, 'ethereum', {
-                          value: originalProvider,
-                          configurable: true,
-                          writable: true,
-                          enumerable: true
-                        });
-                      } catch (e) {
-                        logger.warn("Could not restore window.ethereum for Stacks", { error: e instanceof Error ? e.message : String(e) });
-                      }
-                    }, 1000);
-                  } else {
-                    logger.warn("window.ethereum is not configurable or has no setter for Stacks, skipping nulling");
-                  }
-                }
-              } catch (error) {
-                logger.warn("Could not disable MetaMask auto-connect for Stacks", { error: error instanceof Error ? error.message : String(error) });
-              }
+              // NOTE: We intentionally do NOT mutate window.ethereum here.
+              // The previous workaround that nulled window.ethereum for 1s
+              // created a provider-discovery race with MetaMask's content
+              // script (visible in console as "ObjectMultiplex - malformed
+              // chunk" / "Could not establish connection") and contributed
+              // to @stacks/connect's request() promise hanging forever.
+              // @stacks/connect's `connect()` opens its own wallet-select
+              // modal and is safe to call alongside an active MetaMask.
 
               const stacksWallet = await connectStacksWallet(
                 WalletTypes.STACKS as StacksWalletType,
@@ -734,10 +710,89 @@ async function connectStacksWallet(
 interface StacksAddressEntry {
   address: string;
   publicKey: string;
-  symbol: string;
+  symbol?: string;
+  purpose?: string;
+  addressType?: string;
+}
+
+// Hard cap on how long we'll wait for the wallet popup/response.
+// Without this, a stuck provider (common when MetaMask is also installed)
+// leaves the request() promise pending forever and the UI never recovers.
+const STACKS_CONNECT_TIMEOUT_MS = 60_000;
+
+// In-flight guard so rapid double-clicks (or a re-render of the modal)
+// don't queue up multiple wallet popups against the same provider.
+let stacksConnectInFlight: Promise<{
+  address: string;
+  publicKey: string;
+  mirrorAddress: string;
+}> | null = null;
+
+function withStacksTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(
+        createError(
+          "CONNECTION_TIMEOUT",
+          "Stacks wallet connection timed out. If no wallet prompt appeared, unlock Leather/Xverse, disable conflicting extensions, and try again.",
+        ),
+      );
+    }, ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timeoutId) clearTimeout(timeoutId);
+  });
+}
+
+function normalizeStacksAddresses(response: unknown): StacksAddressEntry[] {
+  const value = response as
+    | { addresses?: unknown }
+    | { result?: { addresses?: unknown } | unknown[] }
+    | undefined;
+  if (!value || typeof value !== "object") return [];
+
+  const candidate =
+    "addresses" in value && Array.isArray((value as { addresses?: unknown }).addresses)
+      ? (value as { addresses: unknown[] }).addresses
+      : "result" in value && value.result && !Array.isArray(value.result) &&
+          Array.isArray((value.result as { addresses?: unknown }).addresses)
+        ? ((value.result as { addresses: unknown[] }).addresses)
+        : "result" in value && Array.isArray(value.result)
+          ? (value.result as unknown[])
+          : [];
+
+  return candidate.map((addr) => {
+    const e = addr as Partial<StacksAddressEntry>;
+    return {
+      address: String(e.address || ""),
+      publicKey: String(e.publicKey || ""),
+      symbol: e.symbol ? String(e.symbol) : undefined,
+      purpose: e.purpose ? String(e.purpose) : undefined,
+      addressType: e.addressType ? String(e.addressType) : undefined,
+    };
+  });
 }
 
 async function connectStacksWalletWithConnect(): Promise<{
+  address: string;
+  publicKey: string;
+  mirrorAddress: string;
+}> {
+  if (stacksConnectInFlight) {
+    logger.warn(
+      "Stacks wallet connection already in flight; reusing existing promise",
+    );
+    return stacksConnectInFlight;
+  }
+
+  stacksConnectInFlight = doConnectStacksWalletWithConnect().finally(() => {
+    stacksConnectInFlight = null;
+  });
+  return stacksConnectInFlight;
+}
+
+async function doConnectStacksWalletWithConnect(): Promise<{
   address: string;
   publicKey: string;
   mirrorAddress: string;
@@ -752,7 +807,9 @@ async function connectStacksWalletWithConnect(): Promise<{
         !!(window as unknown as WalletProviders).XverseProviders ||
         !!(window as unknown as WalletProviders).AsignaProvider ||
         !!(window as unknown as WalletProviders).FordefiProvider ||
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
         !!(window as any).StacksProvider ||
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
         !!(window as any).btc);
 
     if (!hasStacksWallet) {
@@ -763,56 +820,45 @@ async function connectStacksWalletWithConnect(): Promise<{
       );
     }
 
-    // @stacks/connect.request() uses pattern: request(method, params)
-    // For stx_getAddresses, no params are needed
-    // Wrap the call to ensure proper JSON serialization and handle non-serializable properties
-    const response = await (async () => {
-      try {
-        const res = await request("stx_getAddresses");
-        
-        // Fix for "setImmediate... is not valid JSON" error:
-        // Some wallet extensions return a response with non-serializable properties (functions, symbols)
-        // We manually extract only the serializable data we need
-        if (res && typeof res === 'object') {
-          return {
-            addresses: (res.addresses as StacksAddressEntry[] || []).map((addr) => ({
-              address: String(addr.address || ''),
-              publicKey: String(addr.publicKey || ''),
-              symbol: String(addr.symbol || '')
-            }))
-          };
-        }
-        return res;
-      } catch (e) {
-        logger.warn("Stacks request failed, attempting minimal data extraction", { error: e instanceof Error ? e.message : String(e) });
-        // If the above fails, it might be because the provider returned something unexpected
-        // Attempt a direct call if possible or re-throw
-        throw e;
-      }
-    })();
+    // Use @stacks/connect's high-level `connect()` (alias for
+    // `request({ forceWalletSelect: true }, 'getAddresses')`) instead of
+    // bare `request("stx_getAddresses")`. Reasons:
+    //   1. `connect()` always opens the wallet-select modal, avoiding stale
+    //      provider state that can make `request()` hang forever when
+    //      MetaMask is also installed.
+    //   2. `getAddresses` has built-in compatibility overrides that map to
+    //      `wallet_connect` for Xverse-like wallets — `stx_getAddresses`
+    //      doesn't, so it silently fails on Xverse.
+    //   3. We wrap in a timeout so the UI can't be left in a "Connecting…"
+    //      state forever.
+    const rawResponse = await withStacksTimeout(
+      stacksConnect(),
+      STACKS_CONNECT_TIMEOUT_MS,
+    );
 
     logger.info("Stacks wallet connection successful");
 
-    // Response format from @stacks/connect:
-    // { addresses: [{ address: string, publicKey: string, symbol: string, ... }, ...] }
-    if (
-      !response?.addresses ||
-      !Array.isArray(response.addresses) ||
-      response.addresses.length === 0
-    ) {
+    const addresses = normalizeStacksAddresses(rawResponse);
+    if (addresses.length === 0) {
       throw new Error("No Stacks addresses found in wallet response");
     }
 
-    // ENHANCEMENT: Filter for STX address to avoid picking BTC address (which Leather often returns first)
-    // Leather returns symbols like 'STX' and 'BTC'
-    const stxAddress = response.addresses.find(
-      (addr: StacksAddressEntry) =>
-        addr.symbol === "STX" ||
+    // ENHANCEMENT: pick the STX address; Leather often returns BTC first,
+    // Xverse uses `purpose: 'stacks'` instead of `symbol: 'STX'`.
+    const stxAddress = addresses.find((addr) => {
+      const symbol = addr.symbol?.toUpperCase();
+      const purpose = addr.purpose?.toLowerCase();
+      const addressType = addr.addressType?.toLowerCase();
+      return (
+        symbol === "STX" ||
+        purpose === "stacks" ||
+        addressType === "stacks" ||
         addr.address.startsWith("SP") ||
-        addr.address.startsWith("ST"),
-    );
+        addr.address.startsWith("ST")
+      );
+    });
 
-    const primaryAddress = stxAddress || response.addresses[0];
+    const primaryAddress = stxAddress || addresses[0];
 
     if (!primaryAddress?.address) {
       throw createError(
