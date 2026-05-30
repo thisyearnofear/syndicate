@@ -1,107 +1,27 @@
 import { NextResponse } from 'next/server';
-import { API } from '@/config';
 import { basePublicClient } from '@/lib/baseClient';
 import { MEGAPOT_ABI, MEGAPOT_V2 } from '@/config/contracts';
 import { logger } from '@/lib/logger';
 
 /**
- * Stats API route - uses same transport logic as /api/megapot
- * Returns partial stats on failure instead of 502
+ * Stats API route - reads Megapot jackpot stats directly from the on-chain contract.
+ * The api.megapot.io REST API has been restructured and all endpoints return 404.
  */
-
-function normalizeBaseUrl(url: string): string {
-  return url.replace(/\/+$/, '');
-}
-
-function getCandidateBaseUrls(): string[] {
-  const configured = normalizeBaseUrl(API.megapot.baseUrl);
-  return [
-    'https://api.megapot.io/api/v1',
-    'https://api.megapot.io/api/v2',
-    configured,
-    configured.replace(/\/api\/v2$/i, ''),
-  ].filter((value, index, arr) => arr.indexOf(value) === index);
-}
 
 export async function GET() {
   try {
-    const apiKey = API.megapot.apiKey || process.env.MEGAPOT_API_KEY;
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    if (apiKey) {
-      headers['apikey'] = apiKey;
+    const onChainStats = await getOnChainStats();
+    if (onChainStats) {
+      return NextResponse.json(onChainStats);
     }
-
-    let response: Response | null = null;
-
-    // Try all candidate URLs with both /jackpot-round-stats/active and /lottery/jackpot-round-stats/active
-    for (const baseUrl of getCandidateBaseUrls()) {
-      for (const endpoint of ['/jackpot-round-stats/active', '/lottery/jackpot-round-stats/active']) {
-        try {
-          const url = new URL(`${baseUrl}${endpoint}`);
-          if (apiKey) {
-            url.searchParams.set('apikey', apiKey);
-          }
-          
-          const attempt = await fetch(url.toString(), {
-            headers,
-            signal: AbortSignal.timeout(10000),
-            cache: 'no-store',
-          });
-          
-          if (attempt.ok) {
-            response = attempt;
-            break;
-          }
-        } catch {
-          // try next endpoint
-        }
-      }
-      if (response) break;
-    }
-
-    // Return partial stats if API unavailable or outdated
-    if (!response) {
-      logger.warn('[Stats API] All endpoints failed, trying on-chain fallback');
-      const onChainStats = await getOnChainStats();
-      if (onChainStats) {
-        return NextResponse.json(onChainStats);
-      }
-
-      return NextResponse.json({
-        totalRaised: null,
-        activePlayers: null,
-        prizeUsd: null,
-        ticketsSold: null,
-        updatedAt: new Date().toISOString(),
-        source: 'unavailable',
-      });
-    }
-
-    const stats = await response.json();
-    const prizeUsd = stats.prizeUsd ? parseFloat(stats.prizeUsd) : 0;
-
-    // If API returns suspiciously low jackpot (old version), try on-chain
-    if (prizeUsd < 100000) {
-      logger.warn('[Stats API] API returned suspicious prize, trying on-chain', { prizeUsd });
-      const onChainStats = await getOnChainStats();
-      if (onChainStats) {
-        return NextResponse.json(onChainStats);
-      }
-    }
-
-    const totalRaised = stats.ticketsSoldCount && stats.ticketPrice
-      ? stats.ticketsSoldCount * stats.ticketPrice
-      : null;
 
     return NextResponse.json({
-      totalRaised,
-      activePlayers: stats.activePlayers ?? null,
-      prizeUsd: prizeUsd || null,
-      ticketsSold: stats.ticketsSoldCount ?? null,
+      totalRaised: null,
+      activePlayers: null,
+      prizeUsd: null,
+      ticketsSold: null,
       updatedAt: new Date().toISOString(),
-      source: 'megapot-api',
+      source: 'unavailable',
     });
   } catch (error) {
     logger.error('[Stats API] Unexpected error', { error: String(error) });
