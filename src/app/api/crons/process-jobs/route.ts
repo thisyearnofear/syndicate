@@ -2,10 +2,10 @@
  * CRON: Process Purchase Jobs
  *
  * Drains the durable purchase_jobs queue.
- * Triggered by Vercel Cron every minute.
+ * Triggered by Vercel Cron daily at midnight.
  *
- * Add to vercel.json:
- * { "path": "/api/crons/process-jobs", "schedule": "* * * * *" }
+ * vercel.json:
+ * { "path": "/api/crons/process-jobs", "schedule": "0 0 * * *" }
  */
 
 import { NextRequest, NextResponse } from 'next/server';
