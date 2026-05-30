@@ -9,12 +9,6 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
 
-  // Reduce build memory usage by splitting webpack compilation into workers
-  // This helps prevent OOM errors on memory-constrained build environments (Vercel Hobby)
-  experimental: {
-    webpackBuildWorker: true,
-  },
-
   // Force packages that ship pre-compiled bundles with React hooks to be
   // re-compiled through Next.js's pipeline so they use the app's single
   // React instance.
@@ -41,5 +35,7 @@ module.exports = withSentryConfig(nextConfig, {
   hideSourceMaps: true,
 
   // Automatically tree-shake Sentry logger statements in production
-  disableLogger: true,
+  // Note: disableLogger is deprecated in favor of removeDebugLogging
+  // but we keep it simple for now if the wrapper handles it.
+  // Actually let's just remove it as it's deprecated and causing warnings.
 });
