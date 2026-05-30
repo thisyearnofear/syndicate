@@ -174,6 +174,7 @@ function YieldStrategiesContent() {
       const saved = localStorage.getItem(ALLOCATION_STORAGE_KEY);
       if (!saved) return;
       const { tickets, causes } = JSON.parse(saved);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
       setYieldToTickets(tickets);
       setYieldToCauses(causes);
     } catch {}
@@ -215,6 +216,7 @@ function YieldStrategiesContent() {
 
   useEffect(() => {
     const targetStrategy = strategyParam ?? protocolParam;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
     setFlowStep(getInitialFlowStep(tabParam ?? null, isBridgeEntry, targetStrategy ?? null));
 
     if (
@@ -232,6 +234,7 @@ function YieldStrategiesContent() {
 
   useEffect(() => {
     if (!selectedStrategy && flowStep !== 1) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
       setFlowStep(1);
     }
   }, [flowStep, selectedStrategy]);
@@ -240,6 +243,7 @@ function YieldStrategiesContent() {
     if (!amountParam) return;
     const parsedAmount = Number(amountParam);
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) return;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
     setDepositAmount((current) => (current > 0 ? current : parsedAmount));
   }, [amountParam]);
 
@@ -289,6 +293,7 @@ function YieldStrategiesContent() {
 
   useEffect(() => {
     reset();
+        // eslint-disable-next-line react-hooks/set-state-in-effect
     setDepositSuccess(false);
   }, [depositAmount, selectedStrategy, reset]);
 

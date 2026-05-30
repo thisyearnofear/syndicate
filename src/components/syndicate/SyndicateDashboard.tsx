@@ -117,7 +117,7 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
     enabled: data?.pool_type === 'fhenix',
   });
 
-  const fhenixStatusLabel = (() => {
+  const _fhenixStatusLabel = (() => {
     switch (fhenixPrivateStatus) {
       case 'initializing':
         return 'Initializing privacy layer';

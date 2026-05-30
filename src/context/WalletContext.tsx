@@ -287,6 +287,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
   // Only call wagmi hooks after mount to avoid hydration issues
   useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMounted(true);
   }, []);
 

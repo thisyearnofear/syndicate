@@ -12,7 +12,7 @@
  */
 
 // Re-export consolidated utilities from specialized modules
-// eslint-disable-next-line import/no-unresolved
+ 
 export { 
   withRetry, 
   withTimeout, 
@@ -27,7 +27,7 @@ export {
 // Note: isValidAddress in shared/utils is EVM-only, while the one in 
 // lib/wallet/connection supports multiple chains (EVM, Solana, NEAR, Stacks)
 // Use the multi-chain version where chain-agnostic validation is needed
-// eslint-disable-next-line import/no-unresolved
+ 
 export { 
   shortenAddress, 
   addressesEqual,

@@ -37,7 +37,7 @@ interface UserIdentity {
  * Window type extension to support ethereum and phantom
  */
 declare global {
-  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+   
   interface Window {
     ethereum: MetaMaskInpageProvider & {
       setProvider?: (provider: MetaMaskInpageProvider) => void;
@@ -49,7 +49,7 @@ declare global {
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+   
   interface WindowEventMap {
     'eip6963:requestProvider': EIP6963RequestProviderEvent;
     'eip6963:announceProvider': EIP6963AnnounceProviderEvent;

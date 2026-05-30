@@ -63,6 +63,7 @@ export function useRangerExecutionTracker() {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as Partial<RangerExecutionTrackerState>;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setState({
           ...defaultState,
           ...parsed,

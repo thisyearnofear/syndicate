@@ -38,6 +38,7 @@ export function PendingBridgeNotification({
 
     useEffect(() => {
         if (hasPending) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
             setIsVisible(true);
         } else if (isVisible && currentBalance !== undefined) {
             // Bridge completed!

@@ -6,6 +6,7 @@ import "@near-wallet-selector/modal-ui/styles.css";
 import { ToastProvider } from "@/shared/components/ui/Toast";
 import NavigationHeader from "@/components/NavigationHeader";
 import ClientProviders from "@/components/ClientProviders";
+import Link from "next/link";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -63,10 +64,10 @@ export default function RootLayout({
                     <div>
                       <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Product</h4>
                       <div className="space-y-2">
-                        <a href="/" className="block text-sm text-gray-500 hover:text-white transition-colors">Home</a>
-                        <a href="/syndicates" className="block text-sm text-gray-500 hover:text-white transition-colors">Syndicates</a>
-                        <a href="/vaults" className="block text-sm text-gray-500 hover:text-white transition-colors">Vaults</a>
-                        <a href="/bridge" className="block text-sm text-gray-500 hover:text-white transition-colors">Bridge</a>
+                        <Link href="/" className="block text-sm text-gray-500 hover:text-white transition-colors">Home</Link>
+                        <Link href="/syndicates" className="block text-sm text-gray-500 hover:text-white transition-colors">Syndicates</Link>
+                        <Link href="/vaults" className="block text-sm text-gray-500 hover:text-white transition-colors">Vaults</Link>
+                        <Link href="/bridge" className="block text-sm text-gray-500 hover:text-white transition-colors">Bridge</Link>
                       </div>
                     </div>
                     <div>

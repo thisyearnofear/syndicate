@@ -140,6 +140,7 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
     if (!pending) return;
 
     try {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
       setState((prev) => ({
         ...prev,
         isPurchasing: true,

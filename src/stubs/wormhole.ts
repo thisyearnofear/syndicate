@@ -24,7 +24,7 @@ export interface Platform {
 
 // Wormhole class stub
 export class Wormhole {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   constructor(_network: Network, _platforms: Platform[]) {
     console.warn('[STUB] Wormhole initialized - Wormhole is disabled');
   }
@@ -78,13 +78,13 @@ export interface VAA {
 }
 
 // Stub functions
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 export function wormhole(_network: Network, _platforms: Platform[]): Wormhole {
   console.warn('[STUB] wormhole() called - Wormhole is disabled');
   return new Wormhole(_network, _platforms);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 export function chainToPlatform(_chain: Chain): string {
   return 'Evm';
 }

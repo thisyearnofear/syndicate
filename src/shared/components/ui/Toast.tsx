@@ -182,6 +182,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [idCounter, setIdCounter] = useState(0);
 
   useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 

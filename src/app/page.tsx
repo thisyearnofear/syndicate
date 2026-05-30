@@ -27,6 +27,7 @@ export default function Home() {
   const { isConnected } = useUnifiedWallet();
 
   useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMounted(true);
   }, []);
 

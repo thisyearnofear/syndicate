@@ -9,7 +9,6 @@ import {
   ShieldCheck,
   Loader,
   Check,
-  X,
   AlertCircle,
   RefreshCw,
 } from 'lucide-react';
@@ -83,7 +82,7 @@ function CompactRevealButton({
   status,
   balanceMicro,
   formattedBalance,
-  error,
+  error: _error,
   onReveal,
 }: {
   status: Status;

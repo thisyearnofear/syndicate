@@ -180,37 +180,6 @@ export const LOTTERY = {
 
 // =============================================================================
 
-// API CONFIGURATION
-
-// =============================================================================
-
-
-
-export const API = {
-  megapot: {
-    baseUrl: process.env.NEXT_PUBLIC_MEGAPOT_API_BASE_URL || "https://api.megapot.io/api/v2",
-    apiKey: process.env.MEGAPOT_API_KEY || process.env.NEXT_PUBLIC_MEGAPOT_API_KEY,
-    endpoints: {
-      jackpotStats: "/jackpot-round-stats/active",
-      ticketPurchases: "/ticket-purchases",
-      dailyGiveaway: "/giveaways/daily-giveaway-winners",
-    },
-  },
-  stacks: {
-    baseUrl: process.env.NEXT_PUBLIC_STACKS_API_URL || "https://api.mainnet.hiro.so",
-    apiKey: process.env.NEXT_PUBLIC_STACKS_API_KEY,
-    endpoints: {
-      jackpotStats: "/lottery/jackpot-round-stats/active",
-      ticketPurchases: "/lottery/ticket-purchases",
-      dailyGiveaway: "/lottery/daily-giveaway-winners",
-    },
-  },
-} as const;
-
-
-
-// =============================================================================
-
 // DESIGN SYSTEM
 
 // =============================================================================
@@ -508,8 +477,6 @@ export { CONTRACTS as contracts };
 export { LOTTERY as lottery };
 
 export { DESIGN as design };
-
-export { API as api };
 
 export { PERFORMANCE as performance };
 

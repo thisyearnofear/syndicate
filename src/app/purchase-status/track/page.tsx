@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 
 // Uses query param ?txId=xxx instead of dynamic segment [txId]
 // to avoid Next.js buildAppStaticPaths crash during build.
@@ -174,12 +175,12 @@ export default function PurchaseStatusTrackPage() {
               <p className="text-green-700 mb-3">
                 Your tickets have been purchased and sent to {status.recipientBaseAddress}
               </p>
-              <a
+              <Link
                 href="/"
                 className="inline-block bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
               >
                 View My Tickets
-              </a>
+              </Link>
             </div>
           )}
         </div>

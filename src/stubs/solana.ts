@@ -115,9 +115,9 @@ export interface TransactionInstruction {
 
 // SPL Token stubs
 export async function getAssociatedTokenAddress(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   _mint: PublicKey,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   _owner: PublicKey
 ): Promise<PublicKey> {
   console.warn('[STUB] getAssociatedTokenAddress called - Solana is disabled');
