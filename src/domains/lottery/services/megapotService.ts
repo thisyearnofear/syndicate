@@ -144,37 +144,21 @@ class MegapotService {
    }
 
   /**
-  * ENHANCEMENT FIRST: Enhanced ticket purchases with wallet filtering
-  */
-  async getTicketPurchases(walletAddress?: string, limit = performance.pagination.transactions): Promise<TicketPurchase[]> {
-    try {
-      let endpoint = api.megapot.endpoints.ticketPurchases;
-      if (walletAddress) {
-        endpoint += `/${walletAddress}`;
-      } else {
-        endpoint += `?limit=${limit}`;
-      }
-      return await this.makeRequest<TicketPurchase[]>(endpoint, {
-        cacheDuration: performance.cache.activityFeed,
-      });
-    } catch (error) {
-      logger.error('Failed to fetch ticket purchases', { error: String(error) });
-      return [];
-    }
+   * Ticket purchases are no longer available from the api.megapot.io REST API
+   * (all endpoints return 404). Returns empty array to avoid wasted HTTP requests
+   * and 404 console noise. The Envio indexer (UserTicketPurchase event handler)
+   * can be used when it's connected.
+   */
+  async getTicketPurchases(_walletAddress?: string, _limit?: number): Promise<TicketPurchase[]> {
+    return [];
   }
 
   /**
-   * ENHANCEMENT FIRST: Enhanced daily giveaway winners
+   * Daily giveaway winners are no longer available from the api.megapot.io REST API
+   * (all endpoints return 404). Returns empty array to avoid wasted HTTP requests.
    */
   async getDailyGiveawayWinners(): Promise<DailyGiveawayWin[]> {
-    try {
-      return await this.makeRequest<DailyGiveawayWin[]>(api.megapot.endpoints.dailyGiveaway, {
-        cacheDuration: performance.cache.activityFeed,
-      });
-    } catch (error) {
-      logger.error('Failed to fetch daily giveaway winners', { error: String(error) });
-      return [];
-    }
+    return [];
   }
 
   /**
