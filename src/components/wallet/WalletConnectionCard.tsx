@@ -92,6 +92,7 @@ const WALLET_SECTIONS: WalletSection[] = [
 
 interface WalletConnectionCardProps {
   onConnect?: (walletType: WalletType) => void | Promise<void>;
+  onCancel?: () => void;
   title?: string;
   subtitle?: string;
   compact?: boolean;
@@ -99,6 +100,7 @@ interface WalletConnectionCardProps {
 
 export function WalletConnectionCard({
   onConnect,
+  onCancel,
   title = "Connect Wallet",
   subtitle = "Connect the wallet you use to fund or access Syndicate’s Base-native vault flows",
   compact = false,
@@ -124,10 +126,13 @@ export function WalletConnectionCard({
          await onConnect?.(walletType);
        } catch (err) {
          const error = err as Error;
+         const message = error?.message || '';
+         const isCancelled = message.toLowerCase().includes('cancel') || message.toLowerCase().includes('reject');
          // Don't show error for EVM/WalletConnect since RainbowKit handles its own UI
-         if (walletType !== 'evm') {
+         // Also don't show error for user-initiated cancellation
+         if (walletType !== 'evm' && !isCancelled) {
            const errorMessage =
-             error?.message ||
+             message ||
              `Failed to connect to ${walletType}. Please try again.`;
            setError(errorMessage);
          }
@@ -141,6 +146,13 @@ export function WalletConnectionCard({
     },
     [onConnect, isConnecting]
   );
+
+  const handleCancel = useCallback(() => {
+    setIsConnecting(false);
+    setConnectingWallet(null);
+    setError(null);
+    onCancel?.();
+  }, [onCancel]);
 
   // Prevent hydration mismatches by only rendering after mount
   useEffect(() => {
@@ -261,6 +273,20 @@ export function WalletConnectionCard({
             </div>
           </CompactFlex>
         </Card>
+      )}
+
+      {/* Cancel Button - appears when a wallet connection is in progress */}
+      {isConnecting && onCancel && (
+        <div className="text-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCancel}
+            className="text-xs text-gray-400 hover:text-gray-200 border border-gray-700 bg-gray-800/50"
+          >
+            Cancel
+          </Button>
+        </div>
       )}
 
       {/* Wallet Sections */}

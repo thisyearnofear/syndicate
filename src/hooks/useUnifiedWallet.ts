@@ -37,6 +37,7 @@ export interface WalletActions {
   signTransaction: <T>(transaction: T) => Promise<T>;
   switchChain: (chainId: number) => Promise<void>;
   clearError: () => void;
+  cancelStacksConnection: () => void;
 }
 
 function toWalletType(chain: WalletChain | WalletType): WalletType {
@@ -190,6 +191,7 @@ export function useUnifiedWallet(): WalletState & WalletActions {
     signTransaction,
     switchChain,
     clearError: walletService.clearError,
+    cancelStacksConnection: walletService.cancelStacksConnection,
   };
 }
 

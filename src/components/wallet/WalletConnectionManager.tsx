@@ -20,7 +20,7 @@ export default function WalletConnectionManager({
   showConnectionInfo = true,
   variant = "default",
 }: WalletConnectionManagerProps) {
-  const { isConnected, connect, disconnect } = useUnifiedWallet();
+  const { isConnected, connect, disconnect, cancelStacksConnection } = useUnifiedWallet();
   const { state, dispatch } = useWalletContext();
 
   const handleConnectClick = useCallback(() => {
@@ -63,6 +63,11 @@ export default function WalletConnectionManager({
       console.error("Failed to disconnect wallet:", error);
     }
   }, [disconnect]);
+
+  const handleCancelStacks = useCallback(() => {
+    cancelStacksConnection();
+    dispatch({ type: "CONNECT_FAILURE", payload: { error: "Connection cancelled" } });
+  }, [cancelStacksConnection, dispatch]);
 
   // Render different variants based on connection state and variant prop
   if (isConnected && showConnectionInfo) {
@@ -163,6 +168,7 @@ export default function WalletConnectionManager({
 
           <WalletConnectionOptions
             onWalletConnect={handleWalletConnect}
+            onCancel={handleCancelStacks}
           />
         </div>
       </UnifiedModal>

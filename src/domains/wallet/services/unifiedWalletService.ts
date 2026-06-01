@@ -180,6 +180,7 @@ export function useUnifiedWallet(): {
   disconnect: () => Promise<void>;
   switchChain: (chainId: number) => Promise<void>;
   clearError: () => void;
+  cancelStacksConnection: () => void;
 } {
   const { state, dispatch } = useWalletContext();
 
@@ -650,6 +651,7 @@ export function useUnifiedWallet(): {
     disconnect,
     switchChain,
     clearError,
+    cancelStacksConnection,
   };
 }
 
@@ -728,7 +730,19 @@ let stacksConnectInFlight: Promise<{
   mirrorAddress: string;
 }> | null = null;
 
-function withStacksTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+// AbortController for user-initiated cancellation of stuck Stacks connections.
+// When the user clicks "Cancel", this fires and rejects the in-flight promise
+// with a CONNECTION_CANCELLED error so the UI can immediately recover.
+let currentStacksAbortController: AbortController | null = null;
+
+export function cancelStacksConnection(): void {
+  if (currentStacksAbortController) {
+    currentStacksAbortController.abort();
+    currentStacksAbortController = null;
+  }
+}
+
+function withStacksTimeout<T>(promise: Promise<T>, ms: number, signal?: AbortSignal): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => {
@@ -740,7 +754,28 @@ function withStacksTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
       );
     }, ms);
   });
-  return Promise.race([promise, timeout]).finally(() => {
+
+  const abort = new Promise<never>((_, reject) => {
+    if (signal?.aborted) {
+      reject(
+        createError(
+          "CONNECTION_CANCELLED",
+          "Stacks wallet connection was cancelled.",
+        ),
+      );
+      return;
+    }
+    signal?.addEventListener("abort", () => {
+      reject(
+        createError(
+          "CONNECTION_CANCELLED",
+          "Stacks wallet connection was cancelled.",
+        ),
+      );
+    }, { once: true });
+  });
+
+  return Promise.race([promise, timeout, abort]).finally(() => {
     if (timeoutId) clearTimeout(timeoutId);
   });
 }
@@ -786,18 +821,32 @@ async function connectStacksWalletWithConnect(): Promise<{
     return stacksConnectInFlight;
   }
 
-  stacksConnectInFlight = doConnectStacksWalletWithConnect().finally(() => {
+  // Abort any previous stuck connection
+  cancelStacksConnection();
+
+  // Create a fresh AbortController so the user can cancel if it hangs
+  currentStacksAbortController = new AbortController();
+
+  stacksConnectInFlight = doConnectStacksWalletWithConnect(
+    currentStacksAbortController.signal,
+  ).finally(() => {
     stacksConnectInFlight = null;
+    currentStacksAbortController = null;
   });
   return stacksConnectInFlight;
 }
 
-async function doConnectStacksWalletWithConnect(): Promise<{
+async function doConnectStacksWalletWithConnect(signal?: AbortSignal): Promise<{
   address: string;
   publicKey: string;
   mirrorAddress: string;
 }> {
   try {
+    // Check for cancellation before we start
+    if (signal?.aborted) {
+      throw createError("CONNECTION_CANCELLED", "Stacks wallet connection was cancelled.");
+    }
+
     logger.info("Initiating Stacks wallet connection with @stacks/connect");
 
     // Check if any Stacks wallet provider is available
@@ -829,11 +878,12 @@ async function doConnectStacksWalletWithConnect(): Promise<{
     //   2. `getAddresses` has built-in compatibility overrides that map to
     //      `wallet_connect` for Xverse-like wallets — `stx_getAddresses`
     //      doesn't, so it silently fails on Xverse.
-    //   3. We wrap in a timeout so the UI can't be left in a "Connecting…"
-    //      state forever.
+    //   3. We wrap in a timeout + abort signal so the UI can recover
+    //      immediately when the user cancels.
     const rawResponse = await withStacksTimeout(
       stacksConnect(),
       STACKS_CONNECT_TIMEOUT_MS,
+      signal,
     );
 
     logger.info("Stacks wallet connection successful");
