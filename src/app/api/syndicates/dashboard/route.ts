@@ -221,7 +221,6 @@ export async function GET(request: Request) {
 
     // Fetch pool-specific info
     let safeInfo, splitInfo, ptVaultInfo;
-    const ticketsPerMember = pool.tickets_purchased / Math.max(members.length, 1);
 
     try {
       switch (poolType) {
@@ -262,6 +261,7 @@ export async function GET(request: Request) {
           const vaultConfig = await import('@/services/syndicate/poolProviders/fhenixProvider');
           const fhenixVaultProvider = (await import('@/services/vaults/fhenixProvider')).fhenixVaultProvider;
           const fhenixAPY = await fhenixVaultProvider.getCurrentAPY();
+          const fhenixTicketsPerMember = pool.tickets_purchased / Math.max(members.length, 1);
           // Return enriched response for Fhenix pools
           return NextResponse.json({
             id: pool.id,
@@ -277,7 +277,7 @@ export async function GET(request: Request) {
             members,
             total_contributed_usdc: totalContributed.toFixed(2),
             tickets_purchased: pool.tickets_purchased || 0,
-            tickets_per_member: ticketsPerMember,
+            tickets_per_member: fhenixTicketsPerMember,
             total_impact_usdc: pool.total_impact_usdc || '0',
             cause_percentage: pool.cause_allocation_percent || 15,
             recent_activity: recentActivity,
@@ -296,6 +296,8 @@ export async function GET(request: Request) {
     } catch (error) {
       logger.error('[Dashboard API] Failed to fetch pool-specific info', { error: String(error) });
     }
+
+    const ticketsPerMember = pool.tickets_purchased / Math.max(members.length, 1);
 
     const dashboardData: SyndicateDashboardData = {
       id: pool.id,
