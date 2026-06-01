@@ -21,8 +21,15 @@ import {
 import { computeAddress } from "ethers";
 
 interface WalletProviders {
-  LeatherProvider?: unknown;
-  XverseProviders?: unknown;
+  StacksProvider?: {
+    request(method: string, params?: unknown): Promise<unknown>;
+  };
+  LeatherProvider?: {
+    getAddresses(): Promise<{ addresses: Array<{ address: string; publicKey?: string; symbol?: string; purpose?: string; addressType?: string }> }>;
+  };
+  XverseProviders?: {
+    getAddress(network: string): Promise<string>;
+  };
   AsignaProvider?: unknown;
   FordefiProvider?: unknown;
   starknet_argentX?: { enable(): Promise<void>; selectedAddress?: string; account?: { address?: string } };
@@ -809,6 +816,55 @@ function normalizeStacksAddresses(response: unknown): StacksAddressEntry[] {
   });
 }
 
+/**
+ * Extract the STX address (not BTC) from normalized addresses and derive
+ * the EVM mirror address. Shared between direct-provider and modal paths.
+ */
+function extractStacksResult(addresses: StacksAddressEntry[]): {
+  address: string;
+  publicKey: string;
+  mirrorAddress: string;
+} {
+  if (addresses.length === 0) {
+    throw new Error("No Stacks addresses found in wallet response");
+  }
+
+  // ENHANCEMENT: pick the STX address; Leather often returns BTC first,
+  // Xverse uses `purpose: 'stacks'` instead of `symbol: 'STX'`.
+  const stxAddress = addresses.find((addr) => {
+    const symbol = addr.symbol?.toUpperCase();
+    const purpose = addr.purpose?.toLowerCase();
+    const addressType = addr.addressType?.toLowerCase();
+    return (
+      symbol === "STX" ||
+      purpose === "stacks" ||
+      addressType === "stacks" ||
+      addr.address.startsWith("SP") ||
+      addr.address.startsWith("ST")
+    );
+  });
+
+  const primaryAddress = stxAddress || addresses[0];
+
+  if (!primaryAddress?.address) {
+    throw createError(
+      "NO_STACKS_ADDRESS",
+      "No Stacks address found. Please make sure you have a Stacks account in your wallet.",
+    );
+  }
+
+  const publicKey = primaryAddress.publicKey
+    ? String(primaryAddress.publicKey)
+    : "";
+  const mirrorAddress = deriveMirrorAddress(publicKey);
+
+  return {
+    address: String(primaryAddress.address),
+    publicKey,
+    mirrorAddress,
+  };
+}
+
 async function connectStacksWalletWithConnect(): Promise<{
   address: string;
   publicKey: string;
@@ -849,17 +905,20 @@ async function doConnectStacksWalletWithConnect(signal?: AbortSignal): Promise<{
 
     logger.info("Initiating Stacks wallet connection with @stacks/connect");
 
+    const providers = typeof window !== "undefined"
+      ? (window as unknown as WalletProviders)
+      : null;
+
     // Check if any Stacks wallet provider is available
-    const hasStacksWallet =
-      typeof window !== "undefined" &&
-      (!!(window as unknown as WalletProviders).LeatherProvider ||
-        !!(window as unknown as WalletProviders).XverseProviders ||
-        !!(window as unknown as WalletProviders).AsignaProvider ||
-        !!(window as unknown as WalletProviders).FordefiProvider ||
+    const hasStacksWallet = !!(
+      providers?.StacksProvider ||
+      providers?.LeatherProvider ||
+      providers?.XverseProviders ||
+      providers?.AsignaProvider ||
+      providers?.FordefiProvider ||
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        !!(window as any).StacksProvider ||
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        !!(window as any).btc);
+      (window as any)?.btc
+    );
 
     if (!hasStacksWallet) {
       throw createError(
@@ -869,65 +928,75 @@ async function doConnectStacksWalletWithConnect(signal?: AbortSignal): Promise<{
       );
     }
 
-    // Use @stacks/connect's high-level `connect()` (alias for
-    // `request({ forceWalletSelect: true }, 'getAddresses')`) instead of
-    // bare `request("stx_getAddresses")`. Reasons:
-    //   1. `connect()` always opens the wallet-select modal, avoiding stale
-    //      provider state that can make `request()` hang forever when
-    //      MetaMask is also installed.
-    //   2. `getAddresses` has built-in compatibility overrides that map to
-    //      `wallet_connect` for Xverse-like wallets — `stx_getAddresses`
-    //      doesn't, so it silently fails on Xverse.
-    //   3. We wrap in a timeout + abort signal so the UI can recover
-    //      immediately when the user cancels.
+    // ---- Tiered direct-provider connection (bypasses @stacks/connect's
+    // ---- broken Postmate modal to avoid extension-content-script conflicts
+    // ---- with MetaMask/HashPack) ----
+
+    // Tier 1: SIP-030 StacksProvider.request('getAddresses') — Leather/Hiro
+    // calls the provider directly, no iframe, no postMessage, no corruption
+    if (providers?.StacksProvider?.request) {
+      const sipResponse = await withStacksTimeout(
+        providers.StacksProvider.request("getAddresses") as Promise<unknown>,
+        STACKS_CONNECT_TIMEOUT_MS,
+        signal,
+      );
+      const addresses = normalizeStacksAddresses(sipResponse);
+      if (addresses.length > 0) {
+        logger.info("Stacks wallet connected via SIP-030 StacksProvider (direct)");
+        return extractStacksResult(addresses);
+      }
+    }
+
+    // Tier 2: LeatherProvider.getAddresses() — Leather/Hiro direct
+    // (belt-and-suspenders; Leather injects same object as both StacksProvider
+    // and LeatherProvider, so this is redundant but safe)
+    if (providers?.LeatherProvider?.getAddresses) {
+      const leatherResponse = await withStacksTimeout(
+        providers.LeatherProvider.getAddresses(),
+        STACKS_CONNECT_TIMEOUT_MS,
+        signal,
+      );
+      const addresses = normalizeStacksAddresses(leatherResponse);
+      if (addresses.length > 0) {
+        logger.info("Stacks wallet connected via LeatherProvider.getAddresses() (direct)");
+        return extractStacksResult(addresses);
+      }
+    }
+
+    // Tier 3: XverseProviders.getAddress('stacks') — Xverse direct
+    // Xverse returns a bare string, no publicKey, so mirror address will be empty
+    if (providers?.XverseProviders?.getAddress) {
+      const xverseAddr = await withStacksTimeout(
+        providers.XverseProviders.getAddress("stacks"),
+        STACKS_CONNECT_TIMEOUT_MS,
+        signal,
+      );
+      if (xverseAddr && typeof xverseAddr === "string") {
+        logger.info("Stacks wallet connected via XverseProviders.getAddress() (direct)");
+        return extractStacksResult([{
+          address: xverseAddr,
+          publicKey: "",
+        }]);
+      }
+    }
+
+    // Tier 4: @stacks/connect modal fallback (Asigna, Fordefi, unknown wallets)
+    logger.info("No direct provider found, falling back to @stacks/connect modal");
+
     const rawResponse = await withStacksTimeout(
       stacksConnect(),
       STACKS_CONNECT_TIMEOUT_MS,
       signal,
     );
 
-    logger.info("Stacks wallet connection successful");
+    logger.info("Stacks wallet connection successful via @stacks/connect");
 
     const addresses = normalizeStacksAddresses(rawResponse);
     if (addresses.length === 0) {
       throw new Error("No Stacks addresses found in wallet response");
     }
 
-    // ENHANCEMENT: pick the STX address; Leather often returns BTC first,
-    // Xverse uses `purpose: 'stacks'` instead of `symbol: 'STX'`.
-    const stxAddress = addresses.find((addr) => {
-      const symbol = addr.symbol?.toUpperCase();
-      const purpose = addr.purpose?.toLowerCase();
-      const addressType = addr.addressType?.toLowerCase();
-      return (
-        symbol === "STX" ||
-        purpose === "stacks" ||
-        addressType === "stacks" ||
-        addr.address.startsWith("SP") ||
-        addr.address.startsWith("ST")
-      );
-    });
-
-    const primaryAddress = stxAddress || addresses[0];
-
-    if (!primaryAddress?.address) {
-      throw createError(
-        "NO_STACKS_ADDRESS",
-        "No Stacks address found. Please make sure you have a Stacks account in your wallet.",
-      );
-    }
-
-    // Return only serializable data (no function references, no circular references)
-    const publicKey = primaryAddress.publicKey
-      ? String(primaryAddress.publicKey)
-      : "";
-    const mirrorAddress = deriveMirrorAddress(publicKey);
-
-    return {
-      address: String(primaryAddress.address),
-      publicKey,
-      mirrorAddress,
-    };
+    return extractStacksResult(addresses);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error("Stacks wallet connection error", { error: errorMessage });
