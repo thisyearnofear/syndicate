@@ -6,6 +6,7 @@ import { WalletType } from "@/domains/wallet/types";
 
 interface WalletConnectionOptionsProps {
   onWalletConnect?: (walletType: WalletType) => void | Promise<void>;
+  onCancel?: () => void;
 }
 
 /**
@@ -14,6 +15,7 @@ interface WalletConnectionOptionsProps {
  */
 export default function WalletConnectionOptions({
   onWalletConnect,
+  onCancel,
 }: WalletConnectionOptionsProps) {
   // IMPORTANT: must return the promise so WalletConnectionCard can await it.
   // Otherwise `await onConnect?.(walletType)` resolves to undefined immediately
@@ -27,6 +29,7 @@ export default function WalletConnectionOptions({
   return (
     <WalletConnectionCard
       onConnect={handleWalletConnect}
+      onCancel={onCancel}
     />
   );
 }
