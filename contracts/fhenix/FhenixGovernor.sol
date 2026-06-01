@@ -6,6 +6,7 @@ import {Permissioned, Permission} from "@fhenixprotocol/contracts/access/Permiss
 
 interface IFhenixSyndicateVault {
     function isMember(address member) external view returns (bool);
+    function memberCount() external view returns (uint256);
 }
 
 /**
@@ -120,6 +121,7 @@ contract FhenixGovernor is Permissioned {
     error InvalidVoteChoice();
     error TallyAlreadyRevealed();
     error InvalidStateTransition();
+    error QuorumNotMet();
     error ExecutionFailed();
 
     // ─── Constructor ─────────────────────────────────────────────────────────
@@ -323,7 +325,6 @@ contract FhenixGovernor is Permissioned {
      */
     function revealTally(uint256 proposalId, Permission calldata permission)
         external
-        view
         onlyCoordinator
         onlySender(permission)
         returns (string memory forVotesSealed, string memory againstVotesSealed, string memory abstainVotesSealed)
@@ -334,10 +335,14 @@ contract FhenixGovernor is Permissioned {
         if (block.timestamp <= p.deadline && p.state == ProposalState.Active) revert VotingNotOpen();
         if (p.tallyRevealed) revert TallyAlreadyRevealed();
 
+        p.tallyRevealed = true;
+
         // Seal each encrypted tally for the coordinator
         string memory fS = FHE.sealoutput(p.encryptedForVotes, permission.publicKey);
         string memory aS = FHE.sealoutput(p.encryptedAgainstVotes, permission.publicKey);
         string memory abS = FHE.sealoutput(p.encryptedAbstainVotes, permission.publicKey);
+
+        emit TallyRevealed(proposalId);
 
         return (fS, aS, abS);
     }
@@ -366,7 +371,12 @@ contract FhenixGovernor is Permissioned {
         p.tallyRevealed = true;
 
         // Determine outcome
-        uint256 totalVotes = forVotes + againstVotes;
+        uint256 totalVotes = forVotes + againstVotes + abstainVotes;
+
+        // Quorum check: at least quorumBps of total members must have participated
+        uint256 totalMembers = IFhenixSyndicateVault(vault).memberCount();
+        uint256 requiredVotes = (totalMembers * quorumBps) / 10_000;
+        if (totalVotes < requiredVotes) revert QuorumNotMet();
 
         // Simple majority: forVotes > againstVotes
         if (totalVotes > 0 && forVotes > againstVotes) {

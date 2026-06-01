@@ -336,7 +336,7 @@ Encrypted governance for Fhenix syndicates. Members vote with FHE-encrypted choi
 | File | Purpose |
 |------|---------|
 | `contracts/fhenix/FhenixGovernor.sol` | FHE-encrypted governance contract (~320 lines, 11 functions) |
-| `test/FhenixGovernor.t.sol` | **21 Foundry unit tests** |
+| `test/FhenixGovernor.t.sol` | **25 Foundry unit tests** |
 | `src/services/governance/fhenixGovernorService.ts` | Client-side service: getProposals, castVote, revealAndDecryptTally |
 | `src/components/governance/GovernancePanel.tsx` | Full UI: proposal list, vote buttons, create form, reveal & finalize |
 | `src/components/syndicate/SyndicateDashboard.tsx` | Integrated GovernancePanel for Fhenix pools |
