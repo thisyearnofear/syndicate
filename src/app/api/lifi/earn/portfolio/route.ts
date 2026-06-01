@@ -14,10 +14,10 @@ export async function GET(
     return NextResponse.json({ error: 'Address is required' }, { status: 400 });
   }
 
-  const target = `${LIFI_EARN_API_BASE_URL}/v1/earn/portfolio/${address}/positions`;
+  const target = `${LIFI_EARN_API_BASE_URL}/v1/portfolio/${address}/positions`;
 
   try {
-    const apiKey = process.env.LIFI_API_KEY || process.env.NEXT_PUBLIC_LIFI_API_KEY || '';
+    const apiKey = process.env.LIFI_API_KEY || '';
     const response = await fetch(target, {
       headers: apiKey ? { 'x-lifi-api-key': apiKey } : undefined,
       cache: 'no-store',

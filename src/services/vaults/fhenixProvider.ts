@@ -24,6 +24,7 @@ import type {
   VaultWithdrawResult,
 } from './vaultProvider';
 import { FHENIX_POOL_CONFIG } from '@/services/syndicate/poolProviders/fhenixProvider';
+import { FHENIX_VAULT_CHAIN, FHENIX_VAULT_RPC_URL } from '@/services/fhe/fhenixChain';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -93,10 +94,8 @@ export class FhenixVaultProvider implements VaultProvider {
     try {
       const { createPublicClient, http } = await import('viem');
       const client = createPublicClient({
-        transport: http(
-          process.env.FHENIX_RPC_URL ??
-          `https://api.fhenix.zone`
-        ),
+        chain: FHENIX_VAULT_CHAIN,
+        transport: http(process.env.FHENIX_RPC_URL ?? FHENIX_VAULT_RPC_URL),
       });
 
       const vaultAddress = FHENIX_POOL_CONFIG.VAULT_ADDRESS;
@@ -238,7 +237,8 @@ export class FhenixVaultProvider implements VaultProvider {
 
       const { createPublicClient, http } = await import('viem');
       const client = createPublicClient({
-        transport: http(process.env.FHENIX_RPC_URL ?? 'https://api.fhenix.zone'),
+        chain: FHENIX_VAULT_CHAIN,
+        transport: http(process.env.FHENIX_RPC_URL ?? FHENIX_VAULT_RPC_URL),
       });
 
       // Contract responds → healthy
@@ -266,7 +266,8 @@ export class FhenixVaultProvider implements VaultProvider {
       if (vaultAddress !== '0x0000000000000000000000000000000000000000') {
         const { createPublicClient, http } = await import('viem');
         const client = createPublicClient({
-          transport: http(process.env.FHENIX_RPC_URL ?? 'https://api.fhenix.zone'),
+          chain: FHENIX_VAULT_CHAIN,
+          transport: http(process.env.FHENIX_RPC_URL ?? FHENIX_VAULT_RPC_URL),
         });
 
         // Read APY from on-chain contract (basis points: 500 = 5.00%)

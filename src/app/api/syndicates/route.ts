@@ -7,6 +7,7 @@ import type { SyndicateInfo } from '@/domains/lottery/types';
 import { ERC20_TRANSFER_TOPIC } from '@/abis/erc20';
 import { getCorsHeaders, apiError, apiSuccess, apiValidationError, apiNotFound, checkRateLimit, rateLimitError, getSafeErrorMessage } from '@/lib/api/response';
 import { logger } from '@/lib/logger';
+import { FHENIX_VAULT_CHAIN, FHENIX_VAULT_RPC_URL } from '@/services/fhe/fhenixChain';
 
 // USDC on Base (6 decimals)
 const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
@@ -229,13 +230,10 @@ export async function POST(request: Request) {
       if (pool.pool_type === 'fhenix') {
         const { createPublicClient, http, decodeEventLog, parseAbiItem } = await import('viem');
 
-        const fhenixChainId = parseInt(process.env.NEXT_PUBLIC_FHENIX_CHAIN_ID ?? '84532', 10);
-        const rpcUrl =
-          fhenixChainId === 8008135
-            ? (process.env.FHENIX_RPC_URL ?? 'https://api.fhenix.zone')
-            : (process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL ?? 'https://sepolia.base.org');
-
-        const client = createPublicClient({ transport: http(rpcUrl) });
+        const client = createPublicClient({
+          chain: FHENIX_VAULT_CHAIN,
+          transport: http(process.env.FHENIX_RPC_URL ?? FHENIX_VAULT_RPC_URL),
+        });
 
         const expectedVault = (process.env.NEXT_PUBLIC_FHENIX_VAULT_ADDRESS ?? '').toLowerCase();
         const depositEvent = parseAbiItem('event DepositShielded(address indexed from, uint256 placeholder)');
