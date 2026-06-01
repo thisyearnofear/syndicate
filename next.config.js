@@ -22,6 +22,30 @@ const nextConfig = {
     '@tonconnect/ui-react',
     '@rainbow-me/rainbowkit',
   ],
+
+  webpack: (config, { isServer, webpack }) => {
+    // 1) `cofhejs/web` references Node's `fs` for an optional code path that
+    //    never runs in the browser. Tell webpack to stub it out so the bundle
+    //    is clean and won't crash if that path is ever hit at runtime.
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+      };
+    }
+
+    // 2) `pino` (transitive dep of @walletconnect/logger) does a lazy
+    //    `require('pino-pretty')` for dev-only pretty-printing. We don't
+    //    ship pino-pretty (it's not a runtime requirement), so silence the
+    //    "Module not found" warning by telling webpack to ignore the import.
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /^pino-pretty$/,
+      })
+    );
+
+    return config;
+  },
 };
 
 module.exports = withSentryConfig(nextConfig, {
