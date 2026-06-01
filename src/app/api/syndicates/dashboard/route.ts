@@ -13,6 +13,7 @@ import { sql } from '@vercel/postgres';
 import { safeService } from '@/services/safe/safeService';
 import { splitsService } from '@/services/splits/splitService';
 import { poolTogetherVaultService } from '@/services/poolTogether/vaultService';
+import { fhenixPoolProvider } from '@/services/syndicate/poolProviders/fhenixProvider';
 import type { PoolType } from '@/domains/lottery/types';
 import { logger } from '@/lib/logger';
 
@@ -89,6 +90,13 @@ interface SyndicateDashboardData {
     total_assets: string;
     apy: number;
   };
+  fhenix_info?: {
+    vault_address: string;
+    chain_id: number;
+    apy: number;
+    encrypted_members: number;
+    privacy_enabled: boolean;
+  };
 }
 
 export async function GET(request: Request) {
@@ -148,6 +156,17 @@ export async function GET(request: Request) {
           const vaultInfo = await poolTogetherVaultService.fetchVaultInfo(poolAddress);
           poolBalance = vaultInfo?.totalAssets || '0';
           poolBalanceFormatted = `$${parseFloat(vaultInfo?.totalAssetsFormatted || '0').toLocaleString()}`;
+          break;
+        case 'fhenix':
+          // Fhenix pools store encrypted balances in the vault contract
+          // Read the on-chain encrypted total hash (actual value requires permit)
+          try {
+            const fhenixBalance = await fhenixPoolProvider.getBalance(poolAddress);
+            poolBalance = fhenixBalance;
+            poolBalanceFormatted = `$${parseFloat(fhenixBalance).toLocaleString()}`;
+          } catch (fhenixError) {
+            logger.error('[Dashboard API] Fhenix balance read failed', { error: String(fhenixError) });
+          }
           break;
       }
       
@@ -238,6 +257,40 @@ export async function GET(request: Request) {
             };
           }
           break;
+        case 'fhenix':
+          const vaultConfig = await import('@/services/syndicate/poolProviders/fhenixProvider');
+          const fhenixVaultProvider = (await import('@/services/vaults/fhenixProvider')).fhenixVaultProvider;
+          const fhenixAPY = await fhenixVaultProvider.getCurrentAPY();
+          // Return enriched response for Fhenix pools
+          return NextResponse.json({
+            id: pool.id,
+            name: pool.name,
+            pool_type: poolType,
+            pool_address: poolAddress,
+            safe_address: pool.safe_address,
+            split_address: pool.split_address,
+            pt_vault_address: pool.pt_vault_address,
+            pool_balance_usdc: poolBalance,
+            pool_balance_formatted: poolBalanceFormatted,
+            members_count: allMembers.length,
+            members,
+            total_contributed_usdc: totalContributed.toFixed(2),
+            tickets_purchased: pool.tickets_purchased || 0,
+            tickets_per_member: ticketsPerMember,
+            total_impact_usdc: pool.total_impact_usdc || '0',
+            cause_percentage: pool.cause_allocation_percent || 15,
+            recent_activity: recentActivity,
+            safe_info: safeInfo,
+            split_info: splitInfo,
+            pt_vault_info: ptVaultInfo,
+            fhenix_info: {
+              vault_address: vaultConfig.FHENIX_POOL_CONFIG.vaultAddress,
+              chain_id: vaultConfig.FHENIX_POOL_CONFIG.chainId,
+              apy: fhenixAPY,
+              encrypted_members: members.length,
+              privacy_enabled: true,
+            },
+          }, { headers: corsHeaders });
       }
     } catch (error) {
       logger.error('[Dashboard API] Failed to fetch pool-specific info', { error: String(error) });

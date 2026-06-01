@@ -5,8 +5,8 @@ import {Script, console} from "forge-std/Script.sol";
 import {FhenixGovernor} from "../contracts/fhenix/FhenixGovernor.sol";
 
 contract DeployFhenixGovernor is Script {
-    // Base Sepolia: existing FhenixSyndicateVault
-    address constant VAULT = 0xE11c8FF006dFAc43F952Ad394E56f1a50a2BdB63;
+    // Base Sepolia: deployed FhenixSyndicateVault (0x2bB4AdD658E6DB8BEc759B6F1Ab8cb3f1954AE83)
+    address constant VAULT = 0x2bB4AdD658E6DB8BEc759B6F1Ab8cb3f1954AE83;
 
     // Quorum: 1000 basis points = 10%
     uint256 constant QUORUM_BPS = 1000;
