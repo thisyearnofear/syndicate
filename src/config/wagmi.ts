@@ -1,7 +1,7 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { base, baseSepolia } from 'wagmi/chains';
 import { http } from 'wagmi';
-import { fhenixHelium } from '@/services/fhe/fhenixChain';
+import { FHENIX_HELIUM_RPC_URL, fhenixHelium } from '@/services/fhe/fhenixChain';
 
 let cachedConfig: ReturnType<typeof getDefaultConfig> | null = null;
 let isConfigInitialized = false;
@@ -57,7 +57,7 @@ export function getConfig(): ReturnType<typeof getDefaultConfig> | null {
       transports: {
         [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org', { batch: true }),
         [baseSepolia.id]: http(),
-        [fhenixHelium.id]: http(process.env.NEXT_PUBLIC_FHENIX_RPC_URL || 'https://api.fhenix.zone'),
+        [fhenixHelium.id]: http(process.env.NEXT_PUBLIC_FHENIX_RPC_URL || FHENIX_HELIUM_RPC_URL),
       },
       pollingInterval: 30_000,
       ssr: false, // Disable SSR to prevent indexedDB access on server
@@ -79,7 +79,7 @@ export function getConfig(): ReturnType<typeof getDefaultConfig> | null {
     transports: {
       [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org', { batch: true }),
       [baseSepolia.id]: http(),
-      [fhenixHelium.id]: http(process.env.NEXT_PUBLIC_FHENIX_RPC_URL || 'https://api.fhenix.zone'),
+      [fhenixHelium.id]: http(process.env.NEXT_PUBLIC_FHENIX_RPC_URL || FHENIX_HELIUM_RPC_URL),
     },
     pollingInterval: 30_000,
     ssr: false, // Set to false to prevent server-side indexedDB access

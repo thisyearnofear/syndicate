@@ -13,15 +13,18 @@ import { defineChain } from 'viem';
  * - `NEXT_PUBLIC_FHENIX_RPC_URL` provides RPC for that chain (required for Helium).
  */
 
+export const FHENIX_HELIUM_RPC_URL = 'https://api.helium.fhenix.zone';
+export const FHENIX_BASE_SEPOLIA_RPC_URL = 'https://base-sepolia-rpc.publicnode.com';
+
 export const fhenixHelium = defineChain({
   id: 8008135,
   name: 'Fhenix Helium',
   nativeCurrency: { name: 'tFHE', symbol: 'tFHE', decimals: 18 },
   rpcUrls: {
-    default: { http: [process.env.NEXT_PUBLIC_FHENIX_RPC_URL ?? 'https://api.fhenix.zone'] },
+    default: { http: [process.env.NEXT_PUBLIC_FHENIX_RPC_URL ?? FHENIX_HELIUM_RPC_URL] },
   },
   blockExplorers: {
-    default: { name: 'Fhenix Explorer', url: 'https://explorer.fhenix.zone' },
+    default: { name: 'Fhenix Explorer', url: 'https://explorer.helium.fhenix.zone' },
   },
   testnet: true,
 });
@@ -36,5 +39,13 @@ export const FHENIX_VAULT_CHAIN =
 
 export const FHENIX_VAULT_RPC_URL =
   process.env.NEXT_PUBLIC_FHENIX_RPC_URL ??
-  (FHENIX_VAULT_CHAIN_ID === fhenixHelium.id ? 'https://api.fhenix.zone' : 'https://base-sepolia-rpc.publicnode.com');
+  (FHENIX_VAULT_CHAIN_ID === fhenixHelium.id ? FHENIX_HELIUM_RPC_URL : FHENIX_BASE_SEPOLIA_RPC_URL);
 
+export const FHENIX_VAULT_NETWORK_LABEL =
+  FHENIX_VAULT_CHAIN_ID === fhenixHelium.id ? 'Fhenix Helium testnet' : 'Base Sepolia testnet';
+
+export function getFhenixVaultExplorerTxUrl(txHash: string): string {
+  return FHENIX_VAULT_CHAIN_ID === fhenixHelium.id
+    ? `https://explorer.helium.fhenix.zone/tx/${txHash}`
+    : `https://sepolia.basescan.org/tx/${txHash}`;
+}

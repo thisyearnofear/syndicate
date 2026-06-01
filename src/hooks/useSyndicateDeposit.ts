@@ -15,11 +15,10 @@
  */
 
 import { useState, useCallback } from 'react';
-import { useWalletClient, usePublicClient } from 'wagmi';
 import { logger } from '@/lib/logger';
 import { base } from 'wagmi/chains';
 import { parseUnits, encodeFunctionData } from 'viem';
-import { FHENIX_VAULT_CHAIN } from '@/services/fhe/fhenixChain';
+import { useEVMClients } from './useEVMClients';
 import { approveAndDepositEncrypted } from '@/services/fhe/fhenixActions';
 import { ERC20_ABI } from '@/abis/erc20';
 import { TOKENS } from '@/config/contracts';
@@ -78,10 +77,16 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
   const [delegationTxHash, setDelegationTxHash] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
 
-  const { data: walletClient } = useWalletClient({ chainId: base.id });
-  const publicClient = usePublicClient({ chainId: base.id });
-  const { data: fhenixWalletClient } = useWalletClient({ chainId: FHENIX_VAULT_CHAIN.id });
-  const fhenixPublicClient = usePublicClient({ chainId: FHENIX_VAULT_CHAIN.id });
+  const {
+    walletClient,
+    publicClient,
+    fhenixWalletClient,
+    fhenixPublicClient,
+    fhenixChainName,
+    walletType,
+    ensureBaseChain,
+    ensureFhenixChain,
+  } = useEVMClients();
 
   const reset = useCallback(() => {
     setStatus('idle');
@@ -105,14 +110,32 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
     ptVaultAddress?: `0x${string}`;
   }): Promise<string | null> => {
     const isFhenix = poolType === 'fhenix';
+    if (walletType !== 'evm') {
+      setError('Syndicate deposits require an EVM wallet such as MetaMask or WalletConnect.');
+      setStatus('error');
+      return null;
+    }
+
+    try {
+      if (isFhenix) {
+        await ensureFhenixChain();
+      } else {
+        await ensureBaseChain();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setStatus('error');
+      return null;
+    }
+
     const activeWalletClient = isFhenix ? fhenixWalletClient : walletClient;
     const activePublicClient = isFhenix ? fhenixPublicClient : publicClient;
 
     if (!activeWalletClient) {
       setError(
         isFhenix
-          ? `No wallet connected for ${FHENIX_VAULT_CHAIN.name}. Please switch network and reconnect.`
-          : 'No EVM wallet connected. Please connect a Base-compatible wallet.',
+          ? `Connect an EVM wallet on ${fhenixChainName} to join this private syndicate.`
+          : 'Connect an EVM wallet on Base to join this syndicate.',
       );
       setStatus('error');
       return null;
@@ -241,7 +264,16 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
       setStatus('error');
       return null;
     }
-  }, [walletClient, publicClient, fhenixWalletClient, fhenixPublicClient]);
+  }, [
+    walletClient,
+    publicClient,
+    fhenixWalletClient,
+    fhenixPublicClient,
+    fhenixChainName,
+    walletType,
+    ensureBaseChain,
+    ensureFhenixChain,
+  ]);
 
   return { status, txHash, approveTxHash, delegationTxHash, error, deposit, reset };
 }

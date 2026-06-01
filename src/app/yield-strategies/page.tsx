@@ -48,6 +48,10 @@ import {
   YIELD_ENTRY_PARAM,
   hasYieldExecutionIntent,
 } from "@/constants/vaultRouting";
+import {
+  FHENIX_VAULT_NETWORK_LABEL,
+  getFhenixVaultExplorerTxUrl,
+} from "@/services/fhe/fhenixChain";
 
 const ALLOCATION_STORAGE_KEY = "vault_yield_allocation";
 const DIRECT_DEPOSIT_STRATEGIES = [
@@ -120,6 +124,12 @@ function getStrategyLockupLabel(strategy: SupportedYieldStrategyId | null): stri
   if (strategy === "octant") return "Epoch-based (mock)";
   if (strategy === "lifiearn") return "Depends on destination vault";
   return "Withdraw anytime";
+}
+
+function getStrategyNetworkLabel(strategy: SupportedYieldStrategyId | null): string {
+  if (strategy === "fhenix") return FHENIX_VAULT_NETWORK_LABEL;
+  if (strategy === "lifiearn") return "Selected destination vault";
+  return "Base mainnet";
 }
 
 function YieldStrategiesContent() {
@@ -321,17 +331,23 @@ function YieldStrategiesContent() {
 
   const renderSelectedStrategySummary = () => {
     if (!selectedStrategy) return null;
+    const isFhenix = selectedStrategy === "fhenix";
 
     return (
-      <CompactCard variant="glass" padding="md" className="border-blue-500/20 bg-blue-500/5">
+      <CompactCard variant="glass" padding="md" className={isFhenix ? "border-amber-500/25 bg-amber-500/5" : "border-blue-500/20 bg-blue-500/5"}>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className={`flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/20 text-blue-200`}>
+            <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${isFhenix ? "bg-amber-500/20 text-amber-200" : "bg-blue-500/20 text-blue-200"}`}>
               {selectedStrategyConfig?.icon || <Shield className="h-5 w-5" />}
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-blue-400">Selected Vault</p>
+              <p className={`text-xs font-semibold uppercase tracking-wider ${isFhenix ? "text-amber-400" : "text-blue-400"}`}>Selected Vault</p>
               <h3 className="text-lg font-bold text-white">{selectedStrategyConfig?.name}</h3>
+              {isFhenix && (
+                <p className="mt-0.5 text-xs font-medium text-amber-100/70">
+                  Live on {FHENIX_VAULT_NETWORK_LABEL}
+                </p>
+              )}
             </div>
           </div>
           
@@ -343,6 +359,10 @@ function YieldStrategiesContent() {
             <div className="text-right">
               <p className="text-xs text-gray-500 uppercase tracking-wider">Risk Profile</p>
               <p className="font-bold text-white">{getStrategyRiskLabel(selectedStrategy)}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-500 uppercase tracking-wider">Network</p>
+              <p className={isFhenix ? "font-bold text-amber-300" : "font-bold text-white"}>{getStrategyNetworkLabel(selectedStrategy)}</p>
             </div>
           </div>
         </div>
@@ -500,7 +520,7 @@ function YieldStrategiesContent() {
 
             <div className="mt-5 flex flex-wrap gap-3">
               <a
-                href={`https://basescan.org/tx/${txHash}`}
+                href={selectedStrategy === "fhenix" ? getFhenixVaultExplorerTxUrl(txHash) : `https://basescan.org/tx/${txHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5 text-sm font-medium text-emerald-300 transition hover:bg-emerald-500/10"
@@ -557,6 +577,10 @@ function YieldStrategiesContent() {
             <div className="flex items-center justify-between border-t border-white/5 pt-4">
               <span className="text-sm text-gray-400">Terms</span>
               <span className="text-xs text-right font-medium text-gray-300">{getStrategyLockupLabel(selectedStrategy)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-400">Network</span>
+              <span className="text-xs text-right font-medium text-gray-300">{getStrategyNetworkLabel(selectedStrategy)}</span>
             </div>
           </div>
         </div>

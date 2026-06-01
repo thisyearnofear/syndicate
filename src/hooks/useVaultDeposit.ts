@@ -1,15 +1,14 @@
 "use client";
 
 import { useState, useCallback } from 'react';
-import { useWalletClient, usePublicClient } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { parseUnits } from 'viem';
 import { useUnifiedWallet } from './useUnifiedWallet';
+import { useEVMClients } from './useEVMClients';
 import { AAVE_CONFIG } from '@/services/vaults/aaveProvider';
 import { MORPHO_CONFIG } from '@/services/vaults/morphoProvider';
 import { SPARK_CONFIG } from '@/services/vaults/sparkProvider';
 import type { VaultProtocol } from '@/services/vaults';
-import { FHENIX_VAULT_CHAIN } from '@/services/fhe/fhenixChain';
 import { approveAndDepositEncrypted, withdrawFromFhenixVault } from '@/services/fhe/fhenixActions';
 import { ERC20_ABI } from '@/abis/erc20';
 
@@ -32,11 +31,16 @@ const USDC_BASE = AAVE_CONFIG.BASE.USDC_ADDRESS as `0x${string}`;
 const AAVE_POOL = AAVE_CONFIG.BASE.POOL_ADDRESS as `0x${string}`;
 
 export function useVaultDeposit() {
-  const { address } = useUnifiedWallet();
-  const { data: walletClient } = useWalletClient({ chainId: base.id });
-  const publicClient = usePublicClient({ chainId: base.id });
-  const { data: fhenixWalletClient } = useWalletClient({ chainId: FHENIX_VAULT_CHAIN.id });
-  const fhenixPublicClient = usePublicClient({ chainId: FHENIX_VAULT_CHAIN.id });
+  const { address, walletType } = useUnifiedWallet();
+  const {
+    walletClient,
+    publicClient,
+    fhenixWalletClient,
+    fhenixPublicClient,
+    fhenixChainName,
+    ensureBaseChain,
+    ensureFhenixChain,
+  } = useEVMClients();
 
   const [state, setState] = useState<VaultDepositState>({
     isDepositing: false,
@@ -50,7 +54,9 @@ export function useVaultDeposit() {
 
   const depositAave = useCallback(
     async (amount: string): Promise<{ success: boolean; txHash?: string }> => {
-      if (!walletClient || !publicClient || !address) throw new Error('No EVM wallet connected');
+      await ensureBaseChain();
+      if (walletType !== 'evm') throw new Error('Vault deposits require an EVM wallet (MetaMask, WalletConnect, etc.)');
+      if (!walletClient || !publicClient || !address) throw new Error('Connect an EVM wallet on Base to deposit into this vault.');
 
       const amountWei = parseUnits(amount, 6);
       const userAddr = address as `0x${string}`;
@@ -80,14 +86,16 @@ export function useVaultDeposit() {
 
       return { success: true, txHash: supplyHash };
     },
-    [walletClient, publicClient, address],
+    [ensureBaseChain, walletClient, publicClient, address, walletType],
   );
 
   // ─── EVM (ERC4626 Vaults: Morpho, PoolTogether) — approve USDC + deposit via wagmi ───
 
   const depositERC4626 = useCallback(
     async (amount: string, vaultAddress: `0x${string}`): Promise<{ success: boolean; txHash?: string }> => {
-      if (!walletClient || !publicClient || !address) throw new Error('No EVM wallet connected');
+      await ensureBaseChain();
+      if (walletType !== 'evm') throw new Error('Vault deposits require an EVM wallet (MetaMask, WalletConnect, etc.)');
+      if (!walletClient || !publicClient || !address) throw new Error('Connect an EVM wallet on Base to deposit into this vault.');
 
       const amountWei = parseUnits(amount, 6);
       const userAddr = address as `0x${string}`;
@@ -122,12 +130,14 @@ export function useVaultDeposit() {
 
       return { success: true, txHash: depositHash };
     },
-    [walletClient, publicClient, address],
+    [ensureBaseChain, walletClient, publicClient, address, walletType],
   );
 
   const withdrawAave = useCallback(
     async (amount: string): Promise<{ success: boolean; txHash?: string }> => {
-      if (!walletClient || !publicClient || !address) throw new Error('No EVM wallet connected');
+      await ensureBaseChain();
+      if (walletType !== 'evm') throw new Error('Vault deposits require an EVM wallet (MetaMask, WalletConnect, etc.)');
+      if (!walletClient || !publicClient || !address) throw new Error('Connect an EVM wallet on Base to withdraw from this vault.');
 
       const amountWei = parseUnits(amount, 6);
       const userAddr = address as `0x${string}`;
@@ -140,12 +150,14 @@ export function useVaultDeposit() {
 
       return { success: true, txHash: withdrawHash };
     },
-    [walletClient, publicClient, address],
+    [ensureBaseChain, walletClient, publicClient, address, walletType],
   );
 
   const withdrawERC4626 = useCallback(
     async (amount: string, vaultAddress: `0x${string}`): Promise<{ success: boolean; txHash?: string }> => {
-      if (!walletClient || !publicClient || !address) throw new Error('No EVM wallet connected');
+      await ensureBaseChain();
+      if (walletType !== 'evm') throw new Error('Vault deposits require an EVM wallet (MetaMask, WalletConnect, etc.)');
+      if (!walletClient || !publicClient || !address) throw new Error('Connect an EVM wallet on Base to withdraw from this vault.');
 
       const amountWei = parseUnits(amount, 6);
       const userAddr = address as `0x${string}`;
@@ -163,7 +175,7 @@ export function useVaultDeposit() {
 
       return { success: true, txHash: withdrawHash };
     },
-    [walletClient, publicClient, address],
+    [ensureBaseChain, walletClient, publicClient, address, walletType],
   );
 
   // ─── Public API ───
@@ -213,7 +225,9 @@ export function useVaultDeposit() {
           throw new Error('LI.FI Earn requires cross-chain deposit. Use useLifiEarnVaultDeposit hook for Composer execution.');
         } else if (protocol === 'fhenix') {
           // Fhenix FHE vault: encrypt amount then call depositEncrypted on vault
-          if (!fhenixWalletClient || !fhenixPublicClient || !address) throw new Error('No EVM wallet connected');
+          await ensureFhenixChain();
+          if (walletType !== 'evm') throw new Error('Vault deposits require an EVM wallet (MetaMask, WalletConnect, etc.)');
+          if (!fhenixWalletClient || !fhenixPublicClient || !address) throw new Error(`Connect an EVM wallet on ${fhenixChainName} to deposit into this Fhenix vault.`);
           const amountWei = parseUnits(amount, 6);
           const userAddr = address as `0x${string}`;
 
@@ -245,7 +259,7 @@ export function useVaultDeposit() {
         return { success: false, error: isCancel ? 'Transaction cancelled' : msg };
       }
     },
-    [address, depositAave, depositERC4626, fhenixPublicClient, fhenixWalletClient],
+    [address, depositAave, depositERC4626, ensureFhenixChain, fhenixChainName, fhenixPublicClient, fhenixWalletClient, walletType],
   );
 
   const withdraw = useCallback(
@@ -286,7 +300,9 @@ export function useVaultDeposit() {
           throw new Error('Uniswap V3 withdrawals require position management UI. Coming soon.');
         } else if (protocol === 'fhenix') {
           // Fhenix FHE vault withdrawal — coordinator-attested plain amount
-          if (!fhenixWalletClient || !fhenixPublicClient || !address) throw new Error('No EVM wallet connected');
+          await ensureFhenixChain();
+          if (walletType !== 'evm') throw new Error('Vault deposits require an EVM wallet (MetaMask, WalletConnect, etc.)');
+          if (!fhenixWalletClient || !fhenixPublicClient || !address) throw new Error(`Connect an EVM wallet on ${fhenixChainName} to withdraw from this Fhenix vault.`);
           const amountWei = parseUnits(amount, 6);
           const { FHENIX_POOL_CONFIG } = await import('@/services/syndicate/poolProviders/fhenixProvider');
           setState(prev => ({ ...prev, status: 'signing' }));
@@ -309,7 +325,7 @@ export function useVaultDeposit() {
         return { success: false, error: msg };
       }
     },
-    [address, withdrawAave, withdrawERC4626, fhenixPublicClient, fhenixWalletClient],
+    [address, ensureFhenixChain, fhenixChainName, withdrawAave, withdrawERC4626, fhenixPublicClient, fhenixWalletClient, walletType],
   );
 
   const reset = useCallback(() => {
