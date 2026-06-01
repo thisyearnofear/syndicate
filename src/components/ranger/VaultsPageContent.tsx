@@ -85,7 +85,7 @@ export function VaultsPageContent({
               Vaults
             </h1>
             <p className="max-w-xl text-gray-400">
-              {yieldMode?.description} For the strongest demo path, pair that with {privateVaultMode?.shortTitle.toLowerCase()} and reveal the Fhenix balance from your portfolio after depositing.
+              Deposit into vault strategies on Base and auto-convert earnings into lottery tickets or cause allocations. The featured Fhenix vault demonstrates privacy-by-design — encrypted deposits, private governance, and local balance reveal via Fully Homomorphic Encryption.
             </p>
             <div className="inline-flex flex-wrap items-center gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-gray-200">
               <span className="rounded-full bg-amber-500/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
@@ -96,12 +96,68 @@ export function VaultsPageContent({
           </div>
 
           {/* Vault cards */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 pt-2">
-            {YIELD_STRATEGIES.filter(s => s.id !== 'uniswap').map((strategy) => {
+          <div className="space-y-4 pt-2">
+            {/* Fhenix — featured full-width card at top */}
+            {(() => {
+              const fhenix = YIELD_STRATEGIES.find(s => s.id === 'fhenix');
+              if (!fhenix) return null;
+              const apy = APY_MAP[fhenix.id];
+              const status = STATUS_MAP[fhenix.id];
+              const href = buildVaultExecutionHref('strategies', 'vaults', { strategy: fhenix.id });
+
+              return (
+                <Link
+                  key={fhenix.id}
+                  href={href}
+                  onClick={() =>
+                    trackEvent({
+                      eventName: 'vault_card_click',
+                      properties: { strategy: fhenix.id, source: showOperatorTools ? 'operator' : 'public' },
+                    })
+                  }
+                  className="group relative flex flex-col justify-between rounded-2xl border border-amber-500/40 bg-amber-500/[0.04] p-6 transition-all hover:border-amber-500/60 hover:bg-amber-500/[0.08] shadow-lg shadow-amber-500/10"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4">
+                      <span className="text-3xl">{fhenix.icon}</span>
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300 border border-amber-500/30">
+                            🎯 Buildathon Demo
+                          </span>
+                          <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${status.style}`}>
+                            {status.label}
+                          </span>
+                        </div>
+                        <h3 className="text-xl font-bold text-amber-200">{fhenix.name}</h3>
+                        <p className="mt-1 text-sm leading-relaxed text-gray-400 max-w-lg">{fhenix.description}</p>
+                      </div>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-amber-400 transition-transform group-hover:translate-x-1 mt-2" />
+                  </div>
+                  <div className="mt-5 flex items-center gap-6 border-t border-amber-500/20 pt-4">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">APY</p>
+                      <p className="text-xl font-black text-amber-400">{apy}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Risk</p>
+                      <p className="text-sm font-bold text-white">{fhenix.risk}</p>
+                    </div>
+                    <div className="ml-auto text-xs text-amber-300/70 font-medium">
+                      Encrypted deposits · Private governance · Local balance reveal
+                    </div>
+                  </div>
+                </Link>
+              );
+            })()}
+
+            {/* Other vaults grid */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {YIELD_STRATEGIES.filter(s => s.id !== 'uniswap' && s.id !== 'fhenix').map((strategy) => {
               const apy = APY_MAP[strategy.id];
               const status = STATUS_MAP[strategy.id];
               const href = buildVaultExecutionHref('strategies', 'vaults', { strategy: strategy.id });
-              const isFhenix = strategy.id === 'fhenix';
 
               return (
                 <Link
@@ -151,11 +207,12 @@ export function VaultsPageContent({
                         <p className="text-sm font-bold text-white">{strategy.risk}</p>
                       </div>
                     </div>
-                    <ArrowRight className={`h-4 w-4 transition-transform group-hover:translate-x-1 ${isFhenix ? 'text-amber-400 group-hover:text-amber-300' : 'text-gray-600 group-hover:text-white'}`} />
+                    <ArrowRight className="h-4 w-4 text-gray-600 transition-transform group-hover:translate-x-1 group-hover:text-white" />
                   </div>
                 </Link>
               );
             })}
+          </div>
           </div>
 
           {/* Bottom info — minimal */}

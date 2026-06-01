@@ -9,6 +9,11 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
 
+  // Reduce webpack memory usage to avoid OOM on Vercel free tier (1.5GB)
+  experimental: {
+    clientTraceMetadata: ['*'],
+  },
+
   // Force packages that ship pre-compiled bundles with React hooks to be
   // re-compiled through Next.js's pipeline so they use the app's single
   // React instance.
@@ -23,7 +28,26 @@ const nextConfig = {
     '@rainbow-me/rainbowkit',
   ],
 
-  webpack: (config, { isServer, webpack }) => {
+  webpack: (config, { isServer, webpack, dev }) => {
+    // Memory optimizations for Vercel builds
+    if (!dev) {
+      // Reduce Terser parallelism to avoid OOM
+      config.optimization.minimizer = config.optimization.minimizer.map(minimizer => {
+        if (minimizer?.options?.terserOptions?.parallel) {
+          minimizer.options.terserOptions.parallel = 2;
+        }
+        return minimizer;
+      });
+      // Limit chunk splitting to reduce memory
+      config.optimization.splitChunks = {
+        ...config.optimization.splitChunks,
+        cacheGroups: {
+          default: false,
+          vendors: false,
+        },
+      };
+    }
+
     // 1) `cofhejs/web` references Node's `fs` for an optional code path that
     //    never runs in the browser. Tell webpack to stub it out so the bundle
     //    is clean and won't crash if that path is ever hit at runtime.
