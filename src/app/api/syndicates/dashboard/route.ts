@@ -221,7 +221,8 @@ export async function GET(request: Request) {
 
     // Fetch pool-specific info
     let safeInfo, splitInfo, ptVaultInfo;
-    
+    const ticketsPerMember = pool.tickets_purchased / Math.max(members.length, 1);
+
     try {
       switch (poolType) {
         case 'safe':
@@ -284,8 +285,8 @@ export async function GET(request: Request) {
             split_info: splitInfo,
             pt_vault_info: ptVaultInfo,
             fhenix_info: {
-              vault_address: vaultConfig.FHENIX_POOL_CONFIG.vaultAddress,
-              chain_id: vaultConfig.FHENIX_POOL_CONFIG.chainId,
+              vault_address: vaultConfig.FHENIX_POOL_CONFIG.VAULT_ADDRESS,
+              chain_id: vaultConfig.FHENIX_POOL_CONFIG.CHAIN_ID,
               apy: fhenixAPY,
               encrypted_members: members.length,
               privacy_enabled: true,
@@ -295,8 +296,6 @@ export async function GET(request: Request) {
     } catch (error) {
       logger.error('[Dashboard API] Failed to fetch pool-specific info', { error: String(error) });
     }
-
-    const ticketsPerMember = pool.tickets_purchased / Math.max(members.length, 1);
 
     const dashboardData: SyndicateDashboardData = {
       id: pool.id,

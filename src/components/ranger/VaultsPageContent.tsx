@@ -169,29 +169,20 @@ export function VaultsPageContent({
                       properties: { strategy: strategy.id, source: showOperatorTools ? 'operator' : 'public' },
                     })
                   }
-                  className={`group relative flex flex-col justify-between rounded-2xl border p-5 transition-all hover:shadow-lg ${
-                    isFhenix
-                      ? 'border-amber-500/40 bg-amber-500/[0.04] hover:border-amber-500/60 hover:bg-amber-500/[0.08] shadow-lg shadow-amber-500/10'
-                      : 'border-white/5 bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.04]'
-                  }`}
+                  className="group relative flex flex-col justify-between rounded-2xl border border-white/5 bg-white/[0.02] p-5 transition-all hover:border-white/15 hover:bg-white/[0.04] hover:shadow-lg"
                 >
                   {/* Top row */}
                   <div>
                     <div className="flex items-start justify-between">
                       <span className="text-2xl">{strategy.icon}</span>
                       <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                        {isFhenix && (
-                          <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300 border border-amber-500/30">
-                            🎯 Demo
-                          </span>
-                        )}
                         <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${status.style}`}>
                           {status.label}
                         </span>
                       </div>
                     </div>
 
-                    <h3 className={`mt-3 text-lg font-bold ${isFhenix ? 'text-amber-200' : 'text-white'}`}>{strategy.name}</h3>
+                    <h3 className="mt-3 text-lg font-bold text-white">{strategy.name}</h3>
                     <p className="mt-1 text-sm leading-relaxed text-gray-400">{strategy.description}</p>
                   </div>
 
@@ -200,7 +191,7 @@ export function VaultsPageContent({
                     <div className="flex items-center gap-4">
                       <div>
                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">APY</p>
-                        <p className={`text-lg font-black ${isFhenix ? 'text-amber-400' : 'text-emerald-400'}`}>{apy}</p>
+                        <p className="text-lg font-black text-emerald-400">{apy}</p>
                       </div>
                       <div>
                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Risk</p>
