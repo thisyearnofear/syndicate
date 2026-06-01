@@ -10,7 +10,8 @@
  * - PERFORMANT: Minimal re-renders
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/shared/components/ui/Button';
@@ -28,25 +29,63 @@ interface NavigationProps {
 
 export default function Navigation({ className = '' }: NavigationProps) {
     const pathname = usePathname();
-    const { isConnected, connect } = useUnifiedWallet();
+    const { isConnected, walletType, chain, connect } = useUnifiedWallet();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [showWalletDetails, setShowWalletDetails] = useState(false);
     const [showWalletModal, setShowWalletModal] = useState(false);
+    const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
+    const walletPillRef = useRef<HTMLDivElement>(null);
     const walletDetailsRef = useRef<HTMLDivElement>(null);
+    const [mounted, setMounted] = useState(false);
 
-    const handleWalletConnect = async (walletType: WalletType) => {
+    useEffect(() => { setMounted(true); }, []);
+
+    // Recalculate dropdown position when toggling
+    const handleWalletStatusClick = useCallback(() => {
+        if (!showWalletDetails && walletPillRef.current) {
+            const rect = walletPillRef.current.getBoundingClientRect();
+            setDropdownPos({
+                top: rect.bottom + 8,
+                right: window.innerWidth - rect.right,
+            });
+        }
+        setShowWalletDetails(!showWalletDetails);
+    }, [showWalletDetails]);
+
+    const handleWalletConnect = useCallback(async (walletType: WalletType) => {
         try {
             await connect(walletType);
             setShowWalletModal(false);
         } catch (error) {
             console.error("Connection failed:", error);
         }
-    };
+    }, [connect]);
 
     // Determine if Bridge should be emphasized in nav
-    // Enhancement-first: derive minimal signal from route (hide on /bridge itself)
-    // Prevent bloat: no heavy balance checks here; Buy page shows full "Get Ready" panel
     const shouldShowBridge = pathname !== '/bridge';
+
+    const getWalletIcon = () => {
+        switch (walletType) {
+            case 'evm': return '🔗';
+            case 'solana': return '👻';
+            case 'near': return '🌌';
+            case 'stacks': return '₿';
+            case 'starknet': return '⚡';
+            default: return '💼';
+        }
+    };
+
+    const getChainLabel = () => {
+        switch (chain) {
+            case 'stacks': return 'Stacks';
+            case 'solana': return 'Solana';
+            case 'near': return 'NEAR';
+            case 'ton': return 'TON';
+            case 'starknet': return 'Starknet';
+            case 'evm': return 'EVM';
+            default: return '';
+        }
+    };
 
     const navigationItems = [
         {
@@ -104,10 +143,6 @@ export default function Navigation({ className = '' }: NavigationProps) {
         };
     }, []);
 
-    const handleWalletStatusClick = () => {
-        setShowWalletDetails(!showWalletDetails);
-    };
-
     return (
         <>
             {/* Desktop Navigation */}
@@ -149,25 +184,30 @@ export default function Navigation({ className = '' }: NavigationProps) {
                         {/* Wallet Status */}
                         <CompactFlex align="center" gap="md">
                             {isConnected ? (
-                                <div className="relative">
+                                <div className="relative flex items-center">
                                     <div
-                                        className="flex items-center gap-2 px-3 py-1 bg-green-500/20 border border-green-500/30 rounded-full cursor-pointer hover:bg-green-500/30 transition-colors"
+                                        ref={walletPillRef}
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 border border-green-500/30 rounded-full cursor-pointer hover:bg-green-500/30 transition-colors"
                                         onClick={handleWalletStatusClick}
                                     >
                                         <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                                        <span className="text-green-400 text-sm font-semibold">Connected</span>
+                                        <span className="text-green-400 text-sm font-semibold">
+                                            {getWalletIcon()} {getChainLabel()}
+                                        </span>
                                     </div>
-                                    {showWalletDetails && (
+                                    {mounted && showWalletDetails && createPortal(
                                         <div
                                             ref={walletDetailsRef}
-                                            className="absolute top-full right-0 mt-2 z-[100001] wallet-dropdown"
+                                            className="fixed wallet-dropdown z-[100001]"
+                                            style={{ top: dropdownPos.top, right: dropdownPos.right }}
                                         >
                                             <WalletInfo
                                                 showFullAddress={false}
                                                 showNetworkIndicator={true}
                                                 className="w-80 shadow-2xl border border-white/20 bg-slate-900/95 backdrop-blur-xl"
                                             />
-                                        </div>
+                                        </div>,
+                                        document.body
                                     )}
                                 </div>
                             ) : (

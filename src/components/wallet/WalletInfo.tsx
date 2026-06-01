@@ -245,16 +245,6 @@ export default function WalletInfo({
           >
             🔌 Disconnect
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              disconnectWallet();
-            }}
-            className="flex-1 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
-          >
-            🔄 Switch
-          </Button>
         </div>
       </div>
     </div>
