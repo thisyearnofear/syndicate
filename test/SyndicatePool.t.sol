@@ -8,9 +8,11 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 // Mock USDC for testing
 contract MockUSDC is ERC20 {
     constructor() ERC20("Mock USDC", "USDC") {}
+
     function mint(address to, uint256 amount) public {
         _mint(to, amount);
     }
+
     function decimals() public view virtual override returns (uint8) {
         return 6;
     }
@@ -58,7 +60,7 @@ contract SyndicatePoolTest is Test {
     address public member2 = address(4);
     address public causeWallet = address(5);
 
-    uint256 public constant INITIAL_MINT = 1000 * 10**6; // $1000 USDC
+    uint256 public constant INITIAL_MINT = 1000 * 10 ** 6; // $1000 USDC
 
     function setUp() public {
         vm.startPrank(owner);
@@ -76,16 +78,28 @@ contract SyndicatePoolTest is Test {
     function test_CreatePool() public {
         vm.prank(coordinator);
         bytes32 poolId = poolContract.createPool("Test Pool", 10);
-        
+
         // Correctly unpack 11 return values
-        (address coord, uint256 totalPooled, uint256 originalTotalPooled, uint256 membersCount, uint8 causePercent, bool active, bool privacy, bool drawn, uint256 created, uint256 tickets, bool ticketsFlag) = poolContract.getPool(poolId);
+        (
+            address coord,
+            uint256 totalPooled,
+            uint256 originalTotalPooled,
+            uint256 membersCount,
+            uint8 causePercent,
+            bool active,
+            bool privacy,
+            bool drawn,
+            uint256 created,
+            uint256 tickets,
+            bool ticketsFlag
+        ) = poolContract.getPool(poolId);
     }
 
     function test_JoinPool() public {
         vm.prank(coordinator);
         bytes32 poolId = poolContract.createPool("Test Pool", 10);
 
-        uint256 amount = 10 * 10**6;
+        uint256 amount = 10 * 10 ** 6;
         vm.startPrank(member1);
         usdc.approve(address(poolContract), amount);
         poolContract.joinPool(poolId, amount);
@@ -93,7 +107,7 @@ contract SyndicatePoolTest is Test {
 
         (uint256 contribution,,,) = poolContract.getMemberContribution(poolId, member1);
         assertEq(contribution, amount);
-        
+
         (, uint256 totalPooled,,,,,,,,,) = poolContract.getPool(poolId);
         assertEq(totalPooled, amount);
     }
@@ -102,11 +116,11 @@ contract SyndicatePoolTest is Test {
         vm.prank(coordinator);
         bytes32 poolId = poolContract.createPool("Test Pool", 10);
 
-        uint256 amount = 10 * 10**6;
+        uint256 amount = 10 * 10 ** 6;
         vm.startPrank(member1);
         usdc.approve(address(poolContract), amount);
         poolContract.joinPool(poolId, amount);
-        
+
         poolContract.exitPool(poolId);
         vm.stopPrank();
 
@@ -139,9 +153,9 @@ contract SyndicatePoolTest is Test {
         bytes32 poolId = poolContract.createPool("Test Pool", 10); // 10% cause
 
         // Members join
-        uint256 amount1 = 60 * 10**6;
-        uint256 amount2 = 40 * 10**6;
-        
+        uint256 amount1 = 60 * 10 ** 6;
+        uint256 amount2 = 40 * 10 ** 6;
+
         vm.startPrank(member1);
         usdc.approve(address(poolContract), amount1);
         poolContract.joinPool(poolId, amount1);
@@ -153,16 +167,16 @@ contract SyndicatePoolTest is Test {
         vm.stopPrank();
 
         // Simulate winning
-        uint256 winnings = 100 * 10**6;
+        uint256 winnings = 100 * 10 ** 6;
         usdc.mint(address(megapot), winnings);
         megapot.setWinnings(address(poolContract), winnings);
 
         vm.startPrank(coordinator);
         poolContract.claimWinnings(poolId, 1);
-        
+
         // Distribution
         poolContract.startWinningsDistribution(poolId, winnings, causeWallet);
-        
+
         // Batch 1 (Member 1)
         poolContract.continueWinningsDistribution(poolId, 1);
         // Batch 2 (Member 2)
@@ -172,38 +186,38 @@ contract SyndicatePoolTest is Test {
         // Verify distribution
         // Total 100. 10% to cause = 10. Members get 90.
         // Member 1 (60%) = 54. Member 2 (40%) = 36.
-        assertEq(usdc.balanceOf(causeWallet), 10 * 10**6);
-        
+        assertEq(usdc.balanceOf(causeWallet), 10 * 10 ** 6);
+
         (uint256 m1Amount, uint256 m1Winnings,,) = poolContract.getMemberContribution(poolId, member1);
-        assertEq(m1Winnings, 54 * 10**6);
+        assertEq(m1Winnings, 54 * 10 ** 6);
 
         (uint256 m2Amount, uint256 m2Winnings,,) = poolContract.getMemberContribution(poolId, member2);
-        assertEq(m2Winnings, 36 * 10**6);
+        assertEq(m2Winnings, 36 * 10 ** 6);
 
         // Member withdraws
         vm.prank(member1);
         poolContract.withdrawWinnings(poolId);
-        assertEq(usdc.balanceOf(member1), INITIAL_MINT - amount1 + 54 * 10**6);
+        assertEq(usdc.balanceOf(member1), INITIAL_MINT - amount1 + 54 * 10 ** 6);
     }
 
     function test_EmergencyWithdraw() public {
         vm.prank(coordinator);
         bytes32 poolId = poolContract.createPool("Test Pool", 10);
 
-        uint256 amount = 10 * 10**6;
+        uint256 amount = 10 * 10 ** 6;
         vm.startPrank(member1);
         usdc.approve(address(poolContract), amount);
         poolContract.joinPool(poolId, amount);
-        
+
         poolContract.requestEmergencyWithdraw(poolId);
-        
+
         // Try execute immediately (fails)
         vm.expectRevert(SyndicatePool.EmergencyTimelockNotPassed.selector);
         poolContract.executeEmergencyWithdraw(poolId);
 
         // Advance time 7 days
         vm.warp(block.timestamp + 7 days + 1);
-        
+
         poolContract.executeEmergencyWithdraw(poolId);
         vm.stopPrank();
 

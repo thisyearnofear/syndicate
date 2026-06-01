@@ -150,9 +150,13 @@ contract SyndicatePool is ReentrancyGuard, Ownable {
 
     event EmergencyWithdrawExecuted(bytes32 indexed poolId, address indexed member, uint256 amount);
 
-    event CoordinatorTransferInitiated(bytes32 indexed poolId, address indexed oldCoordinator, address indexed newCoordinator, uint256 timelockExpires);
+    event CoordinatorTransferInitiated(
+        bytes32 indexed poolId, address indexed oldCoordinator, address indexed newCoordinator, uint256 timelockExpires
+    );
 
-    event CoordinatorTransferCompleted(bytes32 indexed poolId, address indexed oldCoordinator, address indexed newCoordinator);
+    event CoordinatorTransferCompleted(
+        bytes32 indexed poolId, address indexed oldCoordinator, address indexed newCoordinator
+    );
 
     // =============================================================================
     // ERRORS
