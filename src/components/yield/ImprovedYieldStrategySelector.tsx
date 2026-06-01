@@ -197,13 +197,14 @@ export function ImprovedYieldStrategySelector({
                       </div>
                     </div>
                     <p className="font-bold text-indigo-400">
-                      {strategy.id === 'aave' ? 'Live on Base 🟦' : 
-                       strategy.id === 'morpho' ? 'Live on Base 🟦' :
-                       strategy.id === 'spark' ? 'Live on Base 🟦 ✨' :
-                       strategy.id === 'pooltogether' ? 'Live on Base 🟦' :
+                      {strategy.id === 'aave' ? 'Live on Base Sepolia' : 
+                       strategy.id === 'morpho' ? 'Live on Base Sepolia' :
+                       strategy.id === 'spark' ? 'Live on Base Sepolia ✨' :
+                       strategy.id === 'pooltogether' ? 'Live on Base Sepolia' :
                        strategy.id === 'octant' ? 'MVP Mock 🧪' :
                        strategy.id === 'uniswap' ? 'Coming Soon 🚧' :
                        strategy.id === 'lifiearn' ? 'Live Cross-Chain 🔀' :
+                       strategy.id === 'fhenix' ? 'Live on Base Sepolia 🔐' :
                        'Coming Soon'}
                     </p>
                     {compactCards ? (

@@ -226,7 +226,8 @@ function YieldStrategiesContent() {
       targetStrategy === "pooltogether" ||
       targetStrategy === "octant" ||
       targetStrategy === "uniswap" ||
-      targetStrategy === "lifiearn"
+      targetStrategy === "lifiearn" ||
+      targetStrategy === "fhenix"
     ) {
       setSelectedStrategy(targetStrategy as SupportedYieldStrategyId);
     }
@@ -686,6 +687,19 @@ function YieldStrategiesContent() {
             </div>
           </div>
 
+          {/* Progress Bar */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-2 rounded-full bg-white/5 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-500 ease-out"
+                style={{ width: `${((flowStep - 1) / (FLOW_STEPS.length - 1)) * 100}%` }}
+              />
+            </div>
+            <span className="text-xs font-bold text-gray-400 tabular-nums whitespace-nowrap">
+              Step {flowStep} of {FLOW_STEPS.length}
+            </span>
+          </div>
+
           {/* Stepper Area */}
           <div className="grid grid-cols-3 gap-3">
             {FLOW_STEPS.map((step) => {
@@ -698,22 +712,29 @@ function YieldStrategiesContent() {
                   key={step.id}
                   onClick={() => isUnlocked && setFlowStep(step.id)}
                   disabled={!isUnlocked}
-                  className={`relative flex flex-col gap-2 rounded-xl border p-3 text-left transition-all ${
+                  className={`relative flex flex-col gap-2 rounded-xl border p-4 text-left transition-all ${
                     isCurrent 
-                      ? "border-blue-500/50 bg-blue-500/10 shadow-lg shadow-blue-500/5" 
+                      ? "border-blue-500/50 bg-blue-500/10 shadow-lg shadow-blue-500/10 ring-1 ring-blue-500/20" 
                       : isComplete
                         ? "border-emerald-500/30 bg-emerald-500/5"
                         : "border-white/5 bg-white/[0.02] opacity-40"
                   }`}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+                      isComplete 
+                        ? "bg-emerald-500 text-white" 
+                        : isCurrent 
+                          ? "bg-blue-500 text-white" 
+                          : "bg-white/10 text-gray-500"
+                    }`}>
+                      {isComplete ? <Check className="h-3.5 w-3.5" /> : step.id}
+                    </div>
                     <span className={`text-[10px] font-black uppercase tracking-widest ${isCurrent ? 'text-blue-400' : isComplete ? 'text-emerald-400' : 'text-gray-500'}`}>
                       {step.eyebrow}
                     </span>
-                    {isComplete && <Check className="h-3 w-3 text-emerald-400" />}
                   </div>
-                  <span className={`text-xs font-bold ${isCurrent ? 'text-white' : 'text-gray-400'}`}>{step.title}</span>
-                  {isCurrent && <div className="absolute -bottom-[1px] left-0 h-[2px] w-full bg-blue-500" />}
+                  <span className={`text-sm font-bold ${isCurrent ? 'text-white' : 'text-gray-400'}`}>{step.title}</span>
                 </button>
               );
             })}
