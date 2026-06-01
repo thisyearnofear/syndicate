@@ -44,21 +44,22 @@ contract FhenixGovernor is Permissioned {
     // ─── Types ───────────────────────────────────────────────────────────────
 
     enum ProposalState {
-        Pending,   // Created but voting not yet open
-        Active,    // Voting is open
-        Passed,    // Deadline passed, quorum met, majority for
-        Failed,    // Deadline passed, quorum not met or majority against
-        Executed   // Coordinator marked proposal as executed
+        Pending, // Created but voting not yet open
+        Active, // Voting is open
+        Passed, // Deadline passed, quorum met, majority for
+        Failed, // Deadline passed, quorum not met or majority against
+        Executed // Coordinator marked proposal as executed
+
     }
 
     struct Proposal {
         string title;
         string description;
-        address target;              // Execution target (e.g., Vault)
-        bytes data;                  // Execution payload
+        address target; // Execution target (e.g., Vault)
+        bytes data; // Execution payload
         uint256 createdAt;
         uint256 deadline;
-        uint256 voteCount;           // Total number of votes cast (plaintext counter)
+        uint256 voteCount; // Total number of votes cast (plaintext counter)
         ProposalState state;
         // Encrypted tallies (accumulated homomorphically via FHE)
         euint64 encryptedForVotes;
@@ -103,7 +104,9 @@ contract FhenixGovernor is Permissioned {
     event ProposalCreated(uint256 indexed proposalId, string title, address target, uint256 deadline);
     event VoteCast(uint256 indexed proposalId, address indexed voter);
     event TallyRevealed(uint256 indexed proposalId);
-    event ProposalFinalized(uint256 indexed proposalId, ProposalState state, uint256 forVotes, uint256 againstVotes, uint256 abstainVotes);
+    event ProposalFinalized(
+        uint256 indexed proposalId, ProposalState state, uint256 forVotes, uint256 againstVotes, uint256 abstainVotes
+    );
     event ProposalExecuted(uint256 indexed proposalId);
 
     // ─── Errors ──────────────────────────────────────────────────────────────
@@ -190,21 +193,25 @@ contract FhenixGovernor is Permissioned {
     /**
      * @notice Get proposal metadata (public fields only — encrypted tallies not returned)
      */
-    function getProposal(uint256 proposalId) external view returns (
-        string memory title,
-        string memory description,
-        address target,
-        bytes memory data,
-        uint256 createdAt,
-        uint256 deadline,
-        uint256 voteCount,
-        ProposalState state,
-        uint256 forVotes,
-        uint256 againstVotes,
-        uint256 abstainVotes,
-        address proposer,
-        bool tallyRevealed
-    ) {
+    function getProposal(uint256 proposalId)
+        external
+        view
+        returns (
+            string memory title,
+            string memory description,
+            address target,
+            bytes memory data,
+            uint256 createdAt,
+            uint256 deadline,
+            uint256 voteCount,
+            ProposalState state,
+            uint256 forVotes,
+            uint256 againstVotes,
+            uint256 abstainVotes,
+            address proposer,
+            bool tallyRevealed
+        )
+    {
         Proposal storage p = _proposals[proposalId];
         return (
             p.title,
@@ -314,14 +321,13 @@ contract FhenixGovernor is Permissioned {
      * @return againstVotesSealed    Sealed "no" count — decryptable by coordinator
      * @return abstainVotesSealed    Sealed "abstain" count — decryptable by coordinator
      */
-    function revealTally(
-        uint256 proposalId,
-        Permission calldata permission
-    ) external view onlyCoordinator onlySender(permission) returns (
-        string memory forVotesSealed,
-        string memory againstVotesSealed,
-        string memory abstainVotesSealed
-    ) {
+    function revealTally(uint256 proposalId, Permission calldata permission)
+        external
+        view
+        onlyCoordinator
+        onlySender(permission)
+        returns (string memory forVotesSealed, string memory againstVotesSealed, string memory abstainVotesSealed)
+    {
         Proposal storage p = _proposals[proposalId];
 
         // Deadline must have passed or voting ended
@@ -346,12 +352,10 @@ contract FhenixGovernor is Permissioned {
      * @param againstVotes Decrypted "no" count
      * @param abstainVotes Decrypted "abstain" count
      */
-    function finalizeProposal(
-        uint256 proposalId,
-        uint256 forVotes,
-        uint256 againstVotes,
-        uint256 abstainVotes
-    ) external onlyCoordinator {
+    function finalizeProposal(uint256 proposalId, uint256 forVotes, uint256 againstVotes, uint256 abstainVotes)
+        external
+        onlyCoordinator
+    {
         Proposal storage p = _proposals[proposalId];
 
         if (p.state != ProposalState.Active) revert InvalidStateTransition();
@@ -381,12 +385,12 @@ contract FhenixGovernor is Permissioned {
     function executeProposal(uint256 proposalId) external onlyCoordinator {
         Proposal storage p = _proposals[proposalId];
         if (p.state != ProposalState.Passed) revert InvalidStateTransition();
-        
+
         p.state = ProposalState.Executed;
 
         // Perform execution if target is set
         if (p.target != address(0)) {
-            (bool success, ) = p.target.call(p.data);
+            (bool success,) = p.target.call(p.data);
             if (!success) revert ExecutionFailed();
         }
 

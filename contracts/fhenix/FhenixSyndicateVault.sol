@@ -93,9 +93,7 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
      * @param _usdc        USDC token address (Base: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913)
      * @param _coordinator Syndicate creator address — receives coordinator privileges
      */
-    constructor(address _usdc, address _coordinator)
-        Ownable(_coordinator)
-    {
+    constructor(address _usdc, address _coordinator) Ownable(_coordinator) {
         _DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
@@ -137,10 +135,7 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
      * @param encryptedAmount  FHE-encrypted euint64 produced client-side via cofhejs
      * @param plainAmount      Plaintext USDC micro-units (6 dec) for the ERC-20 transfer
      */
-    function depositEncrypted(
-        inEuint64 calldata encryptedAmount,
-        uint256 plainAmount
-    ) external {
+    function depositEncrypted(inEuint64 calldata encryptedAmount, uint256 plainAmount) external {
         if (plainAmount == 0) revert ZeroAmount();
 
         // Transfer USDC from caller to this vault
@@ -157,10 +152,7 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
             activeMemberCount += 1;
             _members.push(msg.sender);
         } else {
-            _encryptedBalances[msg.sender] = FHE.add(
-                _encryptedBalances[msg.sender],
-                eAmount
-            );
+            _encryptedBalances[msg.sender] = FHE.add(_encryptedBalances[msg.sender], eAmount);
         }
 
         totalDeposited += plainAmount;
@@ -180,9 +172,12 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
      * @param permission  Permit struct generated client-side via cofhejs
      * @return            Sealed ciphertext (JSON EthEncryptedData) — decryptable only by the permit holder
      */
-    function getEncryptedBalanceCtHash(
-        Permission calldata permission
-    ) external view onlySender(permission) returns (string memory) {
+    function getEncryptedBalanceCtHash(Permission calldata permission)
+        external
+        view
+        onlySender(permission)
+        returns (string memory)
+    {
         return FHE.sealoutput(_encryptedBalances[msg.sender], permission.publicKey);
     }
 
@@ -190,9 +185,13 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
      * @notice Coordinator view: get total encrypted pool value sealed for coordinator's key.
      * @dev    Sums all member balances homomorphously, then seals the result for the coordinator.
      */
-    function getEncryptedTotalCtHash(
-        Permission calldata permission
-    ) external view onlySender(permission) onlyCoordinator returns (string memory) {
+    function getEncryptedTotalCtHash(Permission calldata permission)
+        external
+        view
+        onlySender(permission)
+        onlyCoordinator
+        returns (string memory)
+    {
         euint64 total = FHE.asEuint64(0);
         for (uint256 i = 0; i < _members.length; i++) {
             if (isMember[_members[i]]) {
@@ -213,10 +212,7 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
      * @param encryptedYield  FHE-encrypted USDC yield amount
      * @param plainYield      Plaintext amount for ERC-20 transfer
      */
-    function depositYield(
-        inEuint64 calldata encryptedYield,
-        uint256 plainYield
-    ) external onlyCoordinator {
+    function depositYield(inEuint64 calldata encryptedYield, uint256 plainYield) external onlyCoordinator {
         if (plainYield == 0) revert ZeroAmount();
         bool ok = usdc.transferFrom(msg.sender, address(this), plainYield);
         if (!ok) revert TransferFailed();
@@ -239,10 +235,10 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
      * @param members       Array of member addresses to receive yield
      * @param encryptedAmounts  FHE-encrypted allocations for each member (must match length)
      */
-    function distributeYield(
-        address[] calldata members,
-        inEuint64[] calldata encryptedAmounts
-    ) external onlyCoordinatorOrGovernor {
+    function distributeYield(address[] calldata members, inEuint64[] calldata encryptedAmounts)
+        external
+        onlyCoordinatorOrGovernor
+    {
         if (members.length == 0) revert ZeroAmount();
         if (members.length != encryptedAmounts.length) revert InvalidWithdrawAmount();
 
@@ -278,9 +274,13 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
      * @dev    The coordinator can unseal the sealed output locally to see how much
      *         yield is available for distribution.
      */
-    function getAccumulatedYieldCtHash(
-        Permission calldata permission
-    ) external view onlySender(permission) onlyCoordinator returns (string memory) {
+    function getAccumulatedYieldCtHash(Permission calldata permission)
+        external
+        view
+        onlySender(permission)
+        onlyCoordinator
+        returns (string memory)
+    {
         return FHE.sealoutput(_encryptedYield, permission.publicKey);
     }
 
@@ -289,10 +289,12 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
      * @dev    Allows members to verify how much yield they've received by decrypting
      *         the sealed output locally with their SealingKey.
      */
-    function getYieldDistributedCtHash(
-        address member,
-        Permission calldata permission
-    ) external view onlySender(permission) returns (string memory) {
+    function getYieldDistributedCtHash(address member, Permission calldata permission)
+        external
+        view
+        onlySender(permission)
+        returns (string memory)
+    {
         if (msg.sender != member && msg.sender != coordinator) revert NotCoordinator();
         return FHE.sealoutput(_yieldDistributed[member], permission.publicKey);
     }
@@ -348,8 +350,7 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
      * @param signature    Coordinator's ECDSA signature (65 bytes)
      */
     /// @dev EIP-712 type hash for signed withdrawal
-    bytes32 private constant _WITHDRAW_TYPEHASH =
-        keccak256("Withdraw(address member,uint256 amount,uint256 nonce)");
+    bytes32 private constant _WITHDRAW_TYPEHASH = keccak256("Withdraw(address member,uint256 amount,uint256 nonce)");
 
     /// @dev EIP-712 domain separator (immutable — computed in constructor)
     bytes32 private immutable _DOMAIN_SEPARATOR;
@@ -381,14 +382,7 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
         uint256 nonce = coordinatorNonces[msg.sender];
 
         // Build EIP-712 typed digest: Withdraw(member, amount, nonce)
-        bytes32 structHash = keccak256(
-            abi.encode(
-                _WITHDRAW_TYPEHASH,
-                msg.sender,
-                plainAmount,
-                nonce
-            )
-        );
+        bytes32 structHash = keccak256(abi.encode(_WITHDRAW_TYPEHASH, msg.sender, plainAmount, nonce));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", _DOMAIN_SEPARATOR, structHash));
 
         // Split signature into v, r, s and recover signer using ecrecover
@@ -458,7 +452,7 @@ contract FhenixSyndicateVault is Permissioned, Ownable {
     function executeTransfer(address to, uint256 amount) external onlyCoordinatorOrGovernor {
         if (amount == 0) revert ZeroAmount();
         if (amount > totalDeposited) revert InvalidWithdrawAmount();
-        
+
         totalDeposited -= amount;
         bool ok = usdc.transfer(to, amount);
         if (!ok) revert TransferFailed();
