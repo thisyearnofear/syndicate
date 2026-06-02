@@ -26,13 +26,16 @@ import {
 import { useERC7715 } from "@/hooks/useERC7715";
 import { CONTRACTS } from "@/services/bridges/protocols/stacks";
 import { useUnifiedWallet } from "@/hooks";
-import { getPermissionPresets } from "@/services/automation/erc7715Service";
+import { getPermissionPresets, type AdvancedPermissionGrant } from "@/services/automation/erc7715Service";
 import { stacksX402Service } from "@/domains/wallet/services/stacksX402Service";
 import type { AutoPurchaseConfig, AdvancedPermission } from "@/domains/wallet/types";
 import { AUTOMATION_MODE_META } from "@/config/automationModes";
+import { FEATURES } from "@/config";
+import { permissionedAutopilotService } from "@/services/metamask/permissionedAutopilotService";
+import type { VaultProtocol } from "@/services/vaults";
 
 type Step = "select-type" | "configure" | "review" | "approving" | "success" | "error";
-type AgentStrategy = "scheduled" | "autonomous" | "no-loss";
+type AgentStrategy = "scheduled" | "autonomous" | "no-loss" | "yield-autopilot";
 
 interface PurchaseConfig {
   strategy: AgentStrategy;
@@ -41,6 +44,7 @@ interface PurchaseConfig {
   ticketCount: number;
   totalAmount: number;
   paymentToken: 'usdc' | 'usdt' | 'usdcx' | 'sbtc';
+  sourceVault: VaultProtocol;
   // Extended fields for internal use (persisted to localStorage)
   permission?: {
     permissionId: string;
@@ -49,6 +53,15 @@ interface PurchaseConfig {
   };
   enabled?: boolean;
   tokenAddress?: string;
+}
+
+interface VenicePolicyRecommendation {
+  sourceVault: VaultProtocol;
+  period: "weekly" | "monthly";
+  maxSpendUsdc: string;
+  ticketCount: number;
+  rationale: string[];
+  warnings: string[];
 }
 
 interface AutoPurchaseModalProps {
@@ -72,14 +85,17 @@ export function AutoPurchaseModal({
     ticketCount: 10,
     totalAmount: 50,
     paymentToken: 'usdc',
+    sourceVault: 'spark',
   });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSuggestingPolicy, setIsSuggestingPolicy] = useState(false);
+  const [advisorError, setAdvisorError] = useState<string | null>(null);
+  const [advisorRecommendation, setAdvisorRecommendation] = useState<VenicePolicyRecommendation | null>(null);
 
-  const { chainId, walletType } = useUnifiedWallet();
+  const { address, chainId, walletType } = useUnifiedWallet();
   const {
     isRequesting,
     error,
-    permissions,
     clearError,
     isLoading,
     requestAdvancedPermission,
@@ -89,26 +105,21 @@ export function AutoPurchaseModal({
   // Check for Stacks wallet and x402 eligibility
   const isStacksWallet = walletType === 'stacks';
   
-  // For Stacks wallets, we don't need ERC7715 - use x402 instead
-  const effectivePermissions = isStacksWallet ? [] : permissions;
-
-  const permission = effectivePermissions[0] || null;
   const strategyMeta = AUTOMATION_MODE_META[config.strategy];
 
-  const requestPresetPermission = async (preset: 'weekly' | 'monthly'): Promise<boolean> => {
-    if (!chainId) return false;
+  const requestPresetPermission = async (preset: 'weekly' | 'monthly'): Promise<AdvancedPermissionGrant | null> => {
+    if (!chainId) return null;
     const numericChainId = typeof chainId === 'string' ? parseInt(chainId, 16) : chainId;
     const presets = getPermissionPresets(numericChainId);
     const presetConfig = presets[preset];
-    if (!presetConfig) return false;
+    if (!presetConfig) return null;
 
-    const result = await requestAdvancedPermission(
+    return requestAdvancedPermission(
       presetConfig.scope,
       presetConfig.tokenAddress,
-      presetConfig.limit,
+      BigInt(Math.max(0, Math.floor(config.amount * 1_000_000))),
       presetConfig.period
     );
-    return !!result;
   };
 
   useEffect(() => {
@@ -129,8 +140,9 @@ export function AutoPurchaseModal({
     setConfig(prev => ({
       ...prev,
       strategy: initialStrategy,
-      paymentToken: initialStrategy === 'autonomous' ? 'usdt' : initialStrategy === 'no-loss' ? 'usdc' : 'usdc',
+      paymentToken: initialStrategy === 'autonomous' ? 'usdt' : 'usdc',
       frequency: initialStrategy === 'autonomous' ? 'opportunistic' : 'weekly',
+      sourceVault: initialStrategy === 'yield-autopilot' ? 'spark' : prev.sourceVault,
     }));
     setStep('configure');
   }, [initialStrategy, isOpen]);
@@ -155,6 +167,52 @@ export function AutoPurchaseModal({
 
   const handleFrequencyChange = (frequency: "weekly" | "monthly") => {
     setConfig((prev) => ({ ...prev, frequency }));
+  };
+
+  const handleSuggestPolicy = async () => {
+    setAdvisorError(null);
+    setIsSuggestingPolicy(true);
+
+    try {
+      const response = await fetch('/api/agent/autopilot/advice', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          currentAmount: config.amount,
+          currentFrequency: config.frequency,
+          currentSourceVault: config.sourceVault,
+          walletType,
+          riskPreference: 'balanced',
+          wantsPrivacy: config.sourceVault === 'fhenix',
+          preservePrincipal: true,
+        }),
+      });
+      const body = await response.json() as {
+        success?: boolean;
+        recommendation?: VenicePolicyRecommendation;
+        error?: string;
+      };
+
+      if (!response.ok || !body.success || !body.recommendation) {
+        throw new Error(body.error ?? 'Venice advisor could not suggest a policy.');
+      }
+
+      const nextAmount = Number.parseFloat(body.recommendation.maxSpendUsdc);
+      setAdvisorRecommendation(body.recommendation);
+      setConfig((prev) => ({
+        ...prev,
+        strategy: 'yield-autopilot',
+        paymentToken: 'usdc',
+        sourceVault: body.recommendation?.sourceVault ?? prev.sourceVault,
+        frequency: body.recommendation?.period ?? prev.frequency,
+        amount: Number.isFinite(nextAmount) ? nextAmount : prev.amount,
+        ticketCount: body.recommendation?.ticketCount ?? prev.ticketCount,
+      }));
+    } catch (err) {
+      setAdvisorError(err instanceof Error ? err.message : 'Venice advisor failed.');
+    } finally {
+      setIsSuggestingPolicy(false);
+    }
   };
 
   const handleApprove = async () => {
@@ -233,6 +291,7 @@ export function AutoPurchaseModal({
               ticketCount: config.ticketCount,
               totalAmount: config.totalAmount,
               paymentToken: config.paymentToken,
+              sourceVault: config.sourceVault,
             };
             setTimeout(() => onSuccess(successConfig), 2000);
           }
@@ -255,34 +314,20 @@ export function AutoPurchaseModal({
       return;
     }
 
-    // Handle EVM ERC-7715 flow (original logic)
+    // Handle EVM ERC-7715 flow
     try {
-      let _limit;  
-      switch (config.frequency) {
-        case "weekly":
-          _limit = BigInt(config.amount * 7 * 10 ** 6);
-          break;
-        case "monthly":
-          _limit = BigInt(config.amount * 30 * 10 ** 6);
-          break;
-        default:
-          _limit = BigInt(config.amount * 7 * 10 ** 6);
-      }
-
-      void _limit; // Suppress unused variable warning
-
-      const result = await requestPresetPermission(
+      const grantedPermission = await requestPresetPermission(
         config.frequency === 'opportunistic' ? 'weekly' : config.frequency
       );
 
-      if (result && permission) {
+      if (grantedPermission) {
         const frequency = config.frequency;
-        const amountPerPeriod = BigInt(config.amount * 10 ** 6);
+        const amountPerPeriod = BigInt(Math.max(0, Math.floor(config.amount * 1_000_000)));
         const ticketCount = config.ticketCount;
 
         const autoConfig: AutoPurchaseConfig = {
           enabled: true,
-          permission: permission as unknown as AdvancedPermission,
+          permission: grantedPermission as unknown as AdvancedPermission,
           frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 'weekly' | 'biweekly' | 'monthly',
           amountPerPeriod,
           tokenAddress: CONTRACTS.USDC,
@@ -296,8 +341,8 @@ export function AutoPurchaseModal({
 
         try {
           const executorConfig = {
-            permissionId: permission.id,
-frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 'weekly' | 'biweekly' | 'monthly',
+            permissionId: grantedPermission.id,
+            frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 'weekly' | 'biweekly' | 'monthly',
             ticketCount,
             nextExecutionTime: autoConfig.nextExecution,
           };
@@ -307,8 +352,27 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
           );
         } catch {}
 
+        if (config.strategy === 'yield-autopilot') {
+          const numericChainId = !chainId
+            ? 8453
+            : typeof chainId === 'string'
+              ? parseInt(chainId, 16)
+              : chainId;
+
+          permissionedAutopilotService.createPolicy({
+            mode: 'yield-autopilot',
+            permission: grantedPermission,
+            chainId: numericChainId,
+            sourceVault: config.sourceVault,
+            maxSpendPerPeriod: amountPerPeriod,
+            period: frequency === 'monthly' ? 'monthly' : 'weekly',
+            ticketCount,
+            userAddress: address as `0x${string}` | undefined,
+          });
+        }
+
         try {
-          await createAutoPurchaseSession(permission.id, 4);
+          await createAutoPurchaseSession(grantedPermission.id, 4);
         } catch {}
 
         setStep("success");
@@ -379,8 +443,11 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
       ticketCount: 10,
       totalAmount: 50,
       paymentToken: 'usdcx',
+      sourceVault: 'spark',
     });
     setErrorMessage(null);
+    setAdvisorError(null);
+    setAdvisorRecommendation(null);
     clearError();
     onClose();
   };
@@ -436,6 +503,32 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
                   </div>
                 </div>
               </button>
+
+              {/* YIELD AUTOPILOT OPTION (MetaMask policy layer) */}
+              {FEATURES.enableMetaMaskAutopilot && (
+                <button
+                  onClick={() => {
+                    setConfig(prev => ({ ...prev, strategy: 'yield-autopilot', paymentToken: 'usdc', frequency: 'weekly', sourceVault: 'spark' }));
+                    setStep('configure');
+                  }}
+                  className="group relative p-4 rounded-xl border-2 border-slate-700 bg-slate-800/50 hover:border-cyan-500 hover:bg-slate-800 transition-all text-left"
+                >
+                  <div className="absolute -top-2 -right-2 bg-cyan-600 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                    MetaMask
+                  </div>
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-cyan-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                      <Zap className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-white">{AUTOMATION_MODE_META['yield-autopilot'].title}</h4>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {AUTOMATION_MODE_META['yield-autopilot'].shortDescription}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              )}
 
               {/* AUTONOMOUS OPTION (WDK - AI) */}
               <button
@@ -514,9 +607,73 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
             </DialogHeader>
 
             <div className="space-y-6">
+              {FEATURES.enableVeniceAdvisor && config.strategy === 'yield-autopilot' && (
+                <div className="bg-violet-950/40 border border-violet-600/40 rounded-xl p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2">
+                      <Brain className="w-5 h-5 text-violet-300 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-violet-100">Venice private policy advisor</p>
+                        <p className="text-xs text-violet-200/75">
+                          Suggests a capped yield-only policy. You still review and approve the MetaMask permission.
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleSuggestPolicy}
+                      disabled={isSuggestingPolicy}
+                      className="border-violet-400/60 text-violet-100 hover:bg-violet-900/60"
+                    >
+                      {isSuggestingPolicy ? (
+                        <>
+                          <Loader className="w-3 h-3 mr-1 animate-spin" />
+                          Asking
+                        </>
+                      ) : (
+                        'Suggest'
+                      )}
+                    </Button>
+                  </div>
+
+                  {advisorError && (
+                    <p className="text-xs text-amber-200 bg-amber-950/30 border border-amber-700/40 rounded-lg px-3 py-2">
+                      {advisorError}
+                    </p>
+                  )}
+
+                  {advisorRecommendation && (
+                    <div className="space-y-2 text-xs">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-violet-900/40 rounded-lg px-2 py-1.5">
+                          <span className="block text-violet-300">Vault</span>
+                          <span className="font-semibold text-white capitalize">{advisorRecommendation.sourceVault}</span>
+                        </div>
+                        <div className="bg-violet-900/40 rounded-lg px-2 py-1.5">
+                          <span className="block text-violet-300">Cap</span>
+                          <span className="font-semibold text-white">${advisorRecommendation.maxSpendUsdc}</span>
+                        </div>
+                        <div className="bg-violet-900/40 rounded-lg px-2 py-1.5">
+                          <span className="block text-violet-300">Period</span>
+                          <span className="font-semibold text-white capitalize">{advisorRecommendation.period}</span>
+                        </div>
+                      </div>
+                      <p className="text-violet-100">{advisorRecommendation.rationale[0]}</p>
+                      <p className="text-violet-200/70">{advisorRecommendation.warnings[0]}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-3">
                 <label className="block text-sm font-medium text-gray-300">
-                  {config.strategy === 'autonomous' ? 'Initial Funding' : 'Amount per period'}
+                  {config.strategy === 'autonomous'
+                    ? 'Initial Funding'
+                    : config.strategy === 'yield-autopilot'
+                      ? 'Max yield spend per period'
+                      : 'Amount per period'}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -535,9 +692,34 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
                 <p className="text-xs text-gray-400">
                   {config.strategy === 'autonomous' 
                     ? `How much ${config.paymentToken.toUpperCase()} to transfer to your AI agent wallet`
+                    : config.strategy === 'yield-autopilot'
+                      ? `Upper bound for ticket purchases from ${config.sourceVault} yield`
                     : `How much ${config.paymentToken.toUpperCase()} to spend per ${config.frequency}`}
                 </p>
               </div>
+
+              {config.strategy === 'yield-autopilot' && (
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-300">
+                    Source vault
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['spark', 'fhenix', 'pooltogether'] as const).map((vault) => (
+                      <button
+                        key={vault}
+                        onClick={() => setConfig(prev => ({ ...prev, sourceVault: vault }))}
+                        className={`py-2 px-2 rounded-lg border text-xs font-medium capitalize transition-all ${
+                          config.sourceVault === vault
+                            ? "bg-cyan-600 border-cyan-500 text-white"
+                            : "bg-slate-800/50 border-slate-600 text-gray-300 hover:bg-slate-700/50"
+                        }`}
+                      >
+                        {vault}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {config.strategy !== 'autonomous' && (
                 <div className="space-y-3">
@@ -588,6 +770,12 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
                     <span className="text-gray-400">Amount:</span>
                     <span className="font-semibold text-white">${config.amount} USDC</span>
                   </div>
+                  {config.strategy === 'yield-autopilot' && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Source vault:</span>
+                      <span className="font-semibold text-white capitalize">{config.sourceVault}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-gray-400">Tickets:</span>
                     <span className="font-semibold text-white">{config.ticketCount}</span>
@@ -650,6 +838,9 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
                     <ul className="text-xs text-blue-200 space-y-1">
                       <li>• Approve spending up to ${config.amount}/{config.frequency}</li>
                       <li>• Actions execute automatically using your chosen automation mode</li>
+                      {config.strategy === 'yield-autopilot' && (
+                        <li>• Principal remains in {config.sourceVault}; only available yield should fund tickets</li>
+                      )}
                       <li>• Revoke anytime from settings</li>
                     </ul>
                   </div>
@@ -716,6 +907,14 @@ frequency: (frequency === 'opportunistic' ? 'monthly' : frequency) as 'daily' | 
                       ${config.amount} USDC
                     </span>
                   </div>
+                  {config.strategy === 'yield-autopilot' && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Source vault:</span>
+                      <span className="font-semibold capitalize text-white">
+                        {config.sourceVault}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-gray-400">Tickets:</span>
                     <span className="font-semibold text-white">

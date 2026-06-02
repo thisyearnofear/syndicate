@@ -12,6 +12,63 @@
 | **Ranger Build-a-Bear** | Medium (⚠️ Constraints) | Optional | April 21 deadline (7 days) |
 | **Lifi DeFi Mullet** | Excellent ✅ | **RECOMMENDED** | Open submission |
 | **Fhenix Privacy-by-Design Buildathon** | Excellent ✅ | **RECOMMENDED** | Final submission June 1 |
+| **MetaMask Smart Accounts / 1Shot / Venice Cook-Off** | Strong if tightly scoped | Recommended as additive feature | June 15 submission |
+
+---
+
+## MetaMask Smart Accounts / 1Shot / Venice Cook-Off
+
+### Recommended wedge
+**Permissioned lottery autopilot**: users grant a tightly scoped MetaMask permission so an agent can use vault yield, not principal, to buy lottery tickets within explicit spend, target, and expiry limits.
+
+### Why this is differentiated
+Megapot already has native recurring purchases via `JackpotAutoSubscription`; PoolTogether already owns no-loss prize savings. Syndicate should not pitch either feature as if it invented them.
+
+Syndicate's unique layer is the **policy and coordination layer above those protocols**:
+- Route capital across Spark, Aave, Morpho, Fhenix, PoolTogether, and Megapot-related flows.
+- Preserve principal while using generated yield for tickets.
+- Support group/syndicate participation, not only individual play.
+- Add Fhenix privacy for contribution amounts and vault balances.
+- Use MetaMask permissions so automation is capped, revocable, and target-specific.
+- Optionally relay eligible executions through 1Shot for gas/UX improvements.
+
+### Product caveat
+This is only worth building if it is additive to the existing app. Do not replace direct purchases, Megapot native subscriptions, PoolTogether deposits, or current x402 flows. Gate it behind feature flags and keep direct fallback paths.
+
+### Suggested implementation scope
+1. Add a MetaMask permissioned path to the existing auto-purchase/yield-to-tickets flow. ✅
+2. Store delegation metadata separately from existing purchase authorizations. ✅
+3. Build an agent activity panel: yield detected, permission checked, purchase prepared, relayed/executed, confirmed. In progress: read-only planning, calldata prep, direct wallet execution, and 1Shot task status polling are wired.
+4. Use 1Shot only after the core permissioned purchase path works. The relayer path now targets 1Shot's permissionless JSON-RPC `relayer_send7710Transaction`; it requires MetaMask to return an ERC-7710 `permissionContext` for the stored policy.
+5. Use Venice AI as a private policy advisor: suggest capped yield-only settings, then let the user review and approve through the normal MetaMask flow. ✅
+
+Feature flags:
+```bash
+NEXT_PUBLIC_ENABLE_METAMASK_AGENT=true
+NEXT_PUBLIC_ENABLE_1SHOT_RELAYER=false
+NEXT_PUBLIC_ENABLE_VENICE_ADVISOR=false
+VENICE_API_KEY=...
+VENICE_MODEL=zai-org-glm-5-1
+
+# Optional override. Defaults to 1Shot public mainnet/testnet relayer endpoints.
+ONESHOT_RELAYER_URL=https://relayer.1shotapi.com/relayers
+```
+
+1Shot notes:
+- Public relayer endpoint: `POST /relayers`.
+- Mainnet: `https://relayer.1shotapi.com/relayers`.
+- Testnet: `https://relayer.1shotapi.dev/relayers`.
+- Relevant methods: `relayer_getCapabilities`, `relayer_send7710Transaction`, `relayer_getStatus`.
+- No signup/API-key path is required for the public relayer; failure should be treated as a transport or delegation-context issue, not an account provisioning issue.
+- Submitted 1Shot tasks are tracked locally by task id and polled until pending/submitted/confirmed/rejected/reverted.
+
+Venice notes:
+- Venice uses server-side Chat Completions at `https://api.venice.ai/api/v1/chat/completions`.
+- Venice never executes transactions or overrides caps; it returns a structured recommendation for vault, period, spend cap, ticket count, rationale, and warnings.
+- The UI applies only reviewable fields. MetaMask remains the authorization step.
+
+### Demo positioning
+**Megapot executes the lottery. PoolTogether provides prize savings. Syndicate manages user intent, group coordination, privacy, yield routing, and permissioned automation.**
 
 ---
 

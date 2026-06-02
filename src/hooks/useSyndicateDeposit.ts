@@ -200,6 +200,7 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
       if (currentAllowance < amountWei) {
         setStatus('approving');
         const approveHash = await activeWalletClient.writeContract({
+          account: userAddress,
           address: TOKENS.usdc.address,
           abi: ERC20_ABI,
           functionName: 'approve',
@@ -213,6 +214,7 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
       // Transfer USDC to deposit address
       setStatus('transferring');
       const transferHash = await activeWalletClient.writeContract({
+        account: userAddress,
         address: TOKENS.usdc.address,
         abi: ERC20_ABI,
         functionName: 'transfer',
@@ -236,6 +238,7 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
 
           // Execute delegation transaction
           const delegationHash = await walletClient!.sendTransaction({
+            account: userAddress,
             to: PT_TWAB_DELEGATOR,
             data: delegationData,
             chain: base,

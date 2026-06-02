@@ -71,6 +71,7 @@ export function useVaultDeposit() {
       if (currentAllowance < amountWei) {
         setState(prev => ({ ...prev, status: 'approving' }));
         const approveHash = await walletClient.writeContract({
+          account: userAddr,
           address: USDC_BASE, abi: ERC20_ABI, functionName: 'approve', args: [AAVE_POOL, amountWei], chain: base,
         });
         setState(prev => ({ ...prev, approveTxHash: approveHash }));
@@ -80,6 +81,7 @@ export function useVaultDeposit() {
       // 3. Supply USDC to Aave V3 Pool
       setState(prev => ({ ...prev, status: 'depositing' }));
       const supplyHash = await walletClient.writeContract({
+        account: userAddr,
         address: AAVE_POOL, abi: AAVE_POOL_ABI, functionName: 'supply', args: [USDC_BASE, amountWei, userAddr, 0], chain: base,
       });
       await publicClient.waitForTransactionReceipt({ hash: supplyHash });
@@ -115,6 +117,7 @@ export function useVaultDeposit() {
       if (currentAllowance < amountWei) {
         setState(prev => ({ ...prev, status: 'approving' }));
         const approveHash = await walletClient.writeContract({
+          account: userAddr,
           address: USDC_BASE, abi: ERC20_ABI, functionName: 'approve', args: [vaultAddress, amountWei], chain: base,
         });
         setState(prev => ({ ...prev, approveTxHash: approveHash }));
@@ -124,6 +127,7 @@ export function useVaultDeposit() {
       // 3. Deposit USDC to ERC4626 vault
       setState(prev => ({ ...prev, status: 'depositing' }));
       const depositHash = await walletClient.writeContract({
+        account: userAddr,
         address: vaultAddress, abi: ERC4626_DEPOSIT_ABI, functionName: 'deposit', args: [amountWei, userAddr], chain: base,
       });
       await publicClient.waitForTransactionReceipt({ hash: depositHash });
@@ -144,6 +148,7 @@ export function useVaultDeposit() {
 
       setState(prev => ({ ...prev, status: 'signing' }));
       const withdrawHash = await walletClient.writeContract({
+        account: userAddr,
         address: AAVE_POOL, abi: AAVE_POOL_ABI, functionName: 'withdraw', args: [USDC_BASE, amountWei, userAddr], chain: base,
       });
       await publicClient.waitForTransactionReceipt({ hash: withdrawHash });
@@ -169,6 +174,7 @@ export function useVaultDeposit() {
 
       setState(prev => ({ ...prev, status: 'signing' }));
       const withdrawHash = await walletClient.writeContract({
+        account: userAddr,
         address: vaultAddress, abi: ERC4626_WITHDRAW_ABI, functionName: 'withdraw', args: [amountWei, userAddr, userAddr], chain: base,
       });
       await publicClient.waitForTransactionReceipt({ hash: withdrawHash });

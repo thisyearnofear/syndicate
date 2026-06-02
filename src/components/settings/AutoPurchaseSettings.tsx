@@ -20,20 +20,25 @@ import {
   Brain,
   Terminal,
   Coins,
-  TrendingUp
+  TrendingUp,
+  ShieldCheck
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/Button";
 import { AgentRegistryService, AgentStatus, AgentType } from "@/services/automation/agentRegistryService";
 import { useUnifiedWallet } from "@/hooks";
 import { AutoPurchaseModal } from "@/components/modal/AutoPurchaseModal";
 import { AUTOMATION_MODE_META } from "@/config/automationModes";
+import { FEATURES } from "@/config";
+import { PermissionedAutopilotPanel } from "@/components/automation/PermissionedAutopilotPanel";
+
+type HubStrategy = 'scheduled' | 'autonomous' | 'no-loss' | 'yield-autopilot';
 
 export function AutoPurchaseSettings() {
   const { address, walletType } = useUnifiedWallet();
   const [agents, setAgents] = useState<AgentStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [selectedStrategy, setSelectedStrategy] = useState<'scheduled' | 'autonomous' | 'no-loss'>('scheduled');
+  const [selectedStrategy, setSelectedStrategy] = useState<HubStrategy>('scheduled');
 
   const registry = AgentRegistryService.getInstance();
 
@@ -58,8 +63,8 @@ export function AutoPurchaseSettings() {
     fetchAgents();
   }, [fetchAgents]);
 
-  const handleActivateAgent = (type: AgentType | 'no-loss') => {
-    setSelectedStrategy(type === 'autonomous' ? 'autonomous' : type === 'no-loss' ? 'no-loss' : 'scheduled');
+  const handleActivateAgent = (type: AgentType | 'no-loss' | 'yield-autopilot') => {
+    setSelectedStrategy(type === 'autonomous' || type === 'no-loss' || type === 'yield-autopilot' ? type : 'scheduled');
     setShowModal(true);
   };
 
@@ -94,6 +99,8 @@ export function AutoPurchaseSettings() {
           Refresh Status
         </Button>
       </div>
+
+      <PermissionedAutopilotPanel />
 
       {/* AGENT TIERS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -137,6 +144,20 @@ export function AutoPurchaseSettings() {
           Automation Paths
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {FEATURES.enableMetaMaskAutopilot && (
+          <div className="bg-white border border-cyan-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all group">
+            <div className="w-10 h-10 rounded-lg bg-cyan-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+              <ShieldCheck className="w-6 h-6 text-cyan-600" />
+            </div>
+            <h4 className="font-bold text-gray-900 text-sm">{AUTOMATION_MODE_META['yield-autopilot'].title}</h4>
+            <p className="text-[10px] text-gray-500 mt-1 mb-3">{AUTOMATION_MODE_META['yield-autopilot'].shortDescription}</p>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-cyan-700 bg-cyan-50 px-1.5 py-0.5 rounded">{AUTOMATION_MODE_META['yield-autopilot'].hubLabel}</span>
+              <Button size="sm" variant="outline" onClick={() => handleActivateAgent('yield-autopilot')}>Configure</Button>
+            </div>
+          </div>
+          )}
+
           {/* POOLTOGETHER V5 */}
           <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all group">
             <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">

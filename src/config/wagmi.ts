@@ -14,22 +14,7 @@ type RainbowConfigExt = ReturnType<typeof getDefaultConfig> & { autoConnect?: bo
 export function getConfig(): ReturnType<typeof getDefaultConfig> | null {
   // Only initialize on client side
   if (!isBrowser) {
-    // Return a dummy config on server that won't be used
-    if (!cachedConfig) {
-      try {
-        // This will likely fail on server, but we wrap it
-        cachedConfig = getDefaultConfig({
-          appName: 'Syndicate',
-          projectId: 'server-placeholder',
-          chains: [base, baseSepolia, fhenixHelium],
-          ssr: true, // Enable SSR mode for Next.js - prevents hydration mismatch
-        });
-      } catch {
-        // Silently fail on server - this config won't be used anyway
-        return null;
-      }
-    }
-    return cachedConfig;
+    return null;
   }
 
   // Return cached config to prevent multiple initializations
