@@ -18,16 +18,17 @@
  */
 
 import { useCallback } from 'react';
+import type { PublicClient, WalletClient } from 'viem';
 import { useChainId, usePublicClient, useSwitchChain, useWalletClient } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { useUnifiedWallet } from './useUnifiedWallet';
 import { FHENIX_VAULT_CHAIN, FHENIX_VAULT_NETWORK_LABEL } from '@/services/fhe/fhenixChain';
 
 export interface EVMClients {
-  walletClient: ReturnType<typeof useWalletClient>['data'];
-  publicClient: ReturnType<typeof usePublicClient>;
-  fhenixWalletClient: ReturnType<typeof useWalletClient>['data'];
-  fhenixPublicClient: ReturnType<typeof usePublicClient>;
+  walletClient: WalletClient | null;
+  publicClient: PublicClient | null;
+  fhenixWalletClient: WalletClient | null;
+  fhenixPublicClient: PublicClient | null;
   activeChainId: number | undefined;
   baseChainName: string;
   fhenixChainName: string;
@@ -48,7 +49,6 @@ export function useEVMClients(): EVMClients {
   });
   const publicClient = usePublicClient({
     chainId: base.id,
-    query: { enabled: isEVM },
   });
   const { data: fhenixWalletClient } = useWalletClient({
     chainId: FHENIX_VAULT_CHAIN.id,
@@ -56,7 +56,6 @@ export function useEVMClients(): EVMClients {
   });
   const fhenixPublicClient = usePublicClient({
     chainId: FHENIX_VAULT_CHAIN.id,
-    query: { enabled: isEVM },
   });
 
   const ensureChain = useCallback(
@@ -87,10 +86,10 @@ export function useEVMClients(): EVMClients {
   );
 
   return {
-    walletClient,
-    publicClient,
-    fhenixWalletClient,
-    fhenixPublicClient,
+    walletClient: isEVM ? (walletClient as WalletClient | undefined) ?? null : null,
+    publicClient: isEVM ? (publicClient as PublicClient | undefined) ?? null : null,
+    fhenixWalletClient: isEVM ? (fhenixWalletClient as WalletClient | undefined) ?? null : null,
+    fhenixPublicClient: isEVM ? (fhenixPublicClient as PublicClient | undefined) ?? null : null,
     activeChainId,
     baseChainName: base.name,
     fhenixChainName: FHENIX_VAULT_NETWORK_LABEL,

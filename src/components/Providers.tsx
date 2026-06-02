@@ -74,7 +74,7 @@ export function Providers({ children }: { children: ReactNode }) {
     },
   }), []);
 
-  const config = useMemo(() => getConfig(), []);
+  const config = useMemo(() => (isMounted ? getConfig() : null), [isMounted]);
 
   // Use visibility:hidden instead of conditionally hiding children.
   // Replacing children with a loading div caused React Error #321.

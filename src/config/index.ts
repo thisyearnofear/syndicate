@@ -438,6 +438,12 @@ export const FEATURES = {
 
   enableERC7715SmartSessions: process.env.NEXT_PUBLIC_ENABLE_ERC7715_SESSIONS === "true",
 
+  enableMetaMaskAutopilot: process.env.NEXT_PUBLIC_ENABLE_METAMASK_AGENT === "true",
+
+  enable1ShotRelayer: process.env.NEXT_PUBLIC_ENABLE_1SHOT_RELAYER === "true",
+
+  enableVeniceAdvisor: process.env.NEXT_PUBLIC_ENABLE_VENICE_ADVISOR === "true",
+
 } as const;
 
 

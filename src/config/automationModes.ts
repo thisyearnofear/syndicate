@@ -1,4 +1,4 @@
-export type AutomationStrategyId = 'scheduled' | 'autonomous' | 'no-loss';
+export type AutomationStrategyId = 'scheduled' | 'autonomous' | 'no-loss' | 'yield-autopilot';
 
 export interface AutomationModeMeta {
   id: AutomationStrategyId;
@@ -61,5 +61,20 @@ export const AUTOMATION_MODE_META: Record<AutomationStrategyId, AutomationModeMe
     successDescriptionStacks: 'Your selected token is now authorized for recurring prize-savings deposits without manual signing for each run.',
     failureDescription: 'Unable to enable prize-savings automation',
     hubLabel: 'Prize savings',
+  },
+  'yield-autopilot': {
+    id: 'yield-autopilot',
+    title: 'Yield Autopilot',
+    shortDescription: 'Use vault yield, not principal, for capped public-play participation.',
+    configureTitle: 'Configure Yield Autopilot',
+    configureDescription: 'Set a capped MetaMask permission for yield-funded ticket purchases.',
+    reviewTitle: 'Review Your Yield Autopilot',
+    approvalDescriptionEvm: 'This permission lets Syndicate buy tickets only within your cap, target, and cadence. Principal remains in the selected vault.',
+    approvalDescriptionStacks: 'Yield Autopilot is currently optimized for EVM vaults and MetaMask permissions.',
+    successTitle: 'Yield Autopilot Enabled',
+    successDescriptionEvm: 'Your policy is active. Syndicate will check vault yield and only buy tickets within the permission you approved.',
+    successDescriptionStacks: 'Your authorization is active for yield-aware participation.',
+    failureDescription: 'Unable to enable Yield Autopilot',
+    hubLabel: 'Yield autopilot',
   },
 };

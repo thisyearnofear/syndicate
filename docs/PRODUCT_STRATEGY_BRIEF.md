@@ -71,6 +71,20 @@ The product is not just a wallet view. It is built for pooled action, group part
 ### 4. Usable finance
 Privacy is integrated into deposits, positions, and vault UX, not hidden behind technical abstractions alone.
 
+### 5. Permissioned automation
+Automation should be useful because it enforces user intent, not because it adds another bot. The clearest use case is yield-funded lottery participation with explicit limits: source vault, max spend, target contract, cadence, and expiry.
+
+Venice AI should stay in the advisory layer: recommend conservative policy settings and plain-language caveats, then let deterministic app logic and MetaMask permissions enforce the result.
+
+## Protocol Positioning Caveat
+Syndicate should integrate with established lottery and prize protocols instead of competing with their core mechanics.
+
+- **Megapot** already provides ticket purchases and native recurring subscriptions.
+- **PoolTogether** already provides no-loss prize savings.
+- **Syndicate** should own the layer above them: capital routing, group coordination, privacy, and permission-scoped automation.
+
+The product promise is not "we rebuilt Megapot or PoolTogether." It is: **choose where capital sits, keep sensitive positions private, and define what yield or prizes should do next.**
+
 ## Product Hierarchy Recommendation
 
 ### Primary product category
@@ -140,4 +154,3 @@ After the repositioning pass, a first-time visitor should immediately understand
 3. Privacy UX system
 4. Invite and group coordination loop
 5. Supporting marketing content
-

@@ -41,6 +41,10 @@ export type {
 // Automation & Scheduling
 export { useAutoExecutionMonitor } from './useAutoExecutionMonitor';
 export { useAutomation } from './useAutomation';
+export { usePermissionedAutopilotPolicies } from './usePermissionedAutopilotPolicies';
+export { useYieldAutopilotActivity } from './useYieldAutopilotActivity';
+export { useYieldAutopilotExecution } from './useYieldAutopilotExecution';
+export { useYieldAutopilotExecutionLog } from './useYieldAutopilotExecutionLog';
 export { useYieldAutoProcessor } from './useYieldAutoProcessor';
 
 // Yield & Vaults
