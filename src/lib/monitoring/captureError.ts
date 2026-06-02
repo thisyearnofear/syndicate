@@ -23,6 +23,8 @@ export async function captureError(
   // Always log locally
   logger.error(`[captureError] ${message}`, { extra: context.extra ?? '' });
 
+  if (!isSentryRuntimeEnabled()) return;
+
   // Send to Sentry SDK if available
   try {
     const Sentry = await import('@sentry/nextjs');
@@ -51,4 +53,11 @@ export async function captureError(
   } catch {
     // Sentry SDK not available or failed — already logged locally above
   }
+}
+
+function isSentryRuntimeEnabled(): boolean {
+  return (
+    process.env.ENABLE_SENTRY_RUNTIME === 'true' &&
+    Boolean(process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN)
+  );
 }
