@@ -3,7 +3,7 @@ import MEGAPOT_V2_CONTRACTS from '@/config/contracts';
 import { FEATURES } from '@/config';
 import type { AdvancedPermissionGrant } from '@/services/automation/erc7715Service';
 import { getUsdcAddressForChain } from '@/services/automation/erc7715Service';
-import type { VaultProtocol } from '@/services/vaults';
+import type { VaultProtocol } from '@/services/vaults/vaultProvider';
 import type {
   PermissionedAutopilotDelegation,
   PermissionedAutopilotMode,

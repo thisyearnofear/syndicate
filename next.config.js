@@ -9,10 +9,9 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
 
-  // Reduce webpack memory usage to avoid OOM on Vercel free tier (1.5GB)
-  experimental: {
-    clientTraceMetadata: ['*'],
-  },
+  // Keep production builds lean enough for Vercel's default memory limits.
+  // `clientTraceMetadata: ['*']` materially increases webpack's trace payload
+  // and can push builds over the heap limit as the client graph grows.
 
   // Force packages that ship pre-compiled bundles with React hooks to be
   // re-compiled through Next.js's pipeline so they use the app's single
@@ -72,7 +71,7 @@ const nextConfig = {
   },
 };
 
-module.exports = withSentryConfig(nextConfig, {
+const sentryBuildOptions = {
   // Suppresses source map uploading logs during build
   silent: true,
 
@@ -86,4 +85,8 @@ module.exports = withSentryConfig(nextConfig, {
   // Note: disableLogger is deprecated in favor of removeDebugLogging
   // but we keep it simple for now if the wrapper handles it.
   // Actually let's just remove it as it's deprecated and causing warnings.
-});
+};
+
+module.exports = process.env.ENABLE_SENTRY_BUILD_PLUGIN === 'true'
+  ? withSentryConfig(nextConfig, sentryBuildOptions)
+  : nextConfig;
