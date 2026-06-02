@@ -10,7 +10,6 @@
  */
 
 import { useEffect } from 'react';
-import * as Sentry from '@sentry/nextjs';
 
 export default function GlobalError({
   error,
@@ -20,7 +19,11 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    Sentry.captureException(error);
+    if (process.env.NEXT_PUBLIC_ENABLE_SENTRY !== 'true') return;
+
+    import('@sentry/nextjs')
+      .then((Sentry) => Sentry.captureException(error))
+      .catch(() => {});
   }, [error]);
 
   return (
