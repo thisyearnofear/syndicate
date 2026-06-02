@@ -1,6 +1,5 @@
 import { encodeFunctionData, parseAbi, parseEther, type Address, type Hex, zeroHash } from 'viem';
 import { REFERRALS } from '@/config';
-import { vaultManager } from '@/services/vaults';
 import type { PermissionedAutopilotPolicy } from '@/services/metamask/delegationTypes';
 import { oneShotRelayerService, type OneShotRelayerResult } from '@/services/metamask/oneShotRelayerService';
 import { permissionedAutopilotService } from '@/services/metamask/permissionedAutopilotService';
@@ -53,7 +52,7 @@ class YieldAutopilotAgent {
     }
 
     try {
-      const yieldAmount = await vaultManager.getProvider(policy.sourceVault).getYieldAccrued(policy.userAddress);
+      const yieldAmount = getKnownYieldAmount(policy);
       const availableYield = Math.max(0, Number.parseFloat(yieldAmount));
       const maxSpend = Number(BigInt(policy.maxSpendPerPeriod)) / 1_000_000;
       const spendable = Math.min(availableYield, maxSpend);
@@ -180,3 +179,19 @@ class YieldAutopilotAgent {
 }
 
 export const yieldAutopilotAgent = new YieldAutopilotAgent();
+
+function getKnownYieldAmount(policy: PermissionedAutopilotPolicy): string {
+  const demoYield = process.env.NEXT_PUBLIC_YIELD_AUTOPILOT_DEMO_YIELD_USDC;
+  if (demoYield && Number.parseFloat(demoYield) >= 0) {
+    return demoYield;
+  }
+
+  if (typeof window === 'undefined') return '0';
+
+  try {
+    const raw = localStorage.getItem(`syndicate:yield-autopilot-yield:${policy.sourceVault}:${policy.userAddress ?? ''}`);
+    if (raw && Number.parseFloat(raw) >= 0) return raw;
+  } catch {}
+
+  return '0';
+}

@@ -1,5 +1,5 @@
 import type { Address, Hex } from 'viem';
-import type { VaultProtocol } from '@/services/vaults';
+import type { VaultProtocol } from '@/services/vaults/vaultProvider';
 
 export type PermissionedAutopilotMode = 'scheduled-public-play' | 'yield-autopilot';
 export type PermissionedAutopilotRelayer = 'direct' | '1shot';

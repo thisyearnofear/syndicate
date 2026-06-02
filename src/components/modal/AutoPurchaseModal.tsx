@@ -32,7 +32,7 @@ import type { AutoPurchaseConfig, AdvancedPermission } from "@/domains/wallet/ty
 import { AUTOMATION_MODE_META } from "@/config/automationModes";
 import { FEATURES } from "@/config";
 import { permissionedAutopilotService } from "@/services/metamask/permissionedAutopilotService";
-import type { VaultProtocol } from "@/services/vaults";
+import type { VaultProtocol } from "@/services/vaults/vaultProvider";
 
 type Step = "select-type" | "configure" | "review" | "approving" | "success" | "error";
 type AgentStrategy = "scheduled" | "autonomous" | "no-loss" | "yield-autopilot";

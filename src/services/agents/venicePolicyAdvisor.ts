@@ -1,4 +1,4 @@
-import type { VaultProtocol } from '@/services/vaults';
+import type { VaultProtocol } from '@/services/vaults/vaultProvider';
 
 export type VeniceRiskPreference = 'conservative' | 'balanced' | 'active';
 
