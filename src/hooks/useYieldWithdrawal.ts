@@ -8,7 +8,7 @@ import { logger } from '@/lib/logger';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
-export export type WithdrawalStatus =
+export type WithdrawalStatus =
   | 'idle'
   | 'pending_signature'   // Waiting for user to sign in wallet
   | 'signing'             // User signed, submitting tx
