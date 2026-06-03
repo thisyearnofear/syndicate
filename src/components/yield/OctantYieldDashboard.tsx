@@ -133,28 +133,126 @@ export function OctantYieldDashboard({
     try {
       const result = await yieldToTicketsService.processYieldConversion(address);
 
-      // If Solana withdrawal needs client-side signing
+      // If withdrawal needs client-side signing (EVM or Solana)
       if (result.pendingWithdrawalTx) {
         try {
-          if (!solanaWalletService.isReady()) {
-            const pk = await solanaWalletService.connectPhantom();
-            if (!pk) throw new Error('Failed to connect Phantom wallet');
+          if (result.pendingWithdrawalTx.chain === 'solana') {
+            // Solana flow: sign with Phantom wallet
+            if (!solanaWalletService.isReady()) {
+              const pk = await solanaWalletService.connectPhantom();
+              if (!pk) throw new Error('Failed to connect Phantom wallet');
+            }
+
+            const { VersionedTransaction } = await import('@solana/web3.js');
+            const txBytes = Buffer.from(result.pendingWithdrawalTx.txData, 'base64');
+            const transaction = VersionedTransaction.deserialize(txBytes);
+            const signature = await solanaWalletService.signAndSendTransaction(transaction);
+
+            // Complete the conversion after signing
+            const completeResult = await yieldToTicketsService.completeYieldConversion(address, signature);
+            setProcessResult({
+              success: completeResult.success,
+              txHashes: completeResult.txHashes,
+              ticketsPurchased: completeResult.ticketsPurchased,
+              causesAmount: completeResult.causesAmount,
+              causeTransferParams: completeResult.causeTransferParams,
+              error: completeResult.error,
+            });
+            return;
           }
 
-          const { VersionedTransaction } = await import('@solana/web3.js');
-          const txBytes = Buffer.from(result.pendingWithdrawalTx, 'base64');
-          const transaction = VersionedTransaction.deserialize(txBytes);
-          const signature = await solanaWalletService.signAndSendTransaction(transaction);
+          // EVM flow: use wagmi to sign and execute the withdrawal transaction
+          // Parse the txData JSON to get contract call parameters
+          const txDataParsed = (() => {
+            try { return JSON.parse(result.pendingWithdrawalTx.txData); } catch { return null; }
+          })();
 
-          // Complete the conversion after signing
-          const completeResult = await yieldToTicketsService.completeYieldConversion(address, signature);
+          if (txDataParsed && walletClient && publicClient) {
+            const userAddr = address as `0x${string}`;
+            const protocol = result.pendingWithdrawalTx.protocol;
+
+            // The txData format varies by vault provider:
+            // ERC4626 (Spark, Morpho, PoolTogether): { vault, amount, receiver, owner, action: 'withdraw' }
+            // Aave: { pool, asset, amount, to, action: 'withdraw' }
+            if (txDataParsed.action === 'withdraw') {
+              let withdrawHash: `0x${string}`;
+
+              if (protocol === 'aave') {
+                // Aave V3 Pool: withdraw(address asset, uint256 amount, address to)
+                const AAVE_POOL_ABI = [{
+                  name: 'withdraw', type: 'function', stateMutability: 'nonpayable',
+                  inputs: [
+                    { name: 'asset', type: 'address' },
+                    { name: 'amount', type: 'uint256' },
+                    { name: 'to', type: 'address' },
+                  ],
+                  outputs: [{ name: '', type: 'uint256' }],
+                }] as const;
+
+                withdrawHash = await walletClient.writeContract({
+                  account: userAddr,
+                  address: txDataParsed.pool as `0x${string}`,
+                  abi: AAVE_POOL_ABI,
+                  functionName: 'withdraw',
+                  args: [
+                    txDataParsed.asset as `0x${string}`,
+                    BigInt(txDataParsed.amount),
+                    userAddr,
+                  ],
+                  chain: base,
+                });
+              } else {
+                // ERC4626 withdraw(vault, amount, receiver, owner) — Spark, Morpho, PoolTogether
+                const ERC4626_WITHDRAW_ABI = [{
+                  name: 'withdraw', type: 'function', stateMutability: 'nonpayable',
+                  inputs: [
+                    { name: 'assets', type: 'uint256' },
+                    { name: 'receiver', type: 'address' },
+                    { name: 'owner', type: 'address' },
+                  ],
+                  outputs: [{ name: 'shares', type: 'uint256' }],
+                }] as const;
+
+                withdrawHash = await walletClient.writeContract({
+                  account: userAddr,
+                  address: txDataParsed.vault as `0x${string}`,
+                  abi: ERC4626_WITHDRAW_ABI,
+                  functionName: 'withdraw',
+                  args: [
+                    BigInt(txDataParsed.amount),
+                    userAddr,
+                    userAddr,
+                  ],
+                  chain: base,
+                });
+              }
+
+              // Wait for withdrawal confirmation
+              await publicClient.waitForTransactionReceipt({ hash: withdrawHash });
+
+              // Complete the conversion after withdrawal
+              const completeResult = await yieldToTicketsService.completeYieldConversion(address, withdrawHash);
+              setProcessResult({
+                success: completeResult.success,
+                txHashes: completeResult.txHashes,
+                ticketsPurchased: completeResult.ticketsPurchased,
+                causesAmount: completeResult.causesAmount,
+                causeTransferParams: completeResult.causeTransferParams,
+                error: completeResult.error,
+              });
+              return;
+            }
+          }
+
+          // Fallback: unrecognized txData format — surface error to user
+          // Don't re-call processYieldConversion (would loop infinitely)
+          console.warn('[YieldDashboard] Unknown withdrawal txData format for protocol:', result.pendingWithdrawalTx.protocol, txDataParsed);
           setProcessResult({
-            success: completeResult.success,
-            txHashes: completeResult.txHashes,
-            ticketsPurchased: completeResult.ticketsPurchased,
-            causesAmount: completeResult.causesAmount,
-            causeTransferParams: completeResult.causeTransferParams,
-            error: completeResult.error,
+            success: false,
+            txHashes: [],
+            ticketsPurchased: 0,
+            causesAmount: '0',
+            error: `Unrecognized withdrawal format for ${result.pendingWithdrawalTx.protocol}. Please withdraw manually.`,
           });
           return;
         } catch (signErr) {

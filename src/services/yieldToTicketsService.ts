@@ -30,14 +30,25 @@ export interface YieldToTicketsConfig {
   minIntervalMinutes?: number;
 }
 
+export interface PendingWithdrawalTx {
+  /** Serialized transaction data for client-side signing */
+  txData: string;
+  /** Protocol that needs withdrawal (e.g. 'spark', 'morpho', 'aave') */
+  protocol: VaultProtocol;
+  /** Amount to withdraw (human-readable USDC) */
+  amount: string;
+  /** Whether this is an EVM vault (needs wagmi signing) vs Solana */
+  chain: 'evm' | 'solana';
+}
+
 export interface YieldConversionResult {
   success: boolean;
   yieldAmount: string;
   ticketsPurchased: number;
   causesAmount: string;
   txHashes: string[];
-  /** If withdrawal needs client-side signing (Solana) */
-  pendingWithdrawalTx?: string;
+  /** If yield withdrawal needs client-side signing before tickets can be purchased */
+  pendingWithdrawalTx?: PendingWithdrawalTx;
   /** Cause transfer params for client-side signing after yield conversion */
   causeTransferParams?: {
     chain: 'evm' | 'solana';
@@ -45,6 +56,8 @@ export interface YieldConversionResult {
     amountWei: string;
     data?: string;
   } | null;
+  /** Amount that still needs to be withdrawn (for auto-compounding vaults) */
+  remainingYield?: string;
   error?: string;
 }
 
@@ -55,6 +68,18 @@ export interface AutoYieldStrategy {
   totalYieldProcessed: string;
   totalTicketsBought: number;
   totalCausesFunded: string;
+
+  // ── Pending withdrawal state (two-phase flow for auto-compounding vaults) ──
+  /** Amount of yield currently being withdrawn (cleared after completeYieldConversion) */
+  pendingWithdrawalAmount?: string;
+  /** Tickets planned from the pending yield (cleared after completeYieldConversion) */
+  pendingWithdrawalTickets?: number;
+  /** Causes amount from the pending yield (cleared after completeYieldConversion) */
+  pendingWithdrawalCauses?: string;
+  /** Transaction data for client-side signing (set by processYieldConversion) */
+  pendingWithdrawalTxData?: string;
+  /** Protocol being withdrawn from (set by processYieldConversion) */
+  pendingWithdrawalProtocol?: VaultProtocol;
 }
 
 class YieldToTicketsService {
@@ -140,8 +165,12 @@ class YieldToTicketsService {
   }
 
   /**
-   * Plan a yield conversion — returns what will happen without executing.
-   * For protocols requiring client-side signing (Solana), also returns unsigned txData.
+   * Process a yield conversion — two-phase flow for auto-compounding vaults:
+   * Phase 1: Request yield withdrawal from the vault (returns txData for client-side signing)
+   * Phase 2: After user signs withdrawal, the UI calls completeYieldConversion() to buy tickets
+   *
+   * For non-auto-compounding vaults (or when yield is already available as free USDC),
+   * tickets are purchased directly.
    */
   async processYieldConversion(userAddress: string): Promise<YieldConversionResult> {
     const strategy = this.strategies.get(userAddress);
@@ -204,8 +233,62 @@ class YieldToTicketsService {
       const causesAmount = (availableYield * config.causesAllocation / 100).toFixed(6);
       const ticketCount = Math.floor(parseFloat(ticketsAmount) / parseFloat(config.ticketPrice));
 
-      // For EVM protocols: execute ticket purchase directly
-      // (EVM withdrawal may be handled via wagmi signer in future)
+      // ---- Phase 1: Attempt to withdraw yield from vault ----
+      // For auto-compounding ERC4626 vaults (Spark, Morpho, Spark, Aave), the yield is
+      // embedded in the share price and must be withdrawn via a user-signed tx
+      // before it can be used to purchase tickets.
+
+      // Try to withdraw yield; if the vault returns txData, return it for client-side signing
+      try {
+        const withdrawResult = await vaultManager.withdrawYield(config.vaultProtocol, userAddress);
+
+        if (withdrawResult.success && withdrawResult.txData) {
+          // Vault requires client-side withdrawal signing before purchase
+          // Store withdrawal context in typed fields so completeYieldConversion can use them
+          strategy.pendingWithdrawalAmount = yieldAmount;
+          strategy.pendingWithdrawalTickets = ticketCount;
+          strategy.pendingWithdrawalCauses = causesAmount;
+          strategy.pendingWithdrawalTxData = withdrawResult.txData;
+          strategy.pendingWithdrawalProtocol = config.vaultProtocol;
+          this.saveToStorage();
+
+          return {
+            success: true,
+            yieldAmount,
+            ticketsPurchased: 0,
+            causesAmount,
+            txHashes: [],
+            pendingWithdrawalTx: {
+              txData: withdrawResult.txData,
+              protocol: config.vaultProtocol,
+              amount: yieldAmount,
+              chain: 'evm',
+            },
+            causeTransferParams: config.causesAllocation > 0 && parseFloat(causesAmount) > 0
+              ? this.getCauseTransferParams(config.vaultProtocol, causesAmount, config.causeWallet)
+              : null,
+            remainingYield: yieldAmount,
+          };
+        }
+
+        if (!withdrawResult.success && withdrawResult.error &&
+            !withdrawResult.error.includes('No yield') &&
+            !withdrawResult.error.includes('No balance')) {
+          // Unexpected error — report it but continue to try direct purchase
+          logger.warn('withdrawYield returned error, falling back to direct purchase', {
+            error: withdrawResult.error,
+            protocol: config.vaultProtocol,
+          });
+        }
+      } catch (withdrawErr) {
+        // withdrawYield may throw for some protocols — continue to direct purchase
+        logger.warn('withdrawYield threw, falling back to direct purchase', {
+          error: withdrawErr instanceof Error ? withdrawErr.message : String(withdrawErr),
+          protocol: config.vaultProtocol,
+        });
+      }
+
+      // ---- Phase 2a: Direct purchase (yield already available in wallet, no withdrawal needed) ----
       let ticketsPurchased = 0;
       const txHashes: string[] = [];
 
@@ -217,7 +300,7 @@ class YieldToTicketsService {
             if (purchaseResult.txHash) txHashes.push(purchaseResult.txHash);
           }
         } catch (err) {
-          logger.error("Ticket purchase failed", { error: err instanceof Error ? err.message : String(err) });
+          logger.error('Ticket purchase failed', { error: err instanceof Error ? err.message : String(err) });
         }
       }
 
@@ -247,7 +330,7 @@ class YieldToTicketsService {
         causeTransferParams,
       };
     } catch (error) {
-      logger.error("Yield conversion failed", { error: error instanceof Error ? error.message : String(error) });
+      logger.error('Yield conversion failed', { error: error instanceof Error ? error.message : String(error) });
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Yield conversion failed',
@@ -260,8 +343,12 @@ class YieldToTicketsService {
   }
 
   /**
-   * Called after client-side withdrawal signing completes.
+   * Called after client-side withdrawal signing completes (Phase 2).
    * Finishes the yield conversion by purchasing tickets with the withdrawn yield.
+   *
+   * This handles both EVM and Solana flows:
+   * - EVM: withdrawalTxHash is the transaction hash from the wagmi-signed withdrawal
+   * - Solana: withdrawalTxHash is the Solana signature from Phantom wallet
    */
   async completeYieldConversion(
     userAddress: string,
@@ -280,32 +367,67 @@ class YieldToTicketsService {
     }
 
     const { config } = strategy;
-    const txHashes = [withdrawalTxHash];
+    const txHashes: string[] = [];
+    if (withdrawalTxHash) txHashes.push(withdrawalTxHash);
+
+    // Use the typed pending withdrawal fields (set during processYieldConversion)
+    const pendingAmount = strategy.pendingWithdrawalAmount;
+    const pendingTickets = strategy.pendingWithdrawalTickets;
+    const pendingCauses = strategy.pendingWithdrawalCauses;
+    const pendingTxData = strategy.pendingWithdrawalTxData;
+
+    // Read the cached values or fall back to strategy totals
+    const ticketsToBuy = pendingTickets && pendingTickets > 0
+      ? pendingTickets
+      : Math.floor(
+          (parseFloat(strategy.totalYieldProcessed || '0') * config.ticketsAllocation / 100) /
+          parseFloat(config.ticketPrice)
+        );
+
+    const causesAmount = pendingCauses || (
+      parseFloat(strategy.totalYieldProcessed || '0') * config.causesAllocation / 100
+    ).toFixed(6);
+
     let ticketsPurchased = 0;
 
-    // Re-fetch yield (should be 0 or reduced after withdrawal)
-    // Use the cached value from strategy or last known yield
-    const ticketCount = Math.floor(
-      (parseFloat(strategy.totalYieldProcessed || '0') * config.ticketsAllocation / 100) /
-      parseFloat(config.ticketPrice)
-    );
+    // If the withdrawal was signed, log confirmation
+    if (withdrawalTxHash && withdrawalTxHash.startsWith('0x')) {
+      logger.info('Withdrawal confirmed, purchasing tickets', {
+        txHash: withdrawalTxHash,
+        ticketsToBuy,
+        originalTxData: pendingTxData ? pendingTxData.slice(0, 66) + '...' : 'none',
+      });
+    }
 
-    if (ticketCount > 0) {
+    // ---- Phase 2b: Purchase tickets with the withdrawn yield ----
+    if (ticketsToBuy > 0) {
       try {
-        const purchaseResult = await web3Service.purchaseTickets(ticketCount);
+        const purchaseResult = await web3Service.purchaseTickets(ticketsToBuy);
         if (purchaseResult.success) {
-          ticketsPurchased = ticketCount;
+          ticketsPurchased = ticketsToBuy;
           if (purchaseResult.txHash) txHashes.push(purchaseResult.txHash);
         }
       } catch (err) {
-        logger.error("Post-withdrawal ticket purchase failed", { error: err instanceof Error ? err.message : String(err) });
+        logger.error('Post-withdrawal ticket purchase failed', { error: err instanceof Error ? err.message : String(err) });
       }
     }
 
-    // Calculate causes amount from total yield processed
-    const totalYield = parseFloat(strategy.totalYieldProcessed || '0');
-    const causesAmount = (totalYield * config.causesAllocation / 100).toFixed(6);
-    
+    // Clear the pending withdrawal context (typed fields)
+    strategy.pendingWithdrawalAmount = undefined;
+    strategy.pendingWithdrawalTickets = undefined;
+    strategy.pendingWithdrawalCauses = undefined;
+    strategy.pendingWithdrawalTxData = undefined;
+    strategy.pendingWithdrawalProtocol = undefined;
+
+    // Update strategy stats
+    if (pendingAmount) {
+      strategy.totalYieldProcessed = (parseFloat(strategy.totalYieldProcessed || '0') + parseFloat(pendingAmount)).toString();
+    }
+    strategy.lastProcessed = new Date().toISOString();
+    strategy.totalTicketsBought += ticketsPurchased;
+    strategy.totalCausesFunded = (parseFloat(strategy.totalCausesFunded) + parseFloat(causesAmount)).toString();
+    this.saveToStorage();
+
     // Get cause transfer params for client-side execution
     const causeTransferParams = this.getCauseTransferParams(
       config.vaultProtocol,
@@ -313,14 +435,9 @@ class YieldToTicketsService {
       config.causeWallet
     );
 
-    strategy.lastProcessed = new Date().toISOString();
-    strategy.totalTicketsBought += ticketsPurchased;
-    strategy.totalCausesFunded = (parseFloat(strategy.totalCausesFunded) + parseFloat(causesAmount)).toString();
-    this.saveToStorage();
-
     return {
       success: true,
-      yieldAmount: strategy.totalYieldProcessed,
+      yieldAmount: pendingAmount || strategy.totalYieldProcessed,
       ticketsPurchased,
       causesAmount,
       txHashes,
@@ -328,8 +445,53 @@ class YieldToTicketsService {
     };
   }
 
+  /**
+   * Get the current yield strategy status for a user.
+   * Includes any pending withdrawal state from a previous processYieldConversion call.
+   */
   getStrategyStatus(userAddress: string): AutoYieldStrategy | null {
     return this.strategies.get(userAddress) || null;
+  }
+
+  /**
+   * Get pending withdrawal transaction data for client-side signing.
+   * Returns null if there's no pending withdrawal or the strategy is inactive.
+   * The UI should:
+   *   1. Call this to check if a withdrawal is pending
+   *   2. If pendingWithdrawalTxData exists, sign & submit the transaction via wagmi
+   *   3. After receipt confirmation, call completeYieldConversion(txHash)
+   */
+  getPendingWithdrawal(userAddress: string): PendingWithdrawalTx | null {
+    const strategy = this.strategies.get(userAddress);
+    if (!strategy || !strategy.isActive || !strategy.pendingWithdrawalTxData) {
+      return null;
+    }
+
+    return {
+      txData: strategy.pendingWithdrawalTxData,
+      protocol: strategy.pendingWithdrawalProtocol || strategy.config.vaultProtocol,
+      amount: strategy.pendingWithdrawalAmount || '0',
+      chain: 'evm',
+    };
+  }
+
+  /**
+   * Clear pending withdrawal state without completing it.
+   * Useful if the user declines the wallet signature or the transaction fails.
+   */
+  clearPendingWithdrawal(userAddress: string): boolean {
+    const strategy = this.strategies.get(userAddress);
+    if (!strategy) return false;
+
+    strategy.pendingWithdrawalAmount = undefined;
+    strategy.pendingWithdrawalTickets = undefined;
+    strategy.pendingWithdrawalCauses = undefined;
+    strategy.pendingWithdrawalTxData = undefined;
+    strategy.pendingWithdrawalProtocol = undefined;
+    this.saveToStorage();
+
+    logger.info('Cleared pending withdrawal for user', { userAddress });
+    return true;
   }
 
   deactivateStrategy(userAddress: string): boolean {

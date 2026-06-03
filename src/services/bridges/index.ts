@@ -679,6 +679,21 @@ case 'near-intents': {
                     this.registerProtocol(stacksProtocol);
                     return stacksProtocol;
                 }
+                case 'ton': {
+                    const { tonProtocol } = await import('./protocols/ton');
+                    this.registerProtocol(tonProtocol);
+                    return tonProtocol;
+                }
+                case 'starknet': {
+                    const { starknetProtocol } = await import('./protocols/starknet');
+                    this.registerProtocol(starknetProtocol);
+                    return starknetProtocol;
+                }
+                case 'debridge': {
+                    const { debridgeProtocol } = await import('./protocols/debridge');
+                    this.registerProtocol(debridgeProtocol);
+                    return debridgeProtocol;
+                }
 default:
                     logger.warn('Unknown protocol', { protocol: name });
                     return null;

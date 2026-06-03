@@ -15,20 +15,20 @@ Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, A
 |-------|----------|-------|
 | Base | CCTP + ERC-7715 | Native USDC, Advanced Permissions |
 | Stacks | USDCx + sBTC + x402 | Native Circle USDC, SIP-018 signatures |
-| Solana | Wormhole + Proxy | Cross-chain USDC, Lossless Lottery |
-| NEAR | Intents | Cross-chain intents |
-| Starknet | Cairo contracts | Native bridging |
+| Solana | DeBridge DLN | Automated intent-based cross-chain USDC bridging |
+| NEAR | Intents + Chain Sigs | Cross-chain intents and MPC signatures |
+| Starknet | Starknet.js + Relayer | Production-ready USDC/STRK bridging to Base |
 | TON | CCTP + Telegram | USDT/TON → CCTP → Base, Telegram Mini App |
 
 ### Vault Providers (Yield Strategies)
 | Provider | Chain | Status | APY | Notes |
 |----------|-------|--------|-----|-------|
-| Aave V3 | Base | ✅ Live | ~4.5% | Stable lending with variable rates |
-| Morpho Blue | Base | ✅ Live | ~6.7% | Curated lending vaults |
-| Spark Protocol | Base | ✅ Live | ~4.0% | Savings USDC (sUSDC) via Sky Savings Rate |
-| PoolTogether V5 | Base | ✅ Live | ~3.5% | No-loss prize savings |
+| Aave V3 | Base | ✅ Live | Live Query | Stable lending, live on-chain APY queries |
+| Morpho Blue | Base | ✅ Live | Live Query | Curated lending vaults, event-indexed yield calculation |
+| Spark Protocol | Base | ✅ Live | Live Query | Savings USDC (sUSDC), event-indexed yield calculation |
+| PoolTogether V5 | Base | ✅ Live | Live Query | No-loss prize savings, event-indexed yield calculation |
 | Octant V2 | Ethereum/Base | 🧪 MVP Mock | ~10% | Yield donating vaults (mock for testing) |
-| Uniswap V3 | Base | 🚧 Coming Soon | ~8.5% | Concentrated liquidity positions |
+| Uniswap V3 | Base | ✅ Live | Live Query | Concentrated liquidity, real position fee calculation |
 
 ### Key Files
 - `src/services/bridges/protocols/stacks.ts` - Stacks bridge with USDCx/sBTC support

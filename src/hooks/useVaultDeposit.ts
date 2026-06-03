@@ -209,8 +209,9 @@ export function useVaultDeposit() {
           // Spark sUSDC Vault on Base
           result = await depositERC4626(amount, SPARK_CONFIG.BASE.VAULT_ADDRESS);
         } else if (protocol === 'pooltogether') {
-          // PoolTogether PrizeVault on Base
-          result = await depositERC4626(amount, '0x7f5C2b379b88499aC2B997Db583f8079503f25b9');
+          // PoolTogether PrizeVault on Base — import exported address from provider
+          const { PRIZE_VAULT: PT_VAULT } = await import('@/services/vaults/poolTogetherProvider');
+          result = await depositERC4626(amount, PT_VAULT as `0x${string}`);
         } else if (protocol === 'octant') {
           // Octant uses octantVaultService which needs initialization
           const { octantVaultService } = await import('@/services/octantVaultService');

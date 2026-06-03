@@ -9,6 +9,7 @@
 
 import type { PoolProvider, PoolProviderConfig, PoolCreationResult } from './types';
 import { splitsService } from '@/services/splits/splitService';
+import { logger } from '@/lib/logger';
 import type { Address, WalletClient } from 'viem';
 
 const BASE_CHAIN_ID = 8453;
@@ -57,7 +58,7 @@ export class SplitsPoolProvider implements PoolProvider {
         });
       }
 
-      console.log('[SplitsProvider] Creating split with recipients:', {
+      logger.info('Creating split with recipients', {
         recipients: recipients.map(r => ({
           address: r.address.slice(0, 10) + '...',
           share: r.percentAllocation.toFixed(2) + '%',
@@ -65,12 +66,53 @@ export class SplitsPoolProvider implements PoolProvider {
         coordinator: config.coordinatorAddress.slice(0, 10) + '...',
       });
 
-      // Note: We can't actually create the split here because we need a wallet client
-      // The actual split creation will happen when the user joins and approves
-      // For now, store the split configuration in metadata
-      
-      // Generate a deterministic address for demo/testing
-      // In production, this would be the actual split address after creation
+      // If wallet client is provided, deploy the split on-chain immediately
+      if (config.walletClient) {
+        logger.info('Wallet client provided — deploying split on-chain');
+        const createResult = await splitsService.createSplit({
+          recipients,
+          distributorFee: 0,
+          controller: config.coordinatorAddress as Address,
+        }, config.walletClient);
+
+        if (!createResult.success || !createResult.txHash) {
+          return {
+            success: false,
+            poolAddress: '',
+            poolType: 'splits',
+            error: createResult.error || 'Split deployment failed',
+          };
+        }
+
+        // Use the real split address from the transaction's SplitCreated event
+        // splitsService.createSplit() now parses the event logs to extract the address
+        if (!createResult.splitAddress) {
+          return {
+            success: false,
+            poolAddress: '',
+            poolType: 'splits',
+            txHash: createResult.txHash,
+            error: 'Split was deployed but address could not be extracted from logs. Tx: ' + createResult.txHash,
+          };
+        }
+
+        return {
+          success: true,
+          poolAddress: createResult.splitAddress,
+          poolType: 'splits',
+          txHash: createResult.txHash,
+          metadata: {
+            recipients,
+            distributorFee: 0,
+            controller: config.coordinatorAddress,
+            chainId: BASE_CHAIN_ID,
+            isImmutable: true,
+            deployed: true,
+          },
+        };
+      }
+
+      // Without wallet client: generate deterministic address for preview/planning
       const splitAddress = this.generateSplitAddress(
         config.coordinatorAddress,
         recipients
@@ -86,7 +128,8 @@ export class SplitsPoolProvider implements PoolProvider {
           controller: config.coordinatorAddress,
           chainId: BASE_CHAIN_ID,
           isImmutable: true,
-          note: 'Split will be created on-chain when first deposit is made',
+          requiresDeployment: true,
+          note: 'Split needs on-chain deployment. Provide a walletClient to deploy automatically.',
         },
       };
     } catch (error) {

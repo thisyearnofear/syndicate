@@ -3,7 +3,7 @@
  * Single source of truth for cross-chain bridge metadata
  */
 
-export type SupportedChain = 'stacks' | 'near' | 'solana' | 'starknet' | 'base';
+export type SupportedChain = 'stacks' | 'near' | 'solana' | 'starknet' | 'base' | 'ton';
 
 export interface BridgeConfig {
   name: string;
@@ -75,11 +75,26 @@ export const BRIDGE_CONFIG: Record<SupportedChain, BridgeConfig> = {
     },
     timing: {
       estimate: '2-5 minutes',
-      description: 'Starknet bridge + Base execution',
+      description: 'LayerSwap/Orbiter bridge + Base execution',
     },
     explorer: {
       name: 'Starkscan',
       txUrl: (txHash) => `https://starkscan.co/tx/${txHash}`,
+    },
+  },
+  ton: {
+    name: 'TON',
+    fees: {
+      bridge: 0.10,
+      gas: 0.01,
+    },
+    timing: {
+      estimate: '1-3 minutes',
+      description: 'TON confirmation + CCTP relay to Base',
+    },
+    explorer: {
+      name: 'TON Viewer',
+      txUrl: (txHash) => `https://tonviewer.com/transaction/${txHash}`,
     },
   },
   base: {
