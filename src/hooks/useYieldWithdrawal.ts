@@ -196,7 +196,7 @@ export function useYieldWithdrawal(): UseYieldWithdrawalResult {
         withdrawalTxHash = await walletClient.writeContract({
           account: userAddr,
           address: parsedTx.pool as `0x${string}`,
-          abi: AAVE_POOL_ABI,
+          abi: AAVE_POOL_WITHDRAW_ABI,
           functionName: 'withdraw',
           args: [
             (parsedTx.asset as string) as `0x${string}`,
