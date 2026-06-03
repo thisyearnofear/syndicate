@@ -86,17 +86,22 @@ export class DebridgeProtocol implements BridgeProtocol {
             }
 
             // Build DeBridge order creation payload
-            const orderPayload = {
+            const orderPayload: Record<string, unknown> = {
                 srcChainId: 7565164, // Solana
                 dstChainId: 8453, // Base
                 srcChainTokenIn: SOLANA_USDC_MINT,
                 dstChainTokenOut: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // USDC on Base
                 amount: `${parseFloat(amount) * 1_000_000}`, // USDC has 6 decimals
                 dstChainTokenOutRecipient: destinationAddress,
-                // External call for atomic Megapot purchase (if adapter is configured)
-                ...(options?.externalCall && { externalCall: options.externalCall }),
-                ...(options?.fallbackAddress && { fallbackAddress: options.fallbackAddress }),
             };
+
+            // Add optional fields if provided
+            if (options?.externalCall) {
+                orderPayload.externalCall = options.externalCall;
+            }
+            if (options?.fallbackAddress) {
+                orderPayload.fallbackAddress = options.fallbackAddress;
+            }
 
             const response = await fetch(`${DEBRIDGE_API_BASE}/tx`, {
                 method: 'POST',
