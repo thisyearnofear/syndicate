@@ -1,19 +1,26 @@
 /**
  * OCTANT V2 CONFIGURATION
- * 
+ *
  * Configuration for Octant v2 yield donating strategies
  * Based on official Octant v2 hackathon boilerplate
+ *
+ * PRODUCTION SETUP:
+ * Before enabling Octant in production, deploy a real ERC-4626 USDC vault
+ * (e.g., Yearn v3 USDC on Ethereum or Morpho USDC on Base) and set
+ * vaults.ethereumUsdcVault to the deployed address. Also update contracts
+ * addresses from the Octant team.
  */
 
 export const OCTANT_V2_CONFIG = {
   // Feature flags
-  useMockVault: true, // Toggle to use in-memory mock vault for MVP
+  // Set to false when a real vault address is configured below
+  useMockVault: false,
 
-  // Contract addresses (to be filled with real addresses from Octant team)
+  // Contract addresses (fill with real addresses from Octant team once available)
   contracts: {
-    morphoFactory: '0x...', // MorphoCompounderStrategyFactory
-    skyFactory: '0x...', // SkyCompounderStrategyFactory
-    yieldStrategy: '0x...', // YieldDonatingTokenizedStrategy
+    morphoFactory: '0x...', // MorphoCompounderStrategyFactory (TODO: fill)
+    skyFactory: '0x...', // SkyCompounderStrategyFactory (TODO: fill)
+    yieldStrategy: '0x...', // YieldDonatingTokenizedStrategy (TODO: fill)
   },
 
   // Token addresses by network (mainnet and Base)
@@ -26,9 +33,12 @@ export const OCTANT_V2_CONFIG = {
     },
   },
 
-  // Vault addresses (fill with real ERC-4626 USDC vault when moving off mock)
+  // Vault addresses (replace with real deployed ERC-4626 USDC vault before mainnet)
   vaults: {
-    ethereumUsdcVault: '0x...', // Yearn v3 ERC-4626 USDC or Octant TokenizedStrategy vault
+    // TODO: Deploy or configure a real ERC-4626 USDC vault and set the address here.
+    // Example: Yearn v3 USDC vault on Ethereum or a Morpho USDC vault on Base.
+    // Until this is set, the provider will fall back to mock mode (in-memory balances).
+    ethereumUsdcVault: '0x...', // e.g. Yearn v3 USDC vault address
   },
 
   // Default yield allocation percentages
@@ -42,19 +52,19 @@ export const OCTANT_V2_CONFIG = {
     {
       id: 'climate-action',
       name: 'Climate Action Fund',
-      wallet: '0x...', // To be filled with real verified wallet
+      wallet: '0x...', // TODO: Fill with verified climate action wallet
       description: 'Supporting renewable energy and carbon reduction projects',
     },
     {
       id: 'education-access',
       name: 'Education Access Initiative',
-      wallet: '0x...', // To be filled with real verified wallet
+      wallet: '0x...', // TODO: Fill with verified education wallet
       description: 'Providing educational resources to underserved communities',
     },
     {
       id: 'ocean-cleanup',
       name: 'Ocean Cleanup Project',
-      wallet: '0x...', // To be filled with real verified wallet
+      wallet: '0x...', // TODO: Fill with verified ocean cleanup wallet
       description: 'Removing plastic waste from oceans and waterways',
     },
   ],
@@ -72,7 +82,7 @@ export const OCTANT_V2_CONFIG = {
     strategy: 100, // $100 minimum for yield strategies
   },
 
-  // MVP lock configuration (short lock for demo/testing)
+  // Lock configuration (5 min for dev/test; increase for production)
   lock: {
     durationSeconds: 5 * 60, // 5 minutes lock for MVP
   },

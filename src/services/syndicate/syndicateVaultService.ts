@@ -341,8 +341,8 @@ export class SyndicateVaultService {
       morpho: '0x9CBF0184036048895e69aAFb4D0A1598085bFc82', // Morpho USDC vault
       spark: '0x3128a0F7f0ea68E7B7c9B00AFa7E41045828e858', // Savings USDC (sUSDC) on Base
       pooltogether: '0x7f5C2b379b88499aC2B997Db583f8079503f25b9', // przUSDC PrizeVault
-      octant: '0xOctantUSDCVaultOnEthereum', // Placeholder
-      uniswap: '0xUniswapV3StrategyOnBase', // Placeholder
+      octant: '0x0000000000000000000000000000000000000000', // Coming soon
+      uniswap: '0x0000000000000000000000000000000000000000', // Coming soon
       lifiearn: 'lifiearn:aggregator', // LI.FI Earn uses multiple vaults
       fhenix: process.env.NEXT_PUBLIC_FHENIX_VAULT_ADDRESS ?? '0x0000000000000000000000000000000000000000',
     };

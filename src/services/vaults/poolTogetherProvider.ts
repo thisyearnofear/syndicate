@@ -8,6 +8,7 @@
 import { formatUnits, parseUnits } from 'viem';
 import { basePublicClient } from '@/lib/baseClient';
 import { poolTogetherService } from '../lotteries/PoolTogetherService';
+import { getNetDepositedAssets } from './erc4626YieldCalculator';
 import type {
     VaultProvider,
     VaultProtocol,
@@ -20,7 +21,7 @@ const baseClient = basePublicClient;
 
 // przUSDC PrizeVault on Base
 // https://dev.pooltogether.com/protocol/deployments/base
-const PRIZE_VAULT = '0x7f5C2b379b88499aC2B997Db583f8079503f25b9' as const;
+export const PRIZE_VAULT = '0x7f5C2b379b88499aC2B997Db583f8079503f25b9' as const;
 
 // Chain ID for Base
 const BASE_CHAIN_ID = 8453;
@@ -115,11 +116,13 @@ export class PoolTogetherVaultProvider implements VaultProvider {
 
   async getBalance(userAddress: string): Promise<VaultBalance> {
     try {
+      const userAddr = userAddress as `0x${string}`;
+      
       const shares = await baseClient.readContract({
         address: PRIZE_VAULT,
         abi: PRIZE_VAULT_ABI,
         functionName: 'balanceOf',
-        args: [userAddress as `0x${string}`],
+        args: [userAddr],
       });
 
       const assets = await baseClient.readContract({
@@ -129,14 +132,32 @@ export class PoolTogetherVaultProvider implements VaultProvider {
         args: [shares],
       });
 
-      const deposited = parseFloat(formatUnits(assets, 6));
+      const currentTotalBalance = parseFloat(formatUnits(assets, 6));
       const apy = await this.getCurrentAPY();
-      const yieldAccrued = deposited * (apy / 100) * (1 / 365) * 7; // Weekly estimate
+      
+      // Calculate actual historical yield using on-chain events
+      const netDepositResult = await getNetDepositedAssets(
+        PRIZE_VAULT,
+        userAddr,
+        6
+      );
+
+      let yieldAccrued = 0;
+      let deposited = currentTotalBalance;
+
+      if (netDepositResult.success && netDepositResult.netDepositedAssets > 0) {
+        deposited = netDepositResult.netDepositedAssets;
+        yieldAccrued = Math.max(0, currentTotalBalance - deposited);
+      } else if (currentTotalBalance > 0) {
+        // Fallback: If events couldn't be fetched but user has a balance,
+        // we can't accurately determine principal. Use a conservative estimate.
+        yieldAccrued = currentTotalBalance * (apy / 100) * (1 / 365) * 7;
+      }
 
       return {
         deposited: deposited.toFixed(6),
         yieldAccrued: yieldAccrued.toFixed(6),
-        totalBalance: deposited.toFixed(6),
+        totalBalance: currentTotalBalance.toFixed(6),
         apy,
         lastUpdated: Date.now(),
       };
@@ -185,11 +206,54 @@ export class PoolTogetherVaultProvider implements VaultProvider {
     };
   }
 
-  async withdrawYield(_userAddress: string): Promise<VaultWithdrawResult> {
-    return {
-      success: false,
-      error: 'PoolTogether V5 prizes are claimed automatically by bots and paid instantly to your wallet. No manual claiming needed.',
-    };
+  async withdrawYield(userAddress: string): Promise<VaultWithdrawResult> {
+    try {
+      // PoolTogether V5 prizes are claimed automatically by bots.
+      // For the vault balance, we estimate yield via the share-to-assets ratio
+      // similar to other ERC4626 vaults.
+      const shares = await baseClient.readContract({
+        address: PRIZE_VAULT,
+        abi: PRIZE_VAULT_ABI,
+        functionName: 'balanceOf',
+        args: [userAddress as `0x${string}`],
+      });
+
+      if (shares === 0n) {
+        return { success: false, error: 'No balance in vault' };
+      }
+
+      const assets = await baseClient.readContract({
+        address: PRIZE_VAULT,
+        abi: PRIZE_VAULT_ABI,
+        functionName: 'convertToAssets',
+        args: [shares],
+      });
+
+      let yieldAmount = '0';
+      // For PrizeVaults, yield comes as prizes (not interest), so we estimate
+      // based on the APY and time since deposit
+      const apy = await this.getCurrentAPY();
+      if (apy > 0) {
+        // Weekly yield estimate
+        const estimatedYield = parseFloat(formatUnits(assets, 6)) * (apy / 100) * (1 / 52);
+        yieldAmount = estimatedYield.toFixed(6);
+      }
+
+      if (parseFloat(yieldAmount) <= 0) {
+        return {
+          success: false,
+          error: 'No yield available to withdraw',
+        };
+      }
+
+      return this.withdraw(yieldAmount, userAddress);
+    } catch (error) {
+      console.error('[PoolTogetherVault] Failed to withdraw yield:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to withdraw yield',
+      };
+    }
   }
 }
 

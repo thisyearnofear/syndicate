@@ -10,8 +10,10 @@
 
 import { 
   encodeFunctionData,
+  decodeEventLog,
   type Address,
   type WalletClient,
+  type Log,
 } from 'viem';
 import { base } from 'viem/chains';
 import { basePublicClient } from '@/lib/baseClient';
@@ -22,7 +24,8 @@ const _BASE_CHAIN_ID = 8453;
 // SplitMain contract on Base (immutable, no upgrade)
 const SPLIT_MAIN = '0x2ed6c55457632e381550485286422539B967796D' as const;
 
-// SplitMain ABI (core functions)
+// SplitMain ABI (core functions + events)
+// The SplitCreated event is emitted when createSplit succeeds, containing the split address.
 const SPLIT_MAIN_ABI = [
   {
     name: 'createSplit',
@@ -110,6 +113,19 @@ const SPLIT_MAIN_ABI = [
       { name: 'token', type: 'address' },
     ],
     outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    type: 'event',
+    name: 'SplitCreated',
+    inputs: [
+      { indexed: true, name: 'split', type: 'address' },
+      { indexed: true, name: 'controller', type: 'address' },
+      { indexed: false, name: 'accounts', type: 'tuple[]', components: [
+        { name: 'target', type: 'address' },
+        { name: 'allocPoints', type: 'uint256' },
+      ]},
+      { indexed: false, name: 'distributorFee', type: 'uint256' },
+    ],
   },
 ] as const;
 
@@ -226,13 +242,51 @@ export async function createSplit(
 
     logger.info("Create split transaction sent", { txHash, recipients: recipients.length, distributorFee });
 
-    // Wait for transaction _receipt to get split address
-    const _receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+    // Wait for transaction receipt to get the split address from logs
+    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
     
     // Parse logs to find the SplitCreated event
-    // For now, return the txHash - the split address will be indexed by subgraph
+    // The event's first indexed parameter (split) is in topics[1]
+    // We use viem's decodeEventLog for type-safe extraction
+    const receiptLogs = (receipt as unknown as { logs: Log[] }).logs || [];
+    
+    let splitAddress: Address | undefined;
+    for (const log of receiptLogs) {
+      // Check if this log is from the SplitMain contract (the emitter)
+      if (log.address?.toLowerCase() !== SPLIT_MAIN.toLowerCase()) continue;
+      
+      try {
+        // Attempt to decode as SplitCreated event using the full ABI
+        // We cast topics via intermediate to satisfy viem's strict tuple type
+        const decoded = decodeEventLog({
+          abi: SPLIT_MAIN_ABI,
+          data: log.data as `0x${string}`,
+          topics: log.topics as unknown as [`0x${string}`, ...`0x${string}`[]],
+          strict: false,
+        });
+        
+        if (decoded.eventName === 'SplitCreated') {
+          // Extract the split address from the decoded event args
+          // viem's decodeEventLog returns typed args matching the ABI
+          const args = decoded.args as { split: Address };
+          splitAddress = args.split;
+          break;
+        }
+      } catch {
+        // This log doesn't match the SplitCreated event; continue searching
+        continue;
+      }
+    }
+
+    if (!splitAddress) {
+      logger.warn('Could not extract split address from SplitCreated event logs. ' +
+        'The split was deployed (txHash: ' + txHash + ') but the address could not be parsed. ' +
+        'Use the 0xSplits subgraph to resolve the address.');
+    }
+
     return {
       success: true,
+      splitAddress,
       txHash,
     };
   } catch (error) {

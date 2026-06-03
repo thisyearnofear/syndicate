@@ -53,6 +53,8 @@ export { useSyndicateDeposit } from './useSyndicateDeposit';
 export { useUserVaults } from './useUserVaults';
 export { useVaultDeposit } from './useVaultDeposit';
 export { useVaultActivity } from './useVaultActivity';
+export { useYieldWithdrawal } from './useYieldWithdrawal';
+export type { YieldWithdrawalState, WithdrawalStatus } from './useYieldWithdrawal';
 
 // Lottery & Tickets
 export { useTicketHistory } from './useTicketHistory';

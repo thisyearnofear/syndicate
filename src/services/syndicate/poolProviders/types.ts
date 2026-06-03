@@ -6,6 +6,7 @@
  */
 
 import type { PoolType } from '@/domains/lottery/types';
+import type { WalletClient } from 'viem';
 
 export type { PoolType };
 
@@ -18,6 +19,8 @@ export interface PoolProviderConfig {
   }>;
   coordinatorAddress: string;
   threshold?: number;
+  /** Optional wallet client — if provided, the pool is deployed on-chain immediately */
+  walletClient?: WalletClient;
 }
 
 export interface PoolCreationResult {

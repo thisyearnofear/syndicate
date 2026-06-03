@@ -13,6 +13,7 @@
 import { formatUnits, parseUnits } from 'viem';
 import { basePublicClient } from '@/lib/baseClient';
 import { logger } from '@/lib/logger';
+import { getNetDepositedAssets } from './erc4626YieldCalculator';
 import type {
     VaultProvider,
     VaultProtocol,
@@ -142,12 +143,14 @@ export class MorphoVaultProvider implements VaultProvider {
      */
     async getBalance(userAddress: string): Promise<VaultBalance> {
         try {
+            const userAddr = userAddress as `0x${string}`;
+            
             // Get user's vault shares
             const shares = await baseClient.readContract({
                 address: MORPHO_CONFIG.BASE.VAULT_ADDRESS,
                 abi: ERC4626_ABI,
                 functionName: 'balanceOf',
-                args: [userAddress as `0x${string}`],
+                args: [userAddr],
             });
 
             // Convert shares to assets (USDC)
@@ -158,16 +161,32 @@ export class MorphoVaultProvider implements VaultProvider {
                 args: [shares],
             });
 
-            const deposited = parseFloat(formatUnits(assets, 6)); // USDC has 6 decimals
+            const currentTotalBalance = parseFloat(formatUnits(assets, 6));
             const apy = await this.getCurrentAPY();
             
-            // Calculate yield based on APY (approximation)
-            const yieldAccrued = deposited * (apy / 100) * (1 / 365) * 7; // Weekly estimate
+            // Calculate actual historical yield using on-chain events
+            const netDepositResult = await getNetDepositedAssets(
+                MORPHO_CONFIG.BASE.VAULT_ADDRESS,
+                userAddr,
+                6
+            );
+
+            let yieldAccrued = 0;
+            let deposited = currentTotalBalance;
+
+            if (netDepositResult.success && netDepositResult.netDepositedAssets > 0) {
+                deposited = netDepositResult.netDepositedAssets;
+                yieldAccrued = Math.max(0, currentTotalBalance - deposited);
+            } else if (currentTotalBalance > 0) {
+                // Fallback: If events couldn't be fetched but user has a balance,
+                // we can't accurately determine principal. Use a conservative estimate.
+                yieldAccrued = currentTotalBalance * (apy / 100) * (1 / 365) * 7;
+            }
 
             return {
                 deposited: deposited.toFixed(6),
                 yieldAccrued: yieldAccrued.toFixed(6),
-                totalBalance: deposited.toFixed(6),
+                totalBalance: currentTotalBalance.toFixed(6),
                 apy,
                 lastUpdated: Date.now(),
             };
@@ -202,9 +221,39 @@ export class MorphoVaultProvider implements VaultProvider {
         }
 
         try {
-            // Query actual yield from vault by comparing total assets over time
-            // March 2026: Morpho USDC vaults on Base showing ~6.7% APY
-            const estimatedAPY = 6.7; // Current rate as of March 2026
+            // Try to derive APY from on-chain data by comparing totalAssets to totalSupply
+            try {
+                const totalAssets = await baseClient.readContract({
+                    address: MORPHO_CONFIG.BASE.VAULT_ADDRESS,
+                    abi: ERC4626_ABI,
+                    functionName: 'totalAssets',
+                });
+                
+                const totalSupply = await baseClient.readContract({
+                    address: MORPHO_CONFIG.BASE.VAULT_ADDRESS,
+                    abi: ERC4626_ABI,
+                    functionName: 'totalSupply',
+                });
+                
+                // Derive APY from the share-to-assets conversion rate
+                // ERC4626 vaults accrue yield by increasing assets-per-share ratio
+                if (totalSupply > 0n && totalAssets > 0n) {
+                    const rate = Number(totalAssets) / Number(totalSupply);
+                    // Annualize the rate growth since deployment
+                    // rate should be > 1.0 if yield has accrued
+                    const estimatedAPY = Math.min(Math.max((rate - 1) * 365 * 100, 0), 30);
+                    
+                    if (estimatedAPY > 0) {
+                        this.cachedAPY = { value: estimatedAPY, timestamp: Date.now() };
+                        return estimatedAPY;
+                    }
+                }
+            } catch {
+                // Fall through to default
+            }
+
+            // Fallback: March 2026 Morpho USDC vaults on Base showing ~6.7% APY
+            const estimatedAPY = 6.7;
             
             this.cachedAPY = { value: estimatedAPY, timestamp: Date.now() };
             return estimatedAPY;
@@ -273,15 +322,69 @@ export class MorphoVaultProvider implements VaultProvider {
      * Withdraw yield only (redeem shares, keep principal)
      * For Morpho, this is complex - would need to calculate principal vs yield shares
      */
-    async withdrawYield(_userAddress: string): Promise<VaultWithdrawResult> {
-        // For Morpho ERC4626 vaults, yield is automatically compounded
-        // To withdraw only yield, would need to calculate:
-        // yieldShares = totalShares - (principalInShares)
-        // For simplicity, we return error suggesting full withdrawal
-        return {
-            success: false,
-            error: 'Morpho vault auto-compounds yield. Withdraw full amount to access yield.',
-        };
+    async withdrawYield(userAddress: string): Promise<VaultWithdrawResult> {
+        try {
+            // For ERC4626 vaults, yield is auto-compounded in the share price.
+            // We derive yield by comparing totalAssets/totalSupply ratio.
+            const shares = await baseClient.readContract({
+                address: MORPHO_CONFIG.BASE.VAULT_ADDRESS,
+                abi: ERC4626_ABI,
+                functionName: 'balanceOf',
+                args: [userAddress as `0x${string}`],
+            });
+
+            if (shares === 0n) {
+                return {
+                    success: false,
+                    error: 'No balance in vault',
+                };
+            }
+
+            const assets = await baseClient.readContract({
+                address: MORPHO_CONFIG.BASE.VAULT_ADDRESS,
+                abi: ERC4626_ABI,
+                functionName: 'convertToAssets',
+                args: [shares],
+            });
+
+            // Derive yield from the share-to-assets growth ratio
+            const totalAssets = await baseClient.readContract({
+                address: MORPHO_CONFIG.BASE.VAULT_ADDRESS,
+                abi: ERC4626_ABI,
+                functionName: 'totalAssets',
+            });
+            const totalSupply = await baseClient.readContract({
+                address: MORPHO_CONFIG.BASE.VAULT_ADDRESS,
+                abi: ERC4626_ABI,
+                functionName: 'totalSupply',
+            });
+
+            let yieldAmount = '0';
+            if (totalSupply > 0n && totalAssets > 0n) {
+                const totalAssetsBN = BigInt(totalAssets.toString());
+                const totalSupplyBN = BigInt(totalSupply.toString());
+                if (totalAssetsBN > totalSupplyBN) {
+                    // Estimated principal = assets * (totalSupply / totalAssets)
+                    const estimatedYieldAssets = assets - (assets * totalSupplyBN) / totalAssetsBN;
+                    yieldAmount = formatUnits(estimatedYieldAssets, 6);
+                }
+            }
+
+            if (parseFloat(yieldAmount) <= 0) {
+                return {
+                    success: false,
+                    error: 'No yield available to withdraw',
+                };
+            }
+
+            return this.withdraw(yieldAmount, userAddress);
+        } catch (error) {
+            logger.error('Failed to withdraw Morpho yield', { error: error instanceof Error ? error.message : String(error) });
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to withdraw yield',
+            };
+        }
     }
 }
 

@@ -62,11 +62,33 @@ export const SUPPORTED_CHAINS = {
     sourceChain: 'stacks' as const,
     description: 'Buy Base tickets from Stacks Bitcoin L2'
   },
+  // Starknet ZK-rollup
+  'starknet': {
+    name: 'Starknet',
+    native: false,
+    supported: true,
+    icon: '⚡',
+    method: 'Cross-chain via LayerSwap/Orbiter',
+    purchaseMethod: 'cross-chain' as const,
+    sourceChain: 'starknet' as const,
+    description: 'Buy Base tickets from Starknet'
+  },
+  // TON blockchain
+  'ton': {
+    name: 'TON',
+    native: false,
+    supported: true,
+    icon: '💎',
+    method: 'Cross-chain via CCTP Relay',
+    purchaseMethod: 'cross-chain' as const,
+    sourceChain: 'ton' as const,
+    description: 'Buy Base tickets from TON'
+  },
 } as const;
 
 export type ChainId = keyof typeof SUPPORTED_CHAINS;
 export type PurchaseMethod = typeof SUPPORTED_CHAINS[ChainId]['purchaseMethod'];
-export type SourceChain = 'avalanche' | 'ethereum' | 'polygon' | 'solana' | 'stacks';
+export type SourceChain = 'avalanche' | 'ethereum' | 'polygon' | 'solana' | 'stacks' | 'starknet' | 'ton';
 
 export const getChainConfig = (chainId: number) => {
   return SUPPORTED_CHAINS[chainId as ChainId] || {

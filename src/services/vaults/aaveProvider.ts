@@ -154,11 +154,19 @@ export class AaveVaultProvider implements VaultProvider {
                 );
             }
 
-            // Note: Actual transaction execution requires a signer
-            // This is a read-only provider, so we return instructions for the frontend
+            // Return txData for client-side signing via the frontend hook (useVaultDeposit)
+            // The frontend will handle the approve + supply flow using wagmi
             return {
-                success: false,
-                error: 'Deposit requires wallet signature. Use web3Service.executeVaultDeposit() with user signer.',
+                success: true,
+                txData: JSON.stringify({
+                    pool: AAVE_CONFIG.BASE.POOL_ADDRESS,
+                    asset: AAVE_CONFIG.BASE.USDC_ADDRESS,
+                    amount: amountBigInt.toString(),
+                    onBehalfOf: userAddress,
+                    referralCode: 0,
+                    action: 'supply',
+                    aToken: AAVE_CONFIG.BASE.AUSDC_ADDRESS,
+                }),
                 vaultId: `aave:${AAVE_CONFIG.BASE.AUSDC_ADDRESS}`,
             };
         } catch (_error) {
@@ -194,10 +202,17 @@ export class AaveVaultProvider implements VaultProvider {
                 );
             }
 
-            // Note: Actual transaction execution requires a signer
+            // Return txData for client-side signing via the frontend hook (useVaultDeposit)
             return {
-                success: false,
-                error: 'Withdrawal requires wallet signature. Use web3Service.executeVaultWithdraw() with user signer.',
+                success: true,
+                txData: JSON.stringify({
+                    pool: AAVE_CONFIG.BASE.POOL_ADDRESS,
+                    asset: AAVE_CONFIG.BASE.USDC_ADDRESS,
+                    amount: amountBigInt.toString(),
+                    to: userAddress,
+                    action: 'withdraw',
+                }),
+                amountWithdrawn: amount,
             };
         } catch (_error) {
             if (_error instanceof VaultError) throw _error;
@@ -242,11 +257,26 @@ export class AaveVaultProvider implements VaultProvider {
         }
 
         try {
-            // APY queried from Aave protocol via Pool Data Provider
-            // Using default 4.5% APY for now (average historical rate)
-            const apy = 4.5;
+            // Fetch live APY from Aave protocol via Pool Data Provider
+            // Using Aave V3's getReserveData to get current liquidity rate
+            const POOL_DATA_PROVIDER = '0x7F23D86E20f13AF896E4A17c0Bc0c5D87A6c4bA7';
+            const DATA_PROVIDER_ABI = [
+                'function getReserveData(address asset) view returns (uint256 unbacked, uint256 accruedToTreasuryScaled, uint256 totalAToken, uint256 totalStableDebt, uint256 totalVariableDebt, uint256 liquidityRate, uint256 variableBorrowRate, uint256 stableBorrowRate, uint256 averageStableBorrowRate, uint256 liquidityIndex, uint256 variableBorrowIndex, uint40 lastUpdateTimestamp)'
+            ];
+            
+            const dataProvider = new ethers.Contract(
+                POOL_DATA_PROVIDER,
+                DATA_PROVIDER_ABI,
+                this.provider
+            );
+            
+            const reserveData = await dataProvider.getReserveData(AAVE_CONFIG.BASE.USDC_ADDRESS);
+            const liquidityRate = reserveData.liquidityRate; // Ray (27 decimals)
+            
+            // Convert liquidity rate to APY percentage
+            // liquidityRate is in ray (1e27), represents the annual rate
+            const apy = (Number(liquidityRate) / 1e25) * 100; // Convert to percentage
 
-            // Cache the result
             this.cachedAPY = {
                 value: apy,
                 timestamp: Date.now(),
@@ -254,8 +284,9 @@ export class AaveVaultProvider implements VaultProvider {
 
             return apy;
         } catch (_error) {
-            // Return cached value if available, otherwise default
-            return this.cachedAPY?.value ?? 0;
+            console.warn('[AaveVault] Failed to fetch live APY, using fallback:', _error);
+            // Return cached value if available, otherwise default (conservative 4.5%)
+            return this.cachedAPY?.value ?? 4.5;
         }
     }
 

@@ -27,10 +27,10 @@ export class OctantVaultProvider implements VaultProvider {
     private cachedAPY: { value: number; timestamp: number } | null = null;
     private readonly APY_CACHE_TTL = 5 * 60 * 1000;
 
-    // Use mock vault address for MVP
-    private readonly VAULT_ADDRESS = OCTANT_CONFIG.useMockVault 
-        ? 'mock:octant-usdc' 
-        : OCTANT_CONFIG.vaults.ethereumUsdcVault;
+    // Use configured vault address; falls back to mock for testing if address isn't deployed yet
+    private readonly VAULT_ADDRESS = (OCTANT_CONFIG.vaults.ethereumUsdcVault && OCTANT_CONFIG.vaults.ethereumUsdcVault !== '0x...')
+        ? OCTANT_CONFIG.vaults.ethereumUsdcVault
+        : 'mock:octant-usdc';
 
     async getBalance(userAddress: string): Promise<VaultBalance> {
         try {
@@ -77,8 +77,8 @@ export class OctantVaultProvider implements VaultProvider {
 
     async isHealthy(): Promise<boolean> {
         try {
-            // For mock vault, always healthy
-            if (OCTANT_CONFIG.useMockVault) return true;
+            // For mock/in-development vault, always healthy
+            if (this.VAULT_ADDRESS.startsWith('mock:')) return true;
             
             // For real vault, check if we can fetch vault info
             await octantVaultService.getVaultInfo(this.VAULT_ADDRESS);

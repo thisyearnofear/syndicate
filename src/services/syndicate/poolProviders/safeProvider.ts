@@ -36,12 +36,39 @@ export class SafePoolProvider implements PoolProvider {
         totalOwners: uniqueOwners.length,
       });
 
-      // Note: We can't actually deploy the Safe here because we need a wallet client
-      // The actual deployment will happen when the user creates the syndicate
-      // For now, store the configuration in metadata
-      
-      // Generate a deterministic address for demo/testing
-      // In production, this would be the actual Safe address after deployment
+      // If wallet client is provided, deploy the Safe on-chain immediately
+      if (config.walletClient) {
+        logger.info('Wallet client provided — deploying Safe on-chain');
+        const deployResult = await this.deploySafe(
+          uniqueOwners.map(o => o as Address),
+          threshold,
+          config.walletClient
+        );
+
+        if (!deployResult.success || !deployResult.safeAddress) {
+          return {
+            success: false,
+            poolAddress: '',
+            poolType: 'safe',
+            error: deployResult.error || 'Safe deployment failed',
+          };
+        }
+
+        return {
+          success: true,
+          poolAddress: deployResult.safeAddress,
+          poolType: 'safe',
+          txHash: deployResult.txHash,
+          metadata: {
+            owners: uniqueOwners,
+            threshold,
+            chainId: BASE_CHAIN_ID,
+            deployed: true,
+          },
+        };
+      }
+
+      // Without wallet client: generate deterministic address for preview/planning
       const saltNonce = BigInt(Date.now());
       const safeAddress = this.generateDeterministicAddress(
         config.coordinatorAddress,
@@ -57,7 +84,8 @@ export class SafePoolProvider implements PoolProvider {
           threshold,
           chainId: BASE_CHAIN_ID,
           saltNonce: saltNonce.toString(),
-          note: 'Safe will be deployed on-chain when first deposit is made',
+          requiresDeployment: true,
+          note: 'Safe needs on-chain deployment. Provide a walletClient to deploy automatically.',
         },
       };
     } catch (error) {
