@@ -23,9 +23,13 @@ export interface YieldStrategyConfig {
   icon: string;
   color: string;
   risk: 'Low' | 'Medium' | 'High';
+  networkStatus: string;
   isOctant?: boolean;
   isPaused?: boolean;
 }
+
+const IS_MAINNET = process.env.NEXT_PUBLIC_CHAIN_ENV === 'mainnet';
+const BASE_STATUS = IS_MAINNET ? 'Live on Base' : 'Testnet (Base Sepolia)';
 
 export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
   {
@@ -35,6 +39,7 @@ export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
     icon: '🏦',
     color: 'bg-gradient-to-br from-blue-500 to-cyan-400',
     risk: 'Low',
+    networkStatus: BASE_STATUS,
   },
   {
     id: 'morpho',
@@ -43,6 +48,7 @@ export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
     icon: '⚡',
     color: 'bg-gradient-to-br from-purple-500 to-pink-400',
     risk: 'Medium',
+    networkStatus: BASE_STATUS,
   },
   {
     id: 'spark',
@@ -51,6 +57,7 @@ export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
     icon: '✨',
     color: 'bg-gradient-to-br from-indigo-500 to-blue-400',
     risk: 'Low',
+    networkStatus: BASE_STATUS,
   },
   {
     id: 'pooltogether',
@@ -59,6 +66,7 @@ export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
     icon: '🎰',
     color: 'bg-gradient-to-br from-yellow-400 to-amber-600',
     risk: 'Low',
+    networkStatus: BASE_STATUS,
   },
   {
     id: 'octant',
@@ -67,6 +75,7 @@ export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
     icon: '🌍',
     color: 'bg-gradient-to-br from-green-500 to-emerald-400',
     risk: 'Low',
+    networkStatus: 'MVP Mock',
     isOctant: true,
   },
   {
@@ -76,6 +85,7 @@ export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
     icon: '🔀',
     color: 'bg-gradient-to-br from-indigo-500 to-purple-600',
     risk: 'Low',
+    networkStatus: 'Live Cross-Chain',
   },
   {
     id: 'fhenix',
@@ -84,6 +94,7 @@ export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
     icon: '🔐',
     color: 'bg-gradient-to-br from-violet-500 to-indigo-600',
     risk: 'Low',
+    networkStatus: IS_MAINNET ? 'Live on Base' : 'Testnet (Base Sepolia)',
   },
 ];
 

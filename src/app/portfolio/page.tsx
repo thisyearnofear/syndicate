@@ -28,6 +28,7 @@ import {
 import { Button } from '@/shared/components/ui/Button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { CompactCard } from '@/shared/components/premium/CompactLayout';
+import { AgentActivityPanel } from '@/components/automation/AgentActivityPanel';
 import { useUnifiedWallet, useUnifiedBridge } from '@/hooks';
 import { useFhenixPrivateVaultBalance } from '@/hooks/useFhenixPrivateVaultBalance';
 import { FhenixRevealStepper } from '@/components/fhenix/FhenixRevealStepper';
@@ -367,23 +368,27 @@ export default function PortfolioPage() {
           router.replace(`/portfolio?${params.toString()}`, { scroll: false });
         }} className="w-full">
           <TabsList className="w-full overflow-x-auto mb-8">
-            <TabsTrigger value="overview">
+            <TabsTrigger value="overview" aria-label="Overview">
               <ChartPie className="w-4 h-4" />
               <span className="hidden sm:inline">Overview</span>
+              <span className="sm:hidden text-[10px]">Oview</span>
             </TabsTrigger>
-            <TabsTrigger value="syndicates">
+            <TabsTrigger value="syndicates" aria-label="Syndicates">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Syndicates</span>
+              <span className="sm:hidden text-[10px]">Synd.</span>
               <span className="ml-1 text-xs opacity-60">({syndicates.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="vaults">
+            <TabsTrigger value="vaults" aria-label="Vaults">
               <Zap className="w-4 h-4" />
               <span className="hidden sm:inline">Vaults</span>
+              <span className="sm:hidden text-[10px]">Vaults</span>
               <span className="ml-1 text-xs opacity-60">({vaultPositions.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="activity">
+            <TabsTrigger value="activity" aria-label="Activity">
               <Ticket className="w-4 h-4" />
               <span className="hidden sm:inline">Activity</span>
+              <span className="sm:hidden text-[10px]">Act.</span>
               <span className="ml-1 text-xs opacity-60">({totalActivityCount})</span>
             </TabsTrigger>
           </TabsList>
@@ -629,6 +634,9 @@ export default function PortfolioPage() {
                 </div>
               </>
             )}
+
+            {/* AI Agent Activity */}
+            <AgentActivityPanel className="mb-8" />
 
             {/* CTA */}
             <CompactCard variant="glass" padding="md" hover={false} className="mt-8 rounded-2xl border border-white/20 text-center">

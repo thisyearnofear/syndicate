@@ -1,6 +1,7 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
 import { YieldAllocationControl } from './YieldAllocationControl';
+import { YieldCalculator } from './YieldCalculator';
 import { octantVaultService, type OctantVaultInfo } from '@/services/octantVaultService';
 import { vaultManager, type VaultInfo } from '@/services/vaults';
 import { TrendingUp, Globe, Zap } from 'lucide-react';
@@ -197,15 +198,7 @@ export function ImprovedYieldStrategySelector({
                       </div>
                     </div>
                     <p className="font-bold text-indigo-400">
-                      {strategy.id === 'aave' ? 'Live on Base Sepolia' : 
-                       strategy.id === 'morpho' ? 'Live on Base Sepolia' :
-                       strategy.id === 'spark' ? 'Live on Base Sepolia ✨' :
-                       strategy.id === 'pooltogether' ? 'Live on Base Sepolia' :
-                       strategy.id === 'octant' ? 'MVP Mock 🧪' :
-                       strategy.id === 'uniswap' ? 'Coming Soon 🚧' :
-                       strategy.id === 'lifiearn' ? 'Live Cross-Chain 🔀' :
-                       strategy.id === 'fhenix' ? 'Live on Base Sepolia 🔐' :
-                       'Coming Soon'}
+                      {strategy.networkStatus}
                     </p>
                     {compactCards ? (
                       <>
@@ -338,6 +331,20 @@ export function ImprovedYieldStrategySelector({
                     ticketsAllocation={ticketsAllocation}
                     causesAllocation={causesAllocation}
                     onAllocationChange={onAllocationChange}
+                  />
+                </div>
+              )}
+
+              {/* Yield Calculator */}
+              {!isLifiEarn && (
+                <div className="mt-6 pt-4 border-t border-white/10">
+                  <YieldCalculator 
+                    apy={
+                      selectedStrategyObj.isOctant 
+                        ? (octantVaults[0]?.apy || 0)
+                        : (getVaultInfo(selectedStrategyObj.id)?.currentAPY || 0)
+                    }
+                    vaultName={selectedStrategyObj.name}
                   />
                 </div>
               )}

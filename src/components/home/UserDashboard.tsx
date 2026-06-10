@@ -1,12 +1,26 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useUnifiedWallet, useTicketInfo } from "@/hooks";
 import { Button } from "@/shared/components/ui/Button";
 import Link from "next/link";
+import { Zap } from "lucide-react";
 
 export default function UserDashboard() {
   const { address } = useUnifiedWallet();
   const { userTicketInfo, claimWinnings, isClaimingWinnings } = useTicketInfo();
+  const [automationActive, setAutomationActive] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const stored = localStorage.getItem("syndicate_automation_task");
+      if (stored) {
+        const task = JSON.parse(stored);
+        if (task.status === "active") setAutomationActive(true);
+      }
+    } catch {}
+  }, []);
 
   if (!address) return null;
 
@@ -18,6 +32,24 @@ export default function UserDashboard() {
       <h2 className="text-2xl md:text-3xl font-bold text-white text-center">
         Your Dashboard
       </h2>
+
+      {/* Automation active banner */}
+      {automationActive && (
+        <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Zap className="w-5 h-5 text-indigo-400 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-indigo-300">Auto-purchase active</p>
+              <p className="text-xs text-gray-400">Recurring purchases are running in the background</p>
+            </div>
+          </div>
+          <Link href="/settings">
+            <Button variant="outline" size="sm" className="text-xs flex-shrink-0">
+              Manage
+            </Button>
+          </Link>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Tickets */}

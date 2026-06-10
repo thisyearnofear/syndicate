@@ -412,7 +412,7 @@ export function AutoPurchaseModal({
           errMsg.includes("not a function")
         ) {
           friendlyMessage =
-            "Auto-purchase requires MetaMask Flask with Advanced Permissions. Please install Flask from flask.metamask.io to use this feature.";
+            "Auto-purchase requires MetaMask with wallet spending controls enabled. Please update MetaMask or visit metamask.io to use this feature.";
         } else if (
           errMsg.includes("network") ||
           errMsg.includes("connection")
@@ -583,7 +583,7 @@ export function AutoPurchaseModal({
               variant="ghost"
               className="w-full text-gray-400 hover:text-white"
             >
-              Maybe Later
+              Skip for now — you can enable this anytime from Settings
             </Button>
           </div>
         )}
@@ -601,7 +601,7 @@ export function AutoPurchaseModal({
               </DialogTitle>
               <DialogDescription className="text-gray-300">
                 {isStacksWallet 
-                  ? 'Recurring authorization via SIP-018 on Stacks'
+                  ? 'Recurring wallet authorization on Stacks'
                   : strategyMeta.configureDescription}
               </DialogDescription>
             </DialogHeader>
@@ -793,10 +793,10 @@ export function AutoPurchaseModal({
                     <Zap className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-purple-300 mb-1">
-                        x402 Auto-Purchase on Stacks
+                        Automated Purchases on Stacks
                       </p>
                       <ul className="text-xs text-purple-200 space-y-1">
-                        <li>• Authorize recurring purchases with SIP-018 signature</li>
+                        <li>• Authorize recurring purchases with a one-time wallet signature</li>
                         <li>• No manual signing required after setup</li>
                         <li>• Works with USDCx or sBTC</li>
                       </ul>
@@ -888,7 +888,7 @@ export function AutoPurchaseModal({
               <div className="bg-slate-800/50 border border-slate-600 rounded-xl p-5 space-y-4">
                 <div className="flex justify-between items-center pb-3 border-b border-slate-700">
                   <h3 className="font-semibold text-lg">
-                    {isStacksWallet ? 'x402 Authorization Details' : 'Permission Details'}
+                    {isStacksWallet ? 'Recurring Authorization Details' : 'Permission Details'}
                   </h3>
                   <div className="px-3 py-1 bg-green-900/30 text-green-400 rounded-full text-xs font-medium">
                     Active
@@ -935,6 +935,25 @@ export function AutoPurchaseModal({
                       ~${config.totalAmount} USDC
                     </span>
                   </div>
+                </div>
+              </div>
+
+              {/* Spending cap visualization */}
+              <div className="bg-slate-800/50 border border-slate-600 rounded-lg p-4 space-y-3">
+                <p className="text-sm font-medium text-white">
+                  Monthly spending cap: ${config.totalAmount} USDC
+                </p>
+                <div className="relative h-2 bg-gray-700 rounded-full overflow-hidden">
+                  <div className="absolute top-0 left-0 h-full w-0 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full" />
+                </div>
+                <div className="flex justify-between text-xs text-gray-400">
+                  <span>$0 / ${config.totalAmount} used</span>
+                  <span>You control the cap</span>
+                </div>
+                <div className="flex flex-wrap gap-3 text-xs text-gray-400 pt-1">
+                  <span className="flex items-center gap-1"><span className="text-green-400">✓</span> You control the cap</span>
+                  <span className="flex items-center gap-1"><span className="text-green-400">✓</span> Revoke anytime</span>
+                  <span className="flex items-center gap-1"><span className="text-green-400">✓</span> Base only</span>
                 </div>
               </div>
 

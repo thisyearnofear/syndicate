@@ -9,6 +9,7 @@ import { useUserVaults } from '@/hooks/useUserVaults';
 import { useFhenixPrivateVaultBalance } from '@/hooks/useFhenixPrivateVaultBalance';
 import { FhenixRevealStepper } from '@/components/fhenix/FhenixRevealStepper';
 import { yieldToTicketsService } from '@/services/yieldToTicketsService';
+import { YieldPipelineViz } from '@/components/yield/YieldPipelineViz';
 import { Button } from '@/shared/components/ui/Button';
 import { Card } from '@/shared/components/ui/Card';
 import { Badge } from '@/shared/components/ui/Badge';
@@ -282,7 +283,16 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
             </div>
           </PuzzlePiece>
         </div>
-        
+
+        {/* Yield-to-Tickets Pipeline Visualization */}
+        {totalDeposited > 0 && weightedAPY > 0 && (
+          <YieldPipelineViz
+            depositAmount={totalDeposited}
+            apy={weightedAPY}
+            ticketPrice={1}
+          />
+        )}
+
         {/* Individual Vault Positions */}
         <div className="space-y-4">
           <h3 className="text-lg font-bold text-white">Your Vault Positions</h3>

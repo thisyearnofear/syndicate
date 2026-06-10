@@ -169,17 +169,17 @@ export function InfoTooltip({
 export function AdvancedPermissionsTooltip() {
   return (
     <InfoTooltip
-      title="What are Advanced Permissions?"
+      title="What is Secure Wallet Autopilot?"
       position="bottom"
       size="sm"
       content={
         <div className="space-y-2">
           <p>
-            Grant Syndicate permission to automatically buy lottery tickets on your behalf. You set the limit ($50/week or $200/month) and MetaMask enforces it.
+            Grant Syndicate permission to automatically buy lottery tickets on your behalf. You set the limit ($50/week or $200/month) and your wallet enforces it.
           </p>
           <p className="text-xs text-gray-400 mt-2">
-            ✓ You control the limit  
-            ✓ Revoke anytime  
+            ✓ You control the limit
+            ✓ Revoke anytime from Settings
             ✓ Only on Base mainnet
           </p>
         </div>
