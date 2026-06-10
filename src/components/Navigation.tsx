@@ -21,7 +21,7 @@ import { WalletType } from '@/domains/wallet/types';
 import WalletInfo from './wallet/WalletInfo';
 import UnifiedModal from './modal/UnifiedModal';
 import WalletConnectionOptions from './wallet/WalletConnectionOptions';
-import { Home, Users, TrendingUp, Menu, X, ArrowLeftRight, LayoutDashboard } from 'lucide-react';
+import { Home, Users, TrendingUp, Menu, X, ArrowLeftRight, LayoutDashboard, Settings } from 'lucide-react';
 
 interface NavigationProps {
     className?: string;
@@ -123,6 +123,12 @@ export default function Navigation({ className = '' }: NavigationProps) {
                 active: pathname === '/bridge',
             }]
             : []),
+        {
+            href: '/settings',
+            label: 'Settings',
+            icon: Settings,
+            active: pathname === '/settings',
+        },
     ];
 
     const visibleItems = navigationItems.filter(item =>

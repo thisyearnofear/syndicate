@@ -150,6 +150,7 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
   const [ptDepositAmount, setPtDepositAmount] = useState(10);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [purchaseMode, setPurchaseMode] = useState<'one-time' | 'auto'>('one-time');
   const [statusLinkCopied, setStatusLinkCopied] = useState(false);
   const [stacksToken, setStacksToken] = useState<'usdcx' | 'sbtc'>('usdcx');
   const [showAdvancedToken, setShowAdvancedToken] = useState(false);
@@ -167,7 +168,6 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
   const [hasExistingAllowance, setHasExistingAllowance] = useState<boolean | null>(null);
   const hasActivePermission = permissions.length > 0 && isSupported;
   const selectedProtocolCopy = PROTOCOL_COPY[selectedProtocol];
-
   // Check if user already has sufficient USDC allowance (skip approval warning if so)
   useEffect(() => {
     if (!isConnected || !address || walletType !== 'evm' || selectedProtocol !== 'megapot') {
@@ -420,35 +420,40 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
 
             {/* ===== MEGAPOT-ONLY SECTIONS (kept inline due to cross-chain complexity) ===== */}
             {selectedProtocol === 'megapot' && (<>
-              {/* Auto-purchase setup */}
-              {!hasActivePermission && isSupported && walletType === "evm" && (
-                <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-lg p-4 space-y-3">
-                  <div className="flex items-start gap-3">
-                    <Zap className="w-5 h-5 text-indigo-400 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-indigo-300 mb-1">Enable Auto-Purchase</p>
-                      <p className="text-xs text-gray-300">Set up automatic weekly or monthly public-play purchases using MetaMask Advanced Permissions. No signing required after setup.</p>
-                    </div>
+              <div className="flex bg-gray-800/50 p-1 rounded-lg">
+                <button
+                  onClick={() => setPurchaseMode('one-time')}
+                  className={`flex-1 py-2 text-xs font-medium rounded-md transition-colors ${purchaseMode === 'one-time' ? 'bg-gray-700 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                >
+                  One-Time Purchase
+                </button>
+                <button
+                  onClick={() => setPurchaseMode('auto')}
+                  className={`flex-1 py-2 text-xs font-medium rounded-md transition-colors ${purchaseMode === 'auto' ? 'bg-gray-700 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                >
+                  Auto-Purchase
+                </button>
+              </div>
+
+              {purchaseMode === 'auto' ? (
+                <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-lg p-6 space-y-4 text-center mt-2">
+                  <div className="w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <Zap className="w-6 h-6 text-indigo-400" />
                   </div>
-                  <Button variant="secondary" size="sm" className="w-full text-xs" onClick={() => setShowPermissionModal(true)}>
-                    <Zap className="w-3 h-3 mr-1" /> Set Up Auto-Purchase
+                  <div>
+                    <h3 className="text-lg font-bold text-white mb-2">Automate Your Play</h3>
+                    <p className="text-sm text-gray-300">
+                      {walletType === "stacks"
+                        ? "Set up automatic weekly or monthly public-play purchases on Stacks. Sign once — no manual signing after setup."
+                        : "Set up automatic weekly or monthly public-play purchases using Secure Wallet Autopilot. No signing required after setup."}
+                    </p>
+                  </div>
+                  <Button variant="default" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => setShowPermissionModal(true)}>
+                    Configure Auto-Purchase
                   </Button>
                 </div>
-              )}
-              {walletType === "stacks" && (
-                <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 space-y-3">
-                  <div className="flex items-start gap-3">
-                    <Zap className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-purple-300 mb-1">Enable x402 Auto-Purchase</p>
-                      <p className="text-xs text-gray-300">Set up automatic weekly or monthly public-play purchases on Stacks. Sign once with SIP-018 — no manual signing after setup.</p>
-                    </div>
-                  </div>
-                  <Button variant="secondary" size="sm" className="w-full text-xs" onClick={() => setShowPermissionModal(true)}>
-                    <Zap className="w-3 h-3 mr-1" /> Set Up x402 Auto-Purchase
-                  </Button>
-                </div>
-              )}
+              ) : (
+                <>
 
               {/* Cross-Chain Flow Indicator */}
               {showCrossChainUI && selectedChain && (
@@ -637,6 +642,8 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
                   {isPurchasing ? <><Loader className="w-4 h-4 mr-2 animate-spin" />Processing...</> : needsBaseAddress && !isValidBaseAddress ? <><Wallet className="w-4 h-4 mr-2" />Enter Base Address to Continue</> : `Buy ${ticketCount} Ticket${ticketCount > 1 ? 's' : ''} — $${ticketCount}`}
                 </Button>
               </div>
+              </>
+            )}
             </>)}
           </CompactStack>
         );
@@ -707,14 +714,14 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
             {/* Auto-purchase upsell */}
             {!hasActivePermission && isSupported && walletType === "evm" && (
               <div className="w-full bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 space-y-3">
-                <div><p className="text-sm font-medium text-blue-300 mb-1">Never sign again</p><p className="text-xs text-gray-300">Enable auto-purchase to buy tickets daily without signing. Powered by MetaMask Advanced Permissions.</p></div>
+                <div><p className="text-sm font-medium text-blue-300 mb-1">Never sign again</p><p className="text-xs text-gray-300">Enable auto-purchase to buy tickets daily without signing. Powered by your wallet's built-in spending controls.</p></div>
                 <Button variant="secondary" size="sm" className="w-full text-xs" onClick={() => setShowPermissionModal(true)}><Zap className="w-3 h-3 mr-1" /> Enable Auto-Purchase</Button>
               </div>
             )}
             {walletType === "stacks" && (
               <div className="w-full bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 space-y-3">
-                <div><p className="text-sm font-medium text-purple-300 mb-1">Automate your purchases</p><p className="text-xs text-gray-300">Set up recurring ticket purchases with x402. Sign once, buy tickets automatically every week or month.</p></div>
-                <Button variant="secondary" size="sm" className="w-full text-xs" onClick={() => setShowPermissionModal(true)}><Zap className="w-3 h-3 mr-1" /> Enable x402 Auto-Purchase</Button>
+                <div><p className="text-sm font-medium text-purple-300 mb-1">Automate your purchases</p><p className="text-xs text-gray-300">Set up recurring ticket purchases with a one-time wallet authorization. Sign once, buy tickets automatically every week or month.</p></div>
+                <Button variant="secondary" size="sm" className="w-full text-xs" onClick={() => setShowPermissionModal(true)}><Zap className="w-3 h-3 mr-1" /> Enable Auto-Purchase</Button>
               </div>
             )}
             <div className="flex gap-3 w-full">

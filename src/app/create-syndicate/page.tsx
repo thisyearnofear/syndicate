@@ -10,7 +10,8 @@ import {
   Shield,
   Vault,
   Coins,
-  Share2
+  Share2,
+  Info
 } from "lucide-react";
 import { CompactCard, CompactStack, CompactContainer, CompactSection } from '@/shared/components/premium/CompactLayout';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
@@ -382,7 +383,15 @@ export default function CreateSyndicatePage() {
                       <Shield className="w-4 h-4 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-bold text-white">Safe Multisig</h3>
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-bold text-white">Safe Multisig</h3>
+                        <div className="relative group">
+                          <Info className="w-4 h-4 text-gray-500 hover:text-blue-400 cursor-help" />
+                          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 bg-gray-800 text-xs text-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 text-center">
+                            A smart contract wallet requiring multiple team members to approve transactions.
+                          </div>
+                        </div>
+                      </div>
                       <p className="text-sm text-gray-400 mb-2">
                         Secure multisig wallet for team coordination
                       </p>
@@ -411,7 +420,15 @@ export default function CreateSyndicatePage() {
                       <Share2 className="w-4 h-4 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-bold text-white">0xSplits</h3>
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-bold text-white">0xSplits</h3>
+                        <div className="relative group">
+                          <Info className="w-4 h-4 text-gray-500 hover:text-green-400 cursor-help" />
+                          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 bg-gray-800 text-xs text-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 text-center">
+                            Automatically routes any received funds to members based on preset percentages.
+                          </div>
+                        </div>
+                      </div>
                       <p className="text-sm text-gray-400 mb-2">
                         Automatic proportional distribution
                       </p>
@@ -440,8 +457,14 @@ export default function CreateSyndicatePage() {
                       <Shield className="w-4 h-4 text-white" />
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
                         <h3 className="font-bold text-white">Fhenix Private Vault</h3>
+                        <div className="relative group">
+                          <Info className="w-4 h-4 text-gray-500 hover:text-amber-400 cursor-help" />
+                          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 p-2 bg-gray-800 text-xs text-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 text-center">
+                            Uses Fully Homomorphic Encryption (FHE) to keep deposit amounts completely private on-chain.
+                          </div>
+                        </div>
                         <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300">
                           Private by default
                         </span>
@@ -474,7 +497,15 @@ export default function CreateSyndicatePage() {
                       <Coins className="w-4 h-4 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-bold text-white">PoolTogether</h3>
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-bold text-white">PoolTogether</h3>
+                        <div className="relative group">
+                          <Info className="w-4 h-4 text-gray-500 hover:text-purple-400 cursor-help" />
+                          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 p-2 bg-gray-800 text-xs text-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 text-center">
+                            A no-loss savings protocol. Keep your principal safe while the yield buys syndicate tickets.
+                          </div>
+                        </div>
+                      </div>
                       <p className="text-sm text-gray-400 mb-2">
                         Prize-linked savings with delegation
                       </p>
@@ -534,25 +565,97 @@ export default function CreateSyndicatePage() {
             </CompactStack>
             
             <div className="flex gap-3 mt-6">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="flex-1"
                 onClick={() => setStep(3)}
               >
                 Back
               </Button>
-              <Button 
-                variant="default" 
+              <Button
+                variant="default"
                 className="flex-1 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600"
+                onClick={() => setStep(5)}
+                disabled={!formData.vaultStrategy}
+              >
+                Review & Create
+              </Button>
+            </div>
+          </CompactCard>
+        );
+        
+      case 5:
+        return (
+          <CompactCard variant="premium" padding="lg">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center">
+                <Target className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">Review & Create</h2>
+                <p className="text-gray-400">Confirm your syndicate configuration before creating on-chain</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-sm text-gray-400">Name</span>
+                <span className="text-sm font-medium text-white">{formData.name}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-sm text-gray-400">Governance</span>
+                <span className="text-sm font-medium text-white">
+                  {formData.governanceModel === 'leader' ? 'Leader-Guided' : formData.governanceModel === 'dao' ? 'DAO (Token Voting)' : 'Hybrid'}
+                </span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-sm text-gray-400">Pool Type</span>
+                <span className="text-sm font-medium text-white">
+                  {formData.poolType === 'safe' ? 'Safe Multisig' : formData.poolType === 'splits' ? '0xSplits' : formData.poolType === 'fhenix' ? 'Fhenix Private Vault' : 'PoolTogether'}
+                </span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-sm text-gray-400">Yield Strategy</span>
+                <span className="text-sm font-medium text-white capitalize">{formData.vaultStrategy ?? 'None'}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-sm text-gray-400">Allocation</span>
+                <span className="text-sm font-medium text-white">
+                  {formData.yieldToTicketsPercentage}% Tickets / {formData.yieldToCausesPercentage}% Causes
+                </span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-sm text-gray-400">Cause</span>
+                <span className="text-sm font-medium text-white">{formData.cause} ({formData.causePercentage}%)</span>
+              </div>
+            </div>
+
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-6">
+              <p className="text-xs text-amber-300">
+                This will create an on-chain pool. Pool type and governance model cannot be changed after creation.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setStep(4)}
+              >
+                Back
+              </Button>
+              <Button
+                variant="default"
+                className="flex-1 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600"
                 onClick={handleSubmit}
-                disabled={loading || !formData.vaultStrategy}
+                disabled={loading}
               >
                 {loading ? 'Creating...' : 'Create Syndicate'}
               </Button>
             </div>
           </CompactCard>
         );
-        
+
       default:
         return null;
     }
@@ -596,12 +699,19 @@ export default function CreateSyndicatePage() {
               }`}>
                 4
               </div>
+              <div className="h-1 w-4 bg-gray-600"></div>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                step >= 5 ? 'bg-emerald-500 text-white' : 'bg-gray-700 text-gray-400'
+              }`}>
+                5
+              </div>
             </div>
             <div className="flex justify-between text-xs text-gray-400">
               <span>Basic Info</span>
               <span>Governance</span>
               <span>Pool Type</span>
               <span>Yield</span>
+              <span>Review</span>
             </div>
           </div>
           

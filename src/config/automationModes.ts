@@ -67,7 +67,7 @@ export const AUTOMATION_MODE_META: Record<AutomationStrategyId, AutomationModeMe
     title: 'Yield Autopilot',
     shortDescription: 'Use vault yield, not principal, for capped public-play participation.',
     configureTitle: 'Configure Yield Autopilot',
-    configureDescription: 'Set a capped MetaMask permission for yield-funded ticket purchases.',
+    configureDescription: 'Set a spending cap for automatic yield-funded ticket purchases.',
     reviewTitle: 'Review Your Yield Autopilot',
     approvalDescriptionEvm: 'This permission lets Syndicate buy tickets only within your cap, target, and cadence. Principal remains in the selected vault.',
     approvalDescriptionStacks: 'Yield Autopilot is currently optimized for EVM vaults and MetaMask permissions.',

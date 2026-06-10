@@ -13,10 +13,11 @@ import { Button } from "@/shared/components/ui/Button";
 const SimplePurchaseModal = lazy(() => import("@/components/modal/SimplePurchaseModal"));
 const WalletConnectionManager = lazy(() => import("@/components/wallet/WalletConnectionManager"));
 
-// Home Components - Lazy load for better performance
+// Lazy load home components
 const PremiumJackpotDisplay = lazy(() => import("@/components/home/PremiumJackpotDisplay"));
 const MultiLotteryPrizes = lazy(() => import("@/components/home/MultiLotteryPrizes"));
 const UserDashboard = lazy(() => import("@/components/home/UserDashboard"));
+const OnboardingWizard = lazy(() => import("@/components/onboarding/OnboardingWizard"));
 
 export default function Home() {
   const router = useRouter();
@@ -24,12 +25,38 @@ export default function Home() {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [selectedProtocol, setSelectedProtocol] = useState<string | undefined>(undefined);
   const [isMounted, setIsMounted] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const { isConnected } = useUnifiedWallet();
 
   useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = localStorage.getItem('syndicate_onboarding');
+      if (!stored) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setShowOnboarding(true);
+      } else {
+        const state = JSON.parse(stored);
+        if (!state.completed) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setShowOnboarding(true);
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Trigger opening purchase modal when wallet connects and wallet modal was open
+  useEffect(() => {
+    if (isConnected && showWalletModal) {
+      setShowWalletModal(false);
+      setShowPurchaseModal(true);
+    }
+  }, [isConnected, showWalletModal]);
 
   const handlePurchaseAction = useCallback((protocol?: string) => {
     setSelectedProtocol(protocol === 'megapot' || protocol === 'pooltogether' ? protocol : undefined);
@@ -105,7 +132,7 @@ export default function Home() {
               variant="outline"
               size="lg"
               className="border-white/20 bg-white/5 text-white hover:bg-white/10 text-lg px-10 py-6"
-              onClick={handleCreatePrivateVault}
+              onClick={() => handlePurchaseAction('megapot')}
             >
               {publicPlayMode?.shortTitle ?? 'Public Play'}
             </Button>
@@ -326,12 +353,18 @@ export default function Home() {
         )}
       </Suspense>
 
-      {/* Floating CTA - Desktop only */}
+      {/* Onboarding Wizard for first-time visitors */}
+      {showOnboarding && (
+        <Suspense fallback={null}>
+          <OnboardingWizard />
+        </Suspense>
+      )}
+
       <div className="fixed bottom-8 right-8 z-40 hidden md:block">
         <Button
           variant="default"
           size="lg"
-          className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white shadow-2xl animate-float"
+          className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-2xl hover:shadow-emerald-500/30 border border-emerald-400/30 animate-float"
           onClick={handleCreatePrivateVault}
         >
           Launch Private Vault
