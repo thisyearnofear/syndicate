@@ -366,3 +366,57 @@ NEXT_PUBLIC_FHENIX_GOVERNOR_ADDRESS=0x...
 # USDC address on the selected Fhenix-enabled chain (optional override)
 NEXT_PUBLIC_FHENIX_USDC_ADDRESS=0x...
 ```
+
+---
+
+## Virtuals Protocol Integration (EconomyOS)
+
+Autonomous agent infrastructure for Syndicate's "Universal Agent." The agent operates as a first-class economic actor with its own identity, wallet, email, and reasoning layer.
+
+### Provisioned Agent
+| Field | Value |
+|-------|-------|
+| **Agent ID** | `019e9c04-81ea-77d9-88fd-39d58f3b3e4d` |
+| **Name** | Syndicate Strategist |
+| **Description** | Autonomous yield strategist for private vaults. Manages capital routing and reporting via FHE. |
+| **EVM Wallet (Base)** | `0xdc05f5aed7bedc9e5f37ca9f67d1cc19bf8f136a` |
+| **Solana Wallet** | `224gvDMTdg3cWVbZoXSsfJgBCGCrQs3HYk4cdE1kQwog` |
+| **Email** | `syndicate_strategist@agents.world` |
+| **Builder Code** | `bc_vpi176n4` |
+| **Wallet Provider** | Privy (embedded, EVM + Solana) |
+| **Role** | HYBRID (client + provider) |
+
+### Key Files
+| File | Purpose |
+|------|---------|
+| `src/services/automation/VirtualsService.ts` | Core service: agent identity, Venice AI reasoning, wallet txns, email reports |
+| `src/services/automation/AutomationOrchestrator.ts` | Orchestrator with `virtuals-acp` strategy (Reasoning → Execution → Reporting) |
+| `src/app/api/virtuals/email/route.ts` | Server-side proxy — shells out to `acp email compose` via `execFile` |
+| `src/app/api/virtuals/transaction/route.ts` | Server-side proxy — shells out to `acp wallet send-transaction` via `execFile` |
+
+### Automation Strategy: `virtuals-acp`
+The orchestrator's `executeVirtualsAgentTask()` runs a 3-step agentic lifecycle:
+1. **Reasoning** — Venice AI analyzes vault state and recommends strategy
+2. **Execution** — Agent wallet submits transaction (e.g., Megapot ticket purchase)
+3. **Reporting** — Agent email sends status update to syndicate members
+
+### Environment Variables
+```bash
+NEXT_PUBLIC_VIRTUALS_AGENT_ID=019e9c04-81ea-77d9-88fd-39d58f3b3e4d
+NEXT_PUBLIC_VIRTUALS_AGENT_WALLET=0xdc05f5aed7bedc9e5f37ca9f67d1cc19bf8f136a
+NEXT_PUBLIC_VIRTUALS_AGENT_SOL_WALLET=224gvDMTdg3cWVbZoXSsfJgBCGCrQs3HYk4cdE1kQwog
+NEXT_PUBLIC_VIRTUALS_AGENT_EMAIL=syndicate_strategist@agents.world
+NEXT_PUBLIC_VIRTUALS_BUILDER_CODE=bc_vpi176n4
+VIRTUALS_VENICE_API_KEY=  # Funded by Virtuals developer credits ($400k grant)
+ACP_BIN_PATH=acp           # Server-side path to acp CLI binary
+```
+
+### CLI Setup
+```bash
+npm install -g @virtuals-protocol/acp-cli
+acp configure          # Browser-based auth (Privy)
+acp agent create       # Provision agent identity
+acp agent whoami       # Verify active agent
+acp email provision    # Activate @agents.world email
+acp wallet balance --chain-id 8453  # Check Base wallet
+```
