@@ -71,10 +71,24 @@ The product is not just a wallet view. It is built for pooled action, group part
 ### 4. Usable finance
 Privacy is integrated into deposits, positions, and vault UX, not hidden behind technical abstractions alone.
 
-### 5. Permissioned automation
-Automation should be useful because it enforces user intent, not because it adds another bot. The clearest use case is yield-funded lottery participation with explicit limits: source vault, max spend, target contract, cadence, and expiry.
+### 5. Autonomous Economic Coordination
+Automation is handled by **Autonomous Agents (Virtuals Protocol)** that operate as first-class economic actors. These agents don't just execute code; they manage their own identities, communications, and budgets.
 
-Venice AI should stay in the advisory layer: recommend conservative policy settings and plain-language caveats, then let deterministic app logic and MetaMask permissions enforce the result.
+- **Reasoning**: Venice AI (via Virtuals credits) provides privacy-preserving, high-integrity advisory for vault strategies.
+- **Reporting**: Agents use their dedicated **Agent Email** to provide confidential status updates to syndicate members.
+- **Execution**: Deterministic app logic and Virtuals-managed wallets ensure group intent is enforced with institutional-grade security.
+
+### Virtuals Agent Infrastructure
+
+The **Syndicate Strategist** agent is a provisioned economic actor on the Virtuals Protocol (EconomyOS):
+
+- **Role**: Autonomous yield strategist — analyzes private vault positions, recommends capital routing, executes transactions, and reports to syndicate members.
+- **Identity**: Registered via Virtuals ACP with a dedicated Base wallet, Solana wallet, and `@agents.world` email.
+- **Reasoning Layer**: Venice AI (privacy-preserving inference, funded by Virtuals developer credits).
+- **Execution Layer**: Agent wallet submits transactions through server-side API proxies (`/api/virtuals/transaction`, `/api/virtuals/email`) with input validation and chain-ID allowlisting.
+- **Orchestration**: The `AutomationOrchestrator` runs a 3-step agentic lifecycle — Reasoning → Execution → Reporting — under the `virtuals-acp` strategy.
+
+This moves the product from "a dashboard with a bot" to "a private fund managed by an autonomous economic actor."
 
 ## Protocol Positioning Caveat
 Syndicate should integrate with established lottery and prize protocols instead of competing with their core mechanics.
@@ -153,4 +167,5 @@ After the repositioning pass, a first-time visitor should immediately understand
 2. Fhenix / private vault entry point
 3. Privacy UX system
 4. Invite and group coordination loop
-5. Supporting marketing content
+5. Virtuals agent activation (fund wallet, link Venice credits, first autonomous strategy run)
+6. Supporting marketing content

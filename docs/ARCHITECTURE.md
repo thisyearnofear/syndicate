@@ -213,11 +213,44 @@ Verify permissions → Execute on Megapot → Update database
 
 ### Agent Types
 
-| Type | Description | Trigger |
-|------|-------------|---------|
-| **Scheduled** | Recurring purchases (weekly/monthly) | Time-based |
-| **WDK AI Agent** | Autonomous reasoning based on yield/market | Time-based + AI decision |
-| **No-Loss** | Yield-funded tickets from PoolTogether/Spark | Yield accrual |
+| Type | Description | Trigger | Infrastructure |
+|------|-------------|---------|----------------|
+| **Scheduled** | Recurring purchases (weekly/monthly) | Time-based | Gelato / ERC-7715 |
+| **Autonomous** | Economic actor with identity & reasoning | Yield/Market | **Virtuals Protocol (ACP)** |
+| **No-Loss** | Yield-funded tickets | Yield accrual | PoolTogether / Spark |
+
+### Virtuals Protocol Integration (EconomyOS)
+
+Syndicate leverages the **Virtuals Protocol (acp-cli)** to transform the "Universal Agent" into a first-class economic actor.
+
+- **Identity**: Agents are registered on the ERC-8004 identity registry.
+- **Economic Primitives**: Agents possess their own dedicated EVM wallets, email inboxes (for member reporting), and virtual cards.
+- **Inference**: Powered by **Venice AI** via the Virtuals Developer Credits program ($400k builder grant).
+- **Communication**: Agent-to-user reporting via Agent Email and Agent-to-Agent coordination via ACP Marketplace.
+
+#### Provisioned Agent
+
+| Field | Value |
+|-------|-------|
+| Agent ID | `019e9c04-81ea-77d9-88fd-39d58f3b3e4d` |
+| EVM Wallet (Base) | `0xdc05f5aed7bedc9e5f37ca9f67d1cc19bf8f136a` |
+| Solana Wallet | `224gvDMTdg3cWVbZoXSsfJgBCGCrQs3HYk4cdE1kQwog` |
+| Email | `syndicate_strategist@agents.world` |
+| Builder Code | `bc_vpi176n4` |
+
+#### API Routes
+
+Server-side proxies shell out to the `acp` CLI via `execFile` (no shell injection). Both routes require `Authorization: Bearer <AUTOMATION_API_KEY>`.
+
+- **`POST /api/virtuals/email`** — Sends email via `acp email compose`. Input-validated (email format, length limits).
+- **`POST /api/virtuals/transaction`** — Broadcasts EVM transactions via `acp wallet send-transaction`. Validates address, chain ID (allowlist: Base, Ethereum, Arbitrum, Sepolia), calldata format, and wei value.
+
+#### Security
+
+- `ACP_BIN_PATH` env var controls the binary location (defaults to `acp` on PATH)
+- `execFile` (not `exec`) prevents shell injection — all args are passed as arrays
+- Chain ID allowlist prevents transactions on unexpected networks
+- The agent wallet is a Privy embedded wallet — no private key exists on the server
 
 ### Database Schema
 
@@ -241,8 +274,11 @@ CREATE TABLE auto_purchases (
 | Component | File |
 |-----------|------|
 | AutomationOrchestrator | `src/services/automation/AutomationOrchestrator.ts` |
+| VirtualsService | `src/services/automation/VirtualsService.ts` |
 | wdkService | `src/services/automation/wdkService.ts` |
 | useAutomation | `src/hooks/useAutomation.ts` |
+| Virtuals Email API | `src/app/api/virtuals/email/route.ts` |
+| Virtuals Tx API | `src/app/api/virtuals/transaction/route.ts` |
 
 ---
 

@@ -16,6 +16,7 @@
 
 import { Address, Hash, encodeFunctionData } from 'viem';
 import { TetherWDKService } from './wdkService';
+import { VirtualsService } from './VirtualsService';
 import { getERC7715Service } from './erc7715Service';
 import { referralManager } from '../referral/ReferralManager';
 import { poolTogetherService, POOLTOGETHER_VAULTS } from '../lotteries/PoolTogetherService';
@@ -25,7 +26,7 @@ import { MEGAPOT_V2_CONTRACTS } from '@/config/contracts';
 // TYPES
 // =============================================================================
 
-export type AutomationStrategy = 'scheduled' | 'autonomous' | 'stacks-x402' | 'no-loss';
+export type AutomationStrategy = 'scheduled' | 'autonomous' | 'stacks-x402' | 'no-loss' | 'virtuals-acp';
 
 export interface AutomationTask {
   id: string;
@@ -190,6 +191,8 @@ export class AutomationOrchestrator {
 
     try {
       switch (_task.strategy) {
+        case 'virtuals-acp':
+          return await this.executeVirtualsAgentTask(_task);
         case 'autonomous':
           return await this.executeAutonomousWDK(_task);
         case 'scheduled':
@@ -205,6 +208,40 @@ export class AutomationOrchestrator {
       console.error(`[Orchestrator] Task execution failed:`, _error);
       return { success: false, error: _error instanceof Error ? _error.message : String(_error) };
     }
+  }
+
+  /**
+   * STRATEGY: Virtuals Protocol (EconomyOS) Autonomous Agent
+   */
+  private async executeVirtualsAgentTask(_task: AutomationTask): Promise<ExecutionResult> {
+    // 1. REASONING (Powered by Venice AI credits)
+    const reasoning = await this.virtualsService.getVeniceReasoning(
+      `As a Syndicate Vault Strategist for user ${_task.userAddress}, evaluate the current strategy for ${_task.amount} ${(_task.tokenSymbol)}.`
+    );
+
+    // 2. EXECUTION (Via Virtuals Agent Wallet)
+    const result = await this.virtualsService.executeAgentTransaction({
+      to: MEGAPOT_V2_CONTRACTS.address as Address,
+      value: 0n,
+      data: encodeFunctionData({
+        abi: MEGAPOT_V2_CONTRACTS.abi,
+        functionName: 'buyTickets',
+        args: [[], _task.userAddress as Address, [], [], '0x0000000000000000000000000000000000000000000000000000000000000000'],
+      }),
+      chainId: 8453
+    });
+
+    // 3. REPORTING (Via Agent Email)
+    await this.virtualsService.sendEmailReport({
+      to: 'member@syndicate.xyz', // In production, this would be the user's registered email
+      subject: `Syndicate Strategy Update: ${_task.strategy}`,
+      body: `Execution Result: ${result.success ? 'Success' : 'Failed'}\nReasoning: ${reasoning}\nTx: ${result.txHash}`
+    });
+
+    return {
+      ...result,
+      reasoning
+    };
   }
 
   /**
