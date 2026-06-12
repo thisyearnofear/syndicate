@@ -251,6 +251,8 @@ export interface ProtocolHealth {
         lowSuccessRate?: boolean;
         lastSuccessTime?: Date | null;
         currentLoad?: 'low' | 'medium' | 'high';
+        disabled?: boolean;
+        reason?: string;
     };
 }
 
@@ -284,6 +286,7 @@ export enum BridgeErrorCode {
     INVALID_ADDRESS = 'INVALID_ADDRESS',
     UNSUPPORTED_ROUTE = 'UNSUPPORTED_ROUTE',
     PROTOCOL_UNAVAILABLE = 'PROTOCOL_UNAVAILABLE',
+    PROTOCOL_DISABLED = 'PROTOCOL_DISABLED',
     ATTESTATION_TIMEOUT = 'ATTESTATION_TIMEOUT',
     ATTESTATION_FAILED = 'ATTESTATION_FAILED',
     TRANSACTION_FAILED = 'TRANSACTION_FAILED',

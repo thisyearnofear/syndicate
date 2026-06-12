@@ -66,7 +66,8 @@ export class AutomationOrchestrator {
   private static instance: AutomationOrchestrator;
   private wdkService = TetherWDKService.getInstance();
   private erc7715Service = getERC7715Service();
-  
+  private virtualsService = VirtualsService.getInstance();
+
   // Gelato Configuration
   private gelatoApiKey = process.env.GELATO_API_KEY || '';
   private relayerAddress = (process.env.GELATO_RELAYER_ADDRESS ||
@@ -221,7 +222,7 @@ export class AutomationOrchestrator {
 
     // 2. EXECUTION (Via Virtuals Agent Wallet)
     const result = await this.virtualsService.executeAgentTransaction({
-      to: MEGAPOT_V2_CONTRACTS.address as Address,
+      to: MEGAPOT_V2_CONTRACTS.jackpot.address as Address,
       value: 0n,
       data: encodeFunctionData({
         abi: MEGAPOT_V2_CONTRACTS.abi,
