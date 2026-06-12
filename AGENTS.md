@@ -1,7 +1,7 @@
 # Syndicate App - Developer Guide
 
 ## Project Overview
-Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, Arbitrum), Solana, NEAR, Starknet, Stacks, and TON (Telegram Mini App).
+Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, Arbitrum), Solana, NEAR, Starknet, Stacks, and Telegram (TON bridge paused until the lottery contract is deployed).
 
 ## Core Architecture
 
@@ -18,7 +18,7 @@ Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, A
 | Solana | DeBridge DLN | Automated intent-based cross-chain USDC bridging |
 | NEAR | Intents + Chain Sigs | Cross-chain intents and MPC signatures |
 | Starknet | Starknet.js + Relayer | Production-ready USDC/STRK bridging to Base |
-| TON | CCTP + Telegram | USDT/TON → CCTP → Base, Telegram Mini App |
+| TON | Paused (CCTP + Telegram) | USDT/TON → CCTP → Base. Bridge refused at runtime until `TON_LOTTERY_CONTRACT` is configured. |
 
 ### Vault Providers (Yield Strategies)
 | Provider | Chain | Status | APY | Notes |
@@ -45,16 +45,16 @@ Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, A
 - `src/components/yield/YieldDashboard.tsx` - Multi-vault overview dashboard
 - `src/app/portfolio/page.tsx` - Unified portfolio (syndicates + vaults) with tabs
 - `src/app/yield-strategies/page.tsx` - Yield strategies page with 3 tabs
-- `src/services/automation/tonAgentService.ts` - TON Agentic Wallet + MCP tools
+- `src/services/automation/tonAgentService.ts` - TON Agentic Wallet + MCP tools (paused with the TON bridge)
 - `src/services/yieldToTicketsService.ts` - Orchestrator for Yield -> Ticket conversion
 - `src/components/modal/AutoPurchaseModal.tsx` - Auto-purchase + Yield upsell UI
 - `src/components/modal/SimplePurchaseModal.tsx` - Direct purchase + Yield upsell UI
 - `src/components/telegram/TelegramProvider.tsx` - Telegram WebApp SDK context
-- `src/components/telegram/TelegramPurchaseModal.tsx` - Telegram-optimized purchase UI
+- `src/components/telegram/TelegramPurchaseModal.tsx` - Telegram-optimized purchase UI (gated on `NEXT_PUBLIC_TON_LOTTERY_CONTRACT`)
 - `src/hooks/useTonConnect.ts` - TON Connect wallet hook
 - `src/hooks/useTonPay.ts` - TON Pay SDK payment hook
-- `contracts/ton/lottery.fc` - TON lottery payment receiver contract (FunC)
-- `contracts/ton/lottery.tact` - TON lottery contract (Tact, modern alternative)
+- `contracts/ton/lottery.fc` - TON lottery payment receiver contract (FunC, not yet deployed)
+- `contracts/ton/lottery.tact` - TON lottery contract (Tact, not yet deployed)
 - `src/app/create-syndicate/page.tsx` - 4-step syndicate creation with pool type selector
 - `src/hooks/useSyndicateDeposit.ts` - Multi-pool-type deposit hook with PoolTogether delegation
 
@@ -63,7 +63,7 @@ Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, A
 - **Styling**: Tailwind CSS
 - **EVM**: wagmi + RainbowKit
 - **Stacks**: @stacks/connect
-- **TON**: @tonconnect/ui-react + @twa-dev/sdk (Telegram Mini App)
+- **TON**: @tonconnect/ui-react + @twa-dev/sdk (Telegram Mini App) — bridge paused until `TON_LOTTERY_CONTRACT` is set
 - **State**: React Context + useState
 
 ## Common Commands

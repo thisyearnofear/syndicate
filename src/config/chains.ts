@@ -1,5 +1,15 @@
 // Single source of truth for all chain configurations
-// Base is the primary lottery chain, others enable cross-chain purchases
+// Base is the primary lottery chain, others enable cross-chain purchases.
+//
+// TON: marked `supported: false` at module load when TON_LOTTERY_CONTRACT is
+// not configured. The bridge protocol (src/services/bridges/protocols/ton.ts)
+// is independently paused in the same condition. To re-enable, deploy the TON
+// lottery contract and set the env var; no other code changes are required.
+const tonEnabled =
+  typeof process !== 'undefined' &&
+  typeof process.env.TON_LOTTERY_CONTRACT === 'string' &&
+  process.env.TON_LOTTERY_CONTRACT.trim().length > 0;
+
 export const SUPPORTED_CHAINS = {
   8453: {
     name: 'Base',
@@ -73,16 +83,18 @@ export const SUPPORTED_CHAINS = {
     sourceChain: 'starknet' as const,
     description: 'Buy Base tickets from Starknet'
   },
-  // TON blockchain
+  // TON blockchain (paused until the lottery contract is deployed)
   'ton': {
     name: 'TON',
     native: false,
-    supported: true,
+    supported: tonEnabled,
     icon: '💎',
     method: 'Cross-chain via CCTP Relay',
     purchaseMethod: 'cross-chain' as const,
     sourceChain: 'ton' as const,
-    description: 'Buy Base tickets from TON'
+    description: tonEnabled
+      ? 'Buy Base tickets from TON'
+      : 'TON bridge is paused (TON_LOTTERY_CONTRACT not configured)',
   },
 } as const;
 
