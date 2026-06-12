@@ -714,7 +714,7 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
             {/* Auto-purchase upsell */}
             {!hasActivePermission && isSupported && walletType === "evm" && (
               <div className="w-full bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 space-y-3">
-                <div><p className="text-sm font-medium text-blue-300 mb-1">Never sign again</p><p className="text-xs text-gray-300">Enable auto-purchase to buy tickets daily without signing. Powered by your wallet's built-in spending controls.</p></div>
+                <div><p className="text-sm font-medium text-blue-300 mb-1">Never sign again</p><p className="text-xs text-gray-300">Enable auto-purchase to buy tickets daily without signing. Powered by your wallet&apos;s built-in spending controls.</p></div>
                 <Button variant="secondary" size="sm" className="w-full text-xs" onClick={() => setShowPermissionModal(true)}><Zap className="w-3 h-3 mr-1" /> Enable Auto-Purchase</Button>
               </div>
             )}

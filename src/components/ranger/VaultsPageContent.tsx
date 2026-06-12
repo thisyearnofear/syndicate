@@ -50,8 +50,8 @@ const STATUS_MAP: Record<SupportedYieldStrategyId, { label: string; style: strin
 export function VaultsPageContent({
   showOperatorTools = false,
 }: VaultsPageContentProps) {
-  const yieldMode = getProductModeById('yield_to_tickets');
-  const privateVaultMode = getProductModeById('private_vaults');
+  const _yieldMode = getProductModeById('yield_to_tickets');
+  const _privateVaultMode = getProductModeById('private_vaults');
 
   return (
     <div className="min-h-screen bg-[#020617] bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.08),transparent_40%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.05),transparent_40%)] px-4 py-8">

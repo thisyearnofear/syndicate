@@ -17,7 +17,10 @@ export default function UserDashboard() {
       const stored = localStorage.getItem("syndicate_automation_task");
       if (stored) {
         const task = JSON.parse(stored);
-        if (task.status === "active") setAutomationActive(true);
+        if (task.status === "active") {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setAutomationActive(true);
+        }
       }
     } catch {}
   }, []);

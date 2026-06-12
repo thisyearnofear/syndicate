@@ -38,7 +38,10 @@ export default function Navigation({ className = '' }: NavigationProps) {
     const walletDetailsRef = useRef<HTMLDivElement>(null);
     const [mounted, setMounted] = useState(false);
 
-    useEffect(() => { setMounted(true); }, []);
+    useEffect(() => {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setMounted(true);
+    }, []);
 
     // Recalculate dropdown position when toggling
     const handleWalletStatusClick = useCallback(() => {

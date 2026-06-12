@@ -217,8 +217,12 @@ describe('AaveVaultProvider', () => {
 
             const result = await provider.deposit('100', USER_ADDRESS);
 
-            expect(result.success).toBe(false);
+            // The provider returns a txData payload for client-side signing
+            // (the actual approve+supply happens in the useVaultDeposit hook).
+            expect(result.success).toBe(true);
             expect(result.vaultId).toContain('aave:');
+            expect(result.txData).toBeDefined();
+            expect(JSON.parse(result.txData!).action).toBe('supply');
         });
 
         it('throws INSUFFICIENT_BALANCE when user lacks USDC', async () => {
@@ -252,8 +256,10 @@ describe('AaveVaultProvider', () => {
 
             const result = await provider.withdraw('100', USER_ADDRESS);
 
-            expect(result.success).toBe(false);
-            expect(result.error).toContain('wallet signature');
+            // Withdraw returns a txData payload for client-side signing
+            expect(result.success).toBe(true);
+            expect(result.txData).toBeDefined();
+            expect(JSON.parse(result.txData!).action).toBe('withdraw');
         });
 
         it('throws INSUFFICIENT_BALANCE when vault balance is too low', async () => {

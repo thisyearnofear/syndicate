@@ -73,7 +73,7 @@ export class DebridgeProtocol implements BridgeProtocol {
     }
 
     async bridge(params: BridgeParams): Promise<BridgeResult> {
-        const startTime = Date.now();
+        const _startTime = Date.now();
         const { amount, destinationAddress, onStatus, options } = params;
 
         try {
