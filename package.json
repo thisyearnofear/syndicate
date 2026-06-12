@@ -90,7 +90,7 @@
     "starknetkit": "3.4.3",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
-    "viem": "^2.41.2",
+    "viem": "^2.52.2",
     "wagmi": "^2.19.0"
   },
   "devDependencies": {
