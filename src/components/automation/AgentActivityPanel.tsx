@@ -52,7 +52,7 @@ export function AgentActivityPanel({ className = "" }: AgentActivityPanelProps) 
   const handleToggleAgent = () => {
     if (!activity) return;
     const newStatus = activity.status === "active" ? "paused" : "active";
-    const updated = { ...activity, status: newStatus };
+    const updated = { ...activity, status: newStatus as typeof activity.status };
     setActivity(updated);
     localStorage.setItem(AGENT_STORAGE_KEY, JSON.stringify(updated));
   };
@@ -173,7 +173,7 @@ export function AgentActivityPanel({ className = "" }: AgentActivityPanelProps) 
           </div>
         )}
 
-        {!activity?.lastReasoning && activity.recentTransactions.length === 0 && (
+        {!activity?.lastReasoning && activity?.recentTransactions.length === 0 && (
           <p className="text-xs text-gray-500 text-center py-2">
             The agent hasn&apos;t taken any actions yet. Enable auto-purchase to activate.
           </p>
