@@ -12,6 +12,7 @@
     "start": "next start",
     "start:dev": "NODE_ENV=development next start",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "analyze": "npx @next/bundle-analyzer",
     "perf": "npm run build && npm run analyze",
     "perf:monitor": "NEXT_PUBLIC_ENABLE_ANALYTICS=true npm run dev",
@@ -23,7 +24,13 @@
     "test:gelato-webhook": "tsx scripts/test-gelato-webhook.ts",
     "migrate:gelato": "tsx scripts/migrate-gelato-db.ts",
     "migrate": "tsx scripts/run-migration.ts",
-    "postinstall": "echo 'Skipping postinstall'"
+    "postinstall": "echo 'Skipping postinstall'",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix"
+    ]
   },
   "dependencies": {
     "@defuse-protocol/intents-sdk": "0.33.0",
@@ -103,8 +110,10 @@
     "eslint": "^9.26.0",
     "eslint-config-next": "16.2.6",
     "https-browserify": "1.0.0",
+    "husky": "^9.1.7",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
+    "lint-staged": "^15.2.10",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.18",
     "ts-jest": "^29.1.2",

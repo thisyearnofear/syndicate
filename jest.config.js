@@ -85,7 +85,7 @@ const customJestConfig = {
   
   // Transform ESM modules that Jest can't handle
   transformIgnorePatterns: [
-    '/node_modules/(?!(uuid|@solana|@coral-xyz|jayson)/)',
+    '/node_modules/(?!(uuid|@solana|@coral-xyz|jayson|viem|@viem|@wagmi)/)',
   ],
 };
 
