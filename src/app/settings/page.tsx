@@ -47,22 +47,31 @@ export default function SettingsPage() {
     if (typeof window === "undefined") return;
     try {
       const storedTask = localStorage.getItem(AUTOMATION_STORAGE_KEY);
-      if (storedTask) setAutomationTask(JSON.parse(storedTask));
+      if (storedTask) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setAutomationTask(JSON.parse(storedTask));
+      }
     } catch {}
     try {
       const storedAllocation = localStorage.getItem(ALLOCATION_STORAGE_KEY);
-      if (storedAllocation) setAllocation(JSON.parse(storedAllocation));
+      if (storedAllocation) {
+         
+        setAllocation(JSON.parse(storedAllocation));
+      }
     } catch {}
     try {
       const notifPref = localStorage.getItem("syndicate_notifications");
-      if (notifPref !== null) setNotificationsEnabled(JSON.parse(notifPref));
+      if (notifPref !== null) {
+         
+        setNotificationsEnabled(JSON.parse(notifPref));
+      }
     } catch {}
   }, []);
 
   const handleToggleAutomation = () => {
     if (!automationTask) return;
     const newStatus = automationTask.status === "active" ? "paused" : "active";
-    const updated = { ...automationTask, status: newStatus };
+    const updated = { ...automationTask, status: newStatus as typeof automationTask.status };
     setAutomationTask(updated);
     localStorage.setItem(AUTOMATION_STORAGE_KEY, JSON.stringify(updated));
   };

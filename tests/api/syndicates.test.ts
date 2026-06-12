@@ -29,6 +29,19 @@ jest.mock('@/domains/syndicate/services/syndicateService', () => ({
   },
 }));
 
+// Mock FHE chain to avoid viem ESM interop in the test environment
+jest.mock('@/services/fhe/fhenixChain', () => ({
+  FHENIX_VAULT_CHAIN: {
+    id: 84532,
+    name: 'Base Sepolia',
+    nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+    rpcUrls: { default: { http: ['https://sepolia.base.org'] } },
+  },
+  FHENIX_BASE_SEPOLIA_RPC_URL: 'https://sepolia.base.org',
+  FHENIX_VAULT_RPC_URL: 'https://sepolia.base.org',
+  fhenixHelium: { id: 8008135, name: 'Fhenix Helium' },
+}));
+
 // Mock base client (viem public client)
 jest.mock('@/lib/baseClient', () => ({
   basePublicClient: {

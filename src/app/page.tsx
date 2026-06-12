@@ -43,7 +43,7 @@ export default function Home() {
       } else {
         const state = JSON.parse(stored);
         if (!state.completed) {
-          // eslint-disable-next-line react-hooks/set-state-in-effect
+           
           setShowOnboarding(true);
         }
       }
@@ -53,7 +53,9 @@ export default function Home() {
   // Trigger opening purchase modal when wallet connects and wallet modal was open
   useEffect(() => {
     if (isConnected && showWalletModal) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowWalletModal(false);
+       
       setShowPurchaseModal(true);
     }
   }, [isConnected, showWalletModal]);

@@ -20,7 +20,7 @@ import { yieldToTicketsService, type AutoYieldStrategy } from '@/services/yieldT
 import { useToast } from '@/shared/components/ui/Toast';
 import { useWalletClient, usePublicClient } from 'wagmi';
 import { base } from 'wagmi/chains';
-import { parseUnits } from 'viem';
+import { parseUnits, type Address } from 'viem';
 import { Loader, Check, ExternalLink, Bell } from 'lucide-react';
 
 // USDC contract on Base
@@ -75,6 +75,10 @@ export function OctantYieldDashboard({
   } | null>(null);
   const [isSendingToCause, setIsSendingToCause] = useState(false);
   const [causeTransferTxHash, setCauseTransferTxHash] = useState<string | null>(null);
+
+  // Wagmi hooks for EVM transfers (hoisted above callbacks that close over them)
+  const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
 
   const resolvedVaultAddress = vaultAddress || (OCTANT_CONFIG.useMockVault 
     ? 'mock:octant-usdc' 
@@ -168,7 +172,7 @@ export function OctantYieldDashboard({
           })();
 
           if (txDataParsed && walletClient && publicClient) {
-            const userAddr = address as `0x${string}`;
+            const userAddr = address as Address;
             const protocol = result.pendingWithdrawalTx.protocol;
 
             // The txData format varies by vault provider:
@@ -293,10 +297,6 @@ export function OctantYieldDashboard({
       setIsProcessing(false);
     }
   }, [address]);
-
-  // Wagmi hooks for EVM transfers
-  const { data: walletClient } = useWalletClient();
-  const publicClient = usePublicClient();
 
   // Handle sending yield portion to causes
   const handleSendToCause = useCallback(async () => {

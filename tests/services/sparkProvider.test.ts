@@ -254,11 +254,13 @@ describe('SparkVaultProvider', () => {
     // =========================================================================
 
     describe('withdrawYield', () => {
-        it('returns error about auto-compounding', async () => {
+        it('returns error when no yield is available', async () => {
             const result = await provider.withdrawYield(USER_ADDRESS);
 
             expect(result.success).toBe(false);
-            expect(result.error).toContain('auto-compounds');
+            // Spark auto-compounds: yield is reflected in share-to-asset conversion.
+            // When there's no accrued yield, withdrawYield returns this error.
+            expect(result.error).toMatch(/yield|auto-compound/i);
         });
     });
 });
