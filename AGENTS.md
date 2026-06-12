@@ -1,5 +1,52 @@
 # Syndicate App - Developer Guide
 
+## Status
+
+This file is the source of truth for what is **actually shipped**. Items in the "Backlog" section below are aspirational and may diverge from the codebase. Update this table whenever you cut a release or add a new feature.
+
+### Component Status (as of last update)
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Aave V3 vault (Base) | Live | Live on-chain APY queries |
+| Morpho Blue vault (Base) | Live | Live on-chain APY queries |
+| Spark Protocol sUSDC (Base) | Live | No lockup, yield→tickets flow |
+| PoolTogether V5 vault (Base) | Live | TwabDelegator wiring in `useSyndicateDeposit` |
+| Octant V2 vault | Mock | Returns hardcoded ~10% APY, no live queries |
+| Uniswap V3 LP vault | Stub | Marked "Coming Soon" in code |
+| LI.FI Earn aggregator | Live | Real protocol, no public docs row |
+| Fhenix FHE vault (Base Sepolia) | Testnet | On-chain APY oracle, sealed-output balance reveal, 31 Foundry tests |
+| Fhenix Governor (Base Sepolia) | Testnet | 25 Foundry tests, sealed-output tally reveal |
+| Fhenix Helium (chain 8008135) | Sunset | Replaced by Nitrogen; not actively targeted |
+| Safe pool provider | Live | `safeService` + `safeProvider` |
+| 0xSplits pool provider | Live | `splitService` + `splitsProvider` |
+| PoolTogether pool provider | Live | `poolTogetherV5Provider` |
+| Fhenix pool provider | Testnet | Encrypted deposits, FHE permits |
+| TON bridge | Paused | Runtime refuses calls until `TON_LOTTERY_CONTRACT` is set; redeploy lottery.fc to re-enable |
+| Telegram Mini App | Paused | `TelegramPurchaseModal` is gated on `NEXT_PUBLIC_TON_LOTTERY_CONTRACT` |
+| Civic KYC / verification gate | Not built | See "Verification Gate (planned)" below |
+| Virtuals ACP automation | Bug fix only in Phase 0 | `executeVirtualsAgentTask` had a missing `this.virtualsService` field — fixed; full pipeline is Phase 3 work |
+| TON Agentic Wallet | Paused | `tonAgentService` is dormant; remove or re-enable with TON |
+| ERC-7715 scheduled purchases | Live | `erc7715Service` + `useERC7715` |
+| Tether WDK autonomous agent | Live | `wdkService` |
+| 1Shot relayer | Live | `oneShotRelayerService` for yield-autopilot |
+| Stacks x402 | Live | `useUnifiedPurchase` Stacks branch |
+| Foundry tests | Live | 31 (vault) + 25 (governor) tests run in CI |
+| Jest tests | Live | `npm test` runs in CI; coverage report missing |
+| CI (lint + typecheck + build + test + forge) | Live | `.github/workflows/ci.yml` and `test.yml` |
+
+### Backlog (planned, not yet built)
+
+- **Verification gate (Phase 2)**: thin internal `VerificationProvider` interface with a `NoopVerificationProvider` default and a `CivicVerificationProvider` slot. Civic SDK is intentionally **not** bundled unless the env is set. This will land before Civic is wired in.
+- **Virtuals ACP full pipeline (Phase 3)**: agent registry, persisted task state, monitored cron, agent status UI.
+- **Mainnet FHE (Phase 4)**: multisig coordinator, timelock on `setApy`, pausable contract, audit-ready natspec, then promote to Base mainnet.
+- **Fhenix Nitrogen support (Phase 4.1)**: re-evaluate when Nitrogen is GA; add a chain selector branch with the same pattern as Helium.
+- **TON re-enable (post-Phase 0)**: deploy `contracts/ton/lottery.fc` to TON mainnet, set `TON_LOTTERY_CONTRACT`, unpause.
+
+### How to keep this table honest
+
+When you finish a Phase, update the table. When you decide not to build a feature, move it to "Backlog" or remove it. When you discover a divergence (e.g. a feature documented here that the code does not implement), open a PR to remove the doc claim — not to match the code with the claim.
+
 ## Project Overview
 Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, Arbitrum), Solana, NEAR, Starknet, Stacks, and Telegram (TON bridge paused until the lottery contract is deployed).
 
@@ -95,29 +142,9 @@ npm run lint   # Lint (note: may have config issues)
 - **Lottery**: `SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3`
 - **Megapot V2 (Base)**: `0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2`
 
-## Civic Pass Integration (KYC/AML Compliance)
-Permissioned vault access via Civic's on-chain attestation system. KYC gates deposits, not prize claims.
+## Verification Gate (planned)
 
-### Civic Components
-| File | Purpose |
-|------|---------|
-| `src/components/civic/CivicGateProvider.tsx` | Wraps Solana components with Civic GatewayProvider. Supports 3 gatekeeper networks |
-| `src/hooks/useCivicGate.ts` | Hook exposing `isVerified`, `isChecking`, `isInProgress`, `isRejected`, `requestVerification`, `statusText` |
-| `src/components/civic/CivicVerificationGate.tsx` | Drop-in gate UI with shield icon, compliance badges (KYC, AML, Sanctions), privacy notice |
-
-### Gatekeeper Networks
-- **CAPTCHA** (default): Low-friction hackathon demo
-- **Liveness**: Anti-spoofing verification
-- **ID_VERIFICATION**: Full institutional KYC (production)
-
-### Configuration
-Switch from demo to production KYC in `CivicGateProvider.tsx`:
-```typescript
-const ACTIVE_NETWORK = CIVIC_NETWORKS.ID_VERIFICATION; // or CIVIC_NETWORKS.CAPTCHA
-```
-
-### Integration Points
-- **Yield Strategies page** (`src/app/yield-strategies/page.tsx`): Content wrapped in `CivicGateProvider`
+Civic KYC/AML is **not** currently integrated. The codebase has no `src/components/civic/`, no `useCivicGate` hook, and no `CivicGateProvider`. The next phase will land a thin internal verification gate (env-switchable, defaults to off) so a Civic provider can be plugged in later without a rewrite.
 
 ## Spark Protocol (Savings USDC) Deposit Flow
 Spark Protocol provides savings USDC (sUSDC) with the Sky Savings Rate on Base. No lockup required - yield accrues immediately.
@@ -189,7 +216,7 @@ Multi-chain syndicate pooling with three pool types for fund custody and prize d
 - AutoPurchaseModal shows different UI for Stacks (x402) vs EVM (ERC-7715)
 - Balance API supports EVM, Solana, NEAR, Starknet, Stacks address formats
 - Use `CONTRACTS` object from stacks.ts for contract addresses
-- **Civic**: Default gate is CAPTCHA for demos; switch to ID_VERIFICATION for production compliance
+- **Civic**: Not yet integrated. See "Verification Gate (planned)" above for the planned rollout.
 - **Spark Protocol**: No lockup; yield withdrawn automatically to purchase tickets
 - **Pool Types**: Pool type selection is in create-syndicate page step 3; badges shown on syndicate detail page
 
@@ -200,9 +227,9 @@ Multi-chain syndicate pooling with three pool types for fund custody and prize d
 Privacy-by-design layer using Fully Homomorphic Encryption (FHE) via Fhenix. Encrypts syndicate contribution amounts and vault positions so on-chain data reveals nothing about individual stakes. Targeting the Fhenix Buildathon (Wave 1 → Wave 5, deadline June 1 2026).
 
 ### Current Status (Implemented)
-- ✅ **Multi-network ready**: Base Sepolia (84532) or Fhenix Helium (8008135) selectable via `NEXT_PUBLIC_FHENIX_CHAIN_ID`
+- ✅ **Multi-network ready (Base Sepolia)**: Base Sepolia (84532) is the active FHE deployment target via `NEXT_PUBLIC_FHENIX_CHAIN_ID`. Fhenix Helium (8008135) is sunset in favor of Fhenix Nitrogen; re-evaluate when Nitrogen GA fits our use case.
   - Chain definition: `src/services/fhe/fhenixChain.ts`
-  - Wallet support: `src/config/wagmi.ts` includes `fhenixHelium`
+  - Wallet support: `src/config/wagmi.ts` includes `fhenixHelium` (kept for compatibility, no longer the recommended target)
 - ✅ **Encrypted deposits wired end-to-end**
   - Vault deposits: `useVaultDeposit` calls `depositEncrypted(...)`
   - Syndicate deposits: `useSyndicateDeposit` calls `depositEncrypted(...)` for `poolType === 'fhenix'`
@@ -251,7 +278,7 @@ Privacy-by-design layer using Fully Homomorphic Encryption (FHE) via Fhenix. Enc
 ### FHE Vault Provider
 | Provider | Chain | Status | APY | Notes |
 |----------|-------|--------|-----|-------|
-| **Fhenix FHE Vault** | Base Sepolia / Fhenix | ✅ Integrated | ~5.0% (on-chain oracle) | Encrypted deposits, permit-gated private balance reveal, APY oracle with provider fallback |
+| **Fhenix FHE Vault** | Base Sepolia | ✅ Integrated | ~5.0% (on-chain oracle) | Encrypted deposits, permit-gated private balance reveal, APY oracle with provider fallback |
 
 ### Core Principles for FHE Implementation
 - **ENHANCEMENT FIRST**: Extend existing `PoolProvider` and `VaultProvider` interfaces — no parallel stacks
@@ -350,12 +377,12 @@ Fhenix pool member lists are privacy-gated at the API layer:
 
 ### FHE Environment Variables
 ```bash
-# Select deployment target: Base Sepolia (84532) or Fhenix Helium (8008135)
+# Base Sepolia is the active FHE deployment target
 NEXT_PUBLIC_FHENIX_CHAIN_ID=84532
 
 # RPCs (server + client)
-FHENIX_RPC_URL=https://api.fhenix.zone
-NEXT_PUBLIC_FHENIX_RPC_URL=https://api.fhenix.zone
+FHENIX_RPC_URL=https://sepolia.base.org
+NEXT_PUBLIC_FHENIX_RPC_URL=https://sepolia.base.org
 
 # Deployed vault contract address (FhenixSyndicateVault)
 NEXT_PUBLIC_FHENIX_VAULT_ADDRESS=0x...
