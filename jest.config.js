@@ -141,6 +141,19 @@ const customJestConfig = {
       branches: 5,
       functions: 10,
     },
+    // ── Verification gate (Phase 2) ────────────────────────────────────────
+    './src/services/verification/noopProvider.ts': {
+      lines: 90,
+      statements: 90,
+      branches: 80,
+      functions: 100,
+    },
+    './src/services/verification/civicProvider.ts': {
+      lines: 80,
+      statements: 80,
+      branches: 65,
+      functions: 90,
+    },
   },
   
   // Verbose output
