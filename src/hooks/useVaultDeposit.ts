@@ -11,6 +11,7 @@ import { SPARK_CONFIG } from '@/services/vaults/sparkProvider';
 import type { VaultProtocol } from '@/services/vaults';
 import { approveAndDepositEncrypted, withdrawFromFhenixVault } from '@/services/fhe/fhenixActions';
 import { ERC20_ABI } from '@/abis/erc20';
+import { mapErrorMessage } from '@/services/vaults/router';
 
 type DepositStatus = 'idle' | 'checking_allowance' | 'approving' | 'building_tx' | 'depositing' | 'signing' | 'confirming' | 'complete' | 'error';
 
@@ -260,10 +261,9 @@ export function useVaultDeposit() {
         setState(prev => ({ ...prev, isDepositing: false, error: null, txHash: result.txHash ?? null, status: 'complete' }));
         return result;
       } catch (error) {
-        const msg = error instanceof Error ? error.message : 'Deposit failed';
-        const isCancel = msg.toLowerCase().includes('cancel') || msg.toLowerCase().includes('reject') || msg.toLowerCase().includes('denied');
-        setState({ isDepositing: false, error: isCancel ? 'Transaction cancelled' : msg, txHash: null, approveTxHash: null, status: 'error' });
-        return { success: false, error: isCancel ? 'Transaction cancelled' : msg };
+        const msg = mapErrorMessage(error, 'Deposit failed');
+        setState({ isDepositing: false, error: msg, txHash: null, approveTxHash: null, status: 'error' });
+        return { success: false, error: msg };
       }
     },
     [address, depositAave, depositERC4626, ensureFhenixChain, fhenixChainName, fhenixPublicClient, fhenixWalletClient, walletType],
