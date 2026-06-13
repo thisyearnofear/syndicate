@@ -67,9 +67,81 @@ const customJestConfig = {
     '!src/**/mock*.ts',
     '!src/**/__mocks__/**',
   ],
-  
+
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov'],
+
+  // Per-file coverage floors. Each value is the minimum acceptable
+  // coverage for that file. Currently calibrated ~5pp below the
+  // measured baseline so the gate passes today and fails on a real
+  // regression. Bump these up as more tests are added.
+  //
+  // Glob keys are matched against the absolute file path.
+  coverageThreshold: {
+    // ── Vault providers (Phase 1.3) ───────────────────────────────────────
+    './src/services/vaults/router.ts': {
+      lines: 90,
+      statements: 90,
+      branches: 90,
+      functions: 100,
+    },
+    './src/services/vaults/aaveProvider.ts': {
+      lines: 80,
+      statements: 80,
+      branches: 55,
+      functions: 90,
+    },
+    './src/services/vaults/morphoProvider.ts': {
+      lines: 80,
+      statements: 80,
+      branches: 55,
+      functions: 90,
+    },
+    './src/services/vaults/sparkProvider.ts': {
+      lines: 70,
+      statements: 70,
+      branches: 35,
+      functions: 85,
+    },
+    './src/services/vaults/poolTogetherProvider.ts': {
+      lines: 80,
+      statements: 80,
+      branches: 60,
+      functions: 85,
+    },
+    './src/services/vaults/fhenixProvider.ts': {
+      lines: 80,
+      statements: 80,
+      branches: 70,
+      functions: 85,
+    },
+    // ── Bridge protocols (Phase 1.4) ──────────────────────────────────────
+    './src/services/bridges/protocols/debridge.ts': {
+      lines: 85,
+      statements: 85,
+      branches: 65,
+      functions: 90,
+    },
+    './src/services/bridges/protocols/starknet.ts': {
+      lines: 90,
+      statements: 90,
+      branches: 80,
+      functions: 90,
+    },
+    './src/services/bridges/protocols/ton.ts': {
+      lines: 55,
+      statements: 55,
+      branches: 20,
+      functions: 55,
+    },
+    // ── Shared CCTP path (existing test) ──────────────────────────────────
+    './src/services/bridges/protocols/cctp.ts': {
+      lines: 10,
+      statements: 10,
+      branches: 5,
+      functions: 10,
+    },
+  },
   
   // Verbose output
   verbose: true,
