@@ -24,7 +24,7 @@ This file is the source of truth for what is **actually shipped**. Items in the 
 | Fhenix pool provider | Testnet | Encrypted deposits, FHE permits |
 | TON bridge | Paused | Runtime refuses calls until `TON_LOTTERY_CONTRACT` is set; redeploy lottery.fc to re-enable |
 | Telegram Mini App | Paused | `TelegramPurchaseModal` is gated on `NEXT_PUBLIC_TON_LOTTERY_CONTRACT` |
-| Civic KYC / verification gate | Not built | See "Verification Gate (planned)" below |
+| Civic KYC / verification gate | Live (noop) | `VerificationProvider` interface + `NoopVerificationProvider` default + `CivicVerificationProvider` stub. Civic SDK not bundled. Switch via `VERIFICATION_PROVIDER=civic` + `CIVIC_GATEWAY_KEY`. 27 tests. |
 | Virtuals ACP automation | Bug fix only in Phase 0 | `executeVirtualsAgentTask` had a missing `this.virtualsService` field — fixed; full pipeline is Phase 3 work |
 | TON Agentic Wallet | Paused | `tonAgentService` is dormant; remove or re-enable with TON |
 | ERC-7715 scheduled purchases | Live | `erc7715Service` + `useERC7715` |
@@ -37,10 +37,10 @@ This file is the source of truth for what is **actually shipped**. Items in the 
 
 ### Backlog (planned, not yet built)
 
-- **Verification gate (Phase 2)**: thin internal `VerificationProvider` interface with a `NoopVerificationProvider` default and a `CivicVerificationProvider` slot. Civic SDK is intentionally **not** bundled unless the env is set. This will land before Civic is wired in.
 - **Virtuals ACP full pipeline (Phase 3)**: agent registry, persisted task state, monitored cron, agent status UI.
 - **Mainnet FHE (Phase 4)**: multisig coordinator, timelock on `setApy`, pausable contract, audit-ready natspec, then promote to Base mainnet.
 - **Fhenix Nitrogen support (Phase 4.1)**: re-evaluate when Nitrogen is GA; add a chain selector branch with the same pattern as Helium.
+- **Civic SDK wire-up (post-Phase 2)**: bundle `@civic/gateway`, implement `CivicVerificationProvider.getStatus` against the real SDK, add UI to the gated flows (deposit/withdraw/bridge/purchase/create_syndicate) that surfaces `useVerificationGate`'s `allowed`/`reason` state.
 - **TON re-enable (post-Phase 0)**: deploy `contracts/ton/lottery.fc` to TON mainnet, set `TON_LOTTERY_CONTRACT`, unpause.
 
 ### How to keep this table honest
@@ -142,9 +142,39 @@ npm run lint   # Lint (note: may have config issues)
 - **Lottery**: `SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3`
 - **Megapot V2 (Base)**: `0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2`
 
-## Verification Gate (planned)
+## Verification Gate (Phase 2 — shipped)
 
-Civic KYC/AML is **not** currently integrated. The codebase has no `src/components/civic/`, no `useCivicGate` hook, and no `CivicGateProvider`. The next phase will land a thin internal verification gate (env-switchable, defaults to off) so a Civic provider can be plugged in later without a rewrite.
+A thin internal `VerificationProvider` interface with a `NoopVerificationProvider` default and a `CivicVerificationProvider` stub. Civic SDK is **not** bundled. The gate is env-switchable:
+
+- `VERIFICATION_PROVIDER=...` (default: `noop`)
+  - `noop` — `NoopVerificationProvider` always allows; no SDK, no network.
+  - `civic` — `CivicVerificationProvider` stub; requires `CIVIC_GATEWAY_KEY`. Throws on instantiation if missing. Bundle `@civic/gateway` and complete the stub in `civicProvider.ts` to wire it for real.
+- `CIVIC_CLIENT_ID=...` (optional)
+
+### Key files
+
+| File | Purpose |
+|------|---------|
+| `src/services/verification/types.ts` | `VerificationProvider` interface, `VerificationTier`, `VerificationStatus`, `VerificationRequirement`, `evaluateGate` helpers (`tierMeets`, `tierRank`) |
+| `src/services/verification/noopProvider.ts` | Default `NoopVerificationProvider` — always verified, no requirement |
+| `src/services/verification/civicProvider.ts` | `CivicVerificationProvider` stub; tier mapping via `kycTiers` (liveness $1k+, id_verification $10k+) |
+| `src/services/verification/index.ts` | `getVerificationProvider()` factory (env-switchable, cached) + `checkVerificationGate()` helper + `__resetVerificationProviderForTests()` |
+| `src/hooks/useVerificationGate.ts` | React hook: `useVerificationGate(context)` → `{ allowed, isLoading, reason, status, requirement, refresh }` |
+| `tests/services/verification.test.ts` | 27 tests: tier helpers, noop provider, civic stub, factory, evaluateGate, end-to-end |
+
+### Usage
+
+```ts
+// In any gated action
+const { allowed, reason, requirement } = useVerificationGate({ action: 'deposit', amount: 5_000 });
+if (!allowed) {
+  // Show the verification prompt with `reason` + `requirement.reason`
+}
+
+// Or, for service-level checks (e.g. API route guards)
+const result = await checkVerificationGate(userAddress, { action: 'deposit', amount: 50_000 });
+if (!result.allowed) throw new Error(result.reason);
+```
 
 ## Spark Protocol (Savings USDC) Deposit Flow
 Spark Protocol provides savings USDC (sUSDC) with the Sky Savings Rate on Base. No lockup required - yield accrues immediately.
