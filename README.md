@@ -11,6 +11,7 @@ Syndicate enables multi-chain lottery ticket purchases with integrated yield str
 | For | See |
 |-----|-----|
 | **Hackathon Strategy** | [docs/HACKATHON.md](./docs/HACKATHON.md) |
+| **MetaMask Smart Accounts x 1Shot x Venice Cook-Off (June 15 2026)** | [docs/METAMASK_COOKOFF_SUBMISSION.md](./docs/METAMASK_COOKOFF_SUBMISSION.md) · [docs/METAMASK_COOKOFF_DEMO_SCRIPT.md](./docs/METAMASK_COOKOFF_DEMO_SCRIPT.md) |
 | **Architecture & Dev** | [AGENTS.md](./AGENTS.md) · [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) |
 | **Bridge Protocols** | [docs/BRIDGES.md](./docs/BRIDGES.md) |
 | **Deployment** | [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) |
@@ -89,23 +90,21 @@ docs/
 
 ---
 
-## 🎯 Hackathon Strategy
+## 🎯 Active Hackathon Submission
 
-**Two opportunities** (both viable, different scopes):
+**MetaMask Smart Accounts Kit x 1Shot API x Venice AI Cook-Off** (June 15, 2026)
 
-### Ranger Build-a-Bear (April 21 deadline)
-- ✅ **Supported**: ERC-4626 compatible vaults (Aave, Morpho, Spark, PoolTogether)
-- ✅ **Path**: USDC lending allocator strategy (if 10%+ APY achievable)
-- 📖 **Details**: [docs/HACKATHON.md#ranger-build-a-bear](./docs/HACKATHON.md#ranger-build-a-bear)
+| Track Prize | Prize | Submission |
+|---|---|---|
+| Best x402 + ERC-7710 | $3,000 | [METAMASK_COOKOFF_SUBMISSION.md](./docs/METAMASK_COOKOFF_SUBMISSION.md#track-prize-mapping) |
+| Best Agent | $3,000 | [METAMASK_COOKOFF_SUBMISSION.md](./docs/METAMASK_COOKOFF_SUBMISSION.md#track-prize-mapping) |
+| Best A2A coordination | $3,000 | [METAMASK_COOKOFF_SUBMISSION.md](./docs/METAMASK_COOKOFF_SUBMISSION.md#track-prize-mapping) |
+| Best use of Venice AI | $3,000 | [METAMASK_COOKOFF_SUBMISSION.md](./docs/METAMASK_COOKOFF_SUBMISSION.md#track-prize-mapping) |
+| Best Use of 1Shot Permissionless Relayer | $1,000 USDC | [METAMASK_COOKOFF_SUBMISSION.md](./docs/METAMASK_COOKOFF_SUBMISSION.md#track-prize-mapping) |
 
-### Lifi DeFi Mullet
-- ✅ **Perfect fit**: Cross-chain bridges (8 protocols) + yield routing
-- ✅ **Novel**: TON/CCTP + Telegram Mini App integration
-- 📖 **Details**: [docs/HACKATHON.md#lifi-defi-mullet](./docs/HACKATHON.md#lifi-defi-mullet)
+Recording script: [docs/METAMASK_COOKOFF_DEMO_SCRIPT.md](./docs/METAMASK_COOKOFF_DEMO_SCRIPT.md)
 
-**Recommendation**: Lifi (higher confidence) + Ranger (if strategy is viable)
-
-**Full analysis**: [docs/HACKATHON.md](./docs/HACKATHON.md)
+**Other historical hackathons** (Ranger, Lifi, Fhenix): see [docs/HACKATHON.md](./docs/HACKATHON.md).
 
 ---
 
