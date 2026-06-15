@@ -36,6 +36,187 @@ type SyndicateFormData = {
   yieldToCausesPercentage: number;
 };
 
+// Human-readable labels keyed by the form's union types. Centralising these
+// keeps the live preview card, the persistent sidebar, and the review step
+// (Step 5) in lock-step — if a new pool type or governance model is added to
+// the union, the compiler will force a label entry here.
+const POOL_TYPE_LABELS: Record<PoolType, string> = {
+  safe: 'Safe Multisig',
+  splits: '0xSplits',
+  fhenix: 'Fhenix Private Vault',
+  pooltogether: 'PoolTogether',
+};
+
+const GOVERNANCE_MODEL_LABELS: Record<GovernanceModel, string> = {
+  leader: 'Leader-Guided',
+  dao: 'DAO-Governed',
+  hybrid: 'Hybrid',
+};
+
+const WIZARD_STEPS = [
+  { n: 1, label: 'Basic Information' },
+  { n: 2, label: 'Governance' },
+  { n: 3, label: 'Pool Type' },
+  { n: 4, label: 'Yield Strategy' },
+  { n: 5, label: 'Review & Create' },
+] as const;
+
+// One row in the persistent sidebar. `dim` is used to grey out fields the
+// user hasn't reached yet (e.g. on Step 2, "Governance" is dim because
+// the user is about to pick it).
+const Field = ({
+  label,
+  value,
+  dim,
+}: {
+  label: string;
+  value: string;
+  dim?: boolean;
+}) => (
+  <div className={dim ? 'opacity-50' : ''}>
+    <h4 className="text-xs text-gray-500 uppercase mb-1">{label}</h4>
+    <p className="text-white font-medium text-sm truncate" title={value}>
+      {value}
+    </p>
+  </div>
+);
+
+// Persistent right-hand sidebar for steps 2–5. Shows the choices the user
+// has made so far plus a progress checklist so the user always knows where
+// they are in the flow.
+const SummarySidebar = ({
+  data,
+  currentStep,
+}: {
+  data: SyndicateFormData;
+  currentStep: number;
+}) => (
+  <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700 h-full flex flex-col gap-6">
+    <div>
+      <h3 className="text-sm text-gray-400 mb-4 uppercase tracking-wider">
+        Active Configuration
+      </h3>
+      <div className="space-y-4">
+        <Field label="Syndicate" value={data.name || 'Not set'} dim={currentStep < 2} />
+        <Field label="Cause" value={data.cause || 'Not set'} dim={currentStep < 2} />
+        <Field
+          label="Governance"
+          value={GOVERNANCE_MODEL_LABELS[data.governanceModel]}
+          dim={currentStep < 3}
+        />
+        <Field
+          label="Pool Type"
+          value={POOL_TYPE_LABELS[data.poolType]}
+          dim={currentStep < 4}
+        />
+        <Field
+          label="Yield Strategy"
+          value={
+            data.vaultStrategy
+              ? data.vaultStrategy.charAt(0).toUpperCase() + data.vaultStrategy.slice(1)
+              : 'Not set'
+          }
+          dim={currentStep < 5}
+        />
+      </div>
+    </div>
+    <div className="pt-4 border-t border-gray-700">
+      <h4 className="text-xs text-gray-500 uppercase mb-3">Progress</h4>
+      <ol className="space-y-2">
+        {WIZARD_STEPS.map((s) => {
+          const completed = currentStep > s.n;
+          const active = currentStep === s.n;
+          return (
+            <li
+              key={s.n}
+              className={`flex items-center gap-2 text-xs ${
+                active
+                  ? 'text-white font-semibold'
+                  : completed
+                    ? 'text-emerald-400'
+                    : 'text-gray-500'
+              }`}
+            >
+              <span
+                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                  completed
+                    ? 'bg-emerald-500/20 text-emerald-300'
+                    : active
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-700 text-gray-400'
+                }`}
+              >
+                {completed ? '\u2713' : s.n}
+              </span>
+              {s.label}
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  </div>
+);
+
+// "How others will see this syndicate" preview card. Shown only on Step 1
+// (the form is open, so live updates are most useful there). On later steps
+// the user has already committed to their inputs and the SummarySidebar
+// takes over the right column.
+const SyndicatePreviewCard = ({ data }: { data: SyndicateFormData }) => (
+  <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700 h-full flex flex-col">
+    <h3 className="text-sm text-gray-400 mb-1 uppercase tracking-wider">
+      Live Preview
+    </h3>
+    <p className="text-xs text-gray-500 mb-4">
+      How your syndicate will appear to others.
+    </p>
+    <div className="rounded-xl border border-gray-700 bg-gradient-to-br from-slate-800 to-slate-900 p-5 flex-1">
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <h2 className="text-lg font-bold text-white break-words min-h-[1.75rem]">
+          {data.name || 'Your Syndicate'}
+        </h2>
+        <span className="shrink-0 rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-purple-300">
+          {POOL_TYPE_LABELS[data.poolType]}
+        </span>
+      </div>
+      <p className="text-sm text-gray-300 mb-4 break-words min-h-[3.5rem]">
+        {data.description ||
+          'Your description will appear here as you type...'}
+      </p>
+      <div className="space-y-2 pt-3 border-t border-gray-700">
+        <div className="flex justify-between text-xs">
+          <span className="text-gray-400">Cause</span>
+          <span
+            className="text-purple-300 font-medium truncate ml-2"
+            title={data.cause || '\u2014'}
+          >
+            {data.cause || '\u2014'}
+          </span>
+        </div>
+        <div className="flex justify-between text-xs">
+          <span className="text-gray-400">Governance</span>
+          <span className="text-white font-medium">
+            {GOVERNANCE_MODEL_LABELS[data.governanceModel]}
+          </span>
+        </div>
+        <div className="flex justify-between text-xs items-center">
+          <span className="text-gray-400">Allocation to cause</span>
+          <span className="text-emerald-400 font-bold">
+            {data.causePercentage}%
+          </span>
+        </div>
+        {data.vaultStrategy && (
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-400">Yield strategy</span>
+            <span className="text-white font-medium capitalize">
+              {data.vaultStrategy}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+);
+
 export default function CreateSyndicatePage() {
   const router = useRouter();
   const { address } = useUnifiedWallet();
@@ -721,7 +902,18 @@ export default function CreateSyndicatePage() {
             </div>
           )}
           
-          {renderStep()}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+            <div className="md:col-span-3">
+              {renderStep()}
+            </div>
+            <div className="md:col-span-2 hidden md:block">
+              {step === 1 ? (
+                <SyndicatePreviewCard data={formData} />
+              ) : (
+                <SummarySidebar data={formData} currentStep={step} />
+              )}
+            </div>
+          </div>
         </CompactSection>
       </CompactContainer>
     </div>
