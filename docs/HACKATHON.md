@@ -1,22 +1,26 @@
 # Hackathon Strategy - Consolidated Plan
 
-**Last Updated**: April 27, 2026  
-**Status**: Ready to execute
+**Last Updated**: June 15, 2026  
+**Active submission**: **MetaMask Smart Accounts Kit x 1Shot API x Venice AI Cook-Off** — see [METAMASK_COOKOFF_SUBMISSION.md](./METAMASK_COOKOFF_SUBMISSION.md) and [METAMASK_COOKOFF_DEMO_SCRIPT.md](./METAMASK_COOKOFF_DEMO_SCRIPT.md)
 
 ---
 
 ## Executive Summary
 
-| Hackathon | Alignment | Recommendation | Timeline |
-|-----------|-----------|---|---|
-| **Ranger Build-a-Bear** | Medium (⚠️ Constraints) | Optional | April 21 deadline (7 days) |
-| **Lifi DeFi Mullet** | Excellent ✅ | **RECOMMENDED** | Open submission |
-| **Fhenix Privacy-by-Design Buildathon** | Excellent ✅ | **RECOMMENDED** | Final submission June 1 |
-| **MetaMask Smart Accounts / 1Shot / Venice Cook-Off** | Strong if tightly scoped | Recommended as additive feature | June 15 submission |
+| Hackathon | Status | Recommendation | Timeline |
+|-----------|--------|---|---|
+| **MetaMask Smart Accounts / 1Shot / Venice Cook-Off** | **Active submission** | **SUBMIT** | June 15, 2026 |
+| **Fhenix Privacy-by-Design Buildathon** | Shipped (Wave 4) | Submitted | Final submission June 1 |
+| **Lifi DeFi Mullet** | Backlog | Optional | Open submission |
+| **Ranger Build-a-Bear** | Backlog | Skip | April 21 deadline (passed) |
 
 ---
 
-## MetaMask Smart Accounts / 1Shot / Venice Cook-Off
+## MetaMask Smart Accounts / 1Shot / Venice Cook-Off (active)
+
+### Submission artifacts
+- Track-prize mapping: [docs/METAMASK_COOKOFF_SUBMISSION.md](./METAMASK_COOKOFF_SUBMISSION.md)
+- 60-90s recording script (Base Sepolia): [docs/METAMASK_COOKOFF_DEMO_SCRIPT.md](./METAMASK_COOKOFF_DEMO_SCRIPT.md)
 
 ### Recommended wedge
 **Permissioned lottery autopilot**: users grant a tightly scoped MetaMask permission so an agent can use vault yield, not principal, to buy lottery tickets within explicit spend, target, and expiry limits.
@@ -32,23 +36,20 @@ Syndicate's unique layer is the **policy and coordination layer above those prot
 - Use MetaMask permissions so automation is capped, revocable, and target-specific.
 - Optionally relay eligible executions through 1Shot for gas/UX improvements.
 
-### Product caveat
-This is only worth building if it is additive to the existing app. Do not replace direct purchases, Megapot native subscriptions, PoolTogether deposits, or current x402 flows. Gate it behind feature flags and keep direct fallback paths.
-
 ### Suggested implementation scope
 1. Add a MetaMask permissioned path to the existing auto-purchase/yield-to-tickets flow. ✅
 2. Store delegation metadata separately from existing purchase authorizations. ✅
-3. Build an agent activity panel: yield detected, permission checked, purchase prepared, relayed/executed, confirmed. In progress: read-only planning, calldata prep, direct wallet execution, and 1Shot task status polling are wired.
-4. Use 1Shot only after the core permissioned purchase path works. The relayer path now targets 1Shot's permissionless JSON-RPC `relayer_send7710Transaction`; it requires MetaMask to return an ERC-7710 `permissionContext` for the stored policy.
+3. Build an agent activity panel: yield detected, permission checked, purchase prepared, relayed/executed, confirmed. ✅ (`PermissionedAutopilotPanel`)
+4. Use 1Shot only after the core permissioned purchase path works. The relayer path now targets 1Shot's permissionless JSON-RPC `relayer_send7710Transaction`; it requires MetaMask to return an ERC-7710 `permissionContext` for the stored policy. ✅
 5. Use Venice AI as a private policy advisor: suggest capped yield-only settings, then let the user review and approve through the normal MetaMask flow. ✅
 
-Feature flags:
+Feature flags (live in the running app):
 ```bash
-NEXT_PUBLIC_ENABLE_METAMASK_AGENT=true
-NEXT_PUBLIC_ENABLE_1SHOT_RELAYER=false
-NEXT_PUBLIC_ENABLE_VENICE_ADVISOR=false
-VENICE_API_KEY=...
-VENICE_MODEL=zai-org-glm-5-1
+NEXT_PUBLIC_ENABLE_ERC7715_SESSIONS=true   # already on
+NEXT_PUBLIC_ENABLE_METAMASK_AGENT=true     # added 2026-06-15
+NEXT_PUBLIC_ENABLE_1SHOT_RELAYER=true      # added 2026-06-15
+NEXT_PUBLIC_ENABLE_VENICE_ADVISOR=true     # added 2026-06-15
+VENICE_API_KEY=...                         # added 2026-06-15
 
 # Optional override. Defaults to 1Shot public mainnet/testnet relayer endpoints.
 ONESHOT_RELAYER_URL=https://relayer.1shotapi.com/relayers
