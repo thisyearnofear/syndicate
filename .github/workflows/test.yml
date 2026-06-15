@@ -24,7 +24,11 @@ jobs:
           submodules: recursive
 
       - name: Install Foundry
+        # Pinned to a specific release so the toolchain does not drift under us.
+        # See the matching comment in ci.yml for the full diagnosis.
         uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.2.3
 
       - name: Show Forge version
         run: |
