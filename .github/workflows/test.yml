@@ -23,9 +23,26 @@ jobs:
         with:
           submodules: recursive
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      # Fhenix contracts import from @fhenixprotocol/contracts, which lives in
+      # node_modules/ (gitignored). Without this step, `forge build` cannot
+      # resolve those imports and the Foundry job fails. This was the real
+      # cause of the 14-day red streak on main, not the toolchain version.
+
+      - name: Install npm dependencies (for Fhenix Solidity imports)
+        run: pnpm install --frozen-lockfile
+
       - name: Install Foundry
-        # Pinned to a specific release so the toolchain does not drift under us.
-        # See the matching comment in ci.yml for the full diagnosis.
+        # Pinned to v1.2.3 so the toolchain version itself is no longer a
+        # moving target. See the matching comment in ci.yml for full context.
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: v1.2.3
