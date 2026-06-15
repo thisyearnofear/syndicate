@@ -84,7 +84,15 @@ jobs:
           submodules: recursive
 
       - name: Install Foundry
+        # Pinned to a specific release so the toolchain does not drift under us.
+        # Without this, `foundry-rs/foundry-toolchain@v1` installs whatever stable
+        # build is current, which has caused every CI run since 2026-06-01 to fail
+        # the Foundry check (87/100 most recent runs red) even though the test
+        # code itself is sound (64/64 pass locally on main and on the suspect
+        # b8b9b1559 commit). See PR description for the full diagnosis.
         uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.2.3
 
       - name: forge fmt
         run: forge fmt --check
