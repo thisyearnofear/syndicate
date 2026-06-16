@@ -33,7 +33,7 @@ interface VeniceChatResponse {
 }
 
 const VENICE_CHAT_COMPLETIONS_URL = 'https://api.venice.ai/api/v1/chat/completions';
-const DEFAULT_MODEL = 'zai-org-glm-5-1';
+const DEFAULT_MODEL = 'grok-4-3';
 const ALLOWED_VAULTS = new Set<VaultProtocol>(['spark', 'fhenix', 'pooltogether']);
 
 class VenicePolicyAdvisor {
@@ -66,28 +66,31 @@ class VenicePolicyAdvisor {
         response_format: {
           type: 'json_schema',
           json_schema: {
-            type: 'object',
-            required: [
-              'sourceVault',
-              'mode',
-              'period',
-              'maxSpendUsdc',
-              'ticketCount',
-              'preservePrincipal',
-              'relayer',
-              'rationale',
-              'warnings',
-            ],
-            properties: {
-              sourceVault: { type: 'string', enum: ['spark', 'fhenix', 'pooltogether'] },
-              mode: { type: 'string', enum: ['yield-autopilot'] },
-              period: { type: 'string', enum: ['weekly', 'monthly'] },
-              maxSpendUsdc: { type: 'string' },
-              ticketCount: { type: 'number' },
-              preservePrincipal: { type: 'boolean' },
-              relayer: { type: 'string', enum: ['1shot'] },
-              rationale: { type: 'array', items: { type: 'string' } },
-              warnings: { type: 'array', items: { type: 'string' } },
+            name: 'syndicate_policy_recommendation',
+            schema: {
+              type: 'object',
+              required: [
+                'sourceVault',
+                'mode',
+                'period',
+                'maxSpendUsdc',
+                'ticketCount',
+                'preservePrincipal',
+                'relayer',
+                'rationale',
+                'warnings',
+              ],
+              properties: {
+                sourceVault: { type: 'string', enum: ['spark', 'fhenix', 'pooltogether'] },
+                mode: { type: 'string', enum: ['yield-autopilot'] },
+                period: { type: 'string', enum: ['weekly', 'monthly'] },
+                maxSpendUsdc: { type: 'string' },
+                ticketCount: { type: 'number' },
+                preservePrincipal: { type: 'boolean' },
+                relayer: { type: 'string', enum: ['1shot'] },
+                rationale: { type: 'array', items: { type: 'string' } },
+                warnings: { type: 'array', items: { type: 'string' } },
+              },
             },
           },
         },
