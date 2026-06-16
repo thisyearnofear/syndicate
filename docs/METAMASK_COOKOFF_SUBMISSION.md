@@ -108,7 +108,7 @@ For x402 specifically, we ship the Stacks path (`stacksX402Service.authorizeRecu
 
 1. Open the deployed app and connect MetaMask (no Flask).
 2. Switch to **Base Sepolia** (`84532`). Faucet USDC from the Base Sepolia USDC contract if needed.
-3. Open the **Auto-purchase** modal → select **Yield autopilot** → click **Suggest a policy** (Venice returns within ~2s) → confirm.
+3. Open the **Auto-purchase** modal → select **Yield autopilot** → click **Suggest a policy** (Venice returns within ~8s on cold start) → confirm.
 4. Click **Approve** → MetaMask Smart Accounts prompt appears → confirm.
 5. `PermissionedAutopilotPanel` shows the new policy with `MetaMask policy` badge.
 6. Hit **Execute** → 1Shot public endpoint is called → status updates to `submitted` → `confirmed` (or `reverted` if test USDC is insufficient, which is still a successful demo of the relayer path).
