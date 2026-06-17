@@ -144,6 +144,7 @@ export class StacksProtocol implements BridgeProtocol {
 
             // pending_signature is not a failure — don't penalise health metrics yet
             // Health is updated externally once the tx is confirmed via chainhook
+            this.successCount++;
 
             return result;
 

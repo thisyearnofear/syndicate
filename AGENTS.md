@@ -30,7 +30,7 @@ This file is the source of truth for what is **actually shipped**. Items in the 
 | ERC-7715 scheduled purchases | Live | `erc7715Service` + `useERC7715` |
 | Tether WDK autonomous agent | Live | `wdkService` |
 | 1Shot relayer | Live | `oneShotRelayerService` for yield-autopilot |
-| Stacks x402 | Live | `useUnifiedPurchase` Stacks branch |
+| Stacks x402 | Live (Phase: production hardening) | `useUnifiedPurchase` Stacks branch. **Audit pass complete (June 17 2026):** fixed the unreachable-signing bug (handler was returning `success: false` for `pending_signature`, bypassing the hook's signing branch — a Stacks user was never prompted to sign), the resume-path phantom-success (handler was returning `success: true, status: "bridging"` regardless of bridge result), and the protocol's health tracking (`successCount` was never incremented). 6 regression tests. **Remaining gaps:** the Stacks protocol's `bridge()` doesn't actually support resume (it returns a new `pending_signature` on every call; the chainhook handler drives the real status), the x402 service is placeholder code, no end-to-end test. |
 | Foundry tests | Live | 31 (vault) + 25 (governor) tests run in CI |
 | Jest tests | Live | `npm test` runs in CI; coverage report missing |
 | CI (lint + typecheck + build + test + forge) | Live | `.github/workflows/ci.yml` and `test.yml` |
