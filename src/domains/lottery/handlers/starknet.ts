@@ -37,6 +37,23 @@ export async function executeStarknetPurchase(
       if (resumeResult.success && resumeResult.status === "complete") {
         if (!resumeResult.destinationTxHash) {
           const purchaseResult = await web3Service.purchaseTickets(req.ticketCount);
+          // Honor the underlying purchaseTickets result. The prior code
+          // returned `success: true` with `destinationTxHash: undefined`
+          // when purchaseTickets failed, which left the UI in a permanent
+          // "still bridging" state. The bridge did succeed (USDC is on
+          // Base), so the caller can retry the purchase step from where
+          // it left off.
+          if (!purchaseResult.success || !purchaseResult.txHash) {
+            return {
+              success: false,
+              status: "complete",
+              sourceTxHash: resumeResult.sourceTxHash,
+              error: {
+                code: "PURCHASE_FAILED",
+                message: `Bridge completed but ticket purchase failed: ${purchaseResult.error || 'no tx hash'}. USDC is on Base — retry the purchase step.`,
+              },
+            };
+          }
           return {
             success: true,
             status: "complete",

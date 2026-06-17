@@ -37,6 +37,22 @@ export async function executeNEARPurchase(
       if (resumeResult.success && resumeResult.status === "complete") {
         if (!resumeResult.destinationTxHash) {
           const purchaseResult = await web3Service.purchaseTickets(req.ticketCount);
+          // Honor the underlying purchaseTickets result. The prior code
+          // returned `success: true` with `destinationTxHash: undefined`
+          // when purchaseTickets failed, which left the UI in a permanent
+          // "still bridging" state. The bridge did succeed (USDC is on
+          // Base), so the caller can retry the purchase step.
+          if (!purchaseResult.success || !purchaseResult.txHash) {
+            return {
+              success: false,
+              status: "complete",
+              sourceTxHash: resumeResult.sourceTxHash,
+              error: {
+                code: "PURCHASE_FAILED",
+                message: `Bridge completed but ticket purchase failed: ${purchaseResult.error || 'no tx hash'}. USDC is on Base — retry the purchase step.`,
+              },
+            };
+          }
           return {
             success: true,
             status: "complete",
@@ -104,11 +120,19 @@ export async function executeNEARPurchase(
 
     const purchaseResult = await web3Service.purchaseTickets(req.ticketCount);
     if (!purchaseResult.success || !purchaseResult.txHash) {
+      // The prior code returned `success: true` here when the purchase
+      // step failed — which left the UI in a permanent "still bridging"
+      // state and made the user think tickets were being bought when
+      // they weren't. Bridge did succeed, so the caller can retry.
       return {
-        success: true,
+        success: false,
         status: "bridging",
         sourceTxHash: result.sourceTxHash,
         bridgeId: result.bridgeId,
+        error: {
+          code: "PURCHASE_FAILED",
+          message: `Bridge completed but ticket purchase failed: ${purchaseResult.error || 'no tx hash'}. USDC is on Base — retry the purchase step.`,
+        },
       };
     }
 
