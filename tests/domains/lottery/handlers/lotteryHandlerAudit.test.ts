@@ -60,7 +60,7 @@ jest.mock('@/lib/db/repositories/purchaseStatusRepository', () => ({
 // Helpers
 // ---------------------------------------------------------------------------
 
-const RESUME_REQ = {
+const RESUME_REQ_LOTTERY = {
     chain: 'starknet' as const,
     mode: 'direct' as const,
     userAddress: '0x1111111111111111111111111111111111111111',
@@ -71,7 +71,7 @@ const RESUME_REQ = {
     },
 };
 
-const NON_RESUME_REQ = {
+const NON_RESUME_REQ_LOTTERY = {
     chain: 'near' as const,
     mode: 'direct' as const,
     userAddress: '0x1111111111111111111111111111111111111111',
@@ -123,7 +123,7 @@ describe('executeStarknetPurchase — resume path phantom-success', () => {
         });
 
         const { executeStarknetPurchase } = await import('@/domains/lottery/handlers/starknet');
-        const result = await executeStarknetPurchase(RESUME_REQ);
+        const result = await executeStarknetPurchase(RESUME_REQ_LOTTERY);
 
         expect(result.success).toBe(false);
         expect(result.error).toBeDefined();
@@ -146,7 +146,7 @@ describe('executeStarknetPurchase — resume path phantom-success', () => {
         });
 
         const { executeStarknetPurchase } = await import('@/domains/lottery/handlers/starknet');
-        const result = await executeStarknetPurchase(RESUME_REQ);
+        const result = await executeStarknetPurchase(RESUME_REQ_LOTTERY);
 
         expect(result.success).toBe(true);
         expect(result.destinationTxHash).toBe('0xPURCHASE');
@@ -172,7 +172,7 @@ describe('executeNEARPurchase — phantom-success in both paths', () => {
         });
 
         const { executeNEARPurchase } = await import('@/domains/lottery/handlers/near');
-        const result = await executeNEARPurchase(RESUME_REQ);
+        const result = await executeNEARPurchase(RESUME_REQ_LOTTERY);
 
         expect(result.success).toBe(false);
         expect(result.error?.code).toBe('PURCHASE_FAILED');
@@ -197,7 +197,7 @@ describe('executeNEARPurchase — phantom-success in both paths', () => {
         });
 
         const { executeNEARPurchase } = await import('@/domains/lottery/handlers/near');
-        const result = await executeNEARPurchase(NON_RESUME_REQ);
+        const result = await executeNEARPurchase(NON_RESUME_REQ_LOTTERY);
 
         expect(result.success).toBe(false);
         expect(result.error?.code).toBe('PURCHASE_FAILED');
@@ -221,7 +221,7 @@ describe('executeNEARPurchase — phantom-success in both paths', () => {
         });
 
         const { executeNEARPurchase } = await import('@/domains/lottery/handlers/near');
-        const result = await executeNEARPurchase(NON_RESUME_REQ);
+        const result = await executeNEARPurchase(NON_RESUME_REQ_LOTTERY);
 
         expect(result.success).toBe(true);
         expect(result.destinationTxHash).toBe('0xPURCHASE');

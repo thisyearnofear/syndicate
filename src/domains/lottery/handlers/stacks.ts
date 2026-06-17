@@ -44,6 +44,29 @@ export async function executeStacksPurchase(
         };
       }
 
+      // If the bridge resume explicitly failed, surface it. The prior
+      // code returned `success: true, status: "bridging"` regardless of
+      // the bridge's actual result — which left the UI in a permanent
+      // "still bridging" state when the bridge API was down or the
+      // bridgeId was unknown.
+      if (!resumeResult.success) {
+        return {
+          success: false,
+          status: "bridging",
+          sourceTxHash: req.resume.sourceTxHash,
+          bridgeId: req.resume.bridgeId,
+          error: {
+            code: "STACKS_ERROR",
+            message: resumeResult.error
+              ? (typeof resumeResult.error === 'string' ? resumeResult.error : String(resumeResult.error))
+              : "Stacks bridge resume failed",
+          },
+        };
+      }
+
+      // Bridge succeeded but still in progress (e.g. waiting for chainhook
+      // to confirm the Stacks tx, or for CCTP/relayer to deliver on Base).
+      // Keep polling — the chainhook handler will update the status row.
       return {
         success: true,
         status: "bridging",
@@ -77,20 +100,33 @@ export async function executeStacksPurchase(
       tokenAddress,
     });
 
-    if (!result.success) {
-      return errorResult("STACKS_ERROR", result.error, "Stacks purchase failed");
-    }
-
+    // Check for pending_signature FIRST. The Stacks protocol returns
+    // `success: false` with `status: "pending_signature"` (it's waiting for
+    // the user to sign), so the general `!result.success` failure check
+    // would catch it and short-circuit to errorResult before we get a
+    // chance to hand the walletAction to the user.
     if (result.status === "pending_signature") {
+      // Match the Solana pattern: return `success: true` with status
+      // "pending_signature" so the `useUnifiedPurchase` hook enters its
+      // wallet-signing branch. The prior code returned `success: false`
+      // here, which made the entire Stacks signing path unreachable —
+      // the user would never get prompted to sign with Leather/Xverse.
+      // The hook checks `if (result.success && result.status === 'pending_signature')`
+      // before entering the signing flow, so a `success: false` result
+      // bypasses the sign step entirely and the user is stuck.
       if (result.bridgeId && result.sourceTxHash) {
         savePendingPurchase(result.bridgeId, result.sourceTxHash, "stacks");
       }
       return {
-        success: false,
+        success: true,
         status: "pending_signature",
         bridgeId: result.bridgeId,
         details: result.details,
       };
+    }
+
+    if (!result.success) {
+      return errorResult("STACKS_ERROR", result.error, "Stacks purchase failed");
     }
 
     return {
