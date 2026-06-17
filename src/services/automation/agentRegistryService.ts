@@ -15,7 +15,7 @@
 
 import { Address } from 'viem';
 
-export type AgentType = 'scheduled' | 'autonomous' | 'stacks-x402' | 'ton-agentic';
+export type AgentType = 'scheduled' | 'autonomous' | 'stacks-x402' | 'ton-agentic' | 'virtuals-acp';
 
 export interface AgentStatus {
   id: string;
@@ -77,6 +77,10 @@ export class AgentRegistryService {
     // 6. Check TON Agent (Agentic Wallet)
     const tonAgent = await this.getTonAgent(_userAddress);
     if (tonAgent) agents.push(tonAgent);
+
+    // 7. Check Virtuals ACP Agent (Syndicate Strategist)
+    const virtualsAgent = await this.getVirtualsAgent(_userAddress);
+    if (virtualsAgent) agents.push(virtualsAgent);
 
     return agents;
   }
@@ -232,6 +236,55 @@ export class AgentRegistryService {
         lastExecution: config.isEnabled ? config.activatedAt : undefined,
         nextExecution: config.isEnabled ? Date.now() + 7 * 24 * 60 * 60 * 1000 : undefined,
         lastReasoning: config.isEnabled ? 'Monitoring TON wallet for yield accrual. Ready to auto-purchase tickets.' : undefined,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Virtuals ACP agent (Syndicate Strategist) — the autonomous EconomyOS
+   * agent. Reflects the provisioned agent from `NEXT_PUBLIC_VIRTUALS_AGENT_ID`
+   * plus persisted cron-driven task state. When the agent is unconfigured
+   * (no env vars), this returns null and the registry omits it.
+   */
+  private async getVirtualsAgent(_userAddress: string): Promise<AgentStatus | null> {
+    try {
+      const agentId = typeof process !== 'undefined'
+        ? (process.env.NEXT_PUBLIC_VIRTUALS_AGENT_ID ?? '')
+        : '';
+      const agentWallet = typeof process !== 'undefined'
+        ? (process.env.NEXT_PUBLIC_VIRTUALS_AGENT_WALLET ?? '')
+        : '';
+      if (!agentId || !agentWallet) return null;
+
+      // Task persistence is server-side (Postgres). In the browser we can
+      // only show that the agent is provisioned and whether the user has
+      // opted in via localStorage.
+      const isEnabled = typeof window !== 'undefined'
+        && localStorage.getItem('syndicate_virtuals_enabled') === 'true';
+      const configStr = typeof window !== 'undefined'
+        ? localStorage.getItem('syndicate_virtuals_config')
+        : null;
+      const config = configStr ? JSON.parse(configStr) : null;
+
+      return {
+        id: `virtuals-${agentId.slice(0, 8)}`,
+        type: 'virtuals-acp',
+        name: 'Syndicate Strategist (Virtuals)',
+        description: 'Autonomous yield strategist for private vaults. Venice AI reasoning → agent wallet execution → email report. Powered by Virtuals EconomyOS.',
+        isEnabled,
+        status: isEnabled ? 'active' : 'inactive',
+        tokenSymbol: 'USDC',
+        tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+        chainName: 'Base',
+        frequency: config?.frequency || 'daily',
+        lastExecution: isEnabled && config ? config.activatedAt : undefined,
+        nextExecution: isEnabled ? Date.now() + 24 * 60 * 60 * 1000 : undefined,
+        lastReasoning: isEnabled
+          ? 'Venice AI is monitoring vault yield. Next review window: 24h.'
+          : undefined,
+        address: agentWallet as Address,
       };
     } catch {
       return null;
