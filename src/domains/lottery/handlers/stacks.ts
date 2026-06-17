@@ -14,6 +14,7 @@ import {
   errorResult,
   savePendingPurchase,
 } from "../utils/purchaseUtils";
+import { mapStacksError } from "../utils/mapStacksError";
 
 export async function executeStacksPurchase(
   req: PurchaseRequest,
@@ -136,6 +137,16 @@ export async function executeStacksPurchase(
       destinationTxHash: result.destinationTxHash,
     };
   } catch (error) {
-    return errorResult("STACKS_ERROR", error, "Stacks purchase failed");
+    // Use the Stacks-specific error mapper so the user sees a clear
+    // message (e.g. "Insufficient USDCx balance", "Stacks network
+    // error") instead of the raw exception text.
+    return {
+      success: false,
+      status: "failed",
+      error: {
+        code: "STACKS_ERROR",
+        message: mapStacksError(error, "Stacks purchase failed"),
+      },
+    };
   }
 }
