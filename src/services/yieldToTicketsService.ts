@@ -271,21 +271,58 @@ class YieldToTicketsService {
           };
         }
 
-        if (!withdrawResult.success && withdrawResult.error &&
-            !withdrawResult.error.includes('No yield') &&
-            !withdrawResult.error.includes('No balance')) {
-          // Unexpected error — report it but continue to try direct purchase
-          logger.warn('withdrawYield returned error, falling back to direct purchase', {
+        if (!withdrawResult.success) {
+          // "No yield" / "No balance" means there's nothing to convert — a clean no-op.
+          if (withdrawResult.error?.includes('No yield') ||
+              withdrawResult.error?.includes('No balance')) {
+            return {
+              success: true,
+              yieldAmount: '0',
+              ticketsPurchased: 0,
+              causesAmount: '0',
+              txHashes: [],
+            };
+          }
+          // For all other failures (Fhenix "yield distributed via coordinator",
+          // LIFIEarn "auto-compounds yield", Octant VAULT_DISABLED, RPC errors,
+          // etc.) we MUST NOT fall through to `web3Service.purchaseTickets` —
+          // that function spends the user's PRINCIPAL USDC, not the yield, so
+          // the user would silently lose capital they intended to keep.
+          // The prior code logged a warning and fell through, which was a
+          // silent principal-loss bug for Fhenix/Octant/LIFIEarn strategies.
+          logger.warn('withdrawYield failed; not falling back to direct purchase (would spend principal)', {
             error: withdrawResult.error,
             protocol: config.vaultProtocol,
           });
+          return {
+            success: false,
+            error: withdrawResult.error || `Yield withdrawal not available for ${config.vaultProtocol}. Withdraw yield manually before converting.`,
+            yieldAmount,
+            ticketsPurchased: 0,
+            causesAmount,
+            txHashes: [],
+          };
         }
+        // withdrawResult.success === true but no needsClientSignature: the
+        // provider claims to have completed the withdrawal server-side. We
+        // don't have a tx hash to record, and the yield is now in the user's
+        // wallet as free USDC. Continue to direct purchase below.
       } catch (withdrawErr) {
-        // withdrawYield may throw for some protocols — continue to direct purchase
-        logger.warn('withdrawYield threw, falling back to direct purchase', {
+        // VaultError from a provider (e.g. Octant VAULT_DISABLED) — same
+        // rationale: do NOT fall through to direct purchase, that would
+        // spend principal.
+        logger.warn('withdrawYield threw; not falling back to direct purchase (would spend principal)', {
           error: withdrawErr instanceof Error ? withdrawErr.message : String(withdrawErr),
           protocol: config.vaultProtocol,
         });
+        return {
+          success: false,
+          error: withdrawErr instanceof Error ? withdrawErr.message : `Yield withdrawal failed for ${config.vaultProtocol}.`,
+          yieldAmount,
+          ticketsPurchased: 0,
+          causesAmount,
+          txHashes: [],
+        };
       }
 
       // ---- Phase 2a: Direct purchase (yield already available in wallet, no withdrawal needed) ----
@@ -559,15 +596,15 @@ class YieldToTicketsService {
     causeWallet: string
   ): { chain: 'evm' | 'solana'; to: string; amountWei: string; data?: string } | null {
     const amount = parseFloat(amountUsdc);
-    
+
     // Validate amount
     if (isNaN(amount) || amount <= 0) {
       logger.warn("Invalid cause amount", { amount: amountUsdc });
       return null;
     }
-    
+
     // Validate cause wallet
-    if (!causeWallet || 
+    if (!causeWallet ||
         causeWallet === '0x0000000000000000000000000000000000000000' ||
         causeWallet.length < 32) {
       logger.warn("Invalid cause wallet", { causeWallet });
@@ -577,7 +614,26 @@ class YieldToTicketsService {
     // USDC has 6 decimals
     const amountWei = Math.round(amount * 1e6).toString();
 
-    if (vaultProtocol === 'aave') {
+    // All USDC-yield EVM vaults share the same on-chain USDC contract on Base
+    // (0x8335…2913) and the same `transfer(address,uint256)` ABI. Once the
+    // user has withdrawn yield to their wallet as free USDC, the cause
+    // transfer calldata is identical regardless of the source vault.
+    //
+    // The previous implementation only generated calldata for `aave` and
+    // returned `null` for every other EVM protocol — causing the cause
+    // transfer to be silently dropped for ~87% of strategies. This affected
+    // morpho, spark, pooltogether, octant, fhenix, and lifiearn.
+    const evmUsdcYieldProtocols: ReadonlySet<VaultProtocol> = new Set([
+      'aave',
+      'morpho',
+      'spark',
+      'pooltogether',
+      'octant',
+      'fhenix',
+      'lifiearn',
+    ]);
+
+    if (evmUsdcYieldProtocols.has(vaultProtocol)) {
       // EVM USDC transfer: function transfer(address to, uint256 amount) returns (bool)
       // Function selector: 0xa9059cbb
       const functionSelector = '0xa9059cbb';
@@ -587,6 +643,19 @@ class YieldToTicketsService {
       return { chain: 'evm', to: causeWallet, amountWei, data };
     }
 
+    // Uniswap V3 yields WETH+USDC fees (mixed asset). Cause transfer would
+    // require a swap step first; we don't silently drop the cause amount,
+    // we surface the gap so the UI can show a clear message.
+    if (vaultProtocol === 'uniswap') {
+      logger.warn('Cause transfer not supported for Uniswap V3 (mixed WETH+USDC fees would require a swap step)', {
+        vaultProtocol,
+        amountUsdc,
+        causeWallet,
+      });
+      return null;
+    }
+
+    logger.warn('Unknown vault protocol for cause transfer', { vaultProtocol });
     return null;
   }
 

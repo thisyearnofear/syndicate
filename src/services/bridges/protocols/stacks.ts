@@ -168,16 +168,22 @@ export class StacksProtocol implements BridgeProtocol {
         const successRate = total > 0 ? this.successCount / total : 0.95;
         const averageTimeMs = this.successCount > 0 ? this.totalTimeMs / this.successCount : 180_000;
 
+        // Failure-based health (was hardcoded `isHealthy: true`). The
+        // protocol only updates failureCount when `bridge()` throws, so this
+        // is conservative but accurate.
+        const recentFailures = this.failureCount > 3;
+        const isHealthy = !recentFailures && this.failureCount < 5;
+
         return {
             protocol: 'stacks',
-            isHealthy: true,
+            isHealthy,
             successRate,
             averageTimeMs,
             consecutiveFailures: this.failureCount,
             estimatedFee: '0.50',
             statusDetails: {
-                recentFailures: this.failureCount > 3,
-            }
+                recentFailures,
+            },
         };
     }
 

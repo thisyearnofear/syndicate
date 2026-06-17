@@ -235,19 +235,23 @@ export function useYieldWithdrawal(): UseYieldWithdrawalResult {
 
       if (!completionResult.success) {
         // Tickets may have failed but withdrawal succeeded
+        // — this is a partial failure, NOT a success. Surface it: the user
+        // spent gas to withdraw, but the yield→ticket conversion didn't
+        // complete. Returning `success: true` here would close the modal
+        // as "complete" and the user would not know tickets were not bought.
         logger.warn('Yield withdrawal succeeded but ticket purchase failed', {
           error: completionResult.error,
           withdrawalTxHash,
         });
         updateStatus({
-          status: 'complete',
+          status: 'error',
           purchaseTxHash: null,
-          error: completionResult.error || 'Ticket purchase after withdrawal failed',
+          error: completionResult.error || 'Ticket purchase after withdrawal failed. Withdrawal succeeded but tickets were not bought.',
         });
         return {
-          success: true,
+          success: false,
           withdrawalTxHash,
-          error: completionResult.error,
+          error: completionResult.error || 'Ticket purchase after withdrawal failed',
         };
       }
 
