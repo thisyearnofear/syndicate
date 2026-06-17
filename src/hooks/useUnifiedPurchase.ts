@@ -256,20 +256,30 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
               sourceTxHash,
             };
           } catch (signError) {
-            const msg = signError instanceof Error ? signError.message : 'Wallet signing failed';
-            const isCancel = msg.includes('cancel') || msg.includes('reject') || msg.includes('denied');
+            // For Stacks, use the Stacks-specific error mapper so the
+            // user sees a clear message (e.g. "Insufficient USDCx
+            // balance") instead of the raw wallet/chainhook error.
+            const isStacks = chain === 'stacks';
+            const { mapStacksError } = isStacks
+              ? await import('@/domains/lottery/utils/mapStacksError')
+              : { mapStacksError: undefined };
+            const rawMsg = signError instanceof Error ? signError.message : 'Wallet signing failed';
+            const isCancel = rawMsg.includes('cancel') || rawMsg.includes('reject') || rawMsg.includes('denied');
+            const friendlyMsg = isStacks && mapStacksError
+              ? mapStacksError(signError, rawMsg)
+              : rawMsg;
             clearPendingPurchaseState();
             setState((prev) => ({
               ...prev,
               isPurchasing: false,
-              error: isCancel ? 'Transaction cancelled' : msg,
+              error: isCancel ? 'Transaction cancelled' : friendlyMsg,
               status: 'error',
             }));
             return {
               success: false,
               error: {
                 code: isCancel ? 'USER_CANCELLED' : 'SIGNING_FAILED',
-                message: isCancel ? 'Transaction cancelled' : msg,
+                message: isCancel ? 'Transaction cancelled' : friendlyMsg,
               },
             };
           }

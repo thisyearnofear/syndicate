@@ -29,6 +29,31 @@ import type {
     BridgeStatus,
 } from '../types';
 import { BridgeError, BridgeErrorCode } from '../types';
+import { getPurchaseStatusByTxId } from '@/lib/db/repositories/purchaseStatusRepository';
+import { logger } from '@/lib/logger';
+
+/**
+ * Map a purchase-statuses row status to a BridgeStatus the rest of the
+ * app understands. The chainhook handler and the bridge flow use
+ * different vocabularies; this keeps the conversion in one place.
+ */
+function mapDbStatusToBridgeStatus(dbStatus: string): BridgeStatus {
+    switch (dbStatus) {
+        case 'confirmed_stacks':
+        case 'bridging':
+        case 'purchasing':
+            return 'bridging';
+        case 'complete':
+            return 'complete';
+        case 'error':
+        case 'failed':
+            return 'failed';
+        default:
+            // Unknown status — treat as in-flight rather than fabricating
+            // a final state. The polling loop will refresh this.
+            return 'bridging';
+    }
+}
 
 // ============================================================================
 // STACKS BRIDGE PROTOCOL
@@ -81,6 +106,42 @@ export class StacksProtocol implements BridgeProtocol {
         const _startTime = Date.now();
 
         try {
+            // Resume: when the user has already signed, the handler passes
+            // the signed tx hash in `options.signedTxHash`. Look up the
+            // chainhook-recorded status instead of returning a fresh
+            // pending_signature. This gives the protocol a real answer for
+            // "what's the status of bridge X?" instead of always returning
+            // a new placeholder. The polling path is still the source of
+            // truth for the UI, but this gives a synchronous fallback when
+            // the polling hasn't caught up yet.
+            const resumeTxHash = params.options?.signedTxHash as string | undefined;
+            if (resumeTxHash) {
+                try {
+                    const dbStatus = await getPurchaseStatusByTxId(resumeTxHash);
+                    if (dbStatus) {
+                        const bridgeStatus = mapDbStatusToBridgeStatus(dbStatus.status);
+                        this.successCount++;
+                        return {
+                            success: bridgeStatus === 'complete',
+                            protocol: 'stacks',
+                            status: bridgeStatus,
+                            sourceTxHash: resumeTxHash,
+                            destinationTxHash: dbStatus.baseTxId ?? undefined,
+                            bridgeId: params.options?.bridgeId as string | undefined,
+                            error: dbStatus.error ?? undefined,
+                        };
+                    }
+                    logger.warn('[StacksProtocol] Resume tx not found in purchase_statuses', { resumeTxHash });
+                } catch (lookupErr) {
+                    logger.error('[StacksProtocol] Resume status lookup failed', {
+                        resumeTxHash,
+                        error: lookupErr instanceof Error ? lookupErr.message : String(lookupErr),
+                    });
+                    // Fall through to the normal flow rather than failing
+                    // the resume — the chainhook polling will catch up.
+                }
+            }
+
             // Validate parameters
             const validation = await this.validate(params);
             if (!validation.valid) {
