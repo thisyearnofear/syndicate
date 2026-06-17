@@ -15,6 +15,7 @@ import { MORPHO_CONFIG } from './morphoProvider';
 import { SPARK_CONFIG } from './sparkProvider';
 import { PRIZE_VAULT } from './poolTogetherProvider';
 import { FHENIX_POOL_CONFIG } from '@/services/syndicate/poolProviders/fhenixProvider';
+import { resolveOctantVaultAddress } from '@/config/octantConfig';
 import type { VaultProtocol } from './vaultProvider';
 
 /** USDC on Base. */
@@ -36,6 +37,10 @@ export type WithdrawRoute =
   | { kind: 'fhenix_attested'; vaultAddress: `0x${string}` }
   | { kind: 'octant_mock'; vaultId: string }
   | { kind: 'unsupported'; reason: string };
+
+/** Shared disabled reason for Octant when neither a real vault nor the mock is enabled. */
+const OCTANT_DISABLED_REASON =
+  'Octant vault is disabled: configure a real ERC-4626 vault address or set NEXT_PUBLIC_OCTANT_MOCK=true for demos/tests.';
 
 /**
  * Pure router: protocol → deposit action.
@@ -70,8 +75,11 @@ export function selectDepositRoute(protocol: VaultProtocol): DepositRoute {
         vaultAddress: FHENIX_POOL_CONFIG.VAULT_ADDRESS,
         usdcAddress: FHENIX_POOL_CONFIG.USDC_ADDRESS as `0x${string}`,
       };
-    case 'octant':
-      return { kind: 'octant_mock', label: 'Octant V2 (mock)', vaultId: 'mock:octant-usdc' };
+    case 'octant': {
+      const vaultId = resolveOctantVaultAddress();
+      if (!vaultId) return { kind: 'unsupported', reason: OCTANT_DISABLED_REASON };
+      return { kind: 'octant_mock', label: 'Octant V2', vaultId };
+    }
     case 'uniswap':
       return {
         kind: 'unsupported',
@@ -99,8 +107,11 @@ export function selectWithdrawRoute(protocol: VaultProtocol): WithdrawRoute {
       return { kind: 'erc4626', vaultAddress: SPARK_CONFIG.BASE.VAULT_ADDRESS as `0x${string}` };
     case 'pooltogether':
       return { kind: 'erc4626', vaultAddress: PRIZE_VAULT as `0x${string}` };
-    case 'octant':
-      return { kind: 'octant_mock', vaultId: 'mock:octant-usdc' };
+    case 'octant': {
+      const vaultId = resolveOctantVaultAddress();
+      if (!vaultId) return { kind: 'unsupported', reason: OCTANT_DISABLED_REASON };
+      return { kind: 'octant_mock', vaultId };
+    }
     case 'fhenix':
       return { kind: 'fhenix_attested', vaultAddress: FHENIX_POOL_CONFIG.VAULT_ADDRESS };
     case 'uniswap':

@@ -219,7 +219,9 @@ describe('AaveVaultProvider', () => {
 
             // The provider returns a txData payload for client-side signing
             // (the actual approve+supply happens in the useVaultDeposit hook).
-            expect(result.success).toBe(true);
+            // success stays false until the client signs+confirms the tx.
+            expect(result.success).toBe(false);
+            expect(result.needsClientSignature).toBe(true);
             expect(result.vaultId).toContain('aave:');
             expect(result.txData).toBeDefined();
             expect(JSON.parse(result.txData!).action).toBe('supply');
@@ -256,8 +258,10 @@ describe('AaveVaultProvider', () => {
 
             const result = await provider.withdraw('100', USER_ADDRESS);
 
-            // Withdraw returns a txData payload for client-side signing
-            expect(result.success).toBe(true);
+            // Withdraw returns a txData payload for client-side signing;
+            // success stays false until the client signs+confirms the tx.
+            expect(result.success).toBe(false);
+            expect(result.needsClientSignature).toBe(true);
             expect(result.txData).toBeDefined();
             expect(JSON.parse(result.txData!).action).toBe('withdraw');
         });

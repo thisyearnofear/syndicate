@@ -168,9 +168,10 @@ describe('MorphoVaultProvider', () => {
     // =========================================================================
 
     describe('deposit', () => {
-        it('returns success with txData', async () => {
+        it('returns a client-signature intent with txData', async () => {
             const result = await provider.deposit('100', USER_ADDRESS);
-            expect(result.success).toBe(true);
+            expect(result.success).toBe(false);
+            expect(result.needsClientSignature).toBe(true);
             expect(result.txData).toBeDefined();
         });
 
@@ -190,9 +191,10 @@ describe('MorphoVaultProvider', () => {
     // =========================================================================
 
     describe('withdraw', () => {
-        it('returns success with txData and amountWithdrawn', async () => {
+        it('returns a client-signature intent with txData and amountWithdrawn', async () => {
             const result = await provider.withdraw('100', USER_ADDRESS);
-            expect(result.success).toBe(true);
+            expect(result.success).toBe(false);
+            expect(result.needsClientSignature).toBe(true);
             expect(result.txData).toBeDefined();
             expect(result.amountWithdrawn).toBe('100');
         });

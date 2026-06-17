@@ -163,9 +163,10 @@ describe('PoolTogetherVaultProvider', () => {
     // =========================================================================
 
     describe('deposit', () => {
-        it('returns success with txData and correct amount', async () => {
+        it('returns a client-signature intent with txData and correct amount', async () => {
             const result = await provider.deposit('100', USER_ADDRESS);
-            expect(result.success).toBe(true);
+            expect(result.success).toBe(false);
+            expect(result.needsClientSignature).toBe(true);
             const txData = JSON.parse(result.txData!);
             expect(txData.vault).toBe(PRIZE_VAULT);
             expect(txData.receiver).toBe(USER_ADDRESS);
@@ -175,9 +176,10 @@ describe('PoolTogetherVaultProvider', () => {
     });
 
     describe('withdraw', () => {
-        it('returns success with txData and amountWithdrawn', async () => {
+        it('returns a client-signature intent with txData and amountWithdrawn', async () => {
             const result = await provider.withdraw('100', USER_ADDRESS);
-            expect(result.success).toBe(true);
+            expect(result.success).toBe(false);
+            expect(result.needsClientSignature).toBe(true);
             const txData = JSON.parse(result.txData!);
             expect(txData.vault).toBe(PRIZE_VAULT);
             expect(txData.action).toBe('withdraw');

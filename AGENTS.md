@@ -15,8 +15,8 @@ This file is the source of truth for what is **actually shipped**. Items in the 
 | Octant V2 vault | Mock | Returns hardcoded ~10% APY, no live queries |
 | Uniswap V3 LP vault | Stub | Marked "Coming Soon" in code |
 | LI.FI Earn aggregator | Live | Real protocol, no public docs row |
-| Fhenix FHE vault (Base Sepolia) | Testnet | On-chain APY oracle, sealed-output balance reveal, 31 Foundry tests |
-| Fhenix Governor (Base Sepolia) | Testnet | 25 Foundry tests, sealed-output tally reveal |
+| Fhenix FHE vault (Base Sepolia) | Live | On-chain APY oracle, sealed-output balance reveal, 31 Foundry tests. Vault `0x2bB4AdD658E6DB8BEc759B6F1Ab8cb3f1954AE83` (block `0x2851211`, deploy tx `0xc1b79cab…`). |
+| Fhenix Governor (Base Sepolia) | Live | 25 Foundry tests, sealed-output tally reveal. Governor `0xcE39E8bc27267dF6Ae5641F11Bce876700ab06b1` (block `0x285122f`, deploy tx `0xf94bcac9…`), bound to vault above. |
 | Fhenix Helium (chain 8008135) | Sunset | Replaced by Nitrogen; not actively targeted |
 | Safe pool provider | Live | `safeService` + `safeProvider` |
 | 0xSplits pool provider | Live | `splitService` + `splitsProvider` |

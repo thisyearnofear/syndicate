@@ -7,7 +7,7 @@
 
 import { ethers, Contract } from 'ethers';
 import OctantV2ABI from '@/abis/OctantV2.json';
-import { OCTANT_CONFIG } from '@/config/octantConfig';
+import { OCTANT_CONFIG, isOctantEnabled, isOctantMockEnabled, isOctantVaultConfigured } from '@/config/octantConfig';
 import { logger } from '@/lib/logger';
 
 export interface OctantVaultInfo {
@@ -110,9 +110,14 @@ class OctantVaultService {
    */
   async getAvailableVaults(_chainId: number): Promise<OctantVaultInfo[]> {
     void _chainId;
+    // Disabled: no real vault configured and mock not explicitly enabled.
+    if (!isOctantEnabled()) {
+      return [];
+    }
+
     // Resolve whether to return mock or real vault based on config toggle
     const assetAddr = OCTANT_CONFIG.tokens.ethereum.usdc; // Use Ethereum USDC on Tenderly fork
-    const useMock = OCTANT_CONFIG.useMockVault || !OCTANT_CONFIG.vaults?.ethereumUsdcVault || OCTANT_CONFIG.vaults.ethereumUsdcVault === '0x...';
+    const useMock = !isOctantVaultConfigured() && isOctantMockEnabled();
 
     if (useMock) {
       return [

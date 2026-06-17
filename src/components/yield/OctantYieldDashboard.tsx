@@ -15,7 +15,7 @@ import { useUnifiedWallet } from '@/hooks';
 import { useYieldAutoProcessor } from '@/hooks/useYieldAutoProcessor';
 import { solanaWalletService } from '@/services/solanaWalletService';
 import { octantVaultService, type OctantVaultInfo } from '@/services/octantVaultService';
-import { OCTANT_CONFIG } from '@/config/octantConfig';
+import { resolveOctantVaultAddress } from '@/config/octantConfig';
 import { yieldToTicketsService, type AutoYieldStrategy } from '@/services/yieldToTicketsService';
 import { useToast } from '@/shared/components/ui/Toast';
 import { useWalletClient, usePublicClient } from 'wagmi';
@@ -80,9 +80,7 @@ export function OctantYieldDashboard({
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
 
-  const resolvedVaultAddress = vaultAddress || (OCTANT_CONFIG.useMockVault 
-    ? 'mock:octant-usdc' 
-    : OCTANT_CONFIG.vaults.ethereumUsdcVault);
+  const resolvedVaultAddress = vaultAddress || resolveOctantVaultAddress() || '';
 
   // Load vault info + strategy status
   const loadVaultInfo = useCallback(async () => {

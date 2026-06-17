@@ -10,7 +10,12 @@
  */
 
 import { octantVaultService } from '../octantVaultService';
-import { OCTANT_CONFIG } from '@/config/octantConfig';
+import {
+    OCTANT_CONFIG,
+    isOctantEnabled,
+    isOctantMockEnabled,
+    resolveOctantVaultAddress,
+} from '@/config/octantConfig';
 import type {
     VaultProvider,
     VaultProtocol,
@@ -27,14 +32,45 @@ export class OctantVaultProvider implements VaultProvider {
     private cachedAPY: { value: number; timestamp: number } | null = null;
     private readonly APY_CACHE_TTL = 5 * 60 * 1000;
 
-    // Use configured vault address; falls back to mock for testing if address isn't deployed yet
-    private readonly VAULT_ADDRESS = (OCTANT_CONFIG.vaults.ethereumUsdcVault && OCTANT_CONFIG.vaults.ethereumUsdcVault !== '0x...')
-        ? OCTANT_CONFIG.vaults.ethereumUsdcVault
-        : 'mock:octant-usdc';
+    /**
+     * Active vault address, resolved per-call so env/config changes are
+     * picked up. Returns the real configured vault, the mock vault (only when
+     * NEXT_PUBLIC_OCTANT_MOCK is set), or null when Octant is disabled.
+     */
+    private get vaultAddress(): string | null {
+        return resolveOctantVaultAddress();
+    }
+
+    /**
+     * Throw a clear, actionable error when Octant is disabled (no real vault
+     * configured and the mock not explicitly enabled). Mirrors the TON pause
+     * pattern so the mock never silently runs for real users.
+     */
+    private assertEnabled(): string {
+        const addr = this.vaultAddress;
+        if (!addr) {
+            throw new VaultError(
+                'Octant vault is disabled: configure a real ERC-4626 vault address or set NEXT_PUBLIC_OCTANT_MOCK=true for demos/tests.',
+                VaultErrorCode.VAULT_DISABLED,
+                'octant',
+            );
+        }
+        return addr;
+    }
 
     async getBalance(userAddress: string): Promise<VaultBalance> {
+        // When disabled, report an empty position instead of faking a balance.
+        if (!isOctantEnabled()) {
+            return {
+                deposited: '0',
+                yieldAccrued: '0',
+                totalBalance: '0',
+                apy: 0,
+                lastUpdated: Date.now(),
+            };
+        }
         try {
-            const vaultInfo = await octantVaultService.getVaultInfo(this.VAULT_ADDRESS, userAddress);
+            const vaultInfo = await octantVaultService.getVaultInfo(this.vaultAddress!, userAddress);
             
             return {
                 deposited: vaultInfo.userAssets,
@@ -61,6 +97,9 @@ export class OctantVaultProvider implements VaultProvider {
     }
 
     async getCurrentAPY(): Promise<number> {
+        // Don't advertise a yield figure for a vault that won't run.
+        if (!isOctantEnabled()) return 0;
+
         if (this.cachedAPY && Date.now() - this.cachedAPY.timestamp < this.APY_CACHE_TTL) {
             return this.cachedAPY.value;
         }
@@ -76,12 +115,14 @@ export class OctantVaultProvider implements VaultProvider {
     }
 
     async isHealthy(): Promise<boolean> {
+        // Disabled (no real vault, no explicit mock opt-in) → not healthy.
+        if (!isOctantEnabled()) return false;
         try {
-            // For mock/in-development vault, always healthy
-            if (this.VAULT_ADDRESS.startsWith('mock:')) return true;
-            
+            // Explicitly-enabled mock vault is always "healthy".
+            if (isOctantMockEnabled() && !this.vaultAddress?.startsWith('0x')) return true;
+
             // For real vault, check if we can fetch vault info
-            await octantVaultService.getVaultInfo(this.VAULT_ADDRESS);
+            await octantVaultService.getVaultInfo(this.vaultAddress!);
             return true;
         } catch {
             return false;
@@ -89,30 +130,33 @@ export class OctantVaultProvider implements VaultProvider {
     }
 
     async deposit(amount: string, userAddress: string): Promise<VaultDepositResult> {
+        const vaultAddr = this.assertEnabled();
         try {
-            const result = await octantVaultService.deposit(this.VAULT_ADDRESS, amount, userAddress);
-            
+            const result = await octantVaultService.deposit(vaultAddr, amount, userAddress);
+
             return {
                 success: result.success,
                 txHash: result.txHash,
                 error: result.error,
-                vaultId: `octant:${this.VAULT_ADDRESS}`,
+                vaultId: `octant:${vaultAddr}`,
             };
         } catch (error) {
+            if (error instanceof VaultError) throw error;
             const msg = error instanceof Error ? error.message : 'Deposit failed';
             throw new VaultError(msg, VaultErrorCode.TRANSACTION_FAILED, 'octant');
         }
     }
 
     async withdraw(amount: string, userAddress: string): Promise<VaultWithdrawResult> {
+        const vaultAddr = this.assertEnabled();
         try {
             const result = await octantVaultService.withdraw(
-                this.VAULT_ADDRESS,
+                vaultAddr,
                 amount,
                 userAddress,
                 userAddress
             );
-            
+
             return {
                 success: result.success,
                 txHash: result.txHash,
@@ -120,6 +164,7 @@ export class OctantVaultProvider implements VaultProvider {
                 amountWithdrawn: result.assets,
             };
         } catch (error) {
+            if (error instanceof VaultError) throw error;
             const msg = error instanceof Error ? error.message : 'Withdrawal failed';
             throw new VaultError(msg, VaultErrorCode.TRANSACTION_FAILED, 'octant');
         }

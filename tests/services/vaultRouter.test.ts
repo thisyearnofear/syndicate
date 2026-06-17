@@ -90,11 +90,33 @@ describe('vault router', () => {
             }
         });
 
-        it('routes octant to the octant_mock kind with a stable mock vaultId', () => {
-            const route = selectDepositRoute('octant');
-            expect(route.kind).toBe('octant_mock');
-            if (route.kind === 'octant_mock') {
-                expect(route.vaultId).toBe('mock:octant-usdc');
+        it('marks octant as unsupported when disabled (no real vault, mock not enabled)', () => {
+            const prev = process.env.NEXT_PUBLIC_OCTANT_MOCK;
+            delete process.env.NEXT_PUBLIC_OCTANT_MOCK;
+            try {
+                const route = selectDepositRoute('octant');
+                expect(route.kind).toBe('unsupported');
+                if (route.kind === 'unsupported') {
+                    expect(route.reason).toMatch(/disabled/i);
+                }
+            } finally {
+                if (prev === undefined) delete process.env.NEXT_PUBLIC_OCTANT_MOCK;
+                else process.env.NEXT_PUBLIC_OCTANT_MOCK = prev;
+            }
+        });
+
+        it('routes octant to octant_mock when NEXT_PUBLIC_OCTANT_MOCK is enabled', () => {
+            const prev = process.env.NEXT_PUBLIC_OCTANT_MOCK;
+            process.env.NEXT_PUBLIC_OCTANT_MOCK = 'true';
+            try {
+                const route = selectDepositRoute('octant');
+                expect(route.kind).toBe('octant_mock');
+                if (route.kind === 'octant_mock') {
+                    expect(route.vaultId).toBe('mock:octant-usdc');
+                }
+            } finally {
+                if (prev === undefined) delete process.env.NEXT_PUBLIC_OCTANT_MOCK;
+                else process.env.NEXT_PUBLIC_OCTANT_MOCK = prev;
             }
         });
 
@@ -156,11 +178,21 @@ describe('vault router', () => {
             }
         });
 
-        it('routes octant to the octant_mock kind', () => {
-            const route = selectWithdrawRoute('octant');
-            expect(route.kind).toBe('octant_mock');
-            if (route.kind === 'octant_mock') {
-                expect(route.vaultId).toBe('mock:octant-usdc');
+        it('marks octant as unsupported when disabled, octant_mock when mock enabled', () => {
+            const prev = process.env.NEXT_PUBLIC_OCTANT_MOCK;
+            try {
+                delete process.env.NEXT_PUBLIC_OCTANT_MOCK;
+                expect(selectWithdrawRoute('octant').kind).toBe('unsupported');
+
+                process.env.NEXT_PUBLIC_OCTANT_MOCK = 'true';
+                const route = selectWithdrawRoute('octant');
+                expect(route.kind).toBe('octant_mock');
+                if (route.kind === 'octant_mock') {
+                    expect(route.vaultId).toBe('mock:octant-usdc');
+                }
+            } finally {
+                if (prev === undefined) delete process.env.NEXT_PUBLIC_OCTANT_MOCK;
+                else process.env.NEXT_PUBLIC_OCTANT_MOCK = prev;
             }
         });
 
