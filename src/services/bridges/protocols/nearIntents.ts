@@ -137,18 +137,23 @@ export class NearIntentsProtocol implements BridgeProtocol {
 
             // Monitor status
             if (result.intentHash) {
-                // Return awaiting_deposit status with the deposit address
-                // The UI will then handle the transfer from NEAR wallet
+                // Quote was created; user must still fund the deposit address
+                // before any on-chain bridging happens. Mirror the DeBridge /
+                // Starknet / Stacks `pending_signature` contract: report
+                // `success: false` because no on-chain transaction has been
+                // broadcast. The UI is expected to surface the deposit
+                // address and prompt the user to send USDC to it.
                 return {
-                    success: true,
+                    success: false,
                     protocol: 'near-intents',
                     status: 'awaiting_deposit',
                     sourceTxHash: result.txHash,
                     bridgeId: result.intentHash,
-                    details: { 
+                    details: {
                         intentHash: result.intentHash,
                         depositAddress: result.depositAddress,
-                        requiresDeposit: true
+                        requiresDeposit: true,
+                        message: 'Quote created. Sign the USDC transfer to the deposit address from your NEAR wallet to fund the intent.',
                     },
                 };
             }
@@ -176,14 +181,27 @@ export class NearIntentsProtocol implements BridgeProtocol {
     }
 
     async getHealth(): Promise<ProtocolHealth> {
+        // Mirror NearIntentsService.getHealth: health is failure-based, not
+        // hardcoded true. The protocol's own getHealth() in the underlying
+        // service already has the right logic — we re-derive the same
+        // signals here so the BridgeProtocol view stays consistent.
         const total = this.successCount + this.failureCount;
+        const successRate = total > 0 ? this.successCount / total : 0.95;
+        const recentFailures = this.failureCount > 3;
+        const lowSuccessRate = successRate < 0.6;
+        const isHealthy = !recentFailures && !lowSuccessRate && this.failureCount < 5;
+
         return {
             protocol: 'near-intents',
-            isHealthy: true, // Assume healthy if no repeated failures
-            successRate: total > 0 ? this.successCount / total : 1,
-            averageTimeMs: this.successCount > 0 ? this.totalTimeMs / this.successCount : 30000,
+            isHealthy,
+            successRate,
+            averageTimeMs: this.successCount > 0 ? this.totalTimeMs / this.successCount : 30_000,
             lastFailure: this.lastFailure,
             consecutiveFailures: this.failureCount,
+            statusDetails: {
+                recentFailures,
+                lowSuccessRate,
+            },
         };
     }
 

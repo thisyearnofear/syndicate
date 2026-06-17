@@ -12,8 +12,8 @@ This file is the source of truth for what is **actually shipped**. Items in the 
 | Morpho Blue vault (Base) | Live | Live on-chain APY queries |
 | Spark Protocol sUSDC (Base) | Live | No lockup, yield→tickets flow |
 | PoolTogether V5 vault (Base) | Live | TwabDelegator wiring in `useSyndicateDeposit` |
-| Octant V2 vault | Mock | Returns hardcoded ~10% APY, no live queries |
-| Uniswap V3 LP vault | Stub | Marked "Coming Soon" in code |
+| Octant V2 vault | Disabled | Mock is gated on `NEXT_PUBLIC_OCTANT_MOCK=true`; provider throws `VAULT_DISABLED` and returns zero balance/APY by default. Real ERC-4626 vault address not configured (`OCTANT_V2_CONFIG.vaults.ethereumUsdcVault` still `0x...`). |
+| Uniswap V3 LP vault | Stub | Deposit/withdraw throw "Coming soon" in `useVaultDeposit` and `vaults/router`; UI shows "Coming Soon" badge in `VaultsPageContent`. Read-side (positions + uncollected fees) is wired in `uniswapProvider` but not surfaced as an end-to-end flow. |
 | LI.FI Earn aggregator | Live | Real protocol, no public docs row |
 | Fhenix FHE vault (Base Sepolia) | Live | On-chain APY oracle, sealed-output balance reveal, 31 Foundry tests. Vault `0x2bB4AdD658E6DB8BEc759B6F1Ab8cb3f1954AE83` (block `0x2851211`, deploy tx `0xc1b79cab…`). |
 | Fhenix Governor (Base Sepolia) | Live | 25 Foundry tests, sealed-output tally reveal. Governor `0xcE39E8bc27267dF6Ae5641F11Bce876700ab06b1` (block `0x285122f`, deploy tx `0xf94bcac9…`), bound to vault above. |
@@ -61,10 +61,10 @@ Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, A
 | Chain | Protocol | Notes |
 |-------|----------|-------|
 | Base | CCTP + ERC-7715 | Native USDC, Advanced Permissions |
-| Stacks | USDCx + sBTC + x402 | Native Circle USDC, SIP-018 signatures |
-| Solana | DeBridge DLN | Automated intent-based cross-chain USDC bridging |
-| NEAR | Intents + Chain Sigs | Cross-chain intents and MPC signatures |
-| Starknet | Starknet.js + Relayer | Production-ready USDC/STRK bridging to Base |
+| Stacks | USDCx + sBTC + x402 | Native Circle USDC, SIP-018 signatures. `bridge()` returns `pending_signature`; user signs via `@stacks/connect` (handled in `useUnifiedPurchase` Stacks branch). |
+| Solana | DeBridge DLN | Automated intent-based cross-chain USDC bridging. `bridge()` returns `pending_signature` with a base64-serialized Solana tx; user signs with Phantom (`OctantYieldDashboard`). `getHealth()` pings the DeBridge API. |
+| NEAR | Intents + Chain Sigs | Cross-chain intents and MPC signatures. **Intents**: two-step (quote → user signs USDC transfer to deposit address → solver). **ChainSigs**: derives EVM address from NEAR account, gets MPC signature, broadcasts via `eth_sendRawTransaction` on Base/Ethereum. |
+| Starknet | Starknet.js + Relayer | Production-ready USDC/STRK bridging to Base. `bridge()` returns `pending_signature`; `handleStarknetWalletSign` in `useUnifiedPurchase` calls `starknetWallet.account.execute(calls)`. |
 | TON | Paused (CCTP + Telegram) | USDT/TON → CCTP → Base. Bridge refused at runtime until `TON_LOTTERY_CONTRACT` is configured. |
 
 ### Vault Providers (Yield Strategies)
@@ -74,8 +74,8 @@ Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, A
 | Morpho Blue | Base | ✅ Live | Live Query | Curated lending vaults, event-indexed yield calculation |
 | Spark Protocol | Base | ✅ Live | Live Query | Savings USDC (sUSDC), event-indexed yield calculation |
 | PoolTogether V5 | Base | ✅ Live | Live Query | No-loss prize savings, event-indexed yield calculation |
-| Octant V2 | Ethereum/Base | 🧪 MVP Mock | ~10% | Yield donating vaults (mock for testing) |
-| Uniswap V3 | Base | ✅ Live | Live Query | Concentrated liquidity, real position fee calculation |
+| Octant V2 | Ethereum/Base | 🧪 Mock (opt-in) | 0 default / ~10% when enabled | Yield donating vaults. Disabled by default — `octantProvider` throws `VAULT_DISABLED` and returns zero balance/APY unless `NEXT_PUBLIC_OCTANT_MOCK=true` is set or a real ERC-4626 vault address replaces the `0x...` placeholder in `OCTANT_V2_CONFIG.vaults.ethereumUsdcVault`. The 10% is config-only, not a live query. |
+| Uniswap V3 | Base | 🚧 Coming Soon | — | Concentrated liquidity USDC/WETH positions. Read-side in `uniswapProvider` (uncollected fees only — no live APY query). Deposit/withdraw refused at `useVaultDeposit`/`vaults/router` with "Coming soon" until position-management UI ships. |
 
 ### Key Files
 - `src/services/bridges/protocols/stacks.ts` - Stacks bridge with USDCx/sBTC support

@@ -30,6 +30,7 @@ import {
     serializeSignedEip1559,
     type Eip1559Params
 } from '@/services/evmTxBuilder';
+import { nearIntentsService } from '@/services/nearIntentsService';
 
 // Lightweight type for NEAR wallet context
 type NearWalletContext = {
@@ -304,29 +305,23 @@ export class NearChainSigsProtocol implements BridgeProtocol {
     // ============================================================================
 
     private async getDerivedEvmAddress(accountId: string, chain: 'base' | 'ethereum'): Promise<string | null> {
-        void accountId; // Not used in this implementation anymore
+        // Per-user additive key derivation against the MPC root public key.
+        // The previous implementation called `/api/near-queries` with
+        // `public_key_for(path, key_version)` which executes the view
+        // function in the contract's own predecessor context — meaning
+        // EVERY user got the same EVM address. That was a security bug:
+        // 100 NEAR users would all sign from the same derived EVM key.
+        //
+        // The correct NEAR Chain Signatures pattern is additive key
+        // derivation: `derived_key = root_pubkey + sha256(accountId, path, key_version)*G`,
+        // implemented by `nearIntentsService.deriveEvmAddress(accountId)`
+        // (calls `/api/derive-evm-address` which fetches the root pubkey
+        // and performs the elliptic-curve point addition). The `chain`
+        // argument only controls the derivation path string ("ethereum-1"
+        // for both Base and Ethereum since they share EVM derivation).
         void chain;
         try {
-            const path = DERIVATION_PATHS.ethereum;
-            const response = await fetch('/api/near-queries', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    operation: 'getPublicKey',
-                    path,
-                    key_version: this.DEFAULT_KEY_VERSION
-                }),
-            });
-
-            if (!response.ok) {
-                console.error('Failed to get public key from NEAR query API:', response.status);
-                return null;
-            }
-
-            const { evmAddress } = await response.json();
-            return evmAddress || null;
+            return await nearIntentsService.deriveEvmAddress(accountId);
         } catch (e) {
             console.warn('[NEAR] Address derivation failed:', e);
             return null;
