@@ -27,6 +27,7 @@ import { Button } from "@/shared/components/ui/Button";
 import { AgentRegistryService, AgentStatus, AgentType } from "@/services/automation/agentRegistryService";
 import { useUnifiedWallet } from "@/hooks";
 import { AutoPurchaseModal } from "@/components/modal/AutoPurchaseModal";
+import { VirtualsAgentPanel } from "@/components/settings/VirtualsAgentPanel";
 import { AUTOMATION_MODE_META } from "@/config/automationModes";
 import { FEATURES } from "@/config";
 import { PermissionedAutopilotPanel } from "@/components/automation/PermissionedAutopilotPanel";
@@ -39,6 +40,7 @@ export function AutoPurchaseSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedStrategy, setSelectedStrategy] = useState<HubStrategy>('scheduled');
+  const [showVirtualsPanel, setShowVirtualsPanel] = useState(false);
 
   const registry = AgentRegistryService.getInstance();
 
@@ -106,11 +108,17 @@ export function AutoPurchaseSettings() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* TIERS: WE WOULD ITERATE THROUGH AGENTS HERE */}
         {agents.map((agent) => (
-          <AgentCard 
-            key={agent.id} 
-            agent={agent} 
+          <AgentCard
+            key={agent.id}
+            agent={agent}
             currentWalletType={walletType}
-            onManage={() => console.log('Manage', agent.id)} 
+            onManage={() => {
+              if (agent.type === 'virtuals-acp') {
+                setShowVirtualsPanel(true);
+              } else {
+                console.log('Manage', agent.id);
+              }
+            }}
           />
         ))}
 
@@ -251,14 +259,20 @@ export function AutoPurchaseSettings() {
       )}
 
       {/* MODAL */}
-      <AutoPurchaseModal 
-        isOpen={showModal} 
-        onClose={() => setShowModal(false)} 
+      <AutoPurchaseModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
         initialStrategy={selectedStrategy}
         onSuccess={() => {
           setShowModal(false);
           fetchAgents();
         }}
+      />
+
+      {/* Virtuals ACP agent management panel */}
+      <VirtualsAgentPanel
+        open={showVirtualsPanel}
+        onOpenChange={setShowVirtualsPanel}
       />
     </div>
   );
