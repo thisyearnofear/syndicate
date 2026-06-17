@@ -24,7 +24,7 @@ This file is the source of truth for what is **actually shipped**. Items in the 
 | Fhenix pool provider | Testnet | Encrypted deposits, FHE permits |
 | TON bridge | Paused | Runtime refuses calls until `TON_LOTTERY_CONTRACT` is set; redeploy lottery.fc to re-enable |
 | Telegram Mini App | Paused | `TelegramPurchaseModal` is gated on `NEXT_PUBLIC_TON_LOTTERY_CONTRACT` |
-| Civic KYC / verification gate | Live (noop) | `VerificationProvider` interface + `NoopVerificationProvider` default + `CivicVerificationProvider` stub. Civic SDK not bundled. Switch via `VERIFICATION_PROVIDER=civic` + `CIVIC_GATEWAY_KEY`. 27 tests. |
+| Verification gate | Live (noop, by design) | `VerificationProvider` interface + `NoopVerificationProvider` default + `CivicVerificationProvider` stub. **The noop default is the intended ship state** for this product — KYC adds friction the lottery/yield funnel can't absorb, and it conflicts with the FHE privacy pitch. A real provider (Civic, Sumsub, Persona, on-chain attestations) can be plugged into the interface when a partner, jurisdiction, or pool type requires it. Civic SDK is **not** bundled. 27 tests. |
 | Virtuals ACP automation | Bug fix only in Phase 0 | `executeVirtualsAgentTask` had a missing `this.virtualsService` field — fixed; full pipeline is Phase 3 work |
 | TON Agentic Wallet | Paused | `tonAgentService` is dormant; remove or re-enable with TON |
 | ERC-7715 scheduled purchases | Live | `erc7715Service` + `useERC7715` |
@@ -40,8 +40,14 @@ This file is the source of truth for what is **actually shipped**. Items in the 
 - **Virtuals ACP full pipeline (Phase 3)**: agent registry, persisted task state, monitored cron, agent status UI.
 - **Mainnet FHE (Phase 4)**: multisig coordinator, timelock on `setApy`, pausable contract, audit-ready natspec, then promote to Base mainnet.
 - **Fhenix Nitrogen support (Phase 4.1)**: re-evaluate when Nitrogen is GA; add a chain selector branch with the same pattern as Helium.
-- **Civic SDK wire-up (post-Phase 2)**: bundle `@civic/gateway`, implement `CivicVerificationProvider.getStatus` against the real SDK, add UI to the gated flows (deposit/withdraw/bridge/purchase/create_syndicate) that surfaces `useVerificationGate`'s `allowed`/`reason` state.
 - **TON re-enable (post-Phase 0)**: deploy `contracts/ton/lottery.fc` to TON mainnet, set `TON_LOTTERY_CONTRACT`, unpause.
+
+### Not on the roadmap (conditional / opt-in)
+
+These are **not** planned work. They are listed here so future contributors don't think they were forgotten or assumed to be next:
+
+- **Real KYC provider wiring (Civic / Sumsub / Persona / on-chain attestations)** — the `VerificationProvider` interface and `useVerificationGate` hook are the right abstraction and are kept in the codebase. The noop default is the **intended** ship state. Revisit only if: a regulated syndicate partner requires it, a jurisdiction forces it, or a pool type handling real volume makes AML risk a concrete concern. The decision is product-and-jurisdiction-specific.
+
 
 ### How to keep this table honest
 
@@ -144,11 +150,15 @@ npm run lint   # Lint (note: may have config issues)
 
 ## Verification Gate (Phase 2 — shipped)
 
-A thin internal `VerificationProvider` interface with a `NoopVerificationProvider` default and a `CivicVerificationProvider` stub. Civic SDK is **not** bundled. The gate is env-switchable:
+A thin internal `VerificationProvider` interface with a `NoopVerificationProvider` default and a `CivicVerificationProvider` stub. **The noop default is the intended ship state for this product.** KYC adds friction the lottery/yield funnel can't absorb (a casual user buying a $10 ticket is not going to do a liveness check), and it conflicts with the FHE privacy pitch (encrypted contributions vs. shipping biometric data to a third party).
+
+The interface is opt-in infrastructure: any partner, jurisdiction, or pool type that ever does need KYC can plug in a real provider later (Civic, Sumsub, Persona, on-chain attestations) without touching the consumers. The noop default should be the right choice for a long time.
+
+The gate is env-switchable for completeness, but switching away from noop is a product decision, not an ops one:
 
 - `VERIFICATION_PROVIDER=...` (default: `noop`)
-  - `noop` — `NoopVerificationProvider` always allows; no SDK, no network.
-  - `civic` — `CivicVerificationProvider` stub; requires `CIVIC_GATEWAY_KEY`. Throws on instantiation if missing. Bundle `@civic/gateway` and complete the stub in `civicProvider.ts` to wire it for real.
+  - `noop` — `NoopVerificationProvider` always allows; no SDK, no network. **The default.**
+  - `civic` — `CivicVerificationProvider` stub; requires `CIVIC_GATEWAY_KEY`. Throws on instantiation if missing. The stub is intentionally incomplete: it returns a "not verified" status. To wire it for real, bundle `@civic/gateway`, implement `getStatus` against the real SDK, and re-evaluate the gated flows and thresholds for the specific use case (do **not** gate ticket purchases; gate vault deposits and bridge at $1k+/10k+ only).
 - `CIVIC_CLIENT_ID=...` (optional)
 
 ### Key files
@@ -175,6 +185,15 @@ if (!allowed) {
 const result = await checkVerificationGate(userAddress, { action: 'deposit', amount: 50_000 });
 if (!result.allowed) throw new Error(result.reason);
 ```
+
+### If you ever do wire a real provider
+
+The current `civic` env-switch description and the 5-flow gating plan (deposit/withdraw/bridge/purchase/create_syndicate) were written under the assumption that KYC was the obvious next step. It is not. If a real provider is ever wired:
+
+- **Do not gate ticket purchases.** Conversion funnel dies. A user buying a $5 ticket does not need identity verification.
+- **Re-evaluate the threshold strategy.** `liveness $1k+` is too low for "things people do for fun" and too high for "things people do with their life savings." Sensible default: no verification under $1k, liveness for $1k–$10k, ID verification above $10k — and only for actions that handle real money (vault deposits, cross-chain bridge), not for the purchase path.
+- **Decide the FHE-vs-KYC brand tension explicitly.** The product currently leads with privacy. Either commit to it (no KYC) or commit to compliance (KYC at clear thresholds, accept the conversion hit). Doing both half-heartedly signals confusion.
+
 
 ## Spark Protocol (Savings USDC) Deposit Flow
 Spark Protocol provides savings USDC (sUSDC) with the Sky Savings Rate on Base. No lockup required - yield accrues immediately.
@@ -246,7 +265,7 @@ Multi-chain syndicate pooling with three pool types for fund custody and prize d
 - AutoPurchaseModal shows different UI for Stacks (x402) vs EVM (ERC-7715)
 - Balance API supports EVM, Solana, NEAR, Starknet, Stacks address formats
 - Use `CONTRACTS` object from stacks.ts for contract addresses
-- **Civic**: Not yet integrated. See "Verification Gate (planned)" above for the planned rollout.
+- **Civic / KYC**: Not on the roadmap. The `VerificationProvider` interface and noop default are the intended ship state. See "Verification Gate (Phase 2 — shipped)" for when/why to revisit.
 - **Spark Protocol**: No lockup; yield withdrawn automatically to purchase tickets
 - **Pool Types**: Pool type selection is in create-syndicate page step 3; badges shown on syndicate detail page
 
