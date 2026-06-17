@@ -40,6 +40,8 @@ export interface AutomationTask {
   lastExecutedAt?: number;
   nextExecutionAt?: number;
   lastReasoning?: string;
+  /** Email recipient for the post-execution report (Virtuals strategy). */
+  recipientEmail?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -233,11 +235,22 @@ export class AutomationOrchestrator {
     });
 
     // 3. REPORTING (Via Agent Email)
-    await this.virtualsService.sendEmailReport({
-      to: 'member@syndicate.xyz', // In production, this would be the user's registered email
-      subject: `Syndicate Strategy Update: ${_task.strategy}`,
-      body: `Execution Result: ${result.success ? 'Success' : 'Failed'}\nReasoning: ${reasoning}\nTx: ${result.txHash}`
-    });
+    // The previous code hardcoded 'member@syndicate.xyz' which meant every
+    // task's report went to the same mailbox regardless of who triggered
+    // it. Now we honor the task's `recipientEmail` (set by the persisted
+    // task record), with a safe fallback to the agent's own email so a
+    // missing field never silently drops the report.
+    const agentInfo = await this.virtualsService.getActiveAgent();
+    const recipient = _task.recipientEmail || agentInfo?.email || '';
+    if (recipient) {
+      await this.virtualsService.sendEmailReport({
+        to: recipient,
+        subject: `Syndicate Strategy Update: ${_task.strategy}`,
+        body: `Execution Result: ${result.success ? 'Success' : 'Failed'}\nReasoning: ${reasoning}\nTx: ${result.txHash}`
+      });
+    } else {
+      console.warn('[Orchestrator] Virtuals task has no recipient email; skipping report.');
+    }
 
     return {
       ...result,

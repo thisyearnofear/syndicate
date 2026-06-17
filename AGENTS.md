@@ -37,7 +37,6 @@ This file is the source of truth for what is **actually shipped**. Items in the 
 
 ### Backlog (planned, not yet built)
 
-- **Virtuals ACP full pipeline (Phase 3)**: agent registry, persisted task state, monitored cron, agent status UI.
 - **Mainnet FHE (Phase 4)**: multisig coordinator, timelock on `setApy`, pausable contract, audit-ready natspec, then promote to Base mainnet.
 - **Fhenix Nitrogen support (Phase 4.1)**: re-evaluate when Nitrogen is GA; add a chain selector branch with the same pattern as Helium.
 - **TON re-enable (post-Phase 0)**: deploy `contracts/ton/lottery.fc` to TON mainnet, set `TON_LOTTERY_CONTRACT`, unpause.
@@ -466,15 +465,29 @@ Autonomous agent infrastructure for Syndicate's "Universal Agent." The agent ope
 | File | Purpose |
 |------|---------|
 | `src/services/automation/VirtualsService.ts` | Core service: agent identity, Venice AI reasoning, wallet txns, email reports |
-| `src/services/automation/AutomationOrchestrator.ts` | Orchestrator with `virtuals-acp` strategy (Reasoning → Execution → Reporting) |
+| `src/services/automation/AutomationOrchestrator.ts` | Orchestrator with `virtuals-acp` strategy (Reasoning → Execution → Reporting). Email recipient now comes from `task.recipientEmail` with agent-email fallback (no more hardcoded `member@syndicate.xyz`). |
+| `src/services/automation/agentRegistryService.ts` | Now includes `'virtuals-acp'` in the `AgentType` union; `getVirtualsAgent()` surfaces the agent in the Settings UI. |
+| `src/lib/db/schema/virtualsTasks.ts` | Schema for persisted cron-driven task state. `MockVirtualsTaskRepository` for tests. |
+| `src/lib/db/repositories/virtualsTaskRepository.ts` | Vercel Postgres-backed repo. `getTasksDueForExecution` honors both the kill switch (`is_active`) and the cron gate (`next_execution_at <= now()`). |
+| `src/services/jobs/virtualsJobProcessor.ts` | `drainVirtualsTasks` — called by the cron. Dispatches due tasks to the orchestrator, persists result, reschedules (60s on success, 5 min on failure), auto-pauses after 3 consecutive failures. |
 | `src/app/api/virtuals/email/route.ts` | Server-side proxy — shells out to `acp email compose` via `execFile` |
 | `src/app/api/virtuals/transaction/route.ts` | Server-side proxy — shells out to `acp wallet send-transaction` via `execFile` |
+| `src/app/api/crons/process-jobs/route.ts` | Existing cron endpoint extended to also call `drainVirtualsTasks()` (in addition to `drainJobQueue()`). |
+| `tests/services/automation/virtualsPhase3.test.ts` | 12 regression tests covering registry integration, repository CRUD + kill switch, cron processor, and the email-recipient fix. |
 
 ### Automation Strategy: `virtuals-acp`
 The orchestrator's `executeVirtualsAgentTask()` runs a 3-step agentic lifecycle:
 1. **Reasoning** — Venice AI analyzes vault state and recommends strategy
 2. **Execution** — Agent wallet submits transaction (e.g., Megapot ticket purchase)
-3. **Reporting** — Agent email sends status update to syndicate members
+3. **Reporting** — Agent email sends status update. Recipient is `task.recipientEmail` (set by the persisted task record), with a safe fallback to the agent's own email. No report is sent if neither is set (with a warning, not a throw).
+
+### Phase 3: Persisted State + Server-Side Cron
+- `virtuals_tasks` table stores per-user task state (amount, frequency, `next_execution_at`, `is_active` kill switch, `lastReasoning`, `lastTxHash`, `lastError`).
+- `/api/crons/process-jobs` (already wired in `vercel.json`) now drains both `purchase_jobs` and `virtuals_tasks`.
+- Tasks are only executed when `is_active = true AND status = 'active' AND next_execution_at <= now()`.
+- After 3 consecutive failures a task is auto-paused (`is_active = false`) to avoid burning agent wallet / Venice credits in a tight loop.
+- `drainVirtualsTasks()` returns `{ processed, errors, skipped }` for observability.
+- `deactivateAllForAgent(agentId)` is a single-call kill switch for the whole agent.
 
 ### Environment Variables
 ```bash
