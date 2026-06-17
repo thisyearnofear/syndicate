@@ -25,7 +25,7 @@ This file is the source of truth for what is **actually shipped**. Items in the 
 | TON bridge | Paused | Runtime refuses calls until `TON_LOTTERY_CONTRACT` is set; redeploy lottery.fc to re-enable |
 | Telegram Mini App | Paused | `TelegramPurchaseModal` is gated on `NEXT_PUBLIC_TON_LOTTERY_CONTRACT` |
 | Verification gate | Live (noop, by design) | `VerificationProvider` interface + `NoopVerificationProvider` default + `CivicVerificationProvider` stub. **The noop default is the intended ship state** for this product — KYC adds friction the lottery/yield funnel can't absorb, and it conflicts with the FHE privacy pitch. A real provider (Civic, Sumsub, Persona, on-chain attestations) can be plugged into the interface when a partner, jurisdiction, or pool type requires it. Civic SDK is **not** bundled. 27 tests. |
-| Virtuals ACP automation | Bug fix only in Phase 0 | `executeVirtualsAgentTask` had a missing `this.virtualsService` field — fixed; full pipeline is Phase 3 work |
+| Virtuals ACP automation | Live (Phase 3.5 — user surface) | Full pipeline: agent registry, persisted task state, server-side cron, kill switch + auto-pause, **user-facing surface** (create / list / pause / resume / delete tasks via `VirtualsAgentPanel`). API: `GET/POST /api/virtuals/tasks`, `GET/PATCH/DELETE /api/virtuals/tasks/[id]`. Hook: `useVirtualsTasks`. 12 Phase 3 + 11 Phase 3.5 tests. |
 | TON Agentic Wallet | Paused | `tonAgentService` is dormant; remove or re-enable with TON |
 | ERC-7715 scheduled purchases | Live | `erc7715Service` + `useERC7715` |
 | Tether WDK autonomous agent | Live | `wdkService` |
@@ -473,13 +473,29 @@ Autonomous agent infrastructure for Syndicate's "Universal Agent." The agent ope
 | `src/app/api/virtuals/email/route.ts` | Server-side proxy — shells out to `acp email compose` via `execFile` |
 | `src/app/api/virtuals/transaction/route.ts` | Server-side proxy — shells out to `acp wallet send-transaction` via `execFile` |
 | `src/app/api/crons/process-jobs/route.ts` | Existing cron endpoint extended to also call `drainVirtualsTasks()` (in addition to `drainJobQueue()`). |
+| `src/app/api/virtuals/tasks/route.ts` | `GET` (list a user's tasks), `POST` (create). Idempotent on (agent_id, user_address, recipient_email). |
+| `src/app/api/virtuals/tasks/[id]/route.ts` | `GET` (with ownership check), `PATCH` (pause/resume/update fields), `DELETE` (soft-cancel). |
+| `src/hooks/useVirtualsTasks.ts` | React hook: `tasks`, `createTask`, `updateTask`, `deleteTask`, `refresh`. Auto-polls every 30s. |
+| `src/components/settings/VirtualsAgentPanel.tsx` | The "Manage" modal for the Virtuals agent card. Form to create a task, list of existing tasks with status / pause / delete buttons, recent-activity panel. |
 | `tests/services/automation/virtualsPhase3.test.ts` | 12 regression tests covering registry integration, repository CRUD + kill switch, cron processor, and the email-recipient fix. |
+| `tests/api/virtualsTasks.test.ts` | 11 regression tests covering the new API routes: validation, idempotency, ownership checks, soft-cancel, frequency reschedule. |
 
 ### Automation Strategy: `virtuals-acp`
 The orchestrator's `executeVirtualsAgentTask()` runs a 3-step agentic lifecycle:
 1. **Reasoning** — Venice AI analyzes vault state and recommends strategy
 2. **Execution** — Agent wallet submits transaction (e.g., Megapot ticket purchase)
 3. **Reporting** — Agent email sends status update. Recipient is `task.recipientEmail` (set by the persisted task record), with a safe fallback to the agent's own email. No report is sent if neither is set (with a warning, not a throw).
+
+### Phase 3.5: User-Facing Surface
+
+The Phase 3 backend is wired but invisible to users without a way to manage tasks. Phase 3.5 ships the management surface:
+
+- `VirtualsAgentPanel` opens from the "Manage" button on the Virtuals agent card in the agent hub.
+- Form to create a new task: amount (USDC), frequency (hourly/daily/weekly/opportunistic), recipient email.
+- Live list of the user's tasks with status badges, last execution timestamp, and next scheduled run.
+- Pause / resume / delete per task (delete is a soft-cancel — the row stays in the DB for the activity log).
+- "Recent activity" section at the bottom: latest Venice reasoning + the most recent on-chain tx hash (with a BaseScan link).
+- `useVirtualsTasks` hook auto-polls every 30s so the panel stays fresh without a manual refresh.
 
 ### Phase 3: Persisted State + Server-Side Cron
 - `virtuals_tasks` table stores per-user task state (amount, frequency, `next_execution_at`, `is_active` kill switch, `lastReasoning`, `lastTxHash`, `lastError`).
