@@ -236,7 +236,8 @@ export class UniswapVaultProvider implements VaultProvider {
         const amountWei = parseUnits(amount, 6);
         
         return {
-            success: true,
+            success: false,
+            needsClientSignature: true,
             txData: JSON.stringify({
                 positionManager: UNISWAP_CONFIG.BASE.POSITION_MANAGER,
                 pool: UNISWAP_CONFIG.BASE.USDC_WETH_POOL,
@@ -253,7 +254,8 @@ export class UniswapVaultProvider implements VaultProvider {
         const amountWei = parseUnits(amount, 6);
         
         return {
-            success: true,
+            success: false,
+            needsClientSignature: true,
             txData: JSON.stringify({
                 positionManager: UNISWAP_CONFIG.BASE.POSITION_MANAGER,
                 amount: amountWei.toString(),
@@ -267,7 +269,8 @@ export class UniswapVaultProvider implements VaultProvider {
     async withdrawYield(userAddress: string): Promise<VaultWithdrawResult> {
         // For Uniswap V3, fees accumulate separately and can be collected without removing liquidity
         return {
-            success: true,
+            success: false,
+            needsClientSignature: true,
             txData: JSON.stringify({
                 positionManager: UNISWAP_CONFIG.BASE.POSITION_MANAGER,
                 recipient: userAddress,

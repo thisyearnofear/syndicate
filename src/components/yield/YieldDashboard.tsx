@@ -14,7 +14,7 @@ import { Button } from '@/shared/components/ui/Button';
 import { Card } from '@/shared/components/ui/Card';
 import { Badge } from '@/shared/components/ui/Badge';
 import type { VaultProtocol } from '@/services/vaults/vaultProvider';
-import { vaultManager } from '@/services/vaults';
+import { useVaultDeposit } from '@/hooks/useVaultDeposit';
 import { buildVaultExecutionHref } from '@/constants/vaultRouting';
 import Link from 'next/link';
 
@@ -27,6 +27,7 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
   const { addToast } = useToast();
   const successToast = useSuccessToast();
   const errorToast = useErrorToast();
+  const { withdraw: withdrawFromVault } = useVaultDeposit();
   
   // Fetch all vault positions using the new hook
   const { 
@@ -128,17 +129,17 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
       addToast({
         type: "info",
         title: "Initiating Withdrawal",
-        message: "Checking vault lockup status..."
+        message: "Confirm the transaction in your wallet..."
       });
 
-      // Withdraw from vault
-      const result = await vaultManager.withdraw(
+      // Withdraw from vault — useVaultDeposit signs + broadcasts on-chain and only
+      // resolves success once a real tx hash is confirmed.
+      const result = await withdrawFromVault(
         protocol as VaultProtocol,
-        position.balance.deposited,
-        address
+        position.balance.deposited
       );
-      
-      if (result.success) {
+
+      if (result.success && result.txHash) {
         successToast("Principal Withdrawn", `Successfully withdrew ${position.balance.deposited} USDC from ${protocol.toUpperCase()}.`);
         // Refresh vault data
         await refresh();

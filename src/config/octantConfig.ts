@@ -12,9 +12,9 @@
  */
 
 export const OCTANT_V2_CONFIG = {
-  // Feature flags
-  // Set to false when a real vault address is configured below
-  useMockVault: false,
+  // Mock mode is gated by the NEXT_PUBLIC_OCTANT_MOCK env flag (see
+  // isOctantMockEnabled below), NOT a config constant. Without a real vault
+  // address AND without that flag, Octant is disabled and refuses to run.
 
   // Contract addresses (fill with real addresses from Octant team once available)
   contracts: {
@@ -89,3 +89,48 @@ export const OCTANT_V2_CONFIG = {
 } as const;
 
 export const OCTANT_CONFIG = OCTANT_V2_CONFIG;
+
+/** In-memory mock vault identifier (no on-chain contract). */
+export const OCTANT_MOCK_VAULT_ADDRESS = 'mock:octant-usdc';
+
+/** Placeholder used in config until a real vault address is filled in. */
+const OCTANT_VAULT_PLACEHOLDER = '0x...';
+
+/**
+ * True when a real ERC-4626 vault address has been configured
+ * (i.e. it is not the `0x...` placeholder).
+ */
+export function isOctantVaultConfigured(): boolean {
+  const addr = OCTANT_CONFIG.vaults?.ethereumUsdcVault;
+  return !!addr && addr !== OCTANT_VAULT_PLACEHOLDER;
+}
+
+/**
+ * True when the in-memory mock vault is explicitly opted into via
+ * `NEXT_PUBLIC_OCTANT_MOCK`. Mirrors the TON pause pattern: the mock never
+ * runs for real users unless a developer turns it on for demos/tests.
+ */
+export function isOctantMockEnabled(): boolean {
+  const flag = (process.env.NEXT_PUBLIC_OCTANT_MOCK ?? '').trim().toLowerCase();
+  return flag === '1' || flag === 'true' || flag === 'yes';
+}
+
+/**
+ * Octant is usable only when a real vault is configured OR the mock is
+ * explicitly enabled. Otherwise it is disabled and must refuse to run.
+ */
+export function isOctantEnabled(): boolean {
+  return isOctantVaultConfigured() || isOctantMockEnabled();
+}
+
+/**
+ * Resolve the active Octant vault address:
+ * - the real configured address when present,
+ * - the mock address when `NEXT_PUBLIC_OCTANT_MOCK` is set,
+ * - `null` when Octant is disabled (no real vault, no mock opt-in).
+ */
+export function resolveOctantVaultAddress(): string | null {
+  if (isOctantVaultConfigured()) return OCTANT_CONFIG.vaults.ethereumUsdcVault;
+  if (isOctantMockEnabled()) return OCTANT_MOCK_VAULT_ADDRESS;
+  return null;
+}

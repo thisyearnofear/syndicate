@@ -216,12 +216,16 @@ export function useVaultDeposit() {
         } else if (protocol === 'octant') {
           // Octant uses octantVaultService which needs initialization
           const { octantVaultService } = await import('@/services/octantVaultService');
+          const { resolveOctantVaultAddress } = await import('@/config/octantConfig');
+          const vaultAddr = resolveOctantVaultAddress();
+          if (!vaultAddr) {
+            throw new Error('Octant vault is disabled: configure a real ERC-4626 vault address or set NEXT_PUBLIC_OCTANT_MOCK=true for demos/tests.');
+          }
           const { web3Service } = await import('@/services/web3Service');
           const provider = web3Service.getProvider();
           const signer = await web3Service.getFreshSigner();
           if (!provider) throw new Error('Provider not available');
           await octantVaultService.initialize(provider, signer);
-          const vaultAddr = 'mock:octant-usdc'; // Use mock vault for MVP
           const depositResult = await octantVaultService.deposit(vaultAddr, amount, address);
           result = { success: depositResult.success, txHash: depositResult.txHash };
           if (!depositResult.success) throw new Error(depositResult.error || 'Octant deposit failed');
@@ -293,12 +297,16 @@ export function useVaultDeposit() {
         } else if (protocol === 'octant') {
           // Octant withdrawal
           const { octantVaultService } = await import('@/services/octantVaultService');
+          const { resolveOctantVaultAddress } = await import('@/config/octantConfig');
+          const vaultAddr = resolveOctantVaultAddress();
+          if (!vaultAddr) {
+            throw new Error('Octant vault is disabled: configure a real ERC-4626 vault address or set NEXT_PUBLIC_OCTANT_MOCK=true for demos/tests.');
+          }
           const { web3Service } = await import('@/services/web3Service');
           const provider = web3Service.getProvider();
           const signer = await web3Service.getFreshSigner();
           if (!provider) throw new Error('Provider not available');
           await octantVaultService.initialize(provider, signer);
-          const vaultAddr = 'mock:octant-usdc';
           const withdrawResult = await octantVaultService.withdraw(vaultAddr, amount, address, address);
           result = { success: withdrawResult.success, txHash: withdrawResult.txHash };
           if (!withdrawResult.success) throw new Error(withdrawResult.error || 'Octant withdrawal failed');

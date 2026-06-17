@@ -20,17 +20,19 @@ export interface VaultBalance {
 }
 
 export interface VaultDepositResult {
-    success: boolean;
+    success: boolean; // true ONLY when the on-chain action is confirmed; false while a client signature is still required
     txHash?: string;
-    txData?: string; // Serialized transaction for client-side signing (Solana)
+    txData?: string; // Serialized transaction the client must sign+broadcast (see needsClientSignature)
+    needsClientSignature?: boolean; // true when txData must be signed by the client; success will be false until then
     error?: string;
     vaultId?: string;
 }
 
 export interface VaultWithdrawResult {
-    success: boolean;
+    success: boolean; // true ONLY when the on-chain action is confirmed; false while a client signature is still required
     txHash?: string;
-    txData?: string; // Serialized transaction for client-side signing (Solana)
+    txData?: string; // Serialized transaction the client must sign+broadcast (see needsClientSignature)
+    needsClientSignature?: boolean; // true when txData must be signed by the client; success will be false until then
     error?: string;
     amountWithdrawn?: string;
 }
@@ -128,4 +130,5 @@ export enum VaultErrorCode {
     PROVIDER_NOT_FOUND = 'PROVIDER_NOT_FOUND',
     NETWORK_ERROR = 'NETWORK_ERROR',
     CONTRACT_ERROR = 'CONTRACT_ERROR',
+    VAULT_DISABLED = 'VAULT_DISABLED',
 }

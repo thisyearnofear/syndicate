@@ -181,7 +181,8 @@ export class PoolTogetherVaultProvider implements VaultProvider {
   async deposit(amount: string, userAddress: string): Promise<VaultDepositResult> {
     const amountWei = parseUnits(amount, 6);
     return {
-      success: true,
+      success: false,
+      needsClientSignature: true,
       txData: JSON.stringify({
         vault: PRIZE_VAULT,
         amount: amountWei.toString(),
@@ -194,7 +195,8 @@ export class PoolTogetherVaultProvider implements VaultProvider {
   async withdraw(amount: string, userAddress: string): Promise<VaultWithdrawResult> {
     const amountWei = parseUnits(amount, 6);
     return {
-      success: true,
+      success: false,
+      needsClientSignature: true,
       txData: JSON.stringify({
         vault: PRIZE_VAULT,
         amount: amountWei.toString(),

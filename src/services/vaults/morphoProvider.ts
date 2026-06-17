@@ -287,7 +287,8 @@ export class MorphoVaultProvider implements VaultProvider {
         const amountWei = parseUnits(amount, 6);
         
         return {
-            success: true,
+            success: false,
+            needsClientSignature: true,
             txData: JSON.stringify({
                 vault: MORPHO_CONFIG.BASE.VAULT_ADDRESS,
                 asset: MORPHO_CONFIG.BASE.USDC_ADDRESS,
@@ -305,7 +306,8 @@ export class MorphoVaultProvider implements VaultProvider {
         const amountWei = parseUnits(amount, 6);
         
         return {
-            success: true,
+            success: false,
+            needsClientSignature: true,
             txData: JSON.stringify({
                 vault: MORPHO_CONFIG.BASE.VAULT_ADDRESS,
                 asset: MORPHO_CONFIG.BASE.USDC_ADDRESS,

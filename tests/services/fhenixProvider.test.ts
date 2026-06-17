@@ -182,7 +182,8 @@ describe('FhenixVaultProvider', () => {
     describe('deposit', () => {
         it('returns a deposit intent with requiresEncryption flag and micro-USDC amount', async () => {
             const result = await provider.deposit('1.5', USER_ADDRESS);
-            expect(result.success).toBe(true);
+            expect(result.success).toBe(false);
+            expect(result.needsClientSignature).toBe(true);
             const txData = JSON.parse(result.txData!);
             expect(txData.action).toBe('fhenix_deposit');
             expect(txData.requiresEncryption).toBe(true);
@@ -196,7 +197,8 @@ describe('FhenixVaultProvider', () => {
     describe('withdraw', () => {
         it('returns a withdraw intent for the requested amount', async () => {
             const result = await provider.withdraw('0.5', USER_ADDRESS);
-            expect(result.success).toBe(true);
+            expect(result.success).toBe(false);
+            expect(result.needsClientSignature).toBe(true);
             const txData = JSON.parse(result.txData!);
             expect(txData.action).toBe('fhenix_withdraw');
             expect(txData.receiver).toBe(USER_ADDRESS);

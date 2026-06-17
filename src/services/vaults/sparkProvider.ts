@@ -262,7 +262,8 @@ export class SparkVaultProvider implements VaultProvider {
         const amountWei = parseUnits(amount, 6);
         
         return {
-            success: true,
+            success: false,
+            needsClientSignature: true,
             txData: JSON.stringify({
                 vault: SPARK_CONFIG.BASE.VAULT_ADDRESS,
                 asset: SPARK_CONFIG.BASE.USDC_ADDRESS,
@@ -280,7 +281,8 @@ export class SparkVaultProvider implements VaultProvider {
         const amountWei = parseUnits(amount, 6);
         
         return {
-            success: true,
+            success: false,
+            needsClientSignature: true,
             txData: JSON.stringify({
                 vault: SPARK_CONFIG.BASE.VAULT_ADDRESS,
                 asset: SPARK_CONFIG.BASE.USDC_ADDRESS,

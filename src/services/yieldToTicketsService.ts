@@ -242,7 +242,7 @@ class YieldToTicketsService {
       try {
         const withdrawResult = await vaultManager.withdrawYield(config.vaultProtocol, userAddress);
 
-        if (withdrawResult.success && withdrawResult.txData) {
+        if (withdrawResult.needsClientSignature && withdrawResult.txData) {
           // Vault requires client-side withdrawal signing before purchase
           // Store withdrawal context in typed fields so completeYieldConversion can use them
           strategy.pendingWithdrawalAmount = yieldAmount;

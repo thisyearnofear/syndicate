@@ -154,10 +154,12 @@ export class AaveVaultProvider implements VaultProvider {
                 );
             }
 
-            // Return txData for client-side signing via the frontend hook (useVaultDeposit)
-            // The frontend will handle the approve + supply flow using wagmi
+            // Build txData for client-side signing via the frontend hook (useVaultDeposit).
+            // The frontend handles the approve + supply flow using wagmi. success stays
+            // false until that on-chain tx is signed and confirmed.
             return {
-                success: true,
+                success: false,
+                needsClientSignature: true,
                 txData: JSON.stringify({
                     pool: AAVE_CONFIG.BASE.POOL_ADDRESS,
                     asset: AAVE_CONFIG.BASE.USDC_ADDRESS,
@@ -202,9 +204,11 @@ export class AaveVaultProvider implements VaultProvider {
                 );
             }
 
-            // Return txData for client-side signing via the frontend hook (useVaultDeposit)
+            // Build txData for client-side signing via the frontend hook (useVaultDeposit).
+            // success stays false until that on-chain tx is signed and confirmed.
             return {
-                success: true,
+                success: false,
+                needsClientSignature: true,
                 txData: JSON.stringify({
                     pool: AAVE_CONFIG.BASE.POOL_ADDRESS,
                     asset: AAVE_CONFIG.BASE.USDC_ADDRESS,

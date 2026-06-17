@@ -166,7 +166,8 @@ export class FhenixVaultProvider implements VaultProvider {
     const amountMicroUsdc = Math.round(parseFloat(amount) * 1e6);
 
     return {
-      success: true,
+      success: false,
+      needsClientSignature: true,
       txData: JSON.stringify({
         action: 'fhenix_deposit',
         vault: FHENIX_POOL_CONFIG.VAULT_ADDRESS,
@@ -192,7 +193,8 @@ export class FhenixVaultProvider implements VaultProvider {
     const amountMicroUsdc = Math.round(parseFloat(amount) * 1e6);
 
     return {
-      success: true,
+      success: false,
+      needsClientSignature: true,
       txData: JSON.stringify({
         action: 'fhenix_withdraw',
         vault: FHENIX_POOL_CONFIG.VAULT_ADDRESS,
