@@ -52,6 +52,8 @@ These are **not** planned work. They are listed here so future contributors don'
 
 When you finish a Phase, update the table. When you decide not to build a feature, move it to "Backlog" or remove it. When you discover a divergence (e.g. a feature documented here that the code does not implement), open a PR to remove the doc claim — not to match the code with the claim.
 
+For the non-Base chains (Stacks, Solana, NEAR, Starknet), the status table is the high-level summary. The detailed per-chain assessment against the production bar (functional / error handling / monitoring / security / persistence / testing / documentation) is in [`docs/PRODUCTION_CHECKLIST.md`](docs/PRODUCTION_CHECKLIST.md). When you change a chain's status, update both.
+
 ## Project Overview
 Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, Arbitrum), Solana, NEAR, Starknet, Stacks, and Telegram (TON bridge paused until the lottery contract is deployed).
 
