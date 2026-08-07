@@ -35,7 +35,7 @@ export function useNetworkInfo(): NetworkInfo {
     const rawChainId = state.chainId;
     const chainId = typeof rawChainId === 'number' ? rawChainId : (parseInt(String(rawChainId), 16) || 8453); // Default to Base mainnet
 
-    const isTestnet = chainId === CHAIN_IDS.BASE_SEPOLIA || chainId === CHAIN_IDS.SEPOLIA;
+    const isTestnet = chainId === CHAIN_IDS.BASE_SEPOLIA || chainId === CHAIN_IDS.SEPOLIA || chainId === CHAIN_IDS.XLAYER_TESTNET;
     const isBase = chainId === CHAIN_IDS.BASE;
     const isBaseSepolia = chainId === CHAIN_IDS.BASE_SEPOLIA;
     const isEthereum = chainId === CHAIN_IDS.ETHEREUM;
@@ -60,6 +60,7 @@ export function useNetworkInfo(): NetworkInfo {
       [CHAIN_IDS.SEPOLIA]: 'Sepolia',
       [CHAIN_IDS.AVALANCHE]: 'Avalanche',
       [CHAIN_IDS.STACKS]: 'Stacks',
+      [CHAIN_IDS.XLAYER_TESTNET]: 'X Layer Testnet',
     };
 
     const chainName = chainNameMap[chainId] || `Network (${chainId})`;

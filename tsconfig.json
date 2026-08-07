@@ -49,6 +49,7 @@
     "tmp_*",
     "src/__tests__/**/*",
     "indexer",
-    "contracts/ton"
+    "contracts/ton",
+    "lib/v4-core/test/js-scripts"
   ]
 }

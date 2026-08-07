@@ -47,10 +47,11 @@ function serializeTask(t: VirtualsTaskRecord) {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     await ensureVirtualsTasksTable();
+    const { id } = await params;
 
     const { searchParams } = new URL(req.url);
     const userAddress = searchParams.get('userAddress');
@@ -59,7 +60,7 @@ export async function GET(
     }
 
     const repo = getVirtualsTaskRepository();
-    const task = await repo.getTask(params.id);
+    const task = await repo.getTask(id);
     if (!task) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
@@ -82,10 +83,11 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     await ensureVirtualsTasksTable();
+    const { id } = await params;
 
     const body = await req.json().catch(() => ({}));
     const { userAddress, isActive, status, frequency, amount, recipientEmail } = body ?? {};
@@ -117,7 +119,7 @@ export async function PATCH(
     }
 
     const repo = getVirtualsTaskRepository();
-    const existing = await repo.getTask(params.id);
+    const existing = await repo.getTask(id);
     if (!existing) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
@@ -147,7 +149,7 @@ export async function PATCH(
       updates.status = 'active';
     }
 
-    const updated = await repo.updateTask(params.id, updates);
+    const updated = await repo.updateTask(id, updates);
     return NextResponse.json({ task: serializeTask(updated) });
   } catch (error) {
     logger.error('[VirtualsTasksId PATCH] failed', { error: error instanceof Error ? error.message : String(error) });
@@ -164,10 +166,11 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     await ensureVirtualsTasksTable();
+    const { id } = await params;
 
     const { searchParams } = new URL(req.url);
     const userAddress = searchParams.get('userAddress');
@@ -176,7 +179,7 @@ export async function DELETE(
     }
 
     const repo = getVirtualsTaskRepository();
-    const existing = await repo.getTask(params.id);
+    const existing = await repo.getTask(id);
     if (!existing) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
@@ -184,7 +187,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
-    await repo.updateTask(params.id, {
+    await repo.updateTask(id, {
       isActive: false,
       status: 'cancelled',
     });

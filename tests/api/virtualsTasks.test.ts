@@ -214,7 +214,7 @@ describe('/api/virtuals/tasks/[id]', () => {
             mockGetTask.mockResolvedValue(taskA);
             const { GET } = await import('@/app/api/virtuals/tasks/[id]/route');
             const req = new Request('http://localhost/api/virtuals/tasks/task-A?userAddress=0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
-            const res = await GET(req as unknown as import('next/server').NextRequest, { params: { id: 'task-A' } });
+            const res = await GET(req as unknown as import('next/server').NextRequest, { params: Promise.resolve({ id: 'task-A' }) });
             expect(res.status).toBe(200);
             const body = await res.json();
             expect(body.task.id).toBe('task-A');
@@ -224,7 +224,7 @@ describe('/api/virtuals/tasks/[id]', () => {
             mockGetTask.mockResolvedValue(taskB);
             const { GET } = await import('@/app/api/virtuals/tasks/[id]/route');
             const req = new Request('http://localhost/api/virtuals/tasks/task-B?userAddress=0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
-            const res = await GET(req as unknown as import('next/server').NextRequest, { params: { id: 'task-B' } });
+            const res = await GET(req as unknown as import('next/server').NextRequest, { params: Promise.resolve({ id: 'task-B' }) });
             expect(res.status).toBe(404);
         });
     });
@@ -238,7 +238,7 @@ describe('/api/virtuals/tasks/[id]', () => {
                 method: 'PATCH',
                 body: JSON.stringify({ userAddress: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', isActive: false }),
             });
-            const res = await PATCH(req as unknown as import('next/server').NextRequest, { params: { id: 'task-A' } });
+            const res = await PATCH(req as unknown as import('next/server').NextRequest, { params: Promise.resolve({ id: 'task-A' }) });
             expect(res.status).toBe(200);
             const updates = mockUpdateTask.mock.calls[0][1];
             expect(updates.isActive).toBe(false);
@@ -254,7 +254,7 @@ describe('/api/virtuals/tasks/[id]', () => {
                 method: 'PATCH',
                 body: JSON.stringify({ userAddress: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', frequency: 'weekly' }),
             });
-            await PATCH(req as unknown as import('next/server').NextRequest, { params: { id: 'task-A' } });
+            await PATCH(req as unknown as import('next/server').NextRequest, { params: Promise.resolve({ id: 'task-A' }) });
             const updates = mockUpdateTask.mock.calls[0][1];
             expect(updates.frequency).toBe('weekly');
             // 7 days from now, in ms
@@ -268,7 +268,7 @@ describe('/api/virtuals/tasks/[id]', () => {
                 method: 'PATCH',
                 body: JSON.stringify({ userAddress: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', frequency: 'yearly' }),
             });
-            const res = await PATCH(req as unknown as import('next/server').NextRequest, { params: { id: 'task-A' } });
+            const res = await PATCH(req as unknown as import('next/server').NextRequest, { params: Promise.resolve({ id: 'task-A' }) });
             expect(res.status).toBe(400);
         });
     });
@@ -279,7 +279,7 @@ describe('/api/virtuals/tasks/[id]', () => {
             mockUpdateTask.mockImplementation(async (_id, updates) => ({ ...taskA, ...updates }));
             const { DELETE } = await import('@/app/api/virtuals/tasks/[id]/route');
             const req = new Request('http://localhost/api/virtuals/tasks/task-A?userAddress=0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
-            const res = await DELETE(req as unknown as import('next/server').NextRequest, { params: { id: 'task-A' } });
+            const res = await DELETE(req as unknown as import('next/server').NextRequest, { params: Promise.resolve({ id: 'task-A' }) });
             expect(res.status).toBe(200);
             const updates = mockUpdateTask.mock.calls[0][1];
             expect(updates.isActive).toBe(false);

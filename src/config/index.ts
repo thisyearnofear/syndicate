@@ -10,6 +10,7 @@
 
 import { sepolia, base, avalanche, mainnet, baseSepolia } from "viem/chains";
 import { CCTP } from './cctpConfig';
+import { xLayerTestnet } from './xlayer';
 import { CCIP } from './ccipConfig';
 
 // =============================================================================
@@ -57,6 +58,12 @@ export const CHAINS = {
     explorerUrl: "https://sepolia.basescan.org",
     rpcUrl: process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org",
   },
+  xLayerTestnet: {
+    ...xLayerTestnet,
+    rpcUrl: process.env.NEXT_PUBLIC_XLAYER_TESTNET_RPC_URL || "https://testrpc.xlayer.tech/terigon",
+    explorerUrl: "https://www.oklink.com/x-layer-test",
+  },
+
   stacks: {
     id: 12345,
     name: "Stacks",
@@ -75,6 +82,7 @@ export const CHAIN_IDS = {
   ETHEREUM: 1,
   SEPOLIA: 11155111,
   STACKS: 12345,
+  XLAYER_TESTNET: 195,
 } as const;
 
 
@@ -485,6 +493,7 @@ export { PERFORMANCE as performance };
 export { BRIDGE as bridge };
 export { FEATURES as features };
 export { CCTP as cctp };
+export { xLayerTestnet };
 export { CCIP as ccip };
 
 

@@ -2,7 +2,7 @@
 
 **Project**: Syndicate — "Prize Pool Hook" (lossless lottery DEX on X Layer)
 **Track**: OKX X Layer Build X — AI Season (AI + onchain value)
-**Status**: Active execution plan
+**Status**: Active execution plan; M2 hardened and read-only app slice shipped
 **Window**: Aug 7 → Aug 21, 2026 (submission Aug 21, 23:59 UTC)
 **Last Updated**: Aug 8, 2026
 
@@ -19,9 +19,10 @@ AI layer — Venice policy advisor + permissioned autopilot — is the strategy 
 the pot vs. expected value, recommends the fee split and draw cadence, and triggers draws
 within user-approved, revocable caps.
 
-**Novelty claim (honest + checkable):** the first custom Uniswap v4 hook on X Layer, turning
-the DEX itself into the lottery. No project on X Layer currently uses custom v4 hooks in
-production.
+**Novelty claim (honest + checkable):** we intend to be the first custom Uniswap v4 hook
+on X Layer to turn the DEX itself into the lottery. This is a proposed ecosystem claim to
+verify after testnet deployment; no project on X Layer is currently known to use custom v4
+hooks in production.
 
 ## Why this concept
 
@@ -57,7 +58,7 @@ be stated honestly in the submission.
 
 | Requirement | Status |
 |---|---|
-| AI elements in product design + deployed on X Layer | ✅ AI layer exists; hook deploys on X Layer |
+| AI elements in product design + deployed on X Layer | ✅ AI layer exists; hook is deployment-ready, X Layer deployment pending |
 | Deployed on **X Layer Testnet** during the hackathon, then launched on **X Layer Mainnet** | Planned (testnet self-deployed v4 core; mainnet canonical PoolManager) |
 | Dedicated X account, active; submission post must mention @XLayerOfficial | TODO |
 | Google Form submission by **Aug 21, 2026 23:59 UTC** | TODO |
@@ -134,6 +135,7 @@ same "keep your money, win the pot" promise.
 - `test/` — 104 Foundry tests, including real PoolManager integration, draw mechanics,
   surcharge funding, router swap/refund flows, and end-to-end swap→pot→draw→claim.
 - See `contracts/xlayer/README.md` + `docs/BUILD_X_HOOK_SPEC.md` + `docs/BUILD_X_DEPLOYMENT.md`.
+- The app-side read-only slice is now live in the repo at `/xlayer`: chain 195 is registered with wagmi, deployment-aware reads expose pot/shares/draw settings/user odds, and missing or malformed addresses produce a safe preview state. See [BUILD_X_APP_INTEGRATION.md](./BUILD_X_APP_INTEGRATION.md).
 
 ### Milestones
 
@@ -141,7 +143,7 @@ same "keep your money, win the pot" promise.
 2. ✅ **M2** — swap wrapper: the pot is self-funding from real trades.
 3. **M3** — LP position management + fee split (yield-to-pot engine) + non-USDC conversion.
 4. **M4** — drand beacon verifier + permissionless relay (BLS12-381).
-5. **M5** — Syndicates + AI agent wiring on X Layer; X Layer wagmi config + dashboard UI.
+5. **M5** — In progress: read-only X Layer wagmi config + dashboard UI shipped; syndicates, AI agent wiring, and gated write flows remain.
 
 ## 14-day execution plan
 
@@ -151,8 +153,8 @@ same "keep your money, win the pot" promise.
 - **Days 3–7:** deploy to X Layer testnet with self-deployed v4 core; one live pool with
   the hook + router; live swaps funding the pot (M2 already makes this work end-to-end).
 - **Days 8–10:** drand relay; AI agent wiring (advisor reads pot/odds/fee, recommends
-  settings, agent triggers draws as keeper within caps); X Layer wagmi config + dashboard
-  UI on the existing shell.
+  settings, agent triggers draws as keeper within caps); extend the shipped read-only
+  dashboard with explicitly gated testnet write flows.
 - **Days 11–12:** live testnet demo: real swaps → pot growth → draw → winner claim; record
   60–90s demo video.
 - **Days 13–14:** **mainnet launch** against canonical PoolManager (rule requires it); X post

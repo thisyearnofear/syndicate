@@ -119,16 +119,20 @@ The M2 hook and its hardening pass are implemented and validated:
   `SimpleRandomnessOracle.sol` (testnet-only demo oracle).
 - `PrizePoolHookIntegration.t.sol` exercises the real pinned v4 `PoolManager`, liquidity,
   swaps, surcharge funding, and CREATE2 permissions. **104 Foundry tests pass.**
-- M3 LP fee split → M4 drand verifier → M5 UI/AI wiring. See
+- M3 LP fee split → M4 drand verifier → M5 UI/AI wiring. The read-only X Layer wagmi
+  config and `/xlayer` dashboard slice are now shipped; see
+  [BUILD_X_APP_INTEGRATION.md](./BUILD_X_APP_INTEGRATION.md),
   [contracts/xlayer/README.md](../contracts/xlayer/README.md),
   [BUILD_X_HOOK_SPEC.md](./BUILD_X_HOOK_SPEC.md), [BUILD_X_DEPLOYMENT.md](./BUILD_X_DEPLOYMENT.md).
 
 ### Remaining work
 
-1. Deploy the hardened stack to X Layer testnet with self-deployed v4 core.
+1. Deploy the hardened stack to X Layer testnet with self-deployed v4 core, then configure
+   the shipped `/xlayer` dashboard with the hook, router, PoolManager, and USDC addresses.
 2. Implement and independently review the drand oracle before any real-value draw;
    the deployment script intentionally rejects chain 196 while only the demo oracle exists.
-3. Build M3 LP fee splitting, then add X Layer wagmi/dashboard UI and syndicate wiring.
+3. Build M3 LP fee splitting, then add explicitly gated deposit/withdraw/draw/claim flows,
+   AI keeper actions, and syndicate wiring.
 
 ---
 

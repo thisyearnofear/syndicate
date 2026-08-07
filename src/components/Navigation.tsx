@@ -21,7 +21,7 @@ import { WalletType } from '@/domains/wallet/types';
 import WalletInfo from './wallet/WalletInfo';
 import UnifiedModal from './modal/UnifiedModal';
 import WalletConnectionOptions from './wallet/WalletConnectionOptions';
-import { Home, Users, TrendingUp, Menu, X, ArrowLeftRight, LayoutDashboard, Settings } from 'lucide-react';
+import { Home, Users, TrendingUp, Menu, X, ArrowLeftRight, LayoutDashboard, Settings, Sparkles } from 'lucide-react';
 
 interface NavigationProps {
     className?: string;
@@ -126,6 +126,12 @@ export default function Navigation({ className = '' }: NavigationProps) {
                 active: pathname === '/bridge',
             }]
             : []),
+        {
+            href: '/xlayer',
+            label: 'Prize Pool',
+            icon: Sparkles,
+            active: pathname === '/xlayer',
+        },
         {
             href: '/settings',
             label: 'Settings',

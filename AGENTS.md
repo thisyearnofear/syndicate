@@ -34,7 +34,7 @@ This file is the source of truth for what is **actually shipped**. Items in the 
 | Foundry tests | Live | 31 (vault) + 25 (governor) tests run in CI |
 | Jest tests | Live | `npm test` runs in CI; coverage report missing |
 | CI (lint + typecheck + build + test + forge) | Live | `.github/workflows/ci.yml` and `test.yml` |
-| X Layer Prize Pool Hook (Build X AI Season) | In progress (M2 hardened; testnet-ready) | Uniswap v4 hook on X Layer (chain 196) turning swap fees into a lossless lottery: pot from trading fees, LPs as ticket holders, epoch draws with weighted selection, and oracle-agnostic randomness. M2 includes the surcharge router, atomic `PrizePoolHookFactory`, real `PoolManager` integration coverage, CREATE2 permission-bit checks, post-bind configuration timelocks, and timelocked router recovery. Testnet deployment is guarded against the operator-controlled demo oracle on chain 196. **104 Foundry tests pass.** M3 LP fee split → M4 drand verifier → M5 UI/AI. See [docs/BUILD_X_STRATEGY.md](docs/BUILD_X_STRATEGY.md). |
+| X Layer Prize Pool Hook (Build X AI Season) | In progress (M2 hardened; read-only app slice complete; testnet deployment pending) | Uniswap v4 hook on X Layer (chain 196) turning swap fees into a lossless lottery: pot from trading fees, LPs as ticket holders, epoch draws with weighted selection, and oracle-agnostic randomness. M2 includes the surcharge router, atomic `PrizePoolHookFactory`, real `PoolManager` integration coverage, CREATE2 permission-bit checks, post-bind configuration timelocks, and timelocked router recovery. The read-only `/xlayer` dashboard and chain-195 wagmi integration are shipped; testnet deployment and write flows remain pending. Mainnet is guarded against the operator-controlled demo oracle. **104 Foundry tests pass; 14 focused app tests pass.** M3 LP fee split → M4 drand verifier → gated deposits/draws/claims + AI/syndicate wiring. See [docs/BUILD_X_STRATEGY.md](docs/BUILD_X_STRATEGY.md) and [docs/BUILD_X_APP_INTEGRATION.md](docs/BUILD_X_APP_INTEGRATION.md). |
 
 ### Backlog (planned, not yet built)
 
@@ -112,6 +112,9 @@ Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, A
 - `contracts/ton/lottery.tact` - TON lottery contract (Tact, not yet deployed)
 - `src/app/create-syndicate/page.tsx` - 4-step syndicate creation with pool type selector
 - `src/hooks/useSyndicateDeposit.ts` - Multi-pool-type deposit hook with PoolTogether delegation
+- `src/config/xlayer.ts` - X Layer Testnet chain, deployment addresses, ABIs, and explorer helpers
+- `src/app/xlayer/page.tsx` + `src/components/xlayer/PrizePoolDashboard.tsx` - Read-only Prize Pool dashboard
+- `docs/BUILD_X_APP_INTEGRATION.md` - X Layer app configuration and deployment handoff
 
 ## Tech Stack
 - **Framework**: Next.js 14 (App Router)

@@ -4,8 +4,7 @@ The lossless-lottery DEX for OKX X Layer (Build X AI Season). Companion to
 [BUILD_X_STRATEGY.md](./BUILD_X_STRATEGY.md) (product/plan) and
 [contracts/xlayer/README.md](../contracts/xlayer/README.md) (repo state).
 
-**Status:** M1 + M2 implemented and hardened; 104 Foundry tests green, including real PoolManager integration.
-M3–M5 planned.
+**Status:** M1 + M2 implemented and hardened; the read-only X Layer app slice is also shipped. 104 Foundry tests and 14 focused app tests are green, including real PoolManager integration. M3–M5 and gated write flows remain planned.
 
 ---
 
@@ -113,7 +112,7 @@ The router approach delivers the demo mechanic now and composes with M3 later.
 - [x] **M2 hardening — atomic factory deployment + real v4 integration test +
       post-bind configuration timelock.**
 - [ ] **M4 — standalone drand oracle + permissionless relay.**
-- [ ] **M5 — syndicates, AI agent wiring, X Layer wagmi config + dashboard UI.**
+- [ ] **M5 — syndicates + AI agent wiring and gated write flows.** The X Layer wagmi config and read-only `/xlayer` dashboard slice are shipped; see [BUILD_X_APP_INTEGRATION.md](./BUILD_X_APP_INTEGRATION.md).
 - [ ] **Harden before mainnet**: rejection sampling, multi-currency conversion sweeps,
       drand verification, and independent review of the oracle cryptography.
 

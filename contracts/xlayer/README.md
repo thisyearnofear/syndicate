@@ -68,7 +68,7 @@ oracle-agnostic behind `IRandomnessOracle`:
       action — relevant when the hook LP-splits.)
 - [ ] **M4 — standalone drand beacon verifier + permissionless relay** (BLS12-381),
       replacing `SimpleRandomnessOracle` for real-value draws.
-- [ ] **M5 — syndicates + AI agent wiring + X Layer wagmi config + dashboard UI.**
+- [ ] **M5 — syndicates + AI agent wiring and gated write flows.** The X Layer wagmi config and read-only `/xlayer` dashboard slice are shipped; see [docs/BUILD_X_APP_INTEGRATION.md](../../docs/BUILD_X_APP_INTEGRATION.md).
 
 ## Deployment notes
 

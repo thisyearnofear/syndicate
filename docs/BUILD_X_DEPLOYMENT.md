@@ -66,7 +66,25 @@ Record all printed addresses.
       event on the explorer.
 - [ ] `surchargeEnabled == true`, `surchargeBps == 100`.
 
-### 4. Demo flow (the 60-second loop)
+### 4. Configure the app dashboard
+
+Copy the deployed addresses into `.env.local` so the read-only dashboard can query the
+live testnet stack. Do not expose a private key in these variables.
+
+```bash
+NEXT_PUBLIC_XLAYER_TESTNET_RPC_URL=https://testrpc.xlayer.tech/terigon
+NEXT_PUBLIC_XLAYER_TESTNET_USDC_ADDRESS=0xDec90b78111Ba2fc6FC6d84d8B9ec159A2d4b9B3
+NEXT_PUBLIC_XLAYER_PRIZE_POOL_HOOK_ADDRESS=<hook from step 2>
+NEXT_PUBLIC_XLAYER_PRIZE_POOL_ROUTER_ADDRESS=<router from step 2>
+NEXT_PUBLIC_XLAYER_POOL_MANAGER_ADDRESS=<PoolManager from step 1>
+```
+
+Restart the Next.js server and open `/xlayer`. The dashboard should show the pot, shares,
+draw state, surcharge policy, and connected-wallet odds. It intentionally remains read-only
+until the testnet deployment is verified and the transaction flows receive explicit safety
+gating. See [BUILD_X_APP_INTEGRATION.md](./BUILD_X_APP_INTEGRATION.md).
+
+### 5. Demo flow (the 60-second loop)
 
 1. `hook.deposit(amount)` — user deposits USDC (principal preserved).
 2. `router.swapExactInput(zeroForOne, amountIn, minOut, 0)` — a swap; the 1% surcharge

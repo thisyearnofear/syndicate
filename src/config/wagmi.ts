@@ -2,6 +2,7 @@ import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { base, baseSepolia } from 'wagmi/chains';
 import { http } from 'wagmi';
 import { FHENIX_HELIUM_RPC_URL, fhenixHelium } from '@/services/fhe/fhenixChain';
+import { xLayerTestnet } from '@/config/xlayer';
 
 let cachedConfig: ReturnType<typeof getDefaultConfig> | null = null;
 let isConfigInitialized = false;
@@ -38,11 +39,13 @@ export function getConfig(): ReturnType<typeof getDefaultConfig> | null {
         base,
         baseSepolia,
         fhenixHelium,
+        xLayerTestnet,
       ],
       transports: {
         [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org', { batch: true }),
         [baseSepolia.id]: http(),
         [fhenixHelium.id]: http(process.env.NEXT_PUBLIC_FHENIX_RPC_URL || FHENIX_HELIUM_RPC_URL),
+        [xLayerTestnet.id]: http(process.env.NEXT_PUBLIC_XLAYER_TESTNET_RPC_URL || 'https://testrpc.xlayer.tech/terigon'),
       },
       pollingInterval: 30_000,
       ssr: false, // Disable SSR to prevent indexedDB access on server
@@ -60,11 +63,13 @@ export function getConfig(): ReturnType<typeof getDefaultConfig> | null {
       base,
       baseSepolia,
       fhenixHelium,
+      xLayerTestnet,
     ],
     transports: {
       [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org', { batch: true }),
       [baseSepolia.id]: http(),
       [fhenixHelium.id]: http(process.env.NEXT_PUBLIC_FHENIX_RPC_URL || FHENIX_HELIUM_RPC_URL),
+      [xLayerTestnet.id]: http(process.env.NEXT_PUBLIC_XLAYER_TESTNET_RPC_URL || 'https://testrpc.xlayer.tech/terigon'),
     },
     pollingInterval: 30_000,
     ssr: false, // Set to false to prevent server-side indexedDB access

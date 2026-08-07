@@ -41,6 +41,7 @@ export default function WalletInfo({
       [CHAIN_IDS.SEPOLIA]: { name: "Sepolia", isTestnet: true },
       [CHAIN_IDS.AVALANCHE]: { name: "Avalanche", isTestnet: false },
       [CHAIN_IDS.STACKS]: { name: "Stacks", isTestnet: false },
+      [CHAIN_IDS.XLAYER_TESTNET]: { name: "X Layer Testnet", isTestnet: true },
     };
 
     if (numChainId === 0) {
