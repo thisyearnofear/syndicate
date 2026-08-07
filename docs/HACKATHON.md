@@ -1,7 +1,9 @@
 # Hackathon Strategy - Consolidated Plan
 
-**Last Updated**: June 15, 2026  
-**Active submission**: **MetaMask Smart Accounts Kit x 1Shot API x Venice AI Cook-Off** — see [METAMASK_COOKOFF_SUBMISSION.md](./METAMASK_COOKOFF_SUBMISSION.md) and [METAMASK_COOKOFF_DEMO_SCRIPT.md](./METAMASK_COOKOFF_DEMO_SCRIPT.md)
+**Last Updated**: Aug 8, 2026
+**Active submissions**:
+- **OKX X Layer Build X — AI Season** — see [BUILD_X_STRATEGY.md](./BUILD_X_STRATEGY.md). Submission Aug 21, 2026.
+- **MetaMask Smart Accounts Kit x 1Shot API x Venice AI Cook-Off** — see [METAMASK_COOKOFF_SUBMISSION.md](./METAMASK_COOKOFF_SUBMISSION.md) and [METAMASK_COOKOFF_DEMO_SCRIPT.md](./METAMASK_COOKOFF_DEMO_SCRIPT.md)
 
 ---
 
@@ -9,6 +11,7 @@
 
 | Hackathon | Status | Recommendation | Timeline |
 |-----------|--------|---|---|
+| **OKX X Layer Build X — AI Season** | **Active submission** | **BUILD** | Aug 21, 2026 |
 | **MetaMask Smart Accounts / 1Shot / Venice Cook-Off** | **Active submission** | **SUBMIT** | June 15, 2026 |
 | **Fhenix Privacy-by-Design Buildathon** | Shipped (Wave 4) | Submitted | Final submission June 1 |
 | **Lifi DeFi Mullet** | Backlog | Optional | Open submission |
@@ -70,6 +73,62 @@ Venice notes:
 
 ### Demo positioning
 **Megapot executes the lottery. PoolTogether provides prize savings. Syndicate manages user intent, group coordination, privacy, yield routing, and permissioned automation.**
+
+---
+
+## OKX X Layer Build X — AI Season (active)
+
+### Goal
+
+Ship the **Prize Pool Hook** on X Layer: a Uniswap v4 hook that turns trading fees into a
+lossless lottery — the same product soul as the Base engine (preserve principal, win with
+earnings) on a new engine where **swap fees, not vault interest, buy your tickets**.
+
+### Current repo state
+
+The M2 hook and its hardening pass are implemented and validated:
+- `PrizePoolHookFactory` atomically deploys/configures/initializes the hook and router,
+  then transfers ownership to the final operator.
+- The real pinned v4 `PoolManager` integration test covers liquidity, swaps, surcharge
+  funding, and the exact `0x10C0` CREATE2 permission mask.
+- Post-bind settings use a two-day timelock; router replacement has a separate recovery
+  timelock and retired-router sweep path.
+- `SimpleRandomnessOracle` is epoch-scoped but operator-controlled and testnet-only;
+  the deployment script refuses chain 196 until a separately reviewed drand oracle exists.
+
+### Key facts (verified Aug 7, 2026)
+
+- **Window**: Aug 7 → Aug 21, 2026 (submission Aug 21, 23:59 UTC). Started today.
+- **Prizes**: 30k/15k/5k USDT hackathon grants + **50k USDT AI-RWA Liquidity Grant**
+  (dual-file) + 200k Launch Grant (10M OKX DEX volume — not realistic, skip).
+- **Requirements**: AI elements + X Layer deployment; testnet during hackathon then
+  **mainnet launch**; dedicated X account; post mentioning @XLayerOfficial; Google Form.
+- **Uniswap v4 on X Layer mainnet**: ✅ PoolManager `0x360e68faccca8ca495c1b759fd9eee466db9fb32`.
+  Testnet: no official deployment → self-deploy core.
+- **⚠️ Randomness**: Chainlink VRF ❌ and Pyth Entropy ❌ on X Layer → **drand beacon +
+  permissionless relay** behind `IRandomnessOracle` (contract is oracle-agnostic).
+- **FWA (fwa.fun)**: standalone pair-style contract, NOT v4 hooks — the hook layer is our
+  novelty, pitched as such. FWA principles ported: weighted selection, snapshot/FIFO
+  anti-gaming, guaranteed redeem path.
+
+### Repo state
+
+- M2 hardened: `PrizePoolHook.sol` (draw engine, physical `afterSwap` pot funding,
+  timelocked configuration, router recovery), `PrizePoolSwapRouter.sol` (swap wrapper
+  that withholds the surcharge), `PrizePoolHookFactory.sol` (atomic setup), and
+  `SimpleRandomnessOracle.sol` (testnet-only demo oracle).
+- `PrizePoolHookIntegration.t.sol` exercises the real pinned v4 `PoolManager`, liquidity,
+  swaps, surcharge funding, and CREATE2 permissions. **104 Foundry tests pass.**
+- M3 LP fee split → M4 drand verifier → M5 UI/AI wiring. See
+  [contracts/xlayer/README.md](../contracts/xlayer/README.md),
+  [BUILD_X_HOOK_SPEC.md](./BUILD_X_HOOK_SPEC.md), [BUILD_X_DEPLOYMENT.md](./BUILD_X_DEPLOYMENT.md).
+
+### Remaining work
+
+1. Deploy the hardened stack to X Layer testnet with self-deployed v4 core.
+2. Implement and independently review the drand oracle before any real-value draw;
+   the deployment script intentionally rejects chain 196 while only the demo oracle exists.
+3. Build M3 LP fee splitting, then add X Layer wagmi/dashboard UI and syndicate wiring.
 
 ---
 

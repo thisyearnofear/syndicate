@@ -34,6 +34,7 @@ This file is the source of truth for what is **actually shipped**. Items in the 
 | Foundry tests | Live | 31 (vault) + 25 (governor) tests run in CI |
 | Jest tests | Live | `npm test` runs in CI; coverage report missing |
 | CI (lint + typecheck + build + test + forge) | Live | `.github/workflows/ci.yml` and `test.yml` |
+| X Layer Prize Pool Hook (Build X AI Season) | In progress (M2 hardened; testnet-ready) | Uniswap v4 hook on X Layer (chain 196) turning swap fees into a lossless lottery: pot from trading fees, LPs as ticket holders, epoch draws with weighted selection, and oracle-agnostic randomness. M2 includes the surcharge router, atomic `PrizePoolHookFactory`, real `PoolManager` integration coverage, CREATE2 permission-bit checks, post-bind configuration timelocks, and timelocked router recovery. Testnet deployment is guarded against the operator-controlled demo oracle on chain 196. **104 Foundry tests pass.** M3 LP fee split → M4 drand verifier → M5 UI/AI. See [docs/BUILD_X_STRATEGY.md](docs/BUILD_X_STRATEGY.md). |
 
 ### Backlog (planned, not yet built)
 
