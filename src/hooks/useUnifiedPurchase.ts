@@ -12,6 +12,7 @@ import { solanaWalletService } from '@/services/solanaWalletService';
 import { useExecution } from '@/services/execution';
 import type { ExecutionState } from '@/services/execution';
 import { lifecycle } from '@/services/observability';
+import { invalidatePortfolio } from './usePortfolioInvalidation';
 const BASE_POLLING_INTERVAL = 5000;
 const MAX_POLLING_INTERVAL = 30000;
 
@@ -356,6 +357,12 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
               transactionHash: result.txHash || result.destinationTxHash || undefined,
               userAddress: userAddress,
               metadata: { ticketCount: request.ticketCount ?? 1 },
+            });
+            invalidatePortfolio({
+              operation: 'purchase',
+              provider: 'megapot',
+              chain: chain ?? 'base',
+              transactionHash: result.txHash || result.destinationTxHash || undefined,
             });
           }
         } else {

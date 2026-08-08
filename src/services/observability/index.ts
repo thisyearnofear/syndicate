@@ -34,17 +34,20 @@ export type { EventSubscriber } from './emitter';
 
 import { emit, subscribe, getHistory, reset, subscriberCount } from './emitter';
 import { consoleSubscriber, loggerSubscriber } from './subscribers';
+import { analyticsSubscriber, startAnalyticsFlush, stopAnalyticsFlush, getAnalyticsSnapshot, resetAnalytics } from './analyticsSubscriber';
 
 let initialized = false;
 
 /**
- * Initialize the default subscribers (console + logger).
+ * Initialize the default subscribers (console + logger + analytics).
  * Safe to call multiple times — only registers once.
  */
 function init(): void {
   if (initialized) return;
   subscribe(consoleSubscriber);
   subscribe(loggerSubscriber);
+  subscribe(analyticsSubscriber);
+  startAnalyticsFlush();
   initialized = true;
 }
 
@@ -59,4 +62,10 @@ export const lifecycle = {
   reset,
   subscriberCount,
   init,
+  /** Analytics-specific utilities. */
+  analytics: {
+    getSnapshot: getAnalyticsSnapshot,
+    stop: stopAnalyticsFlush,
+    reset: resetAnalytics,
+  },
 } as const;

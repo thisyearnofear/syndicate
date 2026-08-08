@@ -11,6 +11,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useUnifiedWallet } from './useUnifiedWallet';
 import { logger } from '@/lib/logger';
+import { usePortfolioInvalidation } from './usePortfolioInvalidation';
 
 const STACKS_WALLETS = ['stacks'] as const;
 
@@ -151,6 +152,11 @@ export function useTicketHistory(): TicketHistoryState & TicketHistoryActions {
             setState(prev => ({ ...prev, purchases: [], error: null, isLoading: false }));
         }
     }, [isConnected, address, fetchHistory]);
+
+    // Re-fetch immediately when a purchase completes elsewhere
+    usePortfolioInvalidation((reason) => {
+        if (reason.operation === 'purchase') void fetchHistory();
+    });
 
     return {
         ...state,

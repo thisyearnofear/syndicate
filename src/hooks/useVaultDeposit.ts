@@ -14,6 +14,7 @@ import { ERC20_ABI } from '@/abis/erc20';
 import { mapErrorMessage } from '@/services/vaults/router';
 import { lifecycle } from '@/services/observability';
 import { useExecution } from '@/services/execution';
+import { invalidatePortfolio } from './usePortfolioInvalidation';
 
 type DepositStatus = 'idle' | 'checking_allowance' | 'approving' | 'building_tx' | 'depositing' | 'signing' | 'confirming' | 'complete' | 'error';
 
@@ -308,6 +309,12 @@ export function useVaultDeposit() {
           transactionHash: result.txHash || undefined,
           userAddress: address || undefined,
           metadata: { amount, protocol },
+        });
+        invalidatePortfolio({
+          operation: 'deposit',
+          provider: protocol,
+          chain: protocol === 'fhenix' ? 'fhenix_testnet' : 'base',
+          transactionHash: result.txHash || undefined,
         });
         return result;
       } catch (error) {

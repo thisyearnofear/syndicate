@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Activity,
@@ -15,6 +15,7 @@ import {
   Sparkles,
   Trophy,
   Wifi,
+  Loader,
 } from "lucide-react";
 import { isAddress, type Address, formatUnits } from "viem";
 import { useBalance, useReadContract, useSwitchChain } from "wagmi";
@@ -26,6 +27,8 @@ import {
   CompactSection,
 } from "@/shared/components/premium/CompactLayout";
 import { useUnifiedWallet } from "@/hooks/useUnifiedWallet";
+import { useCapability } from "@/hooks/useCapability";
+import { useXLayerJoin } from "@/services/xlayer";
 import {
   XLAYER_HOOK_ABI,
   XLAYER_HOOK_IS_CONFIGURED,
@@ -340,6 +343,9 @@ export function PrizePoolDashboard() {
             </CompactCard>
           </div>
 
+          {/* Join Pool CTA — only visible when writes are enabled */}
+          <JoinPoolSection />
+
           <CompactCard variant="glass" padding="lg" hover={false} className="border-white/[0.08] bg-slate-950/50">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Deployment registry</p><h2 className="mt-2 text-xl font-semibold text-white">Contracts and network</h2></div>
@@ -380,5 +386,96 @@ export function PrizePoolDashboard() {
         </CompactSection>
       </CompactContainer>
     </main>
+  );
+}
+
+// ─── Join Pool Section (capability-gated) ─────────────────────────────────────
+
+function JoinPoolSection() {
+  const { canWrite, message } = useCapability('xlayer_prize_pool');
+  const { join, execution, isActive, isSuccess, isError, reset } = useXLayerJoin();
+  const [amount, setAmount] = useState('10');
+  const [joinError, setJoinError] = useState<string | null>(null);
+
+  // Hidden entirely when writes are disabled
+  if (!canWrite) return null;
+
+  const handleJoin = async () => {
+    setJoinError(null);
+    const parsed = parseFloat(amount);
+    if (!parsed || parsed <= 0) {
+      setJoinError('Enter a valid USDC amount');
+      return;
+    }
+    const result = await join({ amountUsdc: amount });
+    if (!result.success && result.error) {
+      setJoinError(result.error);
+    }
+  };
+
+  return (
+    <CompactCard variant="glass" padding="lg" hover={false} className="border-emerald-400/20 bg-emerald-500/[0.05]">
+      <div className="flex items-center gap-2 text-emerald-300 mb-4">
+        <Sparkles className="h-4 w-4" />
+        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Join Prize Pool</span>
+        <span className="ml-auto rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] text-amber-300 font-semibold">Testnet</span>
+      </div>
+
+      {isSuccess ? (
+        <div className="text-center py-4">
+          <div className="text-3xl mb-2">🎉</div>
+          <p className="text-white font-semibold">Joined the prize pool!</p>
+          <p className="text-xs text-slate-400 mt-1">Your shares are active for the next draw.</p>
+          <Button variant="glass" size="sm" className="mt-4" onClick={reset}>Join Again</Button>
+        </div>
+      ) : (
+        <>
+          <p className="text-sm text-slate-300 mb-4">
+            Deposit USDC to receive shares. Your principal stays intact — the prize pot grows from swap surcharges.
+          </p>
+          {message && (
+            <p className="text-xs text-amber-300/80 mb-3">{message}</p>
+          )}
+          <div className="flex gap-3 items-end">
+            <div className="flex-1">
+              <label className="block text-xs text-slate-400 mb-1">Amount (USDC)</label>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                disabled={isActive}
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400/50 disabled:opacity-50"
+                placeholder="10.00"
+              />
+            </div>
+            <Button
+              variant="default"
+              size="sm"
+              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6"
+              onClick={handleJoin}
+              disabled={isActive}
+            >
+              {isActive ? (
+                <><Loader className="w-3 h-3 mr-1.5 animate-spin" />Joining...</>
+              ) : (
+                'Join Pool'
+              )}
+            </Button>
+          </div>
+          {joinError && (
+            <p className="text-xs text-red-400 mt-2" role="alert">{joinError}</p>
+          )}
+          {isError && execution.status === 'failed' && !execution.error.userCancelled && (
+            <div className="mt-3 flex items-center gap-2">
+              <Button variant="ghost" size="sm" className="text-xs text-red-300" onClick={() => { reset(); setJoinError(null); }}>
+                Try Again
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+    </CompactCard>
   );
 }

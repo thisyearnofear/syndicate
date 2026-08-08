@@ -24,6 +24,9 @@ export { useIsMounted } from './useIsMounted';
 export { useCapability } from './useCapability';
 export type { UseCapabilityResult } from './useCapability';
 
+export { usePortfolioInvalidation, invalidatePortfolio } from './usePortfolioInvalidation';
+export type { InvalidationReason } from './usePortfolioInvalidation';
+
 export { useUnifiedPurchase } from './useUnifiedPurchase';
 export type {
   PurchaseStatus,

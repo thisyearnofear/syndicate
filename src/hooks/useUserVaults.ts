@@ -12,6 +12,7 @@ import { useState, useCallback } from 'react';
 import { useVisibilityPolling } from '@/lib/useVisibilityPolling';
 import { vaultManager, type VaultBalance, type VaultProtocol } from '@/services/vaults';
 import { logger } from '@/lib/logger';
+import { usePortfolioInvalidation } from './usePortfolioInvalidation';
 
 export interface UserVaultPosition {
   protocol: VaultProtocol;
@@ -123,6 +124,9 @@ export function useUserVaults(
     enabled: autoRefresh && enabled && !!userAddress,
     immediate: true,
   });
+
+  // Re-fetch immediately when another hook signals a portfolio change
+  usePortfolioInvalidation(() => { void fetchVaultPositions(); });
 
   return {
     positions,

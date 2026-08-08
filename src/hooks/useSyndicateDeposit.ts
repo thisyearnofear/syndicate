@@ -25,6 +25,7 @@ import { TOKENS } from '@/config/contracts';
 import { lifecycle } from '@/services/observability';
 import { useExecution } from '@/services/execution';
 import type { ExecutionState } from '@/services/execution';
+import { invalidatePortfolio } from './usePortfolioInvalidation';
 
 // PoolTogether TwabDelegator on Base
 const PT_TWAB_DELEGATOR = '0x2d3DaECD9F5502b533Ff72CDb1e1367481F2aEa6' as const;
@@ -302,6 +303,12 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
         userAddress: userAddress,
         metadata: { amountUsdc, poolType },
       });
+      invalidatePortfolio({
+        operation: 'deposit',
+        provider: `syndicate_${poolType}`,
+        chain: isFhenix ? 'fhenix_testnet' : 'base',
+        transactionHash: transferHash,
+      });
       return transferHash;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -328,6 +335,7 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
     walletType,
     ensureBaseChain,
     ensureFhenixChain,
+    execution,
   ]);
 
   return { status, txHash, approveTxHash, delegationTxHash, error, execution: execution.state, deposit, reset };

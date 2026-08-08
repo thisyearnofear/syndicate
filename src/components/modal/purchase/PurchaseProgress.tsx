@@ -13,7 +13,8 @@
 "use client";
 
 import { useState } from "react";
-import { Loader, Check, Link2 } from "lucide-react";
+import { Loader, Check, Link2, RotateCcw } from "lucide-react";
+import { Button } from "@/shared/components/ui/Button";
 import { CrossChainTracker } from "@/components/bridge/CrossChainTracker";
 import type { SourceChainType, TrackerStatus } from "@/domains/participation/types";
 import type { ExecutionState } from "@/services/execution";
@@ -39,6 +40,10 @@ interface PurchaseProgressProps {
   error?: string | null;
   /** Cross-chain wallet info. */
   walletInfo?: { sourceAddress?: string; baseAddress?: string; isLinked?: boolean };
+  /** Callback to retry the failed operation. Shown when execution failed and not user-cancelled. */
+  onRetry?: () => void;
+  /** Callback to dismiss/go back. */
+  onDismiss?: () => void;
 }
 
 const getExplorerUrl = (chain: SourceChainType, txHash: string): string => {
@@ -53,6 +58,7 @@ const getExplorerUrl = (chain: SourceChainType, txHash: string): string => {
 };
 
 export function PurchaseProgress({
+  execution,
   status,
   sourceChain,
   ticketCount,
@@ -61,6 +67,8 @@ export function PurchaseProgress({
   txHash,
   error,
   walletInfo,
+  onRetry,
+  onDismiss,
 }: PurchaseProgressProps) {
   const [statusLinkCopied, setStatusLinkCopied] = useState(false);
 
@@ -159,6 +167,34 @@ export function PurchaseProgress({
 
       {txHash && (
         <p className="text-xs text-gray-500 font-mono break-all mt-4">{txHash}</p>
+      )}
+
+      {/* Error with retry action */}
+      {execution.status === 'failed' && (
+        <div className="mt-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-left" role="alert">
+          <p className="text-sm text-red-400 font-medium mb-1">
+            {execution.error.userCancelled ? 'Transaction cancelled' : 'Transaction failed'}
+          </p>
+          <p className="text-xs text-red-300/80 mb-3">{execution.error.message}</p>
+          <div className="flex gap-3">
+            {!execution.error.userCancelled && onRetry && (
+              <Button
+                variant="default"
+                size="sm"
+                className="bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300"
+                onClick={onRetry}
+              >
+                <RotateCcw className="w-3 h-3 mr-1.5" />
+                Try Again
+              </Button>
+            )}
+            {onDismiss && (
+              <Button variant="ghost" size="sm" className="text-gray-400" onClick={onDismiss}>
+                {execution.error.userCancelled ? 'Close' : 'Dismiss'}
+              </Button>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

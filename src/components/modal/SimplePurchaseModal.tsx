@@ -584,6 +584,8 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
             txHash={txHash}
             error={error}
             walletInfo={walletInfo}
+            onRetry={() => { reset(); setStep('select'); }}
+            onDismiss={() => { reset(); setStep('select'); }}
           />
         );
 

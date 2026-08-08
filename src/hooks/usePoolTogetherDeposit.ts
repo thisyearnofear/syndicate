@@ -6,12 +6,21 @@
  * 2. Call deposit() to deposit USDC and receive vault shares
  *
  * User keeps 100% principal and becomes eligible for prize draws.
+ *
+ * Integrated with:
+ *   - Execution state machine (typed lifecycle tracking)
+ *   - Lifecycle observability (structured events)
+ *   - Portfolio invalidation (immediate cache refresh)
  */
 
 import { useState, useCallback } from 'react';
 import { useWalletClient, usePublicClient, useSwitchChain } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { parseUnits } from 'viem';
+import { useExecution } from '@/services/execution';
+import type { ExecutionState } from '@/services/execution';
+import { lifecycle } from '@/services/observability';
+import { invalidatePortfolio } from './usePortfolioInvalidation';
 
 // PoolTogether V5 USDC PrizeVault on Base (przUSDC)
 // https://dev.pooltogether.com/protocol/deployments/base
@@ -71,6 +80,8 @@ export interface UsePoolTogetherDepositResult {
   txHash?: string;
   approveTxHash?: string;
   error?: string;
+  /** Typed execution state machine for granular UI control. */
+  execution: ExecutionState;
   deposit: (params: { amountUsdc: number; userAddress: `0x${string}` }) => Promise<void>;
   reset: () => void;
 }
@@ -80,6 +91,7 @@ export function usePoolTogetherDeposit(): UsePoolTogetherDepositResult {
   const [txHash, setTxHash] = useState<string | undefined>();
   const [approveTxHash, setApproveTxHash] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
+  const execution = useExecution();
 
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient({ chainId: base.id });
@@ -90,7 +102,8 @@ export function usePoolTogetherDeposit(): UsePoolTogetherDepositResult {
     setTxHash(undefined);
     setApproveTxHash(undefined);
     setError(undefined);
-  }, []);
+    execution.reset();
+  }, [execution]);
 
   const deposit = useCallback(async ({
     amountUsdc,
@@ -132,6 +145,16 @@ export function usePoolTogetherDeposit(): UsePoolTogetherDepositResult {
     setTxHash(undefined);
     setApproveTxHash(undefined);
 
+    execution.prepare('Preparing PoolTogether deposit');
+    lifecycle.emit('vault.deposit_initiated', {
+      chain: 'base',
+      chainId: 8453,
+      operation: 'deposit',
+      provider: 'pooltogether',
+      userAddress: userAddress,
+      metadata: { amountUsdc: String(amountUsdc) },
+    });
+
     try {
       // USDC has 6 decimals
       const amountWei = parseUnits(String(amountUsdc), 6);
@@ -147,6 +170,7 @@ export function usePoolTogetherDeposit(): UsePoolTogetherDepositResult {
       // Approve if needed (approve max to avoid repeated approvals)
       if (currentAllowance < amountWei) {
         setStatus('approving');
+        execution.awaitSignature('base');
         const approveHash = await walletClient.writeContract({
           address: USDC_BASE,
           abi: ERC20_APPROVE_ABI,
@@ -160,6 +184,7 @@ export function usePoolTogetherDeposit(): UsePoolTogetherDepositResult {
 
       // Deposit to PrizeVault
       setStatus('depositing');
+      execution.awaitSignature('base');
       const depositHash = await walletClient.writeContract({
         address: PRIZE_VAULT,
         abi: PRIZE_VAULT_DEPOSIT_ABI,
@@ -168,16 +193,51 @@ export function usePoolTogetherDeposit(): UsePoolTogetherDepositResult {
         chain: base,
       });
       setTxHash(depositHash);
-      await publicClient.waitForTransactionReceipt({ hash: depositHash });
+      execution.submit(depositHash, base.id);
+      execution.confirm(depositHash, base.id);
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: depositHash });
+
+      // Complete with verified receipt
+      execution.complete({
+        transactionHash: depositHash,
+        blockNumber: Number(receipt.blockNumber),
+        chainId: base.id,
+        confirmedAt: Date.now(),
+      });
 
       setStatus('complete');
+      lifecycle.emit('vault.deposit_confirmed', {
+        chain: 'base',
+        chainId: 8453,
+        operation: 'deposit',
+        provider: 'pooltogether',
+        transactionHash: depositHash,
+        userAddress: userAddress,
+        metadata: { amountUsdc: String(amountUsdc), blockNumber: Number(receipt.blockNumber) },
+      });
+      invalidatePortfolio({
+        operation: 'deposit',
+        provider: 'pooltogether',
+        chain: 'base',
+        transactionHash: depositHash,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       // Trim overly long error messages (e.g., from reverted transactions)
       setError(message.length > 200 ? message.slice(0, 200) + '…' : message);
       setStatus('error');
+      const userCancelled = message.includes('reject') || message.includes('denied');
+      execution.fail(userCancelled ? 'USER_REJECTED' : 'UNKNOWN', message, { userCancelled, cause: err });
+      lifecycle.emit('vault.operation_failed', {
+        chain: 'base',
+        chainId: 8453,
+        operation: 'deposit',
+        provider: 'pooltogether',
+        userAddress: userAddress,
+        error: { code: userCancelled ? 'USER_REJECTED' : 'DEPOSIT_FAILED', message, phase: status, userCancelled },
+      });
     }
-  }, [walletClient, publicClient, switchChainAsync]);
+  }, [walletClient, publicClient, switchChainAsync, execution, status]);
 
-  return { status, txHash, approveTxHash, error, deposit, reset };
+  return { status, txHash, approveTxHash, error, execution: execution.state, deposit, reset };
 }
