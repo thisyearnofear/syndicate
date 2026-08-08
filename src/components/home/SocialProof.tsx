@@ -82,30 +82,48 @@ function TimeUnit({ value, label }: { value: number; label: string }) {
 
 // ─── Recent Activity Feed ───────────────────────────────────────────────────
 
-const RECENT_ACTIONS = [
-  "bought 5 tickets",
-  "bought 1 ticket",
-  "bought 10 tickets",
-  "joined a syndicate",
-  "deposited into yield vault",
-  "bought 3 tickets",
-  "bought 25 tickets",
-  "bought 2 tickets",
+interface ActivityEntry {
+  address: string;
+  tickets: number;
+  txHash: string;
+}
+
+const FALLBACK_ACTIONS = [
+  { address: "0xab...3f", tickets: 5, txHash: "" },
+  { address: "0xcd...7a", tickets: 1, txHash: "" },
+  { address: "0x1f...e2", tickets: 10, txHash: "" },
+  { address: "0x9b...44", tickets: 3, txHash: "" },
+  { address: "0x72...d1", tickets: 25, txHash: "" },
+  { address: "0x3e...8c", tickets: 2, txHash: "" },
 ];
 
 function RecentActivity() {
+  const [entries, setEntries] = useState<ActivityEntry[]>(FALLBACK_ACTIONS);
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Fetch real activity on mount
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/activity/recent')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && data.activity && data.activity.length > 0) {
+          setEntries(data.activity);
+        }
+      })
+      .catch(() => {}); // Keep fallback on failure
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentIndex((i) => (i + 1) % RECENT_ACTIONS.length);
+      setCurrentIndex((i) => (i + 1) % entries.length);
     }, 3500);
     return () => clearInterval(interval);
-  }, []);
+  }, [entries.length]);
 
-  const action = RECENT_ACTIONS[currentIndex];
-  // Generate a consistent but anonymous address prefix
-  const addressPrefix = `0x${((currentIndex + 7) * 1337).toString(16).slice(0, 4)}...`;
+  const entry = entries[currentIndex];
+  if (!entry) return null;
 
   return (
     <div className="flex items-center gap-2 animate-fade-in" key={currentIndex}>
@@ -113,8 +131,8 @@ function RecentActivity() {
         <Ticket className="w-2.5 h-2.5 text-white" />
       </div>
       <span className="text-xs text-gray-400">
-        <span className="text-gray-300 font-mono">{addressPrefix}</span>{" "}
-        {action}
+        <span className="text-gray-300 font-mono">{entry.address}</span>{" "}
+        bought {entry.tickets} ticket{entry.tickets !== 1 ? "s" : ""}
       </span>
     </div>
   );

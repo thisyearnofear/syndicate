@@ -9,6 +9,7 @@ import { getCapability, getCtaState, type CapabilityId } from "@/config/capabili
 import { QuickPurchase } from "@/components/purchase/QuickPurchase";
 import { QuickDeposit } from "@/components/purchase/QuickDeposit";
 import { SocialProof } from "@/components/home/SocialProof";
+import { DrawResults } from "@/components/home/DrawResults";
 import { FirstActionPrompt } from "@/components/onboarding/FirstActionPrompt";
 
 // UI Components
@@ -146,7 +147,10 @@ export default function Home() {
 
         {/* Social proof — live activity signals */}
         <section className="mb-12">
-          <SocialProof className="max-w-2xl mx-auto" />
+          <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-[1fr_auto] gap-6 items-start">
+            <SocialProof />
+            <DrawResults onEnterDraw={handleBuyClick} className="w-full md:w-72" />
+          </div>
         </section>
 
         {/* Optional Public Play - Centered */}
