@@ -48,6 +48,22 @@ const config = {
         "scale-in": "scale-in 0.5s ease-out",
         "fade-in": "fade-in 0.6s ease-out 0.2s both",
         "fade-in-delay": "fade-in 0.6s ease-out 0.4s both",
+        // Motion system utilities
+        "enter": "fadeInUp var(--duration-moderate) var(--ease-out) both",
+        "enter-scale": "scaleIn var(--duration-normal) var(--ease-out) both",
+        "disclosure": "disclosureExpand var(--duration-normal) var(--ease-out) forwards",
+      },
+      transitionTimingFunction: {
+        'out-strong': 'cubic-bezier(0.23, 1, 0.32, 1)',
+        'in-out-strong': 'cubic-bezier(0.77, 0, 0.175, 1)',
+        'spring': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+        'drawer': 'cubic-bezier(0.32, 0.72, 0, 1)',
+      },
+      transitionDuration: {
+        'instant': '100ms',
+        'fast': '150ms',
+        'normal': '200ms',
+        'moderate': '280ms',
       },
       keyframes: {
         "accordion-down": {

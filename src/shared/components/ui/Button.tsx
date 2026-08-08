@@ -17,7 +17,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 disabled:pointer-events-none disabled:opacity-50 select-none",
+  "inline-flex items-center justify-center whitespace-nowrap font-medium transition-[transform,background-color,border-color,box-shadow,opacity] duration-fast ease-out-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 disabled:pointer-events-none disabled:opacity-50 select-none active:scale-[0.97]",
   {
     variants: {
       variant: {
@@ -33,21 +33,21 @@ const buttonVariants = cva(
         ghost:
           "text-slate-400 hover:text-white hover:bg-white/10",
         link:
-          "text-indigo-400 underline-offset-4 hover:underline",
+          "text-indigo-400 underline-offset-4 hover:underline active:scale-100",
 
         // Premium variants (design.ts tokens mapped)
         premium:
-          "gradient-cta text-white shadow-lg shadow-brand-500/25 hover:shadow-xl hover:shadow-brand-500/30 hover:-translate-y-0.5 active:translate-y-0",
+          "gradient-cta text-white shadow-lg shadow-brand-500/25 hover:shadow-xl hover:shadow-brand-500/30",
         glass:
           "bg-white/5 backdrop-blur-md border border-white/10 text-white hover:bg-white/10 hover:border-white/20 shadow-md",
         success:
-          "bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/30 hover:-translate-y-0.5 active:translate-y-0",
+          "bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/30",
         warning:
-          "bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-md shadow-amber-500/20 hover:shadow-lg hover:shadow-amber-500/30 hover:-translate-y-0.5 active:translate-y-0",
+          "bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-md shadow-amber-500/20 hover:shadow-lg hover:shadow-amber-500/30",
         "gradient-primary":
-          "gradient-cta text-white shadow-lg shadow-brand-500/20 hover:shadow-xl hover:shadow-brand-500/30 hover:-translate-y-0.5 active:translate-y-0",
+          "gradient-cta text-white shadow-lg shadow-brand-500/20 hover:shadow-xl hover:shadow-brand-500/30",
         "gradient-secondary":
-          "bg-gradient-to-br from-pink-400 to-rose-500 text-white shadow-lg shadow-pink-500/20 hover:shadow-xl hover:shadow-pink-500/30 hover:-translate-y-0.5 active:translate-y-0",
+          "bg-gradient-to-br from-pink-400 to-rose-500 text-white shadow-lg shadow-pink-500/20 hover:shadow-xl hover:shadow-pink-500/30",
       },
       size: {
         default: "h-10 px-4 py-2 text-sm rounded-xl",

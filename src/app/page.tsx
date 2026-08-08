@@ -220,7 +220,7 @@ export default function Home() {
                   color: "from-amber-500 to-orange-500"
                 }
               ].map((item, i) => (
-                <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover:bg-white/10 transition-all">
+                <div key={i} className={`bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover-lift animate-fade-in-slide-up stagger-${i + 1}`}>
                   <div className={`w-14 h-14 mb-4 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center text-2xl shadow-lg`}>
                     {item.icon}
                   </div>
@@ -247,7 +247,7 @@ export default function Home() {
                 const cap = getCapability(capId);
                 const ctaState = getCtaState(capId);
                 return (
-                <div key={mode.id} className="bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover:bg-white/10 transition-all">
+                <div key={mode.id} className={`bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover-lift animate-fade-in-slide-up stagger-${i + 1}`}>
                   <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide mb-4 ${
                     mode.id === 'private_vaults'
                       ? 'bg-emerald-500/15 text-emerald-300'

@@ -248,7 +248,7 @@ export function QuickPurchase({ onAdvanced, className = "" }: QuickPurchaseProps
       </button>
 
       {showOptions && (
-        <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
+        <div className="mt-3 pt-3 border-t border-white/5 space-y-2 animate-disclosure">
           <button
             type="button"
             onClick={onAdvanced}

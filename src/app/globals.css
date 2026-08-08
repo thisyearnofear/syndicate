@@ -6,6 +6,62 @@
 @tailwind utilities;
 
 /* =============================================================================
+   MOTION TOKENS — Single source of truth for animation values.
+   Based on Emil Kowalski's design engineering philosophy.
+   
+   Principles:
+   - Custom easing curves (built-in CSS easings are too weak)
+   - UI animations under 300ms
+   - ease-out for entering, ease-in-out for on-screen movement
+   - Never ease-in for UI (feels sluggish)
+   - Respect prefers-reduced-motion
+   ============================================================================= */
+
+:root {
+  /* ── Easing curves ─────────────────────────────────────────────────────────── */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);           /* Strong ease-out: entering elements */
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);       /* Strong ease-in-out: on-screen movement */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);     /* Overshoot: playful entrances */
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);        /* iOS-like drawer curve */
+  --ease-out-soft: cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Subtle ease-out for hover states */
+
+  /* ── Durations ─────────────────────────────────────────────────────────────── */
+  --duration-instant: 100ms;     /* Button press, tooltip hide */
+  --duration-fast: 150ms;        /* Hover states, small popovers */
+  --duration-normal: 200ms;      /* Dropdowns, selects, disclosure */
+  --duration-moderate: 280ms;    /* Modals, drawers entering */
+  --duration-slow: 400ms;        /* Complex multi-element transitions */
+
+  /* ── Stagger ───────────────────────────────────────────────────────────────── */
+  --stagger-delay: 50ms;         /* Between sibling items */
+
+  /* ── Motion distances ──────────────────────────────────────────────────────── */
+  --motion-y-sm: 4px;            /* Subtle vertical shift */
+  --motion-y-md: 8px;            /* Standard enter shift */
+  --motion-y-lg: 16px;           /* Dramatic enter (modals) */
+}
+
+/* ── Reduced motion: keep opacity/color, remove transforms ──────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-instant: 0ms;
+    --duration-fast: 0ms;
+    --duration-normal: 100ms;
+    --duration-moderate: 100ms;
+    --duration-slow: 150ms;
+    --motion-y-sm: 0px;
+    --motion-y-md: 0px;
+    --motion-y-lg: 0px;
+  }
+
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.1s !important;
+  }
+}
+
+/* =============================================================================
    PREMIUM GLOBAL STYLES
    ============================================================================= */
 
@@ -84,8 +140,8 @@ button:hover {
 
 /* Ensure proper touch handling */
 button:active {
-  transform: scale(0.98);
-  transition: transform 0.1s ease;
+  transform: scale(0.97);
+  transition: transform var(--duration-instant) var(--ease-out);
 }
 
 /* Base styles with premium typography */
@@ -115,7 +171,7 @@ body {
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(var(--motion-y-md));
   }
 
   to {
@@ -127,7 +183,7 @@ body {
 @keyframes slideInLeft {
   from {
     opacity: 0;
-    transform: translateX(-30px);
+    transform: translateX(-12px);
   }
 
   to {
@@ -139,7 +195,7 @@ body {
 @keyframes scaleIn {
   from {
     opacity: 0;
-    transform: scale(0.9);
+    transform: scale(0.95);
   }
 
   to {
@@ -159,11 +215,11 @@ body {
 }
 
 .animate-fade-in {
-  animation: fade-in 0.2s ease-out forwards;
+  animation: fade-in var(--duration-normal) var(--ease-out) forwards;
 }
 
 .animate-scale-in {
-  animation: scaleIn 0.2s ease-out forwards;
+  animation: scaleIn var(--duration-normal) var(--ease-out) forwards;
 }
 
 @keyframes glow {
@@ -219,17 +275,17 @@ body {
    ============================================================================= */
 
 .animate-fade-in-up {
-  animation: fadeInUp 0.6s ease-out;
+  animation: fadeInUp var(--duration-moderate) var(--ease-out);
 }
 
 .animate-slide-in-left {
-  animation: slideInLeft 0.6s ease-out;
+  animation: slideInLeft var(--duration-moderate) var(--ease-out);
 }
 
 @keyframes slideInBottom {
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(var(--motion-y-md));
   }
 
   to {
@@ -239,11 +295,11 @@ body {
 }
 
 .animate-slide-in-bottom {
-  animation: slideInBottom 0.4s ease-out;
+  animation: slideInBottom var(--duration-normal) var(--ease-out);
 }
 
 .animate-scale-in {
-  animation: scaleIn 0.4s ease-out;
+  animation: scaleIn var(--duration-normal) var(--ease-out);
 }
 
 .animate-glow {
@@ -262,25 +318,66 @@ body {
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
-/* Staggered animations */
-.stagger-1 {
-  animation-delay: 0.1s;
+/* Staggered animations — 50ms between siblings (fast enough to not block) */
+.stagger-1 { animation-delay: calc(var(--stagger-delay) * 1); }
+.stagger-2 { animation-delay: calc(var(--stagger-delay) * 2); }
+.stagger-3 { animation-delay: calc(var(--stagger-delay) * 3); }
+.stagger-4 { animation-delay: calc(var(--stagger-delay) * 4); }
+.stagger-5 { animation-delay: calc(var(--stagger-delay) * 5); }
+.stagger-6 { animation-delay: calc(var(--stagger-delay) * 6); }
+
+/* ── Progressive disclosure animation ──────────────────────────────────────── */
+@keyframes disclosureExpand {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--motion-y-sm) * -1));
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 500px;
+  }
 }
 
-.stagger-2 {
-  animation-delay: 0.2s;
+.animate-disclosure {
+  animation: disclosureExpand var(--duration-normal) var(--ease-out) forwards;
+  overflow: hidden;
 }
 
-.stagger-3 {
-  animation-delay: 0.3s;
+/* ── Fade-in slide-up (for cards, sections entering viewport) ────────────────── */
+@keyframes fadeInSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(var(--motion-y-md));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.stagger-4 {
-  animation-delay: 0.4s;
+.animate-fade-in-slide-up {
+  animation: fadeInSlideUp var(--duration-moderate) var(--ease-out) both;
 }
 
-.stagger-5 {
-  animation-delay: 0.5s;
+/* ── Press feedback for interactive cards ────────────────────────────────────── */
+.press-feedback {
+  transition: transform var(--duration-instant) var(--ease-out);
+}
+.press-feedback:active {
+  transform: scale(0.97);
+}
+
+/* ── Hover lift for cards ────────────────────────────────────────────────────── */
+@media (hover: hover) and (pointer: fine) {
+  .hover-lift {
+    transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.3);
+  }
 }
 
 /* =============================================================================

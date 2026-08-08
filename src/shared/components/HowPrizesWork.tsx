@@ -36,7 +36,7 @@ export function HowPrizesWork({ defaultCollapsed = true, className = "" }: HowPr
         <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </button>
       {isOpen && (
-        <div id="how-prizes-work-content" className="px-4 pb-4 space-y-3 border-t border-white/5 pt-3">
+        <div id="how-prizes-work-content" className="px-4 pb-4 space-y-3 border-t border-white/5 pt-3 animate-disclosure">
           <div className="space-y-1.5">
             <p className="text-xs text-gray-300 font-medium">
               Each $1 ticket picks 5 numbers + 1 bonusball. Match more to win more across{" "}
