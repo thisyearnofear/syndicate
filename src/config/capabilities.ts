@@ -20,6 +20,15 @@
 import { FEATURES } from '@/config';
 import { XLAYER_HOOK_IS_CONFIGURED } from '@/config/xlayer';
 
+/**
+ * X Layer write gate: enabled when the hook deployment is configured AND
+ * the operator has explicitly opted in via env var.
+ * Set NEXT_PUBLIC_XLAYER_WRITES_ENABLED=true to activate testnet writes.
+ */
+const XLAYER_WRITES_ENABLED =
+  XLAYER_HOOK_IS_CONFIGURED &&
+  process.env.NEXT_PUBLIC_XLAYER_WRITES_ENABLED === 'true';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 /**
@@ -199,15 +208,17 @@ export const CAPABILITIES: readonly Capability[] = [
   {
     id: 'xlayer_prize_pool',
     label: 'X Layer Prize Pool',
-    status: XLAYER_HOOK_IS_CONFIGURED ? 'read_only' : 'paused',
+    status: XLAYER_WRITES_ENABLED ? 'testnet' : XLAYER_HOOK_IS_CONFIGURED ? 'read_only' : 'paused',
     chains: ['xlayer_testnet'],
     readsEnabled: XLAYER_HOOK_IS_CONFIGURED,
-    writesEnabled: false, // Testnet write flows pending
+    writesEnabled: XLAYER_WRITES_ENABLED,
     requiresOptIn: false,
     testnetOnly: true,
-    availabilityMessage: XLAYER_HOOK_IS_CONFIGURED
-      ? 'X Layer dashboard is read-only. Testnet write flows are in development.'
-      : 'X Layer prize pool is not configured in this environment.',
+    availabilityMessage: XLAYER_WRITES_ENABLED
+      ? 'X Layer is running on testnet. Funds are not on mainnet.'
+      : XLAYER_HOOK_IS_CONFIGURED
+        ? 'X Layer dashboard is read-only. Set NEXT_PUBLIC_XLAYER_WRITES_ENABLED=true to activate testnet writes.'
+        : 'X Layer prize pool is not configured in this environment.',
     walletRequirement: 'EVM wallet on X Layer testnet',
     productMode: null,
   },

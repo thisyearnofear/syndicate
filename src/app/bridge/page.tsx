@@ -34,6 +34,7 @@ import {
 } from "@/config/yieldStrategies";
 import { nearIntentsService } from "@/services/nearIntentsService";
 import { nearWalletSelectorService } from "@/domains/wallet/services/nearWalletSelectorService";
+import { getCapability, type CapabilityId } from "@/config/capabilities";
 
 type SourceChain = "solana" | "near" | "ethereum" | "starknet";
 
@@ -46,6 +47,7 @@ interface ChainOption {
   walletTypes: string[];
   features: string[];
   role: string;
+  capabilityId: CapabilityId;
 }
 
 export default function BridgePage() {
@@ -110,6 +112,7 @@ export default function BridgePage() {
       walletTypes: ["Phantom", "Solflare"],
       features: ["CCTP Bridge", "Wormhole Bridge", "~15-20 min"],
       role: "Funding rail",
+      capabilityId: "bridge_solana" as CapabilityId,
     },
     {
       id: "near",
@@ -120,6 +123,7 @@ export default function BridgePage() {
       walletTypes: ["Nightly", "MyNearWallet"],
       features: ["NEAR Intents", "1Click SDK", "~10-15 min"],
       role: "Funding rail",
+      capabilityId: "bridge_near" as CapabilityId,
     },
     {
       id: "ethereum",
@@ -130,6 +134,7 @@ export default function BridgePage() {
       walletTypes: ["MetaMask", "WalletConnect", "Rainbow"],
       features: ["Native CCTP", "Secure", "~15-20 min"],
       role: "Funding rail",
+      capabilityId: "bridge_base" as CapabilityId,
     },
     {
       id: "starknet",
@@ -140,6 +145,7 @@ export default function BridgePage() {
       walletTypes: ["ArgentX", "Braavos"],
       features: ["Orbiter Bridge", "Fast", "~2-5 min"],
       role: "Funding rail",
+      capabilityId: "bridge_starknet" as CapabilityId,
     },
   ], []);
 
@@ -263,7 +269,10 @@ export default function BridgePage() {
                           Select Funding Chain
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          {chainOptions.map((chain) => (
+                          {chainOptions.map((chain) => {
+                            const cap = getCapability(chain.capabilityId);
+                            const isPartial = cap.status === 'partial';
+                            return (
                             <button
                               key={chain.id}
                               onClick={() => setSourceChain(chain.id)}
@@ -283,6 +292,11 @@ export default function BridgePage() {
                                 </span>
                               </div>
                               <div className="text-gray-400 text-xs mb-2">{chain.description}</div>
+                              {isPartial && cap.availabilityMessage && (
+                                <div className="text-amber-300/80 text-[10px] mb-2 leading-tight">
+                                  {cap.availabilityMessage}
+                                </div>
+                              )}
                               <div className="flex flex-wrap gap-1">
                                 {chain.features.map((feature, idx) => (
                                   <span key={idx} className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/70">
@@ -291,7 +305,8 @@ export default function BridgePage() {
                                 ))}
                               </div>
                             </button>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
 
@@ -389,6 +404,12 @@ export default function BridgePage() {
                         </h3>
                         <div className="mb-4 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-gray-200">
                           After funds arrive on Base, you can continue into public yield strategies or the Fhenix-powered private vault experience.
+                          {(() => {
+                            const fhenixCap = getCapability('fhenix_privacy');
+                            return fhenixCap.availabilityMessage ? (
+                              <span className="block mt-1 text-xs text-amber-300/80">{fhenixCap.availabilityMessage}</span>
+                            ) : null;
+                          })()}
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {bridgeTargetStrategies.map((strategy) => (

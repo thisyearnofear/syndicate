@@ -22,6 +22,7 @@ import { useEVMClients } from './useEVMClients';
 import { approveAndDepositEncrypted } from '@/services/fhe/fhenixActions';
 import { ERC20_ABI } from '@/abis/erc20';
 import { TOKENS } from '@/config/contracts';
+import { lifecycle } from '@/services/observability';
 
 // PoolTogether TwabDelegator on Base
 const PT_TWAB_DELEGATOR = '0x2d3DaECD9F5502b533Ff72CDb1e1367481F2aEa6' as const;
@@ -157,6 +158,15 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
     setApproveTxHash(undefined);
     setDelegationTxHash(undefined);
 
+    lifecycle.emit('vault.deposit_initiated', {
+      chain: isFhenix ? 'fhenix_testnet' : 'base',
+      chainId: isFhenix ? 84532 : 8453,
+      operation: 'deposit',
+      provider: `syndicate_${poolType}`,
+      userAddress: userAddress,
+      metadata: { amountUsdc, poolType },
+    });
+
     try {
       const amountWei = parseUnits(String(amountUsdc), 6);
 
@@ -260,11 +270,28 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
       }
 
       setStatus('complete');
+      lifecycle.emit('vault.deposit_confirmed', {
+        chain: isFhenix ? 'fhenix_testnet' : 'base',
+        chainId: isFhenix ? 84532 : 8453,
+        operation: 'deposit',
+        provider: `syndicate_${poolType}`,
+        transactionHash: transferHash,
+        userAddress: userAddress,
+        metadata: { amountUsdc, poolType },
+      });
       return transferHash;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message.length > 200 ? message.slice(0, 200) + '…' : message);
       setStatus('error');
+      lifecycle.emit('vault.operation_failed', {
+        chain: isFhenix ? 'fhenix_testnet' : 'base',
+        chainId: isFhenix ? 84532 : 8453,
+        operation: 'deposit',
+        provider: `syndicate_${poolType}`,
+        userAddress: userAddress,
+        error: { code: 'SYNDICATE_DEPOSIT_FAILED', message, phase: 'transferring', userCancelled: message.includes('reject') || message.includes('denied') },
+      });
       return null;
     }
   }, [

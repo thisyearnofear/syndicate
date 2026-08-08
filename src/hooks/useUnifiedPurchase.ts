@@ -11,6 +11,7 @@ import {
 import { solanaWalletService } from '@/services/solanaWalletService';
 import { useExecution } from '@/services/execution';
 import type { ExecutionState } from '@/services/execution';
+import { lifecycle } from '@/services/observability';
 const BASE_POLLING_INTERVAL = 5000;
 const MAX_POLLING_INTERVAL = 30000;
 
@@ -167,6 +168,13 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
         status: 'checking_balance',
       }));
       execution.prepare('Checking balance and preparing transaction');
+      lifecycle.emit('purchase.initiated', {
+        chain: request.chain ?? 'base',
+        operation: 'purchase',
+        provider: 'megapot',
+        userAddress: request.userAddress || connectedAddress || undefined,
+        metadata: { ticketCount: request.ticketCount ?? 1 },
+      });
 
       try {
         const userAddress = request.userAddress || connectedAddress;
@@ -226,6 +234,12 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
 
         setState((prev) => ({ ...prev, status: 'signing' }));
         execution.awaitSignature(chain ?? 'base');
+        lifecycle.emit('purchase.signature_requested', {
+          chain: chain ?? 'base',
+          operation: 'purchase',
+          provider: 'megapot',
+          userAddress: userAddress,
+        });
 
         let result = await purchaseOrchestrator.executePurchase(fullRequest);
 
@@ -335,6 +349,14 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
               error: null,
               status: 'complete',
             }));
+            lifecycle.emit('purchase.confirmed', {
+              chain: chain ?? 'base',
+              operation: 'purchase',
+              provider: 'megapot',
+              transactionHash: result.txHash || result.destinationTxHash || undefined,
+              userAddress: userAddress,
+              metadata: { ticketCount: request.ticketCount ?? 1 },
+            });
           }
         } else {
           clearPendingPurchaseState();
@@ -358,6 +380,13 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
           status: 'error',
         }));
         execution.fail('UNKNOWN', message, { cause: error });
+        lifecycle.emit('purchase.failed', {
+          chain: request.chain ?? 'base',
+          operation: 'purchase',
+          provider: 'megapot',
+          userAddress: connectedAddress || undefined,
+          error: { code: 'UNKNOWN', message, phase: 'execution', userCancelled: false },
+        });
         return {
           success: false,
           error: {

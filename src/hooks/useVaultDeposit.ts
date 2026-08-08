@@ -12,6 +12,8 @@ import type { VaultProtocol } from '@/services/vaults';
 import { approveAndDepositEncrypted, withdrawFromFhenixVault } from '@/services/fhe/fhenixActions';
 import { ERC20_ABI } from '@/abis/erc20';
 import { mapErrorMessage } from '@/services/vaults/router';
+import { lifecycle } from '@/services/observability';
+import { useExecution } from '@/services/execution';
 
 type DepositStatus = 'idle' | 'checking_allowance' | 'approving' | 'building_tx' | 'depositing' | 'signing' | 'confirming' | 'complete' | 'error';
 
@@ -33,6 +35,7 @@ const AAVE_POOL = AAVE_CONFIG.BASE.POOL_ADDRESS as `0x${string}`;
 
 export function useVaultDeposit() {
   const { address, walletType } = useUnifiedWallet();
+  const execution = useExecution();
   const {
     walletClient,
     publicClient,
@@ -196,6 +199,15 @@ export function useVaultDeposit() {
       }
 
       setState({ isDepositing: true, error: null, txHash: null, approveTxHash: null, status: 'building_tx' });
+      execution.prepare(`Preparing ${protocol} deposit`);
+      lifecycle.emit('vault.deposit_initiated', {
+        chain: protocol === 'fhenix' ? 'fhenix_testnet' : 'base',
+        chainId: protocol === 'fhenix' ? 84532 : 8453,
+        operation: 'deposit',
+        provider: protocol,
+        userAddress: address,
+        metadata: { amount, protocol },
+      });
 
       try {
         let result: { success: boolean; txHash?: string };
@@ -263,14 +275,58 @@ export function useVaultDeposit() {
         }
 
         setState(prev => ({ ...prev, isDepositing: false, error: null, txHash: result.txHash ?? null, status: 'complete' }));
+        // Complete execution state machine with verified receipt.
+        // The inner handlers (depositAave, depositERC4626) have already
+        // waited for waitForTransactionReceipt, so the tx is confirmed.
+        if (result.txHash) {
+          const chainId = protocol === 'fhenix' ? 84532 : 8453;
+          try {
+            // Re-read the receipt to get blockNumber for the ConfirmedReceipt
+            const client = protocol === 'fhenix' ? fhenixPublicClient : publicClient;
+            if (client) {
+              const receipt = await client.getTransactionReceipt({ hash: result.txHash as `0x${string}` });
+              execution.awaitSignature(protocol === 'fhenix' ? 'fhenix_testnet' : 'base');
+              execution.submit(result.txHash, chainId);
+              execution.confirm(result.txHash, chainId);
+              execution.complete({
+                transactionHash: result.txHash,
+                blockNumber: Number(receipt.blockNumber),
+                chainId,
+                confirmedAt: Date.now(),
+              });
+            }
+          } catch {
+            // If receipt re-read fails, the deposit still succeeded (we already
+            // waited for confirmation inside the handler). Don't break the flow.
+          }
+        }
+        lifecycle.emit('vault.deposit_confirmed', {
+          chain: protocol === 'fhenix' ? 'fhenix_testnet' : 'base',
+          chainId: protocol === 'fhenix' ? 84532 : 8453,
+          operation: 'deposit',
+          provider: protocol,
+          transactionHash: result.txHash || undefined,
+          userAddress: address || undefined,
+          metadata: { amount, protocol },
+        });
         return result;
       } catch (error) {
         const msg = mapErrorMessage(error, 'Deposit failed');
         setState({ isDepositing: false, error: msg, txHash: null, approveTxHash: null, status: 'error' });
+        const userCancelled = msg.includes('reject') || msg.includes('denied');
+        execution.fail(userCancelled ? 'USER_REJECTED' : 'UNKNOWN', msg, { userCancelled, cause: error });
+        lifecycle.emit('vault.operation_failed', {
+          chain: protocol === 'fhenix' ? 'fhenix_testnet' : 'base',
+          chainId: protocol === 'fhenix' ? 84532 : 8453,
+          operation: 'deposit',
+          provider: protocol,
+          userAddress: address || undefined,
+          error: { code: 'DEPOSIT_FAILED', message: msg, phase: 'depositing', userCancelled: msg.includes('reject') || msg.includes('denied') },
+        });
         return { success: false, error: msg };
       }
     },
-    [address, depositAave, depositERC4626, ensureFhenixChain, fhenixChainName, fhenixPublicClient, fhenixWalletClient, walletType],
+    [address, depositAave, depositERC4626, ensureFhenixChain, fhenixChainName, fhenixPublicClient, fhenixWalletClient, walletType, execution, publicClient],
   );
 
   const withdraw = useCallback(
@@ -343,9 +399,10 @@ export function useVaultDeposit() {
     [address, ensureFhenixChain, fhenixChainName, withdrawAave, withdrawERC4626, fhenixPublicClient, fhenixWalletClient, walletType],
   );
 
-  const reset = useCallback(() => {
+  const resetAll = useCallback(() => {
+    execution.reset();
     setState({ isDepositing: false, error: null, txHash: null, approveTxHash: null, status: 'idle' });
-  }, []);
+  }, [execution]);
 
-  return { ...state, deposit, withdraw, reset };
+  return { ...state, deposit, withdraw, reset: resetAll, execution: execution.state };
 }

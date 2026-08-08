@@ -42,7 +42,7 @@ const FREQUENCY_OPTIONS: { value: VirtualsTaskFrequency; label: string }[] = [
 
 export function VirtualsAgentPanel({ open, onOpenChange }: VirtualsAgentPanelProps) {
   const { address } = useUnifiedWallet();
-  const { tasks, isLoading, error, refresh, createTask, updateTask, deleteTask } = useVirtualsTasks(address as Address | null);
+  const { tasks, isLoading, isInitialLoading, isRefreshing, error, refresh, createTask, updateTask, deleteTask } = useVirtualsTasks(address as Address | null);
   const [amount, setAmount] = useState('10');
   const [frequency, setFrequency] = useState<VirtualsTaskFrequency>('daily');
   const [recipientEmail, setRecipientEmail] = useState('');
@@ -186,7 +186,7 @@ export function VirtualsAgentPanel({ open, onOpenChange }: VirtualsAgentPanelPro
                   disabled={isLoading}
                   className="text-xs"
                 >
-                  {isLoading ? <Loader className="w-3 h-3 animate-spin" /> : 'Refresh'}
+                  {isRefreshing ? <Loader className="w-3 h-3 animate-spin" /> : 'Refresh'}
                 </Button>
               </div>
 
@@ -196,7 +196,7 @@ export function VirtualsAgentPanel({ open, onOpenChange }: VirtualsAgentPanelPro
                 </div>
               )}
 
-              {isLoading && activeTasks.length === 0 ? (
+              {isInitialLoading && activeTasks.length === 0 ? (
                 <div className="flex items-center justify-center py-8 text-sm text-gray-500">
                   <Loader className="w-4 h-4 mr-2 animate-spin" /> Loading tasks...
                 </div>
