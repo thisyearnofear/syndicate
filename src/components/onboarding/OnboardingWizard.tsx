@@ -2,10 +2,10 @@
  * Onboarding Wizard Component
  * 
  * Multi-step onboarding for first-time users:
- * 1. Welcome - Explain what syndicates are
+ * 1. Welcome - Explain the three ways to use Syndicate
  * 2. Pool Types - Explain Safe, Splits, PoolTogether
  * 3. Yield Strategies - Explain how yield works
- * 4. First Steps - Create or join first syndicate
+ * 4. First Steps - Choose the right first action
  */
 
 'use client';
@@ -41,7 +41,7 @@ const ONBOARDING_STEPS = [
   {
     id: 'welcome',
     title: 'Welcome to Syndicate',
-    description: 'Private vaults, smart yield, and direct public play',
+    description: 'Play, grow, or coordinate — with Base at the center',
   },
   {
     id: 'pool_types',
@@ -55,8 +55,8 @@ const ONBOARDING_STEPS = [
   },
   {
     id: 'first_steps',
-    title: 'Get Started',
-    description: 'Create or join your first syndicate',
+    title: 'Choose Your First Step',
+    description: 'Start with the path that fits you',
   },
 ];
 
@@ -196,7 +196,7 @@ export function OnboardingWizard() {
 function WelcomeStep() {
   return (
     <div className="text-center">
-      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center mx-auto mb-6">
+      <div className="w-20 h-20 rounded-full gradient-cta flex items-center justify-center mx-auto mb-6">
         <Sparkles className="w-10 h-10 text-white" />
       </div>
       <h2 className="text-2xl font-bold text-white mb-4">Welcome to Syndicate</h2>
@@ -385,33 +385,41 @@ function FirstStepsStep({ router }: { router: { push: (path: string) => void } }
       </div>
       <h2 className="text-2xl font-bold text-white mb-4">You&apos;re Ready!</h2>
       <p className="text-gray-400 mb-6 max-w-md mx-auto">
-        Start your syndicate journey. Create your own syndicate or join an existing one.
+        Pick the path that fits you. You can always move from public play into yield, or from yield into a coordinated syndicate.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <button
-          onClick={() => router.push('/create-syndicate')}
-          className="bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl p-4 text-left hover:opacity-90 transition-opacity"
+          onClick={() => router.push('/discover')}
+          className="gradient-cta rounded-xl p-4 text-left hover:opacity-90 transition-opacity"
         >
           <Trophy className="w-6 h-6 text-white mb-2" />
-          <p className="text-white font-bold">Create Syndicate</p>
-          <p className="text-sm text-white/70">Start your own pool</p>
+          <p className="text-white font-bold">Coordinate Capital</p>
+          <p className="text-sm text-white/70">Create or discover a syndicate</p>
         </button>
         <button
-          onClick={() => router.push('/discover')}
+          onClick={() => router.push('/vaults')}
           className="bg-white/10 rounded-xl p-4 text-left hover:bg-white/20 transition-colors"
         >
           <Users className="w-6 h-6 text-white mb-2" />
-          <p className="text-white font-bold">Discover Syndicates</p>
-          <p className="text-sm text-gray-400">Join existing pools</p>
+          <p className="text-white font-bold">Grow with Yield</p>
+          <p className="text-sm text-gray-400">Put capital to work on Base</p>
         </button>
       </div>
 
-      <div className="mt-6 p-4 bg-blue-500/20 rounded-lg border border-blue-500/30">
-        <p className="text-sm text-blue-300">
-          💡 <strong>Pro tip:</strong> Start with a small deposit to learn the flow, 
-          then scale up once you&apos;re comfortable!
-        </p>
+      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <button onClick={() => router.push('/')} className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-3 text-left transition-colors hover:bg-yellow-500/20">
+          <p className="text-sm font-bold text-yellow-200">Play Megapot</p>
+          <p className="mt-1 text-xs text-yellow-100/60">Buy a ticket directly on Base</p>
+        </button>
+        <button onClick={() => router.push('/vaults')} className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-3 text-left transition-colors hover:bg-blue-500/20">
+          <p className="text-sm font-bold text-blue-200">Grow with Yield</p>
+          <p className="mt-1 text-xs text-blue-100/60">Let yield fund participation</p>
+        </button>
+        <button onClick={() => router.push('/discover')} className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-left transition-colors hover:bg-emerald-500/20">
+          <p className="text-sm font-bold text-emerald-200">Coordinate Capital</p>
+          <p className="mt-1 text-xs text-emerald-100/60">Join or create a syndicate</p>
+        </button>
       </div>
     </div>
   );

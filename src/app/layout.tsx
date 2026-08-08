@@ -64,10 +64,11 @@ export default function RootLayout({
                     <div>
                       <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Product</h4>
                       <div className="space-y-2">
-                        <Link href="/" className="block text-sm text-gray-500 hover:text-white transition-colors">Home</Link>
-                        <Link href="/syndicates" className="block text-sm text-gray-500 hover:text-white transition-colors">Syndicates</Link>
-                        <Link href="/vaults" className="block text-sm text-gray-500 hover:text-white transition-colors">Vaults</Link>
-                        <Link href="/bridge" className="block text-sm text-gray-500 hover:text-white transition-colors">Bridge</Link>
+                        <Link href="/" className="block text-sm text-gray-500 hover:text-white transition-colors">Play</Link>
+                        <Link href="/discover" className="block text-sm text-gray-500 hover:text-white transition-colors">Coordinate</Link>
+                        <Link href="/vaults" className="block text-sm text-gray-500 hover:text-white transition-colors">Grow</Link>
+                        <Link href="/bridge" className="block text-sm text-gray-500 hover:text-white transition-colors">Fund</Link>
+                        <Link href="/portfolio" className="block text-sm text-gray-500 hover:text-white transition-colors">Portfolio</Link>
                       </div>
                     </div>
                     <div>

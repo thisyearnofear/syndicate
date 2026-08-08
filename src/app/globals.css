@@ -309,6 +309,20 @@ body {
    PREMIUM GRADIENTS
    ============================================================================= */
 
+/* Primary CTA gradient — the one gradient the product uses for primary actions.
+   Anchored to the `brand` scale in tailwind.config.ts (sky→blue). */
+.gradient-cta {
+  background-image: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+}
+
+/* Hover lift only on interactive elements — decorative uses (logo tiles,
+   icon chips) shouldn't brighten or create a stacking context. */
+a.gradient-cta:hover,
+button.gradient-cta:hover,
+[role="button"].gradient-cta:hover {
+  filter: brightness(1.08);
+}
+
 .gradient-primary {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }

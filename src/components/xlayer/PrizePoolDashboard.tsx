@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import {
   Activity,
   ArrowRight,
@@ -354,9 +355,27 @@ export function PrizePoolDashboard() {
             </div>
           </CompactCard>
 
-          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/[0.06] pt-5 text-xs text-slate-500">
+          <div className="flex flex-col gap-4 border-t border-white/[0.06] pt-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
             <span className="inline-flex items-center gap-2"><Clock3 className="h-3.5 w-3.5" /> Testnet demo · no real-value draws</span>
             <span>Read-only until deployment addresses are configured</span>
+          </div>
+
+          <div className="grid gap-3 border-t border-white/[0.06] pt-5 sm:grid-cols-3">
+            <Link href="/" className="rounded-xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-cyan-400/30 hover:bg-white/[0.06]">
+              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">Play</span>
+              <span className="mt-2 block text-sm font-semibold text-white">Buy Megapot tickets</span>
+              <span className="mt-1 block text-xs leading-5 text-slate-500">Use the live Base experience.</span>
+            </Link>
+            <Link href="/vaults" className="rounded-xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-cyan-400/30 hover:bg-white/[0.06]">
+              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">Grow</span>
+              <span className="mt-2 block text-sm font-semibold text-white">Explore yield strategies</span>
+              <span className="mt-1 block text-xs leading-5 text-slate-500">Let yield fund participation.</span>
+            </Link>
+            <Link href="/discover" className="rounded-xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-cyan-400/30 hover:bg-white/[0.06]">
+              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">Coordinate</span>
+              <span className="mt-2 block text-sm font-semibold text-white">Join a syndicate</span>
+              <span className="mt-1 block text-xs leading-5 text-slate-500">Pool capital with other participants.</span>
+            </Link>
           </div>
         </CompactSection>
       </CompactContainer>

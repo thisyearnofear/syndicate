@@ -2,9 +2,9 @@
  * Product mode ladder.
  *
  * Single source of truth for how Syndicate should be explained in product copy:
- * 1. Private Vaults
- * 2. Yield That Plays For You
- * 3. Public Play
+ * 1. Coordinate Capital
+ * 2. Grow with Yield
+ * 3. Play Megapot
  */
 
 export type ProductModeId = 'private_vaults' | 'yield_to_tickets' | 'public_play';
@@ -27,21 +27,21 @@ export const PRODUCT_MODES: readonly ProductModeConfig[] = [
     id: 'private_vaults',
     icon: '🔒',
     badge: 'Core product',
-    title: 'Private Vaults',
-    shortTitle: 'Private Vaults',
+    title: 'Coordinate Capital',
+    shortTitle: 'Syndicates',
     tagline: 'Coordinate capital privately with selective disclosure.',
     description:
       'Create or join privacy-native vaults where sensitive balances stay encrypted by default and authorized users reveal them only when needed.',
     supportingCopy:
       'Best for syndicates, treasury groups, clubs, and coordinated capital where discretion matters.',
-    href: '/create-syndicate',
+    href: '/discover',
     audience: 'Coordinated capital',
   },
   {
     id: 'yield_to_tickets',
     icon: '📈',
     badge: 'Signature mechanic',
-    title: 'Yield That Plays For You',
+    title: 'Grow with Yield',
     shortTitle: 'Yield-to-Tickets',
     tagline: 'Let your yield buy participation automatically.',
     description:
@@ -55,8 +55,8 @@ export const PRODUCT_MODES: readonly ProductModeConfig[] = [
     id: 'public_play',
     icon: '🎫',
     badge: 'Fast entry',
-    title: 'Public Play',
-    shortTitle: 'Megapot Access',
+    title: 'Play Megapot',
+    shortTitle: 'Megapot',
     tagline: 'Access Megapot directly through Syndicate.',
     description:
       'Buy tickets directly on Base through Syndicate when you want the fastest path into public prize participation.',

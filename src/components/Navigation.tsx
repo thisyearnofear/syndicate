@@ -21,7 +21,8 @@ import { WalletType } from '@/domains/wallet/types';
 import WalletInfo from './wallet/WalletInfo';
 import UnifiedModal from './modal/UnifiedModal';
 import WalletConnectionOptions from './wallet/WalletConnectionOptions';
-import { Home, Users, TrendingUp, Menu, X, ArrowLeftRight, LayoutDashboard, Settings, Sparkles } from 'lucide-react';
+import { Ticket, Users, TrendingUp, Menu, X, ArrowLeftRight, LayoutDashboard, Settings, Sparkles } from 'lucide-react';
+import { XLAYER_HOOK_IS_CONFIGURED } from '@/config/xlayer';
 
 interface NavigationProps {
     className?: string;
@@ -34,7 +35,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
     const [showWalletDetails, setShowWalletDetails] = useState(false);
     const [showWalletModal, setShowWalletModal] = useState(false);
     const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
-    const walletPillRef = useRef<HTMLDivElement>(null);
+    const walletPillRef = useRef<HTMLButtonElement>(null);
     const walletDetailsRef = useRef<HTMLDivElement>(null);
     const [mounted, setMounted] = useState(false);
 
@@ -64,8 +65,6 @@ export default function Navigation({ className = '' }: NavigationProps) {
         }
     }, [connect]);
 
-    // Determine if Bridge should be emphasized in nav
-    const shouldShowBridge = pathname !== '/bridge';
 
     const getWalletIcon = () => {
         switch (walletType) {
@@ -93,50 +92,57 @@ export default function Navigation({ className = '' }: NavigationProps) {
     const navigationItems = [
         {
             href: '/',
-            label: 'Home',
-            icon: Home,
+            label: 'Play',
+            icon: Ticket,
             active: pathname === '/',
+            title: 'Buy Megapot tickets on Base or start with public play',
         },
         {
             href: '/portfolio',
             label: 'Portfolio',
             icon: LayoutDashboard,
             active: pathname === '/portfolio',
+            title: 'See your positions, yield, tickets, and activity in one place',
             requiresWallet: true,
         },
         {
             href: '/discover',
-            label: 'Syndicates',
+            label: 'Coordinate',
             icon: Users,
-            active: pathname === '/discover',
+            active: pathname === '/discover' || pathname === '/create-syndicate' || pathname === '/syndicate',
+            title: 'Discover or create a coordinated capital group',
         },
         {
             href: '/vaults',
-            label: 'Vaults',
+            label: 'Grow',
             icon: TrendingUp,
             active: pathname === '/vaults' || pathname === '/yield-strategies',
+            title: 'Put capital to work and route yield into participation',
         },
-        // Bridge (secondary journey): discoverable, minimal logic here
-        // Clean + DRY: single place to define nav items
-        ...(shouldShowBridge
+        {
+            href: '/bridge',
+            label: 'Fund',
+            icon: ArrowLeftRight,
+            active: pathname === '/bridge',
+            title: 'Move funds into the Base-native experience',
+        },
+        // X Layer is an experimental testnet surface — keep it out of primary
+        // navigation until a real hook deployment is configured.
+        ...(XLAYER_HOOK_IS_CONFIGURED
             ? [{
-                href: '/bridge',
-                label: 'Bridge',
-                icon: ArrowLeftRight,
-                active: pathname === '/bridge',
+                href: '/xlayer',
+                label: 'X Layer',
+                icon: Sparkles,
+                active: pathname === '/xlayer',
+                title: 'Explore the experimental X Layer prize pool',
             }]
             : []),
-        {
-            href: '/xlayer',
-            label: 'Prize Pool',
-            icon: Sparkles,
-            active: pathname === '/xlayer',
-        },
         {
             href: '/settings',
             label: 'Settings',
             icon: Settings,
             active: pathname === '/settings',
+            title: 'Manage wallets, automation, and preferences',
         },
     ];
 
@@ -166,7 +172,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                     <CompactFlex align="center" gap="md">
                         {/* Logo */}
                         <Link href="/" className="flex items-center gap-2 mr-6">
-                            <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
+                            <div className="w-8 h-8 gradient-cta rounded-lg flex items-center justify-center">
                                 <span className="text-white font-bold text-sm">S</span>
                             </div>
                             <span className="font-bold text-white text-lg">Syndicate</span>
@@ -177,20 +183,20 @@ export default function Navigation({ className = '' }: NavigationProps) {
                             {visibleItems.map((item) => {
                                 const Icon = item.icon;
                                 return (
-                                    <Link key={item.href} href={item.href}>
-                                        <button
-                                            title={item.label === 'Bridge' ? 'Fund Base-native vaults and strategies from external chains' : item.label}
-                                            className={`
-                            flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium
+                                    <Link
+                                        key={item.href}
+                                        href={item.href}
+                                        title={item.title ?? item.label}
+                                        className={`
+                            flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950
                             ${item.active
-                                                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                                                    ? 'gradient-cta text-white shadow-lg'
                                                     : 'text-gray-300 hover:text-white hover:bg-white/10'
                                                 }
                             `}
-                                        >
-                                            <Icon className="w-4 h-4" />
-                                            <span className="hidden lg:inline">{item.label}</span>
-                                        </button>
+                                    >
+                                        <Icon className="w-4 h-4" />
+                                        <span className="hidden lg:inline">{item.label}</span>
                                     </Link>
                                 );
                             })}
@@ -200,16 +206,19 @@ export default function Navigation({ className = '' }: NavigationProps) {
                         <CompactFlex align="center" gap="md">
                             {isConnected ? (
                                 <div className="relative flex items-center">
-                                    <div
+                                    <button
+                                        type="button"
                                         ref={walletPillRef}
-                                        className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 border border-green-500/30 rounded-full cursor-pointer hover:bg-green-500/30 transition-colors"
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 border border-green-500/30 rounded-full cursor-pointer hover:bg-green-500/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/80"
                                         onClick={handleWalletStatusClick}
+                                        aria-expanded={showWalletDetails}
+                                        aria-label="Open wallet details"
                                     >
                                         <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
                                         <span className="text-green-400 text-sm font-semibold">
                                             {getWalletIcon()} {getChainLabel()}
                                         </span>
-                                    </div>
+                                    </button>
                                     {mounted && showWalletDetails && createPortal(
                                         <div
                                             ref={walletDetailsRef}
@@ -246,7 +255,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                     <CompactFlex align="center" justify="between">
                         {/* Logo */}
                         <Link href="/" className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
+                            <div className="w-8 h-8 gradient-cta rounded-lg flex items-center justify-center">
                                 <span className="text-white font-bold text-sm">S</span>
                             </div>
                             <span className="font-bold text-white text-lg">Syndicate</span>
@@ -274,20 +283,17 @@ export default function Navigation({ className = '' }: NavigationProps) {
                                             key={item.href}
                                             href={item.href}
                                             onClick={() => setIsMobileMenuOpen(false)}
-                                        >
-                                            <button
-                                                aria-label={item.label === 'Bridge' ? 'Bridge USDC to Base-native vaults and strategies' : undefined}
-                                                className={`
-                                w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-left
+                                            aria-label={item.title ?? item.label}
+                                            className={`
+                                w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950
                                 ${item.active
-                                                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                                                        ? 'gradient-cta text-white shadow-lg'
                                                         : 'text-gray-300 hover:text-white hover:bg-white/10'
                                                     }
                                 `}
-                                            >
-                                                <Icon className="w-4 h-4" />
-                                                {item.label}
-                                            </button>
+                                        >
+                                            <Icon className="w-4 h-4" />
+                                            {item.label}
                                         </Link>
                                     );
                                 })}
@@ -301,10 +307,10 @@ export default function Navigation({ className = '' }: NavigationProps) {
                                         </div>
                                     ) : (
                                         <Button
-                                            variant="default"
+                                            variant="premium"
                                             size="sm"
                                             onClick={() => setShowWalletModal(true)}
-                                            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                                            className="w-full"
                                         >
                                             🔗 Connect Wallet
                                         </Button>

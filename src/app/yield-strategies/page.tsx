@@ -397,9 +397,9 @@ function YieldStrategiesContent() {
       {selectedStrategy && (
         <div className="flex justify-end pt-4">
           <Button
-            variant="default"
+            variant="premium"
             size="lg"
-            className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 min-w-[200px] shadow-lg shadow-blue-500/20"
+            className="min-w-[200px] shadow-lg shadow-brand-500/20"
             onClick={() => setFlowStep(2)}
           >
             Continue to allocation
@@ -529,7 +529,7 @@ function YieldStrategiesContent() {
                 <ExternalLink className="ml-2 h-4 w-4" />
               </a>
               <Link
-                href={VAULTS_ROUTE}
+                href="/portfolio"
                 className="inline-flex items-center rounded-xl bg-white/10 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/20"
               >
                 Go to Portfolio
@@ -547,8 +547,9 @@ function YieldStrategiesContent() {
           <Button
             onClick={handleDeposit}
             disabled={!depositAmount || depositAmount <= 0 || isDepositing}
+            variant="premium"
             size="lg"
-            className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 py-8 text-lg font-bold shadow-xl shadow-blue-500/20"
+            className="w-full py-8 text-lg font-bold shadow-xl shadow-brand-500/20"
           >
             {isDepositing ? (
               <span className="flex items-center gap-3">
@@ -667,6 +668,14 @@ function YieldStrategiesContent() {
                   ? `${selectedStrategyConfig.description}`
                   : "Set up your vault strategy and yield routing in a few simple steps."}
               </p>
+              <div className="mt-4 inline-flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-blue-300">Grow</span>
+                <span>Fund your vault</span>
+                <span className="text-gray-700">→</span>
+                <span>Let yield fund participation</span>
+                <span className="text-gray-700">→</span>
+                <span className="text-emerald-300">Track it in Portfolio</span>
+              </div>
             </div>
 
             {/* Wallet Status Area */}

@@ -5,6 +5,8 @@
  * Used by both bridge protocols and wallet services
  */
 
+import { logger } from '@/lib/logger';
+
 export function getSolanaRpcUrls(): string[] {
   const urls: string[] = [];
 
@@ -45,7 +47,7 @@ export function getBaseRpcUrls(): string[] {
   // Priority 1: Configured Base RPC
   const primary =
     process.env.NEXT_PUBLIC_BASE_RPC_URL ||
-    'https://base-mainnet.g.alchemy.com/v2/zXTB8midlluEtdL8Gay5bvz5RI-FfsDH';
+    'https://mainnet.base.org';
   urls.push(primary);
 
   // Priority 2: Fallback Base RPCs
@@ -88,6 +90,7 @@ export async function executeWithRpcFallback<T>(
       return result;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
+      logger.warn('RPC endpoint failed; trying next fallback', { url });
       // Continue to next RPC
       continue;
     }
