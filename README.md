@@ -1,139 +1,63 @@
-# Syndicate - Cross-Chain Yield + Lottery Platform
+# Syndicate
 
-**Status**: Production | **Hackathon**: See [docs/HACKATHON.md](./docs/HACKATHON.md) 
+Syndicate is a Base-native coordination platform for yield, syndicates, privacy, and lottery participation.
 
-Syndicate enables multi-chain lottery ticket purchases with integrated yield strategies that auto-route accrued yield into lottery entries. 8 bridge protocols, 6 vault providers, institutional-grade compliance.
+Users can:
 
----
+- deposit into yield strategies and route earned yield into Megapot tickets;
+- create or join shared syndicates using Safe, 0xSplits, or PoolTogether;
+- fund the Base experience from supported chains including Solana, Stacks, NEAR, and Starknet;
+- use Fhenix for encrypted positions and selective disclosure;
+- automate capped, revocable actions with ERC-7715, x402, and Virtuals agents.
 
-## Quick Navigation
-
-| For | See |
-|-----|-----|
-| **Hackathon Strategy** | [docs/HACKATHON.md](./docs/HACKATHON.md) |
-| **MetaMask Smart Accounts x 1Shot x Venice Cook-Off (June 15 2026)** | [docs/METAMASK_COOKOFF_SUBMISSION.md](./docs/METAMASK_COOKOFF_SUBMISSION.md) · [docs/METAMASK_COOKOFF_DEMO_SCRIPT.md](./docs/METAMASK_COOKOFF_DEMO_SCRIPT.md) |
-| **Architecture & Dev** | [AGENTS.md](./AGENTS.md) · [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) |
-| **Bridge Protocols** | [docs/BRIDGES.md](./docs/BRIDGES.md) |
-| **Deployment** | [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) |
-
----
-
-## Core Capabilities
-
-### 🌉 Multi-Chain Bridging (8 Protocols)
-
-CCTP, Lifi, CCIP, deBridge, TON, Starknet, NEAR, Stacks
-
-**See**: `src/services/bridges/protocols/` · [docs/BRIDGES.md](./docs/BRIDGES.md)
-
-### 💰 Yield Strategies (6 Active)
-
-Aave V3 (Base, 4.5%) · Morpho Blue (6.7%) · Spark Protocol (4.0%) · PoolTogether (3.5%) · Octant (10% mock) · Uniswap V3 (in progress)
-
-Yield auto-converts to lottery tickets (Yield-to-Tickets pattern).
-
-**See**: `src/services/vaults/` · [AGENTS.md#lossless-lottery](./AGENTS.md#lossless-lottery-yield-to-tickets-flow)
-
-### 🏢 Syndicate Pools
-
-Safe Multisig · 0xSplits Distribution · PoolTogether Prize-Linked
-
-**See**: `src/services/syndicate/poolProviders/`
-
-### 🎟️ Cross-Chain Lottery
-
-Buy tickets from any supported chain. Atomic proxy contract. Auto-purchase via x402/ERC-7715.
-
-### 🛡️ Compliance
-
-Civic Pass integration. KYC gates deposits.
-
----
-
-## Quick Start
+## Quick start
 
 ```bash
-npm install && npm run dev    # localhost:3000
-npm run build                 # Production build
-npm run lint && npm run test   # Lint & test
+pnpm install
+pnpm dev
 ```
 
-**Environment**: See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)
+Useful checks:
 
----
-
-## Project Structure
-
-```
-src/
-├── services/bridges/           # 8 bridge protocols
-├── services/vaults/            # 6 vault providers
-├── services/syndicate/         # Pool management
-├── components/modal/           # Purchase + vault UIs
-├── components/yield/           # Dashboard, strategy selector
-├── app/yield-strategies        # Vault selection page
-└── app/portfolio               # User portfolio
-
-contracts/
-├── *.sol                       # EVM (Solidity)
-├── ton/                        # TON (FunC/Tact)
-└── starknet/                   # Starknet (Cairo)
-
-docs/
-├── HACKATHON.md               # 👈 Consolidated hackathon strategy
-├── ARCHITECTURE.md            # Technical design
-├── BRIDGES.md                 # Bridge reference
-├── DEPLOYMENT.md              # Deployment guide
-├── SECURITY.md                # Security considerations
-└── ...
+```bash
+pnpm build
+pnpm lint
+pnpm test
 ```
 
----
+## Product model
 
-## 🎯 Active Hackathon Submission
+- **Base** is the execution and settlement layer.
+- **Fhenix** adds privacy for eligible vault and syndicate flows.
+- **Other chains** are funding and routing rails into the Base-native product.
+- **Megapot** remains the lottery engine; Syndicate owns coordination, yield routing, privacy, and automation.
+- **X Layer** is an experimental second engine: a Uniswap v4 Prize Pool Hook where trading fees fund weighted draws. The read-only `/xlayer` dashboard is shipped; testnet deployment and write flows are pending.
 
-**MetaMask Smart Accounts Kit x 1Shot API x Venice AI Cook-Off** (June 15, 2026)
+## Documentation
 
-| Track Prize | Prize | Submission |
-|---|---|---|
-| Best x402 + ERC-7710 | $3,000 | [METAMASK_COOKOFF_SUBMISSION.md](./docs/METAMASK_COOKOFF_SUBMISSION.md#track-prize-mapping) |
-| Best Agent | $3,000 | [METAMASK_COOKOFF_SUBMISSION.md](./docs/METAMASK_COOKOFF_SUBMISSION.md#track-prize-mapping) |
-| Best A2A coordination | $3,000 | [METAMASK_COOKOFF_SUBMISSION.md](./docs/METAMASK_COOKOFF_SUBMISSION.md#track-prize-mapping) |
-| Best use of Venice AI | $3,000 | [METAMASK_COOKOFF_SUBMISSION.md](./docs/METAMASK_COOKOFF_SUBMISSION.md#track-prize-mapping) |
-| Best Use of 1Shot Permissionless Relayer | $1,000 USDC | [METAMASK_COOKOFF_SUBMISSION.md](./docs/METAMASK_COOKOFF_SUBMISSION.md#track-prize-mapping) |
+Start at [`docs/README.md`](docs/README.md), the canonical documentation index.
 
-Recording script: [docs/METAMASK_COOKOFF_DEMO_SCRIPT.md](./docs/METAMASK_COOKOFF_DEMO_SCRIPT.md)
+| Need | Document |
+|---|---|
+| Product, positioning, and chain model | [`docs/PRODUCT.md`](docs/PRODUCT.md) |
+| Technical architecture | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
+| Bridges and funding rails | [`docs/BRIDGES.md`](docs/BRIDGES.md) |
+| Deployment, security, and readiness | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) |
+| X Layer Prize Pool Hook | [`docs/X_LAYER.md`](docs/X_LAYER.md) |
+| Fhenix privacy integration | [`docs/FHENIX.md`](docs/FHENIX.md) |
+| Active and historical submissions | [`docs/HACKATHONS.md`](docs/HACKATHONS.md) |
+| Developer status and conventions | [`AGENTS.md`](AGENTS.md) |
 
-**Other historical hackathons** (Ranger, Lifi, Fhenix): see [docs/HACKATHON.md](./docs/HACKATHON.md).
+## Repository map
 
----
-
-## Tech Stack
-
-- **Framework**: Next.js 14
-- **Wallets**: wagmi, @stacks/connect, @tonconnect/ui-react
-- **Contracts**: Solidity, Cairo, FunC
-- **UI**: Tailwind CSS
-
----
-
-## Core Principles
-
-✅ Enhancement First · ✅ Consolidation · ✅ DRY · ✅ Clean · ✅ Modular · ✅ Organized
-
-**Read**: [AGENTS.md](./AGENTS.md) for full developer guide.
-
----
-
-## Resources
-
-- **Developer Guide**: [AGENTS.md](./AGENTS.md)
-- **Architecture**: [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
-- **Bridges**: [docs/BRIDGES.md](./docs/BRIDGES.md)
-- **Deployment**: [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)
-- **Security**: [docs/SECURITY.md](./docs/SECURITY.md)
-
----
+```text
+src/          Next.js app, hooks, services, and providers
+contracts/    Solidity, Cairo, FunC, and X Layer contracts
+script/       Foundry deployment scripts
+test/         Foundry tests
+tests/        Jest tests
+docs/         Canonical guides; historical material lives in docs/archive/
+```
 
 ## License
 

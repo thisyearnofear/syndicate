@@ -1,533 +1,75 @@
-# Syndicate App - Developer Guide
+# Syndicate Developer Guide
 
-## Status
+`AGENTS.md` is the source of truth for what is shipped. Product and operational detail belongs in [`docs/README.md`](docs/README.md) and its canonical guides.
 
-This file is the source of truth for what is **actually shipped**. Items in the "Backlog" section below are aspirational and may diverge from the codebase. Update this table whenever you cut a release or add a new feature.
+## Current status
 
-### Component Status (as of last update)
+| Component | Status | Source / notes |
+|---|---|---|
+| Base vaults: Aave, Morpho, Spark, PoolTogether | Live | On-chain reads and deposit flows are implemented. |
+| Fhenix vault/governor | Testnet integrated | Encrypted deposits, sealed-output reveal, APY oracle, signed withdrawals, and governance. See [`docs/FHENIX.md`](docs/FHENIX.md). |
+| Safe / 0xSplits / PoolTogether syndicates | Live | Shared custody and distribution providers. |
+| Cross-chain purchase rails | Mixed | Base and Stacks are the strongest paths; see [`docs/BRIDGES.md`](docs/BRIDGES.md) and the chain runbooks. |
+| Stacks x402 | Production-oriented | Resume support, error mapping, health tracking, and operator runbook shipped; x402 auto-purchase remains placeholder. |
+| Solana / NEAR / Starknet | Partial | Bridge paths exist but require additional E2E, relayer, and wallet-risk hardening before broad production claims. |
+| TON / Telegram | Paused | Runtime remains gated until the lottery contract is deployed/configured. |
+| Virtuals ACP automation | Live surface | Persisted tasks, cron processor, kill switch, auto-pause, and user management UI. |
+| ERC-7715 / 1Shot automation | Live | Permission-scoped recurring purchase and relayer paths. |
+| X Layer Prize Pool Hook | In progress | M2 contract stack hardened; read-only `/xlayer` dashboard shipped; testnet deployment and write flows pending. See [`docs/X_LAYER.md`](docs/X_LAYER.md). |
+| Verification provider | Noop by design | KYC is opt-in infrastructure, not the default ticket-purchase experience. |
 
-| Component | Status | Notes |
-|-----------|--------|-------|
-| Aave V3 vault (Base) | Live | Live on-chain APY queries |
-| Morpho Blue vault (Base) | Live | Live on-chain APY queries |
-| Spark Protocol sUSDC (Base) | Live | No lockup, yield→tickets flow |
-| PoolTogether V5 vault (Base) | Live | TwabDelegator wiring in `useSyndicateDeposit` |
-| Octant V2 vault | Disabled | Mock is gated on `NEXT_PUBLIC_OCTANT_MOCK=true`; provider throws `VAULT_DISABLED` and returns zero balance/APY by default. Real ERC-4626 vault address not configured (`OCTANT_V2_CONFIG.vaults.ethereumUsdcVault` still `0x...`). |
-| Uniswap V3 LP vault | Stub | Deposit/withdraw throw "Coming soon" in `useVaultDeposit` and `vaults/router`; UI shows "Coming Soon" badge in `VaultsPageContent`. Read-side (positions + uncollected fees) is wired in `uniswapProvider` but not surfaced as an end-to-end flow. |
-| LI.FI Earn aggregator | Live | Real protocol, no public docs row |
-| Fhenix FHE vault (Base Sepolia) | Live | On-chain APY oracle, sealed-output balance reveal, 31 Foundry tests. Vault `0x2bB4AdD658E6DB8BEc759B6F1Ab8cb3f1954AE83` (block `0x2851211`, deploy tx `0xc1b79cab…`). |
-| Fhenix Governor (Base Sepolia) | Live | 25 Foundry tests, sealed-output tally reveal. Governor `0xcE39E8bc27267dF6Ae5641F11Bce876700ab06b1` (block `0x285122f`, deploy tx `0xf94bcac9…`), bound to vault above. |
-| Fhenix Helium (chain 8008135) | Sunset | Replaced by Nitrogen; not actively targeted |
-| Safe pool provider | Live | `safeService` + `safeProvider` |
-| 0xSplits pool provider | Live | `splitService` + `splitsProvider` |
-| PoolTogether pool provider | Live | `poolTogetherV5Provider` |
-| Fhenix pool provider | Testnet | Encrypted deposits, FHE permits |
-| TON bridge | Paused | Runtime refuses calls until `TON_LOTTERY_CONTRACT` is set; redeploy lottery.fc to re-enable |
-| Telegram Mini App | Paused | `TelegramPurchaseModal` is gated on `NEXT_PUBLIC_TON_LOTTERY_CONTRACT` |
-| Verification gate | Live (noop, by design) | `VerificationProvider` interface + `NoopVerificationProvider` default + `CivicVerificationProvider` stub. **The noop default is the intended ship state** for this product — KYC adds friction the lottery/yield funnel can't absorb, and it conflicts with the FHE privacy pitch. A real provider (Civic, Sumsub, Persona, on-chain attestations) can be plugged into the interface when a partner, jurisdiction, or pool type requires it. Civic SDK is **not** bundled. 27 tests. |
-| Virtuals ACP automation | Live (Phase 3.5 — user surface) | Full pipeline: agent registry, persisted task state, server-side cron, kill switch + auto-pause, **user-facing surface** (create / list / pause / resume / delete tasks via `VirtualsAgentPanel`). API: `GET/POST /api/virtuals/tasks`, `GET/PATCH/DELETE /api/virtuals/tasks/[id]`. Hook: `useVirtualsTasks`. 12 Phase 3 + 11 Phase 3.5 tests. |
-| TON Agentic Wallet | Paused | `tonAgentService` is dormant; remove or re-enable with TON |
-| ERC-7715 scheduled purchases | Live | `erc7715Service` + `useERC7715` |
-| Tether WDK autonomous agent | Live | `wdkService` |
-| 1Shot relayer | Live | `oneShotRelayerService` for yield-autopilot |
-| Stacks x402 | Live (production-ready) | `useUnifiedPurchase` Stacks branch. **Audit + production-hardening complete (June 17 2026):** fixed the unreachable-signing bug (`success: false` for `pending_signature`), the resume-path phantom-success, and the protocol's health tracking; added the Stacks-specific error mapper (`mapStacksError` translates raw errors to user-friendly messages); added the protocol's resume support (`bridge()` looks up the actual status from `purchase_statuses` when `signedTxHash` is provided, instead of returning a new `pending_signature`); added the [Stacks operator runbook](docs/STACKS_OPERATOR_RUNBOOK.md) covering architecture, env vars, failure modes, SLA, and on-call. 32 regression tests. **Known limitations:** the x402 auto-purchase service is placeholder code; no end-to-end test framework yet. |
-| Foundry tests | Live | 31 (vault) + 25 (governor) tests run in CI |
-| Jest tests | Live | `npm test` runs in CI; coverage report missing |
-| CI (lint + typecheck + build + test + forge) | Live | `.github/workflows/ci.yml` and `test.yml` |
-| X Layer Prize Pool Hook (Build X AI Season) | In progress (M2 hardened; read-only app slice complete; testnet deployment pending) | Uniswap v4 hook on X Layer (chain 196) turning swap fees into a lossless lottery: pot from trading fees, LPs as ticket holders, epoch draws with weighted selection, and oracle-agnostic randomness. M2 includes the surcharge router, atomic `PrizePoolHookFactory`, real `PoolManager` integration coverage, CREATE2 permission-bit checks, post-bind configuration timelocks, and timelocked router recovery. The read-only `/xlayer` dashboard and chain-195 wagmi integration are shipped; testnet deployment and write flows remain pending. Mainnet is guarded against the operator-controlled demo oracle. **104 Foundry tests pass; 14 focused app tests pass.** M3 LP fee split → M4 drand verifier → gated deposits/draws/claims + AI/syndicate wiring. See [docs/BUILD_X_STRATEGY.md](docs/BUILD_X_STRATEGY.md) and [docs/BUILD_X_APP_INTEGRATION.md](docs/BUILD_X_APP_INTEGRATION.md). |
+## Product model
 
-### Backlog (planned, not yet built)
+- **Base** executes vault, syndicate, settlement, and Megapot flows.
+- **Fhenix** adds privacy to eligible vault and syndicate flows.
+- **Other chains** are funding/routing rails into the Base-native product.
+- **Megapot** is the lottery engine; Syndicate owns coordination, yield routing, privacy, and automation.
+- **X Layer** is an experimental DEX-native prize-pool engine, separate from Base/Megapot.
 
-- **Mainnet FHE (Phase 4)**: multisig coordinator, timelock on `setApy`, pausable contract, audit-ready natspec, then promote to Base mainnet.
-- **Fhenix Nitrogen support (Phase 4.1)**: re-evaluate when Nitrogen is GA; add a chain selector branch with the same pattern as Helium.
-- **TON re-enable (post-Phase 0)**: deploy `contracts/ton/lottery.fc` to TON mainnet, set `TON_LOTTERY_CONTRACT`, unpause.
+See [`docs/PRODUCT.md`](docs/PRODUCT.md) and [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-### Not on the roadmap (conditional / opt-in)
+## Core conventions
 
-These are **not** planned work. They are listed here so future contributors don't think they were forgotten or assumed to be next:
+- Extend existing interfaces and providers before creating parallel abstractions.
+- Keep blockchain reads/writes behind services and hooks; keep components focused on presentation.
+- Treat `pending_signature`, `bridging`, and similar states as incomplete, never successful.
+- Verify transaction receipts/events before reporting money movement as complete.
+- Keep private keys, secrets, permits, and plaintext private balances out of logs and source control.
+- User-approved policy remains the authorization boundary for agents and relayers.
+- Update this status table when a feature or chain status changes.
 
-- **Real KYC provider wiring (Civic / Sumsub / Persona / on-chain attestations)** — the `VerificationProvider` interface and `useVerificationGate` hook are the right abstraction and are kept in the codebase. The noop default is the **intended** ship state. Revisit only if: a regulated syndicate partner requires it, a jurisdiction forces it, or a pool type handling real volume makes AML risk a concrete concern. The decision is product-and-jurisdiction-specific.
+## Key locations
 
+```text
+src/app/                         Next.js routes and API handlers
+src/components/                  UI
+src/hooks/                       React and wallet flows
+src/services/                    Bridges, vaults, syndicates, automation, FHE
+src/config/                      Chain and contract configuration
+contracts/                       Solidity, Cairo, FunC, and X Layer contracts
+script/                          Foundry deployment scripts
+test/                            Foundry tests
+tests/                           Jest tests
+docs/                            Canonical guides; archive/ holds historical docs
+```
 
-### How to keep this table honest
+Important entry points:
 
-When you finish a Phase, update the table. When you decide not to build a feature, move it to "Backlog" or remove it. When you discover a divergence (e.g. a feature documented here that the code does not implement), open a PR to remove the doc claim — not to match the code with the claim.
+- `src/services/bridges/protocols/` — bridge implementations
+- `src/services/vaults/` — vault providers
+- `src/services/syndicate/poolProviders/` — syndicate providers
+- `src/services/yieldToTicketsService.ts` — yield-to-ticket orchestration
+- `src/hooks/useUnifiedPurchase.ts` — unified purchase flow
+- `src/components/xlayer/PrizePoolDashboard.tsx` — X Layer read-only dashboard
 
-For the non-Base chains (Stacks, Solana, NEAR, Starknet), the status table is the high-level summary. The detailed per-chain assessment against the production bar (functional / error handling / monitoring / security / persistence / testing / documentation) is in [`docs/PRODUCTION_CHECKLIST.md`](docs/PRODUCTION_CHECKLIST.md). When you change a chain's status, update both.
+## Commands
 
-## Project Overview
-Multi-chain lottery/ticket purchasing platform supporting EVM (Base, Ethereum, Arbitrum), Solana, NEAR, Starknet, Stacks, and Telegram (TON bridge paused until the lottery contract is deployed).
-
-## Core Architecture
-
-### Bridge Protocol System
-- **Location**: `src/services/bridges/protocols/`
-- **Pattern**: Each chain implements `BridgeProtocol` interface
-- **Key methods**: `bridge()`, `getSupportedTokens()`, `healthCheck()`
-
-### Supported Bridges
-| Chain | Protocol | Notes |
-|-------|----------|-------|
-| Base | CCTP + ERC-7715 | Native USDC, Advanced Permissions |
-| Stacks | USDCx + sBTC + x402 | Native Circle USDC, SIP-018 signatures. `bridge()` returns `pending_signature`; user signs via `@stacks/connect` (handled in `useUnifiedPurchase` Stacks branch). |
-| Solana | DeBridge DLN | Automated intent-based cross-chain USDC bridging. `bridge()` returns `pending_signature` with a base64-serialized Solana tx; user signs with Phantom (`OctantYieldDashboard`). `getHealth()` pings the DeBridge API. |
-| NEAR | Intents + Chain Sigs | Cross-chain intents and MPC signatures. **Intents**: two-step (quote → user signs USDC transfer to deposit address → solver). **ChainSigs**: derives EVM address from NEAR account, gets MPC signature, broadcasts via `eth_sendRawTransaction` on Base/Ethereum. |
-| Starknet | Starknet.js + Relayer | Production-ready USDC/STRK bridging to Base. `bridge()` returns `pending_signature`; `handleStarknetWalletSign` in `useUnifiedPurchase` calls `starknetWallet.account.execute(calls)`. |
-| TON | Paused (CCTP + Telegram) | USDT/TON → CCTP → Base. Bridge refused at runtime until `TON_LOTTERY_CONTRACT` is configured. |
-
-### Vault Providers (Yield Strategies)
-| Provider | Chain | Status | APY | Notes |
-|----------|-------|--------|-----|-------|
-| Aave V3 | Base | ✅ Live | Live Query | Stable lending, live on-chain APY queries |
-| Morpho Blue | Base | ✅ Live | Live Query | Curated lending vaults, event-indexed yield calculation |
-| Spark Protocol | Base | ✅ Live | Live Query | Savings USDC (sUSDC), event-indexed yield calculation |
-| PoolTogether V5 | Base | ✅ Live | Live Query | No-loss prize savings, event-indexed yield calculation |
-| Octant V2 | Ethereum/Base | 🧪 Mock (opt-in) | 0 default / ~10% when enabled | Yield donating vaults. Disabled by default — `octantProvider` throws `VAULT_DISABLED` and returns zero balance/APY unless `NEXT_PUBLIC_OCTANT_MOCK=true` is set or a real ERC-4626 vault address replaces the `0x...` placeholder in `OCTANT_V2_CONFIG.vaults.ethereumUsdcVault`. The 10% is config-only, not a live query. |
-| Uniswap V3 | Base | 🚧 Coming Soon | — | Concentrated liquidity USDC/WETH positions. Read-side in `uniswapProvider` (uncollected fees only — no live APY query). Deposit/withdraw refused at `useVaultDeposit`/`vaults/router` with "Coming soon" until position-management UI ships. |
-
-### Key Files
-- `src/services/bridges/protocols/stacks.ts` - Stacks bridge with USDCx/sBTC support
-- `src/services/bridges/protocols/ton.ts` - TON→Base bridge protocol (CCTP)
-- `src/services/vaults/aaveProvider.ts` - Aave V3 lending (Base) ✅ Working
-- `src/services/vaults/morphoProvider.ts` - Morpho Blue vaults (Base) ✅ Working
-- `src/services/vaults/sparkProvider.ts` - Spark Protocol sUSDC (Base) ✅ Working
-- `src/services/vaults/poolTogetherProvider.ts` - PoolTogether V5 (Base) ✅ Working
-- `src/services/vaults/octantProvider.ts` - Octant V2 yield donating (Ethereum) 🧪 MVP Mock
-- `src/services/vaults/uniswapProvider.ts` - Uniswap V3 LP positions (Base) 🚧 Coming Soon
-- `src/services/vaults/index.ts` - VaultManager orchestrator
-- `src/hooks/useVaultDeposit.ts` - Unified deposit/withdraw hook for all vaults
-- `src/hooks/useUserVaults.ts` - Fetch all user vault positions with caching
-- `src/components/yield/YieldDashboard.tsx` - Multi-vault overview dashboard
-- `src/app/portfolio/page.tsx` - Unified portfolio (syndicates + vaults) with tabs
-- `src/app/yield-strategies/page.tsx` - Yield strategies page with 3 tabs
-- `src/services/automation/tonAgentService.ts` - TON Agentic Wallet + MCP tools (paused with the TON bridge)
-- `src/services/yieldToTicketsService.ts` - Orchestrator for Yield -> Ticket conversion
-- `src/components/modal/AutoPurchaseModal.tsx` - Auto-purchase + Yield upsell UI
-- `src/components/modal/SimplePurchaseModal.tsx` - Direct purchase + Yield upsell UI
-- `src/components/telegram/TelegramProvider.tsx` - Telegram WebApp SDK context
-- `src/components/telegram/TelegramPurchaseModal.tsx` - Telegram-optimized purchase UI (gated on `NEXT_PUBLIC_TON_LOTTERY_CONTRACT`)
-- `src/hooks/useTonConnect.ts` - TON Connect wallet hook
-- `src/hooks/useTonPay.ts` - TON Pay SDK payment hook
-- `contracts/ton/lottery.fc` - TON lottery payment receiver contract (FunC, not yet deployed)
-- `contracts/ton/lottery.tact` - TON lottery contract (Tact, not yet deployed)
-- `src/app/create-syndicate/page.tsx` - 4-step syndicate creation with pool type selector
-- `src/hooks/useSyndicateDeposit.ts` - Multi-pool-type deposit hook with PoolTogether delegation
-- `src/config/xlayer.ts` - X Layer Testnet chain, deployment addresses, ABIs, and explorer helpers
-- `src/app/xlayer/page.tsx` + `src/components/xlayer/PrizePoolDashboard.tsx` - Read-only Prize Pool dashboard
-- `docs/BUILD_X_APP_INTEGRATION.md` - X Layer app configuration and deployment handoff
-
-## Tech Stack
-- **Framework**: Next.js 14 (App Router)
-- **Styling**: Tailwind CSS
-- **EVM**: wagmi + RainbowKit
-- **Stacks**: @stacks/connect
-- **TON**: @tonconnect/ui-react + @twa-dev/sdk (Telegram Mini App) — bridge paused until `TON_LOTTERY_CONTRACT` is set
-- **State**: React Context + useState
-
-## Common Commands
 ```bash
-npm run dev    # Development server
-npm run build  # Production build
-npm run lint   # Lint (note: may have config issues)
+pnpm dev
+pnpm build
+pnpm type-check
+pnpm lint
+pnpm test
 ```
 
-## Lossless Lottery (Yield-to-Tickets) Flow
-1. User deposits USDC into **Spark Protocol** (Base) via `SparkVaultProvider`.
-2. No lockup - yield accrues immediately via Sky Savings Rate (~4.0% APY).
-3. `YieldToTicketsService` monitors accrued yield.
-4. On-chain orchestrator (or relayer) triggers `withdrawYield()`.
-5. Yield is auto-routed to `PurchaseOrchestrator` to mint lottery tickets.
-6. User enters lottery for "free" while maintaining 100% of their base capital.
-
-## x402 Auto-Purchase Flow
-1. User configures frequency (weekly/monthly), amount, ticket count
-2. For EVM: Requests ERC-7715 permission via MetaMask
-3. For Stacks: Requests SIP-018 signature via x402 protocol
-4. Service stores authorization and schedules recurring purchases
-5. Relayer monitors and executes authorized purchases
-
-## Contract Addresses (Mainnet)
-- **USDCx**: `SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx`
-- **USDCx Bridge**: `SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx-v1`
-- **sBTC**: `SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token`
-- **Lottery**: `SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3`
-- **Megapot V2 (Base)**: `0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2`
-
-## Verification Gate (Phase 2 — shipped)
-
-A thin internal `VerificationProvider` interface with a `NoopVerificationProvider` default and a `CivicVerificationProvider` stub. **The noop default is the intended ship state for this product.** KYC adds friction the lottery/yield funnel can't absorb (a casual user buying a $10 ticket is not going to do a liveness check), and it conflicts with the FHE privacy pitch (encrypted contributions vs. shipping biometric data to a third party).
-
-The interface is opt-in infrastructure: any partner, jurisdiction, or pool type that ever does need KYC can plug in a real provider later (Civic, Sumsub, Persona, on-chain attestations) without touching the consumers. The noop default should be the right choice for a long time.
-
-The gate is env-switchable for completeness, but switching away from noop is a product decision, not an ops one:
-
-- `VERIFICATION_PROVIDER=...` (default: `noop`)
-  - `noop` — `NoopVerificationProvider` always allows; no SDK, no network. **The default.**
-  - `civic` — `CivicVerificationProvider` stub; requires `CIVIC_GATEWAY_KEY`. Throws on instantiation if missing. The stub is intentionally incomplete: it returns a "not verified" status. To wire it for real, bundle `@civic/gateway`, implement `getStatus` against the real SDK, and re-evaluate the gated flows and thresholds for the specific use case (do **not** gate ticket purchases; gate vault deposits and bridge at $1k+/10k+ only).
-- `CIVIC_CLIENT_ID=...` (optional)
-
-### Key files
-
-| File | Purpose |
-|------|---------|
-| `src/services/verification/types.ts` | `VerificationProvider` interface, `VerificationTier`, `VerificationStatus`, `VerificationRequirement`, `evaluateGate` helpers (`tierMeets`, `tierRank`) |
-| `src/services/verification/noopProvider.ts` | Default `NoopVerificationProvider` — always verified, no requirement |
-| `src/services/verification/civicProvider.ts` | `CivicVerificationProvider` stub; tier mapping via `kycTiers` (liveness $1k+, id_verification $10k+) |
-| `src/services/verification/index.ts` | `getVerificationProvider()` factory (env-switchable, cached) + `checkVerificationGate()` helper + `__resetVerificationProviderForTests()` |
-| `src/hooks/useVerificationGate.ts` | React hook: `useVerificationGate(context)` → `{ allowed, isLoading, reason, status, requirement, refresh }` |
-| `tests/services/verification.test.ts` | 27 tests: tier helpers, noop provider, civic stub, factory, evaluateGate, end-to-end |
-
-### Usage
-
-```ts
-// In any gated action
-const { allowed, reason, requirement } = useVerificationGate({ action: 'deposit', amount: 5_000 });
-if (!allowed) {
-  // Show the verification prompt with `reason` + `requirement.reason`
-}
-
-// Or, for service-level checks (e.g. API route guards)
-const result = await checkVerificationGate(userAddress, { action: 'deposit', amount: 50_000 });
-if (!result.allowed) throw new Error(result.reason);
-```
-
-### If you ever do wire a real provider
-
-The current `civic` env-switch description and the 5-flow gating plan (deposit/withdraw/bridge/purchase/create_syndicate) were written under the assumption that KYC was the obvious next step. It is not. If a real provider is ever wired:
-
-- **Do not gate ticket purchases.** Conversion funnel dies. A user buying a $5 ticket does not need identity verification.
-- **Re-evaluate the threshold strategy.** `liveness $1k+` is too low for "things people do for fun" and too high for "things people do with their life savings." Sensible default: no verification under $1k, liveness for $1k–$10k, ID verification above $10k — and only for actions that handle real money (vault deposits, cross-chain bridge), not for the purchase path.
-- **Decide the FHE-vs-KYC brand tension explicitly.** The product currently leads with privacy. Either commit to it (no KYC) or commit to compliance (KYC at clear thresholds, accept the conversion hit). Doing both half-heartedly signals confusion.
-
-
-## Spark Protocol (Savings USDC) Deposit Flow
-Spark Protocol provides savings USDC (sUSDC) with the Sky Savings Rate on Base. No lockup required - yield accrues immediately.
-
-### UI Flow
-1. **Upsell**: `SimplePurchaseModal` and `AutoPurchaseModal` feature "Play for free forever" upsell linking to Spark vault
-2. **Strategy Selection**: `/yield-strategies` page with `ImprovedYieldStrategySelector` handles Spark strategy selection (identifier: `spark`)
-3. **Deposit Execution**: `vaultManager.deposit('spark', amount, userAddress)` → `SparkVaultProvider`
-
-### Key Files
-| Category | Files |
-|----------|-------|
-| **UI Components** | `src/components/modal/SimplePurchaseModal.tsx#L506-L535` (retail upsell)<br>`src/components/modal/AutoPurchaseModal.tsx#L442-L471` (recurring upsell)<br>`src/components/yield/ImprovedYieldStrategySelector.tsx#L160-L247` (strategy detail + 3mo lockup warning)<br>`src/app/yield-strategies/page.tsx#L110-L160` (main page) |
-| **Services** | `src/services/vaults/sparkProvider.ts#L134-L145` (deposit implementation)<br>`src/services/vaults/index.ts#L187-L205` (VaultManager orchestration) |
-| **Monitoring** | `src/components/yield/YieldDashboard.tsx#L19-L45` (principal + yield view)<br>`src/components/yield/YieldPerformanceDisplay.tsx` (APY visualization + tickets generated) |
-
-## Syndicate Pool System
-
-Multi-chain syndicate pooling with three pool types for fund custody and prize distribution.
-
-### Pool Providers
-| Provider | Type | On-Chain | Use Case |
-|----------|------|----------|----------|
-| **Safe** | Multisig | ✅ Real contracts | Team coordination with threshold approval |
-| **0xSplits** | Distribution | ✅ Real contracts | Automatic proportional prize distribution |
-| **PoolTogether** | Prize-linked | ✅ Real contracts | Principal preservation with lottery odds |
-
-### Key Contracts (Base)
-| Contract | Address |
-|----------|---------|
-| Safe Proxy Factory | `0xa951BE5AF0Fb62a79a4D70954A8D69553207041E` |
-| Safe Singleton L2 | `0x41675C099F32341bf84BFc5382aF534df5C7461a` |
-| 0xSplits SplitMain | `0x2ed6c55457632e381550485286422539B967796D` |
-| PoolTogether PrizeVault (USDC) | `0x7f5C2b379b88499aC2B997Db583f8079503f25b9` |
-| PoolTogether TwabDelegator | `0x2d3DaECD9F5502b533Ff72CDb1e1367481F2aEa6` |
-| USDC (Base) | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
-
-### Pool Provider Services
-| Service | Location | Purpose |
-|---------|----------|---------|
-| `safeService` | `src/services/safe/safeService.ts` | Deploy Safe, manage owners/threshold, execute txns |
-| `splitsService` | `src/services/splits/splitService.ts` | Create splits, distribute tokens/ETH |
-| `poolTogetherVaultService` | `src/services/poolTogether/vaultService.ts` | Fetch vault info, check balances |
-
-### Pool Provider Implementations
-| Provider | Location |
-|----------|----------|
-| SafeProvider | `src/services/syndicate/poolProviders/safeProvider.ts` |
-| SplitsProvider | `src/services/syndicate/poolProviders/splitsProvider.ts` |
-| PoolTogetherProvider | `src/services/syndicate/poolProviders/poolTogetherV5Provider.ts` |
-
-### Syndicate Creation Flow
-1. User fills out syndicate details (name, cause, governance)
-2. User selects **Pool Type** (Safe, 0xSplits, or PoolTogether)
-3. User selects yield strategy (Aave, Morpho, Spark, PoolTogether)
-4. System creates on-chain pool based on type
-5. Pool address stored in database with type metadata
-
-### Join Syndicate Flow
-1. User connects wallet and selects syndicate
-2. `useSyndicateDeposit` hook handles deposit:
-   - **Safe/Splits**: Direct USDC transfer to pool address
-   - **PoolTogether**: Transfer to TwabDelegator + delegation to syndicate
-3. Transaction verified on-chain via API
-4. Member recorded in database with contribution amount
-
-## Development Notes
-- Token selector in SimplePurchaseModal supports USDCx/sBTC selection
-- AutoPurchaseModal shows different UI for Stacks (x402) vs EVM (ERC-7715)
-- Balance API supports EVM, Solana, NEAR, Starknet, Stacks address formats
-- Use `CONTRACTS` object from stacks.ts for contract addresses
-- **Civic / KYC**: Not on the roadmap. The `VerificationProvider` interface and noop default are the intended ship state. See "Verification Gate (Phase 2 — shipped)" for when/why to revisit.
-- **Spark Protocol**: No lockup; yield withdrawn automatically to purchase tickets
-- **Pool Types**: Pool type selection is in create-syndicate page step 3; badges shown on syndicate detail page
-
----
-
-## Fhenix FHE Privacy Integration
-
-Privacy-by-design layer using Fully Homomorphic Encryption (FHE) via Fhenix. Encrypts syndicate contribution amounts and vault positions so on-chain data reveals nothing about individual stakes. Targeting the Fhenix Buildathon (Wave 1 → Wave 5, deadline June 1 2026).
-
-### Current Status (Implemented)
-- ✅ **Multi-network ready (Base Sepolia)**: Base Sepolia (84532) is the active FHE deployment target via `NEXT_PUBLIC_FHENIX_CHAIN_ID`. Fhenix Helium (8008135) is sunset in favor of Fhenix Nitrogen; re-evaluate when Nitrogen GA fits our use case.
-  - Chain definition: `src/services/fhe/fhenixChain.ts`
-  - Wallet support: `src/config/wagmi.ts` includes `fhenixHelium` (kept for compatibility, no longer the recommended target)
-- ✅ **Encrypted deposits wired end-to-end**
-  - Vault deposits: `useVaultDeposit` calls `depositEncrypted(...)`
-  - Syndicate deposits: `useSyndicateDeposit` calls `depositEncrypted(...)` for `poolType === 'fhenix'`
-- ✅ **DRY action layer**: shared helper for `approve + encrypt + depositEncrypted` and withdraw
-  - `src/services/fhe/fhenixActions.ts`
-- ✅ **Permit + unseal flow in app (visible privacy win)**
-  - Hook: `src/hooks/useFhenixPrivateVaultBalance.ts`
-  - UI: Yield Dashboard shows “Reveal Private Balance” for the Fhenix vault row
-- ✅ **Encrypted balance reveal via sealoutput (no threshold round-trip)**
-  - All ctHash getters use `FHE.sealoutput()` returning `string memory` (EthEncryptedData JSON)
-  - Client-side `decryptSealedOutput()` in `fheService.ts` decrypts locally via active permit
-  - Browser-compatible hex-to-Uint8Array parsing, no `Buffer` dependency
-- ✅ **On-chain APY oracle**
-  - `currentApy` public uint256 (basis points) on `FhenixSyndicateVault.sol`
-  - `setApy(newApy)` onlyCoordinator with max 100% bounds check
-  - `ApyUpdated(oldApy, newApy)` event
-  - `getCurrentAPY()` in `fhenixProvider.ts` reads on-chain with fallback chain
-  - `fhenix` entry added to `yieldStrategies.ts` config + UI display maps
-- ✅ **Coordinator-signed withdrawal attestation**
-  - `withdrawSigned(amount, signature)` with EIP-712 typed signature verification
-  - `_DOMAIN_SEPARATOR` as immutable, computed in constructor
-  - `coordinatorNonces` mapping for per-member replay protection
-  - Manual `ecrecover` via inline assembly with v-value adjustment
-  - 5 dedicated tests: valid signature, wrong signer, replay, only member, wrong amount
-- ✅ **Server-side verification hardened**
-  - `/api/syndicates` verifies tx success + expected vault + `DepositShielded(from, 0)` event
-- ✅ **Contract hardened for app flow**
-  - `contracts/fhenix/FhenixSyndicateVault.sol` exposes sealoutput-based getters for client-side decryption:
-    - `getEncryptedBalanceCtHash(Permission) -> string memory`
-    - `getEncryptedTotalCtHash(Permission) -> string memory`
-    - `getAccumulatedYieldCtHash(Permission) -> string memory`
-    - `getYieldDistributedCtHash(Permission) -> string memory`
-  - Active member counting fixed (`activeMemberCount`, `memberCount()`)
-  - Encrypted yield distribution: `distributeYield()` allocates to all members
-  - Total test count: **31 tests** (all passing)
-
-### Why This Project Needs FHE
-| Currently Exposed | Attack Surface |
-|---|---|
-| Syndicate member list (0xSplits — public, immutable) | Wallet identity + affiliation |
-| Contribution amounts (USDC Transfer events on Base) | Wealth fingerprinting |
-| TWAB delegations (PoolTogether) | Member→syndicate binding |
-| Vault positions (ERC-4626 events) | Position size + timing for front-running |
-| Ticket purchase history (API + on-chain) | Behavioral profiling |
-
-### FHE Vault Provider
-| Provider | Chain | Status | APY | Notes |
-|----------|-------|--------|-----|-------|
-| **Fhenix FHE Vault** | Base Sepolia | ✅ Integrated | ~5.0% (on-chain oracle) | Encrypted deposits, permit-gated private balance reveal, APY oracle with provider fallback |
-
-### Core Principles for FHE Implementation
-- **ENHANCEMENT FIRST**: Extend existing `PoolProvider` and `VaultProvider` interfaces — no parallel stacks
-- **CONSOLIDATION**: Single `fheService.ts` is the only file that imports from `cofhejs/*` (lazy-loaded in browser)
-- **DRY**: `PoolType | 'fhenix'` and `VaultProtocol | 'fhenix'` — one-line union extensions
-- **MODULAR**: `FhenixPoolProvider` and `FhenixVaultProvider` are independently testable classes
-- **DB READY**: Schema already has `privacy_enabled`, `pool_public_key`, `amount_commitment`, `encrypted_yield_amount`, `encrypted_allocations` columns — no migration needed
-
-### FHE Key Files
-| File | Status | Purpose |
-|------|--------|---------|
-| `src/services/fhe/fheService.ts` | ✅ Integrated | Single SDK wrapper for encrypt/permit/unseal (browser lazy-load). Added `decryptSealedOutput()` for local EthEncryptedData decryption |
-| `src/services/fhe/fhenixChain.ts` | ✅ Integrated | Single chain selector for Base Sepolia vs Helium |
-| `src/services/fhe/fhenixActions.ts` | ✅ Integrated | DRY helpers: approve+encrypt+depositEncrypted, withdraw |
-| `src/hooks/useFhenixPrivateVaultBalance.ts` | ✅ Integrated | Permit + sealed output read + local decrypt (no threshold round-trip) |
-| `src/services/syndicate/poolProviders/fhenixProvider.ts` | ✅ Integrated | FHE pool provider + config (vault address, chain, USDC) |
-| `src/services/vaults/fhenixProvider.ts` | ✅ Integrated | FHE vault provider (UI metadata + on-chain APY oracle with fallback) |
-| `src/hooks/useSyndicateDeposit.ts` | ✅ Integrated | Executes `depositEncrypted` for Fhenix pools |
-| `src/hooks/useVaultDeposit.ts` | ✅ Integrated | Executes Fhenix deposit/withdraw via `fhenixActions` |
-| `src/app/api/syndicates/route.ts` | ✅ Integrated | Fhenix deposit verification via receipt + event |
-| `contracts/fhenix/FhenixSyndicateVault.sol` | ✅ Integrated | FHE-native vault (`depositEncrypted`, sealoutput getters, `withdrawSigned`, `setApy`, `distributeYield`, active member count) |
-| `test/FhenixSyndicateVault.t.sol` | ✅ Integrated | **31 Foundry unit tests** with mocked FHE precompile |
-
-### FHE Contract (Base Sepolia / Fhenix)
-- `depositEncrypted(inEuint256 encryptedAmount, uint256 plainAmount)` — stores encrypted contribution
-- `getEncryptedBalanceCtHash(Permission)` → `string memory` — returns sealed EthEncryptedData JSON for client-side local decryption
-- `getEncryptedTotalCtHash(Permission)` → `string memory` — coordinator-only total (sealed output)
-- `getAccumulatedYieldCtHash(Permission)` → `string memory` — member's accrued yield (sealed)
-- `getYieldDistributedCtHash(Permission)` → `string memory` — member's distributed yield (sealed)
-- `currentApy()` → `uint256` — on-chain APY in basis points (public getter)
-- `setApy(uint256 newApy)` — coordinator-only APY update (max 100%, emits `ApyUpdated`)
-- `withdrawSigned(uint256 amount, bytes calldata signature)` — EIP-712 signed withdrawal with nonce replay protection
-- `distributeYield()` — coordinator distributes encrypted yield to all active members
-- `DepositShielded(address indexed from, uint256 placeholder)` event — satisfies existing `verifyUsdcTransfer` check
-- `ApyUpdated(uint256 oldApy, uint256 newApy)` event
-
-### FHE Injection Seams (Surgical Extensions)
-| File | Change | Lines |
-|------|--------|-------|
-| `src/domains/lottery/types.ts` | `PoolType` union: `\| 'fhenix'` | +1 |
-| `src/services/vaults/vaultProvider.ts` | `VaultProtocol` union: `\| 'fhenix'` | +1 |
-| `src/services/bridges/types.ts` | `ChainIdentifier` + `BridgeProtocolType`: `\| 'fhenix'` | +2 |
-| `src/services/syndicate/poolProviders/index.ts` | Export `fhenixPoolProvider` | +2 |
-| `src/services/vaults/index.ts` | `VaultManager` constructor: register provider | +3 |
-| `src/hooks/useSyndicateDeposit.ts` | `poolType === 'fhenix'` executes `depositEncrypted` | +~40 |
-| `src/hooks/useVaultDeposit.ts` | `protocol === 'fhenix'` uses `fhenixActions` | +~15 |
-| `src/app/api/syndicates/route.ts` | Verify vault + `DepositShielded` event (no amount leakage) | +~35 |
-| `src/lib/db/syndicateRepository.ts` | Populate existing privacy columns | +~20 |
-| `src/app/create-syndicate/page.tsx` | 4th PuzzlePiece card for Fhenix pool type | +1 card |
-| `src/config/yieldStrategies.ts` | Add `fhenix` strategy entry | +1 entry |
-
-### FHE SDK
-- **Client**: `cofhejs` (v0.3.1) — `cofhejs/web` for browser, `cofhejs/node` for server
-- **Contracts**: `@fhenixprotocol/contracts` (v0.3.1) — Solidity FHE primitives (`FHE.sol`, encrypted types)
-- **Install**: `pnpm add cofhejs @fhenixprotocol/contracts`
-
-### FHE Buildathon Wave Map
-| Wave | Deliverable |
-|---|---|
-| Wave 1 (done Mar 28) | Ideation + architecture |
-| Wave 2 (done Apr 8) | Phase 0+1: SDK install, `fheService.ts`, type unions |
-| Wave 3 Marathon (done May 8) | Phase 2+3: providers + hook extensions + API route + encrypted yield distribution |
-| Wave 4 (done May 20) | Phase 4+5: DB privacy columns + UI card + APY oracle + signed withdrawal + sealoutput fix + Encrypted governance + member privacy gating |
-| Wave 5 | Mainnet-ready artifacts + treasury execution + expanded product surfaces |
-| Wave 6 (TBD) | Mainnet deployment |
-
-### FHE Governance (Encrypted On-Chain Voting)
-
-Encrypted governance for Fhenix syndicates. Members vote with FHE-encrypted choices (yes/no/abstain). Tallies accumulate homomorphically — no one sees running totals until the coordinator reveals after deadline.
-
-**Vote Encoding:** 1 = Yes, 2 = No, 3 = Abstain
-
-**Governance Flow:**
-1. Coordinator creates a proposal (title, description, deadline: 1h–30d)
-2. Members call `vote(proposalId, encryptedChoice)` — choice encrypted client-side via cofhejs
-3. Contract accumulates encrypted tallies homomorphically via `FHE.eq()` + `FHE.add()`
-4. After deadline, coordinator calls `revealTally()` (sealed output via `FHE.sealoutput()` — no threshold round-trip)
-5. Coordinator decrypts sealed outputs locally, calls `finalizeProposal()` with plaintext results
-6. Coordinator marks passed proposals as `executeProposal()`
-
-**Governance Files:**
-| File | Purpose |
-|------|---------|
-| `contracts/fhenix/FhenixGovernor.sol` | FHE-encrypted governance contract (~320 lines, 11 functions) |
-| `test/FhenixGovernor.t.sol` | **25 Foundry unit tests** |
-| `src/services/governance/fhenixGovernorService.ts` | Client-side service: getProposals, castVote, revealAndDecryptTally |
-| `src/components/governance/GovernancePanel.tsx` | Full UI: proposal list, vote buttons, create form, reveal & finalize |
-| `src/components/syndicate/SyndicateDashboard.tsx` | Integrated GovernancePanel for Fhenix pools |
-
-**Contract Features:** Coordinator management, double-vote protection, deadline enforcement (1h–30d), sealed output tally reveal, quorum (basis points), coordinator transfer
-
-### FHE Member Privacy Gating
-
-Fhenix pool member lists are privacy-gated at the API layer:
-- `src/app/api/syndicates/dashboard/route.ts` — non-members see count + empty array instead of full member list. Viewer resolved via `?viewer=` query param.
-
-### FHE Environment Variables
-```bash
-# Base Sepolia is the active FHE deployment target
-NEXT_PUBLIC_FHENIX_CHAIN_ID=84532
-
-# RPCs (server + client)
-FHENIX_RPC_URL=https://sepolia.base.org
-NEXT_PUBLIC_FHENIX_RPC_URL=https://sepolia.base.org
-
-# Deployed vault contract address (FhenixSyndicateVault)
-NEXT_PUBLIC_FHENIX_VAULT_ADDRESS=0x...
-
-# Deployed governor contract address (FhenixGovernor)
-NEXT_PUBLIC_FHENIX_GOVERNOR_ADDRESS=0x...
-
-# USDC address on the selected Fhenix-enabled chain (optional override)
-NEXT_PUBLIC_FHENIX_USDC_ADDRESS=0x...
-```
-
----
-
-## Virtuals Protocol Integration (EconomyOS)
-
-Autonomous agent infrastructure for Syndicate's "Universal Agent." The agent operates as a first-class economic actor with its own identity, wallet, email, and reasoning layer.
-
-### Provisioned Agent
-| Field | Value |
-|-------|-------|
-| **Agent ID** | `019e9c04-81ea-77d9-88fd-39d58f3b3e4d` |
-| **Name** | Syndicate Strategist |
-| **Description** | Autonomous yield strategist for private vaults. Manages capital routing and reporting via FHE. |
-| **EVM Wallet (Base)** | `0xdc05f5aed7bedc9e5f37ca9f67d1cc19bf8f136a` |
-| **Solana Wallet** | `224gvDMTdg3cWVbZoXSsfJgBCGCrQs3HYk4cdE1kQwog` |
-| **Email** | `syndicate_strategist@agents.world` |
-| **Builder Code** | `bc_vpi176n4` |
-| **Wallet Provider** | Privy (embedded, EVM + Solana) |
-| **Role** | HYBRID (client + provider) |
-
-### Key Files
-| File | Purpose |
-|------|---------|
-| `src/services/automation/VirtualsService.ts` | Core service: agent identity, Venice AI reasoning, wallet txns, email reports |
-| `src/services/automation/AutomationOrchestrator.ts` | Orchestrator with `virtuals-acp` strategy (Reasoning → Execution → Reporting). Email recipient now comes from `task.recipientEmail` with agent-email fallback (no more hardcoded `member@syndicate.xyz`). |
-| `src/services/automation/agentRegistryService.ts` | Now includes `'virtuals-acp'` in the `AgentType` union; `getVirtualsAgent()` surfaces the agent in the Settings UI. |
-| `src/lib/db/schema/virtualsTasks.ts` | Schema for persisted cron-driven task state. `MockVirtualsTaskRepository` for tests. |
-| `src/lib/db/repositories/virtualsTaskRepository.ts` | Vercel Postgres-backed repo. `getTasksDueForExecution` honors both the kill switch (`is_active`) and the cron gate (`next_execution_at <= now()`). |
-| `src/services/jobs/virtualsJobProcessor.ts` | `drainVirtualsTasks` — called by the cron. Dispatches due tasks to the orchestrator, persists result, reschedules (60s on success, 5 min on failure), auto-pauses after 3 consecutive failures. |
-| `src/app/api/virtuals/email/route.ts` | Server-side proxy — shells out to `acp email compose` via `execFile` |
-| `src/app/api/virtuals/transaction/route.ts` | Server-side proxy — shells out to `acp wallet send-transaction` via `execFile` |
-| `src/app/api/crons/process-jobs/route.ts` | Existing cron endpoint extended to also call `drainVirtualsTasks()` (in addition to `drainJobQueue()`). |
-| `src/app/api/virtuals/tasks/route.ts` | `GET` (list a user's tasks), `POST` (create). Idempotent on (agent_id, user_address, recipient_email). |
-| `src/app/api/virtuals/tasks/[id]/route.ts` | `GET` (with ownership check), `PATCH` (pause/resume/update fields), `DELETE` (soft-cancel). |
-| `src/hooks/useVirtualsTasks.ts` | React hook: `tasks`, `createTask`, `updateTask`, `deleteTask`, `refresh`. Auto-polls every 30s. |
-| `src/components/settings/VirtualsAgentPanel.tsx` | The "Manage" modal for the Virtuals agent card. Form to create a task, list of existing tasks with status / pause / delete buttons, recent-activity panel. |
-| `tests/services/automation/virtualsPhase3.test.ts` | 12 regression tests covering registry integration, repository CRUD + kill switch, cron processor, and the email-recipient fix. |
-| `tests/api/virtualsTasks.test.ts` | 11 regression tests covering the new API routes: validation, idempotency, ownership checks, soft-cancel, frequency reschedule. |
-
-### Automation Strategy: `virtuals-acp`
-The orchestrator's `executeVirtualsAgentTask()` runs a 3-step agentic lifecycle:
-1. **Reasoning** — Venice AI analyzes vault state and recommends strategy
-2. **Execution** — Agent wallet submits transaction (e.g., Megapot ticket purchase)
-3. **Reporting** — Agent email sends status update. Recipient is `task.recipientEmail` (set by the persisted task record), with a safe fallback to the agent's own email. No report is sent if neither is set (with a warning, not a throw).
-
-### Phase 3.5: User-Facing Surface
-
-The Phase 3 backend is wired but invisible to users without a way to manage tasks. Phase 3.5 ships the management surface:
-
-- `VirtualsAgentPanel` opens from the "Manage" button on the Virtuals agent card in the agent hub.
-- Form to create a new task: amount (USDC), frequency (hourly/daily/weekly/opportunistic), recipient email.
-- Live list of the user's tasks with status badges, last execution timestamp, and next scheduled run.
-- Pause / resume / delete per task (delete is a soft-cancel — the row stays in the DB for the activity log).
-- "Recent activity" section at the bottom: latest Venice reasoning + the most recent on-chain tx hash (with a BaseScan link).
-- `useVirtualsTasks` hook auto-polls every 30s so the panel stays fresh without a manual refresh.
-
-### Phase 3: Persisted State + Server-Side Cron
-- `virtuals_tasks` table stores per-user task state (amount, frequency, `next_execution_at`, `is_active` kill switch, `lastReasoning`, `lastTxHash`, `lastError`).
-- `/api/crons/process-jobs` (already wired in `vercel.json`) now drains both `purchase_jobs` and `virtuals_tasks`.
-- Tasks are only executed when `is_active = true AND status = 'active' AND next_execution_at <= now()`.
-- After 3 consecutive failures a task is auto-paused (`is_active = false`) to avoid burning agent wallet / Venice credits in a tight loop.
-- `drainVirtualsTasks()` returns `{ processed, errors, skipped }` for observability.
-- `deactivateAllForAgent(agentId)` is a single-call kill switch for the whole agent.
-
-### Environment Variables
-```bash
-NEXT_PUBLIC_VIRTUALS_AGENT_ID=019e9c04-81ea-77d9-88fd-39d58f3b3e4d
-NEXT_PUBLIC_VIRTUALS_AGENT_WALLET=0xdc05f5aed7bedc9e5f37ca9f67d1cc19bf8f136a
-NEXT_PUBLIC_VIRTUALS_AGENT_SOL_WALLET=224gvDMTdg3cWVbZoXSsfJgBCGCrQs3HYk4cdE1kQwog
-NEXT_PUBLIC_VIRTUALS_AGENT_EMAIL=syndicate_strategist@agents.world
-NEXT_PUBLIC_VIRTUALS_BUILDER_CODE=bc_vpi176n4
-VIRTUALS_VENICE_API_KEY=  # Funded by Virtuals developer credits ($400k grant)
-ACP_BIN_PATH=acp           # Server-side path to acp CLI binary
-```
-
-### CLI Setup
-```bash
-npm install -g @virtuals-protocol/acp-cli
-acp configure          # Browser-based auth (Privy)
-acp agent create       # Provision agent identity
-acp agent whoami       # Verify active agent
-acp email provision    # Activate @agents.world email
-acp wallet balance --chain-id 8453  # Check Base wallet
-```
+For deployment, secrets, monitoring, and readiness, use [`docs/OPERATIONS.md`](docs/OPERATIONS.md). For chain-specific procedures, use [`docs/README.md`](docs/README.md).

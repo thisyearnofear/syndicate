@@ -298,7 +298,7 @@ export function PrizePoolDashboard() {
                 <p className="mt-1 max-w-3xl text-sm leading-6 text-cyan-100/60">
                   Contract addresses are not configured in this environment yet. The dashboard is intentionally read-only until the hook, router, PoolManager, and testnet token addresses are supplied.
                 </p>
-                <a href="https://github.com/thisyearnofear/syndicate/blob/main/docs/BUILD_X_DEPLOYMENT.md" target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-cyan-300 hover:text-cyan-200">
+                <a href="https://github.com/thisyearnofear/syndicate/blob/main/docs/X_LAYER.md" target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-cyan-300 hover:text-cyan-200">
                   View deployment notes <ArrowRight className="h-3 w-3" />
                 </a>
               </div>

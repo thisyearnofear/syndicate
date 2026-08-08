@@ -1,7 +1,7 @@
 # Prize Pool Hook — X Layer
 
 Uniswap v4 hook that turns swap fees into a lossless lottery on OKX X Layer (chain 196).
-Part of the **Build X AI Season** submission — see [docs/BUILD_X_STRATEGY.md](../../docs/BUILD_X_STRATEGY.md).
+Part of the **Build X AI Season** submission — see [docs/X_LAYER.md](../../docs/X_LAYER.md).
 
 > The DEX is the lottery. Depositors provide USDC; their share sets their draw odds;
 > swap fees accrue to a prize pot; epoch draws award the pot via verifiable randomness;
@@ -68,7 +68,7 @@ oracle-agnostic behind `IRandomnessOracle`:
       action — relevant when the hook LP-splits.)
 - [ ] **M4 — standalone drand beacon verifier + permissionless relay** (BLS12-381),
       replacing `SimpleRandomnessOracle` for real-value draws.
-- [ ] **M5 — syndicates + AI agent wiring and gated write flows.** The X Layer wagmi config and read-only `/xlayer` dashboard slice are shipped; see [docs/BUILD_X_APP_INTEGRATION.md](../../docs/BUILD_X_APP_INTEGRATION.md).
+- [ ] **M5 — syndicates + AI agent wiring and gated write flows.** The X Layer wagmi config and read-only `/xlayer` dashboard slice are shipped; see [docs/X_LAYER.md](../../docs/X_LAYER.md).
 
 ## Deployment notes
 

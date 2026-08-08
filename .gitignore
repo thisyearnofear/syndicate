@@ -88,4 +88,5 @@ yarn.lock
 
 # Claude tooling
 .claude/
+.openclaude/
 .env*
