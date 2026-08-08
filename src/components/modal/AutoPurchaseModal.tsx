@@ -596,7 +596,7 @@ export function AutoPurchaseModal({
                   <Zap className="w-6 h-6 text-white" />
                 </div>
               </div>
-              <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent">
                 {strategyMeta.configureTitle}
               </DialogTitle>
               <DialogDescription className="text-gray-300">
@@ -1017,7 +1017,7 @@ export function AutoPurchaseModal({
               </DialogTitle>
             </DialogHeader>
             <div className="flex flex-col items-center justify-center py-8 space-y-6">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center animate-pulse">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 flex items-center justify-center animate-pulse">
                 <Loader className="w-10 h-10 text-white animate-spin" />
               </div>
               <div className="text-center space-y-3">
@@ -1107,7 +1107,7 @@ export function AutoPurchaseModal({
               </Button>
               <Button
                 onClick={handleRetry}
-                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 flex items-center justify-center gap-2"
+                className="flex-1 gradient-cta flex items-center justify-center gap-2"
               >
                 <RotateCcw className="w-4 h-4" />
                 Try Again

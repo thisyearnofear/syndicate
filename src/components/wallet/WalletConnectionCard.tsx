@@ -242,7 +242,7 @@ export function WalletConnectionCard({
       {/* Header - only show when not compact */}
       {!compact && (
         <div className="space-y-3">
-          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-3xl shadow-lg">
+          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-brand-400 to-brand-600 rounded-2xl flex items-center justify-center text-3xl shadow-lg">
             🔗
           </div>
           <h3 className="font-bold text-white text-2xl">

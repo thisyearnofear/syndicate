@@ -313,7 +313,7 @@ export default function CreateSyndicatePage() {
         return (
           <CompactCard variant="premium" padding="lg">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center">
                 <Target className="w-5 h-5 text-white" />
               </div>
               <div>

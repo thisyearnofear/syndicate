@@ -328,7 +328,7 @@ export function SyndicateDashboard({ poolId, className = '' }: SyndicateDashboar
               return (
                 <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-lg min-h-[60px]">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs md:text-sm font-bold flex-shrink-0">
+                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-xs md:text-sm font-bold flex-shrink-0">
                       {i + 1}
                     </div>
                     <div className="min-w-0">

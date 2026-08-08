@@ -48,7 +48,7 @@ export function BridgeGuidanceCard({
         <div className="glass-premium rounded-xl p-6 border border-blue-500/30 animate-fade-in">
             {/* Icon & Title */}
             <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center">
                     <span className="text-2xl">🌉</span>
                 </div>
                 <div>

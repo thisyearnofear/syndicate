@@ -226,7 +226,7 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <PuzzlePiece variant="primary" size="sm" shape="rounded">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center">
                 <Wallet className="w-5 h-5 text-white" />
               </div>
               <div>

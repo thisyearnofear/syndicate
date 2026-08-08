@@ -6,9 +6,14 @@
  * refresh. Used by the VirtualsAgentPanel in the agent hub.
  *
  * Phase 3.5 — user-facing surface for the Virtuals ACP agent.
+ *
+ * Implemented on React Query: the list is a `useQuery` with a 30s
+ * `refetchInterval` (polling pauses when the tab is hidden), and
+ * create/update/delete are `useMutation`s with optimistic cache updates.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Address } from 'viem';
 
 export type VirtualsTaskFrequency = 'hourly' | 'daily' | 'weekly' | 'opportunistic';
@@ -57,128 +62,168 @@ export interface UseVirtualsTasksResult {
 
 const POLL_INTERVAL_MS = 30_000; // 30s — light polling, the cron is daily
 
-export function useVirtualsTasks(userAddress: Address | null | undefined): UseVirtualsTasksResult {
-  const [tasks, setTasks] = useState<VirtualsTask[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+function tasksQueryKey(userAddress: string | null | undefined) {
+  return ['virtuals-tasks', userAddress ?? 'none'] as const;
+}
 
-  const refresh = useCallback(async () => {
-    if (!userAddress) {
-      setTasks([]);
-      return;
-    }
-    setIsLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/virtuals/tasks?userAddress=${userAddress}`, {
-        cache: 'no-store',
+async function fetchTasks(userAddress: string): Promise<VirtualsTask[]> {
+  const res = await fetch(`/api/virtuals/tasks?userAddress=${userAddress}`, {
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `Request failed (${res.status})`);
+  }
+  const { tasks: list } = (await res.json()) as { tasks: VirtualsTask[] };
+  return list;
+}
+
+export function useVirtualsTasks(userAddress: Address | null | undefined): UseVirtualsTasksResult {
+  const queryClient = useQueryClient();
+  const queryKey = tasksQueryKey(userAddress);
+
+  const {
+    data: tasks,
+    isFetching,
+    error: queryError,
+    refetch,
+  } = useQuery({
+    queryKey,
+    queryFn: () => fetchTasks(userAddress as string),
+    enabled: !!userAddress,
+    refetchInterval: POLL_INTERVAL_MS,
+    refetchIntervalInBackground: false,
+  });
+
+  // Optimistic cache writer shared by all three mutations. Keyed off the
+  // stable `userAddress` (not the freshly-created queryKey array) so the
+  // memoization is not defeated on every render.
+  const updateTasksCache = useCallback(
+    (updater: (prev: VirtualsTask[]) => VirtualsTask[]) => {
+      queryClient.setQueryData<VirtualsTask[]>(tasksQueryKey(userAddress), (prev) => updater(prev ?? []));
+    },
+    [queryClient, userAddress],
+  );
+
+  const createMutation = useMutation({
+    mutationFn: async (params: { agentId: string; amount: number; frequency: VirtualsTaskFrequency; recipientEmail: string }) => {
+      const res = await fetch('/api/virtuals/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userAddress, ...params }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || `Request failed (${res.status})`);
+        throw new Error(body.error || `Create failed (${res.status})`);
       }
-      const { tasks: list } = (await res.json()) as { tasks: VirtualsTask[] };
-      setTasks(list);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userAddress]);
+      const { task } = (await res.json()) as { task: VirtualsTask };
+      return task;
+    },
+    onSuccess: (task) => {
+      updateTasksCache((prev) => {
+        const idx = prev.findIndex((t) => t.id === task.id);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = task;
+          return next;
+        }
+        return [task, ...prev];
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (args: { id: string; updates: Partial<{ isActive: boolean; status: VirtualsTaskStatus; frequency: VirtualsTaskFrequency; amount: number; recipientEmail: string }> }) => {
+      const res = await fetch(`/api/virtuals/tasks/${args.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userAddress, ...args.updates }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Update failed (${res.status})`);
+      }
+      const { task } = (await res.json()) as { task: VirtualsTask };
+      return task;
+    },
+    onSuccess: (task) => {
+      updateTasksCache((prev) => prev.map((t) => (t.id === task.id ? task : t)));
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/virtuals/tasks/${id}?userAddress=${userAddress}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Delete failed (${res.status})`);
+      }
+      return id;
+    },
+    // Mark cancelled in local state (soft delete: row stays in DB).
+    onSuccess: (id) => {
+      updateTasksCache((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, isActive: false, status: 'cancelled' as const } : t)),
+      );
+    },
+  });
 
   const createTask = useCallback(
     async (params: { agentId: string; amount: number; frequency: VirtualsTaskFrequency; recipientEmail: string }) => {
       if (!userAddress) return null;
       try {
-        const res = await fetch('/api/virtuals/tasks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userAddress, ...params }),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.error || `Create failed (${res.status})`);
-        }
-        const { task } = (await res.json()) as { task: VirtualsTask };
-        // Optimistic update: replace if exists, append if new.
-        setTasks(prev => {
-          const idx = prev.findIndex(t => t.id === task.id);
-          if (idx >= 0) {
-            const next = [...prev];
-            next[idx] = task;
-            return next;
-          }
-          return [task, ...prev];
-        });
-        return task;
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
+        return await createMutation.mutateAsync(params);
+      } catch {
         return null;
       }
     },
-    [userAddress],
+    [userAddress, createMutation],
   );
 
   const updateTask = useCallback(
-    async (id: string, updates: Partial<{
-      isActive: boolean;
-      status: VirtualsTaskStatus;
-      frequency: VirtualsTaskFrequency;
-      amount: number;
-      recipientEmail: string;
-    }>) => {
+    async (id: string, updates: Partial<{ isActive: boolean; status: VirtualsTaskStatus; frequency: VirtualsTaskFrequency; amount: number; recipientEmail: string }>) => {
       if (!userAddress) return null;
       try {
-        const res = await fetch(`/api/virtuals/tasks/${id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userAddress, ...updates }),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.error || `Update failed (${res.status})`);
-        }
-        const { task } = (await res.json()) as { task: VirtualsTask };
-        setTasks(prev => prev.map(t => t.id === id ? task : t));
-        return task;
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
+        return await updateMutation.mutateAsync({ id, updates });
+      } catch {
         return null;
       }
     },
-    [userAddress],
+    [userAddress, updateMutation],
   );
 
   const deleteTask = useCallback(
     async (id: string) => {
       if (!userAddress) return false;
       try {
-        const res = await fetch(`/api/virtuals/tasks/${id}?userAddress=${userAddress}`, {
-          method: 'DELETE',
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.error || `Delete failed (${res.status})`);
-        }
-        // Mark cancelled in local state (soft delete: row stays in DB).
-        setTasks(prev => prev.map(t => t.id === id ? { ...t, isActive: false, status: 'cancelled' } : t));
+        await deleteMutation.mutateAsync(id);
         return true;
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
+      } catch {
         return false;
       }
     },
-    [userAddress],
+    [userAddress, deleteMutation],
   );
 
-  // Initial load + interval polling when a wallet is connected.
-  useEffect(() => {
-    if (!userAddress) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void refresh();
-    const id = setInterval(() => { void refresh(); }, POLL_INTERVAL_MS);
-    return () => clearInterval(id);
-  }, [userAddress, refresh]);
+  const mutationError =
+    createMutation.error ?? updateMutation.error ?? deleteMutation.error ?? null;
+  const error =
+    (queryError instanceof Error ? queryError.message : null) ??
+    (mutationError instanceof Error ? mutationError.message : mutationError ? String(mutationError) : null);
 
-  return { tasks, isLoading, error, refresh, createTask, updateTask, deleteTask };
+  const refresh = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
+
+  return {
+    tasks: tasks ?? [],
+    isLoading: isFetching,
+    error,
+    refresh,
+    createTask,
+    updateTask,
+    deleteTask,
+  };
 }

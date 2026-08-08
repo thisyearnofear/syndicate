@@ -178,7 +178,7 @@ export function CrossChainTracker({
     <div className="p-6 glass-premium rounded-3xl border border-white/20 max-w-md mx-auto animate-fade-in-slide-up">
       {/* Header */}
       <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 mb-2">
+        <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-brand-600 mb-2">
           {isCrossChain ? "🌉 Cross-Chain Funding" : "🎫 Public Play In Progress"}
         </h2>
         <p className="text-center text-gray-300 text-sm">
@@ -239,7 +239,7 @@ export function CrossChainTracker({
                     stepStatus === "complete" &&
                       "bg-gradient-to-r from-green-500 to-emerald-600 border-green-500 text-white shadow-lg shadow-green-500/30",
                     stepStatus === "in_progress" &&
-                      "bg-gradient-to-r from-blue-500 to-purple-600 border-blue-500 text-white animate-pulse shadow-lg shadow-blue-500/30",
+                      "bg-gradient-to-r from-brand-400 to-brand-600 border-brand-500 text-white animate-pulse shadow-lg shadow-brand-500/30",
                     stepStatus === "pending" &&
                       "bg-gradient-to-r from-gray-700 to-gray-800 border-gray-600 text-gray-400",
                   )}

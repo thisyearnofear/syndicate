@@ -13,11 +13,18 @@
  *   - status:         the user's current verification status
  *   - reason:         human-readable explanation when blocked
  *   - refresh():      re-fetch the status
+ *
+ * Implemented on React Query: the gate evaluation is a `useQuery` keyed on
+ * address + serialized context, so it re-evaluates when either changes and
+ * is cached across consumers. No-op provider behavior is preserved: with
+ * no address, or while the evaluation is pending, the gate is permissive
+ * (`allowed: true`) — the same contract the previous effect-based version
+ * had.
  */
 
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useUnifiedWallet } from '@/hooks/useUnifiedWallet';
 import {
   getVerificationProvider,
@@ -37,35 +44,44 @@ export interface UseVerificationGateResult {
   refresh: () => Promise<void>;
 }
 
+const EMPTY_STATE = {
+  allowed: true,
+  error: null as Error | null,
+  status: null as VerificationStatus | null,
+  requirement: null as VerificationRequirement | null,
+  reason: null as string | null,
+};
+
+const BLOCKED_ON_ERROR_STATE = {
+  allowed: false,
+  status: null as VerificationStatus | null,
+  requirement: null as VerificationRequirement | null,
+  reason: 'Verification provider error.',
+};
+
+// Query keys must be serializable. Fall back to a type marker if the context
+// ever contains a non-serializable value so the hook never crashes in render.
+function stableContextKey(context: VerificationContext): string {
+  try {
+    return JSON.stringify(context) ?? 'empty';
+  } catch {
+    return `unserializable:${typeof context}`;
+  }
+}
+
 export function useVerificationGate(context: VerificationContext): UseVerificationGateResult {
   const { address } = useUnifiedWallet();
-  const [state, setState] = useState<Omit<UseVerificationGateResult, 'refresh'>>({
-    allowed: true,
-    isLoading: false,
-    error: null,
-    status: null,
-    requirement: null,
-    reason: null,
-  });
 
-  const evaluate = useCallback(async () => {
-    if (!address) {
-      setState({
-        allowed: true,
-        isLoading: false,
-        error: null,
-        status: null,
-        requirement: null,
-        reason: null,
-      });
-      return;
-    }
-
-    setState(prev => ({ ...prev, isLoading: true, error: null }));
-
-    try {
+  const {
+    data,
+    isFetching,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ['verification-gate', address ?? 'none', stableContextKey(context)],
+    queryFn: async () => {
       const provider = getVerificationProvider();
-      const status = await provider.getStatus(address);
+      const status = await provider.getStatus(address as string);
       const requirement = provider.getRequirement(context);
       const result: GateEvaluation = requirement === null
         ? { allowed: true, requirement: null, status }
@@ -73,30 +89,35 @@ export function useVerificationGate(context: VerificationContext): UseVerificati
           ? { allowed: true, requirement, status }
           : { allowed: false, requirement, status, reason: `Verification required. ${requirement.reason}` };
 
-      setState({
+      return {
         allowed: result.allowed,
-        isLoading: false,
-        error: null,
         status: result.status,
         requirement: result.requirement,
         reason: result.reason ?? null,
-      });
-    } catch (err) {
-      setState({
-        allowed: false,
-        isLoading: false,
-        error: err instanceof Error ? err : new Error(String(err)),
-        status: null,
-        requirement: null,
-        reason: 'Verification provider error.',
-      });
-    }
-  }, [address, context]);
+      };
+    },
+    enabled: !!address,
+    staleTime: 60_000, // 1 min — verification status is slow-moving
+  });
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- async evaluation must run after mount
-    void evaluate();
-  }, [evaluate]);
+  const refresh = () => refetch().then(() => undefined);
 
-  return { ...state, refresh: evaluate };
+  // Fail closed: if the provider could not be evaluated, the gate must not
+  // silently permit the action.
+  if (error) {
+    return {
+      ...BLOCKED_ON_ERROR_STATE,
+      isLoading: isFetching,
+      error: error instanceof Error ? error : new Error(String(error)),
+      refresh,
+    };
+  }
+
+  return {
+    ...EMPTY_STATE,
+    ...data,
+    isLoading: isFetching,
+    error: null,
+    refresh,
+  };
 }
