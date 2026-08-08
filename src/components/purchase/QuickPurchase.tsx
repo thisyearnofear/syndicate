@@ -181,10 +181,10 @@ export function QuickPurchase({ onAdvanced, className = "" }: QuickPurchaseProps
           <button
             type="button"
             onClick={() => setTicketCount(Math.max(1, ticketCount - 1))}
-            className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+            className="w-10 h-10 sm:w-8 sm:h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
             disabled={isPurchasing || ticketCount <= 1}
           >
-            <Minus className="w-3 h-3" />
+            <Minus className="w-4 h-4 sm:w-3 sm:h-3" />
           </button>
           <span className="text-2xl font-bold text-white w-10 text-center tabular-nums">
             {ticketCount}
@@ -192,10 +192,10 @@ export function QuickPurchase({ onAdvanced, className = "" }: QuickPurchaseProps
           <button
             type="button"
             onClick={() => setTicketCount(ticketCount + 1)}
-            className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+            className="w-10 h-10 sm:w-8 sm:h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
             disabled={isPurchasing}
           >
-            <Plus className="w-3 h-3" />
+            <Plus className="w-4 h-4 sm:w-3 sm:h-3" />
           </button>
         </div>
       </div>
@@ -207,7 +207,7 @@ export function QuickPurchase({ onAdvanced, className = "" }: QuickPurchaseProps
             key={n}
             type="button"
             onClick={() => setTicketCount(n)}
-            className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+            className={`flex-1 py-2.5 sm:py-1.5 text-sm sm:text-xs font-medium rounded-lg transition-colors ${
               ticketCount === n
                 ? "bg-brand-500/20 text-brand-300 border border-brand-500/40"
                 : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-transparent"

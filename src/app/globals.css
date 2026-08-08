@@ -62,6 +62,47 @@
 }
 
 /* =============================================================================
+   MOBILE TOUCH OPTIMIZATION
+   ============================================================================= */
+
+/* Ensure all interactive elements have adequate touch targets on mobile */
+@media (max-width: 640px) {
+  /* Larger tap targets for buttons on mobile */
+  button, [role="button"], a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Increase padding on preset buttons (ticket count, amount) for fat fingers */
+  .mobile-tap-target {
+    min-height: 48px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  /* Prevent input zoom on iOS (font-size must be ≥ 16px) */
+  input[type="number"],
+  input[type="text"],
+  input[type="email"],
+  select {
+    font-size: 16px !important;
+  }
+
+  /* Bottom-safe padding for fixed elements near the home indicator */
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+  }
+}
+
+/* Touch-device hover protection (no sticky hovers on tap) */
+@media (hover: none) {
+  .hover-lift:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+/* =============================================================================
    PREMIUM GLOBAL STYLES
    ============================================================================= */
 

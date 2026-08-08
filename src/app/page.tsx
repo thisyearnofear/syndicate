@@ -7,13 +7,15 @@ import { useUnifiedWallet, useIsMounted } from "@/hooks";
 import { PRODUCT_MODES, getProductModeById } from "@/config/productModes";
 import { getCapability, getCtaState, type CapabilityId } from "@/config/capabilities";
 import { QuickPurchase } from "@/components/purchase/QuickPurchase";
+import { QuickDeposit } from "@/components/purchase/QuickDeposit";
+import { SocialProof } from "@/components/home/SocialProof";
+import { FirstActionPrompt } from "@/components/onboarding/FirstActionPrompt";
 
 // UI Components
 import { Button } from "@/shared/components/ui/Button";
 
 // Lazy load heavy components
 const SimplePurchaseModal = lazy(() => import("@/components/modal/SimplePurchaseModal"));
-const WalletConnectionManager = lazy(() => import("@/components/wallet/WalletConnectionManager"));
 
 // Lazy load home components
 const PremiumJackpotDisplay = lazy(() => import("@/components/home/PremiumJackpotDisplay"));
@@ -24,7 +26,6 @@ const OnboardingWizard = lazy(() => import("@/components/onboarding/OnboardingWi
 export default function Home() {
   const router = useRouter();
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
-  const [showWalletModal, setShowWalletModal] = useState(false);
   const [selectedProtocol, setSelectedProtocol] = useState<string | undefined>(undefined);
   const isMounted = useIsMounted();
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -47,26 +48,27 @@ export default function Home() {
     } catch {}
   }, []);
 
-  // Trigger opening purchase modal when wallet connects and wallet modal was open
-  useEffect(() => {
-    if (isConnected && showWalletModal) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setShowWalletModal(false);
-       
-      setShowPurchaseModal(true);
-    }
-  }, [isConnected, showWalletModal]);
-
   const handlePurchaseAction = useCallback((protocol?: string) => {
     setSelectedProtocol(protocol === 'megapot' || protocol === 'pooltogether' ? protocol : undefined);
-    if (!isConnected) {
-      setShowWalletModal(true);
-    } else {
+    // For non-megapot protocols (PoolTogether), open the full modal
+    if (protocol && protocol !== 'megapot') {
       setShowPurchaseModal(true);
+      return;
     }
-  }, [isConnected]);
+    // For megapot / default, scroll to the inline QuickPurchase
+    const quickPurchase = document.getElementById('quick-purchase');
+    if (quickPurchase) {
+      quickPurchase.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      quickPurchase.classList.add('ring-2', 'ring-brand-400/50');
+      setTimeout(() => quickPurchase.classList.remove('ring-2', 'ring-brand-400/50'), 2000);
+    }
+  }, []);
 
   const handleBuyClick = useCallback(() => handlePurchaseAction(), [handlePurchaseAction]);
+  const handleOpenAdvanced = useCallback((protocol?: string) => {
+    setSelectedProtocol(protocol === 'megapot' || protocol === 'pooltogether' ? protocol : undefined);
+    setShowPurchaseModal(true);
+  }, []);
   const handleCreatePrivateVault = useCallback(() => router.push('/discover'), [router]);
   const handleSeePrivateVaults = useCallback(() => router.push('/vaults'), [router]);
   const handleModeAction = useCallback((modeId: string) => {
@@ -142,6 +144,11 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Social proof — live activity signals */}
+        <section className="mb-12">
+          <SocialProof className="max-w-2xl mx-auto" />
+        </section>
+
         {/* Optional Public Play - Centered */}
         <section className="mb-16">
           <div className="max-w-4xl mx-auto text-center mb-8">
@@ -163,9 +170,12 @@ export default function Home() {
             </div>
           </Suspense>
 
-          {/* Inline Quick Purchase — no modal needed for the default flow */}
-          <div className="max-w-sm mx-auto mt-8">
-            <QuickPurchase onAdvanced={() => handlePurchaseAction('megapot')} />
+          {/* Inline Quick Actions — Play and Grow side by side */}
+          <div id="quick-purchase" className="max-w-3xl mx-auto mt-8 scroll-mt-24 transition-[box-shadow] duration-moderate rounded-2xl">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <QuickPurchase onAdvanced={() => handleOpenAdvanced('megapot')} />
+              <QuickDeposit onExploreVaults={handleSeePrivateVaults} />
+            </div>
           </div>
         </section>
 
@@ -175,7 +185,7 @@ export default function Home() {
             <div className="max-w-4xl mx-auto h-96 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
           }>
             <div className="max-w-4xl mx-auto">
-              <MultiLotteryPrizes onBuyClick={handlePurchaseAction} />
+              <MultiLotteryPrizes onBuyClick={handleOpenAdvanced} />
             </div>
           </Suspense>
         </section>
@@ -365,31 +375,22 @@ export default function Home() {
         )}
       </Suspense>
 
-      <Suspense fallback={null}>
-        {showWalletModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="bg-slate-900/95 border border-white/20 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-white">Connect Wallet</h3>
-                <button
-                  onClick={() => setShowWalletModal(false)}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  ✕
-                </button>
-              </div>
-              <WalletConnectionManager />
-            </div>
-          </div>
-        )}
-      </Suspense>
-
       {/* Onboarding Wizard for first-time visitors */}
       {showOnboarding && (
         <Suspense fallback={null}>
           <OnboardingWizard />
         </Suspense>
       )}
+
+      {/* First-action prompt — appears after first successful purchase */}
+      <FirstActionPrompt
+        onGrow={() => {
+          const quickDeposit = document.getElementById('quick-purchase');
+          if (quickDeposit) {
+            quickDeposit.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }}
+      />
 
       <div className="fixed bottom-8 right-8 z-40 hidden md:block">
         <Button
