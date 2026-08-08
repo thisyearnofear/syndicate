@@ -96,6 +96,7 @@
   "devDependencies": {
     "@fhenixprotocol/contracts": "0.3.1",
     "@next/bundle-analyzer": "14.2.35",
+    "@playwright/test": "1.62.1",
     "@stacks/blockchain-api-client": "8.13.5",
     "@testing-library/jest-dom": "7.0.0",
     "@testing-library/react": "16.3.2",

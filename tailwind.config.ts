@@ -34,6 +34,13 @@ const config = {
           900: "#0c4a6e",
           950: "#082f49",
         },
+        // Semantic surface tokens for consistent dark theme
+        surface: {
+          DEFAULT: "#0f172a",  // slate-900 — primary background
+          raised: "#1e293b",   // slate-800 — cards, modals, popovers
+          overlay: "#1e293b",  // slate-800 — modal overlays
+          muted: "#334155",    // slate-700 — secondary surfaces
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",

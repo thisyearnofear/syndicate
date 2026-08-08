@@ -13,3 +13,4 @@
 
 export { PurchaseProgress } from './PurchaseProgress';
 export { PurchaseReceipt } from './PurchaseReceipt';
+export { PurchaseErrorBoundary } from './PurchaseErrorBoundary';

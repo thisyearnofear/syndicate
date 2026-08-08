@@ -197,7 +197,7 @@ export function NotificationBell({ poolId, className = '' }: NotificationBellPro
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 top-12 w-80 md:w-96 bg-gray-900 border border-white/20 rounded-xl shadow-2xl z-50 overflow-hidden">
+        <div className="absolute right-0 top-12 w-80 md:w-96 bg-surface-raised border border-white/20 rounded-xl shadow-2xl z-50 overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-white/10">
             <h3 className="font-bold text-white">Notifications</h3>

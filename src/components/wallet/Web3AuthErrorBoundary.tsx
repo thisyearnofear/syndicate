@@ -45,7 +45,7 @@ export class Web3AuthErrorBoundary extends Component<Props, State> {
 
       return (
         this.props.fallback || (
-          <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+          <div className="min-h-screen bg-surface-raised flex items-center justify-center p-4">
             <div className="max-w-md w-full bg-gray-800 rounded-lg p-6 border border-gray-700">
               <div className="text-center">
                 <h2 className="text-xl font-bold text-red-400 mb-4">

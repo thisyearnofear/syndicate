@@ -100,7 +100,7 @@ export default function SyndicateJoinModal({
       onClick={onClose}
     >
       <div
-        className="bg-gray-900 border border-white/20 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl"
+        className="bg-surface-raised border border-white/20 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">

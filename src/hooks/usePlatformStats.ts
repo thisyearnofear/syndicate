@@ -1,7 +1,16 @@
-"use client";
+/**
+ * USE PLATFORM STATS HOOK
+ *
+ * React Query implementation. Features:
+ * - Visibility-aware polling (1 min interval, pauses in background)
+ * - isInitialLoading / isRefreshing semantics
+ * - Simple /api/stats fetch with automatic error handling
+ */
 
-import { useState, useCallback, useRef } from 'react';
-import { useVisibilityPolling } from '@/lib/useVisibilityPolling';
+'use client';
+
+import { useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 interface PlatformStats {
   totalRaised: number | null;
@@ -14,45 +23,43 @@ interface PlatformStats {
 interface UsePlatformStatsReturn {
   stats: PlatformStats | null;
   isLoading: boolean;
+  isInitialLoading: boolean;
+  isRefreshing: boolean;
   error: string | null;
   refresh: () => Promise<void>;
 }
 
+async function fetchStats(): Promise<PlatformStats> {
+  const res = await fetch('/api/stats');
+  if (!res.ok) throw new Error(`Stats fetch failed: ${res.status}`);
+  return res.json();
+}
+
 export function usePlatformStats(): UsePlatformStatsReturn {
-  const [stats, setStats] = useState<PlatformStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const mountedRef = useRef(true);
-
-  const fetchStats = useCallback(async () => {
-    if (!mountedRef.current) return;
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch('/api/stats');
-      if (!res.ok) throw new Error(`Stats fetch failed: ${res.status}`);
-      const data = await res.json();
-      if (!mountedRef.current) return;
-      setStats(data);
-    } catch (err) {
-      if (!mountedRef.current) return;
-      setError(err instanceof Error ? err.message : 'Failed to load stats');
-    } finally {
-      if (mountedRef.current) setIsLoading(false);
-    }
-  }, []);
-
-  const refresh = useCallback(async () => {
-    await fetchStats();
-  }, [fetchStats]);
-
-  useVisibilityPolling({
-    callback: fetchStats,
-    intervalMs: 60000,
-    enabled: true,
-    immediate: true,
+  const {
+    data: stats,
+    isFetching,
+    isLoading: isQueryLoading,
+    error: queryError,
+    refetch,
+  } = useQuery({
+    queryKey: ['platform-stats'],
+    queryFn: fetchStats,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
+    staleTime: 30_000,
   });
 
-  return { stats, isLoading, error, refresh };
+  const refresh = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
+
+  return {
+    stats: stats ?? null,
+    isLoading: isFetching,
+    isInitialLoading: isQueryLoading,
+    isRefreshing: isFetching && !isQueryLoading,
+    error: queryError instanceof Error ? queryError.message : null,
+    refresh,
+  };
 }

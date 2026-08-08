@@ -22,8 +22,9 @@ import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getConfig } from "@/config/wagmi";
-import { useMemo, ReactNode } from "react";
+import { useMemo, useEffect, ReactNode } from "react";
 import { useIsMounted } from "@/hooks/useIsMounted";
+import { lifecycle } from "@/services/observability";
 
 // Suppress specific console warnings that are not breaking functionality - only on client
 if (typeof window !== 'undefined') {
@@ -71,6 +72,11 @@ export function Providers({ children }: { children: ReactNode }) {
   }), []);
 
   const config = useMemo(() => (isMounted ? getConfig() : null), [isMounted]);
+
+  // Initialize lifecycle observability subscribers (analytics, logger, console)
+  useEffect(() => {
+    lifecycle.init();
+  }, []);
 
   // Use visibility:hidden instead of conditionally hiding children.
   // Replacing children with a loading div caused React Error #321.

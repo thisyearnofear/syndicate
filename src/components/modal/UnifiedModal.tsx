@@ -61,7 +61,7 @@ export default function UnifiedModal({
       }}
     >
       <div
-        className={`bg-gray-900 rounded-2xl p-6 w-full ${maxWidthClasses[maxWidth]} max-h-[90vh] overflow-y-auto border border-gray-700 modal-content relative z-[10000] ${className} animate-scale-in shadow-2xl`}
+        className={`bg-surface-raised rounded-2xl p-6 w-full ${maxWidthClasses[maxWidth]} max-h-[90vh] overflow-y-auto border border-gray-700 modal-content relative z-[10000] ${className} animate-scale-in shadow-2xl`}
         onClick={(e) => e.stopPropagation()}
       >
         {(title || showCloseButton) && (

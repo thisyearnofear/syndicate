@@ -1,15 +1,17 @@
 /**
  * USE USER VAULTS HOOK
- * 
- * Core Principles Applied:
- * - DRY: Single source of truth for vault balance fetching
- * - PERFORMANT: Caching with configurable refresh intervals
- * - CLEAN: Separates data fetching from UI components
- * - MODULAR: Reusable across dashboard, overview, and other components
+ *
+ * React Query implementation. Features:
+ * - Automatic visibility-aware polling (refetchIntervalInBackground: false)
+ * - isInitialLoading / isRefreshing semantics
+ * - Portfolio invalidation listener for instant post-deposit refresh
+ * - Configurable staleTime and refetchInterval
  */
 
-import { useState, useCallback } from 'react';
-import { useVisibilityPolling } from '@/lib/useVisibilityPolling';
+'use client';
+
+import { useMemo, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { vaultManager, type VaultBalance, type VaultProtocol } from '@/services/vaults';
 import { logger } from '@/lib/logger';
 import { usePortfolioInvalidation } from './usePortfolioInvalidation';
@@ -26,14 +28,45 @@ export interface UseUserVaultsResult {
   totalYield: number;
   totalBalance: number;
   isLoading: boolean;
+  isInitialLoading: boolean;
+  isRefreshing: boolean;
   error: string | null;
   refresh: () => Promise<void>;
 }
 
 interface UseUserVaultsOptions {
   autoRefresh?: boolean;
-  refreshInterval?: number; // milliseconds
+  refreshInterval?: number;
   enabled?: boolean;
+}
+
+function vaultsQueryKey(userAddress: string | undefined) {
+  return ['user-vaults', userAddress ?? 'none'] as const;
+}
+
+async function fetchVaultPositions(userAddress: string): Promise<UserVaultPosition[]> {
+  const availableVaults = vaultManager.getAvailableProviders();
+
+  const positionPromises = availableVaults.map(async (protocol) => {
+    try {
+      const provider = vaultManager.getProvider(protocol);
+      const [balance, isHealthy] = await Promise.all([
+        provider.getBalance(userAddress),
+        provider.isHealthy(),
+      ]);
+
+      if (parseFloat(balance.totalBalance) > 0) {
+        return { protocol, balance, isHealthy };
+      }
+      return null;
+    } catch (err) {
+      logger.error(`Failed to fetch ${protocol}`, { error: err instanceof Error ? err.message : String(err) });
+      return null;
+    }
+  });
+
+  const results = await Promise.all(positionPromises);
+  return results.filter((pos): pos is UserVaultPosition => pos !== null);
 }
 
 export function useUserVaults(
@@ -42,99 +75,53 @@ export function useUserVaults(
 ): UseUserVaultsResult {
   const {
     autoRefresh = true,
-    refreshInterval = 30000, // 30 seconds default
+    refreshInterval = 30000,
     enabled = true,
   } = options;
 
-  const [positions, setPositions] = useState<UserVaultPosition[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  // Calculate aggregated totals
-  const totalDeposited = positions.reduce(
-    (sum, pos) => sum + parseFloat(pos.balance.deposited),
-    0
-  );
-  const totalYield = positions.reduce(
-    (sum, pos) => sum + parseFloat(pos.balance.yieldAccrued),
-    0
-  );
-  const totalBalance = positions.reduce(
-    (sum, pos) => sum + parseFloat(pos.balance.totalBalance),
-    0
-  );
-
-  const fetchVaultPositions = useCallback(async () => {
-    if (!userAddress || !enabled) {
-      setPositions([]);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Get all available vault providers
-      const availableVaults = vaultManager.getAvailableProviders();
-
-      // Fetch balances and health status in parallel
-      const positionPromises = availableVaults.map(async (protocol) => {
-        try {
-          const provider = vaultManager.getProvider(protocol);
-          const [balance, isHealthy] = await Promise.all([
-            provider.getBalance(userAddress),
-            provider.isHealthy(),
-          ]);
-
-          // Only include positions with non-zero balance
-          if (parseFloat(balance.totalBalance) > 0) {
-            return {
-              protocol,
-              balance,
-              isHealthy,
-            };
-          }
-          return null;
-        } catch (err) {
-          logger.error(`Failed to fetch ${protocol}`, { error: err instanceof Error ? err.message : String(err) });
-          return null;
-        }
-      });
-
-      const results = await Promise.all(positionPromises);
-      const validPositions = results.filter(
-        (pos): pos is UserVaultPosition => pos !== null
-      );
-
-      setPositions(validPositions);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch vault positions';
-      logger.error("useUserVaults error", { error: err instanceof Error ? err.message : String(err) });
-      setError(message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userAddress, enabled]);
-
-  // Initial fetch + auto-refresh with visibility awareness
-  useVisibilityPolling({
-    callback: fetchVaultPositions,
-    intervalMs: refreshInterval,
-    enabled: autoRefresh && enabled && !!userAddress,
-    immediate: true,
+  const {
+    data: positions,
+    isFetching,
+    isLoading: isQueryLoading,
+    error: queryError,
+    refetch,
+  } = useQuery({
+    queryKey: vaultsQueryKey(userAddress),
+    queryFn: () => fetchVaultPositions(userAddress as string),
+    enabled: enabled && !!userAddress,
+    refetchInterval: autoRefresh ? refreshInterval : false,
+    refetchIntervalInBackground: false,
+    staleTime: 15_000, // 15s — positions change slowly
   });
 
+  const validPositions = useMemo(() => positions ?? [], [positions]);
+
+  const { totalDeposited, totalYield, totalBalance } = useMemo(() => ({
+    totalDeposited: validPositions.reduce((sum, pos) => sum + parseFloat(pos.balance.deposited), 0),
+    totalYield: validPositions.reduce((sum, pos) => sum + parseFloat(pos.balance.yieldAccrued), 0),
+    totalBalance: validPositions.reduce((sum, pos) => sum + parseFloat(pos.balance.totalBalance), 0),
+  }), [validPositions]);
+
+  const refresh = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
+
   // Re-fetch immediately when another hook signals a portfolio change
-  usePortfolioInvalidation(() => { void fetchVaultPositions(); });
+  usePortfolioInvalidation(() => {
+    void queryClient.invalidateQueries({ queryKey: vaultsQueryKey(userAddress) });
+  });
 
   return {
-    positions,
+    positions: validPositions,
     totalDeposited,
     totalYield,
     totalBalance,
-    isLoading,
-    error,
-    refresh: fetchVaultPositions,
+    isLoading: isFetching,
+    isInitialLoading: isQueryLoading,
+    isRefreshing: isFetching && !isQueryLoading,
+    error: queryError instanceof Error ? queryError.message : null,
+    refresh,
   };
 }

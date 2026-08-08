@@ -116,7 +116,7 @@ export function InfoTooltip({
         <div
           className={`
             absolute z-50 ${POSITION_CLASSES[position]}
-            bg-gray-900 text-gray-50
+            bg-surface-raised text-gray-50
             rounded-lg shadow-lg
             border border-gray-700
             p-3 max-w-xs
@@ -149,7 +149,7 @@ export function InfoTooltip({
 
           {/* Pointer Arrow */}
           <div
-            className="absolute w-2 h-2 bg-gray-900 border border-gray-700 rotate-45"
+            className="absolute w-2 h-2 bg-surface-raised border border-gray-700 rotate-45"
             style={{
               ...(position === 'top' && { bottom: '-5px', left: '50%', transform: 'translateX(-50%)' }),
               ...(position === 'bottom' && { top: '-5px', left: '50%', transform: 'translateX(-50%)' }),

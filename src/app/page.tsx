@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { useUnifiedWallet, useIsMounted } from "@/hooks";
 import { PRODUCT_MODES, getProductModeById } from "@/config/productModes";
+import { getCapability, getCtaState, type CapabilityId } from "@/config/capabilities";
 
 // UI Components
 import { Button } from "@/shared/components/ui/Button";
@@ -204,6 +205,11 @@ export default function Home() {
             <p className="text-gray-400 text-lg max-w-2xl mx-auto">
               The core loop works on Base in the open. Fhenix modes add encryption for the balances and contributions you&apos;d rather keep to yourself.
             </p>
+            {getCapability('fhenix_privacy').availabilityMessage && (
+              <p className="text-xs text-amber-300/70 mt-3 max-w-xl mx-auto">
+                {getCapability('fhenix_privacy').availabilityMessage}
+              </p>
+            )}
           </div>
           <div className="max-w-5xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -246,7 +252,14 @@ export default function Home() {
               Three Ways To Use Syndicate
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {PRODUCT_MODES.map((mode, i) => (
+              {PRODUCT_MODES.map((mode, i) => {
+                // Map product mode to its primary capability
+                const capId: CapabilityId = mode.id === 'private_vaults' ? 'fhenix_privacy'
+                  : mode.id === 'yield_to_tickets' ? 'vaults'
+                  : 'megapot';
+                const cap = getCapability(capId);
+                const ctaState = getCtaState(capId);
+                return (
                 <div key={mode.id} className="bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover:bg-white/10 transition-all">
                   <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide mb-4 ${
                     mode.id === 'private_vaults'
@@ -277,17 +290,22 @@ export default function Home() {
                   <p className="text-white font-medium mb-2">{mode.tagline}</p>
                   <p className="text-gray-400 leading-relaxed text-sm">{mode.description}</p>
                   <p className="text-xs text-gray-500 mt-3">{mode.supportingCopy}</p>
+                  {cap.availabilityMessage && (
+                    <p className="text-xs text-amber-300/80 mt-2">{cap.availabilityMessage}</p>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="mt-4 w-full justify-between border border-white/10 bg-white/[0.04] text-gray-200 hover:bg-white/10 hover:text-white"
+                    className={`mt-4 w-full justify-between border border-white/10 bg-white/[0.04] text-gray-200 hover:bg-white/10 hover:text-white ${ctaState === 'disabled' ? 'opacity-50 cursor-not-allowed' : ''}`}
                     onClick={() => handleModeAction(mode.id)}
+                    disabled={ctaState === 'disabled'}
                   >
                     {mode.id === 'private_vaults' ? 'Discover or create' : mode.id === 'yield_to_tickets' ? 'Explore strategies' : 'Buy tickets'}
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>
