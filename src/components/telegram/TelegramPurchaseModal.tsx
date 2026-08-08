@@ -13,6 +13,7 @@ import { useTelegram, useHapticFeedback } from "./TelegramProvider";
 import { SyndicateTonConnectButton } from "./TonConnectButton";
 import { useUnifiedWallet } from "@/hooks";
 import { useTonPay } from "@/hooks/useTonPay";
+import { getCapability } from "@/config/capabilities";
 
 interface TelegramPurchaseModalProps {
   isOpen: boolean;
@@ -74,6 +75,10 @@ export function TelegramPurchaseModal({
   }, [isConnected, address, selectedToken, totalCost, ticketCount, pay, impact, notification, onSuccess, onClose]);
 
   if (!isOpen) return null;
+
+  // TON bridge/lottery is paused — hide the modal entirely
+  const tonCapability = getCapability('bridge_ton');
+  if (!tonCapability.readsEnabled && !tonCapability.writesEnabled) return null;
 
   const isDark = colorScheme === "dark";
 

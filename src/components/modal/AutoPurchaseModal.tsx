@@ -30,7 +30,7 @@ import { getPermissionPresets, type AdvancedPermissionGrant } from "@/services/a
 import { stacksX402Service } from "@/domains/wallet/services/stacksX402Service";
 import type { AutoPurchaseConfig, AdvancedPermission } from "@/domains/wallet/types";
 import { AUTOMATION_MODE_META } from "@/config/automationModes";
-import { FEATURES } from "@/config";
+import { getCapability } from "@/config/capabilities";
 import { permissionedAutopilotService } from "@/services/metamask/permissionedAutopilotService";
 import type { VaultProtocol } from "@/services/vaults/vaultProvider";
 
@@ -505,7 +505,7 @@ export function AutoPurchaseModal({
               </button>
 
               {/* YIELD AUTOPILOT OPTION (MetaMask policy layer) */}
-              {FEATURES.enableMetaMaskAutopilot && (
+              {getCapability('automation_erc7715').writesEnabled && (
                 <button
                   onClick={() => {
                     setConfig(prev => ({ ...prev, strategy: 'yield-autopilot', paymentToken: 'usdc', frequency: 'weekly', sourceVault: 'spark' }));
@@ -607,7 +607,7 @@ export function AutoPurchaseModal({
             </DialogHeader>
 
             <div className="space-y-6">
-              {FEATURES.enableVeniceAdvisor && config.strategy === 'yield-autopilot' && (
+              {process.env.NEXT_PUBLIC_ENABLE_VENICE_ADVISOR === 'true' && config.strategy === 'yield-autopilot' && (
                 <div className="bg-violet-950/40 border border-violet-600/40 rounded-xl p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-2">

@@ -504,7 +504,7 @@ export function FocusedBridgeFlow({
   // Render protocol selection stage
   if (stage === "select") {
     return (
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-6 animate-fade-in" role="region" aria-label="Select bridge protocol">
         <div className="text-center">
           <h3 className="text-white font-bold text-xl mb-2">
             Bridge USDC to Base
@@ -574,7 +574,7 @@ export function FocusedBridgeFlow({
   // Render bridging progress stage
   if (stage === "bridging") {
     return (
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-6 animate-fade-in" role="region" aria-label="Bridge in progress" aria-live="polite">
         {/* Protocol Badge */}
         {(selectedProtocol || sourceChain === "near") && (
           <div className="flex justify-center">
@@ -738,7 +738,7 @@ export function FocusedBridgeFlow({
   // Render completion stage
   if (stage === "complete") {
     return (
-      <div className="space-y-6 animate-fade-in text-center">
+      <div className="space-y-6 animate-fade-in text-center" role="status" aria-label="Bridge complete">
         <div className="flex justify-center">
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
             <CircleCheck className="w-10 h-10 text-white" />

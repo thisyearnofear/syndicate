@@ -29,7 +29,7 @@ import { useUnifiedWallet } from "@/hooks";
 import { AutoPurchaseModal } from "@/components/modal/AutoPurchaseModal";
 import { VirtualsAgentPanel } from "@/components/settings/VirtualsAgentPanel";
 import { AUTOMATION_MODE_META } from "@/config/automationModes";
-import { FEATURES } from "@/config";
+import { getCapability } from "@/config/capabilities";
 import { PermissionedAutopilotPanel } from "@/components/automation/PermissionedAutopilotPanel";
 
 type HubStrategy = 'scheduled' | 'autonomous' | 'no-loss' | 'yield-autopilot';
@@ -152,7 +152,7 @@ export function AutoPurchaseSettings() {
           Automation Paths
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {FEATURES.enableMetaMaskAutopilot && (
+          {getCapability('automation_erc7715').writesEnabled && (
           <div className="bg-white border border-cyan-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all group">
             <div className="w-10 h-10 rounded-lg bg-cyan-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
               <ShieldCheck className="w-6 h-6 text-cyan-600" />

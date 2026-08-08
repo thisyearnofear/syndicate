@@ -70,7 +70,7 @@ export function MultiLotteryPrizes({ onBuyClick }: MultiLotteryPrizesProps) {
           <h3 className="text-lg font-bold text-white">More Public Prize Modes</h3>
         </div>
         <span className="text-sm text-gray-400">
-          ${Math.round(totalPrizeUsd).toLocaleString()} across all lotteries
+          ${Math.round(totalPrizeUsd).toLocaleString()} across all prize pools
         </span>
       </div>
 

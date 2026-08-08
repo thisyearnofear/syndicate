@@ -175,7 +175,7 @@ export function CrossChainTracker({
   };
 
   return (
-    <div className="p-6 glass-premium rounded-3xl border border-white/20 max-w-md mx-auto animate-fade-in-slide-up">
+    <div className="p-6 glass-premium rounded-3xl border border-white/20 max-w-md mx-auto animate-fade-in-slide-up" role="region" aria-label="Cross-chain transaction progress" aria-live="polite">
       {/* Header */}
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-brand-600 mb-2">
@@ -225,13 +225,13 @@ export function CrossChainTracker({
       )}
 
       {/* Steps */}
-      <div className="space-y-4">
+      <div className="space-y-4" role="list" aria-label="Transaction steps">
         {steps.map((step, index) => {
           const stepStatus = getStepStatus(step.id);
           const Icon = step.icon;
 
           return (
-            <div key={step.id} className="flex items-start">
+            <div key={step.id} className="flex items-start" role="listitem" aria-current={stepStatus === "in_progress" ? "step" : undefined}>
               <div className="flex flex-col items-center mr-4">
                 <div
                   className={cn(
@@ -243,6 +243,7 @@ export function CrossChainTracker({
                     stepStatus === "pending" &&
                       "bg-gradient-to-r from-gray-700 to-gray-800 border-gray-600 text-gray-400",
                   )}
+                  aria-label={`${step.title}: ${stepStatus === "complete" ? "complete" : stepStatus === "in_progress" ? "in progress" : "pending"}`}
                 >
                   {stepStatus === "complete" ? (
                     <CircleCheck className="w-5 h-5" />
@@ -329,7 +330,7 @@ export function CrossChainTracker({
 
       {/* Error State */}
       {status === "error" && (
-        <div className="mt-6 p-4 bg-gradient-to-r from-red-500/20 to-red-600/20 border border-red-500/30 rounded-xl">
+        <div className="mt-6 p-4 bg-gradient-to-r from-red-500/20 to-red-600/20 border border-red-500/30 rounded-xl" role="alert">
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
             <div>

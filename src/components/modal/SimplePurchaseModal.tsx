@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
 import { Input } from "@/shared/components/ui/Input";
 import { Badge } from "@/shared/components/ui/Badge";
-import { Loader, AlertCircle, Check, Zap, Link2, ChevronDown, ArrowRight, Wallet, Shield, DollarSign, Bitcoin, Trophy, ExternalLink, Info } from "lucide-react";
+import { Loader, AlertCircle, Check, Zap, ChevronDown, ArrowRight, Wallet, Shield, DollarSign, Bitcoin, Trophy, Info, ExternalLink } from "lucide-react";
 import { useUnifiedWallet, useUnifiedPurchase } from "@/hooks";
 import { useERC7715 } from "@/hooks/useERC7715";
 import { usePoolTogetherDeposit } from "@/hooks/usePoolTogetherDeposit";
@@ -23,13 +23,13 @@ import {
 } from "@/shared/components/premium/CompactLayout";
 import { BalanceDisplay } from "@/components/modal/BalanceDisplay";
 import { AutoPurchaseModal } from "./AutoPurchaseModal";
-import { CrossChainTracker } from "@/components/bridge/CrossChainTracker";
-import type { SourceChainType, TrackerStatus } from "@/domains/participation/types";
+import type { SourceChainType } from "@/domains/participation/types";
 import { CostBreakdown } from "@/components/bridge/CostBreakdown";
 import { TimeEstimate } from "@/components/bridge/TimeEstimate";
 import { CONTRACTS } from "@/services/bridges/protocols/stacks";
 import { STRK_ADDRESSES } from "@/services/bridges/types";
 import { PoolTogetherFlow } from "./flows/PoolTogetherFlow";
+import { PurchaseProgress, PurchaseReceipt } from "./purchase";
 import {
   Dialog,
   DialogContent,
@@ -58,79 +58,6 @@ const PROTOCOL_COPY: Record<PurchaseProtocol, {
   },
 };
 
-// Helper function to get explorer URLs
-const getExplorerUrl = (chain: SourceChainType, txHash: string): string => {
-  switch (chain) {
-    case "solana": return `https://solscan.io/tx/${txHash}`;
-    case "near": return `https://explorer.near.org/transactions/${txHash}`;
-    case "stacks": return `https://explorer.stacks.co/txid/${txHash}?chain=mainnet`;
-    case "base": return `https://basescan.org/tx/${txHash}`;
-    case "ethereum": return `https://etherscan.io/tx/${txHash}`;
-    default: return "#";
-  }
-};
-
-// DRY helper for CrossChainTracker section
-const renderTrackerSection = ({
-  chain, sourceTxHash, destinationTxHash, status, error, ticketCount, walletInfo,
-  showActions = true, statusLinkCopied = false, onCopyLink, customLink, customButtons,
-}: {
-  chain: SourceChainType;
-  sourceTxHash?: string | null;
-  destinationTxHash?: string | null;
-  status: TrackerStatus;
-  error?: string | null;
-  ticketCount: number;
-  walletInfo?: { sourceAddress?: string; baseAddress?: string; isLinked?: boolean };
-  showActions?: boolean;
-  statusLinkCopied?: boolean;
-  onCopyLink?: () => void;
-  customLink?: React.ReactNode;
-  customButtons?: React.ReactNode;
-}) => {
-  const txId = sourceTxHash ?? undefined;
-  const destTxId = destinationTxHash ?? undefined;
-  const txError = error ?? undefined;
-  const explorerUrl = txId ? getExplorerUrl(chain, txId) : undefined;
-
-  return (
-    <div>
-      <CrossChainTracker
-        status={status}
-        sourceChain={chain}
-        sourceTxId={txId}
-        baseTxId={destTxId}
-        error={txError}
-        ticketCount={ticketCount}
-        walletInfo={walletInfo}
-        receipt={{
-          sourceExplorer: explorerUrl,
-          baseExplorer: destTxId ? `https://basescan.org/tx/${destTxId}` : undefined,
-          megapotApp: `/my-tickets`,
-        }}
-      />
-      {showActions && (
-        <div className="mt-4">
-          {customLink || (sourceTxHash && (
-            <div className="flex items-center gap-3">
-              <a href={`/purchase-status/track?txId=${sourceTxHash}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1">
-                Open Live Tracker →
-              </a>
-              {onCopyLink && (
-                <button type="button" onClick={onCopyLink} className="text-xs text-gray-300 hover:text-white inline-flex items-center gap-1">
-                  <Link2 className="w-3 h-3" />
-                  {statusLinkCopied ? "Copied" : "Copy Link"}
-                </button>
-              )}
-            </div>
-          ))}
-          {customButtons}
-        </div>
-      )}
-    </div>
-  );
-};
-
 export interface SimplePurchaseModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -140,7 +67,7 @@ export interface SimplePurchaseModalProps {
 export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }: SimplePurchaseModalProps) {
   const router = useRouter();
   const { isConnected, address, walletType, mirrorAddress } = useUnifiedWallet();
-  const { purchase, isPurchasing, error, txHash, clearError, reset, status, sourceChain, sourceTxHash, destinationTxHash, walletInfo } = useUnifiedPurchase();
+  const { purchase, isPurchasing, error, txHash, clearError, reset, status, sourceChain, sourceTxHash, destinationTxHash, walletInfo, execution } = useUnifiedPurchase();
   const { permissions, isSupported } = useERC7715();
   const ptDeposit = usePoolTogetherDeposit();
 
@@ -151,7 +78,6 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
   const [showCelebration, setShowCelebration] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [purchaseMode, setPurchaseMode] = useState<'one-time' | 'auto'>('one-time');
-  const [statusLinkCopied, setStatusLinkCopied] = useState(false);
   const [stacksToken, setStacksToken] = useState<'usdcx' | 'sbtc'>('usdcx');
   const [showAdvancedToken, setShowAdvancedToken] = useState(false);
   const [btcUsdPrice, setBtcUsdPrice] = useState<number | null>(null);
@@ -250,8 +176,6 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
       .finally(() => setIsCheckingBalance(false));
   }, [selectedChain, address, stacksToken, refreshKey]);
 
-  const showTracker = isPurchasing || ["confirmed_source", "bridging", "purchasing", "complete", "error"].includes(status);
-
   useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
     if (isOpen && isConnected && address && step === "connect") setStep("select");
@@ -308,12 +232,6 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
     } else {
       setStep("select");
     }
-  };
-
-  const handleCopyStatusLink = async () => {
-    if (!sourceTxHash || !sourceChain) return;
-    const url = `${window.location.origin}/purchase-status/track?txId=${sourceTxHash}`;
-    try { await navigator.clipboard.writeText(url); setStatusLinkCopied(true); setTimeout(() => setStatusLinkCopied(false), 2000); } catch {}
   };
 
   const renderStep = () => {
@@ -653,29 +571,20 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
         if (selectedProtocol === 'pooltogether') {
           return <PoolTogetherFlow step="processing" depositAmount={ptDepositAmount} setDepositAmount={setPtDepositAmount} ptDeposit={ptDeposit} onDeposit={handlePurchaseClick} onBack={() => { ptDeposit.reset(); setStep('select'); }} onClose={handleClose} walletType={walletType} />;
         }
-        // Megapot processing → cross-chain tracker
-        const processingChain = sourceChain || selectedChain;
-        if (showTracker && processingChain) {
-          return renderTrackerSection({ chain: processingChain, sourceTxHash, destinationTxHash, status, error, ticketCount, walletInfo, showActions: true, statusLinkCopied, onCopyLink: handleCopyStatusLink });
-        }
-        // Megapot fallback loading
+        // Megapot processing → extracted PurchaseProgress component
         return (
-          <div className="text-center py-8">
-            <div className="inline-block mb-6"><Loader className="w-12 h-12 text-blue-400 animate-spin" /></div>
-            <h2 className="text-2xl font-bold text-white mb-2">Processing Public Play</h2>
-            <p className="text-gray-400 mb-6">{walletType === "stacks" || walletType === "near" || walletType === "solana" ? "Bridging across chains — this takes 2-3 minutes" : "Executing transaction..."}</p>
-            {(walletType === "stacks" || walletType === "near" || walletType === "solana") && (
-              <div className="text-left space-y-3 max-w-xs mx-auto">
-                {[{ label: "Signing transaction", done: !!sourceTxHash }, { label: "Waiting for confirmation", done: status === "bridging" || status === "purchasing" || status === "complete" }, { label: "Bridging to Base", done: status === "purchasing" || status === "complete" }, { label: "Minting public-play tickets", done: status === "complete" }].map((s, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    {s.done ? <Check className="w-4 h-4 text-green-400 flex-shrink-0" /> : <div className="w-4 h-4 rounded-full border-2 border-gray-600 flex-shrink-0" />}
-                    <span className={`text-sm ${s.done ? "text-green-300" : "text-gray-500"}`}>{s.label}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {txHash && <p className="text-xs text-gray-500 font-mono break-all mt-4">{txHash}</p>}
-          </div>
+          <PurchaseProgress
+            execution={execution}
+            status={status}
+            sourceChain={sourceChain || selectedChain as SourceChainType | undefined}
+            walletType={walletType}
+            ticketCount={ticketCount}
+            sourceTxHash={sourceTxHash}
+            destinationTxHash={destinationTxHash}
+            txHash={txHash}
+            error={error}
+            walletInfo={walletInfo}
+          />
         );
 
       case "success":
@@ -683,52 +592,24 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
         if (selectedProtocol === 'pooltogether') {
           return <PoolTogetherFlow step="success" depositAmount={ptDepositAmount} setDepositAmount={setPtDepositAmount} ptDeposit={ptDeposit} onDeposit={handlePurchaseClick} onBack={() => { ptDeposit.reset(); setStep("select"); }} onClose={handleClose} walletType={walletType} />;
         }
-        // Megapot cross-chain success
-        const effectiveChain = sourceChain || selectedChain;
-        const isCrossChain = effectiveChain && effectiveChain !== "base" && effectiveChain !== "ethereum";
-        if (showTracker && effectiveChain && isCrossChain) {
-          return renderTrackerSection({
-            chain: effectiveChain, sourceTxHash, destinationTxHash, status, error, ticketCount, walletInfo, showActions: true,
-            customLink: sourceTxHash && isCrossChain ? <a href={`/purchase-status?txId=${sourceTxHash}&chain=${effectiveChain}`} className="inline-block text-sm text-blue-400 hover:text-blue-300">Open Status Page</a> : undefined,
-            customButtons: (
-              <div className="flex gap-3 mt-3">
-                <Button variant="outline" className="flex-1" onClick={() => { setTicketCount(1); setStep("select"); clearError(); reset(); }}>Buy More</Button>
-                <Button variant="default" className="flex-1" onClick={handleClose}>Done</Button>
-              </div>
-            ),
-          });
-        }
-        // Megapot direct success
+        // Megapot success → extracted PurchaseReceipt component
         return (
-          <CompactStack spacing="md" align="center">
-            <div className="text-center">
-              <div className="inline-block mb-4"><div className="w-16 h-16 rounded-full bg-green-400/20 flex items-center justify-center"><Check className="w-8 h-8 text-green-400" /></div></div>
-              <h2 className="text-2xl font-bold text-white mb-2">Public Play Confirmed!</h2>
-              <p className="text-gray-400 mb-2">You purchased {ticketCount} ticket{ticketCount !== 1 ? "s" : ""}</p>
-              <div className="flex flex-wrap items-center justify-center gap-3 mb-2">
-                {txHash && <a href={`https://basescan.org/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-400 hover:text-blue-300 inline-flex items-center gap-1">View Transaction <ExternalLink className="w-3 h-3" /></a>}
-                <a href="https://docs.megapot.io/overview/prizes" target="_blank" rel="noopener noreferrer" className="text-sm text-yellow-400 hover:text-yellow-300 inline-flex items-center gap-1">Prize Info <ExternalLink className="w-3 h-3" /></a>
-              </div>
-              <p className="text-xs text-gray-500">Winners are drawn on-chain. Prizes are paid instantly to your wallet — no claiming needed.</p>
-            </div>
-            {/* Auto-purchase upsell */}
-            {!hasActivePermission && isSupported && walletType === "evm" && (
-              <div className="w-full bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 space-y-3">
-                <div><p className="text-sm font-medium text-blue-300 mb-1">Never sign again</p><p className="text-xs text-gray-300">Enable auto-purchase to buy tickets daily without signing. Powered by your wallet&apos;s built-in spending controls.</p></div>
-                <Button variant="secondary" size="sm" className="w-full text-xs" onClick={() => setShowPermissionModal(true)}><Zap className="w-3 h-3 mr-1" /> Enable Auto-Purchase</Button>
-              </div>
-            )}
-            {walletType === "stacks" && (
-              <div className="w-full bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 space-y-3">
-                <div><p className="text-sm font-medium text-purple-300 mb-1">Automate your purchases</p><p className="text-xs text-gray-300">Set up recurring ticket purchases with a one-time wallet authorization. Sign once, buy tickets automatically every week or month.</p></div>
-                <Button variant="secondary" size="sm" className="w-full text-xs" onClick={() => setShowPermissionModal(true)}><Zap className="w-3 h-3 mr-1" /> Enable Auto-Purchase</Button>
-              </div>
-            )}
-            <div className="flex gap-3 w-full">
-              <Button variant="outline" className="flex-1" onClick={() => { setTicketCount(1); setStep("select"); clearError(); reset(); }}>Buy More</Button>
-              <Button variant="default" className="flex-1" onClick={handleClose}>Done</Button>
-            </div>
-          </CompactStack>
+          <PurchaseReceipt
+            ticketCount={ticketCount}
+            txHash={txHash}
+            sourceTxHash={sourceTxHash}
+            destinationTxHash={destinationTxHash}
+            sourceChain={sourceChain || selectedChain as SourceChainType | undefined}
+            status={status}
+            error={error}
+            walletInfo={walletInfo}
+            walletType={walletType}
+            hasActivePermission={hasActivePermission}
+            isERC7715Supported={isSupported}
+            onBuyMore={() => { setTicketCount(1); setStep("select"); clearError(); reset(); }}
+            onClose={handleClose}
+            onEnableAutoPurchase={() => setShowPermissionModal(true)}
+          />
         );
 
       default:

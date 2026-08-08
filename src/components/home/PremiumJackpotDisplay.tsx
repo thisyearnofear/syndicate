@@ -37,7 +37,6 @@ export default function PremiumJackpotDisplay({ onBuyClick }: PremiumJackpotDisp
       : null;
 
     if (!baseOdds) return "Provably fair draw every 24 hours";
-    
     const x = Math.ceil(baseOdds);
     return `1 in ${x.toLocaleString()} odds per ticket`;
   }, [jackpotStats]);
@@ -48,7 +47,7 @@ export default function PremiumJackpotDisplay({ onBuyClick }: PremiumJackpotDisp
         <div className="text-red-400 mb-4">⚠️ Unable to load jackpot data</div>
         <p className="text-gray-400 text-sm mb-4">The Megapot API is temporarily unavailable</p>
         <Button variant="default" onClick={onBuyClick}>
-          Buy Tickets Anyway
+          Play Megapot
         </Button>
       </div>
     );
@@ -84,7 +83,7 @@ export default function PremiumJackpotDisplay({ onBuyClick }: PremiumJackpotDisp
             </div>
           )}
           <p className="text-lg md:text-xl text-yellow-400 font-semibold mt-2 animate-pulse">
-            {hasValidData ? "Daily onchain draw" : "Provably fair onchain lottery"}
+            {hasValidData ? "Daily onchain draw" : "Provably fair onchain draw"}
           </p>
         </div>
 

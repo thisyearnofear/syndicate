@@ -7,6 +7,7 @@ import { useUnifiedWallet } from "@/hooks";
 import { useToast } from "@/shared/components/ui/Toast";
 import { useSyndicateDeposit } from "@/hooks/useSyndicateDeposit";
 import type { SyndicateInfo } from "@/domains/lottery/types";
+import type { ExecutionState } from "@/services/execution";
 
 interface SyndicateJoinModalProps {
   syndicate: SyndicateInfo;
@@ -15,14 +16,27 @@ interface SyndicateJoinModalProps {
   onSuccess?: () => void;
 }
 
-const DEPOSIT_STATUS_LABELS: Record<string, string> = {
-  checking_allowance: "Checking allowance…",
-  approving: "Approving USDC…",
-  transferring: "Transferring USDC…",
-  delegating: "Delegating tickets…",
-  complete: "Transfer complete",
-  error: "Transfer failed",
-};
+/** Map execution state machine to user-friendly progress label. */
+function getProgressLabel(execution: ExecutionState, legacyStatus: string): string {
+  switch (execution.status) {
+    case 'preparing': return execution.detail ?? 'Preparing…';
+    case 'pending_signature': return 'Waiting for wallet signature…';
+    case 'submitted': return 'Transaction submitted…';
+    case 'confirming': return 'Confirming on-chain…';
+    case 'completed': return 'Transfer complete';
+    case 'failed': return execution.error.userCancelled ? 'Cancelled' : 'Transfer failed';
+    default:
+      // Fall back to legacy status labels during transitions
+      switch (legacyStatus) {
+        case 'checking_allowance': return 'Checking allowance…';
+        case 'approving': return 'Approving USDC…';
+        case 'encrypting': return 'Encrypting deposit…';
+        case 'transferring': return 'Transferring USDC…';
+        case 'delegating': return 'Delegating tickets…';
+        default: return 'Processing…';
+      }
+  }
+}
 
 export default function SyndicateJoinModal({
   syndicate,
@@ -34,7 +48,7 @@ export default function SyndicateJoinModal({
   const [isJoining, setIsJoining] = useState(false);
   const { address, isConnected } = useUnifiedWallet();
   const { addToast } = useToast();
-  const { deposit: depositUsdc, status: depositStatus, reset: resetDeposit } = useSyndicateDeposit();
+  const { deposit: depositUsdc, status: depositStatus, execution, reset: resetDeposit } = useSyndicateDeposit();
 
   const handleJoin = async () => {
     if (!isConnected || !address) {
@@ -148,8 +162,8 @@ export default function SyndicateJoinModal({
           <p className="text-yellow-400 text-xs mb-3 text-center">⚠️ Connect your wallet to join</p>
         )}
         {isJoining && depositStatus !== "idle" && (
-          <p className="text-blue-400 text-xs mb-3 text-center animate-pulse">
-            {DEPOSIT_STATUS_LABELS[depositStatus] ?? "Processing…"}
+          <p className="text-blue-400 text-xs mb-3 text-center animate-pulse" aria-live="polite">
+            {getProgressLabel(execution, depositStatus)}
           </p>
         )}
         <div className="flex gap-3">

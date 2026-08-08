@@ -23,6 +23,8 @@ import { approveAndDepositEncrypted } from '@/services/fhe/fhenixActions';
 import { ERC20_ABI } from '@/abis/erc20';
 import { TOKENS } from '@/config/contracts';
 import { lifecycle } from '@/services/observability';
+import { useExecution } from '@/services/execution';
+import type { ExecutionState } from '@/services/execution';
 
 // PoolTogether TwabDelegator on Base
 const PT_TWAB_DELEGATOR = '0x2d3DaECD9F5502b533Ff72CDb1e1367481F2aEa6' as const;
@@ -61,6 +63,8 @@ export interface UseSyndicateDepositResult {
   approveTxHash?: string;
   delegationTxHash?: string;
   error?: string;
+  /** Typed execution state machine for granular UI control. */
+  execution: ExecutionState;
   deposit: (params: {
     amountUsdc: number;
     userAddress: `0x${string}`;
@@ -77,6 +81,7 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
   const [approveTxHash, setApproveTxHash] = useState<string | undefined>();
   const [delegationTxHash, setDelegationTxHash] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
+  const execution = useExecution();
 
   const {
     walletClient,
@@ -95,7 +100,8 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
     setApproveTxHash(undefined);
     setDelegationTxHash(undefined);
     setError(undefined);
-  }, []);
+    execution.reset();
+  }, [execution]);
 
   const deposit = useCallback(async ({
     amountUsdc,
@@ -158,6 +164,7 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
     setApproveTxHash(undefined);
     setDelegationTxHash(undefined);
 
+    execution.prepare(`Preparing syndicate ${poolType} deposit`);
     lifecycle.emit('vault.deposit_initiated', {
       chain: isFhenix ? 'fhenix_testnet' : 'base',
       chainId: isFhenix ? 84532 : 8453,
@@ -209,6 +216,7 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
       // Approve if needed
       if (currentAllowance < amountWei) {
         setStatus('approving');
+        execution.awaitSignature(isFhenix ? 'fhenix_testnet' : 'base');
         const approveHash = await activeWalletClient.writeContract({
           account: userAddress,
           address: TOKENS.usdc.address,
@@ -223,6 +231,7 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
 
       // Transfer USDC to deposit address
       setStatus('transferring');
+      execution.awaitSignature(isFhenix ? 'fhenix_testnet' : 'base');
       const transferHash = await activeWalletClient.writeContract({
         account: userAddress,
         address: TOKENS.usdc.address,
@@ -270,6 +279,20 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
       }
 
       setStatus('complete');
+      // Complete execution state machine with verified receipt
+      try {
+        const receipt = await activePublicClient.getTransactionReceipt({ hash: transferHash as `0x${string}` });
+        execution.submit(transferHash, isFhenix ? 84532 : 8453);
+        execution.confirm(transferHash, isFhenix ? 84532 : 8453);
+        execution.complete({
+          transactionHash: transferHash,
+          blockNumber: Number(receipt.blockNumber),
+          chainId: isFhenix ? 84532 : 8453,
+          confirmedAt: Date.now(),
+        });
+      } catch {
+        // Receipt re-read failure is non-critical — the tx already confirmed above.
+      }
       lifecycle.emit('vault.deposit_confirmed', {
         chain: isFhenix ? 'fhenix_testnet' : 'base',
         chainId: isFhenix ? 84532 : 8453,
@@ -284,6 +307,8 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
       const message = err instanceof Error ? err.message : String(err);
       setError(message.length > 200 ? message.slice(0, 200) + '…' : message);
       setStatus('error');
+      const userCancelled = message.includes('reject') || message.includes('denied');
+      execution.fail(userCancelled ? 'USER_REJECTED' : 'UNKNOWN', message, { userCancelled, cause: err });
       lifecycle.emit('vault.operation_failed', {
         chain: isFhenix ? 'fhenix_testnet' : 'base',
         chainId: isFhenix ? 84532 : 8453,
@@ -305,5 +330,5 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
     ensureFhenixChain,
   ]);
 
-  return { status, txHash, approveTxHash, delegationTxHash, error, deposit, reset };
+  return { status, txHash, approveTxHash, delegationTxHash, error, execution: execution.state, deposit, reset };
 }
