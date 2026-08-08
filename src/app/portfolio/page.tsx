@@ -214,7 +214,7 @@ export default function PortfolioPage() {
             <p className="text-gray-400 mb-6">
               Connect your wallet to view your syndicate portfolio, contributions, and winnings.
             </p>
-              <Button onClick={() => router.push('/')} className="bg-gradient-to-r from-blue-500 to-purple-500">
+              <Button onClick={() => router.push('/')} variant="premium">
                 Go to Home to Connect
               </Button>
             </CompactCard>

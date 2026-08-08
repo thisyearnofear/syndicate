@@ -12,7 +12,8 @@
  * - PERFORMANT: Optimized interactions, lazy library loading
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
+import { useIsMounted } from "@/hooks/useIsMounted";
 import { Button } from "@/shared/components/ui/Button";
 import { Card } from "@/shared/components/ui/Card";
 import {
@@ -108,7 +109,7 @@ export function WalletConnectionCard({
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useIsMounted();
   const { state } = useWalletContext();
 
   // FIX: Always call hooks in the same order - move handleConnect before the mounted check
@@ -153,12 +154,6 @@ export function WalletConnectionCard({
     setError(null);
     onCancel?.();
   }, [onCancel]);
-
-  // Prevent hydration mismatches by only rendering after mount
-  useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true);
-  }, []); // Empty dependency array to run only once
 
   // NOTE: We intentionally do NOT reset isConnecting in a cleanup effect.
   // A modal re-render or Suspense boundary can briefly unmount this card

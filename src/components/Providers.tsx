@@ -22,7 +22,8 @@ import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getConfig } from "@/config/wagmi";
-import { useMemo, useState, useEffect, ReactNode } from "react";
+import { useMemo, ReactNode } from "react";
+import { useIsMounted } from "@/hooks/useIsMounted";
 
 // Suppress specific console warnings that are not breaking functionality - only on client
 if (typeof window !== 'undefined') {
@@ -58,12 +59,7 @@ if (typeof window !== 'undefined') {
 }
 
 export function Providers({ children }: { children: ReactNode }) {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsMounted(true);
-  }, []);
+  const isMounted = useIsMounted();
 
   // Create QueryClient and config - memoized for stability
   const queryClient = useMemo(() => new QueryClient({

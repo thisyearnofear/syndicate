@@ -19,6 +19,8 @@ export type {
   ConnectOptions,
 } from './useUnifiedWallet';
 
+export { useIsMounted } from './useIsMounted';
+
 export { useUnifiedPurchase } from './useUnifiedPurchase';
 export type {
   PurchaseStatus,

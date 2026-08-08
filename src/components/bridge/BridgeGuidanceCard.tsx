@@ -195,7 +195,7 @@ export function BridgeGuidanceCard({
                 <Button
                     onClick={() => onBridge(amountInput, selectedProtocol)}
                     disabled={!evmConnected || !evmAddress}
-                    className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full gradient-cta text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                     size="lg"
                 >
                     <span className="text-lg mr-2">🌉</span>

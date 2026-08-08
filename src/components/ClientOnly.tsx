@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import { useIsMounted } from '@/hooks/useIsMounted';
 
 /**
  * Prevents children from rendering during SSR.
@@ -11,12 +12,7 @@ import { useState, useEffect, type ReactNode } from 'react';
  * avoiding "Cannot read properties of null (reading 'useContext')" errors.
  */
 export default function ClientOnly({ children }: { children: ReactNode }) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true);
-  }, []);
+  const mounted = useIsMounted();
 
   if (!mounted) {
     return null;

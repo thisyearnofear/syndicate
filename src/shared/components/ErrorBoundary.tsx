@@ -60,7 +60,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </p>
             <button
               onClick={() => window.location.reload()}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105"
+              className="gradient-cta text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105"
             >
               Refresh Page
             </button>

@@ -251,7 +251,7 @@ export function InlineBridgeFlow({
                 <Button
                     onClick={startBridge}
                     size="lg"
-                    className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+                    className="gradient-cta text-white"
                 >
                     Start Bridge
                 </Button>

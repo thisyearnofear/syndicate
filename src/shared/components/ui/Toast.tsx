@@ -19,6 +19,7 @@ import React, {
 } from "react";
 import { X, CircleCheck, AlertCircle, Info, AlertTriangle } from "lucide-react";
 import { Button } from "./Button";
+import { useIsMounted } from "@/hooks/useIsMounted";
 
 export interface Toast {
   id: string;
@@ -178,13 +179,8 @@ export function ToastContainer() {
 // Toast provider
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useIsMounted();
   const [idCounter, setIdCounter] = useState(0);
-
-  useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true);
-  }, []);
 
   const addToast = useCallback(
     (toastData: Omit<Toast, "id">) => {

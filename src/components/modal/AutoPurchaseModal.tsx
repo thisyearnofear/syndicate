@@ -852,7 +852,7 @@ export function AutoPurchaseModal({
             <Button
               onClick={() => setStep("review")}
               disabled={config.amount <= 0}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 py-3 font-semibold text-lg"
+              className="w-full gradient-cta py-3 font-semibold text-lg"
             >
               Review & Approve
             </Button>
@@ -994,7 +994,7 @@ export function AutoPurchaseModal({
               <Button
                 onClick={handleApprove}
                 disabled={isRequesting}
-                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                className="flex-1 gradient-cta"
               >
                 {isRequesting ? (
                   <span className="flex items-center">

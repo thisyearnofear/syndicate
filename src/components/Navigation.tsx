@@ -16,7 +16,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/shared/components/ui/Button';
 import { CompactFlex } from '@/shared/components/premium/CompactLayout';
-import { useUnifiedWallet } from '@/hooks';
+import { useUnifiedWallet, useIsMounted } from '@/hooks';
 import { WalletType } from '@/domains/wallet/types';
 import WalletInfo from './wallet/WalletInfo';
 import UnifiedModal from './modal/UnifiedModal';
@@ -37,12 +37,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
     const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
     const walletPillRef = useRef<HTMLButtonElement>(null);
     const walletDetailsRef = useRef<HTMLDivElement>(null);
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setMounted(true);
-    }, []);
+    const mounted = useIsMounted();
 
     // Recalculate dropdown position when toggling
     const handleWalletStatusClick = useCallback(() => {

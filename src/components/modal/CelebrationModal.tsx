@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { useIsMounted } from '@/hooks/useIsMounted';
 import { X, Ticket, Gift } from 'lucide-react';
 import { ShareModal } from './ShareModal';
 
@@ -18,13 +19,8 @@ interface CelebrationModalProps {
 export default function CelebrationModal({ isOpen, onClose, achievement }: CelebrationModalProps) {
   const [showConfetti, setShowConfetti] = useState(false);
   const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; color: string; delay: number }>>([]);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useIsMounted();
   const [showShareModal, setShowShareModal] = useState(false);
-
-  useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (isOpen && mounted) {

@@ -30,11 +30,11 @@ import React, {
   useReducer,
   useEffect,
   useRef,
-  useState,
   ReactNode,
 } from "react";
 import { useAccount, useDisconnect } from "wagmi";
 import { useCallback } from "react";
+import { useIsMounted } from "@/hooks/useIsMounted";
 import { WalletType } from "@/domains/wallet/types";
 import { logger } from "@/lib/logger";
 
@@ -283,13 +283,7 @@ function getInitialWalletState(): WalletState {
 
 export function WalletProvider({ children }: WalletProviderProps) {
   const [state, dispatch] = useReducer(walletReducer, defaultWalletState, getInitialWalletState);
-  const [isMounted, setIsMounted] = useState(false);
-
-  // Only call wagmi hooks after mount to avoid hydration issues
-  useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsMounted(true);
-  }, []);
+  const isMounted = useIsMounted();
 
   const {
     address,

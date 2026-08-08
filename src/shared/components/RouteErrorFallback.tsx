@@ -63,7 +63,7 @@ export function RouteErrorFallback({
           <button
             type="button"
             onClick={reset}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-2.5 px-5 rounded-xl transition-all"
+            className="gradient-cta text-white font-semibold py-2.5 px-5 rounded-xl transition-all"
           >
             Try again
           </button>

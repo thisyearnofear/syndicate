@@ -452,7 +452,7 @@ export default function BridgePage() {
                           <Button
                             onClick={() => setIsBridging(true)}
                             disabled={!canBridge}
-                            className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-[1.02]"
+                            className="w-full gradient-cta text-white font-semibold text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-[1.02]"
                           >
                             <span className="text-xl mr-2">🌉</span>
                             Bridge {bridgeAmount || "0"} USDC to {selectedStrategyConfig?.name ?? "Vaults"}

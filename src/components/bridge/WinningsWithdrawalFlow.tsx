@@ -389,7 +389,7 @@ export function WinningsWithdrawalFlow({
           {onSuccess && (
             <Button
               onClick={onSuccess}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold py-3"
+              className="w-full gradient-cta text-white font-semibold py-3"
             >
               Continue
             </Button>

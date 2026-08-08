@@ -555,7 +555,7 @@ export function FocusedBridgeFlow({
             disabled={
               !selectedProtocol || !amountInput || parseFloat(amountInput) <= 0
             }
-            className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 gradient-cta text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {selectedProtocol ? (
               <>

@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, Suspense, lazy } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
-import { useUnifiedWallet } from "@/hooks";
+import { useUnifiedWallet, useIsMounted } from "@/hooks";
 import { PRODUCT_MODES, getProductModeById } from "@/config/productModes";
 
 // UI Components
@@ -24,14 +24,9 @@ export default function Home() {
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [selectedProtocol, setSelectedProtocol] = useState<string | undefined>(undefined);
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useIsMounted();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const { isConnected } = useUnifiedWallet();
-
-  useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsMounted(true);
-  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

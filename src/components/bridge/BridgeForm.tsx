@@ -163,7 +163,7 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: BridgeResult)
       <div className="flex flex-col sm:flex-row gap-4">
         <Button
           disabled={!canSubmit}
-          className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 h-12 text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 gradient-cta text-white border-0 h-12 text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={handleBridge}
         >
           {isSubmitting ? (
