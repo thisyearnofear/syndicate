@@ -13,9 +13,9 @@
 | Stacks x402 | Production-oriented | Resume support, error mapping, health tracking, and operator runbook shipped; x402 auto-purchase remains placeholder. |
 | Solana / NEAR / Starknet | Partial | Bridge paths exist but require additional E2E, relayer, and wallet-risk hardening before broad production claims. |
 | TON / Telegram | Paused | Runtime remains gated until the lottery contract is deployed/configured. |
-| Virtuals ACP automation | Live surface | Persisted tasks, cron processor, kill switch, auto-pause, and user management UI. |
+| Virtuals ACP automation | Live surface | Persisted tasks, cron processor, kill switch, auto-pause, user management UI, and server-side guards (rate limit, task cap, amount bounds, audit log). |
 | ERC-7715 / 1Shot automation | Live | Permission-scoped recurring purchase and relayer paths. |
-| X Layer Prize Pool Hook | In progress | M2 contract stack hardened; read-only `/xlayer` dashboard shipped; testnet deployment and write flows pending. See [`docs/X_LAYER.md`](docs/X_LAYER.md). |
+| X Layer Prize Pool Hook | In progress | M2 contract stack hardened; read-only `/xlayer` dashboard shipped; write flow (`useXLayerJoin`) code-complete and gated by capability registry — pending testnet deployment config to enable. See [`docs/X_LAYER.md`](docs/X_LAYER.md). |
 | Verification provider | Noop by design | KYC is opt-in infrastructure, not the default ticket-purchase experience. |
 
 ## Product model
@@ -58,9 +58,15 @@ Important entry points:
 - `src/services/bridges/protocols/` — bridge implementations
 - `src/services/vaults/` — vault providers
 - `src/services/syndicate/poolProviders/` — syndicate providers
+- `src/services/execution/` — receipt-confirmed execution state machine
+- `src/services/observability/` — structured lifecycle event layer
+- `src/services/xlayer/` — X Layer prize pool write flows
 - `src/services/yieldToTicketsService.ts` — yield-to-ticket orchestration
+- `src/config/capabilities.ts` — typed capability registry (feature readiness)
 - `src/hooks/useUnifiedPurchase.ts` — unified purchase flow
+- `src/hooks/useCapability.ts` — React hook for capability-driven UI
 - `src/components/xlayer/PrizePoolDashboard.tsx` — X Layer read-only dashboard
+- `src/app/api/virtuals/tasks/guards.ts` — server-side automation guards
 
 ## Commands
 

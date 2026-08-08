@@ -21,6 +21,9 @@ export type {
 
 export { useIsMounted } from './useIsMounted';
 
+export { useCapability } from './useCapability';
+export type { UseCapabilityResult } from './useCapability';
+
 export { useUnifiedPurchase } from './useUnifiedPurchase';
 export type {
   PurchaseStatus,

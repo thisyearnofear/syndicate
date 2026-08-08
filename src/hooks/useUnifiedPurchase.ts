@@ -9,6 +9,8 @@ import {
   savePendingPurchaseState,
 } from '@/domains/participation/utils/pendingPurchaseState';
 import { solanaWalletService } from '@/services/solanaWalletService';
+import { useExecution } from '@/services/execution';
+import type { ExecutionState } from '@/services/execution';
 const BASE_POLLING_INTERVAL = 5000;
 const MAX_POLLING_INTERVAL = 30000;
 
@@ -36,10 +38,13 @@ export interface PurchaseActions {
   purchase: (request: PurchaseParams, permissionId?: string) => Promise<PurchaseResult>;
   clearError: () => void;
   reset: () => void;
+  /** Typed execution state machine — use for granular UI control. */
+  execution: ExecutionState;
 }
 
 export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
   const { address: connectedAddress, walletType } = useUnifiedWallet();
+  const execution = useExecution();
   const [state, setState] = useState<PurchaseState>({
     isPurchasing: false,
     error: null,
@@ -161,12 +166,14 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
         error: null,
         status: 'checking_balance',
       }));
+      execution.prepare('Checking balance and preparing transaction');
 
       try {
         const userAddress = request.userAddress || connectedAddress;
         if (!userAddress) {
           const message = 'No wallet connected';
           setState((prev) => ({ ...prev, isPurchasing: false, error: message, status: 'error' }));
+          execution.fail('NOT_CONNECTED', message);
           return { success: false, error: { code: 'NOT_CONNECTED', message } };
         }
 
@@ -183,6 +190,7 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
         if (!chain) {
           const message = 'Unable to determine purchase chain';
           setState((prev) => ({ ...prev, isPurchasing: false, error: message, status: 'error' }));
+          execution.fail('UNSUPPORTED_CHAIN', message);
           return { success: false, error: { code: 'UNSUPPORTED_CHAIN', message } };
         }
 
@@ -217,6 +225,7 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
         };
 
         setState((prev) => ({ ...prev, status: 'signing' }));
+        execution.awaitSignature(chain ?? 'base');
 
         let result = await purchaseOrchestrator.executePurchase(fullRequest);
 
@@ -348,6 +357,7 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
           error: message,
           status: 'error',
         }));
+        execution.fail('UNKNOWN', message, { cause: error });
         return {
           success: false,
           error: {
@@ -357,7 +367,7 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
         };
       }
     },
-    [connectedAddress, walletType],
+    [connectedAddress, walletType, execution],
   );
 
   const clearError = useCallback(() => {
@@ -366,6 +376,7 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
 
   const reset = useCallback(() => {
     stopPolling();
+    execution.reset();
     setState({
       isPurchasing: false,
       error: null,
@@ -377,13 +388,14 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
       sourceChain: undefined,
       walletInfo: undefined,
     });
-  }, [stopPolling]);
+  }, [stopPolling, execution]);
 
   return {
     ...state,
     purchase,
     clearError,
     reset,
+    execution: execution.state,
   };
 }
 

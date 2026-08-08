@@ -24,6 +24,12 @@ import {
   type VirtualsTaskFrequency,
 } from '@/lib/db/schema/virtualsTasks';
 import { logger } from '@/lib/logger';
+import {
+  runMutationGuards,
+  validateAmountBounds,
+  isTaskCapReached,
+  auditLog,
+} from './guards';
 
 const VALID_FREQUENCIES: ReadonlySet<VirtualsTaskFrequency> = new Set([
   'hourly', 'daily', 'weekly', 'opportunistic',
@@ -100,6 +106,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'recipientEmail must be a valid email address' }, { status: 400 });
     }
 
+    // ── Server-side guards ──────────────────────────────────────────────────
+    const guard = runMutationGuards({
+      userAddress,
+      operation: 'create',
+      idempotencyKey: `create:${userAddress}:${agentId}:${recipientEmail}`,
+    });
+    if (!guard.allowed) return guard.response!;
+
+    const amountError = validateAmountBounds(amount);
+    if (amountError) {
+      return NextResponse.json({ error: amountError }, { status: 400 });
+    }
+
     const repo = getVirtualsTaskRepository();
 
     // Idempotency: if a task already exists for this (agentId, userAddress,
@@ -108,6 +127,15 @@ export async function POST(req: NextRequest) {
       .find(t => t.agentId === agentId && t.recipientEmail === recipientEmail);
     if (existing) {
       return NextResponse.json({ task: serializeTask(existing), created: false });
+    }
+
+    // Task cap enforcement
+    const allUserTasks = await repo.getTasksByUserAddress(userAddress);
+    if (isTaskCapReached(allUserTasks.length)) {
+      return NextResponse.json(
+        { error: 'Maximum task limit reached. Delete or cancel existing tasks first.' },
+        { status: 403 },
+      );
     }
 
     const now = Date.now();
@@ -131,6 +159,7 @@ export async function POST(req: NextRequest) {
     };
 
     const created = await repo.createTask(record);
+    auditLog({ operation: 'create', taskId: record.id, userAddress, timestamp: now });
     return NextResponse.json({ task: serializeTask(created), created: true }, { status: 201 });
   } catch (error) {
     logger.error('[VirtualsTasks POST] failed', { error: error instanceof Error ? error.message : String(error) });

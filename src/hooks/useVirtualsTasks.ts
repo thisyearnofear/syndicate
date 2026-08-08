@@ -41,7 +41,12 @@ export interface VirtualsTask {
 
 export interface UseVirtualsTasksResult {
   tasks: VirtualsTask[];
+  /** True during any fetch (initial or background). Preserved for backward compat. */
   isLoading: boolean;
+  /** True only when no task data has been loaded yet (first fetch in progress). */
+  isInitialLoading: boolean;
+  /** True during a background poll/refetch when cached data already exists. */
+  isRefreshing: boolean;
   error: string | null;
   refresh: () => Promise<void>;
   createTask: (params: {
@@ -85,6 +90,7 @@ export function useVirtualsTasks(userAddress: Address | null | undefined): UseVi
   const {
     data: tasks,
     isFetching,
+    isLoading: isQueryLoading,
     error: queryError,
     refetch,
   } = useQuery({
@@ -220,6 +226,8 @@ export function useVirtualsTasks(userAddress: Address | null | undefined): UseVi
   return {
     tasks: tasks ?? [],
     isLoading: isFetching,
+    isInitialLoading: isQueryLoading,
+    isRefreshing: isFetching && !isQueryLoading,
     error,
     refresh,
     createTask,

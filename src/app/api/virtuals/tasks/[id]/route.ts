@@ -21,6 +21,11 @@ import {
 } from '@/lib/db/schema/virtualsTasks';
 import { ensureVirtualsTasksTable } from '@/lib/db/repositories/virtualsTaskRepository';
 import { logger } from '@/lib/logger';
+import {
+  runMutationGuards,
+  validateAmountBounds,
+  auditLog,
+} from '../guards';
 
 const VALID_FREQUENCIES: ReadonlySet<VirtualsTaskFrequency> = new Set([
   'hourly', 'daily', 'weekly', 'opportunistic',
@@ -118,6 +123,21 @@ export async function PATCH(
       return NextResponse.json({ error: 'recipientEmail must be a valid email address' }, { status: 400 });
     }
 
+    // ── Server-side guards ──────────────────────────────────────────────────
+    const guard = runMutationGuards({
+      userAddress,
+      operation: 'update',
+      idempotencyKey: `update:${id}:${userAddress}:${Date.now().toString(36).slice(0, -1)}`,
+    });
+    if (!guard.allowed) return guard.response!;
+
+    if (amount !== undefined) {
+      const amountError = validateAmountBounds(amount);
+      if (amountError) {
+        return NextResponse.json({ error: amountError }, { status: 400 });
+      }
+    }
+
     const repo = getVirtualsTaskRepository();
     const existing = await repo.getTask(id);
     if (!existing) {
@@ -150,6 +170,7 @@ export async function PATCH(
     }
 
     const updated = await repo.updateTask(id, updates);
+    auditLog({ operation: 'update', taskId: id, userAddress, changes: updates, timestamp: Date.now() });
     return NextResponse.json({ task: serializeTask(updated) });
   } catch (error) {
     logger.error('[VirtualsTasksId PATCH] failed', { error: error instanceof Error ? error.message : String(error) });
@@ -178,6 +199,14 @@ export async function DELETE(
       return NextResponse.json({ error: 'userAddress query param is required' }, { status: 400 });
     }
 
+    // ── Server-side guards ──────────────────────────────────────────────────
+    const guard = runMutationGuards({
+      userAddress,
+      operation: 'delete',
+      idempotencyKey: `delete:${id}:${userAddress}`,
+    });
+    if (!guard.allowed) return guard.response!;
+
     const repo = getVirtualsTaskRepository();
     const existing = await repo.getTask(id);
     if (!existing) {
@@ -192,6 +221,7 @@ export async function DELETE(
       status: 'cancelled',
     });
 
+    auditLog({ operation: 'delete', taskId: id, userAddress, timestamp: Date.now() });
     return NextResponse.json({ ok: true });
   } catch (error) {
     logger.error('[VirtualsTasksId DELETE] failed', { error: error instanceof Error ? error.message : String(error) });

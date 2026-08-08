@@ -22,7 +22,7 @@ import WalletInfo from './wallet/WalletInfo';
 import UnifiedModal from './modal/UnifiedModal';
 import WalletConnectionOptions from './wallet/WalletConnectionOptions';
 import { Ticket, Users, TrendingUp, Menu, X, ArrowLeftRight, LayoutDashboard, Settings, Sparkles } from 'lucide-react';
-import { XLAYER_HOOK_IS_CONFIGURED } from '@/config/xlayer';
+import { isNavVisible, getAvailabilityMessage } from '@/config/capabilities';
 
 interface NavigationProps {
     className?: string;
@@ -121,15 +121,14 @@ export default function Navigation({ className = '' }: NavigationProps) {
             active: pathname === '/bridge',
             title: 'Move funds into the Base-native experience',
         },
-        // X Layer is an experimental testnet surface — keep it out of primary
-        // navigation until a real hook deployment is configured.
-        ...(XLAYER_HOOK_IS_CONFIGURED
+        // X Layer visibility driven by the capability registry.
+        ...(isNavVisible('xlayer_prize_pool')
             ? [{
                 href: '/xlayer',
                 label: 'X Layer',
                 icon: Sparkles,
                 active: pathname === '/xlayer',
-                title: 'Explore the experimental X Layer prize pool',
+                title: getAvailabilityMessage('xlayer_prize_pool') ?? 'Explore the experimental X Layer prize pool',
             }]
             : []),
         {

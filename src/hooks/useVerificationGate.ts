@@ -36,7 +36,12 @@ import {
 
 export interface UseVerificationGateResult {
   allowed: boolean;
+  /** True during any fetch (initial or background). Preserved for backward compat. */
   isLoading: boolean;
+  /** True only when no gate data has been loaded yet (first evaluation in progress). */
+  isInitialLoading: boolean;
+  /** True during a background refetch when cached evaluation already exists. */
+  isRefreshing: boolean;
   error: Error | null;
   status: VerificationStatus | null;
   requirement: VerificationRequirement | null;
@@ -75,6 +80,7 @@ export function useVerificationGate(context: VerificationContext): UseVerificati
   const {
     data,
     isFetching,
+    isLoading: isQueryLoading,
     error,
     refetch,
   } = useQuery({
@@ -108,6 +114,8 @@ export function useVerificationGate(context: VerificationContext): UseVerificati
     return {
       ...BLOCKED_ON_ERROR_STATE,
       isLoading: isFetching,
+      isInitialLoading: isQueryLoading,
+      isRefreshing: isFetching && !isQueryLoading,
       error: error instanceof Error ? error : new Error(String(error)),
       refresh,
     };
@@ -117,6 +125,8 @@ export function useVerificationGate(context: VerificationContext): UseVerificati
     ...EMPTY_STATE,
     ...data,
     isLoading: isFetching,
+    isInitialLoading: isQueryLoading,
+    isRefreshing: isFetching && !isQueryLoading,
     error: null,
     refresh,
   };
