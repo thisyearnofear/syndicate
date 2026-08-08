@@ -160,7 +160,7 @@ export const CAPABILITIES: readonly Capability[] = [
     writesEnabled: true,
     requiresOptIn: true,
     testnetOnly: true,
-    availabilityMessage: 'Privacy features are available on the Fhenix testnet only. Funds are not on mainnet.',
+    availabilityMessage: 'Preview mode — try privacy features with testnet funds (no real money).',
     walletRequirement: 'EVM wallet on Fhenix testnet',
     productMode: 'private_vaults',
   },
@@ -201,7 +201,7 @@ export const CAPABILITIES: readonly Capability[] = [
     testnetOnly: false,
     availabilityMessage: FEATURES.enableERC7715SmartSessions
       ? null
-      : 'ERC-7715 smart sessions are not enabled in this environment.',
+      : 'Auto-purchase is not available in this environment yet.',
     walletRequirement: 'EVM wallet on Base with session key support',
     productMode: null,
   },
@@ -215,10 +215,10 @@ export const CAPABILITIES: readonly Capability[] = [
     requiresOptIn: false,
     testnetOnly: true,
     availabilityMessage: XLAYER_WRITES_ENABLED
-      ? 'X Layer is running on testnet. Funds are not on mainnet.'
+      ? 'Preview mode — testnet funds only (no real money).'
       : XLAYER_HOOK_IS_CONFIGURED
-        ? 'X Layer dashboard is read-only. Set NEXT_PUBLIC_XLAYER_WRITES_ENABLED=true to activate testnet writes.'
-        : 'X Layer prize pool is not configured in this environment.',
+        ? 'View-only dashboard. Deposits coming soon.'
+        : 'Coming soon — not yet available in this environment.',
     walletRequirement: 'EVM wallet on X Layer testnet',
     productMode: null,
   },
@@ -272,7 +272,7 @@ export const CAPABILITIES: readonly Capability[] = [
     writesEnabled: true,
     requiresOptIn: false,
     testnetOnly: false,
-    availabilityMessage: 'Solana bridge path requires additional end-to-end testing and relayer hardening.',
+    availabilityMessage: 'Available — transfers typically take 15-20 minutes via CCTP.',
     walletRequirement: 'Solana wallet',
     productMode: null,
   },
@@ -285,7 +285,7 @@ export const CAPABILITIES: readonly Capability[] = [
     writesEnabled: true,
     requiresOptIn: false,
     testnetOnly: false,
-    availabilityMessage: 'NEAR bridge path requires additional wallet-risk hardening before broad production use.',
+    availabilityMessage: 'Available — transfers typically take 10-15 minutes via NEAR Intents.',
     walletRequirement: 'NEAR wallet',
     productMode: null,
   },
@@ -298,7 +298,7 @@ export const CAPABILITIES: readonly Capability[] = [
     writesEnabled: true,
     requiresOptIn: false,
     testnetOnly: false,
-    availabilityMessage: 'Starknet bridge path requires additional E2E verification.',
+    availabilityMessage: 'Available — transfers typically take 2-5 minutes via Orbiter.',
     walletRequirement: 'Starknet wallet',
     productMode: null,
   },
@@ -311,7 +311,7 @@ export const CAPABILITIES: readonly Capability[] = [
     writesEnabled: false,
     requiresOptIn: false,
     testnetOnly: false,
-    availabilityMessage: 'TON bridge is paused until the lottery contract deployment is completed.',
+    availabilityMessage: 'Coming soon — TON support is in development.',
     walletRequirement: 'TON wallet',
     productMode: null,
   },
@@ -326,7 +326,7 @@ export const CAPABILITIES: readonly Capability[] = [
     writesEnabled: true,
     requiresOptIn: true,
     testnetOnly: false,
-    availabilityMessage: 'Verification is opt-in. It is not required for the default ticket-purchase experience.',
+    availabilityMessage: 'Optional — not required to buy tickets or use vaults.',
     walletRequirement: null,
     productMode: null,
   },

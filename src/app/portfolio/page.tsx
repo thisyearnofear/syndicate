@@ -37,6 +37,8 @@ import { useTicketHistory } from '@/hooks/useTicketHistory';
 import type { BridgeActivityRecord } from '@/utils/bridgeStateManager';
 import type { VaultDepositActivityRecord } from '@/utils/vaultActivityManager';
 import Link from 'next/link';
+import { CountUpText } from '@/shared/components/ui/CountUpText';
+import { YieldActionPrompt } from '@/components/portfolio/YieldActionPrompt';
 import {
   BridgeActivityCard,
   BridgeActivityRow,
@@ -390,7 +392,9 @@ export default function PortfolioPage() {
               <Wallet className="w-5 h-5 text-green-400" />
               <span className="text-sm text-gray-400">Total Deposited</span>
             </div>
-            <p className="text-2xl font-bold text-white">{formatCurrency(combinedTotalDeposited)}</p>
+            <p className="text-2xl font-bold text-white">
+              <CountUpText value={Math.round(combinedTotalDeposited)} prefix="$" duration={1200} />
+            </p>
             <p className="text-xs text-gray-500">
               {syndicates.length} syndicate{syndicates.length !== 1 ? 's' : ''} + {vaultPositions.length} vault{vaultPositions.length !== 1 ? 's' : ''}
             </p>
@@ -400,7 +404,9 @@ export default function PortfolioPage() {
               <Trophy className="w-5 h-5 text-yellow-400" />
               <span className="text-sm text-gray-400">Winnings</span>
             </div>
-            <p className="text-2xl font-bold text-green-400">{formatCurrency(summary.totalWinnings)}</p>
+            <p className="text-2xl font-bold text-green-400">
+              <CountUpText value={Math.round(summary.totalWinnings)} prefix="$" duration={1200} />
+            </p>
             <p className="text-xs text-gray-500">from prize distributions</p>
           </CompactCard>
           <CompactCard variant="glass" padding="sm" hover={false} className="rounded-xl border border-white/20">
@@ -408,7 +414,9 @@ export default function PortfolioPage() {
               <TrendingUp className="w-5 h-5 text-blue-400" />
               <span className="text-sm text-gray-400">Total Yield</span>
             </div>
-            <p className="text-2xl font-bold text-blue-400">{formatCurrency(combinedTotalYield)}</p>
+            <p className="text-2xl font-bold text-blue-400">
+              <CountUpText value={Math.round(combinedTotalYield)} prefix="$" duration={1200} />
+            </p>
             <p className="text-xs text-gray-500">
               ${summary.totalYield.toFixed(2)} syndicates + ${vaultTotalYield.toFixed(2)} vaults
             </p>
@@ -418,7 +426,9 @@ export default function PortfolioPage() {
               <ChartPie className="w-5 h-5 text-purple-400" />
               <span className="text-sm text-gray-400">Portfolio Value</span>
             </div>
-            <p className="text-2xl font-bold text-white">{formatCurrency(combinedTotalValue)}</p>
+            <p className="text-2xl font-bold text-white">
+              <CountUpText value={Math.round(combinedTotalValue)} prefix="$" duration={1500} enableHover />
+            </p>
             <p className="text-xs text-gray-500">
               {combinedTotalDeposited > 0 
                 ? `+${formatPercent((combinedTotalValue / combinedTotalDeposited - 1) * 100)}`
@@ -426,6 +436,17 @@ export default function PortfolioPage() {
             </p>
           </CompactCard>
         </div>
+
+          {/* Yield Action Prompt — shows when user has accrued yield */}
+          <YieldActionPrompt
+            yieldAmount={combinedTotalYield}
+            vaultCount={vaultPositions.length}
+            onConvert={() => {
+              // Navigate to yield-to-tickets flow
+              window.location.href = '/vaults';
+            }}
+            className="mb-6"
+          />
 
           {/* ── Overview Tab ─────────────────────────────────────────────── */}
           <TabsContent value="overview">

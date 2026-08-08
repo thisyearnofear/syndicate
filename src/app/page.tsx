@@ -6,6 +6,7 @@ import { ArrowRight } from "lucide-react";
 import { useUnifiedWallet, useIsMounted } from "@/hooks";
 import { PRODUCT_MODES, getProductModeById } from "@/config/productModes";
 import { getCapability, getCtaState, type CapabilityId } from "@/config/capabilities";
+import { QuickPurchase } from "@/components/purchase/QuickPurchase";
 
 // UI Components
 import { Button } from "@/shared/components/ui/Button";
@@ -89,7 +90,7 @@ export default function Home() {
       {/* Main content container - centered and clean */}
       <div className="relative z-10 container mx-auto px-4 py-8 md:py-16 max-w-7xl">
         
-        {/* Hero Section - Centered */}
+        {/* Hero Section - Single clear action */}
         <section className="text-center mb-16 space-y-8">
           {/* Brand */}
           <div className="animate-fade-in-up">
@@ -98,65 +99,46 @@ export default function Home() {
             </h1>
           </div>
 
-          {/* Value Proposition */}
-          <div className="animate-fade-in-up space-y-4 max-w-3xl mx-auto">
+          {/* Single clear value prop */}
+          <div className="animate-fade-in-up space-y-3 max-w-2xl mx-auto">
             <h2 className="text-2xl md:text-4xl font-bold text-white leading-tight">
-              Your capital stays yours. Your yield buys your tickets.
+              Enter for $1. Keep your principal forever.
             </h2>
-            <p className="text-lg md:text-xl text-gray-300 leading-relaxed">
-              Deposit into yield vaults on Base, keep your principal, and let the earnings convert into Megapot tickets automatically — or buy tickets directly, or pool capital with a group. Privacy modes keep balances encrypted when you want them.
+            <p className="text-base md:text-lg text-gray-400 leading-relaxed">
+              Buy a ticket directly, or deposit into yield vaults and let earnings buy tickets for you.
             </p>
           </div>
 
-          {/* Primary CTAs */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-scale-in">
-            <Button
-              variant="premium"
-              size="lg"
-              className="shadow-2xl hover:shadow-brand-500/30 border border-brand-400/30 text-lg px-10 py-6"
-              onClick={handleCreatePrivateVault}
-            >
-              Coordinate Capital
-            </Button>
-            <div className="relative">
-              <span className="absolute -top-3 -right-3 z-10 rounded-full bg-amber-500 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-lg shadow-amber-500/30 animate-float">
-                ~2 min
-              </span>
-              <Button
-                variant="default"
-                size="lg"
-                className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-2xl hover:shadow-emerald-500/30 border border-emerald-400/30 text-lg px-10 py-6 group"
-                onClick={handleSeePrivateVaults}
-              >
-                <span className="mr-2">📈</span>
-                Grow with Yield
-                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-              </Button>
-            </div>
-            <Button
-              variant="outline"
-              size="lg"
-              className="border-white/20 bg-white/5 text-white hover:bg-white/10 text-lg px-10 py-6"
-              onClick={() => handlePurchaseAction('megapot')}
-            >
-              Play Megapot
-            </Button>
-          </div>
-
-          {/* Social proof badges */}
-          <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-gray-400">
-            <span className="flex items-center gap-2">
-              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              Built on Base
+          {/* Trust indicators — minimal */}
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-gray-500 animate-fade-in">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+              Live on Base
             </span>
             <span>•</span>
-            <span>🎫 Principal preserved</span>
+            <span>Draw daily at 17:00 UTC</span>
             <span>•</span>
-            <span>📈 Yield → tickets</span>
-            <span>•</span>
-            <span>👥 Group coordination</span>
-            <span>•</span>
-            <span>🔒 Privacy modes</span>
+            <span>Non-custodial</span>
+          </div>
+
+          {/* Secondary paths — revealed below the fold */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center pt-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-400 hover:text-white border border-white/10 hover:border-white/20 px-6"
+              onClick={handleSeePrivateVaults}
+            >
+              <span className="mr-1.5">📈</span> Grow with Yield
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-400 hover:text-white border border-white/10 hover:border-white/20 px-6"
+              onClick={handleCreatePrivateVault}
+            >
+              <span className="mr-1.5">👥</span> Coordinate Capital
+            </Button>
           </div>
         </section>
 
@@ -180,6 +162,11 @@ export default function Home() {
               <PremiumJackpotDisplay onBuyClick={handleBuyClick} />
             </div>
           </Suspense>
+
+          {/* Inline Quick Purchase — no modal needed for the default flow */}
+          <div className="max-w-sm mx-auto mt-8">
+            <QuickPurchase onAdvanced={() => handlePurchaseAction('megapot')} />
+          </div>
         </section>
 
         {/* All Prizes - Centered */}

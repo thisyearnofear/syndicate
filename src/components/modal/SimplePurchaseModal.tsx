@@ -226,8 +226,7 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
     });
 
     if (result.success) {
-      const isCrossChain = result.sourceTxHash && selectedChain && selectedChain !== "base" && selectedChain !== "ethereum";
-      if (!isCrossChain) setShowCelebration(true);
+      setShowCelebration(true);
       setStep("success");
     } else {
       setStep("select");
@@ -589,7 +588,7 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
         {renderStep()}
       </DialogContent>
       <Suspense fallback={null}>
-        <CelebrationModal isOpen={showCelebration} onClose={() => setShowCelebration(false)} achievement={{ title: "Purchase Successful!", message: `You've purchased ${ticketCount} lottery ticket${ticketCount !== 1 ? "s" : ""}. Good luck!`, icon: "🎉", tickets: ticketCount }} />
+        <CelebrationModal isOpen={showCelebration} onClose={() => setShowCelebration(false)} achievement={{ title: "You're In!", message: `${ticketCount} ticket${ticketCount !== 1 ? "s" : ""} entered for the next draw. Good luck!`, icon: "🎉", tickets: ticketCount }} />
       </Suspense>
       <AutoPurchaseModal isOpen={showPermissionModal} onClose={() => setShowPermissionModal(false)} onSuccess={() => setShowPermissionModal(false)} />
     </Dialog>

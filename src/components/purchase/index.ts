@@ -1,0 +1,1 @@
+export { QuickPurchase } from './QuickPurchase';
