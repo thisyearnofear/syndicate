@@ -31,6 +31,7 @@ import { VirtualsAgentPanel } from "@/components/settings/VirtualsAgentPanel";
 import { AUTOMATION_MODE_META } from "@/config/automationModes";
 import { getCapability } from "@/config/capabilities";
 import { PermissionedAutopilotPanel } from "@/components/automation/PermissionedAutopilotPanel";
+import { BaseAgentPanel } from "@/components/automation/BaseAgentPanel";
 
 type HubStrategy = 'scheduled' | 'autonomous' | 'no-loss' | 'yield-autopilot';
 
@@ -102,6 +103,7 @@ export function AutoPurchaseSettings() {
         </Button>
       </div>
 
+      <BaseAgentPanel />
       <PermissionedAutopilotPanel />
 
       {/* AGENT TIERS */}

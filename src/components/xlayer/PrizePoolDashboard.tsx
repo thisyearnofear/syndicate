@@ -28,8 +28,9 @@ import {
 } from "@/shared/components/premium/CompactLayout";
 import { useUnifiedWallet } from "@/hooks/useUnifiedWallet";
 import { useCapability } from "@/hooks/useCapability";
-import { useXLayerJoin } from "@/services/xlayer";
+import { useXLayerJoin, useXLayerDeposit } from "@/services/xlayer";
 import { XLayerAgentPanel } from "@/components/xlayer/XLayerAgentPanel";
+import { XLayerDemoLoopGuide } from "@/components/xlayer/XLayerDemoLoopGuide";
 import {
   XLAYER_HOOK_ABI,
   XLAYER_HOOK_IS_CONFIGURED,
@@ -346,7 +347,16 @@ export function PrizePoolDashboard() {
             </CompactCard>
           </div>
 
-          {/* Join Pool CTA — only visible when writes are enabled */}
+          {/* Demo loop + write surfaces (capability-gated) */}
+          <XLayerDemoLoopGuide
+            potBalanceUsdc={potBalance !== undefined ? Number(formatUnits(potBalance, 6)) : 0}
+            minPotUsdc={minPotForDraw !== undefined ? Number(formatUnits(minPotForDraw, 6)) : 0}
+            totalShares={totalShares !== undefined ? Number(formatUnits(totalShares, 6)) : 0}
+            drawOpen={Boolean(drawState?.[0])}
+            drawResolved={Boolean(drawState?.[1])}
+            drawClaimed={Boolean(drawState?.[2])}
+          />
+          <DepositPrincipalSection />
           <JoinPoolSection />
 
           <XLayerAgentPanel
@@ -376,7 +386,7 @@ export function PrizePoolDashboard() {
 
           <div className="flex flex-col gap-4 border-t border-white/[0.06] pt-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
             <span className="inline-flex items-center gap-2"><Clock3 className="h-3.5 w-3.5" /> Testnet demo · no real-value draws</span>
-            <span>Read-only until deployment addresses are configured</span>
+            <span>Base remains the product home · X Layer is the experimental second engine</span>
           </div>
 
           <div className="grid gap-3 border-t border-white/[0.06] pt-5 sm:grid-cols-3">
@@ -402,7 +412,89 @@ export function PrizePoolDashboard() {
   );
 }
 
-// ─── Join Pool Section (capability-gated) ─────────────────────────────────────
+// ─── Deposit principal (capability-gated) ─────────────────────────────────────
+
+function DepositPrincipalSection() {
+  const { canWrite, message } = useCapability('xlayer_prize_pool');
+  const { deposit, execution, isActive, isSuccess, isError, reset } = useXLayerDeposit();
+  const [amount, setAmount] = useState('5');
+  const [error, setError] = useState<string | null>(null);
+
+  if (!canWrite) return null;
+
+  const handleDeposit = async () => {
+    setError(null);
+    const parsed = parseFloat(amount);
+    if (!parsed || parsed <= 0) {
+      setError('Enter a valid USDC amount');
+      return;
+    }
+    const result = await deposit({ amountUsdc: amount });
+    if (!result.success && result.error) setError(result.error);
+  };
+
+  return (
+    <CompactCard variant="glass" padding="lg" hover={false} className="border-cyan-400/20 bg-cyan-500/[0.05]">
+      <div className="flex items-center gap-2 text-cyan-300 mb-4">
+        <LockKeyhole className="h-4 w-4" />
+        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Deposit principal</span>
+        <span className="ml-auto rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] text-amber-300 font-semibold">Testnet</span>
+      </div>
+
+      {isSuccess ? (
+        <div className="text-center py-4">
+          <p className="text-white font-semibold">Principal deposited</p>
+          <p className="text-xs text-slate-400 mt-1">Shares are active for draw eligibility. Pot still needs surcharge or fundPot.</p>
+          <Button variant="glass" size="sm" className="mt-4" onClick={reset}>Deposit again</Button>
+        </div>
+      ) : (
+        <>
+          <p className="text-sm text-slate-300 mb-4">
+            Lossless path: USDC becomes shares. Your principal stays redeemable between epochs.
+          </p>
+          {message && <p className="text-xs text-amber-300/80 mb-3">{message}</p>}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-3">
+            <div className="flex-1">
+              <label className="mb-1 block text-xs text-slate-400">Amount (USDC)</label>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                inputMode="decimal"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                disabled={isActive}
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-3 text-base text-white focus:border-cyan-400/50 focus:outline-none disabled:opacity-50 sm:py-2 sm:text-sm"
+                placeholder="5.00"
+              />
+            </div>
+            <Button
+              variant="default"
+              size="sm"
+              className="min-h-12 w-full bg-gradient-to-r from-cyan-500 to-blue-600 px-6 text-white touch-manipulation sm:min-h-11 sm:w-auto"
+              onClick={handleDeposit}
+              disabled={isActive}
+            >
+              {isActive ? (
+                <><Loader className="mr-1.5 h-3 w-3 animate-spin" />Depositing…</>
+              ) : (
+                'Deposit'
+              )}
+            </Button>
+          </div>
+          {error && <p className="text-xs text-red-400 mt-2" role="alert">{error}</p>}
+          {isError && execution.status === 'failed' && !execution.error.userCancelled && (
+            <Button variant="ghost" size="sm" className="mt-3 text-xs text-red-300" onClick={() => { reset(); setError(null); }}>
+              Try again
+            </Button>
+          )}
+        </>
+      )}
+    </CompactCard>
+  );
+}
+
+// ─── Join via swap (capability-gated) ─────────────────────────────────────────
 
 function JoinPoolSection() {
   const { canWrite, message } = useCapability('xlayer_prize_pool');
@@ -430,21 +522,20 @@ function JoinPoolSection() {
     <CompactCard variant="glass" padding="lg" hover={false} className="border-emerald-400/20 bg-emerald-500/[0.05]">
       <div className="flex items-center gap-2 text-emerald-300 mb-4">
         <Sparkles className="h-4 w-4" />
-        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Join Prize Pool</span>
+        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Join via swap</span>
         <span className="ml-auto rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] text-amber-300 font-semibold">Testnet</span>
       </div>
 
       {isSuccess ? (
         <div className="text-center py-4">
-          <div className="text-3xl mb-2">🎉</div>
-          <p className="text-white font-semibold">Joined the prize pool!</p>
-          <p className="text-xs text-slate-400 mt-1">Your shares are active for the next draw.</p>
-          <Button variant="glass" size="sm" className="mt-4" onClick={reset}>Join Again</Button>
+          <p className="text-white font-semibold">Joined via swap</p>
+          <p className="text-xs text-slate-400 mt-1">Shares + surcharge contribution confirmed.</p>
+          <Button variant="glass" size="sm" className="mt-4" onClick={reset}>Swap again</Button>
         </div>
       ) : (
         <>
           <p className="text-sm text-slate-300 mb-4">
-            Deposit USDC to receive shares. Your principal stays intact — the prize pot grows from swap surcharges.
+            Route a USDC swap through the prize-pool router. Surcharge accrues to the pot; you receive shares.
           </p>
           {message && (
             <p className="text-xs text-amber-300/80 mb-3">{message}</p>
@@ -474,7 +565,7 @@ function JoinPoolSection() {
               {isActive ? (
                 <><Loader className="mr-1.5 h-3 w-3 animate-spin" />Joining...</>
               ) : (
-                'Join Pool'
+                'Join via swap'
               )}
             </Button>
           </div>

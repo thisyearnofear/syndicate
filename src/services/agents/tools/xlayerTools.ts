@@ -2,6 +2,7 @@
  * X Layer Prize Pool tools — Build X AI Season surface.
  *
  * Every mutating tool requires HITL + receipt. Reads are capability-gated.
+ * deposit / fundPot additionally require the write capability gate.
  */
 
 import { getAgentTool, registerAgentTool } from './registry';
@@ -28,6 +29,29 @@ export const XLAYER_AGENT_TOOLS: AgentToolDefinition[] = [
     requiresHitl: false,
     requiresReceipt: false,
     readOnly: true,
+  },
+  {
+    id: 'xlayer.deposit',
+    label: 'Deposit principal',
+    description:
+      'Deposit USDC for lossless draw shares. Principal is redeemable between epochs (testnet demo cap applies).',
+    capabilityId: 'xlayer_prize_pool',
+    chains: ['xlayer_testnet'],
+    requiresHitl: true,
+    requiresReceipt: true,
+    readOnly: false,
+    requiresWriteGate: true,
+  },
+  {
+    id: 'xlayer.fundPot',
+    label: 'Fund pot',
+    description: 'Owner-only seed of the prize pot (demo path until swap surcharges accrue).',
+    capabilityId: 'xlayer_prize_pool',
+    chains: ['xlayer_testnet'],
+    requiresHitl: true,
+    requiresReceipt: true,
+    readOnly: false,
+    requiresWriteGate: true,
   },
   {
     id: 'xlayer.openDraw',
@@ -84,9 +108,20 @@ export function isXLayerToolId(id: string): id is XLayerToolId {
 }
 
 export function actionToToolId(
-  action: 'wait' | 'open_draw' | 'set_oracle' | 'fulfill_randomness' | 'claim_prize',
+  action:
+    | 'wait'
+    | 'deposit'
+    | 'fund_pot'
+    | 'open_draw'
+    | 'set_oracle'
+    | 'fulfill_randomness'
+    | 'claim_prize',
 ): AgentToolId | null {
   switch (action) {
+    case 'deposit':
+      return 'xlayer.deposit';
+    case 'fund_pot':
+      return 'xlayer.fundPot';
     case 'open_draw':
       return 'xlayer.openDraw';
     case 'set_oracle':

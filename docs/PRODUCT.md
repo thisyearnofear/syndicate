@@ -50,4 +50,4 @@ ERC-7715, x402, 1Shot, and Virtuals provide bounded execution paths. The user re
 
 X Layer extends the same “keep your capital, use the earnings” idea to a DEX-native game. A Uniswap v4 hook collects a real trading surcharge into a prize pot, snapshots depositor shares, and selects a weighted winner. The Base/Megapot engine remains unchanged; X Layer is an additional experimental engine.
 
-The current X Layer app slice is read-only at `/xlayer`. See [`X_LAYER.md`](X_LAYER.md).
+The current X Layer app slice at `/xlayer` supports a testnet demo loop (deposit / swap join / fundPot / agent HITL draw). Writes require `NEXT_PUBLIC_XLAYER_WRITES_ENABLED=true`. See [`X_LAYER.md`](X_LAYER.md).

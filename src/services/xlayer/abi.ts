@@ -22,6 +22,20 @@ export const XLAYER_ROUTER_ABI = [
 export const XLAYER_KEEPER_HOOK_ABI = [
   {
     type: 'function',
+    name: 'deposit',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'amount', type: 'uint256' }],
+    outputs: [],
+  },
+  {
+    type: 'function',
+    name: 'fundPot',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'amount', type: 'uint256' }],
+    outputs: [],
+  },
+  {
+    type: 'function',
     name: 'openDraw',
     stateMutability: 'nonpayable',
     inputs: [],

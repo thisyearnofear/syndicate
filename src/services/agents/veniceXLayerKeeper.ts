@@ -15,6 +15,8 @@
 
 export type XLayerKeeperAction =
   | 'wait'
+  | 'deposit'
+  | 'fund_pot'
   | 'open_draw'
   | 'set_oracle'
   | 'fulfill_randomness'
@@ -35,6 +37,10 @@ export interface XLayerKeeperPoolState {
   epochId: number;
   connectedIsWinner?: boolean;
   oracleOwnerMatchesWallet?: boolean;
+  /** Connected wallet is PrizePoolHook owner (fundPot). */
+  hookOwnerMatchesWallet?: boolean;
+  /** Writes capability enabled for deposit / fundPot. */
+  writesEnabled?: boolean;
 }
 
 export interface XLayerKeeperRecommendation {
@@ -43,6 +49,8 @@ export interface XLayerKeeperRecommendation {
   recommendedSurchargeBps: number;
   surchargeChangeAllowedNow: false;
   demoOracleValue: string | null;
+  /** Human-readable USDC amount for deposit / fund_pot. */
+  amountUsdc: string | null;
   rationale: string[];
   warnings: string[];
   source: 'venice' | 'heuristic';
@@ -100,17 +108,27 @@ class VeniceXLayerKeeperAdvisor {
                   'shouldOpenDraw',
                   'recommendedSurchargeBps',
                   'demoOracleValue',
+                  'amountUsdc',
                   'rationale',
                   'warnings',
                 ],
                 properties: {
                   action: {
                     type: 'string',
-                    enum: ['wait', 'open_draw', 'set_oracle', 'fulfill_randomness', 'claim_prize'],
+                    enum: [
+                      'wait',
+                      'deposit',
+                      'fund_pot',
+                      'open_draw',
+                      'set_oracle',
+                      'fulfill_randomness',
+                      'claim_prize',
+                    ],
                   },
                   shouldOpenDraw: { type: 'boolean' },
                   recommendedSurchargeBps: { type: 'number' },
                   demoOracleValue: { type: ['string', 'null'] },
+                  amountUsdc: { type: ['string', 'null'] },
                   rationale: { type: 'array', items: { type: 'string' } },
                   warnings: { type: 'array', items: { type: 'string' } },
                 },
@@ -123,6 +141,7 @@ class VeniceXLayerKeeperAdvisor {
               content: [
                 'You are the Syndicate X Layer prize-pool keeper advisor.',
                 'Recommend the next keeper action for a Uniswap v4 hook lottery on X Layer testnet.',
+                'deposit adds lossless shares; fundPot is owner-only seeding when the pot is empty.',
                 'openDraw and fulfillRandomness are permissionless; setNextValue on the demo oracle is owner-only.',
                 'Surcharge changes require a two-day timelock after the pool is bound — never claim they can apply immediately.',
                 'The SimpleRandomnessOracle is testnet-demo only and not provably fair.',
@@ -138,6 +157,7 @@ class VeniceXLayerKeeperAdvisor {
                   action: 'Prefer the heuristic action unless state clearly requires wait.',
                   recommendedSurchargeBps: `Integer 0–${MAX_SURCHARGE_BPS}. Advisory only.`,
                   demoOracleValue: 'Non-zero decimal string when action is set_oracle or fulfill_randomness; otherwise null.',
+                  amountUsdc: 'Human USDC amount string for deposit or fund_pot (≤100); otherwise null.',
                 },
               }),
             },
@@ -168,6 +188,9 @@ class VeniceXLayerKeeperAdvisor {
 
 export const veniceXLayerKeeperAdvisor = new VeniceXLayerKeeperAdvisor();
 
+const DEMO_DEPOSIT_USDC = '5';
+const DEMO_AMOUNT_CAP = 100;
+
 /** Exported for unit tests. */
 export function buildHeuristicRecommendation(state: XLayerKeeperPoolState): XLayerKeeperRecommendation {
   const cooldownOk =
@@ -175,8 +198,10 @@ export function buildHeuristicRecommendation(state: XLayerKeeperPoolState): XLay
     state.secondsSinceLastDraw >= state.drawCooldownSeconds;
   const potOk = state.potBalanceUsdc >= state.minPotForDrawUsdc;
   const hasEntries = state.totalShares > 0;
+  const writesOk = state.writesEnabled !== false;
 
   let action: XLayerKeeperAction = 'wait';
+  let amountUsdc: string | null = null;
   const rationale: string[] = [];
   const warnings: string[] = [
     'SimpleRandomnessOracle is a disclosed testnet demo — not for real-value draws.',
@@ -197,10 +222,31 @@ export function buildHeuristicRecommendation(state: XLayerKeeperPoolState): XLay
   } else if (!state.drawOpen && potOk && cooldownOk && hasEntries) {
     action = 'open_draw';
     rationale.push('Pot and cooldown allow opening a draw; snapshot shares and await randomness.');
+  } else if (!state.drawOpen && !hasEntries && writesOk) {
+    action = 'deposit';
+    amountUsdc = DEMO_DEPOSIT_USDC;
+    rationale.push(`No shares yet — deposit ${DEMO_DEPOSIT_USDC} USDC principal for lossless draw eligibility.`);
+  } else if (!state.drawOpen && !potOk && state.hookOwnerMatchesWallet && writesOk) {
+    action = 'fund_pot';
+    const need = Math.max(1, state.minPotForDrawUsdc - state.potBalanceUsdc);
+    amountUsdc = Math.min(DEMO_AMOUNT_CAP, Math.ceil(need * 100) / 100).toFixed(2);
+    rationale.push(
+      `Pot ${state.potBalanceUsdc.toFixed(2)} USDC is below min ${state.minPotForDrawUsdc.toFixed(2)} — owner can seed ${amountUsdc} USDC.`,
+    );
   } else {
     action = 'wait';
-    if (!hasEntries) rationale.push('No depositor shares yet — wait for entries.');
-    if (!potOk) rationale.push(`Pot ${state.potBalanceUsdc.toFixed(2)} USDC is below min ${state.minPotForDrawUsdc.toFixed(2)}.`);
+    if (!hasEntries) {
+      rationale.push(
+        writesOk
+          ? 'No depositor shares yet — deposit or join via swap.'
+          : 'No depositor shares yet — enable writes or wait for entries.',
+      );
+    }
+    if (!potOk) {
+      rationale.push(
+        `Pot ${state.potBalanceUsdc.toFixed(2)} USDC is below min ${state.minPotForDrawUsdc.toFixed(2)}.`,
+      );
+    }
     if (!cooldownOk) rationale.push('Draw cooldown has not elapsed.');
     if (!rationale.length) rationale.push('No keeper action is ready; continue accruing swap surcharges.');
   }
@@ -223,6 +269,7 @@ export function buildHeuristicRecommendation(state: XLayerKeeperPoolState): XLay
     recommendedSurchargeBps,
     surchargeChangeAllowedNow: false,
     demoOracleValue,
+    amountUsdc,
     rationale: rationale.slice(0, 4),
     warnings: warnings.slice(0, 4),
     source: 'heuristic',
@@ -237,6 +284,8 @@ export function sanitizeRecommendation(
   const fallback = buildHeuristicRecommendation(state);
   const allowed: XLayerKeeperAction[] = [
     'wait',
+    'deposit',
+    'fund_pot',
     'open_draw',
     'set_oracle',
     'fulfill_randomness',
@@ -262,12 +311,22 @@ export function sanitizeRecommendation(
     }
   }
 
+  let amountUsdc: string | null = null;
+  if (action === 'deposit' || action === 'fund_pot') {
+    const raw = recommendation.amountUsdc ?? fallback.amountUsdc ?? DEMO_DEPOSIT_USDC;
+    const n = Number.parseFloat(String(raw));
+    amountUsdc = Number.isFinite(n) && n > 0
+      ? Math.min(DEMO_AMOUNT_CAP, n).toFixed(2)
+      : fallback.amountUsdc;
+  }
+
   return {
     action,
     shouldOpenDraw: action === 'open_draw',
     recommendedSurchargeBps,
     surchargeChangeAllowedNow: false,
     demoOracleValue,
+    amountUsdc,
     rationale: normalizeStringList(recommendation.rationale, fallback.rationale),
     warnings: normalizeStringList(recommendation.warnings, fallback.warnings),
     source,

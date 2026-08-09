@@ -174,13 +174,17 @@ export function AutoPurchaseModal({
     setIsSuggestingPolicy(true);
 
     try {
-      const response = await fetch('/api/agent/autopilot/advice', {
+      const response = await fetch('/api/agent/base/plan', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          yieldUsdc: 0,
+          maxSpendUsdc: config.amount,
+          ticketCount: config.ticketCount,
+          sourceVault: config.sourceVault,
+          includeAdvice: true,
           currentAmount: config.amount,
           currentFrequency: config.frequency,
-          currentSourceVault: config.sourceVault,
           walletType,
           riskPreference: 'balanced',
           wantsPrivacy: config.sourceVault === 'fhenix',
@@ -189,27 +193,29 @@ export function AutoPurchaseModal({
       });
       const body = await response.json() as {
         success?: boolean;
+        advice?: VenicePolicyRecommendation;
         recommendation?: VenicePolicyRecommendation;
         error?: string;
       };
 
-      if (!response.ok || !body.success || !body.recommendation) {
-        throw new Error(body.error ?? 'Venice advisor could not suggest a policy.');
+      const recommendation = body.advice ?? body.recommendation;
+      if (!response.ok || !body.success || !recommendation) {
+        throw new Error(body.error ?? 'Could not suggest a policy.');
       }
 
-      const nextAmount = Number.parseFloat(body.recommendation.maxSpendUsdc);
-      setAdvisorRecommendation(body.recommendation);
+      const nextAmount = Number.parseFloat(recommendation.maxSpendUsdc);
+      setAdvisorRecommendation(recommendation);
       setConfig((prev) => ({
         ...prev,
         strategy: 'yield-autopilot',
         paymentToken: 'usdc',
-        sourceVault: body.recommendation?.sourceVault ?? prev.sourceVault,
-        frequency: body.recommendation?.period ?? prev.frequency,
+        sourceVault: recommendation.sourceVault ?? prev.sourceVault,
+        frequency: recommendation.period ?? prev.frequency,
         amount: Number.isFinite(nextAmount) ? nextAmount : prev.amount,
-        ticketCount: body.recommendation?.ticketCount ?? prev.ticketCount,
+        ticketCount: recommendation.ticketCount ?? prev.ticketCount,
       }));
     } catch (err) {
-      setAdvisorError(err instanceof Error ? err.message : 'Venice advisor failed.');
+      setAdvisorError(err instanceof Error ? err.message : 'Policy advisor failed.');
     } finally {
       setIsSuggestingPolicy(false);
     }

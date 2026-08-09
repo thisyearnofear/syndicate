@@ -54,6 +54,11 @@ export { useYieldAutopilotActivity } from './useYieldAutopilotActivity';
 export { useYieldAutopilotExecution } from './useYieldAutopilotExecution';
 export { useYieldAutopilotExecutionLog } from './useYieldAutopilotExecutionLog';
 export { useYieldAutoProcessor } from './useYieldAutoProcessor';
+export { useXLayerAgent } from './useXLayerAgent';
+export { useBaseAgent } from './useBaseAgent';
+export type { BaseAgentPlanRequest } from './useBaseAgent';
+export { useAgentLoop } from './useAgentLoop';
+export type { AgentReadOnlyRunner, AgentMutatingExecutor } from './useAgentLoop';
 
 // Yield & Vaults
 export { usePoolTogetherDeposit } from './usePoolTogetherDeposit';

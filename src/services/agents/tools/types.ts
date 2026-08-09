@@ -10,17 +10,24 @@
 
 import type { CapabilityId } from '@/config/capabilities';
 
-export type AgentChain = 'xlayer_testnet';
+export type AgentChain = 'xlayer_testnet' | 'base';
 
 export type XLayerToolId =
   | 'xlayer.getPoolState'
   | 'xlayer.recommendSurcharge'
+  | 'xlayer.deposit'
+  | 'xlayer.fundPot'
   | 'xlayer.openDraw'
   | 'xlayer.setDemoOracle'
   | 'xlayer.fulfillRandomness'
   | 'xlayer.claimPrize';
 
-export type AgentToolId = XLayerToolId;
+export type BaseToolId =
+  | 'base.getYieldSnapshot'
+  | 'base.planYieldSpend'
+  | 'base.proposeAutopilotPolicy';
+
+export type AgentToolId = XLayerToolId | BaseToolId;
 
 export type AgentToolCallStatus =
   | 'proposed'
@@ -43,6 +50,12 @@ export interface AgentToolDefinition {
   requiresReceipt: boolean;
   /** No chain mutation — may auto-run after plan when HITL not required. */
   readOnly: boolean;
+  /**
+   * When true, mutating tools require capability.writesEnabled.
+   * Keeper permissionless actions leave this false so the AI Season demo
+   * can run HITL open/fulfill/claim while deposit writes stay gated.
+   */
+  requiresWriteGate?: boolean;
 }
 
 export interface AgentToolResult {

@@ -7,6 +7,7 @@ export type {
   AgentSessionMemory,
   AgentLoopState,
   XLayerToolId,
+  BaseToolId,
 } from './types';
 
 export {
@@ -23,3 +24,17 @@ export {
   isXLayerToolId,
   actionToToolId,
 } from './xlayerTools';
+
+export {
+  BASE_AGENT_TOOLS,
+  ensureBaseToolsRegistered,
+  isBaseToolId,
+} from './baseTools';
+
+import { ensureXLayerToolsRegistered } from './xlayerTools';
+import { ensureBaseToolsRegistered } from './baseTools';
+
+export function ensureAllAgentToolsRegistered(): void {
+  ensureXLayerToolsRegistered();
+  ensureBaseToolsRegistered();
+}

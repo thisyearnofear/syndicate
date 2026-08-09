@@ -18,6 +18,8 @@
 
 export { useXLayerJoin } from './useXLayerJoin';
 export type { XLayerJoinParams, XLayerJoinResult } from './useXLayerJoin';
+export { useXLayerDeposit, XLAYER_DEMO_MAX_USDC } from './useXLayerDeposit';
+export type { XLayerAmountParams, XLayerDepositResult } from './useXLayerDeposit';
 export { useXLayerKeeper } from './useXLayerKeeper';
 export type { XLayerKeeperResult, XLayerKeeperTxAction } from './useXLayerKeeper';
 export { XLAYER_ROUTER_ABI, XLAYER_ERC20_ABI, XLAYER_KEEPER_HOOK_ABI, XLAYER_DEMO_ORACLE_ABI } from './abi';

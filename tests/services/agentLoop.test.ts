@@ -8,8 +8,10 @@ import {
   observeStep,
   rejectStep,
 } from '@/services/agents/loop/agentLoop';
+import { buildPlanFromBaseYieldContext } from '@/services/agents/loop/baseAgentPlan';
 import { __resetAgentToolRegistryForTests } from '@/services/agents/tools/registry';
 import { ensureXLayerToolsRegistered } from '@/services/agents/tools/xlayerTools';
+import { ensureBaseToolsRegistered } from '@/services/agents/tools/baseTools';
 import type { XLayerKeeperRecommendation } from '@/services/agents/veniceXLayerKeeper';
 
 jest.mock('@/config/capabilities', () => ({
@@ -42,6 +44,7 @@ describe('agent loop + X Layer tools', () => {
     recommendedSurchargeBps: 100,
     surchargeChangeAllowedNow: false,
     demoOracleValue: action === 'set_oracle' || action === 'fulfill_randomness' ? '42' : null,
+    amountUsdc: action === 'deposit' || action === 'fund_pot' ? '5.00' : null,
     rationale: ['test'],
     warnings: ['demo oracle'],
     source: 'heuristic',
@@ -55,6 +58,13 @@ describe('agent loop + X Layer tools', () => {
       'xlayer.openDraw',
     ]);
     expect(plan.steps[2].status).toBe('proposed');
+  });
+
+  it('builds a deposit plan with amountUsdc when shares are missing', () => {
+    const plan = buildPlanFromKeeperRecommendation(recommendation('deposit'), { pot: 0 }, 0);
+    expect(plan.steps.map((s) => s.toolId)).toContain('xlayer.deposit');
+    const deposit = plan.steps.find((s) => s.toolId === 'xlayer.deposit')!;
+    expect(deposit.args.amountUsdc).toBe('5.00');
   });
 
   it('auto-completes read-only steps and requires approve before execute', () => {
@@ -120,5 +130,46 @@ describe('agent loop + X Layer tools', () => {
     state = rejectStep(state, claim.id);
     expect(state.memory.pendingStepIds).not.toContain(claim.id);
     expect(state.plan!.steps.find((s) => s.id === claim.id)?.status).toBe('rejected');
+  });
+
+  it('blocks deposit when write gate is required and writes are disabled', () => {
+    let state = createInitialAgentLoopState();
+    const plan = buildPlanFromKeeperRecommendation(recommendation('deposit'), {}, 0);
+    state = applyPlan(state, plan);
+    const deposit = state.plan!.steps.find((s) => s.toolId === 'xlayer.deposit')!;
+    state = approveStep(state, deposit.id);
+    expect(state.plan!.steps.find((s) => s.id === deposit.id)?.status).toBe('failed');
+    expect(state.error).toMatch(/WRITES_ENABLED|writes/i);
+  });
+});
+
+describe('Base yield agent plan', () => {
+  beforeEach(() => {
+    __resetAgentToolRegistryForTests();
+    ensureBaseToolsRegistered();
+  });
+
+  it('builds advisory yield tools including policy proposal', () => {
+    const plan = buildPlanFromBaseYieldContext({
+      yieldUsdc: 4,
+      maxSpendUsdc: 10,
+      ticketCount: 5,
+      sourceVault: 'spark',
+      advice: {
+        sourceVault: 'spark',
+        period: 'weekly',
+        maxSpendUsdc: '5.00',
+        ticketCount: 5,
+        rationale: ['cap spend'],
+        warnings: ['review'],
+      },
+    });
+    expect(plan.chain).toBe('base');
+    expect(plan.steps.map((s) => s.toolId)).toEqual([
+      'base.getYieldSnapshot',
+      'base.planYieldSpend',
+      'base.proposeAutopilotPolicy',
+    ]);
+    expect(plan.steps.every((s) => s.status === 'proposed')).toBe(true);
   });
 });

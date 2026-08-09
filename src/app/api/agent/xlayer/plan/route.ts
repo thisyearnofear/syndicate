@@ -89,5 +89,7 @@ function normalizePoolState(body: Partial<XLayerKeeperPoolState>): XLayerKeeperP
     epochId: Math.max(0, Math.floor(num(body.epochId))),
     connectedIsWinner: Boolean(body.connectedIsWinner),
     oracleOwnerMatchesWallet: Boolean(body.oracleOwnerMatchesWallet),
+    hookOwnerMatchesWallet: Boolean(body.hookOwnerMatchesWallet),
+    writesEnabled: body.writesEnabled !== false,
   };
 }

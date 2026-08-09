@@ -185,6 +185,7 @@ export function XLayerAgentPanel({
         address && winner && winner.toLowerCase() === address.toLowerCase(),
       ),
       oracleOwnerMatchesWallet: agent.oracleOwnerMatchesWallet,
+      hookOwnerMatchesWallet: agent.hookOwnerMatchesWallet,
     };
   };
 

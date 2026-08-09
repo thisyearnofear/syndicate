@@ -128,7 +128,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                 label: 'X Layer',
                 icon: Sparkles,
                 active: pathname === '/xlayer',
-                title: getAvailabilityMessage('xlayer_prize_pool') ?? 'Explore the experimental X Layer prize pool',
+                title: getAvailabilityMessage('xlayer_prize_pool') ?? 'Experimental X Layer prize pool (Base remains the product home)',
             }]
             : []),
         {

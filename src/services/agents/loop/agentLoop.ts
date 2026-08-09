@@ -75,6 +75,12 @@ export function buildPlanFromKeeperRecommendation(
     ) {
       args.value = recommendation.demoOracleValue;
     }
+    if (
+      (actionTool === 'xlayer.deposit' || actionTool === 'xlayer.fundPot') &&
+      recommendation.amountUsdc
+    ) {
+      args.amountUsdc = recommendation.amountUsdc;
+    }
     steps.push({
       id: newId('step'),
       toolId: actionTool,
@@ -126,6 +132,9 @@ export function assertToolAllowed(toolId: AgentToolCall['toolId']): string | nul
   const cap = getCapability(def.capabilityId);
   if (!cap.readsEnabled) {
     return `${def.label} unavailable: ${cap.availabilityMessage ?? 'reads disabled'}`;
+  }
+  if (!def.readOnly && def.requiresWriteGate && !cap.writesEnabled) {
+    return `${def.label} blocked: enable NEXT_PUBLIC_XLAYER_WRITES_ENABLED for testnet writes.`;
   }
   if (!def.readOnly && !cap.writesEnabled) {
     // Keeper mutations are permissionless on-chain and intentional for the AI Season

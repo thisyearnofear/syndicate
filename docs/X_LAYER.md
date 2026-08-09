@@ -1,8 +1,8 @@
 # X Layer Prize Pool Hook
 
-**Status:** Testnet deployed on X Layer chain **1952** (Build X AI Season). Read-only `/xlayer` dashboard is wired to live addresses; write flows remain capability-gated. Mainnet blocked until a reviewed randomness oracle replaces the demo oracle.
+**Status:** Testnet deployed on X Layer chain **1952** (Build X AI Season). `/xlayer` supports a live demo loop (deposit / swap join / fundPot / agent HITL draw) when `NEXT_PUBLIC_XLAYER_WRITES_ENABLED=true`. Mainnet blocked until a reviewed randomness oracle replaces the demo oracle.
 
-X Layer is an experimental second engine for Syndicate. Base/Megapot remains the existing lottery path. The X Layer design moves the game into a Uniswap v4 hook: trading surcharges fund a prize pot, depositor shares set draw odds, and principal remains redeemable between draws.
+X Layer is an experimental second engine for Syndicate. **Base/Megapot remains the product home.** The X Layer design moves the game into a Uniswap v4 hook: trading surcharges fund a prize pot, depositor shares set draw odds, and principal remains redeemable between draws.
 
 ## Product and game model
 
@@ -24,8 +24,10 @@ FWA is inspiration for weighted selection, FIFO snapshots, and keep-or-exit dyna
 - `script/DeployV4CoreXLayer.s.sol` — self-deploy v4 core on testnet.
 - `script/DeployPrizePoolHook.s.sol` — deploy the hook stack (precomputes CREATE2 salt before broadcast; optional `HOOK_SALT`).
 - `src/config/xlayer.ts` — chain, address, ABI, and explorer helpers.
-- `src/app/xlayer/page.tsx` — read-only dashboard route.
-- `src/components/xlayer/PrizePoolDashboard.tsx` — pot, shares, draw, surcharge, and user-odds UI.
+- `src/app/xlayer/page.tsx` — prize pool dashboard route.
+- `src/components/xlayer/PrizePoolDashboard.tsx` — pot, shares, draw, surcharge, deposit/join, demo checklist.
+- `src/services/xlayer/useXLayerDeposit.ts` — principal deposit + owner `fundPot`.
+- `src/services/agents/tools/` — shared tool registry (X Layer + Base yield/autopilot).
 
 The contract suite has 104 Foundry tests. The app slice has 3 config tests plus the Virtuals route regression suite used by the build gate.
 
@@ -103,20 +105,33 @@ NEXT_PUBLIC_XLAYER_TESTNET_USDC_ADDRESS=0xcb8bf24c6ce16ad21d707c9505421a17f2bec7
 NEXT_PUBLIC_XLAYER_PRIZE_POOL_HOOK_ADDRESS=0x6B975aB90FBC90157b67bAA38F0fa90bae1710c0
 NEXT_PUBLIC_XLAYER_PRIZE_POOL_ROUTER_ADDRESS=0x256E473c90230d6b022E93019759e53B515b287C
 NEXT_PUBLIC_XLAYER_POOL_MANAGER_ADDRESS=0x49f01fEEbd2e32e380D09dAff2d02b76E783816C
-# NEXT_PUBLIC_XLAYER_WRITES_ENABLED=true  # only after intentional write-gate enablement
+NEXT_PUBLIC_XLAYER_ORACLE_ADDRESS=0x48fF718A9aE775214f207E992fa49d36C02c2858
+NEXT_PUBLIC_XLAYER_WRITES_ENABLED=true  # required for deposit / join / fundPot demo
 ```
 
 Restart the app and open `/xlayer`. Missing or malformed addresses produce a safe preview state. Writes stay off until `NEXT_PUBLIC_XLAYER_WRITES_ENABLED=true` and the capability registry allows them.
+
+## Demo loop (testnet)
+
+1. Enable writes (env above) and connect an X Layer testnet wallet with USDC_TEST.
+2. **Deposit principal** (lossless shares) and/or **Join via swap** (shares + surcharge).
+3. If pot is below min and you are hook owner: agent may propose **fundPot**, or seed manually.
+4. **Plan next actions** → approve HITL → sign **openDraw**.
+5. Oracle owner: **setDemoOracle** → anyone: **fulfillRandomness** → winner: **claimPrize**.
+
+Record a short screen capture of this loop for Build X submission. Do not use the demo oracle for real-value draws.
 
 ## Agent loop (tool registry + HITL)
 
 `/xlayer` includes an **agent loop** panel (`XLayerAgentPanel`):
 
-1. **Tool registry** — typed tools (`getPoolState`, `recommendSurcharge`, `openDraw`, `setDemoOracle`, `fulfillRandomness`, `claimPrize`) with capability, HITL, and receipt gates.
+1. **Tool registry** — typed tools (`getPoolState`, `recommendSurcharge`, `deposit`, `fundPot`, `openDraw`, `setDemoOracle`, `fulfillRandomness`, `claimPrize`) with capability, HITL, and receipt gates. `deposit` / `fundPot` require the write gate.
 2. **Plan** — `POST /api/agent/xlayer/plan` (Venice or heuristic) → structured tool steps.
 3. **HITL** — Approve / Reject each mutating tool card before signing.
-4. **Execute → observe** — `useXLayerKeeper` + receipt confirmation (pending is never success).
+4. **Execute → observe** — wallet hooks + receipt confirmation (pending is never success).
 5. **Session memory** — last plan, tx, epoch, oracle value, short history.
+
+Base product-home tools (`base.getYieldSnapshot`, `base.planYieldSpend`, `base.proposeAutopilotPolicy`) live in the same registry via `POST /api/agent/base/plan` (canonical advice + plan). `POST /api/agent/autopilot/advice` is a thin compatibility wrapper over the same resolver. Client hooks share `useAgentLoop`. MetaMask permission approval remains the Base write boundary.
 
 Legacy advice endpoint `POST /api/agent/xlayer/advice` remains available. Optional: `VENICE_API_KEY` for live Venice plans.
 
@@ -126,8 +141,8 @@ Legacy advice endpoint `POST /api/agent/xlayer/advice` remains available. Option
 2. Replace the demo oracle with independently reviewed drand verification.
 3. Complete M3 LP position management, fee splitting, and non-USDC conversion.
 4. ~~Add explicitly gated deposit, withdraw, draw, claim, AI keeper, and syndicate flows.~~
-   Agent loop (registry + HITL + receipts + session memory) shipped on `/xlayer`.
-   Deposit writes remain capability-gated; syndicate wiring still open.
+   Agent loop + deposit/fundPot/join write path shipped on `/xlayer` (env-gated).
+   Syndicate wiring still open.
 5. Only then evaluate a mainnet deployment against the canonical PoolManager.
 
 Before mainnet: add rejection sampling, timelock all configuration/recovery paths, review custody assumptions, and independently review oracle cryptography.

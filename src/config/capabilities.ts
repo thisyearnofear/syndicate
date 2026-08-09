@@ -217,7 +217,7 @@ export const CAPABILITIES: readonly Capability[] = [
     availabilityMessage: XLAYER_WRITES_ENABLED
       ? 'Preview mode — testnet funds only (no real money).'
       : XLAYER_HOOK_IS_CONFIGURED
-        ? 'View-only dashboard. Deposits coming soon.'
+        ? 'Dashboard live. Set NEXT_PUBLIC_XLAYER_WRITES_ENABLED=true for testnet deposits.'
         : 'Coming soon — not yet available in this environment.',
     walletRequirement: 'EVM wallet on X Layer testnet',
     productMode: null,
