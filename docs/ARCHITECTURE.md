@@ -29,7 +29,7 @@ Domain hooks and services
 - **Base (8453):** primary execution layer for vaults, syndicates, settlement, and Megapot.
 - **Fhenix/Base Sepolia:** privacy-enabled vault and governance path; deployment is testnet-oriented.
 - **Solana, Stacks, NEAR, Ethereum, Starknet:** funding rails and bridge origins.
-- **X Layer (195/196):** separate Prize Pool Hook experiment; not part of the Base purchase path.
+- **X Layer (1952/196):** separate Prize Pool Hook experiment; not part of the Base purchase path.
 
 ## Core domains
 

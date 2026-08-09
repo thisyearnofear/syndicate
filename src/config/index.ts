@@ -82,7 +82,7 @@ export const CHAIN_IDS = {
   ETHEREUM: 1,
   SEPOLIA: 11155111,
   STACKS: 12345,
-  XLAYER_TESTNET: 195,
+  XLAYER_TESTNET: 1952,
 } as const;
 
 

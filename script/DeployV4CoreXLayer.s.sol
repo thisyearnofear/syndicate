@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import {Script, console2} from "forge-std/Script.sol";
 import {PoolManager} from "v4-core/PoolManager.sol";
 
-/// @notice Deploys a fresh Uniswap v4 PoolManager on X Layer testnet (chain 195).
+/// @notice Deploys a fresh Uniswap v4 PoolManager on X Layer testnet (chain 1952).
 /// X Layer testnet has no official v4 deployment, so the core is self-deployed
 /// (v4 core is permissionless to deploy). Mainnet uses the canonical PoolManager
 /// 0x360e68faccca8ca495c1b759fd9eee466db9fb32 and does NOT need this script.

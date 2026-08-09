@@ -61,18 +61,21 @@ oracle-agnostic behind `IRandomnessOracle`:
 - [x] **M2 — swap wrapper + hardening**: `PrizePoolSwapRouter` withholds the surcharge;
       the hook **physically pulls it during afterSwap**; atomic factory deployment;
       real PoolManager integration coverage; post-bind configuration timelock;
-      non-USDC surcharges parked in `pendingConversion`.
+      non-USDC surcharges parked in `pendingConversion`. **Live on X Layer testnet 1952**
+      (see [docs/X_LAYER.md](../../docs/X_LAYER.md)).
 - [ ] **M3 — LP position management + fee split**: the hook provides pool liquidity; LP
       fees split into per-depositor yield + pot; convert `pendingConversion` to USDC.
       (Note: the Hooks library skips a hook's own callbacks when the hook initiates the
       action — relevant when the hook LP-splits.)
 - [ ] **M4 — standalone drand beacon verifier + permissionless relay** (BLS12-381),
       replacing `SimpleRandomnessOracle` for real-value draws.
-- [ ] **M5 — syndicates + AI agent wiring and gated write flows.** The X Layer wagmi config and read-only `/xlayer` dashboard slice are shipped; see [docs/X_LAYER.md](../../docs/X_LAYER.md).
+- [ ] **M5 — syndicates + AI agent wiring and gated write flows.** The X Layer wagmi config
+      and read-only `/xlayer` dashboard slice are shipped and pointed at the live testnet
+      deploy; see [docs/X_LAYER.md](../../docs/X_LAYER.md).
 
 ## Deployment notes
 
-- **Testnet (195):** no official Uniswap v4 deployment → self-deploy v4 core, then use
+- **Testnet (1952):** no official Uniswap v4 deployment → self-deploy v4 core, then use
   `PrizePoolHookFactory` to atomically deploy the hook, router, and pool.
 - **Mainnet (196):** canonical PoolManager
   `0x360e68faccca8ca495c1b759fd9eee466db9fb32` (verified against the official deployment
@@ -83,8 +86,10 @@ oracle-agnostic behind `IRandomnessOracle`:
 - Pool configuration and initialization are performed atomically through
   `PrizePoolHookFactory`, which owns the hook only during setup and transfers ownership
   after the real PoolManager callback binds the pool.
-- **USDC:** mainnet `0xB6CEceAB302E2E4948951eE7843FC24E92933061`, testnet
-  `0xDec90b78111Ba2fc6FC6d84d8B9ec159A2d4b9B3`.
+- **USDC:** mainnet `0xB6CEceAB302E2E4948951eE7843FC24E92933061`; testnet faucet
+  **USDC_TEST** `0xcb8bf24c6ce16ad21d707c9505421a17f2bec79d` (live Build X deploy).
+  Older docs address `0xDec90…` is not what the OKX faucet mints.
+- **Live testnet addresses and runbook:** [docs/X_LAYER.md](../../docs/X_LAYER.md).
 
 ## Security notes (hackathon-grade — harden before mainnet)
 

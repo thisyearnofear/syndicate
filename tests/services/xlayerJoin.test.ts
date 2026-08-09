@@ -63,7 +63,7 @@ jest.mock('@/config/capabilities', () => {
 jest.mock('@/config/xlayer', () => ({
   XLAYER_PRIZE_POOL_ROUTER_ADDRESS: '0x1111111111111111111111111111111111111111',
   XLAYER_TESTNET_USDC_ADDRESS: '0x2222222222222222222222222222222222222222',
-  XLAYER_TESTNET_CHAIN_ID: 195,
+  XLAYER_TESTNET_CHAIN_ID: 1952,
   XLAYER_HOOK_IS_CONFIGURED: false,
 }));
 
@@ -121,7 +121,7 @@ describe('useXLayerJoin', () => {
     const history = lifecycle.getHistory();
     const event = history.find((e) => e.name === 'vault.operation_failed');
     expect(event?.chain).toBe('xlayer_testnet');
-    expect(event?.chainId).toBe(195);
+    expect(event?.chainId).toBe(1952);
   });
 
   it('reset() returns execution to idle', async () => {

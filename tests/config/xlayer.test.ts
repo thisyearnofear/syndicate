@@ -9,7 +9,7 @@ import {
 describe('X Layer configuration', () => {
   it('defines the expected testnet and mainnet IDs', () => {
     expect(xLayerTestnet.id).toBe(XLAYER_TESTNET_CHAIN_ID);
-    expect(XLAYER_TESTNET_CHAIN_ID).toBe(195);
+    expect(XLAYER_TESTNET_CHAIN_ID).toBe(1952);
     expect(XLAYER_MAINNET_CHAIN_ID).toBe(196);
     expect(xLayerTestnet.testnet).toBe(true);
   });

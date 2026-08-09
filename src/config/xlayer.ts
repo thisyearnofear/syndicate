@@ -1,6 +1,6 @@
 import { defineChain, isAddress, type Address } from 'viem';
 
-export const XLAYER_TESTNET_CHAIN_ID = 195;
+export const XLAYER_TESTNET_CHAIN_ID = 1952;
 export const XLAYER_MAINNET_CHAIN_ID = 196;
 
 export const xLayerTestnet = defineChain({
