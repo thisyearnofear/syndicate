@@ -1,334 +1,345 @@
 "use client";
 
-/**
- * NAVIGATION COMPONENT
- * 
- * Core Principles Applied:
- * - ENHANCEMENT FIRST: Built on existing UI patterns
- * - MODULAR: Reusable navigation component
- * - CLEAN: Clear navigation structure
- * - PERFORMANT: Minimal re-renders
- */
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/shared/components/ui/Button';
-import { CompactFlex } from '@/shared/components/premium/CompactLayout';
 import { useUnifiedWallet, useIsMounted } from '@/hooks';
 import { WalletType } from '@/domains/wallet/types';
 import WalletInfo from './wallet/WalletInfo';
 import UnifiedModal from './modal/UnifiedModal';
 import WalletConnectionOptions from './wallet/WalletConnectionOptions';
-import { Ticket, Users, TrendingUp, Menu, X, ArrowLeftRight, LayoutDashboard, Settings, Sparkles } from 'lucide-react';
-import { isNavVisible, getAvailabilityMessage } from '@/config/capabilities';
+import {
+  Ticket, Users, TrendingUp, Menu, X,
+  ArrowLeftRight, LayoutDashboard, Settings, ChevronDown,
+} from 'lucide-react';
+
+// ─── Config ─────────────────────────────────────────────────────────────────
+
+const PRIMARY_NAV = [
+  { href: '/', label: 'Play', icon: Ticket },
+  { href: '/vaults', label: 'Grow', icon: TrendingUp },
+  { href: '/discover', label: 'Coordinate', icon: Users },
+] as const;
+
+const SECONDARY_NAV = [
+  { href: '/portfolio', label: 'Portfolio', icon: LayoutDashboard, requiresWallet: true },
+  { href: '/bridge', label: 'Fund', icon: ArrowLeftRight },
+  { href: '/settings', label: 'Settings', icon: Settings },
+] as const;
+
+// ─── Component ──────────────────────────────────────────────────────────────
 
 interface NavigationProps {
-    className?: string;
+  className?: string;
 }
 
 export default function Navigation({ className = '' }: NavigationProps) {
-    const pathname = usePathname();
-    const { isConnected, walletType, chain, connect } = useUnifiedWallet();
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [showWalletDetails, setShowWalletDetails] = useState(false);
-    const [showWalletModal, setShowWalletModal] = useState(false);
-    const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
-    const walletPillRef = useRef<HTMLButtonElement>(null);
-    const walletDetailsRef = useRef<HTMLDivElement>(null);
-    const mounted = useIsMounted();
+  const pathname = usePathname();
+  const { isConnected, walletType, chain, connect } = useUnifiedWallet();
+  const mounted = useIsMounted();
 
-    // Recalculate dropdown position when toggling
-    const handleWalletStatusClick = useCallback(() => {
-        if (!showWalletDetails && walletPillRef.current) {
-            const rect = walletPillRef.current.getBoundingClientRect();
-            setDropdownPos({
-                top: rect.bottom + 8,
-                right: window.innerWidth - rect.right,
-            });
-        }
-        setShowWalletDetails(!showWalletDetails);
-    }, [showWalletDetails]);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [walletDetailsOpen, setWalletDetailsOpen] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
 
-    const handleWalletConnect = useCallback(async (walletType: WalletType) => {
-        try {
-            await connect(walletType);
-            setShowWalletModal(false);
-        } catch (error) {
-            console.error("Connection failed:", error);
-        }
-    }, [connect]);
+  const walletPillRef = useRef<HTMLButtonElement>(null);
+  const walletDetailsRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
+  // ─── Handlers ───────────────────────────────────────────────────────────
 
-    const getWalletIcon = () => {
-        switch (walletType) {
-            case 'evm': return '🔗';
-            case 'solana': return '👻';
-            case 'near': return '🌌';
-            case 'stacks': return '₿';
-            case 'starknet': return '⚡';
-            default: return '💼';
-        }
+  const handleWalletConnect = useCallback(async (wt: WalletType) => {
+    try {
+      await connect(wt);
+      setShowWalletModal(false);
+    } catch (error) {
+      console.error("Connection failed:", error);
+    }
+  }, [connect]);
+
+  const handleWalletPillClick = useCallback(() => {
+    if (!walletDetailsOpen && walletPillRef.current) {
+      const rect = walletPillRef.current.getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+    }
+    setWalletDetailsOpen((v) => !v);
+  }, [walletDetailsOpen]);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (walletDetailsRef.current && !walletDetailsRef.current.contains(e.target as Node)) {
+        setWalletDetailsOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
     };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
-    const getChainLabel = () => {
-        switch (chain) {
-            case 'stacks': return 'Stacks';
-            case 'solana': return 'Solana';
-            case 'near': return 'NEAR';
-            case 'ton': return 'TON';
-            case 'starknet': return 'Starknet';
-            case 'evm': return 'EVM';
-            default: return '';
-        }
-    };
+  // ─── Helpers ────────────────────────────────────────────────────────────
 
-    const navigationItems = [
-        {
-            href: '/',
-            label: 'Play',
-            icon: Ticket,
-            active: pathname === '/',
-            title: 'Buy Megapot tickets on Base or start with public play',
-        },
-        {
-            href: '/portfolio',
-            label: 'Portfolio',
-            icon: LayoutDashboard,
-            active: pathname === '/portfolio',
-            title: 'See your positions, yield, tickets, and activity in one place',
-            requiresWallet: true,
-        },
-        {
-            href: '/discover',
-            label: 'Coordinate',
-            icon: Users,
-            active: pathname === '/discover' || pathname === '/create-syndicate' || pathname === '/syndicate',
-            title: 'Discover or create a coordinated capital group',
-        },
-        {
-            href: '/vaults',
-            label: 'Grow',
-            icon: TrendingUp,
-            active: pathname === '/vaults' || pathname === '/yield-strategies',
-            title: 'Put capital to work and route yield into participation',
-        },
-        {
-            href: '/bridge',
-            label: 'Fund',
-            icon: ArrowLeftRight,
-            active: pathname === '/bridge',
-            title: 'Move funds into the Base-native experience',
-        },
-        // X Layer visibility driven by the capability registry.
-        ...(isNavVisible('xlayer_prize_pool')
-            ? [{
-                href: '/xlayer',
-                label: 'X Layer',
-                icon: Sparkles,
-                active: pathname === '/xlayer',
-                title: getAvailabilityMessage('xlayer_prize_pool') ?? 'Experimental X Layer prize pool (Base remains the product home)',
-            }]
-            : []),
-        {
-            href: '/settings',
-            label: 'Settings',
-            icon: Settings,
-            active: pathname === '/settings',
-            title: 'Manage wallets, automation, and preferences',
-        },
-    ];
+  const isActive = (href: string) => {
+    if (href === '/') return pathname === '/';
+    return pathname?.startsWith(href) ?? false;
+  };
 
-    const visibleItems = navigationItems.filter(item =>
-        !item.requiresWallet || (item.requiresWallet && isConnected)
-    );
+  const getWalletIcon = () => {
+    switch (walletType) {
+      case 'evm': return '🔗';
+      case 'solana': return '👻';
+      case 'near': return '🌌';
+      case 'stacks': return '₿';
+      case 'starknet': return '⚡';
+      default: return '💼';
+    }
+  };
 
-    // Handle click outside to close wallet details
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (walletDetailsRef.current && !walletDetailsRef.current.contains(event.target as Node)) {
-                setShowWalletDetails(false);
-            }
-        };
+  const getChainLabel = () => {
+    switch (chain) {
+      case 'stacks': return 'Stacks';
+      case 'solana': return 'Solana';
+      case 'near': return 'NEAR';
+      case 'ton': return 'TON';
+      case 'starknet': return 'Starknet';
+      case 'evm': return 'EVM';
+      default: return '';
+    }
+  };
 
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, []);
+  const secondaryItems = SECONDARY_NAV.filter(
+    (item) => !('requiresWallet' in item && item.requiresWallet) || isConnected
+  );
 
-    return (
-        <>
-            {/* Desktop Navigation */}
-            <nav className={`hidden md:block ${className}`}>
-                <div className="glass-premium rounded-2xl p-4 border border-white/20">
-                    <CompactFlex align="center" gap="md">
-                        {/* Logo */}
-                        <Link href="/" className="flex items-center gap-2 mr-6">
-                            <div className="w-8 h-8 gradient-cta rounded-lg flex items-center justify-center">
-                                <span className="text-white font-bold text-sm">S</span>
-                            </div>
-                            <span className="font-bold text-white text-lg">Syndicate</span>
-                        </Link>
+  // ─── Desktop ────────────────────────────────────────────────────────────
 
-                        {/* Navigation Items */}
-                        <CompactFlex align="center" gap="sm" className="flex-1">
-                            {visibleItems.map((item) => {
-                                const Icon = item.icon;
-                                return (
-                                    <Link
-                                        key={item.href}
-                                        href={item.href}
-                                        title={item.title ?? item.label}
-                                        className={`
-                            flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950
-                            ${item.active
-                                                    ? 'gradient-cta text-white shadow-lg'
-                                                    : 'text-gray-300 hover:text-white hover:bg-white/10'
-                                                }
-                            `}
-                                    >
-                                        <Icon className="w-4 h-4" />
-                                        <span className="hidden lg:inline">{item.label}</span>
-                                    </Link>
-                                );
-                            })}
-                        </CompactFlex>
+  return (
+    <>
+      {/* Desktop */}
+      <nav className={`hidden md:block ${className}`} aria-label="Main navigation">
+        <div className="flex items-center justify-between py-3 px-1">
+          {/* Left: Logo + primary links */}
+          <div className="flex items-center gap-8">
+            <Link href="/" className="flex items-center gap-2" aria-label="Syndicate home">
+              <div className="w-7 h-7 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-xs">S</span>
+              </div>
+              <span className="font-bold text-white text-lg">Syndicate</span>
+            </Link>
 
-                        {/* Wallet Status */}
-                        <CompactFlex align="center" gap="md">
-                            {isConnected ? (
-                                <div className="relative flex items-center">
-                                    <button
-                                        type="button"
-                                        ref={walletPillRef}
-                                        className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 border border-green-500/30 rounded-full cursor-pointer hover:bg-green-500/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/80"
-                                        onClick={handleWalletStatusClick}
-                                        aria-expanded={showWalletDetails}
-                                        aria-label="Open wallet details"
-                                    >
-                                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                                        <span className="text-green-400 text-sm font-semibold">
-                                            {getWalletIcon()} {getChainLabel()}
-                                        </span>
-                                    </button>
-                                    {mounted && showWalletDetails && createPortal(
-                                        <div
-                                            ref={walletDetailsRef}
-                                            className="fixed wallet-dropdown z-[100001]"
-                                            style={{ top: dropdownPos.top, right: dropdownPos.right }}
-                                        >
-                                            <WalletInfo
-                                                showFullAddress={false}
-                                                showNetworkIndicator={true}
-                                                className="w-80 shadow-2xl border border-white/20 bg-slate-900/95 backdrop-blur-xl"
-                                            />
-                                        </div>,
-                                        document.body
-                                    )}
-                                </div>
-                            ) : (
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setShowWalletModal(true)}
-                                    className="text-gray-400 hover:text-white text-sm"
-                                >
-                                    Connect Wallet
-                                </Button>
-                            )}
-                        </CompactFlex>
-                    </CompactFlex>
+            <div className="flex items-center gap-1">
+              {PRIMARY_NAV.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/80 ${
+                      active
+                        ? 'bg-white/10 text-white'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Right: Wallet + user menu */}
+          <div className="flex items-center gap-3">
+            {isConnected ? (
+              <>
+                <button
+                  type="button"
+                  ref={walletPillRef}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-green-500/15 border border-green-500/25 rounded-full hover:bg-green-500/25 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/80"
+                  onClick={handleWalletPillClick}
+                  aria-expanded={walletDetailsOpen}
+                  aria-label="Wallet details"
+                >
+                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                  <span className="text-green-400 text-sm font-medium">
+                    {getWalletIcon()} {getChainLabel()}
+                  </span>
+                </button>
+
+                {/* User menu (secondary nav) */}
+                <div className="relative" ref={userMenuRef}>
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/80"
+                    onClick={() => setUserMenuOpen((v) => !v)}
+                    aria-expanded={userMenuOpen}
+                    aria-label="More navigation"
+                  >
+                    <Menu className="w-4 h-4" />
+                    <ChevronDown className={`w-3 h-3 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {userMenuOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900/95 border border-white/10 rounded-xl shadow-2xl backdrop-blur-xl py-1 z-50">
+                      {secondaryItems.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setUserMenuOpen(false)}
+                            className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                              isActive(item.href)
+                                ? 'text-white bg-white/5'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                            }`}
+                          >
+                            <Icon className="w-4 h-4" />
+                            {item.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-            </nav>
+              </>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowWalletModal(true)}
+                className="text-gray-400 hover:text-white border border-white/10 hover:border-white/20 text-sm"
+              >
+                Connect Wallet
+              </Button>
+            )}
+          </div>
+        </div>
 
-            {/* Mobile Navigation */}
-            <nav className={`md:hidden ${className}`}>
-                <div className="glass-premium rounded-2xl p-4 border border-white/20">
-                    <CompactFlex align="center" justify="between">
-                        {/* Logo */}
-                        <Link href="/" className="flex items-center gap-2">
-                            <div className="w-8 h-8 gradient-cta rounded-lg flex items-center justify-center">
-                                <span className="text-white font-bold text-sm">S</span>
-                            </div>
-                            <span className="font-bold text-white text-lg">Syndicate</span>
-                        </Link>
+        {/* Wallet details portal */}
+        {mounted && walletDetailsOpen && createPortal(
+          <div
+            ref={walletDetailsRef}
+            className="fixed z-[100001]"
+            style={{ top: dropdownPos.top, right: dropdownPos.right }}
+          >
+            <WalletInfo
+              showFullAddress={false}
+              showNetworkIndicator={true}
+              className="w-80 shadow-2xl border border-white/10 bg-slate-900/95 backdrop-blur-xl rounded-xl"
+            />
+          </div>,
+          document.body
+        )}
+      </nav>
 
-                        {/* Mobile Menu Button */}
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                            aria-expanded={isMobileMenuOpen}
-                            aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
-                            className="min-h-11 min-w-11 touch-manipulation text-gray-300 hover:text-white"
-                        >
-                            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-                        </Button>
-                    </CompactFlex>
+      {/* ─── Mobile ──────────────────────────────────────────────────────── */}
+      <nav className={`md:hidden ${className}`} aria-label="Main navigation">
+        <div className="flex items-center justify-between py-3 px-1">
+          <Link href="/" className="flex items-center gap-2" aria-label="Syndicate home">
+            <div className="w-7 h-7 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-xs">S</span>
+            </div>
+            <span className="font-bold text-white text-lg">Syndicate</span>
+          </Link>
 
-                    {/* Mobile Menu */}
-                    {isMobileMenuOpen && (
-                        <div className="mt-4 pt-4 border-t border-white/10">
-                            <div className="space-y-2">
-                                {visibleItems.map((item) => {
-                                    const Icon = item.icon;
-                                    return (
-                                        <Link
-                                            key={item.href}
-                                            href={item.href}
-                                            onClick={() => setIsMobileMenuOpen(false)}
-                                            aria-label={item.title ?? item.label}
-                                            className={`
-                                w-full flex items-center gap-3 px-4 py-3.5 min-h-12 rounded-xl transition-all duration-200 text-left touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950
-                                ${item.active
-                                                        ? 'gradient-cta text-white shadow-lg'
-                                                        : 'text-gray-300 hover:text-white hover:bg-white/10'
-                                                    }
-                                `}
-                                        >
-                                            <Icon className="w-4 h-4" />
-                                            {item.label}
-                                        </Link>
-                                    );
-                                })}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setMobileOpen((v) => !v)}
+            aria-expanded={mobileOpen}
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            className="min-h-11 min-w-11 touch-manipulation text-gray-300 hover:text-white"
+          >
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </Button>
+        </div>
 
-                                {/* Wallet Status */}
-                                <div className="space-y-3 mt-4 pt-4 border-t border-white/10">
-                                    {isConnected ? (
-                                        <div className="flex items-center gap-2 px-3 py-2 bg-green-500/20 border border-green-500/30 rounded-lg">
-                                            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                                            <span className="text-green-400 text-sm font-semibold">Wallet Connected</span>
-                                        </div>
-                                    ) : (
-                                        <Button
-                                            variant="premium"
-                                            size="sm"
-                                            onClick={() => setShowWalletModal(true)}
-                                            className="w-full min-h-12 touch-manipulation"
-                                        >
-                                            Connect Wallet
-                                        </Button>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
+        {mobileOpen && (
+          <div className="pb-4 pt-2 border-t border-white/10 space-y-1">
+            {/* Primary */}
+            {PRIMARY_NAV.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors touch-manipulation ${
+                    isActive(item.href)
+                      ? 'bg-white/10 text-white'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {item.label}
+                </Link>
+              );
+            })}
+
+            {/* Divider */}
+            <div className="border-t border-white/5 my-2" />
+
+            {/* Secondary */}
+            {secondaryItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-colors touch-manipulation ${
+                    isActive(item.href)
+                      ? 'bg-white/5 text-white'
+                      : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {item.label}
+                </Link>
+              );
+            })}
+
+            {/* Wallet */}
+            <div className="pt-3 border-t border-white/5">
+              {isConnected ? (
+                <div className="flex items-center gap-2 px-4 py-2">
+                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                  <span className="text-green-400 text-sm font-medium">
+                    {getWalletIcon()} {getChainLabel()} connected
+                  </span>
                 </div>
-            </nav>
+              ) : (
+                <Button
+                  variant="premium"
+                  size="sm"
+                  onClick={() => setShowWalletModal(true)}
+                  className="w-full min-h-12 touch-manipulation"
+                >
+                  Connect Wallet
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+      </nav>
 
-            {/* Enhanced Wallet Modal */}
-            <UnifiedModal
-                isOpen={showWalletModal}
-                onClose={() => setShowWalletModal(false)}
-                title="Connect Wallet"
-                maxWidth="lg"
-            >
-                <WalletConnectionOptions
-                    onWalletConnect={handleWalletConnect}
-                />
-            </UnifiedModal>
-        </>
-    );
+      {/* Wallet connect modal */}
+      <UnifiedModal
+        isOpen={showWalletModal}
+        onClose={() => setShowWalletModal(false)}
+        title="Connect Wallet"
+        maxWidth="lg"
+      >
+        <WalletConnectionOptions onWalletConnect={handleWalletConnect} />
+      </UnifiedModal>
+    </>
+  );
 }

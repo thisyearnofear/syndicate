@@ -1,35 +1,14 @@
 /**
- * Onboarding Wizard Component
- * 
- * Multi-step onboarding for first-time users:
- * 1. Welcome - Explain the three ways to use Syndicate
- * 2. Pool Types - Explain Safe, Splits, PoolTogether
- * 3. Yield Strategies - Explain how yield works
- * 4. First Steps - Choose the right first action
+ * Onboarding Wizard — 3-step intro for first-time visitors.
+ * Concise, outcome-focused, matches landing page tone.
  */
 
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getProductModeById } from '@/config/productModes';
-import { 
-  Sparkles, 
-  ArrowRight, 
-  ArrowLeft,
-  Shield,
-  Share2,
-  Coins,
-  TrendingUp,
-  Trophy,
-  Users,
-  Play
-} from 'lucide-react';
+import { ArrowRight, ArrowLeft, Ticket, TrendingUp, Users } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
-
-const privateVaultMode = getProductModeById('private_vaults');
-const yieldMode = getProductModeById('yield_to_tickets');
-const publicPlayMode = getProductModeById('public_play');
 
 interface OnboardingState {
   currentStep: number;
@@ -37,153 +16,84 @@ interface OnboardingState {
   completedAt: string | null;
 }
 
-const ONBOARDING_STEPS = [
-  {
-    id: 'welcome',
-    title: 'Welcome to Syndicate',
-    description: 'Play, grow, or coordinate — with Base at the center',
-  },
-  {
-    id: 'pool_types',
-    title: 'Choose Your Pool Type',
-    description: 'How your syndicate manages funds',
-  },
-  {
-    id: 'yield',
-    title: 'Earn While You Wait',
-    description: 'Your deposits earn yield automatically',
-  },
-  {
-    id: 'first_steps',
-    title: 'Choose Your First Step',
-    description: 'Start with the path that fits you',
-  },
+const STEPS = [
+  { id: 'welcome', title: 'Welcome' },
+  { id: 'how', title: 'How it works' },
+  { id: 'start', title: 'Get started' },
 ];
 
 export function OnboardingWizard() {
   const router = useRouter();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [step, setStep] = useState(0);
+  const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Check if user has completed onboarding
   useEffect(() => {
-    const checkOnboarding = async () => {
-      try {
-        // Check local storage first
-        const stored = localStorage.getItem('syndicate_onboarding');
-        if (stored) {
-          const state: OnboardingState = JSON.parse(stored);
-          if (state.completed) {
-            setShowOnboarding(false);
-            setLoading(false);
-            return;
-          }
-          setCurrentStep(state.currentStep);
-        }
-        setShowOnboarding(true);
-      } catch {
-        setShowOnboarding(true);
-      } finally {
-        setLoading(false);
+    try {
+      const stored = localStorage.getItem('syndicate_onboarding');
+      if (stored) {
+        const state: OnboardingState = JSON.parse(stored);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        if (state.completed) { setLoading(false); return; }
+        setStep(state.currentStep);
       }
-    };
-    checkOnboarding();
+      setShow(true);
+    } catch {
+      setShow(true);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const saveProgress = (step: number, completed = false) => {
-    const state: OnboardingState = {
-      currentStep: step,
-      completed,
-      completedAt: completed ? new Date().toISOString() : null,
-    };
-    localStorage.setItem('syndicate_onboarding', JSON.stringify(state));
+  const save = (s: number, done = false) => {
+    localStorage.setItem('syndicate_onboarding', JSON.stringify({
+      currentStep: s,
+      completed: done,
+      completedAt: done ? new Date().toISOString() : null,
+    }));
   };
 
-  const handleNext = () => {
-    const nextStep = currentStep + 1;
-    if (nextStep >= ONBOARDING_STEPS.length) {
-      handleComplete();
-    } else {
-      setCurrentStep(nextStep);
-      saveProgress(nextStep);
-    }
+  const next = () => {
+    if (step >= STEPS.length - 1) { complete(); return; }
+    setStep(step + 1);
+    save(step + 1);
   };
+  const prev = () => { setStep(Math.max(0, step - 1)); save(Math.max(0, step - 1)); };
+  const complete = () => { save(step, true); setShow(false); };
 
-  const handlePrevious = () => {
-    const prevStep = Math.max(0, currentStep - 1);
-    setCurrentStep(prevStep);
-    saveProgress(prevStep);
-  };
-
-  const handleComplete = () => {
-    saveProgress(currentStep, true);
-    setShowOnboarding(false);
-  };
-
-  const handleSkip = () => {
-    handleComplete();
-  };
-
-  if (loading) {
-    return null;
-  }
-
-  if (!showOnboarding) {
-    return null;
-  }
+  if (loading || !show) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="w-full max-w-2xl">
-        {/* Progress Bar */}
-        <div className="flex items-center gap-2 mb-6">
-          {ONBOARDING_STEPS.map((step, index) => (
-            <div
-              key={step.id}
-              className={`h-1 flex-1 rounded-full transition-all ${
-                index <= currentStep ? 'bg-blue-500' : 'bg-gray-700'
-              }`}
-            />
+      <div className="w-full max-w-lg">
+        {/* Progress */}
+        <div className="flex gap-2 mb-5">
+          {STEPS.map((_, i) => (
+            <div key={i} className={`h-1 flex-1 rounded-full transition-all ${i <= step ? 'bg-brand-500' : 'bg-gray-700'}`} />
           ))}
         </div>
 
-        {/* Step Content */}
-        <div className="glass-premium rounded-2xl p-8 border border-white/20">
-          {currentStep === 0 && <WelcomeStep />}
-          {currentStep === 1 && <PoolTypesStep />}
-          {currentStep === 2 && <YieldStep />}
-          {currentStep === 3 && <FirstStepsStep router={router} />}
+        <div className="rounded-2xl border border-white/15 bg-slate-900/95 backdrop-blur-xl p-7">
+          {step === 0 && <StepWelcome />}
+          {step === 1 && <StepHow />}
+          {step === 2 && <StepStart router={router} onComplete={complete} />}
 
-          {/* Navigation */}
-          <div className="flex items-center justify-between mt-8 pt-6 border-t border-white/10">
-            <div>
-              {currentStep > 0 ? (
-                <Button variant="ghost" onClick={handlePrevious}>
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back
-                </Button>
-              ) : (
-                <Button variant="ghost" onClick={handleSkip}>
-                  Skip Tour
-                </Button>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-400">
-                {currentStep + 1} of {ONBOARDING_STEPS.length}
-              </span>
-              <Button onClick={handleNext}>
-                {currentStep === ONBOARDING_STEPS.length - 1 ? (
-                  <>Get Started</>
-                ) : (
-                  <>
-                    Next
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </>
-                )}
+          {/* Nav */}
+          <div className="flex items-center justify-between mt-7 pt-5 border-t border-white/10">
+            {step > 0 ? (
+              <Button variant="ghost" size="sm" onClick={prev}>
+                <ArrowLeft className="w-4 h-4 mr-1" /> Back
               </Button>
-            </div>
+            ) : (
+              <Button variant="ghost" size="sm" onClick={complete}>
+                Skip
+              </Button>
+            )}
+            {step < STEPS.length - 1 && (
+              <Button size="sm" onClick={next}>
+                Next <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -191,234 +101,98 @@ export function OnboardingWizard() {
   );
 }
 
-// Step Components
+// ─── Steps ──────────────────────────────────────────────────────────────────
 
-function WelcomeStep() {
+function StepWelcome() {
   return (
-    <div className="text-center">
-      <div className="w-20 h-20 rounded-full gradient-cta flex items-center justify-center mx-auto mb-6">
-        <Sparkles className="w-10 h-10 text-white" />
+    <div className="text-center space-y-4">
+      <div className="w-14 h-14 rounded-2xl bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center mx-auto">
+        <span className="text-white font-bold text-xl">S</span>
       </div>
-      <h2 className="text-2xl font-bold text-white mb-4">Welcome to Syndicate</h2>
-      <p className="text-gray-400 mb-6 max-w-md mx-auto">
-        Syndicate gives you three ways to participate: private vault coordination, yield that plays for you, and direct public access to Megapot when you want the fastest path in.
+      <h2 className="text-2xl font-bold text-white">No-loss lottery on Base</h2>
+      <p className="text-gray-400 max-w-sm mx-auto">
+        $1 tickets with daily draws. Or deposit and let yield enter every draw for you — withdraw your full principal anytime.
       </p>
-
-      <div className="grid grid-cols-3 gap-4 mt-8">
-        <div className="bg-white/5 rounded-xl p-4">
-          <Shield className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
-          <p className="text-white font-medium">{privateVaultMode?.shortTitle}</p>
-          <p className="text-xs text-gray-400">Private by default</p>
-        </div>
-        <div className="bg-white/5 rounded-xl p-4">
-          <TrendingUp className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-          <p className="text-white font-medium">{yieldMode?.shortTitle}</p>
-          <p className="text-xs text-gray-400">Let yield play for you</p>
-        </div>
-        <div className="bg-white/5 rounded-xl p-4">
-          <Trophy className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
-          <p className="text-white font-medium">{publicPlayMode?.shortTitle}</p>
-          <p className="text-xs text-gray-400">Fast public entry</p>
-        </div>
-      </div>
     </div>
   );
 }
 
-function PoolTypesStep() {
+function StepHow() {
   return (
-    <div>
-      <h2 className="text-2xl font-bold text-white mb-4 text-center">Choose Your Pool Type</h2>
-      <p className="text-gray-400 mb-6 text-center">
-        Choose the right coordination model for your group, from transparent flows to privacy-native vaults.
-      </p>
-
-      <div className="space-y-4">
-        {/* Safe */}
-        <div className="bg-white/5 rounded-xl p-4 border border-blue-500/30">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-              <Shield className="w-6 h-6 text-blue-400" />
-            </div>
-            <div>
-              <h3 className="text-white font-bold mb-1">Safe Multisig</h3>
-              <p className="text-gray-400 text-sm mb-2">
-                Secure multisig wallet requiring multiple signatures for transactions.
-              </p>
-              <ul className="text-xs text-gray-500 space-y-1">
-                <li>• Multi-signature approval (e.g., 3 of 5)</li>
-                <li>• Coordinator executes ticket purchases</li>
-                <li>• Best for: Teams needing oversight</li>
-              </ul>
-            </div>
+    <div className="space-y-5">
+      <h2 className="text-xl font-bold text-white text-center">Three ways to use it</h2>
+      <div className="space-y-3">
+        <div className="flex items-center gap-4 rounded-xl bg-white/5 p-4">
+          <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+            <Ticket className="w-5 h-5 text-amber-400" />
           </div>
-        </div>
-
-        {/* Splits */}
-        <div className="bg-white/5 rounded-xl p-4 border border-green-500/30">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
-              <Share2 className="w-6 h-6 text-green-400" />
-            </div>
-            <div>
-              <h3 className="text-white font-bold mb-1">0xSplits</h3>
-              <p className="text-gray-400 text-sm mb-2">
-                Automatic proportional distribution with on-chain transparency.
-              </p>
-              <ul className="text-xs text-gray-500 space-y-1">
-                <li>• Automatic prize distribution</li>
-                <li>• Transparent share percentages</li>
-                <li>• Best for: Decentralized teams</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {/* PoolTogether */}
-        <div className="bg-white/5 rounded-xl p-4 border border-purple-500/30">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-              <Coins className="w-6 h-6 text-purple-400" />
-            </div>
-            <div>
-              <h3 className="text-white font-bold mb-1">PoolTogether</h3>
-              <p className="text-gray-400 text-sm mb-2">
-                No-loss lottery with principal preservation and prize-linked savings.
-              </p>
-              <ul className="text-xs text-gray-500 space-y-1">
-                <li>• 100% principal preservation</li>
-                <li>• Weekly prize draws</li>
-                <li>• Best for: Risk-averse participants</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {/* Fhenix */}
-        <div className="bg-white/5 rounded-xl p-4 border border-amber-500/30">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-              <Sparkles className="w-6 h-6 text-amber-400" />
-            </div>
-            <div>
-              <h3 className="text-white font-bold mb-1">Fhenix Private Vault</h3>
-              <p className="text-gray-400 text-sm mb-2">
-                Privacy-native coordination with encrypted contribution amounts and selective disclosure.
-              </p>
-              <ul className="text-xs text-gray-500 space-y-1">
-                <li>• Contribution amounts stay private by default</li>
-                <li>• Authorized users reveal balances only when needed</li>
-                <li>• Best for: Sensitive coordinated capital</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function YieldStep() {
-  return (
-    <div>
-      <h2 className="text-2xl font-bold text-white mb-4 text-center">Earn While You Wait</h2>
-      <p className="text-gray-400 mb-6 text-center">
-        Deposit into Base-native vaults and let yield auto-convert into participation instead of re-entering manually.
-      </p>
-
-      <div className="bg-gradient-to-r from-green-900/30 to-blue-900/30 rounded-xl p-6 mb-6 border border-green-500/30">
-        <div className="flex items-center gap-3 mb-4">
-          <TrendingUp className="w-8 h-8 text-green-400" />
           <div>
-            <h3 className="text-white font-bold">{yieldMode?.shortTitle}</h3>
-            <p className="text-sm text-gray-400">{yieldMode?.tagline}</p>
+            <p className="text-white font-semibold">Play</p>
+            <p className="text-sm text-gray-400">Buy tickets. $1 each, daily draw, paid instantly on win.</p>
           </div>
         </div>
-        
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
-              <span className="text-green-400 text-sm font-bold">1</span>
-            </div>
-            <p className="text-gray-300 text-sm">Deposit USDC into yield vault (Aave, Morpho, etc.)</p>
+        <div className="flex items-center gap-4 rounded-xl bg-white/5 p-4">
+          <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+            <TrendingUp className="w-5 h-5 text-emerald-400" />
           </div>
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
-              <span className="text-green-400 text-sm font-bold">2</span>
-            </div>
-            <p className="text-gray-300 text-sm">Principal earns yield (typically 3-8% APY)</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
-              <span className="text-green-400 text-sm font-bold">3</span>
-            </div>
-            <p className="text-gray-300 text-sm">Yield automatically converts to lottery tickets</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
-              <span className="text-green-400 text-sm font-bold">4</span>
-            </div>
-            <p className="text-gray-300 text-sm">Win prizes while keeping 100% of your principal</p>
+          <div>
+            <p className="text-white font-semibold">Grow</p>
+            <p className="text-sm text-gray-400">Deposit once. Yield buys tickets every cycle. Withdraw anytime.</p>
           </div>
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white/5 rounded-lg p-4">
-          <p className="text-2xl font-bold text-green-400">3-8%</p>
-          <p className="text-xs text-gray-400">Typical APY</p>
-        </div>
-        <div className="bg-white/5 rounded-lg p-4">
-          <p className="text-2xl font-bold text-yellow-400">100%</p>
-          <p className="text-xs text-gray-400">Principal Preserved</p>
+        <div className="flex items-center gap-4 rounded-xl bg-white/5 p-4">
+          <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+            <Users className="w-5 h-5 text-blue-400" />
+          </div>
+          <div>
+            <p className="text-white font-semibold">Coordinate</p>
+            <p className="text-sm text-gray-400">Pool capital with a group. Encrypted balances, selective reveal.</p>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function FirstStepsStep({ router }: { router: { push: (path: string) => void } }) {
+function StepStart({ router, onComplete }: { router: { push: (p: string) => void }; onComplete: () => void }) {
+  const go = (path: string) => { onComplete(); router.push(path); };
+
   return (
-    <div className="text-center">
-      <div className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-500 to-green-500 flex items-center justify-center mx-auto mb-6">
-        <Play className="w-10 h-10 text-white" />
-      </div>
-      <h2 className="text-2xl font-bold text-white mb-4">You&apos;re Ready!</h2>
-      <p className="text-gray-400 mb-6 max-w-md mx-auto">
-        Pick the path that fits you. You can always move from public play into yield, or from yield into a coordinated syndicate.
-      </p>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="space-y-5">
+      <h2 className="text-xl font-bold text-white text-center">Pick your path</h2>
+      <div className="grid grid-cols-1 gap-3">
         <button
-          onClick={() => router.push('/discover')}
-          className="gradient-cta rounded-xl p-4 text-left hover:opacity-90 transition-opacity"
+          onClick={() => go('/')}
+          className="flex items-center gap-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-left transition-colors hover:bg-amber-500/10"
         >
-          <Trophy className="w-6 h-6 text-white mb-2" />
-          <p className="text-white font-bold">Coordinate Capital</p>
-          <p className="text-sm text-white/70">Create or discover a syndicate</p>
+          <Ticket className="w-5 h-5 text-amber-400 flex-shrink-0" />
+          <div>
+            <p className="text-white font-semibold">Buy tickets now</p>
+            <p className="text-xs text-gray-400">Fastest way into today&apos;s draw</p>
+          </div>
+          <ArrowRight className="w-4 h-4 text-gray-600 ml-auto" />
         </button>
         <button
-          onClick={() => router.push('/vaults')}
-          className="bg-white/10 rounded-xl p-4 text-left hover:bg-white/20 transition-colors"
+          onClick={() => go('/vaults')}
+          className="flex items-center gap-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-left transition-colors hover:bg-emerald-500/10"
         >
-          <Users className="w-6 h-6 text-white mb-2" />
-          <p className="text-white font-bold">Grow with Yield</p>
-          <p className="text-sm text-gray-400">Put capital to work on Base</p>
+          <TrendingUp className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+          <div>
+            <p className="text-white font-semibold">Deposit &amp; grow</p>
+            <p className="text-xs text-gray-400">Set it and forget it — yield does the work</p>
+          </div>
+          <ArrowRight className="w-4 h-4 text-gray-600 ml-auto" />
         </button>
-      </div>
-
-      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <button onClick={() => router.push('/')} className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-3 text-left transition-colors hover:bg-yellow-500/20">
-          <p className="text-sm font-bold text-yellow-200">Play Megapot</p>
-          <p className="mt-1 text-xs text-yellow-100/60">Buy a ticket directly on Base</p>
-        </button>
-        <button onClick={() => router.push('/vaults')} className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-3 text-left transition-colors hover:bg-blue-500/20">
-          <p className="text-sm font-bold text-blue-200">Grow with Yield</p>
-          <p className="mt-1 text-xs text-blue-100/60">Let yield fund participation</p>
-        </button>
-        <button onClick={() => router.push('/discover')} className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-left transition-colors hover:bg-emerald-500/20">
-          <p className="text-sm font-bold text-emerald-200">Coordinate Capital</p>
-          <p className="mt-1 text-xs text-emerald-100/60">Join or create a syndicate</p>
+        <button
+          onClick={() => go('/discover')}
+          className="flex items-center gap-4 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 text-left transition-colors hover:bg-blue-500/10"
+        >
+          <Users className="w-5 h-5 text-blue-400 flex-shrink-0" />
+          <div>
+            <p className="text-white font-semibold">Start a syndicate</p>
+            <p className="text-xs text-gray-400">Coordinate capital with your group</p>
+          </div>
+          <ArrowRight className="w-4 h-4 text-gray-600 ml-auto" />
         </button>
       </div>
     </div>

@@ -110,7 +110,7 @@ export function QuickDeposit({ onExploreVaults, className = "" }: QuickDepositPr
           ${amount} USDC is now earning yield in {protocol.charAt(0).toUpperCase() + protocol.slice(1)}
         </p>
         <p className="text-xs text-gray-500 mb-3">
-          Your yield will automatically convert into draw tickets over time.
+          Yield will auto-convert into draw tickets — no manual re-entry needed.
         </p>
         {txHash && (
           <a
@@ -176,7 +176,8 @@ export function QuickDeposit({ onExploreVaults, className = "" }: QuickDepositPr
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
         <TrendingUp className="w-4 h-4 text-emerald-400" />
-        <span className="text-sm font-semibold text-white">Grow with Yield</span>
+        <span className="text-sm font-semibold text-white">Grow</span>
+        <span className="text-xs text-gray-500">— yield enters every draw for you</span>
       </div>
 
       {/* Protocol pills */}
@@ -247,7 +248,7 @@ export function QuickDeposit({ onExploreVaults, className = "" }: QuickDepositPr
 
       {/* Subtext */}
       <p className="text-[11px] text-gray-500 text-center mt-3">
-        Principal preserved • Yield → tickets • Withdraw anytime
+        Deposit stays yours · Yield buys tickets · Withdraw anytime
       </p>
 
       {/* More options */}

@@ -107,44 +107,44 @@ export default function BridgePage() {
       id: "solana",
       name: "Solana",
       icon: "⚡",
-      description: "Fast source chain for funding Base-native vault flows",
+      description: "USDC via CCTP or Wormhole",
       gradient: "from-purple-500 to-pink-500",
       walletTypes: ["Phantom", "Solflare"],
-      features: ["CCTP Bridge", "Wormhole Bridge", "~15-20 min"],
-      role: "Funding rail",
+      features: ["CCTP", "Wormhole", "~15-20 min"],
+      role: "Source",
       capabilityId: "bridge_solana" as CapabilityId,
     },
     {
       id: "near",
       name: "NEAR",
       icon: "🌌",
-      description: "Source chain with intent-based funding into Base",
+      description: "Intent-based bridge to Base",
       gradient: "from-blue-500 to-cyan-500",
       walletTypes: ["Nightly", "MyNearWallet"],
-      features: ["NEAR Intents", "1Click SDK", "~10-15 min"],
-      role: "Funding rail",
+      features: ["NEAR Intents", "1Click", "~10-15 min"],
+      role: "Source",
       capabilityId: "bridge_near" as CapabilityId,
     },
     {
       id: "ethereum",
       name: "Ethereum",
       icon: "💎",
-      description: "EVM funding route into Base execution",
+      description: "Native CCTP to Base",
       gradient: "from-blue-400 to-purple-500",
       walletTypes: ["MetaMask", "WalletConnect", "Rainbow"],
       features: ["Native CCTP", "Secure", "~15-20 min"],
-      role: "Funding rail",
+      role: "Source",
       capabilityId: "bridge_base" as CapabilityId,
     },
     {
       id: "starknet",
       name: "Starknet",
       icon: "⚡",
-      description: "Advanced funding route for ZK-native users",
+      description: "Fast bridge via Orbiter",
       gradient: "from-blue-600 to-indigo-600",
       walletTypes: ["ArgentX", "Braavos"],
-      features: ["Orbiter Bridge", "Fast", "~2-5 min"],
-      role: "Funding rail",
+      features: ["Orbiter", "Fast", "~2-5 min"],
+      role: "Source",
       capabilityId: "bridge_starknet" as CapabilityId,
     },
   ], []);
@@ -202,24 +202,12 @@ export default function BridgePage() {
         <CompactStack spacing="xl">
           {/* Hero Section */}
           <div className="pt-8 text-center">
-            <div className="inline-flex items-center gap-3 mb-6">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-xl">
-                <span className="text-3xl">🌉</span>
-              </div>
-            </div>
-            <h1 className="font-black text-4xl md:text-6xl bg-gradient-to-r from-blue-400 via-purple-500 to-pink-400 bg-clip-text text-transparent mb-4">
-              Bridge USDC to Base
+            <h1 className="font-bold text-3xl md:text-4xl text-white mb-3">
+              Fund from any chain
             </h1>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Fund the Base-native product from external ecosystems like Solana, NEAR, Ethereum, or Starknet.
+            <p className="text-lg text-gray-400 max-w-lg mx-auto">
+              Move USDC from Solana, NEAR, Ethereum, or Starknet into Base — then deposit into vaults or buy tickets.
             </p>
-            <div className="mt-8 max-w-2xl mx-auto">
-              <div className="glass-premium p-4 rounded-xl border border-blue-500/30 bg-blue-500/5">
-                <p className="text-sm text-blue-200">
-                  💡 <strong>System model:</strong> Base is the execution layer. Fhenix powers private vault mode. Other chains primarily fund or route users into the Base-native experience.
-                </p>
-              </div>
-            </div>
           </div>
 
           {/* Toggle for NEAR users */}
@@ -266,7 +254,7 @@ export default function BridgePage() {
                       <div>
                         <h3 className="text-white font-semibold text-lg mb-4 flex items-center gap-2">
                           <span className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-sm">1</span>
-                          Select Funding Chain
+                          Where are your funds?
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                           {chainOptions.map((chain) => {
@@ -400,10 +388,10 @@ export default function BridgePage() {
                       <div>
                         <h3 className="text-white font-semibold text-lg mb-4 flex items-center gap-2">
                           <span className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-sm">3</span>
-                          Choose Destination Strategy
+                          Where should funds go?
                         </h3>
-                        <div className="mb-4 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-gray-200">
-                          After funds arrive on Base, you can continue into public yield strategies or the Fhenix-powered private vault experience.
+                        <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-gray-400">
+                          Choose where your funds go after arriving on Base.
                           {(() => {
                             const fhenixCap = getCapability('fhenix_privacy');
                             return fhenixCap.availabilityMessage ? (
@@ -451,7 +439,7 @@ export default function BridgePage() {
                       <div>
                         <h3 className="text-white font-semibold text-lg mb-4 flex items-center gap-2">
                           <span className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-sm">4</span>
-                          Enter Amount & Bridge
+                          Amount
                         </h3>
                         <div className="space-y-4">
                           <div>
@@ -506,42 +494,10 @@ export default function BridgePage() {
             </div>
           </CompactSection>
 
-          {/* Features Section */}
-          <CompactSection spacing="lg">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-              <div className="glass-premium p-6 rounded-2xl border border-white/10 backdrop-blur-xl text-center hover:border-white/20 transition-all duration-200">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-purple-400 to-pink-500 flex items-center justify-center mx-auto mb-4">
-                  <span className="text-white text-xl">⚡</span>
-                </div>
-                <h3 className="text-white font-semibold mb-2">
-                  Multi-Chain Support
-                </h3>
-                <p className="text-gray-400 text-sm">
-                  Bridge from Solana, NEAR, or Ethereum with equal ease
-                </p>
-              </div>
-
-              <div className="glass-premium p-6 rounded-2xl border border-white/10 backdrop-blur-xl text-center hover:border-white/20 transition-all duration-200">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-blue-400 to-cyan-500 flex items-center justify-center mx-auto mb-4">
-                  <span className="text-white text-xl">🔒</span>
-                </div>
-                <h3 className="text-white font-semibold mb-2">Secure & Fast</h3>
-                <p className="text-gray-400 text-sm">
-                  CCTP, Wormhole, and NEAR Chain Signatures for secure transfers
-                </p>
-              </div>
-
-              <div className="glass-premium p-6 rounded-2xl border border-white/10 backdrop-blur-xl text-center hover:border-white/20 transition-all duration-200">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-green-400 to-emerald-500 flex items-center justify-center mx-auto mb-4">
-                  <span className="text-white text-xl">💰</span>
-                </div>
-                <h3 className="text-white font-semibold mb-2">Low Fees</h3>
-                <p className="text-gray-400 text-sm">
-                  Minimal bridging costs with optimized routing
-                </p>
-              </div>
-            </div>
-          </CompactSection>
+          {/* Trust line */}
+          <div className="text-center text-xs text-gray-500 pb-8">
+            CCTP · Wormhole · NEAR Intents · Orbiter — optimized routing, minimal fees
+          </div>
         </CompactStack>
       </CompactContainer>
     </div>

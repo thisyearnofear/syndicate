@@ -1,67 +1,104 @@
 "use client";
 
-import { useState, useCallback, useEffect, Suspense, lazy } from "react";
+import { useState, useCallback, useEffect, useMemo, Suspense, lazy } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Clock } from "lucide-react";
 import { useUnifiedWallet, useIsMounted } from "@/hooks";
-import { PRODUCT_MODES, getProductModeById } from "@/config/productModes";
+import { PRODUCT_MODES } from "@/config/productModes";
 import { getCapability, getCtaState, type CapabilityId } from "@/config/capabilities";
+import { useLottery } from "@/domains/lottery/hooks/useLottery";
 import { QuickPurchase } from "@/components/purchase/QuickPurchase";
 import { QuickDeposit } from "@/components/purchase/QuickDeposit";
 import { SocialProof } from "@/components/home/SocialProof";
 import { DrawResults } from "@/components/home/DrawResults";
+import { LastWinner } from "@/components/home/LastWinner";
+import { SharePrompt } from "@/components/home/SharePrompt";
+import { YieldTeaser } from "@/components/home/YieldTeaser";
 import { FirstActionPrompt } from "@/components/onboarding/FirstActionPrompt";
-
-// UI Components
 import { Button } from "@/shared/components/ui/Button";
 
 // Lazy load heavy components
 const SimplePurchaseModal = lazy(() => import("@/components/modal/SimplePurchaseModal"));
-
-// Lazy load home components
 const PremiumJackpotDisplay = lazy(() => import("@/components/home/PremiumJackpotDisplay"));
-const MultiLotteryPrizes = lazy(() => import("@/components/home/MultiLotteryPrizes"));
 const UserDashboard = lazy(() => import("@/components/home/UserDashboard"));
 const OnboardingWizard = lazy(() => import("@/components/onboarding/OnboardingWizard"));
 
+// ─── Countdown hook for hero CTA ────────────────────────────────────────────
+
+function useDrawCountdown(endTimestamp: string | undefined) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return useMemo(() => {
+    if (!endTimestamp) return null;
+    const endRaw = Number(endTimestamp);
+    const end = endRaw > 1e12 ? endRaw : endRaw * 1000;
+    const diff = end - now;
+    if (diff <= 0) return { label: "Drawing now...", urgent: true };
+    const h = Math.floor(diff / 3_600_000);
+    const m = Math.floor((diff % 3_600_000) / 60_000);
+    if (h > 0) return { label: `${h}h ${m}m left`, urgent: h < 2 };
+    return { label: `${m}m left`, urgent: true };
+  }, [endTimestamp, now]);
+}
+
+// ─── Page ───────────────────────────────────────────────────────────────────
+
 export default function Home() {
   const router = useRouter();
+  const isMounted = useIsMounted();
+  const { isConnected } = useUnifiedWallet();
+  const { jackpotStats } = useLottery();
+
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [selectedProtocol, setSelectedProtocol] = useState<string | undefined>(undefined);
-  const isMounted = useIsMounted();
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const { isConnected } = useUnifiedWallet();
+  const [shareState, setShareState] = useState<{ count: number; drawId?: number } | null>(null);
 
+  const countdown = useDrawCountdown(jackpotStats?.endTimestamp);
+
+  // Prize pool formatted
+  const prizeDisplay = useMemo(() => {
+    if (!jackpotStats?.prizeUsd) return "$1,000,000+";
+    const n = parseFloat(jackpotStats.prizeUsd);
+    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+    return `$${Math.round(n).toLocaleString()}`;
+  }, [jackpotStats]);
+
+  const oddsDisplay = jackpotStats?.oddsPerTicket
+    ? `1 in ${parseInt(jackpotStats.oddsPerTicket).toLocaleString()}`
+    : null;
+
+  // Onboarding check
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
       const stored = localStorage.getItem('syndicate_onboarding');
-      if (!stored) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setShowOnboarding(true);
-      } else {
-        const state = JSON.parse(stored);
-        if (!state.completed) {
-           
-          setShowOnboarding(true);
-        }
-      }
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (!stored) { setShowOnboarding(true); return; }
+      const state = JSON.parse(stored);
+       
+      if (!state.completed) setShowOnboarding(true);
     } catch {}
   }, []);
 
+  // ─── Handlers ───────────────────────────────────────────────────────────
+
   const handlePurchaseAction = useCallback((protocol?: string) => {
     setSelectedProtocol(protocol === 'megapot' || protocol === 'pooltogether' ? protocol : undefined);
-    // For non-megapot protocols (PoolTogether), open the full modal
     if (protocol && protocol !== 'megapot') {
       setShowPurchaseModal(true);
       return;
     }
-    // For megapot / default, scroll to the inline QuickPurchase
-    const quickPurchase = document.getElementById('quick-purchase');
-    if (quickPurchase) {
-      quickPurchase.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      quickPurchase.classList.add('ring-2', 'ring-brand-400/50');
-      setTimeout(() => quickPurchase.classList.remove('ring-2', 'ring-brand-400/50'), 2000);
+    const el = document.getElementById('quick-purchase');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('ring-2', 'ring-brand-400/50');
+      setTimeout(() => el.classList.remove('ring-2', 'ring-brand-400/50'), 2000);
     }
   }, []);
 
@@ -70,305 +107,243 @@ export default function Home() {
     setSelectedProtocol(protocol === 'megapot' || protocol === 'pooltogether' ? protocol : undefined);
     setShowPurchaseModal(true);
   }, []);
-  const handleCreatePrivateVault = useCallback(() => router.push('/discover'), [router]);
-  const handleSeePrivateVaults = useCallback(() => router.push('/vaults'), [router]);
+  const handleSeeVaults = useCallback(() => router.push('/vaults'), [router]);
+  const handleDiscover = useCallback(() => router.push('/discover'), [router]);
   const handleModeAction = useCallback((modeId: string) => {
-    if (modeId === 'public_play') {
-      handlePurchaseAction('megapot');
-      return;
-    }
-    if (modeId === 'yield_to_tickets') {
-      router.push('/vaults');
-      return;
-    }
+    if (modeId === 'public_play') { handlePurchaseAction('megapot'); return; }
+    if (modeId === 'yield_to_tickets') { router.push('/vaults'); return; }
     router.push('/discover');
   }, [handlePurchaseAction, router]);
-  const publicPlayMode = getProductModeById('public_play');
+
+  // Listen for successful purchase events to show share prompt
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      setShareState({ count: e.detail?.ticketCount ?? 1, drawId: e.detail?.drawId });
+    };
+    window.addEventListener('syndicate:purchase-success', handler as EventListener);
+    return () => window.removeEventListener('syndicate:purchase-success', handler as EventListener);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950 relative overflow-hidden">
-      {/* Animated background effects */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.1),transparent_50%)] animate-pulse" style={{ animationDuration: "8s" }} />
-      
-      {/* Main content container - centered and clean */}
-      <div className="relative z-10 container mx-auto px-4 py-8 md:py-16 max-w-7xl pb-28 md:pb-16">
-        
-        {/* Hero Section - Single clear action */}
-        <section className="text-center mb-16 space-y-8">
-          {/* Brand */}
+      {/* Background */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.08),transparent_50%)] animate-pulse" style={{ animationDuration: "10s" }} />
+
+      <div className="relative z-10 container mx-auto px-4 py-8 md:py-16 max-w-5xl pb-28 md:pb-16">
+
+        {/* ─── LAST WINNER BANNER ───────────────────────────────────────────── */}
+        <div className="mb-8 max-w-2xl mx-auto">
+          <LastWinner />
+        </div>
+
+        {/* ─── HERO ─────────────────────────────────────────────────────────── */}
+        <section className="text-center mb-16 space-y-5">
+          {/* Prize pool — the anchor */}
           <div className="animate-fade-in-up">
-            <h1 className="font-black text-5xl md:text-7xl lg:text-8xl leading-tight tracking-tight bg-gradient-to-r from-brand-400 via-blue-400 to-emerald-300 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(14,165,233,0.35)]">
-              Syndicate
+            <p className="text-sm uppercase tracking-widest text-gray-500 mb-2">Current prize pool</p>
+            <h1 className="font-black text-6xl md:text-8xl leading-none tracking-tight text-white">
+              {prizeDisplay}
             </h1>
           </div>
 
-          {/* Single clear value prop */}
-          <div className="animate-fade-in-up space-y-3 max-w-2xl mx-auto">
-            <h2 className="text-2xl md:text-4xl font-bold text-white leading-tight">
-              Enter for $1. Keep your principal forever.
-            </h2>
-            <p className="text-base md:text-lg text-gray-400 leading-relaxed">
-              Buy a ticket directly, or deposit into yield vaults and let earnings buy tickets for you.
+          {/* Value prop — one line */}
+          <p className="text-lg md:text-xl text-gray-400 max-w-md mx-auto">
+            $1 to enter. Your deposit back forever.
+          </p>
+
+          {/* Odds line */}
+          {oddsDisplay && (
+            <p className="text-sm text-gray-500">
+              <span className="text-brand-400 font-semibold">{oddsDisplay}</span> odds per ticket
             </p>
+          )}
+
+          {/* CTAs with urgency */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-3">
+            <Button
+              variant="premium"
+              size="lg"
+              className="text-lg px-8 py-5 shadow-2xl group"
+              onClick={handleBuyClick}
+            >
+              Enter draw
+              {countdown && (
+                <span className={`ml-2 inline-flex items-center gap-1 text-sm opacity-80 group-hover:opacity-100 ${countdown.urgent ? 'text-amber-200' : ''}`}>
+                  <Clock className="w-3.5 h-3.5" />
+                  {countdown.label}
+                </span>
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="lg"
+              className="text-lg px-8 py-5 border border-white/15 text-gray-200 hover:text-white hover:border-white/30"
+              onClick={handleSeeVaults}
+            >
+              Deposit &amp; Grow
+            </Button>
           </div>
 
-          {/* Trust indicators — minimal */}
-          <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-gray-500 animate-fade-in">
+          {/* Trust line */}
+          <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-gray-500 pt-1">
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
               Live on Base
             </span>
-            <span>•</span>
-            <span>Draw daily at 17:00 UTC</span>
-            <span>•</span>
+            <span className="text-gray-700">·</span>
             <span>Non-custodial</span>
-          </div>
-
-          {/* Secondary paths — revealed below the fold */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center pt-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-400 hover:text-white border border-white/10 hover:border-white/20 px-6"
-              onClick={handleSeePrivateVaults}
-            >
-              <span className="mr-1.5">📈</span> Grow with Yield
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-400 hover:text-white border border-white/10 hover:border-white/20 px-6"
-              onClick={handleCreatePrivateVault}
-            >
-              <span className="mr-1.5">👥</span> Coordinate Capital
-            </Button>
+            <span className="text-gray-700">·</span>
+            <span>Open-source</span>
           </div>
         </section>
 
-        {/* Social proof — live activity signals */}
-        <section className="mb-12">
+        {/* ─── LIVE PROOF ───────────────────────────────────────────────────── */}
+        <section className="mb-16">
           <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-[1fr_auto] gap-6 items-start">
             <SocialProof />
             <DrawResults onEnterDraw={handleBuyClick} className="w-full md:w-72" />
           </div>
         </section>
 
-        {/* Optional Public Play - Centered */}
+        {/* ─── YIELD TEASER (connected depositors only) ─────────────────────── */}
+        {isMounted && isConnected && (
+          <section className="mb-16 max-w-2xl mx-auto">
+            <YieldTeaser />
+          </section>
+        )}
+
+        {/* ─── JACKPOT + QUICK ACTIONS ──────────────────────────────────────── */}
         <section className="mb-16">
-          <div className="max-w-4xl mx-auto text-center mb-8">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-300">
-              {publicPlayMode?.badge ?? 'Optional public play'}
-            </span>
-            <h2 className="text-3xl md:text-4xl font-bold text-white mt-4 mb-3">
-              {publicPlayMode?.title} stays available, without becoming the whole story
-            </h2>
-            <p className="text-gray-400 text-lg">
-              {publicPlayMode?.description}
-            </p>
-          </div>
           <Suspense fallback={
-            <div className="max-w-4xl mx-auto h-64 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
+            <div className="h-48 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
           }>
-            <div className="max-w-4xl mx-auto">
-              <PremiumJackpotDisplay onBuyClick={handleBuyClick} />
-            </div>
+            <PremiumJackpotDisplay onBuyClick={handleBuyClick} />
           </Suspense>
 
-          {/* Inline Quick Actions — Play and Grow side by side */}
-          <div id="quick-purchase" className="max-w-3xl mx-auto mt-8 scroll-mt-24 transition-[box-shadow] duration-moderate rounded-2xl">
+          <div id="quick-purchase" className="mt-8 scroll-mt-24 transition-[box-shadow] duration-300 rounded-2xl">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <QuickPurchase onAdvanced={() => handleOpenAdvanced('megapot')} />
-              <QuickDeposit onExploreVaults={handleSeePrivateVaults} />
+              <QuickDeposit onExploreVaults={handleSeeVaults} />
             </div>
           </div>
         </section>
 
-        {/* All Prizes - Centered */}
+        {/* ─── THREE MODES ──────────────────────────────────────────────────── */}
         <section className="mb-16">
-          <Suspense fallback={
-            <div className="max-w-4xl mx-auto h-96 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
-          }>
-            <div className="max-w-4xl mx-auto">
-              <MultiLotteryPrizes onBuyClick={handleOpenAdvanced} />
-            </div>
-          </Suspense>
-        </section>
-
-        {/* Privacy - supporting pillar */}
-        <section className="mb-16">
-          <div className="max-w-5xl mx-auto text-center mb-8">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-300">
-              🔒 Privacy, when you want it
-            </span>
-            <h2 className="text-3xl md:text-4xl font-bold text-white mt-4 mb-3">
-              Play in public, keep what matters private
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold text-white">
+              Three ways to use Syndicate
             </h2>
-            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-              The core loop works on Base in the open. Fhenix modes add encryption for the balances and contributions you&apos;d rather keep to yourself.
-            </p>
-            {getCapability('fhenix_privacy').availabilityMessage && (
-              <p className="text-xs text-amber-300/70 mt-3 max-w-xl mx-auto">
-                {getCapability('fhenix_privacy').availabilityMessage}
-              </p>
-            )}
           </div>
-          <div className="max-w-5xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[
-                {
-                  icon: "🔐",
-                  title: "Deposit Privately",
-                  desc: "Sensitive amounts are encrypted client-side before entering the Fhenix-enabled flow.",
-                  color: "from-emerald-500 to-teal-500"
-                },
-                {
-                  icon: "🧠",
-                  title: "Keep Positions Encrypted",
-                  desc: "On-chain activity can remain visible while confidential numeric state stays private by default.",
-                  color: "from-brand-400 to-brand-600"
-                },
-                {
-                  icon: "👁️",
-                  title: "Reveal Selectively",
-                  desc: "Authorized users can reveal balances locally with permits instead of exposing them to everyone.",
-                  color: "from-amber-500 to-orange-500"
-                }
-              ].map((item, i) => (
-                <div key={i} className={`bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover-lift animate-fade-in-slide-up stagger-${i + 1}`}>
-                  <div className={`w-14 h-14 mb-4 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center text-2xl shadow-lg`}>
-                    {item.icon}
-                  </div>
-                  <h3 className="text-xl font-bold text-white mb-2">{item.title}</h3>
-                  <p className="text-gray-400 leading-relaxed">{item.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Product Ladder */}
-        <section className="mb-16">
-          <div className="max-w-5xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-12">
-              Three Ways To Use Syndicate
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {PRODUCT_MODES.map((mode, i) => {
-                // Map product mode to its primary capability
-                const capId: CapabilityId = mode.id === 'private_vaults' ? 'fhenix_privacy'
-                  : mode.id === 'yield_to_tickets' ? 'vaults'
-                  : 'megapot';
-                const cap = getCapability(capId);
-                const ctaState = getCtaState(capId);
-                return (
-                <div key={mode.id} className={`bg-white/5 border border-white/10 rounded-2xl p-6 text-left hover-lift animate-fade-in-slide-up stagger-${i + 1}`}>
-                  <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide mb-4 ${
-                    mode.id === 'private_vaults'
-                      ? 'bg-emerald-500/15 text-emerald-300'
-                      : mode.id === 'yield_to_tickets'
-                        ? 'bg-brand-500/15 text-brand-300'
-                        : 'bg-white/10 text-gray-200'
-                  }`}>
-                    <span>{mode.badge}</span>
-                    <span>•</span>
-                    <span>{mode.audience}</span>
-                  </div>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl shadow-lg ${
-                      mode.id === 'private_vaults'
-                        ? 'bg-gradient-to-br from-emerald-500 to-teal-500'
-                        : mode.id === 'yield_to_tickets'
-                          ? 'bg-gradient-to-br from-brand-400 to-brand-600'
-                          : 'bg-gradient-to-br from-amber-500 to-orange-500'
-                    }`}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {PRODUCT_MODES.map((mode) => {
+              const capId: CapabilityId = mode.id === 'private_vaults' ? 'fhenix_privacy'
+                : mode.id === 'yield_to_tickets' ? 'vaults'
+                : 'megapot';
+              const cap = getCapability(capId);
+              const ctaState = getCtaState(capId);
+              return (
+                <div key={mode.id} className="bg-white/[0.04] border border-white/10 rounded-2xl p-6 flex flex-col hover:bg-white/[0.07] transition-colors">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center text-xl">
                       {mode.icon}
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Mode {i + 1}</p>
-                      <h3 className="text-xl font-bold text-white">{mode.title}</h3>
+                      <h3 className="text-lg font-bold text-white">{mode.title}</h3>
+                      <span className="text-xs text-gray-500">{mode.badge}</span>
                     </div>
                   </div>
-                  <p className="text-white font-medium mb-2">{mode.tagline}</p>
-                  <p className="text-gray-400 leading-relaxed text-sm">{mode.description}</p>
-                  <p className="text-xs text-gray-500 mt-3">{mode.supportingCopy}</p>
+                  <p className="text-sm text-white font-medium mb-1">{mode.tagline}</p>
+                  <p className="text-sm text-gray-400 leading-relaxed mb-2">{mode.description}</p>
+                  <p className="text-xs text-gray-500 mb-auto">{mode.supportingCopy}</p>
                   {cap.availabilityMessage && (
-                    <p className="text-xs text-amber-300/80 mt-2">{cap.availabilityMessage}</p>
+                    <p className="text-xs text-amber-300/80 mt-3">{cap.availabilityMessage}</p>
                   )}
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`mt-4 w-full justify-between border border-white/10 bg-white/[0.04] text-gray-200 hover:bg-white/10 hover:text-white ${ctaState === 'disabled' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`mt-5 w-full justify-between border border-white/10 text-gray-200 hover:bg-white/10 hover:text-white ${ctaState === 'disabled' ? 'opacity-50 cursor-not-allowed' : ''}`}
                     onClick={() => handleModeAction(mode.id)}
                     disabled={ctaState === 'disabled'}
                   >
-                    {mode.id === 'private_vaults' ? 'Discover or create' : mode.id === 'yield_to_tickets' ? 'Explore strategies' : 'Buy tickets'}
+                    {mode.id === 'public_play' ? 'Buy tickets' : mode.id === 'yield_to_tickets' ? 'Explore vaults' : 'Discover syndicates'}
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </div>
-                );
-              })}
-            </div>
+              );
+            })}
           </div>
         </section>
 
-        {/* User Dashboard - Only show when connected */}
+        {/* ─── PRIVACY ──────────────────────────────────────────────────────── */}
+        <section className="mb-16">
+          <div className="max-w-3xl mx-auto rounded-2xl border border-white/10 bg-white/[0.03] p-8 md:p-10 text-center">
+            <p className="text-2xl md:text-3xl font-bold text-white mb-3">
+              A treasury buying 500 tickets doesn&apos;t need every competitor watching.
+            </p>
+            <p className="text-gray-400 mb-6">
+              Coordinate privately, win publicly. Encrypted balances, selective reveal, your rules.
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="border border-white/10 text-gray-300 hover:text-white hover:border-white/20"
+              onClick={handleDiscover}
+            >
+              Explore private syndicates
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+            {getCapability('fhenix_privacy').availabilityMessage && (
+              <p className="text-xs text-amber-300/60 mt-4">
+                {getCapability('fhenix_privacy').availabilityMessage}
+              </p>
+            )}
+          </div>
+        </section>
+
+        {/* ─── USER DASHBOARD (connected only) ──────────────────────────────── */}
         {isMounted && isConnected && (
           <section className="mb-16">
             <Suspense fallback={
-              <div className="max-w-6xl mx-auto h-96 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
+              <div className="h-64 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
             }>
-              <div className="max-w-6xl mx-auto">
-                <UserDashboard />
-              </div>
+              <UserDashboard />
             </Suspense>
           </section>
         )}
 
-        {/* Features Grid - Centered */}
-        <section className="mb-16">
-          <div className="max-w-6xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-12">
-              Why Choose Syndicate?
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[
-                { icon: "🛡️", title: "Principal Preserved", desc: "Your capital stays intact while yield does the work — no-loss participation." },
-                { icon: "📈", title: "Yield That Plays For You", desc: "Earnings auto-convert into tickets or causes every cycle, no manual re-entry." },
-                { icon: "👥", title: "Coordinate With Groups", desc: "Safe multisigs, 0xSplits, PoolTogether, or private Fhenix vaults." },
-                { icon: "🔒", title: "Privacy On Request", desc: "Encrypted balances and selective disclosure when discretion matters." }
-              ].map((feature, i) => (
-                <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-6 text-center hover:bg-white/10 transition-all">
-                  <div className="text-4xl mb-3">{feature.icon}</div>
-                  <h3 className="text-lg font-bold text-white mb-2">{feature.title}</h3>
-                  <p className="text-sm text-gray-400">{feature.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Final CTA - Centered */}
+        {/* ─── FINAL CTA ────────────────────────────────────────────────────── */}
         <section className="text-center">
-          <div className="max-w-3xl mx-auto bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-cyan-500/20 border border-emerald-500/30 rounded-2xl p-8 md:p-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Start with the lossless loop
+          <div className="max-w-2xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">
+              No-loss. Yield-powered. Private when you want.
             </h2>
-            <p className="text-lg text-gray-300 mb-8">
-              Play today, grow tomorrow, coordinate when you&apos;re ready — your principal stays yours either way.
+            <p className="text-gray-400 mb-8">
+              Play today, grow tomorrow, coordinate when you&apos;re ready.
             </p>
-            <Button
-              variant="premium"
-              size="lg"
-              className="shadow-2xl text-lg px-12 py-6"
-              onClick={handleCreatePrivateVault}
-            >
-              Start with a Syndicate
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button
+                variant="premium"
+                size="lg"
+                className="text-lg px-10 py-5 shadow-2xl"
+                onClick={handleBuyClick}
+              >
+                Enter the draw
+              </Button>
+              <Button
+                variant="ghost"
+                size="lg"
+                className="text-lg px-10 py-5 border border-white/15 text-gray-200 hover:text-white"
+                onClick={handleDiscover}
+              >
+                Start a Syndicate
+              </Button>
+            </div>
           </div>
         </section>
       </div>
 
-      {/* Modals */}
+      {/* ─── MODALS & OVERLAYS ────────────────────────────────────────────── */}
       <Suspense fallback={null}>
         {showPurchaseModal && (
           <SimplePurchaseModal
@@ -379,35 +354,47 @@ export default function Home() {
         )}
       </Suspense>
 
-      {/* Onboarding Wizard for first-time visitors */}
       {showOnboarding && (
         <Suspense fallback={null}>
           <OnboardingWizard />
         </Suspense>
       )}
 
-      {/* First-action prompt — appears after first successful purchase */}
       <FirstActionPrompt
         onGrow={() => {
-          const quickDeposit = document.getElementById('quick-purchase');
-          if (quickDeposit) {
-            quickDeposit.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
+          const el = document.getElementById('quick-purchase');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }}
       />
 
+      {/* Share prompt — appears after purchase */}
+      {shareState && (
+        <SharePrompt
+          ticketCount={shareState.count}
+          drawId={shareState.drawId}
+          onDismiss={() => setShareState(null)}
+        />
+      )}
+
+      {/* Desktop floating CTA */}
       <div className="fixed bottom-8 right-8 z-40 hidden md:block">
         <Button
           variant="premium"
           size="lg"
           className="shadow-2xl hover:shadow-brand-500/30 border border-brand-400/30 animate-float"
-          onClick={handleCreatePrivateVault}
+          onClick={handleBuyClick}
         >
-          Start with a Syndicate
+          Enter draw
+          {countdown && (
+            <span className="ml-2 text-sm opacity-80">
+              <Clock className="w-3 h-3 inline mr-0.5" />
+              {countdown.label}
+            </span>
+          )}
         </Button>
       </div>
 
-      {/* Mobile primary CTA — mirrors desktop floating action */}
+      {/* Mobile sticky CTA */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-slate-950/95 px-4 pt-3 backdrop-blur-xl safe-bottom md:hidden">
         <div className="mx-auto flex max-w-lg gap-2">
           <Button
@@ -417,12 +404,13 @@ export default function Home() {
             onClick={handleBuyClick}
           >
             Enter draw
+            {countdown && <span className="ml-1 text-xs opacity-80">{countdown.label}</span>}
           </Button>
           <Button
             variant="glass"
             size="lg"
             className="min-h-12 flex-1 touch-manipulation border-white/15"
-            onClick={handleCreatePrivateVault}
+            onClick={handleDiscover}
           >
             Syndicate
           </Button>

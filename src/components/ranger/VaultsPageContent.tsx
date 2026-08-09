@@ -85,14 +85,8 @@ export function VaultsPageContent({
               Vaults
             </h1>
             <p className="max-w-xl text-gray-400">
-              Deposit into vault strategies on Base and auto-convert earnings into lottery tickets or cause allocations. The featured Fhenix vault demonstrates privacy-by-design — encrypted deposits, private governance, and local balance reveal via Fully Homomorphic Encryption.
+              Deposit once. Yield buys tickets every cycle. Withdraw your full principal anytime.
             </p>
-            <div className="inline-flex flex-wrap items-center gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-gray-200">
-              <span className="rounded-full bg-amber-500/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
-                Demo path
-              </span>
-              <span>Deposit into the Fhenix vault, then reveal the encrypted balance locally from your portfolio.</span>
-            </div>
           </div>
 
           {/* Vault cards */}
@@ -123,7 +117,7 @@ export function VaultsPageContent({
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300 border border-amber-500/30">
-                            🎯 Buildathon Demo
+                            Private
                           </span>
                           <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${status.style}`}>
                             {status.label}

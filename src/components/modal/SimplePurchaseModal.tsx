@@ -48,14 +48,14 @@ const PROTOCOL_COPY: Record<PurchaseProtocol, {
   optionDescription: string;
 }> = {
   megapot: {
-    entryTitle: "Enter Public Play",
+    entryTitle: "Buy Tickets",
     optionTitle: "Megapot",
-    optionDescription: "Public play on Base • $1 per ticket",
+    optionDescription: "$1 per ticket · Daily draw on Base",
   },
   pooltogether: {
-    entryTitle: "Enter Prize Savings",
+    entryTitle: "No-Loss Deposit",
     optionTitle: "PoolTogether v5",
-    optionDescription: "No-loss prize savings • Keep your principal",
+    optionDescription: "Deposit stays yours · Win prizes from yield",
   },
 };
 
@@ -239,8 +239,8 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
         return (
           <CompactStack spacing="md" align="center">
             <div className="text-center">
-              <h2 className="text-2xl font-bold text-white mb-2">Choose Your Participation Mode</h2>
-              <p className="text-gray-400">Connect your wallet to enter public play or no-loss prize savings on Base</p>
+              <h2 className="text-2xl font-bold text-white mb-2">Connect Wallet</h2>
+              <p className="text-gray-400">Connect to buy tickets or deposit into no-loss prize savings.</p>
             </div>
             <WalletConnectionManager />
             <Button variant="outline" className="w-full" onClick={handleClose}>Close</Button>
@@ -275,7 +275,7 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
 
             {/* PROTOCOL SELECTOR */}
             <div className="space-y-3">
-              <label className="block text-sm font-medium text-gray-300">Choose Your Participation Flow</label>
+              <label className="block text-sm font-medium text-gray-300">How do you want to enter?</label>
               <div className="grid grid-cols-1 gap-3">
                 {/* MEGAPOT */}
                 <button onClick={() => setSelectedProtocol("megapot")} disabled={isPurchasing} className={`relative p-4 rounded-lg border-2 transition-all text-left ${selectedProtocol === "megapot" ? "border-yellow-500 bg-yellow-500/20" : "border-gray-600 hover:border-gray-500 bg-gray-700/30"}`}>
@@ -358,11 +358,11 @@ export default function SimplePurchaseModal({ isOpen, onClose, initialProtocol }
                     <Zap className="w-6 h-6 text-indigo-400" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-white mb-2">Automate Your Play</h3>
+                    <h3 className="text-lg font-bold text-white mb-2">Auto-Purchase</h3>
                     <p className="text-sm text-gray-300">
                       {walletType === "stacks"
-                        ? "Set up automatic weekly or monthly public-play purchases on Stacks. Sign once — no manual signing after setup."
-                        : "Set up automatic weekly or monthly public-play purchases using Secure Wallet Autopilot. No signing required after setup."}
+                        ? "Buy tickets automatically every week or month on Stacks. Sign once — no manual action after."
+                        : "Buy tickets automatically every week or month. Sign once — no manual action after."}
                     </p>
                   </div>
                   <Button variant="default" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => setShowPermissionModal(true)}>

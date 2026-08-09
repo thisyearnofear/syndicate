@@ -155,17 +155,11 @@ export default function SyndicateDiscoveryPage() {
         {/* Header */}
         <div className="flex flex-col gap-6 mb-8 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Discover Syndicates</h1>
-            <p className="text-gray-400">Explore public and privacy-native syndicates built for coordinated capital, shared strategies, and selective disclosure.</p>
-            <div className="mt-4 inline-flex flex-wrap items-center gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-gray-200">
-              <span className="rounded-full bg-amber-500/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
-                Private vaults
-              </span>
-              <span>Contribution amounts can stay encrypted while authorized members reveal balances selectively.</span>
-            </div>
+            <h1 className="text-3xl font-bold text-white mb-2">Syndicates</h1>
+            <p className="text-gray-400">Pool capital with a group. Encrypted balances, selective reveal, shared upside.</p>
           </div>
           <Button onClick={() => router.push('/create-syndicate')} className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700">
-            Create Private Syndicate
+            Create Syndicate
           </Button>
         </div>
 
@@ -298,10 +292,10 @@ export default function SyndicateDiscoveryPage() {
             <p className="text-gray-400 mb-6">
               {searchQuery || poolTypeFilter !== 'all' || vaultFilter !== 'all'
                 ? 'Try adjusting your filters'
-                : 'Be the first to create a syndicate!'}
+                : 'Be the first to create one.'}
             </p>
             <Button onClick={() => router.push('/create-syndicate')}>
-              Create First Syndicate
+              Create Syndicate
             </Button>
           </div>
         ) : (

@@ -292,27 +292,27 @@ export default function PortfolioPage() {
   const recommendedAction = bridgeActivities.length === 0 && vaultPositions.length === 0
     ? {
         title: 'Fund from another chain',
-        description: 'Start the product loop by bridging USDC into Base before you allocate it.',
+        description: 'Bridge USDC into Base to start depositing or buying tickets.',
         cta: 'Open Bridge',
         href: '/bridge',
       }
     : vaultPositions.length === 0
     ? {
-        title: 'Allocate into a vault',
-        description: 'Move from funded capital into an active strategy so the portfolio can start earning.',
+        title: 'Deposit into a vault',
+        description: 'Put your USDC to work — yield buys tickets automatically.',
         cta: 'Explore Vaults',
         href: '/vaults',
       }
     : syndicates.length === 0
       ? {
           title: 'Join a syndicate',
-          description: 'Put existing capital and yield to work with a shared pool and cause alignment.',
+          description: 'Pool capital with a group for better odds and shared upside.',
           cta: 'Browse Syndicates',
           href: '/discover',
         }
       : {
-          title: 'Track ticket utility',
-          description: 'Review recent ticket purchases and make sure your yield is flowing where you want it.',
+          title: 'Check your tickets',
+          description: 'See which draws you\'re entered in and track recent results.',
           cta: 'View Activity',
           href: '/portfolio',
         };
@@ -347,7 +347,7 @@ export default function PortfolioPage() {
             </Button>
             <Button onClick={() => router.push('/discover')} variant="premium">
               <Plus className="w-4 h-4 mr-2" />
-              Coordinate Capital
+              New Syndicate
             </Button>
           </div>
         </div>
@@ -555,7 +555,7 @@ export default function PortfolioPage() {
                     <div className="bg-white/5 rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-3">
                         <Ticket className="w-5 h-5 text-amber-400" />
-                        <h3 className="font-semibold text-white">Ticket Utility</h3>
+                        <h3 className="font-semibold text-white">Tickets</h3>
                       </div>
                       <div className="space-y-2">
                         <div className="flex justify-between">
@@ -594,7 +594,7 @@ export default function PortfolioPage() {
                   <CompactCard variant="glass" padding="sm" hover={false} className="rounded-xl border border-white/20">
                     <h3 className="font-semibold text-white mb-2">Recent Funding Activity</h3>
                     <p className="text-gray-400 text-sm mb-4">
-                      Keep cross-chain capital movement visible next to allocation and ticket utility.
+                      Cross-chain transfers into Base.
                     </p>
                     {recentBridgeActivity.length > 0 ? (
                       <div className="space-y-2">
@@ -611,7 +611,7 @@ export default function PortfolioPage() {
                   <CompactCard variant="glass" padding="sm" hover={false} className="rounded-xl border border-white/20">
                     <h3 className="font-semibold text-white mb-2">Recent Deposits</h3>
                     <p className="text-gray-400 text-sm mb-4">
-                      Track when funded capital actually moved into a live strategy.
+                      Capital deposited into vaults.
                     </p>
                     {recentVaultDeposits.length > 0 ? (
                       <div className="space-y-2">
@@ -628,7 +628,7 @@ export default function PortfolioPage() {
                   <CompactCard variant="glass" padding="sm" hover={false} className="rounded-xl border border-white/20">
                     <h3 className="font-semibold text-white mb-2">Recent Ticket Activity</h3>
                     <p className="text-gray-400 text-sm mb-4">
-                      Keep the utility loop visible from the same portfolio surface.
+                      Tickets purchased or earned from yield.
                     </p>
                     {recentTicketPurchases.length > 0 ? (
                       <div className="space-y-2">
@@ -651,9 +651,9 @@ export default function PortfolioPage() {
 
             {/* CTA */}
             <CompactCard variant="glass" padding="md" hover={false} className="mt-8 rounded-2xl border border-white/20 text-center">
-              <h2 className="text-xl font-bold text-white mb-2">Maximize Your Impact</h2>
+              <h2 className="text-xl font-bold text-white mb-2">Keep growing</h2>
               <p className="text-gray-400 mb-4">
-                Diversify across syndicates and vaults to optimize returns and social impact.
+                Add more vaults or join a syndicate to diversify.
               </p>
               <div className="flex gap-4 justify-center">
                 <Button onClick={() => router.push('/discover')}>

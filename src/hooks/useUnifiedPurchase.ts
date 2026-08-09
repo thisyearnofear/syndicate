@@ -81,6 +81,13 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
         clearPendingPurchaseState();
       }
 
+      // Notify UI of cross-chain purchase completion
+      if (newStatus === 'complete' && prev.status !== 'complete' && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('syndicate:purchase-success', {
+          detail: { ticketCount: 1, drawId: undefined },
+        }));
+      }
+
       return {
         ...prev,
         status: newStatus,
@@ -364,6 +371,13 @@ export function useUnifiedPurchase(): PurchaseState & PurchaseActions {
               chain: chain ?? 'base',
               transactionHash: result.txHash || result.destinationTxHash || undefined,
             });
+
+            // Notify UI (e.g. SharePrompt) of successful purchase
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('syndicate:purchase-success', {
+                detail: { ticketCount: request.ticketCount ?? 1 },
+              }));
+            }
           }
         } else {
           clearPendingPurchaseState();

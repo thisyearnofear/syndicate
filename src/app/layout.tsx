@@ -14,8 +14,8 @@ export const revalidate = 0;
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Syndicate - Private Vaults, Yield-Powered Participation, Public Play",
-  description: "Coordinate capital privately, let yield generate participation automatically, or access public play directly on Base through Syndicate.",
+  title: "Syndicate — $1 to play, your deposit back forever",
+  description: "Daily no-loss lottery on Base. Buy tickets directly or deposit and let yield enter every draw for you. Non-custodial, provably fair, open-source.",
 };
 
 export const viewport: Viewport = {
@@ -55,51 +55,42 @@ export default function RootLayout({
               <div className="flex-1">
                 {children}
               </div>
-              <footer className="relative z-10 border-t border-white/10 bg-slate-950/50 backdrop-blur-md">
-                <div className="max-w-6xl mx-auto px-6 py-10">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
-                          <span className="text-white font-bold text-xs">S</span>
-                        </div>
-                        <span className="font-bold text-white">Syndicate</span>
-                      </div>
-                      <p className="text-xs text-gray-500 leading-relaxed">
-                        Private vaults, yield-powered participation, and public play on Base.
-                      </p>
+              <footer className="relative z-10 border-t border-white/10 bg-slate-950/80 backdrop-blur-md">
+                <div className="max-w-5xl mx-auto px-6 py-10">
+                  {/* Closing hook */}
+                  <div className="text-center mb-10">
+                    <p className="text-sm text-gray-400">
+                      Draws run daily at 17:00 UTC.{' '}
+                      <Link href="/" className="text-brand-400 hover:text-white transition-colors font-medium">
+                        Enter the next one &rarr;
+                      </Link>
+                    </p>
+                  </div>
+
+                  {/* Two-column links */}
+                  <div className="grid grid-cols-2 gap-8 max-w-md mx-auto text-center">
+                    <div className="space-y-2">
+                      <Link href="/" className="block text-sm text-gray-500 hover:text-white transition-colors">Play</Link>
+                      <Link href="/vaults" className="block text-sm text-gray-500 hover:text-white transition-colors">Grow</Link>
+                      <Link href="/discover" className="block text-sm text-gray-500 hover:text-white transition-colors">Coordinate</Link>
+                      <a href="https://docs.megapot.io" target="_blank" rel="noopener noreferrer" className="block text-sm text-gray-500 hover:text-white transition-colors">Docs</a>
                     </div>
-                    <div>
-                      <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Product</h4>
-                      <div className="space-y-2">
-                        <Link href="/" className="block text-sm text-gray-500 hover:text-white transition-colors">Play</Link>
-                        <Link href="/discover" className="block text-sm text-gray-500 hover:text-white transition-colors">Coordinate</Link>
-                        <Link href="/vaults" className="block text-sm text-gray-500 hover:text-white transition-colors">Grow</Link>
-                        <Link href="/bridge" className="block text-sm text-gray-500 hover:text-white transition-colors">Fund</Link>
-                        <Link href="/portfolio" className="block text-sm text-gray-500 hover:text-white transition-colors">Portfolio</Link>
-                      </div>
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Resources</h4>
-                      <div className="space-y-2">
-                        <a href="https://docs.megapot.io" target="_blank" rel="noopener noreferrer" className="block text-sm text-gray-500 hover:text-white transition-colors">Documentation</a>
-                        <a href="https://docs.megapot.io/terms-of-service" target="_blank" rel="noopener noreferrer" className="block text-sm text-gray-500 hover:text-white transition-colors">Terms of Service</a>
-                        <a href="https://docs.megapot.io/privacy-policy" target="_blank" rel="noopener noreferrer" className="block text-sm text-gray-500 hover:text-white transition-colors">Privacy Policy</a>
-                      </div>
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Community</h4>
-                      <div className="space-y-2">
-                        <a href="https://warpcast.com/~/channel/syndicate" target="_blank" rel="noopener noreferrer" className="block text-sm text-gray-500 hover:text-white transition-colors">Farcaster</a>
-                        <a href="https://twitter.com/syndicate" target="_blank" rel="noopener noreferrer" className="block text-sm text-gray-500 hover:text-white transition-colors">Twitter</a>
-                        <a href="https://discord.gg/syndicate" target="_blank" rel="noopener noreferrer" className="block text-sm text-gray-500 hover:text-white transition-colors">Discord</a>
-                        <a href="https://github.com/thisyearnofear/syndicate" target="_blank" rel="noopener noreferrer" className="block text-sm text-gray-500 hover:text-white transition-colors">GitHub</a>
-                      </div>
+                    <div className="space-y-2">
+                      <a href="https://warpcast.com/~/channel/syndicate" target="_blank" rel="noopener noreferrer" className="block text-sm text-gray-500 hover:text-white transition-colors">Farcaster</a>
+                      <a href="https://twitter.com/syndicate" target="_blank" rel="noopener noreferrer" className="block text-sm text-gray-500 hover:text-white transition-colors">Twitter</a>
+                      <a href="https://discord.gg/syndicate" target="_blank" rel="noopener noreferrer" className="block text-sm text-gray-500 hover:text-white transition-colors">Discord</a>
+                      <a href="https://github.com/thisyearnofear/syndicate" target="_blank" rel="noopener noreferrer" className="block text-sm text-gray-500 hover:text-white transition-colors">GitHub</a>
                     </div>
                   </div>
-                  <div className="pt-6 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
-                    <p className="text-xs text-gray-600">Base-native execution with Fhenix privacy mode and multi-chain funding rails</p>
-                    <p className="text-xs text-gray-600">Smart contracts are open-source on <a href="https://github.com/thisyearnofear/syndicate" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-white transition-colors underline">GitHub</a></p>
+
+                  {/* Bottom line */}
+                  <div className="mt-10 pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-600">
+                    <span>Non-custodial · Open-source · Base-native</span>
+                    <span>
+                      <a href="https://docs.megapot.io/terms-of-service" target="_blank" rel="noopener noreferrer" className="hover:text-gray-400 transition-colors">Terms</a>
+                      {' · '}
+                      <a href="https://docs.megapot.io/privacy-policy" target="_blank" rel="noopener noreferrer" className="hover:text-gray-400 transition-colors">Privacy</a>
+                    </span>
                   </div>
                 </div>
               </footer>

@@ -2,9 +2,9 @@
  * Product mode ladder.
  *
  * Single source of truth for how Syndicate should be explained in product copy:
- * 1. Coordinate Capital
- * 2. Grow with Yield
- * 3. Play Megapot
+ * 1. Play — fastest entry
+ * 2. Grow — set-and-forget yield participation
+ * 3. Coordinate — group capital with privacy
  */
 
 export type ProductModeId = 'private_vaults' | 'yield_to_tickets' | 'public_play';
@@ -24,46 +24,43 @@ export interface ProductModeConfig {
 
 export const PRODUCT_MODES: readonly ProductModeConfig[] = [
   {
-    id: 'private_vaults',
-    icon: '🔒',
-    badge: 'Core product',
-    title: 'Coordinate Capital',
-    shortTitle: 'Syndicates',
-    tagline: 'Coordinate capital privately with selective disclosure.',
+    id: 'public_play',
+    icon: '🎫',
+    badge: '$1 entry',
+    title: 'Play',
+    shortTitle: 'Megapot',
+    tagline: 'Buy tickets. Draw is daily.',
     description:
-      'Create or join privacy-native vaults where sensitive balances stay encrypted by default and authorized users reveal them only when needed.',
-    supportingCopy:
-      'Best for syndicates, treasury groups, clubs, and coordinated capital where discretion matters.',
-    href: '/discover',
-    audience: 'Coordinated capital',
+      '$1 per ticket on Base. Non-custodial, provably fair, paid instantly on win.',
+    supportingCopy: 'Fastest way in.',
+    href: '/',
+    audience: 'Everyone',
   },
   {
     id: 'yield_to_tickets',
     icon: '📈',
-    badge: 'Signature mechanic',
-    title: 'Grow with Yield',
+    badge: 'Set & forget',
+    title: 'Grow',
     shortTitle: 'Yield-to-Tickets',
-    tagline: 'Let your yield buy participation automatically.',
+    tagline: 'Deposit once. Yield enters every draw.',
     description:
-      'Deposit into vault strategies on Base and auto-convert earnings into lottery tickets or cause allocations without manually re-entering every draw.',
-    supportingCopy:
-      'Best for users who want smarter, more capital-efficient participation with principal-preserving flows.',
+      'Your principal earns yield; earnings auto-convert to tickets each cycle. Withdraw the full deposit anytime.',
+    supportingCopy: 'Passive, capital-efficient, no-loss.',
     href: '/vaults',
-    audience: 'Smart participation',
+    audience: 'Passive players',
   },
   {
-    id: 'public_play',
-    icon: '🎫',
-    badge: 'Fast entry',
-    title: 'Play Megapot',
-    shortTitle: 'Megapot',
-    tagline: 'Access Megapot directly through Syndicate.',
+    id: 'private_vaults',
+    icon: '🔒',
+    badge: 'Group native',
+    title: 'Coordinate',
+    shortTitle: 'Syndicates',
+    tagline: 'Pool capital. Keep balances private.',
     description:
-      'Buy tickets directly on Base through Syndicate when you want the fastest path into public prize participation.',
-    supportingCopy:
-      'Best for first-time users, quick entry, and lightweight public play.',
-    href: '/',
-    audience: 'Instant access',
+      'Multisig vaults with encrypted balances. Members reveal only what they choose, only to who they choose.',
+    supportingCopy: 'For syndicates, treasuries, and clubs.',
+    href: '/discover',
+    audience: 'Groups & treasuries',
   },
 ] as const;
 
