@@ -1,5 +1,5 @@
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "@rainbow-me/rainbowkit/styles.css";
 import "@near-wallet-selector/modal-ui/styles.css";
@@ -16,6 +16,14 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Syndicate - Private Vaults, Yield-Powered Participation, Public Play",
   description: "Coordinate capital privately, let yield generate participation automatically, or access public play directly on Base through Syndicate.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+  themeColor: "#050b14",
 };
 
 export default function RootLayout({

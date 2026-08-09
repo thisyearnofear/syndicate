@@ -22,7 +22,7 @@ export default function NavigationHeader() {
   if (!showNavigation) return null;
 
   return (
-    <div className="pt-4 px-4">
+    <div className="pt-4 px-4 safe-top">
       <Navigation />
     </div>
   );

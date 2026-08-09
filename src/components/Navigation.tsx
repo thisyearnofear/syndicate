@@ -260,7 +260,9 @@ export default function Navigation({ className = '' }: NavigationProps) {
                             variant="ghost"
                             size="sm"
                             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                            className="text-gray-300 hover:text-white"
+                            aria-expanded={isMobileMenuOpen}
+                            aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+                            className="min-h-11 min-w-11 touch-manipulation text-gray-300 hover:text-white"
                         >
                             {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                         </Button>
@@ -279,7 +281,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                                             onClick={() => setIsMobileMenuOpen(false)}
                                             aria-label={item.title ?? item.label}
                                             className={`
-                                w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950
+                                w-full flex items-center gap-3 px-4 py-3.5 min-h-12 rounded-xl transition-all duration-200 text-left touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950
                                 ${item.active
                                                         ? 'gradient-cta text-white shadow-lg'
                                                         : 'text-gray-300 hover:text-white hover:bg-white/10'
@@ -304,9 +306,9 @@ export default function Navigation({ className = '' }: NavigationProps) {
                                             variant="premium"
                                             size="sm"
                                             onClick={() => setShowWalletModal(true)}
-                                            className="w-full"
+                                            className="w-full min-h-12 touch-manipulation"
                                         >
-                                            🔗 Connect Wallet
+                                            Connect Wallet
                                         </Button>
                                     )}
                                 </div>

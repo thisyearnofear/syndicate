@@ -14,6 +14,7 @@ import {
   XLAYER_TESTNET_CHAIN_ID,
 } from '@/config/xlayer';
 import { getAgentTool, ensureXLayerToolsRegistered } from '@/services/agents/tools';
+import type { AgentToolCall } from '@/services/agents/tools/types';
 import type { XLayerKeeperPoolState } from '@/services/agents/veniceXLayerKeeper';
 
 ensureXLayerToolsRegistered();
@@ -34,6 +35,92 @@ const STATUS_STYLE: Record<string, string> = {
   completed: 'bg-emerald-500/20 text-emerald-200',
   failed: 'bg-rose-500/20 text-rose-200',
 };
+
+function ArgChips({ args, toolId }: { args: Record<string, unknown>; toolId: string }) {
+  if (toolId === 'xlayer.getPoolState') return null;
+  const entries = Object.entries(args).filter(([key]) => key !== 'snapshot');
+  if (entries.length === 0) return null;
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      {entries.map(([key, value]) => (
+        <span
+          key={key}
+          className="max-w-full truncate rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-xs text-slate-300"
+        >
+          <span className="text-slate-500">{key}</span>{' '}
+          <span className="font-medium text-white">{String(value)}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function StepActions({
+  step,
+  isExecuting,
+  onApprove,
+  onReject,
+  onExecute,
+  fullWidth,
+}: {
+  step: AgentToolCall;
+  isExecuting: boolean;
+  onApprove: () => void;
+  onReject: () => void;
+  onExecute: () => void;
+  fullWidth?: boolean;
+}) {
+  const width = fullWidth ? 'w-full min-h-12 touch-manipulation' : 'min-h-11 touch-manipulation';
+  if (step.status === 'proposed') {
+    return (
+      <div className={`mt-3 flex gap-2 ${fullWidth ? 'flex-col sm:flex-row' : 'flex-col sm:flex-row'}`}>
+        <Button
+          size="sm"
+          variant="default"
+          className={`bg-cyan-600 text-white ${width} sm:flex-1`}
+          disabled={isExecuting}
+          onClick={onApprove}
+        >
+          <Check className="mr-1.5 h-4 w-4" />
+          Approve
+        </Button>
+        <Button
+          size="sm"
+          variant="glass"
+          className={`${width} sm:flex-1`}
+          disabled={isExecuting}
+          onClick={onReject}
+        >
+          <X className="mr-1.5 h-4 w-4" />
+          Reject
+        </Button>
+      </div>
+    );
+  }
+  if (step.status === 'approved') {
+    return (
+      <div className="mt-3">
+        <Button
+          size="sm"
+          variant="default"
+          className={`bg-gradient-to-r from-violet-500 to-indigo-600 text-white ${width}`}
+          disabled={isExecuting}
+          onClick={onExecute}
+        >
+          {isExecuting ? (
+            <>
+              <Loader className="mr-1.5 h-4 w-4 animate-spin" />
+              Signing…
+            </>
+          ) : (
+            'Execute (sign in wallet)'
+          )}
+        </Button>
+      </div>
+    );
+  }
+  return null;
+}
 
 export function XLayerAgentPanel({
   potBalance,
@@ -104,189 +191,192 @@ export function XLayerAgentPanel({
   if (!configured) return null;
 
   const { loop, recommendation, planning, isExecuting } = agent;
-  const hitlSteps =
-    loop.plan?.steps.filter((s) => {
-      const def = getAgentTool(s.toolId);
-      return def?.requiresHitl;
-    }) ?? [];
+  const activeHitl = loop.plan?.steps.find((s) => {
+    const def = getAgentTool(s.toolId);
+    return def?.requiresHitl && (s.status === 'proposed' || s.status === 'approved');
+  });
+  const hitlDef = activeHitl ? getAgentTool(activeHitl.toolId) : null;
 
   return (
-    <CompactCard variant="glass" padding="lg" hover={false} className="border-violet-400/20 bg-violet-500/[0.05]">
-      <div className="mb-4 flex flex-wrap items-center gap-2 text-violet-200">
-        <Bot className="h-4 w-4" />
-        <span className="text-[10px] font-black uppercase tracking-[0.2em]">X Layer agent loop</span>
-        <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] font-semibold text-violet-200">
-          plan → HITL → execute → observe
-        </span>
-        <span className="ml-auto rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-slate-400">
-          {loop.status}
-        </span>
-      </div>
+    <>
+      <CompactCard
+        variant="glass"
+        padding="md"
+        hover={false}
+        className="border-violet-400/20 bg-violet-500/[0.05] sm:p-6"
+      >
+        <div className="mb-3 flex items-start gap-3 text-violet-200 sm:mb-4">
+          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/15">
+            <Bot className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-black uppercase tracking-[0.16em] sm:text-[10px] sm:tracking-[0.2em]">
+                Agent loop
+              </span>
+              <span className="rounded-full bg-white/5 px-2 py-1 text-xs text-slate-400 sm:text-[10px]">
+                {loop.status}
+              </span>
+            </div>
+            <p className="mt-1 hidden text-sm leading-6 text-slate-300 sm:block">
+              Plan → approve → sign. Receipts close the loop; surcharge advice stays timelock-aware.
+            </p>
+            <p className="mt-1 text-sm leading-5 text-slate-400 sm:hidden">
+              Plan, approve, then sign. You stay in control.
+            </p>
+          </div>
+        </div>
 
-      <p className="mb-4 text-sm leading-6 text-slate-300">
-        Venice (or a capped heuristic) proposes typed tools from the registry. You approve each
-        mutating step; receipts close the loop. Surcharge advice stays timelock-aware.
-      </p>
-
-      <div className="mb-4 flex flex-wrap gap-2 text-[10px] text-slate-500">
-        <span>session {loop.memory.sessionId.slice(-8)}</span>
-        {loop.memory.lastTxHash && <span>last tx {loop.memory.lastTxHash.slice(0, 10)}…</span>}
-        {loop.memory.epochId != null && <span>epoch {loop.memory.epochId}</span>}
-        {chainId !== XLAYER_TESTNET_CHAIN_ID && (
-          <span className="text-amber-300">switch to chain {XLAYER_TESTNET_CHAIN_ID} to execute</span>
-        )}
-      </div>
-
-      <div className="flex flex-wrap gap-3">
-        <Button
-          variant="glass"
-          size="sm"
-          className="border-violet-400/30"
-          disabled={planning || isExecuting}
-          onClick={() => agent.plan(buildPoolState())}
-        >
-          {planning ? (
-            <>
-              <Loader className="mr-2 h-3.5 w-3.5 animate-spin" />
-              Planning…
-            </>
-          ) : (
-            <>
-              <Sparkles className="mr-2 h-3.5 w-3.5" />
-              Plan next actions
-            </>
+        <div className="mb-4 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+          <span>session …{loop.memory.sessionId.slice(-6)}</span>
+          {loop.memory.lastTxHash && <span>tx {loop.memory.lastTxHash.slice(0, 8)}…</span>}
+          {loop.memory.epochId != null && <span>epoch {loop.memory.epochId}</span>}
+          {chainId !== XLAYER_TESTNET_CHAIN_ID && (
+            <span className="font-medium text-amber-300">Switch to X Layer testnet to execute</span>
           )}
-        </Button>
-        {loop.plan && (
-          <Button variant="glass" size="sm" onClick={agent.reset} disabled={isExecuting}>
-            Reset session
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
+          <Button
+            variant="glass"
+            size="sm"
+            className="min-h-12 w-full touch-manipulation border-violet-400/30 sm:min-h-11 sm:w-auto"
+            disabled={planning || isExecuting}
+            onClick={() => agent.plan(buildPoolState())}
+          >
+            {planning ? (
+              <>
+                <Loader className="mr-2 h-4 w-4 animate-spin" />
+                Planning…
+              </>
+            ) : (
+              <>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Plan next actions
+              </>
+            )}
           </Button>
+          {loop.plan && (
+            <Button
+              variant="glass"
+              size="sm"
+              className="min-h-12 w-full touch-manipulation sm:min-h-11 sm:w-auto"
+              onClick={agent.reset}
+              disabled={isExecuting}
+            >
+              Reset session
+            </Button>
+          )}
+        </div>
+
+        {loop.error && <p className="mt-3 text-sm text-rose-300">{loop.error}</p>}
+
+        {recommendation && (
+          <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3 sm:p-4">
+            <p className="text-sm font-semibold text-white">
+              {recommendation.action.replaceAll('_', ' ')}
+              <span className="ml-2 text-xs font-normal text-slate-500">· {recommendation.source}</span>
+            </p>
+            <ul className="mt-2 space-y-1.5 text-sm leading-5 text-slate-300">
+              {recommendation.rationale.slice(0, 3).map((line) => (
+                <li key={line}>• {line}</li>
+              ))}
+            </ul>
+          </div>
         )}
-      </div>
 
-      {loop.error && <p className="mt-3 text-xs text-rose-300">{loop.error}</p>}
-
-      {recommendation && (
-        <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3 text-xs text-slate-300">
-          <p className="font-semibold text-white">
-            Recommendation · {recommendation.action} · {recommendation.source}
-          </p>
-          <ul className="mt-2 space-y-1">
-            {recommendation.rationale.map((line) => (
-              <li key={line}>• {line}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {loop.plan && (
-        <div className="mt-5 space-y-3">
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
-            Tool cards
-          </p>
-          {loop.plan.steps.map((step) => {
-            const def = getAgentTool(step.toolId);
-            const isHitl = Boolean(def?.requiresHitl);
-            return (
-              <div
-                key={step.id}
-                className="rounded-xl border border-white/10 bg-black/25 p-4"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold text-white">{def?.label ?? step.toolId}</p>
-                    <p className="mt-1 text-[11px] leading-5 text-slate-500">{def?.description}</p>
+        {loop.plan && (
+          <div className="mt-5 space-y-3 pb-20 sm:pb-0">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Tools</p>
+            {loop.plan.steps.map((step) => {
+              const def = getAgentTool(step.toolId);
+              const isHitl = Boolean(def?.requiresHitl);
+              return (
+                <div key={step.id} className="rounded-xl border border-white/10 bg-black/25 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-base font-semibold text-white sm:text-sm">
+                        {def?.label ?? step.toolId}
+                      </p>
+                      <p className="mt-1 text-sm leading-5 text-slate-500 sm:text-[11px] sm:leading-5">
+                        {def?.description}
+                      </p>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[step.status] ?? STATUS_STYLE.proposed}`}
+                    >
+                      {step.status}
+                    </span>
                   </div>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLE[step.status] ?? STATUS_STYLE.proposed}`}>
-                    {step.status}
-                  </span>
+                  <ArgChips args={step.args} toolId={step.toolId} />
+                  {step.result && (
+                    <p className={`mt-2 text-sm ${step.result.ok ? 'text-emerald-300' : 'text-rose-300'}`}>
+                      {step.result.message}
+                      {step.result.transactionHash
+                        ? ` · ${step.result.transactionHash.slice(0, 10)}…`
+                        : ''}
+                    </p>
+                  )}
+                  {step.error && !step.result && (
+                    <p className="mt-2 text-sm text-rose-300">{step.error}</p>
+                  )}
+                  {isHitl && (step.status === 'proposed' || step.status === 'approved') && (
+                    <div className="hidden sm:block">
+                      <StepActions
+                        step={step}
+                        isExecuting={isExecuting}
+                        onApprove={() => agent.approve(step.id)}
+                        onReject={() => agent.reject(step.id)}
+                        onExecute={() => agent.execute(step.id)}
+                      />
+                    </div>
+                  )}
                 </div>
-                {Object.keys(step.args).length > 0 && step.toolId !== 'xlayer.getPoolState' && (
-                  <pre className="mt-3 overflow-x-auto rounded-lg bg-white/[0.03] p-2 text-[10px] text-slate-400">
-                    {JSON.stringify(step.args, null, 2)}
-                  </pre>
-                )}
-                {step.result && (
-                  <p className={`mt-2 text-xs ${step.result.ok ? 'text-emerald-300' : 'text-rose-300'}`}>
-                    {step.result.message}
-                    {step.result.transactionHash ? ` · ${step.result.transactionHash.slice(0, 10)}…` : ''}
-                  </p>
-                )}
-                {step.error && !step.result && (
-                  <p className="mt-2 text-xs text-rose-300">{step.error}</p>
-                )}
-                {isHitl && (step.status === 'proposed' || step.status === 'approved') && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {step.status === 'proposed' && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="default"
-                          className="bg-cyan-600 text-white"
-                          disabled={isExecuting}
-                          onClick={() => agent.approve(step.id)}
-                        >
-                          <Check className="mr-1.5 h-3.5 w-3.5" />
-                          Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="glass"
-                          disabled={isExecuting}
-                          onClick={() => agent.reject(step.id)}
-                        >
-                          <X className="mr-1.5 h-3.5 w-3.5" />
-                          Reject
-                        </Button>
-                      </>
-                    )}
-                    {step.status === 'approved' && (
-                      <Button
-                        size="sm"
-                        variant="default"
-                        className="bg-gradient-to-r from-violet-500 to-indigo-600 text-white"
-                        disabled={isExecuting}
-                        onClick={() => agent.execute(step.id)}
-                      >
-                        {isExecuting ? (
-                          <>
-                            <Loader className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                            Signing…
-                          </>
-                        ) : (
-                          'Execute (sign)'
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
 
-      {loop.memory.history.length > 0 && (
-        <div className="mt-5 border-t border-white/10 pt-4">
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
-            Session memory
+        {loop.memory.history.length > 0 && (
+          <details className="mt-5 border-t border-white/10 pt-4">
+            <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.16em] text-slate-500 touch-manipulation">
+              Session memory ({loop.memory.history.length})
+            </summary>
+            <ul className="mt-2 max-h-28 space-y-1 overflow-y-auto text-xs text-slate-500">
+              {[...loop.memory.history].reverse().map((h, i) => (
+                <li key={`${h.at}-${i}`}>
+                  {h.kind}: {h.detail}
+                  {h.txHash ? ` · ${h.txHash.slice(0, 10)}…` : ''}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+
+        {!activeHitl && loop.plan && recommendation?.action === 'wait' && (
+          <p className="mt-4 text-sm text-slate-500">
+            No mutating tools proposed — waiting is the correct keeper action.
           </p>
-          <ul className="mt-2 max-h-28 space-y-1 overflow-y-auto text-[11px] text-slate-500">
-            {[...loop.memory.history].reverse().map((h, i) => (
-              <li key={`${h.at}-${i}`}>
-                {h.kind}: {h.detail}
-                {h.txHash ? ` · ${h.txHash.slice(0, 10)}…` : ''}
-              </li>
-            ))}
-          </ul>
+        )}
+      </CompactCard>
+
+      {/* Mobile sticky HITL bar */}
+      {activeHitl && hitlDef && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-slate-950/95 px-4 pt-3 shadow-[0_-8px_30px_rgba(0,0,0,0.45)] backdrop-blur-xl safe-bottom sm:hidden">
+          <p className="mb-2 truncate text-xs text-slate-400">
+            Next: <span className="font-semibold text-white">{hitlDef.label}</span>
+            <span className="ml-2 text-slate-500">{activeHitl.status}</span>
+          </p>
+          <StepActions
+            step={activeHitl}
+            isExecuting={isExecuting}
+            fullWidth
+            onApprove={() => agent.approve(activeHitl.id)}
+            onReject={() => agent.reject(activeHitl.id)}
+            onExecute={() => agent.execute(activeHitl.id)}
+          />
         </div>
       )}
-
-      {hitlSteps.length === 0 && loop.plan && recommendation?.action === 'wait' && (
-        <p className="mt-4 text-xs text-slate-500">
-          No mutating tools proposed — waiting is the correct keeper action.
-        </p>
-      )}
-    </CompactCard>
+    </>
   );
 }

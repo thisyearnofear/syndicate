@@ -68,9 +68,15 @@
 /* Ensure all interactive elements have adequate touch targets on mobile */
 @media (max-width: 640px) {
   /* Larger tap targets for buttons on mobile */
-  button, [role="button"], a {
+  button, [role="button"] {
     min-height: 44px;
     min-width: 44px;
+  }
+
+  /* Nav/footer text links stay compact; interactive controls get touch room */
+  a.touch-manipulation,
+  button.touch-manipulation {
+    touch-action: manipulation;
   }
 
   /* Increase padding on preset buttons (ticket count, amount) for fat fingers */
@@ -84,13 +90,24 @@
   input[type="number"],
   input[type="text"],
   input[type="email"],
-  select {
+  input[type="search"],
+  select,
+  textarea {
     font-size: 16px !important;
   }
 
   /* Bottom-safe padding for fixed elements near the home indicator */
   .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 16px);
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  /* Room for sticky mobile action bars */
+  .pb-mobile-cta {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
   }
 }
 

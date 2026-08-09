@@ -91,7 +91,7 @@ export default function Home() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.1),transparent_50%)] animate-pulse" style={{ animationDuration: "8s" }} />
       
       {/* Main content container - centered and clean */}
-      <div className="relative z-10 container mx-auto px-4 py-8 md:py-16 max-w-7xl">
+      <div className="relative z-10 container mx-auto px-4 py-8 md:py-16 max-w-7xl pb-28 md:pb-16">
         
         {/* Hero Section - Single clear action */}
         <section className="text-center mb-16 space-y-8">
@@ -405,6 +405,28 @@ export default function Home() {
         >
           Start with a Syndicate
         </Button>
+      </div>
+
+      {/* Mobile primary CTA — mirrors desktop floating action */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-slate-950/95 px-4 pt-3 backdrop-blur-xl safe-bottom md:hidden">
+        <div className="mx-auto flex max-w-lg gap-2">
+          <Button
+            variant="premium"
+            size="lg"
+            className="min-h-12 flex-1 touch-manipulation"
+            onClick={handleBuyClick}
+          >
+            Enter draw
+          </Button>
+          <Button
+            variant="glass"
+            size="lg"
+            className="min-h-12 flex-1 touch-manipulation border-white/15"
+            onClick={handleCreatePrivateVault}
+          >
+            Syndicate
+          </Button>
+        </div>
       </div>
     </div>
   );
