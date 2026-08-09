@@ -39,6 +39,9 @@ export const XLAYER_PRIZE_POOL_ROUTER_ADDRESS =
 export const XLAYER_POOL_MANAGER_ADDRESS =
   (process.env.NEXT_PUBLIC_XLAYER_POOL_MANAGER_ADDRESS || '') as Address;
 
+export const XLAYER_ORACLE_ADDRESS =
+  (process.env.NEXT_PUBLIC_XLAYER_ORACLE_ADDRESS || '') as Address;
+
 export function isXLayerDeploymentConfigured(addresses: {
   hook: string;
   router: string;
@@ -138,6 +141,20 @@ export const XLAYER_HOOK_ABI = [
   {
     type: 'function',
     name: 'randomnessOracle',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'address' }],
+  },
+  {
+    type: 'function',
+    name: 'lastDrawAt',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'uint256' }],
+  },
+  {
+    type: 'function',
+    name: 'owner',
     stateMutability: 'view',
     inputs: [],
     outputs: [{ type: 'address' }],

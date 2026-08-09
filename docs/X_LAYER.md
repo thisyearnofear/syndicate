@@ -108,12 +108,26 @@ NEXT_PUBLIC_XLAYER_POOL_MANAGER_ADDRESS=0x49f01fEEbd2e32e380D09dAff2d02b76E78381
 
 Restart the app and open `/xlayer`. Missing or malformed addresses produce a safe preview state. Writes stay off until `NEXT_PUBLIC_XLAYER_WRITES_ENABLED=true` and the capability registry allows them.
 
+## Agent loop (tool registry + HITL)
+
+`/xlayer` includes an **agent loop** panel (`XLayerAgentPanel`):
+
+1. **Tool registry** — typed tools (`getPoolState`, `recommendSurcharge`, `openDraw`, `setDemoOracle`, `fulfillRandomness`, `claimPrize`) with capability, HITL, and receipt gates.
+2. **Plan** — `POST /api/agent/xlayer/plan` (Venice or heuristic) → structured tool steps.
+3. **HITL** — Approve / Reject each mutating tool card before signing.
+4. **Execute → observe** — `useXLayerKeeper` + receipt confirmation (pending is never success).
+5. **Session memory** — last plan, tx, epoch, oracle value, short history.
+
+Legacy advice endpoint `POST /api/agent/xlayer/advice` remains available. Optional: `VENICE_API_KEY` for live Venice plans.
+
 ## Roadmap and safety gates
 
 1. ~~Deploy and verify one testnet pool.~~ Done (addresses above).
 2. Replace the demo oracle with independently reviewed drand verification.
 3. Complete M3 LP position management, fee splitting, and non-USDC conversion.
-4. Add explicitly gated deposit, withdraw, draw, claim, AI keeper, and syndicate flows.
+4. ~~Add explicitly gated deposit, withdraw, draw, claim, AI keeper, and syndicate flows.~~
+   Agent loop (registry + HITL + receipts + session memory) shipped on `/xlayer`.
+   Deposit writes remain capability-gated; syndicate wiring still open.
 5. Only then evaluate a mainnet deployment against the canonical PoolManager.
 
 Before mainnet: add rejection sampling, timelock all configuration/recovery paths, review custody assumptions, and independently review oracle cryptography.

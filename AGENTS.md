@@ -15,7 +15,7 @@
 | TON / Telegram | Paused | Runtime remains gated until the lottery contract is deployed/configured. |
 | Virtuals ACP automation | Live surface | Persisted tasks, cron processor, kill switch, auto-pause, user management UI, and server-side guards (rate limit, task cap, amount bounds, audit log). |
 | ERC-7715 / 1Shot automation | Live | Permission-scoped recurring purchase and relayer paths. |
-| X Layer Prize Pool Hook | Testnet deployed | Live on X Layer testnet (1952): self-deployed v4 PoolManager + Prize Pool Hook/router against faucet USDC_TEST; `/xlayer` read-only dashboard wired; writes still capability-gated. Mainnet blocked on reviewed randomness. See [`docs/X_LAYER.md`](docs/X_LAYER.md). |
+| X Layer Prize Pool Hook | Testnet deployed | Live on X Layer testnet (1952). `/xlayer` agent loop: tool registry + HITL plan/execute/observe + session memory (Venice/heuristic). Deposit writes still capability-gated. Mainnet blocked on reviewed randomness. See [`docs/X_LAYER.md`](docs/X_LAYER.md). |
 | Verification provider | Noop by design | KYC is opt-in infrastructure, not the default ticket-purchase experience. |
 
 ## Product model

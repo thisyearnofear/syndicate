@@ -18,6 +18,76 @@ export const XLAYER_ROUTER_ABI = [
   },
 ] as const;
 
+/** PrizePoolHook keeper write + view surface used by the AI keeper. */
+export const XLAYER_KEEPER_HOOK_ABI = [
+  {
+    type: 'function',
+    name: 'openDraw',
+    stateMutability: 'nonpayable',
+    inputs: [],
+    outputs: [],
+  },
+  {
+    type: 'function',
+    name: 'fulfillRandomness',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'beaconValue', type: 'uint256' },
+      { name: 'proof', type: 'bytes' },
+    ],
+    outputs: [],
+  },
+  {
+    type: 'function',
+    name: 'claimPrize',
+    stateMutability: 'nonpayable',
+    inputs: [],
+    outputs: [],
+  },
+  {
+    type: 'function',
+    name: 'lastDrawAt',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'uint256' }],
+  },
+  {
+    type: 'function',
+    name: 'owner',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'address' }],
+  },
+] as const;
+
+/** SimpleRandomnessOracle — TESTNET demo only. */
+export const XLAYER_DEMO_ORACLE_ABI = [
+  {
+    type: 'function',
+    name: 'setNextValue',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'epochId', type: 'uint256' },
+      { name: 'value', type: 'uint256' },
+    ],
+    outputs: [],
+  },
+  {
+    type: 'function',
+    name: 'owner',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'address' }],
+  },
+  {
+    type: 'function',
+    name: 'epochValues',
+    stateMutability: 'view',
+    inputs: [{ name: 'epochId', type: 'uint256' }],
+    outputs: [{ type: 'uint256' }],
+  },
+] as const;
+
 /** Standard ERC-20 approve ABI (for USDC approval). */
 export const XLAYER_ERC20_ABI = [
   {

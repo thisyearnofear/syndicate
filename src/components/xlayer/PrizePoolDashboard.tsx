@@ -29,6 +29,7 @@ import {
 import { useUnifiedWallet } from "@/hooks/useUnifiedWallet";
 import { useCapability } from "@/hooks/useCapability";
 import { useXLayerJoin } from "@/services/xlayer";
+import { XLayerAgentPanel } from "@/components/xlayer/XLayerAgentPanel";
 import {
   XLAYER_HOOK_ABI,
   XLAYER_HOOK_IS_CONFIGURED,
@@ -345,6 +346,16 @@ export function PrizePoolDashboard() {
 
           {/* Join Pool CTA — only visible when writes are enabled */}
           <JoinPoolSection />
+
+          <XLayerAgentPanel
+            potBalance={potBalance}
+            totalShares={totalShares}
+            minPot={minPotForDraw}
+            drawCooldown={drawCooldown}
+            surchargeBps={typeof surchargeBps === "number" ? surchargeBps : surchargeBps !== undefined ? Number(surchargeBps) : undefined}
+            surchargeEnabled={surchargeEnabled}
+            drawState={drawState}
+          />
 
           <CompactCard variant="glass" padding="lg" hover={false} className="border-white/[0.08] bg-slate-950/50">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

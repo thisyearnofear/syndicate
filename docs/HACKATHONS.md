@@ -7,7 +7,7 @@ This file is an index, not a second product strategy. Current implementation sta
 ### OKX X Layer Build X — AI Season
 
 - **Project:** Prize Pool Hook — trading-fee-funded weighted lottery on X Layer.
-- **Status:** Testnet deployed on chain 1952 (hook + router + demo oracle against faucet USDC_TEST); `/xlayer` reads wired; write flows and AI keeper still pending.
+- **Status:** Testnet deployed on chain 1952; `/xlayer` agent loop (tool registry, HITL, receipts, session memory); deposit writes still capability-gated.
 - **Canonical guide:** [`X_LAYER.md`](X_LAYER.md).
 
 ### MetaMask / 1Shot / Venice

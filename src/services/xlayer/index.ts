@@ -18,4 +18,6 @@
 
 export { useXLayerJoin } from './useXLayerJoin';
 export type { XLayerJoinParams, XLayerJoinResult } from './useXLayerJoin';
-export { XLAYER_ROUTER_ABI, XLAYER_ERC20_ABI } from './abi';
+export { useXLayerKeeper } from './useXLayerKeeper';
+export type { XLayerKeeperResult, XLayerKeeperTxAction } from './useXLayerKeeper';
+export { XLAYER_ROUTER_ABI, XLAYER_ERC20_ABI, XLAYER_KEEPER_HOOK_ABI, XLAYER_DEMO_ORACLE_ABI } from './abi';
