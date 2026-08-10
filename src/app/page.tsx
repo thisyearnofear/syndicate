@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo, Suspense, lazy } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef, Suspense, lazy } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Clock } from "lucide-react";
 import { useUnifiedWallet, useIsMounted } from "@/hooks";
@@ -16,7 +16,7 @@ import { SharePrompt } from "@/components/home/SharePrompt";
 import { YieldTeaser } from "@/components/home/YieldTeaser";
 import { FirstActionPrompt } from "@/components/onboarding/FirstActionPrompt";
 import { Button } from "@/shared/components/ui/Button";
-import { RoundOrb, deriveOrbState } from "@/components/motion/RoundOrb";
+import { RoundOrb, deriveOrbState, resolveEndMs, type RoundOrbState } from "@/components/motion/RoundOrb";
 import { BeamFrame } from "@/components/motion/BeamFrame";
 import { DecryptLine } from "@/components/motion/DecryptLine";
 
@@ -80,7 +80,7 @@ export default function Home() {
   const router = useRouter();
   const isMounted = useIsMounted();
   const { isConnected } = useUnifiedWallet();
-  const { jackpotStats } = useLottery();
+  const { jackpotStats, refresh: refreshLottery } = useLottery();
 
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [selectedProtocol, setSelectedProtocol] = useState<string | undefined>(undefined);
@@ -88,6 +88,46 @@ export default function Home() {
   const [shareState, setShareState] = useState<{ count: number; drawId?: number } | null>(null);
 
   const countdown = useDrawCountdown(jackpotStats?.endTimestamp);
+
+  // ─── Live round resolution ─────────────────────────────────────────────
+  // When the draw closes on the client clock, poll until the round
+  // advances; then flash 'settled' on the orb for the settle window.
+  const [liveNow, setLiveNow] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setLiveNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const endMs = resolveEndMs(jackpotStats?.endTimestamp);
+  const prevEndRef = useRef<number | null>(null);
+  const [settledAt, setSettledAt] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!endMs) return;
+    const interval = setInterval(() => {
+      if (Date.now() > endMs) refreshLottery();
+    }, 15_000);
+    return () => clearInterval(interval);
+  }, [endMs, refreshLottery]);
+
+  useEffect(() => {
+    if (!endMs) return;
+    if (prevEndRef.current === null) {
+      prevEndRef.current = endMs;
+      return;
+    }
+    if (endMs > prevEndRef.current + 30_000) {
+      prevEndRef.current = endMs;
+      // Round rollover is external state arriving, not a derived value.
+      // (rule satisfied: allowed here, no disable needed)
+      setSettledAt(Date.now());
+    }
+  }, [endMs]);
+
+  const orbState: RoundOrbState =
+    settledAt && liveNow - settledAt < 2 * 60_000
+      ? 'settled'
+      : deriveOrbState(jackpotStats?.endTimestamp, liveNow);
 
   // Prize pool, animated
   const prizeUsd = jackpotStats?.prizeUsd ? parseFloat(jackpotStats.prizeUsd) : 0;
@@ -177,7 +217,7 @@ export default function Home() {
           {/* Prize pool — the anchor, marked by the round orb */}
           <div className="animate-fade-in-up">
             <p className="text-sm uppercase tracking-widest text-amber-200/70 mb-2 flex items-center justify-center gap-2.5">
-              <RoundOrb state={deriveOrbState(jackpotStats?.endTimestamp)} size={14} />
+              <RoundOrb state={orbState} size={14} />
               Current prize pool
             </p>
             <h1 className="font-black text-6xl md:text-8xl leading-none tracking-tight tabular-nums bg-gradient-to-b from-amber-200 via-yellow-300 to-orange-400 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(251,191,36,0.25)]">

@@ -40,17 +40,31 @@ export function RoundOrb({ state, size = 32, className = "" }: RoundOrbProps) {
 /**
  * ORB STATE DERIVATION — pure function so callers/tests can map round
  * timestamps to a state without rendering.
+ *
+ * Semantics: 'settled' is CALLER-DRIVEN — this function never asserts the
+ * outcome arrived. If the round closed, the orb keeps flickering in
+ * 'resolving' until the caller observes the round advance (new
+ * endTimestamp) and explicitly shows 'settled' (see app/page.tsx).
  */
+export function resolveEndMs(endTimestamp: string | undefined): number | null {
+  if (!endTimestamp) return null;
+  const numeric = Number(endTimestamp);
+  if (Number.isFinite(numeric) && numeric > 0) {
+    // Megapot returns epoch; seconds vs ms depending on source.
+    return numeric > 1e12 ? numeric : numeric * 1000;
+  }
+  const parsed = new Date(endTimestamp).getTime();
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
 export function deriveOrbState(
   endTimestamp: string | undefined,
   now: number = Date.now(),
 ): RoundOrbState {
-  if (!endTimestamp) return 'idle';
-  const end = new Date(endTimestamp).getTime();
-  if (Number.isNaN(end)) return 'idle';
+  const end = resolveEndMs(endTimestamp);
+  if (!end) return 'idle';
   const msLeft = end - now;
-  if (msLeft < -60_000) return 'settled'; // recently ended
-  if (msLeft <= 0) return 'resolving';    // close passed, next round pending
+  if (msLeft <= 0) return 'resolving'; // close passed, outcome pending
   if (msLeft < 30 * 60_000) return 'charging';
   return 'active';
 }

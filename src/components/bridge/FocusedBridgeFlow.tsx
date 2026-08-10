@@ -17,6 +17,8 @@ import { CONTRACTS, CHAINS } from "@/config";
 import { ethers } from "ethers";
 import type { BridgeResult } from "@/services/bridges/types";
 import { Button } from "@/shared/components/ui/Button";
+import { RoundOrb } from "@/components/motion/RoundOrb";
+import { BeamFrame } from "@/components/motion/BeamFrame";
 import { ProtocolSelector, ProtocolOption } from "./ProtocolSelector";
 import { BridgeStatusPanel } from "./BridgeStatusPanel";
 import { useBridgeActivityTracker } from "@/domains/participation/hooks/useBridgeActivityTracker";
@@ -592,15 +594,18 @@ export function FocusedBridgeFlow({
           </div>
         )}
 
-        {/* Progress Bar */}
+        {/* Progress Bar — the orb carries in-flight state (reveal grammar) */}
         <div className="space-y-2">
-          <div className="flex justify-between text-sm text-gray-400">
-            <span>Bridging Progress</span>
+          <div className="flex justify-between items-center text-sm text-gray-400">
+            <span className="flex items-center gap-2">
+              <RoundOrb state="resolving" size={12} />
+              Bridging Progress
+            </span>
             <span className="font-medium">{progress}%</span>
           </div>
           <div className="h-3 bg-white/10 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-green-500 transition-all duration-500 ease-out"
+              className="h-full bg-gradient-to-r from-white/50 to-emerald-400 transition-all duration-500 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -735,36 +740,39 @@ export function FocusedBridgeFlow({
     );
   }
 
-  // Render completion stage
+  // Render completion stage — money moved, so it gets the receipt ceremony
   if (stage === "complete") {
     return (
-      <div className="space-y-6 animate-fade-in text-center" role="status" aria-label="Bridge complete">
-        <div className="flex justify-center">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
-            <CircleCheck className="w-10 h-10 text-white" />
-          </div>
-        </div>
+      <div className="space-y-6 text-center receipt-in" role="status" aria-label="Bridge complete">
+        <BeamFrame color="#34d399" duration={1.8} laps={2} className="block rounded-2xl">
+          <div className="rounded-2xl border border-green-500/30 bg-green-500/10 p-6 space-y-4">
+            <div className="flex justify-center items-center gap-3">
+              <RoundOrb state="settled" size={16} />
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+                <CircleCheck className="w-7 h-7 text-white" />
+              </div>
+            </div>
 
-        <div>
-          <h3 className="text-white font-bold text-2xl mb-2">
-            Bridge Complete!
-          </h3>
-          <p className="text-gray-400">
-            Successfully bridged{" "}
-            <span className="text-white font-medium">{amountInput} USDC</span>{" "}
-            to Base Network
-          </p>
-        </div>
+            <div>
+              <h3 className="text-white font-bold text-2xl mb-2">
+                Bridge Complete!
+              </h3>
+              <p className="text-gray-400">
+                Successfully bridged{" "}
+                <span className="text-white font-medium">{amountInput} USDC</span>{" "}
+                to Base Network
+              </p>
+            </div>
 
-        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-          <div className="flex items-center justify-center gap-3">
-            <span className="text-green-400">✅</span>
-            <p className="text-green-300 text-sm">
-              Your USDC has arrived on Base. Your balance will update in a
-              moment.
-            </p>
+            <div className="flex items-center justify-center gap-3">
+              <span className="text-green-400">✅</span>
+              <p className="text-green-300 text-sm">
+                Your USDC has arrived on Base. Your balance will update in a
+                moment.
+              </p>
+            </div>
           </div>
-        </div>
+        </BeamFrame>
 
         {baseEthHint && (
           <div className={`border rounded-lg p-4 ${baseEthHint.have.startsWith('0x')

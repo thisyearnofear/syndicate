@@ -22,23 +22,27 @@ export function LastWinner() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/draws/latest")
-      .then((r) => r.json())
-      .then((data) => {
-        if (!cancelled && data.draw?.isResolved && data.draw?.winner) {
-          // winnerPrizeUsd is the amount actually paid to this winner
-          // (Data API); prizeUsd fallback is the round prize pool.
-          setWinner({
-            address: data.draw.winner,
-            prizeUsd: parseFloat(data.draw.winnerPrizeUsd ?? data.draw.prizeUsd),
-            ticketCount: data.draw.winnerTicketCount ?? 1,
-            drawId: data.draw.id,
-            timestamp: data.draw.drawTime,
-          });
-        }
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
+    const load = () =>
+      fetch("/api/draws/latest")
+        .then((r) => r.json())
+        .then((data) => {
+          if (!cancelled && data.draw?.isResolved && data.draw?.winner) {
+            // winnerPrizeUsd is the amount actually paid to this winner
+            // (Data API); prizeUsd fallback is the round prize pool.
+            setWinner({
+              address: data.draw.winner,
+              prizeUsd: parseFloat(data.draw.winnerPrizeUsd ?? data.draw.prizeUsd),
+              ticketCount: data.draw.winnerTicketCount ?? 1,
+              drawId: data.draw.id,
+              timestamp: data.draw.drawTime,
+            });
+          }
+        })
+        .catch(() => {});
+    load();
+    // Poll so a fresh winner arrives without a page refresh (cheap endpoint).
+    const interval = setInterval(load, 60_000);
+    return () => { cancelled = true; clearInterval(interval); };
   }, []);
 
   if (!winner) return null;
