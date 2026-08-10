@@ -95,4 +95,20 @@ describe('recordAgentTransition', () => {
       userCancelled: false,
     });
   });
+
+  it('records session resets as their own event, not plan creations', () => {
+    recordAgentTransition('agent.session_reset', 'reset', {
+      sessionId: 'xlayer-session',
+      label: 'Session reset',
+      detail: 'Plan discarded; a fresh session memory follows',
+    });
+
+    const transcript = agentSessionTranscript.getEntries();
+    expect(transcript[0].kind).toBe('reset');
+
+    const event = getHistory()[0];
+    expect(event.name).toBe('agent.session_reset');
+    expect(event.category).toBe('agent');
+    expect(event.error).toBeNull();
+  });
 });

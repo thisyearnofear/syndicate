@@ -167,7 +167,17 @@ export function useAgentLoop() {
   );
 
   const reset = useCallback(() => {
+    const hadPlan = Boolean(loopRef.current.plan);
+    const sessionId = loopRef.current.memory.sessionId;
     setLoop(createInitialAgentLoopState());
+    if (hadPlan) {
+      // Session rollover is an auditable event too — keep it in the trail.
+      recordAgentTransition('agent.session_reset', 'reset', {
+        sessionId,
+        label: 'Session reset',
+        detail: 'Plan discarded; a fresh session memory follows',
+      });
+    }
   }, []);
 
   return {

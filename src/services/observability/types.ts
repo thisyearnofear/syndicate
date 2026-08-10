@@ -61,6 +61,7 @@ export type LifecycleEventName =
   // Agent loop (HITL tooling — every transition is an auditable event)
   | 'agent.plan_created'
   | 'agent.plan_failed'
+  | 'agent.session_reset'
   | 'agent.step_approved'
   | 'agent.step_rejected'
   | 'agent.step_executed'

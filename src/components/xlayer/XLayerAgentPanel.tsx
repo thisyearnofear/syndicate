@@ -334,7 +334,7 @@ export function XLayerAgentPanel({
 
         {tab === 'transcript' && (
           <div className="mt-4">
-            <AgentSessionTranscript />
+            <AgentSessionTranscript currentSessionId={loop.memory.sessionId} />
           </div>
         )}
 

@@ -26,7 +26,8 @@ export type AgentTranscriptKind =
   | 'reject'
   | 'execute'
   | 'complete'
-  | 'fail';
+  | 'fail'
+  | 'reset';
 
 export interface AgentTranscriptEntry {
   id: string;
@@ -103,6 +104,7 @@ export function recordAgentTransition(
     LifecycleEventName,
     | 'agent.plan_created'
     | 'agent.plan_failed'
+    | 'agent.session_reset'
     | 'agent.step_approved'
     | 'agent.step_rejected'
     | 'agent.step_executed'
