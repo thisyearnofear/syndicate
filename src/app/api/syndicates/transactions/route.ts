@@ -58,9 +58,9 @@ export async function GET(request: Request) {
         : pool.safe_address || pool.coordinator_address
     ) as Address;
 
-    // Get member deposits from database
+    // Get member deposits from database (columns per migrations/002 + 013).
     const membersResult = await sql`
-      SELECT address, contribution_usdc, joined_at, tx_hash
+      SELECT member_address, amount_usdc, joined_at, tx_hash
       FROM syndicate_members
       WHERE pool_id = ${poolId}
       ORDER BY joined_at DESC
@@ -94,21 +94,22 @@ export async function GET(request: Request) {
 
     // Add member deposits
     for (const member of membersResult.rows) {
+      const amount = parseFloat(member.amount_usdc);
       transactions.push({
-        hash: member.tx_hash || `deposit-${member.address}`,
+        hash: member.tx_hash || `deposit-${member.member_address}`,
         type: 'deposit',
         typeLabel: 'Deposit',
         typeColor: 'text-green-400',
-        from: member.address,
+        from: member.member_address,
         to: poolAddress,
-        amount: member.contribution_usdc,
-        amountFormatted: `$${parseFloat(member.contribution_usdc).toFixed(2)} USDC`,
-        timestamp: new Date(member.joined_at).toISOString(),
+        amount: member.amount_usdc,
+        amountFormatted: `$${amount.toFixed(2)} USDC`,
+        timestamp: new Date(Number(member.joined_at)).toISOString(),
         status: member.tx_hash ? 'confirmed' : 'recorded',
-        explorerUrl: member.tx_hash 
+        explorerUrl: member.tx_hash
           ? transactionHistoryService.getExplorerUrl(member.tx_hash)
           : '',
-        summary: `Deposit by ${member.address.slice(0, 6)}…`,
+        summary: `Deposit by ${member.member_address.slice(0, 6)}…`,
       });
     }
 
@@ -123,7 +124,7 @@ export async function GET(request: Request) {
         to: null,
         amount: dist.prize_amount_usdc,
         amountFormatted: `$${parseFloat(dist.prize_amount_usdc).toFixed(2)} USDC`,
-        timestamp: new Date(dist.created_at).toISOString(),
+        timestamp: new Date(Number(dist.created_at)).toISOString(),
         status: dist.status === 'completed' ? 'confirmed' : dist.status,
         explorerUrl: dist.tx_hash 
           ? transactionHistoryService.getExplorerUrl(dist.tx_hash)
@@ -144,11 +145,12 @@ export async function GET(request: Request) {
 
     // Get pool summary
     const totalDeposits = membersResult.rows.reduce(
-      (sum, m) => sum + parseFloat(m.contribution_usdc || '0'), 
+      (sum, m) => sum + parseFloat(m.amount_usdc || '0'),
       0
     );
+    // Only completed (receipt-verified) payouts count toward the total.
     const totalDistributions = distributionsResult.rows.reduce(
-      (sum, d) => sum + parseFloat(d.prize_amount_usdc || '0'), 
+      (sum, d) => sum + (d.status === 'completed' ? parseFloat(d.prize_amount_usdc || '0') : 0),
       0
     );
 

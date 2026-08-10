@@ -174,24 +174,26 @@ export class FhenixPoolProvider implements PoolProvider {
 
   /**
    * Execute a transaction from the vault (coordinator only).
-   * In the FHE model this routes yield to the YieldToTickets orchestrator.
+   *
+   * Honesty contract: server-side string wallet clients cannot sign for the
+   * FHE vault. The vault's executeTransaction requires the coordinator's
+   * wallet signature (via the permit flow) client-side, so this method fails
+   * explicitly instead of pretending the transaction was queued.
    */
   async executeTransaction(
-    poolAddress: string,
-    to: string,
-    value: string,
-    data: string,
-    executor: string,
+    _poolAddress: string,
+    _to: string,
+    _value: string,
+    _data: string,
+    _executor: string,
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
-    console.log('[FhenixProvider] executeTransaction queued:', {
-      vault: poolAddress,
-      to,
-      executor: executor.slice(0, 10) + '...',
-    });
-
-    // In production: coordinator calls FhenixSyndicateVault.executeTransaction
-    // after collecting off-chain signatures via the permit flow
-    return { success: true };
+    return {
+      success: false,
+      error:
+        'Fhenix vault transactions must be signed by the coordinator via the permit flow — ' +
+        'server-side execution is not available. Use FhenixSyndicateVault.executeTransaction ' +
+        'from a connected coordinator wallet.',
+    };
   }
 
   async getPoolInfo(poolAddress: string): Promise<Record<string, unknown>> {

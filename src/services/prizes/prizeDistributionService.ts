@@ -1,44 +1,27 @@
 /**
- * PRIZE DISTRIBUTION SERVICE
- * 
- * Handles lottery win detection and prize distribution to syndicate members.
- * Routes distribution through appropriate pool provider based on pool type.
- * 
- * Flow:
- * 1. Detect win event (via API or manual trigger)
- * 2. Calculate member shares based on contributions
- * 3. Route to appropriate distribution method:
- *    - Safe: Create transaction proposal for multisig
- *    - Splits: Execute distributeToken through SplitMain
- *    - PoolTogether: Claim prizes and distribute via Safe/Splits
- * 4. Record distribution in database
- * 5. Return distribution details
+ * PRIZE DISTRIBUTION SERVICE (RECORD-KEEPING)
+ *
+ * Journals externally-executed prize distributions for syndicate pools and
+ * computes member shares, read-side. It deliberately does NOT move money:
+ *
+ * - Winnings are claimed from Megapot by the pool coordinator via the solo
+ *   claim path (withdrawWinnings) — tickets bought by a syndicate credit
+ *   the coordinator's address (see syndicateService.executeSyndicatePurchase).
+ * - Payouts to members execute through the pool's own rail (Safe app
+ *   proposal, wallet-signed splitsService.distributeToken, Cabana claims).
+ * - This service records a distribution ONLY after API-side on-chain
+ *   verification of the payout transaction (see /api/syndicates/prizes).
+ *
+ * The previous in-app execution router (distributePrize/distributeVia*)
+ * was removed: it was dead code, and its Safe path returned pretend
+ * success without a transaction. Real execution lives in
+ * splitsService.distributeToken and safeService/safeProvider, which fail
+ * honestly when they cannot execute.
  */
 
 import { sql } from '@vercel/postgres';
-import { safeService } from '@/services/safe/safeService';
-import { splitsService } from '@/services/splits/splitService';
-import { logger } from '@/lib/logger';
 import type { PoolType } from '@/domains/lottery/types';
 import type { Address } from 'viem';
-
-// USDC on Base
-const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
-
-// PoolTogether PrizePool on Base
-const _PT_PRIZE_POOL = '0x45b2010d8a4f08b53c9fa7544c51dfd9733732cb' as const;
-
-interface _PrizeDistributionRow {
-  id: string;
-  pool_id: string;
-  prize_amount_usdc: string;
-  member_count: string;
-  status: string;
-  tx_hash: string | null;
-  created_at: string;
-  completed_at: string | null;
-  error: string | null;
-}
 
 export type DistributionStatus = 
   | 'pending'      // Waiting for win confirmation
@@ -83,27 +66,29 @@ export class PrizeDistributionService {
    * Get pool members and their contributions
    */
   async getPoolMembers(poolId: string): Promise<MemberShare[]> {
+    // Column names must match the syndicate_members schema
+    // (lib/db/migrations/002-syndicate-vault-schema.sql).
     const result = await sql`
-      SELECT address, contribution_usdc
+      SELECT member_address, amount_usdc
       FROM syndicate_members
       WHERE pool_id = ${poolId}
-      ORDER BY contribution_usdc DESC
+      ORDER BY amount_usdc DESC
     `;
 
-    const members = result.rows as Array<{ address: string; contribution_usdc: string }>;
+    const members = result.rows as unknown as Array<{ member_address: string; amount_usdc: string }>;
     const totalContributed = members.reduce(
-      (sum, m) => sum + parseFloat(m.contribution_usdc || '0'), 
+      (sum, m) => sum + parseFloat(m.amount_usdc || '0'),
       0
     );
 
     return members.map(m => {
-      const contribution = parseFloat(m.contribution_usdc || '0');
-      const contributionPercent = totalContributed > 0 
-        ? (contribution / totalContributed) * 100 
+      const contribution = parseFloat(m.amount_usdc || '0');
+      const contributionPercent = totalContributed > 0
+        ? (contribution / totalContributed) * 100
         : 0;
 
       return {
-        address: m.address as Address,
+        address: m.member_address as Address,
         contribution,
         contributionPercent,
         shareAmount: 0, // Will be calculated based on prize
@@ -133,9 +118,11 @@ export class PrizeDistributionService {
     safeAddress: Address | null;
     splitAddress: Address | null;
     ptVaultAddress: Address | null;
+    coordinatorAddress: Address;
+    memberCount: number;
   } | null> {
     const result = await sql`
-      SELECT pool_type, safe_address, split_address, pt_vault_address, coordinator_address
+      SELECT pool_type, safe_address, split_address, pt_vault_address, coordinator_address, member_count
       FROM syndicate_pools
       WHERE id = ${poolId}
     `;
@@ -156,6 +143,8 @@ export class PrizeDistributionService {
       safeAddress: pool.safe_address as Address | null,
       splitAddress: pool.split_address as Address | null,
       ptVaultAddress: pool.pt_vault_address as Address | null,
+      coordinatorAddress: pool.coordinator_address as Address,
+      memberCount: parseInt(pool.member_count ?? '0', 10) || 0,
     };
   }
 
@@ -208,278 +197,54 @@ export class PrizeDistributionService {
   }
 
   /**
-   * Distribute prizes through Safe multisig
-   * Creates transaction proposal that requires threshold signatures
+   * True if a distribution with this tx hash is already journaled for the pool.
+   * Guards the record endpoint against double-journaling the same payout.
    */
-  async distributeViaSafe(
-    safeAddress: Address,
-    memberShares: MemberShare[],
-    _walletClient: unknown
-  ): Promise<DistributionResult> {
-    try {
-      // Get Safe info
-      const safeInfo = await safeService.getSafeInfo(safeAddress);
-      if (!safeInfo) {
-        return { success: false, error: 'Safe not found' };
-      }
-
-      // Create batch transactions for each member
-      // In production, this would use Safe's multiSend
-      // For now, we'll create individual transfer transactions
-      
-      logger.info('[PrizeDistribution] Safe distribution', {
-        safeAddress,
-        threshold: safeInfo.threshold,
-        members: memberShares.length,
-      });
-
-      // Note: With Safe, the distribution requires threshold signatures
-      // The coordinator would create the transaction and owners would sign
-      // For demo, we'll return the proposed transaction details
-
-      return {
-        success: true,
-        memberShares,
-        totalDistributed: memberShares.reduce((sum, m) => sum + m.shareAmount, 0),
-      };
-    } catch (error) {
-      logger.error('[PrizeDistribution] Safe distribution failed', { error: error instanceof Error ? error.message : String(error) });
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Safe distribution failed',
-      };
-    }
+  async hasDistributionWithTxHash(poolId: string, txHash: string): Promise<boolean> {
+    const result = await sql`
+      SELECT 1 AS one
+      FROM prize_distributions
+      WHERE pool_id = ${poolId} AND tx_hash = ${txHash}
+      LIMIT 1
+    `;
+    return result.rows.length > 0;
   }
 
   /**
-   * Distribute prizes through 0xSplits
-   * Automatically distributes to all recipients based on percentages
-   */
-  async distributeViaSplits(
-    splitAddress: Address,
-    memberShares: MemberShare[],
-    walletClient: unknown
-  ): Promise<DistributionResult> {
-    try {
-      // Get split info to verify
-      const splitInfo = await splitsService.getSplitInfo(splitAddress);
-      if (!splitInfo) {
-        return { success: false, error: 'Split not found' };
-      }
-
-      // Check if there's a balance to distribute
-      const balance = await splitsService.getSplitBalance(splitAddress, USDC_ADDRESS);
-      if (balance === 0n) {
-        return { 
-          success: false, 
-          error: 'No USDC balance to distribute. Deposit to split first.' 
-        };
-      }
-
-      // Execute distribution through split
-      const result = await splitsService.distributeToken({
-        splitAddress,
-        token: USDC_ADDRESS,
-        walletClient: walletClient as Parameters<typeof splitsService.distributeToken>[0]['walletClient'],
-      });
-
-      if (!result.success) {
-        return { success: false, error: result.error };
-      }
-
-      logger.info('[PrizeDistribution] Splits distribution', {
-        splitAddress,
-        txHash: result.txHash,
-        balance: balance.toString(),
-      });
-
-      return {
-        success: true,
-        txHash: result.txHash,
-        memberShares,
-        totalDistributed: memberShares.reduce((sum, m) => sum + m.shareAmount, 0),
-      };
-    } catch (error) {
-      logger.error('[PrizeDistribution] Splits distribution failed', { error: error instanceof Error ? error.message : String(error) });
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Splits distribution failed',
-      };
-    }
-  }
-
-  /**
-   * Distribute prizes from PoolTogether
-   * First claims prizes, then distributes via Safe or Splits
-   */
-  async distributeViaPoolTogether(
-    ptVaultAddress: Address,
-    safeAddress: Address | null,
-    memberShares: MemberShare[],
-    walletClient: unknown
-  ): Promise<DistributionResult> {
-    try {
-      // PoolTogether prizes are claimed separately
-      // The vault generates yield that becomes prize pool
-      // For syndicates, we'd typically route through a Safe or Splits
-
-      logger.info('[PrizeDistribution] PoolTogether distribution', {
-        ptVaultAddress,
-        safeAddress,
-        members: memberShares.length,
-      });
-
-      // If there's a Safe, route through it
-      if (safeAddress) {
-        return this.distributeViaSafe(safeAddress, memberShares, walletClient);
-      }
-
-      // Otherwise, this would need manual claiming
-      return {
-        success: false,
-        error: 'PoolTogether prizes require a Safe or Splits for distribution',
-      };
-    } catch (error) {
-      logger.error('[PrizeDistribution] PoolTogether distribution failed', { error: error instanceof Error ? error.message : String(error) });
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'PoolTogether distribution failed',
-      };
-    }
-  }
-
-  /**
-   * Main distribution method
-   * Routes to appropriate provider based on pool type
-   */
-  async distributePrize(
-    poolId: string,
-    prizeAmount: number,
-    walletClient: unknown
-  ): Promise<DistributionResult> {
-    try {
-      // Get pool info
-      const poolInfo = await this.getPoolInfo(poolId);
-      if (!poolInfo) {
-        return { success: false, error: 'Pool not found' };
-      }
-
-      // Get members and calculate shares
-      const members = await this.getPoolMembers(poolId);
-      if (members.length === 0) {
-        return { success: false, error: 'No members found' };
-      }
-
-      const memberShares = this.calculateMemberShares(members, prizeAmount);
-
-      // Create distribution record
-      const distributionId = await this.createDistributionRecord(
-        poolId, 
-        prizeAmount, 
-        memberShares
-      );
-
-      // Update status to calculating
-      await this.updateDistributionStatus(distributionId, 'calculating');
-
-      // Route to appropriate provider
-      let result: DistributionResult;
-
-      switch (poolInfo.poolType) {
-        case 'safe':
-          if (!poolInfo.safeAddress) {
-            result = { success: false, error: 'Safe address not found' };
-          } else {
-            await this.updateDistributionStatus(distributionId, 'distributing');
-            result = await this.distributeViaSafe(
-              poolInfo.safeAddress, 
-              memberShares, 
-              walletClient
-            );
-          }
-          break;
-
-        case 'splits':
-          if (!poolInfo.splitAddress) {
-            result = { success: false, error: 'Split address not found' };
-          } else {
-            await this.updateDistributionStatus(distributionId, 'distributing');
-            result = await this.distributeViaSplits(
-              poolInfo.splitAddress, 
-              memberShares, 
-              walletClient
-            );
-          }
-          break;
-
-        case 'pooltogether':
-          await this.updateDistributionStatus(distributionId, 'distributing');
-          result = await this.distributeViaPoolTogether(
-            poolInfo.ptVaultAddress || poolInfo.poolAddress,
-            poolInfo.safeAddress,
-            memberShares,
-            walletClient
-          );
-          break;
-
-        default:
-          result = { success: false, error: `Unknown pool type: ${poolInfo.poolType}` };
-      }
-
-      // Update final status
-      if (result.success) {
-        await this.updateDistributionStatus(
-          distributionId, 
-          'completed', 
-          result.txHash
-        );
-      } else {
-        await this.updateDistributionStatus(
-          distributionId, 
-          'failed', 
-          undefined,
-          result.error
-        );
-      }
-
-      return {
-        ...result,
-        distributionId,
-      };
-    } catch (error) {
-      logger.error('[PrizeDistribution] Distribution failed', { error: error instanceof Error ? error.message : String(error) });
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Distribution failed',
-      };
-    }
-  }
-
-  /**
-   * Get distribution history for a pool
+   * Get distribution history for a pool.
+   * Member shares are recomputed from current contribution weights
+   * (same proportional semantics as /api/portfolio) since the schema
+   * does not store a per-member payout snapshot.
    */
   async getDistributionHistory(poolId: string): Promise<PrizeDistribution[]> {
     const result = await sql`
-      SELECT 
-        id, pool_id, prize_amount_usdc, member_count,
-        status, tx_hash, created_at, completed_at, error
-      FROM prize_distributions
-      WHERE pool_id = ${poolId}
-      ORDER BY created_at DESC
+      SELECT
+        d.id, d.pool_id, d.prize_amount_usdc, d.member_count,
+        d.status, d.tx_hash, d.created_at, d.completed_at, d.error,
+        p.pool_type
+      FROM prize_distributions d
+      LEFT JOIN syndicate_pools p ON p.id = d.pool_id
+      WHERE d.pool_id = ${poolId}
+      ORDER BY d.created_at DESC
       LIMIT 50
     `;
+
+    if (result.rows.length === 0) return [];
+
+    const members = await this.getPoolMembers(poolId);
+    const totalContributed = members.reduce((sum, m) => sum + m.contribution, 0);
 
     return result.rows.map((row) => ({
       id: row.id,
       poolId: row.pool_id,
-      poolType: 'safe' as PoolType, // Would need to join with pools table
+      poolType: (row.pool_type || 'safe') as PoolType,
       status: row.status as DistributionStatus,
       prizeAmount: parseFloat(row.prize_amount_usdc),
-      totalContributed: 0, // Would need calculation
-      memberShares: [], // Would need to fetch from separate table
+      totalContributed,
+      memberShares: this.calculateMemberShares(members, parseFloat(row.prize_amount_usdc)),
       txHash: row.tx_hash,
-      createdAt: new Date(row.created_at),
-      completedAt: row.completed_at ? new Date(row.completed_at) : null,
+      createdAt: new Date(Number(row.created_at)),
+      completedAt: row.completed_at ? new Date(Number(row.completed_at)) : null,
       error: row.error,
     }));
   }
@@ -489,27 +254,32 @@ export class PrizeDistributionService {
    */
   async getDistribution(distributionId: string): Promise<PrizeDistribution | null> {
     const result = await sql`
-      SELECT 
-        id, pool_id, prize_amount_usdc, member_count,
-        status, tx_hash, created_at, completed_at, error
-      FROM prize_distributions
-      WHERE id = ${distributionId}
+      SELECT
+        d.id, d.pool_id, d.prize_amount_usdc, d.member_count,
+        d.status, d.tx_hash, d.created_at, d.completed_at, d.error,
+        p.pool_type
+      FROM prize_distributions d
+      LEFT JOIN syndicate_pools p ON p.id = d.pool_id
+      WHERE d.id = ${distributionId}
     `;
 
     if (result.rows.length === 0) return null;
 
     const row = result.rows[0];
+    const members = await this.getPoolMembers(row.pool_id);
+    const prizeAmount = parseFloat(row.prize_amount_usdc);
+
     return {
       id: row.id,
       poolId: row.pool_id,
-      poolType: 'safe' as PoolType,
+      poolType: (row.pool_type || 'safe') as PoolType,
       status: row.status as DistributionStatus,
-      prizeAmount: parseFloat(row.prize_amount_usdc),
-      totalContributed: 0,
-      memberShares: [],
+      prizeAmount,
+      totalContributed: members.reduce((sum, m) => sum + m.contribution, 0),
+      memberShares: this.calculateMemberShares(members, prizeAmount),
       txHash: row.tx_hash,
-      createdAt: new Date(row.created_at),
-      completedAt: row.completed_at ? new Date(row.completed_at) : null,
+      createdAt: new Date(Number(row.created_at)),
+      completedAt: row.completed_at ? new Date(Number(row.completed_at)) : null,
       error: row.error,
     };
   }

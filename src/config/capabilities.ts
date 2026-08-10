@@ -60,6 +60,7 @@ export type CapabilityId =
   | 'megapot'
   | 'vaults'
   | 'syndicates'
+  | 'syndicate_distribution'
   | 'fhenix_privacy'
   | 'yield_to_tickets'
   | 'automation_virtuals'
@@ -149,6 +150,22 @@ export const CAPABILITIES: readonly Capability[] = [
     testnetOnly: false,
     availabilityMessage: null,
     walletRequirement: 'EVM wallet on Base',
+    productMode: 'private_vaults',
+  },
+  {
+    id: 'syndicate_distribution',
+    label: 'Syndicate Winnings Payouts',
+    // Winnings reads + coordinator claim are real; member payouts execute
+    // through the pool's own rail (Safe app / 0xSplits / Cabana) — the app
+    // guides and journals but does not custody a distribution step.
+    status: 'partial',
+    chains: ['base'],
+    readsEnabled: true,
+    writesEnabled: false,
+    requiresOptIn: false,
+    testnetOnly: false,
+    availabilityMessage: 'Payouts to members execute on-chain via your pool type (Safe, Splits, or Cabana). The app verifies the payout transaction and records it when the coordinator pastes the tx hash.',
+    walletRequirement: 'Pool coordinator wallet on Base',
     productMode: 'private_vaults',
   },
   {

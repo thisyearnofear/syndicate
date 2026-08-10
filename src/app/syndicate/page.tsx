@@ -257,7 +257,7 @@ export default function SyndicateDetailPage() {
 
           {/* ── Prizes Tab ───────────────────────────────────────────────── */}
           <TabsContent value="prizes">
-            <PrizeDistribution poolId={id} isCoordinator={!!address} />
+            <PrizeDistribution poolId={id} address={address} />
           </TabsContent>
 
           {/* ── Activity Tab ──────────────────────────────────────────────── */}

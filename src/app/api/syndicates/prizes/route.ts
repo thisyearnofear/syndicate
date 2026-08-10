@@ -1,9 +1,15 @@
 /**
  * Prize Distribution API
- * 
- * Handles prize distribution for syndicates:
- * - GET: Get distribution history for a pool
- * - POST: Trigger a prize distribution
+ *
+ * Honesty contract:
+ * - This route never executes or pretends to execute money movement.
+ * - GET returns journal history plus pool metadata the UI needs for the
+ *   coordinator's payout flow.
+ * - POST { action: 'record' } journals an externally-executed payout ONLY
+ *   after verifying the transaction receipt on Base: it must exist, have
+ *   succeeded, and have been initiated by the pool coordinator.
+ * - The former 'distribute' and 'simulate' actions were removed — they
+ *   created records for money that never moved.
  */
 
 import { NextResponse } from 'next/server';
@@ -44,8 +50,25 @@ export async function GET(request: Request) {
       return NextResponse.json(distribution, { headers: corsHeaders });
     }
 
-    const history = await prizeDistributionService.getDistributionHistory(poolId!);
-    return NextResponse.json({ distributions: history }, { headers: corsHeaders });
+    const [history, pool] = await Promise.all([
+      prizeDistributionService.getDistributionHistory(poolId!),
+      prizeDistributionService.getPoolInfo(poolId!),
+    ]);
+
+    if (!pool) {
+      return NextResponse.json(
+        { error: 'Pool not found' },
+        { status: 404, headers: corsHeaders }
+      );
+    }
+
+    // Member weights are needed for share estimates. Fhenix pools keep the
+    // member list gated (consistent with /api/syndicates/dashboard), so we
+    // omit weights there; share estimates simply won't render.
+    const members =
+      pool.poolType === 'fhenix' ? [] : await prizeDistributionService.getPoolMembers(poolId!);
+
+    return NextResponse.json({ distributions: history, pool, members }, { headers: corsHeaders });
   } catch (error) {
     logger.error('[PrizeDistribution API] GET error', { error: String(error) });
     return NextResponse.json(
@@ -60,106 +83,92 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { action, poolId, prizeAmount, txHash } = body;
 
-    if (!poolId) {
+    if (action !== 'record') {
       return NextResponse.json(
-        { error: 'Missing poolId' },
+        { error: `Unknown action: ${action}. Only 'record' is supported — payouts execute on-chain via the pool's own rail (Safe app, 0xSplits, or Cabana).` },
         { status: 400, headers: corsHeaders }
       );
     }
 
-    switch (action) {
-      case 'distribute': {
-        // Trigger a prize distribution
-        if (!prizeAmount || prizeAmount <= 0) {
-          return NextResponse.json(
-            { error: 'Invalid prizeAmount' },
-            { status: 400, headers: corsHeaders }
-          );
-        }
-
-        // Note: In production, the wallet client would be passed from an authenticated session
-        // For demo purposes, we'll simulate the distribution
-        
-        const members = await prizeDistributionService.getPoolMembers(poolId);
-        const memberShares = prizeDistributionService.calculateMemberShares(
-          members, 
-          prizeAmount
-        );
-
-        const distributionId = await prizeDistributionService.createDistributionRecord(
-          poolId,
-          prizeAmount,
-          memberShares
-        );
-
-        return NextResponse.json({
-          success: true,
-          distributionId,
-          message: 'Distribution created. In production, this would trigger the distribution flow.',
-          memberShares,
-          totalDistributed: prizeAmount,
-        }, { headers: corsHeaders });
-      }
-
-      case 'record': {
-        // Record an external distribution (e.g., triggered via Safe Wallet UI)
-        if (!txHash) {
-          return NextResponse.json(
-            { error: 'Missing txHash' },
-            { status: 400, headers: corsHeaders }
-          );
-        }
-
-        // Create a completed distribution record
-        const members = await prizeDistributionService.getPoolMembers(poolId);
-        const distributionId = await prizeDistributionService.createDistributionRecord(
-          poolId,
-          prizeAmount || 0,
-          members.map(m => ({
-            ...m,
-            shareAmount: 0,
-          }))
-        );
-
-        // Update to completed
-        await prizeDistributionService.updateDistributionStatus(
-          distributionId,
-          'completed',
-          txHash
-        );
-
-        return NextResponse.json({
-          success: true,
-          distributionId,
-          message: 'Distribution recorded',
-        }, { headers: corsHeaders });
-      }
-
-      case 'simulate': {
-        // Simulate a distribution for demo purposes
-        const members = await prizeDistributionService.getPoolMembers(poolId);
-        const simulatedPrize = 1000; // $1000 prize
-        const memberShares = prizeDistributionService.calculateMemberShares(
-          members, 
-          simulatedPrize
-        );
-
-        return NextResponse.json({
-          success: true,
-          simulated: true,
-          prizeAmount: simulatedPrize,
-          memberShares,
-          totalDistributed: simulatedPrize,
-          message: 'This is a simulation. Real distribution requires a wallet client.',
-        }, { headers: corsHeaders });
-      }
-
-      default:
-        return NextResponse.json(
-          { error: `Unknown action: ${action}` },
-          { status: 400, headers: corsHeaders }
-        );
+    if (!poolId || typeof prizeAmount !== 'number' || !(prizeAmount > 0) || !txHash) {
+      return NextResponse.json(
+        { error: 'Missing or invalid poolId, prizeAmount, or txHash' },
+        { status: 400, headers: corsHeaders }
+      );
     }
+
+    const pool = await prizeDistributionService.getPoolInfo(poolId);
+    if (!pool) {
+      return NextResponse.json(
+        { error: 'Pool not found' },
+        { status: 404, headers: corsHeaders }
+      );
+    }
+
+    if (await prizeDistributionService.hasDistributionWithTxHash(poolId, txHash)) {
+      return NextResponse.json(
+        { error: 'This transaction is already journaled for this pool' },
+        { status: 409, headers: corsHeaders }
+      );
+    }
+
+    // Verify the payout receipt on Base before journaling anything.
+    // Mirror of the join-verification pattern in /api/syndicates.
+    const { createPublicClient, http, isHash } = await import('viem');
+    const { base } = await import('viem/chains');
+
+    if (!isHash(txHash)) {
+      return NextResponse.json(
+        { error: 'Invalid transaction hash format' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    const client = createPublicClient({
+      chain: base,
+      transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org'),
+    });
+
+    let receipt;
+    try {
+      receipt = await client.getTransactionReceipt({ hash: txHash as `0x${string}` });
+    } catch {
+      return NextResponse.json(
+        { error: 'Transaction not found on Base yet — it may still be pending. Retry once it confirms.' },
+        { status: 422, headers: corsHeaders }
+      );
+    }
+
+    if (receipt.status !== 'success') {
+      return NextResponse.json(
+        { error: 'Transaction reverted on-chain — nothing was paid out' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    if (receipt.from?.toLowerCase() !== pool.coordinatorAddress.toLowerCase()) {
+      return NextResponse.json(
+        { error: 'Payout transaction must be initiated by the pool coordinator' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    // Journal only now, with realistic member shares computed from
+    // current contribution weights.
+    const members = await prizeDistributionService.getPoolMembers(poolId);
+    const memberShares = prizeDistributionService.calculateMemberShares(members, prizeAmount);
+    const distributionId = await prizeDistributionService.createDistributionRecord(
+      poolId,
+      prizeAmount,
+      memberShares,
+    );
+    await prizeDistributionService.updateDistributionStatus(distributionId, 'completed', txHash);
+
+    return NextResponse.json({
+      success: true,
+      distributionId,
+      message: 'Payout verified on-chain and journaled',
+    }, { headers: corsHeaders });
   } catch (error) {
     logger.error('[PrizeDistribution API] POST error', { error: String(error) });
     return NextResponse.json(
