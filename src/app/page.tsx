@@ -151,6 +151,11 @@ export default function Home() {
             $1 to enter. Your deposit back forever.
           </p>
 
+          {/* Mechanism — the brand sentence (docs/POSITIONING.md) */}
+          <p className="text-sm text-gray-500 max-w-sm mx-auto">
+            Keep your capital. Its earnings play — alone or as a group, publicly or privately.
+          </p>
+
           {/* Odds line */}
           {oddsDisplay && (
             <p className="text-sm text-gray-500">

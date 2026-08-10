@@ -21,8 +21,9 @@ import type { VaultProtocol } from './vaultProvider';
 /** USDC on Base. */
 export const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
 
-/** Aave V3 Pool on Base. */
-export const AAVE_POOL_BASE = '0xA238Dd80F259641441B1517C16c08D1B4BcD6019' as const;
+// NOTE: the Aave V3 Pool address lives in AAVE_CONFIG.BASE.POOL_ADDRESS
+// (aaveProvider.ts) — a previous duplicate export here carried a wrong
+// address, so it was removed instead of corrected.
 
 export type DepositRoute =
   | { kind: 'aave_v3'; label: string }

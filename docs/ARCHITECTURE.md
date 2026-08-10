@@ -48,7 +48,7 @@ Pool providers implement shared custody/distribution models:
 - **Safe** — multisig coordination;
 - **0xSplits** — proportional distribution;
 - **PoolTogether** — prize-linked savings;
-- **Fhenix** — encrypted contribution and position path.
+- **Fhenix** — encrypted vault ledger and position path (deposit amounts remain visible in the token transfer; see [`POSITIONING.md`](POSITIONING.md) for claim scoping).
 
 ### Bridges
 

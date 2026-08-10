@@ -1,5 +1,11 @@
 # Product
 
+## North star
+
+> **Keep your capital. Its earnings play — alone or as a group, publicly or privately.**
+
+Syndicate is one mechanism with four expressions: the lottery (Play), the vaults (Grow), syndicates (Coordinate), and the X Layer hook are all instances of "your capital doesn't play — its earnings do." See [`POSITIONING.md`](POSITIONING.md) for the positioning decision, surface ownership, and claim rules.
+
 ## The short version
 
 Syndicate helps groups coordinate capital on-chain without forcing every position to be public.
@@ -40,7 +46,11 @@ Users create or join pools backed by Safe, 0xSplits, PoolTogether, or Fhenix. Po
 
 ### Privacy
 
-Fhenix flows encrypt contribution amounts and vault positions. Authorized users can reveal their own data locally through permits. The default verification provider is intentionally a noop; real KYC is opt-in infrastructure, not the product's default experience.
+Fhenix flows encrypt vault positions and on-vault contribution state; authorized users reveal their own data locally through permits.
+
+Scope of the privacy claim today (per `POSITIONING.md`): balances inside the Fhenix vault are private; the underlying USDC transfer amount of a deposit is still visible in the ERC-20 `Transfer` event. Copy must say "private balances inside the vault," not "private deposits" or "encrypted contributions," until Fhenix mainnet or a shielded funding path exists.
+
+The default verification provider is intentionally a noop; real KYC is opt-in infrastructure, not the product's default experience.
 
 ### Automation
 

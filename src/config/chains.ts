@@ -25,7 +25,7 @@ export const SUPPORTED_CHAINS = {
     native: false,
     supported: true,
     icon: '🔺',
-    method: 'Cross-chain via NEAR Chain Signatures',
+    method: 'Cross-chain via CCIP',
     purchaseMethod: 'cross-chain' as const,
     sourceChain: 'avalanche' as const,
     description: 'Buy Base tickets from Avalanche'
@@ -35,7 +35,7 @@ export const SUPPORTED_CHAINS = {
     native: false,
     supported: true,
     icon: '⟠',
-    method: 'Cross-chain via NEAR Chain Signatures',
+    method: 'Cross-chain via CCTP / LI.FI / CCIP',
     purchaseMethod: 'cross-chain' as const,
     sourceChain: 'ethereum' as const,
     description: 'Buy Base tickets from Ethereum'
@@ -45,40 +45,41 @@ export const SUPPORTED_CHAINS = {
     native: false,
     supported: true,
     icon: '🟣',
-    method: 'Cross-chain via NEAR Chain Signatures',
+    method: 'Cross-chain via CCIP',
     purchaseMethod: 'cross-chain' as const,
     sourceChain: 'polygon' as const,
     description: 'Buy Base tickets from Polygon'
   },
-  // Solana handled separately via Web3Auth + NEAR Chain Signatures
+  // Solana routes via deBridge DLN (CCTP Solana support was removed)
   'solana': {
     name: 'Solana',
     native: false,
     supported: true,
     icon: '⚫',
-    method: 'Cross-chain via NEAR + SNS Integration',
+    method: 'Cross-chain via deBridge',
     purchaseMethod: 'cross-chain' as const,
     sourceChain: 'solana' as const,
-    description: 'Buy Base tickets from Solana with .sol domains'
+    description: 'Buy Base tickets from Solana'
   },
-  // Stacks Bitcoin L2
+  // Stacks Bitcoin L2 — strongest non-EVM rail (chainhook-ingested, resumable)
   'stacks': {
     name: 'Stacks',
     native: false,
     supported: true,
     icon: '🧱',
-    method: 'Cross-chain via NEAR Chain Signatures',
+    method: 'Cross-chain via Stacks bridge (x402 rail)',
     purchaseMethod: 'cross-chain' as const,
     sourceChain: 'stacks' as const,
     description: 'Buy Base tickets from Stacks Bitcoin L2'
   },
-  // Starknet ZK-rollup
+  // Starknet ZK-rollup — relayer-deposit bridge; requires
+  // NEXT_PUBLIC_STARKNET_BRIDGE_DEPOSIT_ADDRESS or the route fails closed
   'starknet': {
     name: 'Starknet',
     native: false,
     supported: true,
     icon: '⚡',
-    method: 'Cross-chain via LayerSwap/Orbiter',
+    method: 'Cross-chain via bridge relayer',
     purchaseMethod: 'cross-chain' as const,
     sourceChain: 'starknet' as const,
     description: 'Buy Base tickets from Starknet'

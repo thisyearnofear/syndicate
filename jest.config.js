@@ -26,11 +26,13 @@ const customJestConfig = {
   // Test match patterns
   testMatch: ['**/tests/**/*.[jt]s?(x)', '**/?(*.)+(spec|test).[tj]s?(x)'],
   
-  // Ignore external Solidity contract tests (OpenZeppelin/Hardhat) and mocks
+  // Ignore external Solidity contract tests (vendored Foundry libs), mocks,
+  // and Playwright e2e specs (run via `playwright test`, not jest)
   testPathIgnorePatterns: [
     '<rootDir>/node_modules/',
-    '<rootDir>/lib/openzeppelin-contracts/',
+    '<rootDir>/lib/',
     '<rootDir>/tests/mocks/',
+    '<rootDir>/e2e/',
   ],
 
   modulePathIgnorePatterns: [

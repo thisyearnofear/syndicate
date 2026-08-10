@@ -38,6 +38,7 @@ See [`docs/PRODUCT.md`](docs/PRODUCT.md) and [`docs/ARCHITECTURE.md`](docs/ARCHI
 - Keep private keys, secrets, permits, and plaintext private balances out of logs and source control.
 - User-approved policy remains the authorization boundary for agents and relayers.
 - Update this status table when a feature or chain status changes.
+- Product copy and hero surfaces follow [`docs/POSITIONING.md`](docs/POSITIONING.md); hero surfaces must be `live` in `src/config/capabilities.ts`.
 
 ## Key locations
 

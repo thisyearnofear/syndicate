@@ -651,10 +651,10 @@ export default function CreateSyndicatePage() {
                         </span>
                       </div>
                       <p className="text-sm text-gray-400 mb-2">
-                        Privacy-native syndicate coordination with encrypted contribution amounts
+                        Privacy-native syndicate coordination with balances encrypted inside the vault
                       </p>
                       <ul className="text-xs text-gray-400 space-y-1">
-                        <li>• Contribution amounts encrypted on-chain</li>
+                        <li>• Vault balances encrypted on-chain (deposit amounts remain visible in the token transfer)</li>
                         <li>• Selective disclosure for authorized users</li>
                         <li>• Best for: Sensitive group coordination and higher-trust capital pools</li>
                         <li>• Member activity may remain visible while balances stay private</li>

@@ -485,24 +485,10 @@ export class CctpProtocol implements BridgeProtocol {
     }
 
     /**
-     * Extract CCTP message from Solana transaction logs
+     * NOTE: Solana CCTP support was removed for consolidation; Solana routes
+     * via deBridge (debridge.ts). The former Solana log-parsing helper was
+     * deleted with it — do not re-add without re-enabling the Solana route.
      */
-    private extractMessageFromSolanaLogs(logs: string[]): string | null {
-        for (const log of logs) {
-            if (log.startsWith('Program data: ')) {
-                const base64Data = log.slice('Program data: '.length).trim();
-                try {
-                    const data = Buffer.from(base64Data, 'base64');
-                    if (data.length >= 116) { // Minimum CCTP message size
-                        return '0x' + data.toString('hex');
-                    }
-                } catch {
-                    continue;
-                }
-            }
-        }
-        return null;
-    }
 
     /**
      * Convert EVM address to 32-byte format for CCTP

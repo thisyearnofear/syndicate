@@ -139,7 +139,7 @@ export function VaultsPageContent({
                       <p className="text-sm font-bold text-white">{fhenix.risk}</p>
                     </div>
                     <div className="ml-auto text-xs text-amber-300/70 font-medium">
-                      Encrypted deposits · Private governance · Local balance reveal
+                      Balances encrypted inside the vault · Private governance · Local balance reveal
                     </div>
                   </div>
                 </Link>

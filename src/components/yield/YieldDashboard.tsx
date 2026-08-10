@@ -310,7 +310,7 @@ export function YieldDashboard({ className = '' }: YieldDashboardProps) {
                     </Badge>
                   </div>
                   <p className="text-sm text-gray-200">
-                    Use the Fhenix vault row below to show the full privacy-native flow: private deposit, encrypted on-chain position, and local balance reveal through a permit.
+                    Use the Fhenix vault row below to show the full privacy-native flow: deposit, encrypted in-vault balance, and local balance reveal through a permit.
                   </p>
                   <div className="flex flex-wrap items-center gap-2 text-[11px]">
                     <Badge variant="glass" size="sm">1. Deposit privately</Badge>

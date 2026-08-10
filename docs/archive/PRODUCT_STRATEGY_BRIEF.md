@@ -1,5 +1,7 @@
 # Product Strategy Brief
 
+> **Superseded (2026-08-10).** The private-vaults-first wedge recommended here was evaluated and replaced by the mechanism-led ladder ("keep your capital, its earnings play") in [`../POSITIONING.md`](../POSITIONING.md). This file is preserved as the argument history, not as current strategy.
+
 ## Objective
 Reposition Syndicate from a broad on-chain lottery / yield experience into a sharper, more defensible product narrative centered on **private syndicate vaults for coordinated capital**.
 

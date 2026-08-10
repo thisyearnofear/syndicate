@@ -220,9 +220,9 @@ export class FhenixPoolProvider implements PoolProvider {
         chain: 'Base Sepolia / Fhenix',
         memberCount: Number(memberCount),
         totalDepositedUsdc: (Number(totalDeposited) / 1e6).toFixed(2),
-        privacy: 'Contribution amounts encrypted with FHE — on-chain state reveals nothing about individual stakes',
+        privacy: 'Vault balances encrypted with FHE — the vault ledger reveals nothing about individual stakes (deposit transfer amounts remain visible on-chain)',
         features: [
-          'Encrypted contribution amounts',
+          'Balances encrypted inside the vault',
           'Sealed balance queries (permit-gated)',
           'Homomorphic yield distribution',
           'MEV-resistant deposit flow',
@@ -234,8 +234,8 @@ export class FhenixPoolProvider implements PoolProvider {
         type: 'Fhenix FHE Vault',
         address: poolAddress,
         chain: 'Base Sepolia / Fhenix',
-        privacy: 'Contribution amounts encrypted with FHE',
-        features: ['Encrypted contribution amounts', 'Sealed balance queries'],
+        privacy: 'Balances encrypted inside the vault',
+        features: ['Balances encrypted inside the vault', 'Sealed balance queries'],
       };
     }
   }

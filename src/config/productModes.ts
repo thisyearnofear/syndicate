@@ -57,7 +57,7 @@ export const PRODUCT_MODES: readonly ProductModeConfig[] = [
     shortTitle: 'Syndicates',
     tagline: 'Pool capital. Keep balances private.',
     description:
-      'Multisig vaults with encrypted balances. Members reveal only what they choose, only to who they choose.',
+      'Multisig vaults with balances encrypted inside the vault. Members reveal only what they choose, only to who they choose.',
     supportingCopy: 'For syndicates, treasuries, and clubs.',
     href: '/discover',
     audience: 'Groups & treasuries',

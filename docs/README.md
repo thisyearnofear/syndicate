@@ -6,6 +6,7 @@ This is the canonical documentation index. Keep durable product and operational 
 
 | Document | Purpose |
 |---|---|
+| [`POSITIONING.md`](POSITIONING.md) | Positioning decision: mechanism-led ladder, surface ownership, claim rules |
 | [`PRODUCT.md`](PRODUCT.md) | Product promise, chain model, and positioning |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Current system design and major flows |
 | [`OPERATIONS.md`](OPERATIONS.md) | Environment, deployment, security, and production readiness |
