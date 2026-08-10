@@ -50,7 +50,10 @@ interface ExecutionContext {
 // CONFIGURATION
 // =============================================================================
 
-// JackpotRandomTicketBuyer ABI - V2 random ticket purchases
+// JackpotRandomTicketBuyer ABI - V2 random ticket purchases.
+// INTENTIONALLY DUPLICATED from src/config/contracts.ts (RANDOM_TICKET_BUYER_ABI):
+// this file is bundled by gelato-cli and deployed to Gelato's runtime
+// separately from the app module graph — it must stay self-contained.
 const RANDOM_TICKET_BUYER_ABI = [
   {
     inputs: [

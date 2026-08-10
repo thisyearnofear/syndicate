@@ -20,6 +20,7 @@ import {
   getMegapotAddressForChain,
   getUsdcAddressForChain,
 } from "@/config";
+import { RANDOM_TICKET_BUYER_ABI, MEGAPOT_V2_CONTRACTS } from "@/config/contracts";
 import { baseChainService, BaseChainService } from "./base/BaseChainService";
 import { ContractDataService } from "./base/ContractDataService";
 import { TransactionExecutor } from "./base/TransactionExecutor";
@@ -43,13 +44,12 @@ export const MEGAPOT_ABI = [
   "event WinningsClaimed(address indexed winner, uint256 indexed ticketId, uint256 amount)",
 ];
 
-// JackpotRandomTicketBuyer ABI - purchases tickets with on-chain random numbers
-export const RANDOM_TICKET_BUYER_ABI = [
-  "function buyTickets(uint256 _count, address _recipient, address[] _referrers, uint256[] _referralSplitBps, bytes32 _source) external",
-];
+// JackpotRandomTicketBuyer ABI is shared from @/config/contracts (single
+// source of truth); re-exported here for existing importers.
+export { RANDOM_TICKET_BUYER_ABI };
 
 // Random ticket buyer contract address (Base mainnet)
-const RANDOM_TICKET_BUYER_ADDRESS = "0xb9560b43b91dE2c1DaF5dfbb76b2CFcDaFc13aBd";
+const RANDOM_TICKET_BUYER_ADDRESS = MEGAPOT_V2_CONTRACTS.randomTicketBuyer.address;
 
 // USDC token ABI
 const USDC_ABI = [

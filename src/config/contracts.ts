@@ -265,6 +265,19 @@ export const MEGAPOT_V2_CONTRACTS = {
   abi: MEGAPOT_ABI,
 };
 
+/**
+ * Single source of truth for the JackpotRandomTicketBuyer ABI
+ * (random/quick-pick ticket purchases). Human-readable form works with
+ * both ethers (Contract/Interface) and viem (parseAbi / encodeFunctionData).
+ * Address: MEGAPOT_V2_CONTRACTS.randomTicketBuyer.address.
+ *
+ * NOTE: gelato-web3-function.ts keeps its own copy intentionally — it is
+ * bundled and deployed to Gelato's runtime separately from the app graph.
+ */
+export const RANDOM_TICKET_BUYER_ABI = [
+  'function buyTickets(uint256 _count, address _recipient, address[] _referrers, uint256[] _referralSplitBps, bytes32 _source) external',
+];
+
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================

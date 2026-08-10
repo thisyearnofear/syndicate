@@ -90,7 +90,9 @@ class MegapotService {
          prizeUsd: onChainData.prizeUsd,
          totalPoolUsd: onChainData.totalDepositsUsd,
          endTimestamp: String(onChainData.nextDrawTimestamp),
-         oddsPerTicket: '1000',
+         // Current Base mainnet ball config (30 normals / 10 bonus) → 1 in
+         // C(30,5)*10 = 1,425,060 per ticket. Same computation as the API path.
+         oddsPerTicket: jackpotOddsFromBallPool(30, 10),
          ticketPrice: 1,
          ticketsSoldCount: Number(onChainData.ticketCount) || 0,
          lastTicketPurchaseBlockNumber: 0,

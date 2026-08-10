@@ -20,15 +20,14 @@ import { VirtualsService } from './VirtualsService';
 import { getERC7715Service } from './erc7715Service';
 import { referralManager } from '../referral/ReferralManager';
 import { poolTogetherService, POOLTOGETHER_VAULTS } from '../lotteries/PoolTogetherService';
-import { MEGAPOT_V2_CONTRACTS } from '@/config/contracts';
+import { MEGAPOT_V2_CONTRACTS, RANDOM_TICKET_BUYER_ABI } from '@/config/contracts';
 
 // Mirror of the real client-side purchase path
 // (TransactionExecutor.purchaseTickets / yieldAutopilotAgent.buildExecutionPlan):
 // Megapot V2 tickets are bought through the JackpotRandomTicketBuyer contract,
 // which pulls USDC and assigns random numbers on-chain. $1 USDC = 1 ticket.
-const RANDOM_TICKET_BUYER_ABI = parseAbi([
-  'function buyTickets(uint256 _count, address _recipient, address[] _referrers, uint256[] _referralSplitBps, bytes32 _source) external',
-]);
+// ABI + address are single-sourced in @/config/contracts.
+const RANDOM_TICKET_BUYER_PARSED_ABI = parseAbi(RANDOM_TICKET_BUYER_ABI);
 const RANDOM_TICKET_BUYER_ADDRESS = MEGAPOT_V2_CONTRACTS.randomTicketBuyer.address as Address;
 /** 1 USDC (6 decimals) buys 1 ticket on Megapot V2. */
 const USDC_PER_TICKET = 1_000_000n;
@@ -47,7 +46,7 @@ function encodeRandomTicketPurchase(
   recipient: Address,
 ): `0x${string}` {
   return encodeFunctionData({
-    abi: RANDOM_TICKET_BUYER_ABI,
+    abi: RANDOM_TICKET_BUYER_PARSED_ABI,
     functionName: 'buyTickets',
     args: [
       ticketCount,

@@ -1,5 +1,6 @@
 import { encodeFunctionData, parseAbi, parseEther, type Address, type Hex, zeroHash } from 'viem';
 import { REFERRALS } from '@/config';
+import { RANDOM_TICKET_BUYER_ABI } from '@/config/contracts';
 import type { PermissionedAutopilotPolicy } from '@/services/metamask/delegationTypes';
 import { oneShotRelayerService, type OneShotRelayerResult } from '@/services/metamask/oneShotRelayerService';
 import { permissionedAutopilotService } from '@/services/metamask/permissionedAutopilotService';
@@ -41,9 +42,8 @@ export interface YieldAutopilotExecutionResult {
   relayerResult?: OneShotRelayerResult;
 }
 
-const RANDOM_TICKET_BUYER_ABI = parseAbi([
-  'function buyTickets(uint256 _count, address _recipient, address[] _referrers, uint256[] _referralSplitBps, bytes32 _source)',
-]);
+// Shared ABI from @/config/contracts (single source of truth).
+const RANDOM_TICKET_BUYER_PARSED_ABI = parseAbi(RANDOM_TICKET_BUYER_ABI);
 
 class YieldAutopilotAgent {
   async planPolicy(policy: PermissionedAutopilotPolicy): Promise<YieldAutopilotActivity> {
@@ -158,7 +158,7 @@ class YieldAutopilotAgent {
       from: policy.userAddress,
       to: policy.targetContract,
       data: encodeFunctionData({
-        abi: RANDOM_TICKET_BUYER_ABI,
+        abi: RANDOM_TICKET_BUYER_PARSED_ABI,
         functionName: 'buyTickets',
         args: [
           BigInt(ticketsPlanned),
