@@ -55,10 +55,10 @@ export const PRODUCT_MODES: readonly ProductModeConfig[] = [
     badge: 'Group native',
     title: 'Coordinate',
     shortTitle: 'Syndicates',
-    tagline: 'Pool capital. Keep balances private.',
+    tagline: 'Pool capital. Play as a group.',
     description:
-      'Multisig vaults with balances encrypted inside the vault. Members reveal only what they choose, only to who they choose.',
-    supportingCopy: 'For syndicates, treasuries, and clubs.',
+      'Multisig Safe pools, 0xSplits shares, or PoolTogether vaults. Winnings are claimed by the coordinator and paid out on-chain — receipt-verified.',
+    supportingCopy: 'For syndicates, treasuries, and clubs. Privacy layer in preview.',
     href: '/discover',
     audience: 'Groups & treasuries',
   },

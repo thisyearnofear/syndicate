@@ -10,7 +10,6 @@ import { useLottery } from "@/domains/lottery/hooks/useLottery";
 import { QuickPurchase } from "@/components/purchase/QuickPurchase";
 import { QuickDeposit } from "@/components/purchase/QuickDeposit";
 import { SocialProof } from "@/components/home/SocialProof";
-import { DrawResults } from "@/components/home/DrawResults";
 import { LastWinner } from "@/components/home/LastWinner";
 import { SharePrompt } from "@/components/home/SharePrompt";
 import { YieldTeaser } from "@/components/home/YieldTeaser";
@@ -19,7 +18,6 @@ import { Button } from "@/shared/components/ui/Button";
 
 // Lazy load heavy components
 const SimplePurchaseModal = lazy(() => import("@/components/modal/SimplePurchaseModal"));
-const PremiumJackpotDisplay = lazy(() => import("@/components/home/PremiumJackpotDisplay"));
 const UserDashboard = lazy(() => import("@/components/home/UserDashboard"));
 const OnboardingWizard = lazy(() => import("@/components/onboarding/OnboardingWizard"));
 
@@ -131,11 +129,6 @@ export default function Home() {
 
       <div className="relative z-10 container mx-auto px-4 py-8 md:py-16 max-w-5xl pb-28 md:pb-16">
 
-        {/* ─── LAST WINNER BANNER ───────────────────────────────────────────── */}
-        <div className="mb-8 max-w-2xl mx-auto">
-          <LastWinner />
-        </div>
-
         {/* ─── HERO ─────────────────────────────────────────────────────────── */}
         <section className="text-center mb-16 space-y-5">
           {/* Prize pool — the anchor */}
@@ -202,40 +195,34 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ─── LIVE PROOF ───────────────────────────────────────────────────── */}
-        <section className="mb-16">
-          <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-[1fr_auto] gap-6 items-start">
-            <SocialProof />
-            <DrawResults onEnterDraw={handleBuyClick} className="w-full md:w-72" />
+        {/* ─── LAST WINNER STRIP (thin banner, hidden when no winner) ─────── */}
+        <div className="mb-10 max-w-2xl mx-auto">
+          <LastWinner />
+        </div>
+
+        {/* ─── QUICK ACTIONS (directly under the hero) ─────────────────────── */}
+        <section id="quick-purchase" className="mb-12 scroll-mt-24 transition-[box-shadow] duration-300 rounded-2xl">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <QuickPurchase onAdvanced={() => handleOpenAdvanced('megapot')} />
+            <QuickDeposit onExploreVaults={handleSeeVaults} />
           </div>
+        </section>
+
+        {/* ─── ACTIVITY PROOF ───────────────────────────────────────────────── */}
+        <section className="mb-12 max-w-3xl mx-auto">
+          <SocialProof />
         </section>
 
         {/* ─── YIELD TEASER (connected depositors only) ─────────────────────── */}
         {isMounted && isConnected && (
-          <section className="mb-16 max-w-2xl mx-auto">
+          <section className="mb-12 max-w-2xl mx-auto">
             <YieldTeaser />
           </section>
         )}
 
-        {/* ─── JACKPOT + QUICK ACTIONS ──────────────────────────────────────── */}
-        <section className="mb-16">
-          <Suspense fallback={
-            <div className="h-48 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
-          }>
-            <PremiumJackpotDisplay onBuyClick={handleBuyClick} />
-          </Suspense>
-
-          <div id="quick-purchase" className="mt-8 scroll-mt-24 transition-[box-shadow] duration-300 rounded-2xl">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <QuickPurchase onAdvanced={() => handleOpenAdvanced('megapot')} />
-              <QuickDeposit onExploreVaults={handleSeeVaults} />
-            </div>
-          </div>
-        </section>
-
         {/* ─── THREE MODES ──────────────────────────────────────────────────── */}
-        <section className="mb-16">
-          <div className="text-center mb-10">
+        <section className="mb-12">
+          <div className="text-center mb-8">
             <h2 className="text-3xl md:text-4xl font-bold text-white">
               Three ways to use Syndicate
             </h2>
@@ -245,7 +232,6 @@ export default function Home() {
               const capId: CapabilityId = mode.id === 'private_vaults' ? 'fhenix_privacy'
                 : mode.id === 'yield_to_tickets' ? 'vaults'
                 : 'megapot';
-              const cap = getCapability(capId);
               const ctaState = getCtaState(capId);
               return (
                 <div key={mode.id} className="bg-white/[0.04] border border-white/10 rounded-2xl p-6 flex flex-col hover:bg-white/[0.07] transition-colors">
@@ -261,9 +247,6 @@ export default function Home() {
                   <p className="text-sm text-white font-medium mb-1">{mode.tagline}</p>
                   <p className="text-sm text-gray-400 leading-relaxed mb-2">{mode.description}</p>
                   <p className="text-xs text-gray-500 mb-auto">{mode.supportingCopy}</p>
-                  {cap.availabilityMessage && (
-                    <p className="text-xs text-amber-300/80 mt-3">{cap.availabilityMessage}</p>
-                  )}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -281,7 +264,7 @@ export default function Home() {
         </section>
 
         {/* ─── PRIVACY ──────────────────────────────────────────────────────── */}
-        <section className="mb-16">
+        <section className="mb-12">
           <div className="max-w-3xl mx-auto rounded-2xl border border-white/10 bg-white/[0.03] p-8 md:p-10 text-center">
             <p className="text-2xl md:text-3xl font-bold text-white mb-3">
               A treasury buying 500 tickets doesn&apos;t need every competitor watching.
@@ -308,7 +291,7 @@ export default function Home() {
 
         {/* ─── USER DASHBOARD (connected only) ──────────────────────────────── */}
         {isMounted && isConnected && (
-          <section className="mb-16">
+          <section className="mb-12">
             <Suspense fallback={
               <div className="h-64 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
             }>
