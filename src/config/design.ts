@@ -357,7 +357,7 @@ export default premiumDesign;
 
 import type { ProductModeId } from '@/config/productModes';
 
-export type DesignAccent = 'play' | 'grow' | 'coordinate' | 'neutral';
+export type DesignAccent = 'play' | 'grow' | 'coordinate' | 'neutral' | 'experimental';
 
 export interface AccentTokens {
   /** Gradient used for heading text and hairlines. neutral keeps plain white. */
@@ -407,6 +407,18 @@ export const ACCENTS: Record<DesignAccent, AccentTokens> = {
     icon: 'text-gray-300',
     hairline: 'from-white/30 via-white/10 to-transparent',
   },
+  /**
+   * Experimental surfaces (X Layer). A fifth meaning — "this is the R&D
+   * engine" — must always pair with a Testnet badge (docs/DESIGN.md).
+   */
+  experimental: {
+    gradientText: 'bg-gradient-to-r from-cyan-200 via-blue-300 to-indigo-300 bg-clip-text text-transparent',
+    tile: 'bg-cyan-400/15',
+    badge: 'text-cyan-300/70',
+    border: 'hover:border-cyan-400/40 hover:shadow-[0_10px_40px_-12px_rgba(34,211,238,0.30)]',
+    icon: 'text-cyan-300',
+    hairline: 'from-cyan-400/70 via-cyan-400/20 to-transparent',
+  },
 };
 
 /** Route domain → accent. Landing/product-mode accents alias these. */
@@ -419,7 +431,7 @@ export const DOMAIN_ACCENT: Record<string, DesignAccent> = {
   coordinate: 'coordinate',
   'create-syndicate': 'coordinate',
   syndicate: 'coordinate',
-  xlayer: 'coordinate',
+  xlayer: 'experimental',
   bridge: 'neutral',
   settings: 'neutral',
 };

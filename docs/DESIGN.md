@@ -67,12 +67,23 @@ From `src/components/layout/StateViews.tsx`:
 - `DisconnectedState` — one wallet-gate shape for the whole app; subject
   names the prize ("Your tickets"), and it may carry the page's connect UI.
 
-## Exemption: X Layer
+## The experimental accent (X Layer)
 
-`/xlayer` is a separate experimental prize-pool product (see
-[`X_LAYER.md`](X_LAYER.md)) with its own visual identity, and it is not
-in the main navigation. It is exempt from PageShell convergence; other
-pages may not copy its patterns back into the core app.
+X Layer is a separate experimental prize-pool product (see
+[`X_LAYER.md`](X_LAYER.md)), but it is **family, flagged** — not an
+island:
+
+- It renders inside `PageShell`/`PageHeader` like every other page, with
+  accent `'experimental'` (cyan) from the config. Cyan means one thing:
+  "this is the R&D engine."
+- It always carries a Testnet badge (header + nav + footer), and its
+  Write gate state stays visibly disclosed. Convergence stops at
+  chrome — the badges are the honesty contract and never get polished
+  away.
+- Its accent MAY NOT bleed into core Base pages; core pages may not
+  ship their own "experimental" variants without the same badges.
+- Cross-links run both ways: home acknowledges the experimental engine;
+  `/xlayer` links back into Play / Grow / Coordinate.
 
 ## Hard rules
 

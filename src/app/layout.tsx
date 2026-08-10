@@ -73,6 +73,10 @@ export default function RootLayout({
                       <Link href="/" className="block text-sm text-gray-500 hover:text-white transition-colors">Play</Link>
                       <Link href="/vaults" className="block text-sm text-gray-500 hover:text-white transition-colors">Grow</Link>
                       <Link href="/coordinate" className="block text-sm text-gray-500 hover:text-white transition-colors">Coordinate</Link>
+                      <Link href="/xlayer" className="flex items-center justify-center gap-1.5 text-sm text-gray-500 hover:text-white transition-colors">
+                        X Layer
+                        <span className="rounded-full border border-amber-400/30 px-1 text-[8px] font-bold uppercase text-amber-300/70">testnet</span>
+                      </Link>
                       <a href="https://docs.megapot.io" target="_blank" rel="noopener noreferrer" className="block text-sm text-gray-500 hover:text-white transition-colors">Docs</a>
                     </div>
                     <div className="space-y-2">

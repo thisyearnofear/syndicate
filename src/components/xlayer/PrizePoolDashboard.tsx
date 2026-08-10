@@ -22,15 +22,14 @@ import { useBalance, useReadContract, useSwitchChain } from "wagmi";
 import { Button } from "@/shared/components/ui/Button";
 import {
   CompactCard,
-  CompactContainer,
   CompactGrid,
-  CompactSection,
 } from "@/shared/components/premium/CompactLayout";
 import { useUnifiedWallet } from "@/hooks/useUnifiedWallet";
 import { useCapability } from "@/hooks/useCapability";
 import { useXLayerJoin, useXLayerDeposit } from "@/services/xlayer";
 import { XLayerAgentPanel } from "@/components/xlayer/XLayerAgentPanel";
 import { XLayerDemoLoopGuide } from "@/components/xlayer/XLayerDemoLoopGuide";
+import { PageShell, PageHeader, ShellSection } from "@/components/layout/PageShell";
 import {
   XLAYER_HOOK_ABI,
   XLAYER_HOOK_IS_CONFIGURED,
@@ -249,55 +248,48 @@ export function PrizePoolDashboard() {
           : "Open for entries";
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#050b14] pb-mobile-cta text-white sm:pb-0">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_18%_10%,rgba(34,211,238,0.12),transparent_28%),radial-gradient(circle_at_85%_28%,rgba(59,130,246,0.12),transparent_30%),linear-gradient(120deg,transparent_0%,rgba(255,255,255,0.02)_50%,transparent_100%)]" />
-      <CompactContainer maxWidth="2xl" padding="md" className="relative pb-8">
-        <CompactSection spacing="lg">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
-            <div className="max-w-3xl">
-              <div className="mb-4 flex flex-wrap items-center gap-2 sm:mb-5 sm:gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full border border-amber-400/25 bg-amber-300/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-amber-200">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-300" />
-                  X Layer Testnet
-                </span>
-                <span className="text-xs text-slate-500">Chain {XLAYER_TESTNET_CHAIN_ID} · Build X</span>
-              </div>
-              <h1 className="max-w-2xl text-[2.15rem] font-semibold leading-[1.05] tracking-[-0.04em] text-white sm:text-6xl sm:leading-[0.98] sm:tracking-[-0.045em]">
-                The DEX is the
-                <span className="block bg-gradient-to-r from-cyan-200 via-blue-300 to-indigo-300 bg-clip-text text-transparent">lottery.</span>
-              </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-400 sm:mt-6 sm:text-lg sm:leading-7">
-                Swap fees feed a shared prize pot. Depositors keep their principal, while their share determines their chance of winning the next epoch.
-              </p>
-            </div>
+    <PageShell width="wide" className="overflow-x-hidden pb-mobile-cta sm:pb-0">
+      <Link href="/" className="inline-flex -mb-2 text-sm font-medium text-gray-500 transition-colors hover:text-white">
+        ← Back to product home (Base)
+      </Link>
 
-            <div className="w-full max-w-none rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl sm:max-w-sm">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${activeOnXLayer ? "bg-emerald-400/15 text-emerald-300" : "bg-amber-300/15 text-amber-200"}`}>
-                    {activeOnXLayer ? <Wifi className="h-5 w-5" /> : <CircleAlert className="h-5 w-5" />}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Wallet network</p>
-                    <p className="mt-1 truncate text-sm font-semibold text-white">{activeOnXLayer ? "Ready on X Layer" : chainId ? `Chain ${chainId}` : "Not connected"}</p>
-                  </div>
+      <PageHeader
+        title="The DEX is the lottery."
+        supportingLine="Swap fees feed a shared prize pot. Depositors keep their principal, while their share determines their chance of winning the next epoch."
+        accent="experimental"
+        badge={{ label: "X Layer Testnet", tone: "amber" }}
+      >
+        <div className="flex flex-col items-end gap-2">
+          <span className="text-xs text-slate-500">Chain {XLAYER_TESTNET_CHAIN_ID} · Build X AI Season</span>
+          <div className="w-full max-w-none rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl sm:max-w-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${activeOnXLayer ? "bg-emerald-400/15 text-emerald-300" : "bg-amber-300/15 text-amber-200"}`}>
+                  {activeOnXLayer ? <Wifi className="h-5 w-5" /> : <CircleAlert className="h-5 w-5" />}
                 </div>
-                {isConnected ? (
-                  <button type="button" onClick={handleSwitch} className="min-h-11 shrink-0 px-2 text-xs font-semibold text-cyan-300 transition hover:text-cyan-200 touch-manipulation">
-                    Switch
-                  </button>
-                ) : (
-                  <Button variant="glass" size="sm" className="min-h-11 touch-manipulation" onClick={handleConnect}>
-                    Connect
-                  </Button>
-                )}
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Wallet network</p>
+                  <p className="mt-1 truncate text-sm font-semibold text-white">{activeOnXLayer ? "Ready on X Layer" : chainId ? `Chain ${chainId}` : "Not connected"}</p>
+                </div>
               </div>
-              <p className="mt-3 border-t border-white/[0.06] pt-3 text-xs leading-5 text-slate-500">
-                {walletType === "evm" && evmAddress ? `Connected ${shorten(evmAddress)}` : "Connect an EVM wallet to preview your share."}
-              </p>
+              {isConnected ? (
+                <button type="button" onClick={handleSwitch} className="min-h-11 shrink-0 px-2 text-xs font-semibold text-cyan-300 transition hover:text-cyan-200 touch-manipulation">
+                  Switch
+                </button>
+              ) : (
+                <Button variant="glass" size="sm" className="min-h-11 touch-manipulation" onClick={handleConnect}>
+                  Connect
+                </Button>
+              )}
             </div>
+            <p className="mt-3 border-t border-white/[0.06] pt-3 text-xs leading-5 text-slate-500">
+              {walletType === "evm" && evmAddress ? `Connected ${shorten(evmAddress)}` : "Connect an EVM wallet to preview your share."}
+            </p>
           </div>
+        </div>
+      </PageHeader>
 
+      <ShellSection className="space-y-6">
           {!hasConfiguredHook && (
             <div className="flex gap-4 rounded-2xl border border-cyan-400/20 bg-cyan-300/[0.06] p-5">
               <div className="mt-0.5 rounded-lg bg-cyan-300/10 p-2 text-cyan-200"><Sparkles className="h-4 w-4" /></div>
@@ -406,9 +398,8 @@ export function PrizePoolDashboard() {
               <span className="mt-1 block text-xs leading-5 text-slate-500">Pool capital with other participants.</span>
             </Link>
           </div>
-        </CompactSection>
-      </CompactContainer>
-    </main>
+      </ShellSection>
+    </PageShell>
   );
 }
 

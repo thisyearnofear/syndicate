@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef, Suspense, lazy } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ArrowRight, Clock } from "lucide-react";
 import { useUnifiedWallet, useIsMounted } from "@/hooks";
 import { PRODUCT_MODES } from "@/config/productModes";
@@ -357,6 +358,9 @@ export default function Home() {
             </p>
             <p className="text-gray-400 mb-2">
               Coordinate privately, win publicly.
+            </p>
+            <p className="text-xs text-gray-600 mb-4">
+              The experimental DEX-native engine lives on <Link href="/xlayer" className="text-cyan-300/80 hover:text-cyan-200 underline underline-offset-4 decoration-dotted">X Layer testnet</Link>.
             </p>
             <DecryptLine
               text="Encrypted balances. Selective reveal. Your rules."

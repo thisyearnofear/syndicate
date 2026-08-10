@@ -12,7 +12,7 @@ import UnifiedModal from './modal/UnifiedModal';
 import WalletConnectionOptions from './wallet/WalletConnectionOptions';
 import {
   Ticket, Users, TrendingUp, Menu, X,
-  ArrowLeftRight, LayoutDashboard, Settings, ChevronDown,
+  ArrowLeftRight, LayoutDashboard, Settings, ChevronDown, FlaskConical,
 } from 'lucide-react';
 
 // ─── Config ─────────────────────────────────────────────────────────────────
@@ -26,6 +26,8 @@ const PRIMARY_NAV = [
 const SECONDARY_NAV = [
   { href: '/portfolio', label: 'Portfolio', icon: LayoutDashboard, requiresWallet: true },
   { href: '/bridge', label: 'Fund', icon: ArrowLeftRight },
+  // Experimental engine: visible but always flagged as testnet (honesty contract).
+  { href: '/xlayer', label: 'X Layer', icon: FlaskConical, flag: 'Testnet' },
   { href: '/settings', label: 'Settings', icon: Settings },
 ] as const;
 
@@ -203,6 +205,11 @@ export default function Navigation({ className = '' }: NavigationProps) {
                           >
                             <Icon className="w-4 h-4" />
                             {item.label}
+                            {'flag' in item && (
+                              <span className="ml-auto rounded-full border border-amber-400/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300/80">
+                                {item.flag}
+                              </span>
+                            )}
                           </Link>
                         );
                       })}
@@ -303,6 +310,11 @@ export default function Navigation({ className = '' }: NavigationProps) {
                 >
                   <Icon className="w-4 h-4" />
                   {item.label}
+                  {'flag' in item && (
+                    <span className="ml-auto rounded-full border border-amber-400/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300/80">
+                      {item.flag}
+                    </span>
+                  )}
                 </Link>
               );
             })}
