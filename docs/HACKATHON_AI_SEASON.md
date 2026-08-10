@@ -86,7 +86,7 @@ Recording: Loom or ffmpeg+QuickTime; keep 60fps if possible. If the demo loop is
 ## 8. Timeline (owner-tagged backwards from deadline)
 
 - **Aug 11 (today):** randomness design doc ✅ (this commit); EIP-2537 precompile probe on 1952 ✅ (precompiles present — primary path confirmed); package doc ✅.
-- **Aug 12–14:** agent-loop polish (`/xlayer` panel: surface tool calls + memory readable; audit-log view); record demo video v1.
+- **Aug 12–14:** agent-loop polish ✅ (shipped 2026-08-11 in `b06dde3`: Steps|Transcript tabs, persisted audit transcript, `agent.*` observability events, full rationale + warnings, gate chips, explorer receipt links); record demo video v1.
 - **Aug 15–16:** X account creation + 3 seed posts; cut final video; screenshots.
 - **Aug 17–18:** internal review against judging criteria; fill Google Form draft offline once more; fix highest-signal gaps only.
 - **Aug 19–20:** final QA pass; rehearse answers for judge Q&A (randomness, custody, failure modes).
