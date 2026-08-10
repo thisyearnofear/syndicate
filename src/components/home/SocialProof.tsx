@@ -9,7 +9,8 @@
  * Data sources:
  *   - useLottery for jackpot stats and draw timing
  *   - usePlatformStats for aggregate numbers
- *   - Simulated recent activity feed (until a real WebSocket feed exists)
+ *   - /api/activity/recent for real purchases only — when empty, the feed
+ *     hides (never fabricates entries; honesty contract)
  *
  * Design: minimal, trust-building, not attention-competing with the purchase CTA.
  */
@@ -88,20 +89,14 @@ interface ActivityEntry {
   txHash: string;
 }
 
-const FALLBACK_ACTIONS = [
-  { address: "0xab...3f", tickets: 5, txHash: "" },
-  { address: "0xcd...7a", tickets: 1, txHash: "" },
-  { address: "0x1f...e2", tickets: 10, txHash: "" },
-  { address: "0x9b...44", tickets: 3, txHash: "" },
-  { address: "0x72...d1", tickets: 25, txHash: "" },
-  { address: "0x3e...8c", tickets: 2, txHash: "" },
-];
+// NO FALLBACK ENTRIES: fabricated purchase activity was presented as real
+// here until 2026-08; the feed simply hides when no real data exists.
 
 function RecentActivity() {
-  const [entries, setEntries] = useState<ActivityEntry[]>(FALLBACK_ACTIONS);
+  const [entries, setEntries] = useState<ActivityEntry[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Fetch real activity on mount
+  // Fetch real activity on mount; empty/error simply hides the feed.
   useEffect(() => {
     let cancelled = false;
     fetch('/api/activity/recent')
@@ -111,17 +106,19 @@ function RecentActivity() {
           setEntries(data.activity);
         }
       })
-      .catch(() => {}); // Keep fallback on failure
+      .catch(() => {});
     return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
+    if (entries.length < 2) return;
     const interval = setInterval(() => {
       setCurrentIndex((i) => (i + 1) % entries.length);
     }, 3500);
     return () => clearInterval(interval);
   }, [entries.length]);
 
+  if (entries.length === 0) return null;
   const entry = entries[currentIndex];
   if (!entry) return null;
 

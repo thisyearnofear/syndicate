@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useMemo, Suspense, lazy } from "react
 import { useRouter } from "next/navigation";
 import { ArrowRight, Clock } from "lucide-react";
 import { useUnifiedWallet, useIsMounted } from "@/hooks";
-import { PRODUCT_MODES } from "@/config/productModes";
+import { PRODUCT_MODES, type ProductModeId } from "@/config/productModes";
 import { getCapability, getCtaState, type CapabilityId } from "@/config/capabilities";
 import { useLottery } from "@/domains/lottery/hooks/useLottery";
 import { QuickPurchase } from "@/components/purchase/QuickPurchase";
@@ -20,6 +20,31 @@ import { Button } from "@/shared/components/ui/Button";
 const SimplePurchaseModal = lazy(() => import("@/components/modal/SimplePurchaseModal"));
 const UserDashboard = lazy(() => import("@/components/home/UserDashboard"));
 const OnboardingWizard = lazy(() => import("@/components/onboarding/OnboardingWizard"));
+
+// ─── Animated number hook (rAF count-up for the hero jackpot) ───────────────
+
+function useCountUp(target: number, durationMs = 1200) {
+  const [value, setValue] = useState(0);
+  const previous = useState(() => ({ current: 0 }))[0];
+
+  useEffect(() => {
+    const from = previous.current;
+    if (from === target) return;
+    const start = performance.now();
+    let frame: number;
+    const tick = (now: number) => {
+      const t = Math.min((now - start) / durationMs, 1);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      setValue(from + (target - from) * eased);
+      if (t < 1) frame = requestAnimationFrame(tick);
+      else previous.current = target;
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [target, durationMs, previous]);
+
+  return value;
+}
 
 // ─── Countdown hook for hero CTA ────────────────────────────────────────────
 
@@ -44,6 +69,26 @@ function useDrawCountdown(endTimestamp: string | undefined) {
   }, [endTimestamp, now]);
 }
 
+// ─── Ladder accent system: Play=amber, Grow=emerald, Coordinate=violet ────────
+
+const MODE_ACCENTS: Record<ProductModeId, { border: string; tile: string; badge: string }> = {
+  public_play: {
+    border: 'hover:border-amber-400/40 hover:shadow-[0_10px_40px_-12px_rgba(251,191,36,0.30)]',
+    tile: 'bg-amber-400/15',
+    badge: 'text-amber-300/70',
+  },
+  yield_to_tickets: {
+    border: 'hover:border-emerald-400/40 hover:shadow-[0_10px_40px_-12px_rgba(52,211,153,0.30)]',
+    tile: 'bg-emerald-400/15',
+    badge: 'text-emerald-300/70',
+  },
+  private_vaults: {
+    border: 'hover:border-violet-400/40 hover:shadow-[0_10px_40px_-12px_rgba(167,139,250,0.30)]',
+    tile: 'bg-violet-400/15',
+    badge: 'text-violet-300/70',
+  },
+};
+
 // ─── Page ───────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -59,13 +104,15 @@ export default function Home() {
 
   const countdown = useDrawCountdown(jackpotStats?.endTimestamp);
 
-  // Prize pool formatted
+  // Prize pool, animated
+  const prizeUsd = jackpotStats?.prizeUsd ? parseFloat(jackpotStats.prizeUsd) : 0;
+  const animatedPrize = useCountUp(prizeUsd, 1500);
   const prizeDisplay = useMemo(() => {
-    if (!jackpotStats?.prizeUsd) return "$1,000,000+";
-    const n = parseFloat(jackpotStats.prizeUsd);
+    if (!prizeUsd) return "$1,000,000+";
+    const n = animatedPrize;
     if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
     return `$${Math.round(n).toLocaleString()}`;
-  }, [jackpotStats]);
+  }, [prizeUsd, animatedPrize]);
 
   const oddsDisplay = jackpotStats?.oddsPerTicket
     ? `1 in ${parseInt(jackpotStats.oddsPerTicket).toLocaleString()}`
@@ -130,38 +177,43 @@ export default function Home() {
       <div className="relative z-10 container mx-auto px-4 py-8 md:py-16 max-w-5xl pb-28 md:pb-16">
 
         {/* ─── HERO ─────────────────────────────────────────────────────────── */}
-        <section className="text-center mb-16 space-y-5">
+        <section className="text-center mb-16 space-y-5 relative">
+          {/* Ambient orbs behind the anchor */}
+          <div aria-hidden className="pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2 -z-10">
+            <div className="w-72 h-72 rounded-full bg-amber-500/15 blur-3xl animate-float" style={{ animationDuration: '9s' }} />
+          </div>
+          <div aria-hidden className="pointer-events-none absolute top-24 -left-10 -z-10 hidden md:block">
+            <div className="w-56 h-56 rounded-full bg-emerald-500/10 blur-3xl animate-float" style={{ animationDuration: '12s' }} />
+          </div>
+          <div aria-hidden className="pointer-events-none absolute top-24 -right-10 -z-10 hidden md:block">
+            <div className="w-56 h-56 rounded-full bg-violet-500/10 blur-3xl animate-float" style={{ animationDuration: '14s' }} />
+          </div>
+
           {/* Prize pool — the anchor */}
           <div className="animate-fade-in-up">
-            <p className="text-sm uppercase tracking-widest text-gray-500 mb-2">Current prize pool</p>
-            <h1 className="font-black text-6xl md:text-8xl leading-none tracking-tight text-white">
+            <p className="text-sm uppercase tracking-widest text-amber-200/70 mb-2 flex items-center justify-center gap-2">
+              <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
+              Current prize pool
+            </p>
+            <h1 className="font-black text-6xl md:text-8xl leading-none tracking-tight tabular-nums bg-gradient-to-b from-amber-200 via-yellow-300 to-orange-400 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(251,191,36,0.25)]">
               {prizeDisplay}
             </h1>
           </div>
 
-          {/* Value prop — one line */}
-          <p className="text-lg md:text-xl text-gray-400 max-w-md mx-auto">
+          {/* Value prop + mechanism — one breath each */}
+          <p className="text-lg md:text-xl text-gray-300 max-w-md mx-auto">
             $1 to enter. Your deposit back forever.
           </p>
-
-          {/* Mechanism — the brand sentence (docs/POSITIONING.md) */}
           <p className="text-sm text-gray-500 max-w-sm mx-auto">
             Keep your capital. Its earnings play — alone or as a group, publicly or privately.
           </p>
 
-          {/* Odds line */}
-          {oddsDisplay && (
-            <p className="text-sm text-gray-500">
-              <span className="text-brand-400 font-semibold">{oddsDisplay}</span> odds per ticket
-            </p>
-          )}
-
           {/* CTAs with urgency */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-3">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-3 animate-fade-in-up" style={{ animationDelay: '150ms' }}>
             <Button
               variant="premium"
               size="lg"
-              className="text-lg px-8 py-5 shadow-2xl group"
+              className="text-lg px-8 py-5 shadow-2xl shadow-amber-500/10 group"
               onClick={handleBuyClick}
             >
               Enter draw
@@ -175,15 +227,15 @@ export default function Home() {
             <Button
               variant="ghost"
               size="lg"
-              className="text-lg px-8 py-5 border border-white/15 text-gray-200 hover:text-white hover:border-white/30"
+              className="text-lg px-8 py-5 border border-emerald-400/25 text-emerald-100/90 hover:text-white hover:border-emerald-300/40 hover:bg-emerald-400/5"
               onClick={handleSeeVaults}
             >
               Deposit &amp; Grow
             </Button>
           </div>
 
-          {/* Trust line */}
-          <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-gray-500 pt-1">
+          {/* Trust + odds line */}
+          <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-gray-500 pt-1 animate-fade-in-up" style={{ animationDelay: '250ms' }}>
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
               Live on Base
@@ -192,6 +244,12 @@ export default function Home() {
             <span>Non-custodial</span>
             <span className="text-gray-700">·</span>
             <span>Open-source</span>
+            {oddsDisplay && (
+              <>
+                <span className="text-gray-700">·</span>
+                <span className="text-amber-300/80 font-semibold">{oddsDisplay} per ticket</span>
+              </>
+            )}
           </div>
         </section>
 
@@ -202,7 +260,7 @@ export default function Home() {
 
         {/* ─── QUICK ACTIONS (directly under the hero) ─────────────────────── */}
         <section id="quick-purchase" className="mb-12 scroll-mt-24 transition-[box-shadow] duration-300 rounded-2xl">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 [&>*]:transition-all [&>*]:duration-300 [&>*]:hover:-translate-y-1">
             <QuickPurchase onAdvanced={() => handleOpenAdvanced('megapot')} />
             <QuickDeposit onExploreVaults={handleSeeVaults} />
           </div>
@@ -233,15 +291,16 @@ export default function Home() {
                 : mode.id === 'yield_to_tickets' ? 'vaults'
                 : 'megapot';
               const ctaState = getCtaState(capId);
+              const accent = MODE_ACCENTS[mode.id];
               return (
-                <div key={mode.id} className="bg-white/[0.04] border border-white/10 rounded-2xl p-6 flex flex-col hover:bg-white/[0.07] transition-colors">
+                <div key={mode.id} className={`bg-white/[0.04] border border-white/10 rounded-2xl p-6 flex flex-col transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.07] ${accent.border}`}>
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center text-xl">
+                    <div className={`w-11 h-11 rounded-xl ${accent.tile} flex items-center justify-center text-xl`}>
                       {mode.icon}
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-white">{mode.title}</h3>
-                      <span className="text-xs text-gray-500">{mode.badge}</span>
+                      <span className={`text-xs ${accent.badge}`}>{mode.badge}</span>
                     </div>
                   </div>
                   <p className="text-sm text-white font-medium mb-1">{mode.tagline}</p>
@@ -265,12 +324,12 @@ export default function Home() {
 
         {/* ─── PRIVACY ──────────────────────────────────────────────────────── */}
         <section className="mb-12">
-          <div className="max-w-3xl mx-auto rounded-2xl border border-white/10 bg-white/[0.03] p-8 md:p-10 text-center">
-            <p className="text-2xl md:text-3xl font-bold text-white mb-3">
+          <div className="max-w-3xl mx-auto rounded-2xl border border-violet-400/20 bg-violet-500/[0.04] hover:border-violet-400/35 transition-colors duration-300 p-8 md:p-10 text-center">
+            <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-violet-200 via-white to-violet-200 bg-clip-text text-transparent mb-3">
               A treasury buying 500 tickets doesn&apos;t need every competitor watching.
             </p>
             <p className="text-gray-400 mb-6">
-              Coordinate privately, win publicly. Encrypted balances, selective reveal, your rules.
+              Coordinate privately, win publicly.
             </p>
             <Button
               variant="ghost"
@@ -303,12 +362,9 @@ export default function Home() {
         {/* ─── FINAL CTA ────────────────────────────────────────────────────── */}
         <section className="text-center">
           <div className="max-w-2xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">
-              No-loss. Yield-powered. Private when you want.
-            </h2>
-            <p className="text-gray-400 mb-8">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-8">
               Play today, grow tomorrow, coordinate when you&apos;re ready.
-            </p>
+            </h2>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button
                 variant="premium"
