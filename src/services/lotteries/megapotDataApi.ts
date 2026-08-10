@@ -213,3 +213,72 @@ export function getWalletTickets(walletAddress: string, limit = 50): Promise<Meg
     TTL_WALLET_MS
   );
 }
+
+// -----------------------------------------------------------------------------
+// WINNINGS AGGREGATE
+// -----------------------------------------------------------------------------
+//
+// Canonical replacement for the fabricated usersInfo(address) on-chain read:
+// the Megapot jackpot contract does NOT expose usersInfo/lastWinnerAddress/
+// withdrawWinnings (verified by mainnet selector probes, 2026-08). Claim
+// executes via claimWinnings(uint256[] ticketIds) using user_ticket_id below.
+
+export interface WalletWinnings {
+  /** Sum of unclaimed winnings in USDC (float, display-grade). */
+  claimableAmountUsd: number;
+  /** Sum formatted as a USDC string (e.g. "12.5") for display. */
+  claimableAmountDisplay: string;
+  /** Unclaimed winning ticket IDs (stringified uint256) → claimWinnings(ids). */
+  claimableTicketIds: string[];
+  /** Ticket rows fetched (page-limited; use for displays like ticket count). */
+  ticketCount: number;
+  /** Any ticket with winnings_amount != null (won at least once). */
+  hasWon: boolean;
+}
+
+/** Fetch ALL ticket pages for a wallet (capped, sequential). */
+export async function getAllWalletTickets(
+  walletAddress: string,
+  options: { pageLimit?: number; maxPages?: number } = {},
+): Promise<MegapotTicket[] | null> {
+  const pageLimit = options.pageLimit ?? 100;
+  const maxPages = options.maxPages ?? 5;
+  const all: MegapotTicket[] = [];
+
+  let cursor: string | null = null;
+  for (let page = 0; page < maxPages; page++) {
+    const suffix: string = cursor ? `&cursor=${encodeURIComponent(cursor)}` : '';
+    const result: MegapotPage<MegapotTicket> | null = await apiGet<MegapotPage<MegapotTicket>>(
+      `/wallets/${walletAddress}/tickets?limit=${pageLimit}${suffix}`,
+      TTL_WALLET_MS,
+    );
+    if (!result) return null;
+    all.push(...result.data);
+    if (!result.has_more || !result.next_cursor) return all;
+    cursor = result.next_cursor;
+  }
+  return all; // capped; callers counting precisely should say "recent N+"
+}
+
+/**
+ * Aggregate a wallet's winnings: claimable amount (unclaimed winners) +
+ * the ticket IDs needed for claimWinnings(uint256[]).
+ */
+export async function getWalletWinnings(walletAddress: string): Promise<WalletWinnings | null> {
+  const tickets = await getAllWalletTickets(walletAddress);
+  if (!tickets) return null;
+
+  const claimable = tickets.filter((t) => t.winnings_amount !== null && !t.claimed);
+  const claimableRaw = claimable.reduce((sum, t) => {
+    const w = t.winnings_amount;
+    return w ? sum + Number(w.amount) / 10 ** w.decimals : sum;
+  }, 0);
+
+  return {
+    claimableAmountUsd: claimableRaw,
+    claimableAmountDisplay: claimableRaw.toString(),
+    claimableTicketIds: claimable.map((t) => t.user_ticket_id),
+    ticketCount: tickets.length,
+    hasWon: tickets.some((t) => t.winnings_amount !== null),
+  };
+}

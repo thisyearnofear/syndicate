@@ -194,16 +194,26 @@ export class TransactionExecutor {
   }
 
   /**
-   * Claim winnings
-   * Invalidates relevant caches after successful claim
+   * Claim winnings via claimWinnings(uint256[] ticketIds).
+   *
+   * NOTE (2026-08): this previously called withdrawWinnings(), which mainnet
+   * selector probes confirmed DOES NOT EXIST on the jackpot contract — every
+   * claim sent that way would revert. Ticket IDs come from the Megapot Data
+   * API (services/lotteries/megapotDataApi.getWalletWinnings).
+   *
+   * Invalidates relevant caches after successful claim.
    */
-  async claimWinnings(): Promise<string> {
+  async claimWinnings(ticketIds: string[]): Promise<string> {
     try {
       if (this.baseChain.isReadOnlyMode()) {
         throw new Error(
           "Cannot claim winnings in read-only mode. Please connect your wallet.",
         );
       }
+      if (ticketIds.length === 0) {
+        throw new Error("No winning tickets to claim.");
+      }
+
       const txSigner = await this.baseChain.getFreshSigner();
       const address = await txSigner.getAddress();
 
@@ -213,7 +223,7 @@ export class TransactionExecutor {
         txSigner,
       );
 
-      const tx = await txContract.withdrawWinnings();
+      const tx = await txContract.claimWinnings(ticketIds.map((id) => BigInt(id)));
       const receipt = await tx.wait();
 
       // Invalidate caches after successful claim

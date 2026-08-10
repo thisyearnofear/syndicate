@@ -115,7 +115,7 @@ export function useTicketInfo(): TicketInfoState & TicketInfoActions {
 
     try {
       await web3Service.initialize();
-      const txHash = await web3Service.claimWinnings();
+      const txHash = await web3Service.claimWinnings(address);
       
       if (txHash) {
         // Refresh info after successful claim

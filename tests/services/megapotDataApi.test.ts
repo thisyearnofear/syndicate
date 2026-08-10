@@ -22,6 +22,7 @@ import {
     getActiveRound,
     getWalletTickets,
     getRoundWins,
+    getWalletWinnings,
     megapotAmountToUsd,
     clearMegapotApiCache,
 } from '@/services/lotteries/megapotDataApi';
@@ -183,6 +184,94 @@ describe('megapotDataApi', () => {
             expect(wins!.data).toHaveLength(1);
             const [url] = mockFetch.mock.calls[0] as [string, RequestInit];
             expect(url).toContain('/v1/rounds/138/wins?limit=10');
+        });
+    });
+
+    describe('getWalletWinnings (canonical winnings read)', () => {
+        const ticket = (overrides: Record<string, unknown>) => ({
+            id: 't1',
+            wallet: '0x1234567890123456789012345678901234567890',
+            buyer: '0x1234567890123456789012345678901234567890',
+            round_id: '139',
+            user_ticket_id: '101',
+            normals: [1, 2, 3, 4, 5],
+            bonusball: 6,
+            matched_normals: null,
+            bonusball_match: null,
+            winnings_amount: null,
+            claimed: false,
+            claimed_tx_hash: null,
+            tx_hash: '0xabc',
+            block_number: 1,
+            created_at: '2026-08-10T00:00:00.000Z',
+            ...overrides,
+        });
+
+        it('sums unclaimed winnings and exposes ticket IDs for claimWinnings', async () => {
+            mockFetch.mockResolvedValue(jsonResponse({
+                data: [
+                    ticket({ user_ticket_id: '101', winnings_amount: { amount: '5000000', decimals: 6 } }),
+                    ticket({ user_ticket_id: '102', winnings_amount: { amount: '7500000', decimals: 6 } }),
+                    ticket({ user_ticket_id: '103', winnings_amount: { amount: '9000000', decimals: 6 }, claimed: true }),
+                    ticket({ user_ticket_id: '104' }), // loser
+                ],
+                next_cursor: null,
+                has_more: false,
+            }));
+
+            const winnings = await getWalletWinnings('0x1234567890123456789012345678901234567890');
+
+            expect(winnings).not.toBeNull();
+            expect(winnings!.claimableAmountUsd).toBeCloseTo(12.5);
+            expect(winnings!.claimableAmountDisplay).toBe('12.5');
+            // Claimed winner excluded; only unclaimed winners' IDs are used.
+            expect(winnings!.claimableTicketIds).toEqual(['101', '102']);
+            expect(winnings!.ticketCount).toBe(4);
+            expect(winnings!.hasWon).toBe(true);
+        });
+
+        it('follows cursor pagination until has_more is false', async () => {
+            mockFetch
+                .mockResolvedValueOnce(jsonResponse({
+                    data: [ticket({ user_ticket_id: '101' })],
+                    next_cursor: 'cur2',
+                    has_more: true,
+                }))
+                .mockResolvedValueOnce(jsonResponse({
+                    data: [ticket({ user_ticket_id: '202', winnings_amount: { amount: '1000000', decimals: 6 } })],
+                    next_cursor: null,
+                    has_more: false,
+                }));
+
+            const winnings = await getWalletWinnings('0x1234567890123456789012345678901234567890');
+
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+            const [, secondUrl] = [mockFetch.mock.calls[0][0], mockFetch.mock.calls[1][0]] as [string, string];
+            expect(secondUrl).toContain('cursor=cur2');
+            expect(winnings!.claimableTicketIds).toEqual(['202']);
+            expect(winnings!.ticketCount).toBe(2);
+        });
+
+        it('returns null when the API fails (never-throw contract preserved)', async () => {
+            mockFetch.mockRejectedValue(new Error('network down'));
+
+            const winnings = await getWalletWinnings('0x1234567890123456789012345678901234567890');
+
+            expect(winnings).toBeNull();
+        });
+
+        it('reports hasWon=false for a wallet with no winning tickets', async () => {
+            mockFetch.mockResolvedValue(jsonResponse({
+                data: [ticket({ user_ticket_id: '301' })],
+                next_cursor: null,
+                has_more: false,
+            }));
+
+            const winnings = await getWalletWinnings('0x1234567890123456789012345678901234567890');
+
+            expect(winnings!.hasWon).toBe(false);
+            expect(winnings!.claimableTicketIds).toEqual([]);
+            expect(winnings!.claimableAmountUsd).toBe(0);
         });
     });
 });

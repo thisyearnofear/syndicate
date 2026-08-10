@@ -15,6 +15,7 @@ import { getAssociatedTokenAddress } from "@solana/spl-token";
 import { CONTRACTS } from "@/config";
 import { RpcProvider, uint256 } from "starknet";
 import { logger } from "@/lib/logger";
+import { getWalletWinnings } from "@/services/lotteries/megapotDataApi";
 
 interface CacheEntry<T> {
   value: T;
@@ -368,33 +369,26 @@ export class ContractDataService {
       }
 
       return this.deduplicateRequest(cacheKey, async () => {
+        // NOTE (2026-08): usersInfo/lastWinnerAddress do not exist on the
+        // jackpot contract (verified by mainnet selector probes). Winnings
+        // and win-status now come from the official Megapot Data API.
         try {
-          const [userInfo, lastWinner] = await Promise.all([
-            this.megapotContract.usersInfo(userAddress),
-            this.megapotContract.lastWinnerAddress(),
-          ]);
-
-          const ticketsPurchasedTotalBps =
-            userInfo.ticketsPurchasedTotalBps || userInfo[0];
-          const winningsClaimable = userInfo.winningsClaimable || userInfo[1];
-          const isActive = userInfo.active || userInfo[2];
-
-          const ticketsPurchased = Number(ticketsPurchasedTotalBps) / 10000;
-          const winningsFormatted = ethers.formatUnits(winningsClaimable, 6);
+          const winnings = await getWalletWinnings(userAddress);
+          if (!winnings) return null;
 
           const result: UserTicketInfo = {
-            ticketsPurchased,
-            winningsClaimable: winningsFormatted,
-            isActive,
-            hasWon:
-              lastWinner.toLowerCase() === userAddress.toLowerCase() &&
-              parseFloat(winningsFormatted) > 0,
+            // Ticket count is the number of rows the Data API returns
+            // (page-capped at ~500; sufficient for consumers).
+            ticketsPurchased: winnings.ticketCount,
+            winningsClaimable: winnings.claimableAmountDisplay,
+            isActive: winnings.ticketCount > 0,
+            hasWon: winnings.hasWon,
           };
 
           this.setCache(cacheKey, result, CACHE_CONFIG.USER_TICKETS);
           return result;
         } catch (_error) {
-          // Silently return null - contract may not be deployed or methods don't exist
+          // Silently return null - degrade instead of breaking UI
           return null;
         }
       });
@@ -425,17 +419,17 @@ export class ContractDataService {
     }
 
     return this.deduplicateRequest(cacheKey, async () => {
+      // NOTE (2026-08): usersInfo does not exist on the jackpot contract
+      // (verified by mainnet selector probes) — read via the Data API.
       try {
-        const userInfo = await this.megapotContract.usersInfo(address);
-        const ticketsRaw = userInfo.ticketsPurchasedTotalBps || userInfo[0];
-        const winningsRaw = userInfo.winningsClaimable || userInfo[1];
-        const activeRaw = userInfo.active || userInfo[2];
+        const winnings = await getWalletWinnings(address);
+        if (!winnings) return null;
 
         const result = {
-          ticketsPurchased: Number(ticketsRaw),
-          winningsClaimable: ethers.formatUnits(winningsRaw, 6),
-          isActive: Boolean(activeRaw),
-          rawValue: ticketsRaw,
+          ticketsPurchased: winnings.ticketCount,
+          winningsClaimable: winnings.claimableAmountDisplay,
+          isActive: winnings.ticketCount > 0,
+          rawValue: BigInt(winnings.ticketCount),
         };
 
         this.setCache(cacheKey, result, CACHE_CONFIG.USER_TICKETS);

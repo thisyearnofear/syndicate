@@ -2,8 +2,10 @@
  * PrizeDistribution — Winnings & Payouts for a syndicate pool
  *
  * Honesty contract:
- * - Winnings shown are read on-chain from Megapot `usersInfo(coordinator)`
- *   (tickets purchased by a syndicate credit the coordinator address).
+ * - Winnings shown are read from the official Megapot Data API
+ *   (getWalletWinnings for the coordinator address; tickets purchased by a
+ *   syndicate credit the coordinator address). The jackpot contract exposes
+ *   no usersInfo view — verified by mainnet selector probes (2026-08).
  * - The app never pretends to execute a payout. The coordinator claims via
  *   the solo Megapot path, pays members via the pool's own rail (Safe app /
  *   0xSplits / Cabana), then pastes the payout tx hash here; the API
@@ -162,8 +164,8 @@ export function PrizeDistribution({
 
       const coordinator = data.pool?.coordinatorAddress as string | undefined;
       if (coordinator) {
-        // On-chain read: Megapot usersInfo(coordinator) — syndicate ticket
-        // purchases credit the coordinator address.
+        // Read via Megapot Data API (syndicate ticket purchases credit the
+        // coordinator address; usersInfo does not exist on the jackpot).
         web3Service
           .getUserInfoForAddress(coordinator)
           .then((info) => setClaimableUsdc(info?.winningsClaimable ?? null))
@@ -192,7 +194,7 @@ export function PrizeDistribution({
     setClaiming(true);
     setNotice(null);
     try {
-      const txHash = await web3Service.claimWinnings();
+      const txHash = await web3Service.claimWinnings(address!);
       setNotice({
         kind: 'ok',
         text: `Claimed from Megapot. Tx: ${txHash.slice(0, 10)}…${txHash.slice(-6)} — pay members via your rail, then journal it below.`,
@@ -370,8 +372,9 @@ export function PrizeDistribution({
               1. Claim from Megapot
             </div>
             <p className="text-sm text-white/60 mb-3">
-              Signs <span className="font-mono">withdrawWinnings()</span> with your coordinator
-              wallet — the same real claim path solo players use.
+              Signs <span className="font-mono">claimWinnings(ticketIds)</span> with your coordinator
+              wallet — the same real claim path solo players use (winning ticket IDs
+              are resolved from the Megapot Data API).
             </p>
             <Button onClick={handleClaim} disabled={claiming || !claimable || claimable <= 0}>
               {claiming ? 'Claiming…' : claimable !== null && claimable > 0 ? 'Claim winnings' : 'Nothing to claim'}

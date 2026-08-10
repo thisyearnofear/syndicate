@@ -21,6 +21,7 @@ import {
   getUsdcAddressForChain,
 } from "@/config";
 import { RANDOM_TICKET_BUYER_ABI, MEGAPOT_V2_CONTRACTS, MEGAPOT_ABI } from "@/config/contracts";
+import { getWalletWinnings } from "@/services/lotteries/megapotDataApi";
 import { baseChainService, BaseChainService } from "./base/BaseChainService";
 import { ContractDataService } from "./base/ContractDataService";
 import { TransactionExecutor } from "./base/TransactionExecutor";
@@ -263,9 +264,26 @@ class Web3Service {
     return this.txExecutor.purchaseTickets(ticketCount, recipientOverride);
   }
 
-  async claimWinnings(): Promise<string> {
+  /**
+   * Claim a wallet's Megapot winnings.
+   *
+   * Resolves unclaimed winning ticket IDs from the Megapot Data API
+   * (the jackpot contract exposes no usersInfo/withdrawWinnings — verified
+   * by mainnet selector probes, 2026-08) and executes the real
+   * claimWinnings(uint256[]) call.
+   */
+  async claimWinnings(walletAddress: string): Promise<string> {
     if (!this.txExecutor) throw new Error("Service not initialized");
-    return this.txExecutor.claimWinnings();
+
+    const winnings = await getWalletWinnings(walletAddress);
+    if (!winnings) {
+      throw new Error("Could not fetch ticket data from the Megapot Data API — try again.");
+    }
+    if (winnings.claimableTicketIds.length === 0) {
+      throw new Error("No unclaimed winnings on this wallet.");
+    }
+
+    return this.txExecutor.claimWinnings(winnings.claimableTicketIds);
   }
 
   async purchaseTicketsWithDelegation(

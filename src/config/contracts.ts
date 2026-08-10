@@ -185,24 +185,6 @@ export const MEGAPOT_ABI = [
     outputs: [{ name: '', type: 'uint256' }],
     stateMutability: 'view',
   },
-  {
-    name: 'usersInfo',
-    type: 'function',
-    inputs: [{ name: 'user', type: 'address' }],
-    outputs: [
-      { name: 'ticketsPurchasedTotalBps', type: 'uint256' },
-      { name: 'winningsClaimable', type: 'uint256' },
-      { name: 'active', type: 'bool' },
-    ],
-    stateMutability: 'view',
-  },
-  {
-    name: 'lastWinnerAddress',
-    type: 'function',
-    inputs: [],
-    outputs: [{ name: '', type: 'address' }],
-    stateMutability: 'view',
-  },
   // Write functions
   {
     name: 'buyTickets',
@@ -231,13 +213,11 @@ export const MEGAPOT_ABI = [
     outputs: [],
     stateMutability: 'nonpayable',
   },
-  {
-    name: 'withdrawWinnings',
-    type: 'function',
-    inputs: [],
-    outputs: [],
-    stateMutability: 'nonpayable',
-  },
+  // NOTE (2026-08): usersInfo, lastWinnerAddress and withdrawWinnings were
+  // removed — mainnet probes confirmed the jackpot contract does NOT expose
+  // them. Winnings claim is claimWinnings(uint256[] ticketIds); claimable
+  // amounts and ticket IDs read from the Megapot Data API
+  // (services/lotteries/megapotDataApi.getWalletWinnings).
   // LP functions
   {
     name: 'lpDeposit',

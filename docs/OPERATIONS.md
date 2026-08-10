@@ -58,35 +58,37 @@ Chain-specific variables are documented in:
 
 ## Contract deployment
 
-Before a Base deployment, verify the target addresses and RPC:
+> **Do NOT deploy `MegapotAutoPurchaseProxy` as-is (2026-08 finding).**
+> Mainnet selector probes show the jackpot contract and JackpotRandomTicketBuyer
+> do not expose its `purchaseTickets(address,uint256,address)` interface —
+> every execution would fall into the refund catch. Its Foundry tests pass only
+> because they mock the same outdated interface. Before deployment it must be
+> retargeted to `RandomTicketBuyer.buyTickets(uint256,address,address[],uint256[],bytes32)`
+> and re-tested against a **Base mainnet fork**. Cross-chain rails call the
+> RandomTicketBuyer directly in the meantime (the same pattern used by the
+> Gelato and Virtuals automation paths).
+
+### Selector-probe sanity check (run before ANY contract deployment)
+
+Verify the ABI you deploy against actually exists on the target:
 
 ```bash
-export BASE_RPC_URL=https://base-mainnet.g.alchemy.com/v2/YOUR_KEY
-export PRIVATE_KEY=0x...
-export BASESCAN_API_KEY=...
+# Real function: reverts with revert DATA or returns (here, business-logic revert)
+cast call --rpc-url "$BASE_RPC_URL" 0xb9560b43b91dE2c1DaF5dfbb76b2CFcDaFc13aBd \
+  "buyTickets(uint256,address,address[],uint256[],bytes32)" 1 0x000...dEaD "[]" "[]" 0x000...0000
+
+# Missing selector: BARE "execution reverted" with NO data — e.g.
+cast call --rpc-url "$BASE_RPC_URL" 0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2 \
+  "withdrawWinnings()"   # reverts bare: function does NOT exist
 ```
 
-Build and deploy the purchase proxy using the repository's Foundry script:
+### When the proxy is retargeted
 
-```bash
-forge build
-forge script script/DeployAutoPurchaseProxy.s.sol:DeployAutoPurchaseProxy \
-  --rpc-url "$BASE_RPC_URL" \
-  --private-key "$PRIVATE_KEY" \
-  --broadcast \
-  --verify \
-  --etherscan-api-key "$BASESCAN_API_KEY"
-```
-
-Verify the deployed proxy points at the expected contracts and state:
-
-```bash
-cast call <PROXY_ADDRESS> "megapot()" --rpc-url "$BASE_RPC_URL"
-cast call <PROXY_ADDRESS> "usdc()" --rpc-url "$BASE_RPC_URL"
-cast call <PROXY_ADDRESS> "supportedTokens(address)(bool)" "$USDC" --rpc-url "$BASE_RPC_URL"
-```
-
-The proxy is covered by `test/MegapotAutoPurchaseProxy.t.sol` (pull/push flows, replay protection, fail-safe refunds, admin controls). Until a broadcast/deployment record exists for a given address, treat any configured proxy address as unverified.
+Restore this procedure with the corrected interface: build (`forge build`),
+run against a mainnet fork (`forge test --fork-url $BASE_RPC_URL`), deploy via
+`script/DeployAutoPurchaseProxy.s.sol` with `--broadcast --verify`, then probe
+the deployed address (`megapot()`, `owner()`, `supportedTokens`), wire
+`NEXT_PUBLIC_AUTO_PURCHASE_PROXY`, and journal the deployment record here.
 
 X Layer deployment is a separate experimental path; use [`X_LAYER.md`](X_LAYER.md), not this Base procedure.
 

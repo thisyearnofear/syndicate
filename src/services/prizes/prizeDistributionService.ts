@@ -5,8 +5,9 @@
  * computes member shares, read-side. It deliberately does NOT move money:
  *
  * - Winnings are claimed from Megapot by the pool coordinator via the solo
- *   claim path (withdrawWinnings) — tickets bought by a syndicate credit
- *   the coordinator's address (see syndicateService.executeSyndicatePurchase).
+ *   claim path (claimWinnings(ticketIds), IDs resolved from the Megapot Data
+ *   API) — tickets bought by a syndicate credit the coordinator's address
+ *   (see syndicateService.executeSyndicatePurchase).
  * - Payouts to members execute through the pool's own rail (Safe app
  *   proposal, wallet-signed splitsService.distributeToken, Cabana claims).
  * - This service records a distribution ONLY after API-side on-chain

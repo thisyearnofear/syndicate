@@ -23,10 +23,8 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { bridgeManager } from '@/services/bridges';
 import type { BridgeParams, BridgeProtocolType } from '@/services/bridges/types';
 import { useUnifiedWallet } from './useUnifiedWallet';
-import { formatUnits } from 'viem';
-import { basePublicClient } from '@/lib/baseClient';
 import { useVisibilityPolling } from '@/lib/useVisibilityPolling';
-import { web3Service } from '@/services/web3Service';
+import { getWalletWinnings } from '@/services/lotteries/megapotDataApi';
 import {
   getBridgeActivityHistory,
   getPendingBridge,
@@ -352,16 +350,10 @@ export function useUnifiedBridge(): BridgeState & {
 
       let baseWinnings = '0';
       if (evmAddress) {
-        const client = basePublicClient;
-        const megapotAddress = web3Service.getMegapotContractAddress();
-        const megapotAbi = web3Service.getMegapotAbi();
-        const userInfo = await client.readContract({
-          address: megapotAddress as `0x${string}`,
-          abi: megapotAbi,
-          functionName: 'usersInfo',
-          args: [evmAddress as `0x${string}`],
-        });
-        baseWinnings = formatUnits(userInfo[1], 6);
+        // usersInfo does not exist on the jackpot contract (verified by
+        // mainnet selector probes, 2026-08) — read via the Data API.
+        const winnings = await getWalletWinnings(evmAddress);
+        baseWinnings = winnings?.claimableAmountDisplay ?? '0';
       }
 
       let claimableStacks = '0';
