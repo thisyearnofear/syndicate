@@ -18,8 +18,6 @@ import {
 import { Button } from "@/shared/components/ui/Button";
 import {
   CompactCard,
-  CompactContainer,
-  CompactSection,
   CompactStack,
 } from "@/shared/components/premium/CompactLayout";
 import { useUnifiedWallet } from "@/hooks";
@@ -52,6 +50,9 @@ import {
   FHENIX_VAULT_NETWORK_LABEL,
   getFhenixVaultExplorerTxUrl,
 } from "@/services/fhe/fhenixChain";
+import { PageShell, PageHeader, ShellSection } from "@/components/layout/PageShell";
+import { PageSkeleton } from "@/components/layout/StateViews";
+import { BeamFrame } from "@/components/motion/BeamFrame";
 
 const ALLOCATION_STORAGE_KEY = "vault_yield_allocation";
 const DIRECT_DEPOSIT_STRATEGIES = [
@@ -334,23 +335,23 @@ function YieldStrategiesContent() {
     const isFhenix = selectedStrategy === "fhenix";
 
     return (
-      <CompactCard variant="glass" padding="md" className={isFhenix ? "border-amber-500/25 bg-amber-500/5" : "border-blue-500/20 bg-blue-500/5"}>
+      <CompactCard variant="glass" padding="md" className={isFhenix ? "border-violet-400/25 bg-violet-500/5" : "border-emerald-500/20 bg-emerald-500/5"}>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${isFhenix ? "bg-amber-500/20 text-amber-200" : "bg-blue-500/20 text-blue-200"}`}>
+            <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${isFhenix ? "bg-violet-500/20 text-violet-200" : "bg-emerald-500/20 text-emerald-200"}`}>
               {selectedStrategyConfig?.icon || <Shield className="h-5 w-5" />}
             </div>
             <div>
-              <p className={`text-xs font-semibold uppercase tracking-wider ${isFhenix ? "text-amber-400" : "text-blue-400"}`}>Selected Vault</p>
+              <p className={`text-xs font-semibold uppercase tracking-wider ${isFhenix ? "text-violet-400" : "text-emerald-400"}`}>Selected Vault</p>
               <h3 className="text-lg font-bold text-white">{selectedStrategyConfig?.name}</h3>
               {isFhenix && (
-                <p className="mt-0.5 text-xs font-medium text-amber-100/70">
+                <p className="mt-0.5 text-xs font-medium text-violet-100/70">
                   Live on {FHENIX_VAULT_NETWORK_LABEL}
                 </p>
               )}
             </div>
           </div>
-          
+
           <div className="flex flex-wrap gap-4">
             <div className="text-right">
               <p className="text-xs text-gray-500 uppercase tracking-wider">Target Yield</p>
@@ -362,7 +363,7 @@ function YieldStrategiesContent() {
             </div>
             <div className="text-right">
               <p className="text-xs text-gray-500 uppercase tracking-wider">Network</p>
-              <p className={isFhenix ? "font-bold text-amber-300" : "font-bold text-white"}>{getStrategyNetworkLabel(selectedStrategy)}</p>
+              <p className={isFhenix ? "font-bold text-violet-300" : "font-bold text-white"}>{getStrategyNetworkLabel(selectedStrategy)}</p>
             </div>
           </div>
         </div>
@@ -374,7 +375,7 @@ function YieldStrategiesContent() {
     <CompactStack spacing="lg">
       <div className="px-1">
         <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          <Layers className="h-5 w-5 text-blue-400" />
+          <Layers className="h-5 w-5 text-emerald-400" />
           Choose your vault
         </h2>
         <p className="mt-1 text-sm text-gray-400">
@@ -461,7 +462,7 @@ function YieldStrategiesContent() {
       <div className="space-y-6">
         <div className="px-1">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Info className="h-5 w-5 text-blue-400" />
+            <Info className="h-5 w-5 text-emerald-400" />
             Fund your vault
           </h2>
           <p className="mt-1 text-sm text-gray-400">
@@ -493,7 +494,7 @@ function YieldStrategiesContent() {
               value={depositAmount || ""}
               onChange={(e) => setDepositAmount(Number(e.target.value) || 0)}
               placeholder="0.00"
-              className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-5 text-2xl font-bold text-white outline-none transition focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
+              className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-5 text-2xl font-bold text-white outline-none transition focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50"
             />
             <div className="absolute right-4 top-1/2 -translate-y-1/2">
               <span className="text-sm font-bold text-gray-500">USDC</span>
@@ -505,37 +506,39 @@ function YieldStrategiesContent() {
         </div>
 
         {depositSuccess && txHash ? (
-          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20">
-                <Check className="h-5 w-5 text-emerald-300" />
+          <BeamFrame color="#34d399" duration={1.8} laps={2} className="block rounded-2xl receipt-in">
+            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20">
+                  <Check className="h-5 w-5 text-emerald-300" />
+                </div>
+                <div>
+                  <p className="font-semibold text-emerald-200">Deposit complete</p>
+                  <p className="text-sm text-emerald-100/70">
+                    Your vault is active and generating yield.
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="font-semibold text-emerald-200">Deposit complete</p>
-                <p className="text-sm text-emerald-100/70">
-                  Your vault is active and generating yield.
-                </p>
-              </div>
-            </div>
 
-            <div className="mt-5 flex flex-wrap gap-3">
-              <a
-                href={selectedStrategy === "fhenix" ? getFhenixVaultExplorerTxUrl(txHash) : `https://basescan.org/tx/${txHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5 text-sm font-medium text-emerald-300 transition hover:bg-emerald-500/10"
-              >
-                View Transaction
-                <ExternalLink className="ml-2 h-4 w-4" />
-              </a>
-              <Link
-                href="/portfolio"
-                className="inline-flex items-center rounded-xl bg-white/10 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/20"
-              >
-                Go to Portfolio
-              </Link>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <a
+                  href={selectedStrategy === "fhenix" ? getFhenixVaultExplorerTxUrl(txHash) : `https://basescan.org/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5 text-sm font-medium text-emerald-300 transition hover:bg-emerald-500/10"
+                >
+                  View Transaction
+                  <ExternalLink className="ml-2 h-4 w-4" />
+                </a>
+                <Link
+                  href="/portfolio"
+                  className="inline-flex items-center rounded-xl bg-white/10 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/20"
+                >
+                  Go to Portfolio
+                </Link>
+              </div>
             </div>
-          </div>
+          </BeamFrame>
         ) : depositError ? (
           <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-5">
             <p className="text-sm text-red-200 mb-4">{depositError}</p>
@@ -586,12 +589,12 @@ function YieldStrategiesContent() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-5">
+        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5">
           <div className="flex gap-3">
-            <Info className="h-5 w-5 text-blue-400 shrink-0" />
+            <Info className="h-5 w-5 text-emerald-400 shrink-0" />
             <div>
-              <p className="text-xs font-bold text-blue-300 uppercase tracking-wider mb-1">No Loss</p>
-              <p className="text-xs leading-relaxed text-blue-100/60">
+              <p className="text-xs font-bold text-emerald-300 uppercase tracking-wider mb-1">No Loss</p>
+              <p className="text-xs leading-relaxed text-emerald-100/60">
                 Your initial deposit remains safe and can be withdrawn according to vault terms. Only yield is put at risk for upside.
               </p>
             </div>
@@ -640,91 +643,90 @@ function YieldStrategiesContent() {
 
   if (!hasExecutionIntent) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#020617]">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-blue-500" />
-          <p className="text-sm text-gray-400">Redirecting...</p>
+      <PageShell width="wide">
+        <div className="flex items-center justify-center py-24">
+          <div className="text-center">
+            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-emerald-500" />
+            <p className="text-sm text-gray-400">Redirecting...</p>
+          </div>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#020617] bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.08),transparent_40%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.05),transparent_40%)] p-4 md:p-8">
-      <CompactContainer maxWidth="2xl">
-        <CompactSection spacing="xl">
-          {/* Header Area */}
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-2">
-              <Link href={VAULTS_ROUTE} className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-white transition-colors mb-2">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Discovery
-              </Link>
-              <h1 className="text-3xl font-black tracking-tight text-white md:text-4xl lg:text-5xl">
-                {selectedStrategyConfig ? `Setting up ${selectedStrategyConfig.name}` : "Vault Setup"}
-              </h1>
-              <p className="text-gray-400 max-w-xl">
-                {selectedStrategyConfig
-                  ? `${selectedStrategyConfig.description}`
-                  : "Set up your vault strategy and yield routing in a few simple steps."}
-              </p>
-              <div className="mt-4 inline-flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-blue-300">Grow</span>
-                <span>Fund your vault</span>
-                <span className="text-gray-700">→</span>
-                <span>Let yield fund participation</span>
-                <span className="text-gray-700">→</span>
-                <span className="text-emerald-300">Track it in Portfolio</span>
-              </div>
+    <PageShell width="wide">
+      <Link href={VAULTS_ROUTE} className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-white transition-colors -mb-2">
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back to Discovery
+      </Link>
+
+      <PageHeader
+        title={selectedStrategyConfig ? `Setting up ${selectedStrategyConfig.name}` : "Vault Setup"}
+        supportingLine={
+          selectedStrategyConfig
+            ? selectedStrategyConfig.description
+            : "Set up your vault strategy and yield routing in a few simple steps."
+        }
+        accent="grow"
+        badge={selectedStrategy === "fhenix" ? { label: "Testnet", tone: "violet" } : undefined}
+      >
+        {/* Wallet Status Area */}
+        <div className="min-w-[320px] rounded-2xl border border-white/10 bg-white/[0.03] p-5 shadow-2xl backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Wallet Status</p>
+            <div className="flex items-center gap-1.5">
+              <div className={`h-1.5 w-1.5 rounded-full ${address ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]'}`} />
+              <span className={`text-[10px] font-bold ${address ? 'text-emerald-500' : 'text-amber-500'}`}>{address ? 'Connected' : 'Not Connected'}</span>
             </div>
+          </div>
 
-            {/* Wallet Status Area */}
-            <div className="min-w-[320px] rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-2xl backdrop-blur-sm">
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Wallet Status</p>
-                <div className="flex items-center gap-1.5">
-                  <div className={`h-1.5 w-1.5 rounded-full ${address ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]'}`} />
-                  <span className={`text-[10px] font-bold ${address ? 'text-emerald-500' : 'text-amber-500'}`}>{address ? 'Connected' : 'Not Connected'}</span>
-                </div>
-              </div>
-
-              <div className="space-y-3">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500">EVM Wallet</span>
+              <span className="text-xs font-mono text-gray-300">{address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Not connected'}</span>
+            </div>
+            {walletRouting && (
+              <>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">EVM Wallet</span>
-                  <span className="text-xs font-mono text-gray-300">{address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Not connected'}</span>
+                  <span className="text-xs text-gray-500">Origin Chain</span>
+                  <span className="text-xs font-bold text-white">{walletRouting.nativeChain}</span>
                 </div>
-                
-                {walletRouting && (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">Origin Chain</span>
-                      <span className="text-xs font-bold text-white">{walletRouting.nativeChain}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">Bridge Protocol</span>
-                      <span className="text-xs font-bold text-blue-400">{walletRouting.bridgeProtocol}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">Destination</span>
-                      <span className="text-xs font-bold text-white">{walletRouting.destination}</span>
-                    </div>
-                  </>
-                )}
-                
-                <div className="pt-2 border-t border-white/5 mt-2 flex justify-end">
-                  <Button variant="ghost" size="sm" className="h-7 text-[10px] text-gray-500 hover:text-white" onClick={() => reset()}>
-                    Switch Wallet
-                  </Button>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">Bridge Protocol</span>
+                  <span className="text-xs font-bold text-white">{walletRouting.bridgeProtocol}</span>
                 </div>
-              </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">Destination</span>
+                  <span className="text-xs font-bold text-white">{walletRouting.destination}</span>
+                </div>
+              </>
+            )}
+            <div className="pt-2 border-t border-white/5 mt-2 flex justify-end">
+              <Button variant="ghost" size="sm" className="h-7 text-[10px] text-gray-500 hover:text-white" onClick={() => reset()}>
+                Switch Wallet
+              </Button>
             </div>
+          </div>
+        </div>
+      </PageHeader>
+
+      <ShellSection className="space-y-8">
+          {/* Ladder breadcrumb */}
+          <div className="inline-flex flex-wrap items-center gap-2 text-xs text-gray-500">
+            <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-emerald-300">Grow</span>
+            <span>Fund your vault</span>
+            <span className="text-gray-700">→</span>
+            <span>Let yield fund participation</span>
+            <span className="text-gray-700">→</span>
+            <span className="text-emerald-300">Track it in Portfolio</span>
           </div>
 
           {/* Progress Bar */}
           <div className="flex items-center gap-3">
             <div className="flex-1 h-2 rounded-full bg-white/5 overflow-hidden">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-500 ease-out"
+                className="h-full rounded-full bg-emerald-500 transition-all duration-500 ease-out"
                 style={{ width: `${((flowStep - 1) / (FLOW_STEPS.length - 1)) * 100}%` }}
               />
             </div>
@@ -747,7 +749,7 @@ function YieldStrategiesContent() {
                   disabled={!isUnlocked}
                   className={`relative flex flex-col gap-2 rounded-xl border p-4 text-left transition-all ${
                     isCurrent 
-                      ? "border-blue-500/50 bg-blue-500/10 shadow-lg shadow-blue-500/10 ring-1 ring-blue-500/20" 
+                      ? "border-emerald-500/50 bg-emerald-500/10 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/20" 
                       : isComplete
                         ? "border-emerald-500/30 bg-emerald-500/5"
                         : "border-white/5 bg-white/[0.02] opacity-40"
@@ -756,14 +758,14 @@ function YieldStrategiesContent() {
                   <div className="flex items-center gap-2">
                     <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
                       isComplete 
-                        ? "bg-emerald-500 text-white" 
+                        ? "bg-emerald-500/25 text-emerald-300" 
                         : isCurrent 
-                          ? "bg-blue-500 text-white" 
+                          ? "bg-emerald-500 text-white" 
                           : "bg-white/10 text-gray-500"
                     }`}>
                       {isComplete ? <Check className="h-3.5 w-3.5" /> : step.id}
                     </div>
-                    <span className={`text-[10px] font-black uppercase tracking-widest ${isCurrent ? 'text-blue-400' : isComplete ? 'text-emerald-400' : 'text-gray-500'}`}>
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${isCurrent || isComplete ? 'text-emerald-400' : 'text-gray-500'}`}>
                       {step.eyebrow}
                     </span>
                   </div>
@@ -792,9 +794,8 @@ function YieldStrategiesContent() {
               </CompactStack>
             )}
           </div>
-        </CompactSection>
-      </CompactContainer>
-    </div>
+      </ShellSection>
+    </PageShell>
   );
 }
 
@@ -802,9 +803,9 @@ export default function YieldStrategiesPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
-          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-white" />
-        </div>
+        <PageShell width="wide">
+          <PageSkeleton cards={3} />
+        </PageShell>
       }
     >
       <YieldStrategiesContent />

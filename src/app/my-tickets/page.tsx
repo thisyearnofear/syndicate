@@ -24,6 +24,7 @@ import { useSuccessToast, useErrorToast } from "@/shared/components/ui/Toast";
 import { ExternalLink, ArrowLeft, RefreshCw, Ticket } from "lucide-react";
 import Link from "next/link";
 import { WinningsGuide } from "@/components/wallet/WinningsGuide"; // Import the new component
+import { BeamFrame } from "@/components/motion/BeamFrame";
 import { getSourceExplorerUrl } from "@/domains/participation/utils/getSourceExplorerUrl";
 import {
     formatTicketHistoryDate,
@@ -140,7 +141,8 @@ return (
 
 {/* Winnings section - only show if user has claimable winnings */}
 {userTicketInfo && parseFloat(userTicketInfo.winningsClaimable || '0') > 0 && (
-<div className="mt-4 p-4 bg-amber-400/10 border border-amber-400/30 rounded-lg text-center">
+<BeamFrame color="#fbbf24" duration={5} laps={Infinity} className="mt-4 block rounded-lg">
+<div className="p-4 bg-amber-400/10 border border-amber-400/30 rounded-lg text-center">
 <p className="text-amber-300 font-semibold mb-2">🏆 Congratulations! You have winnings available!</p>
 <p className="text-white text-sm mb-3">${parseFloat(userTicketInfo.winningsClaimable).toFixed(2)} USDC ready to claim</p>
 <Button
@@ -153,6 +155,7 @@ className="bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-400 hover:fr
                             {isClaimingWinnings ? 'Claiming...' : 'Claim Winnings'}
                         </Button>
                 </div>
+</BeamFrame>
                 )}
             </CompactStack>
         </PuzzlePiece>
