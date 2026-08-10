@@ -184,7 +184,7 @@ function StepStart({ router, onComplete }: { router: { push: (p: string) => void
           <ArrowRight className="w-4 h-4 text-gray-600 ml-auto" />
         </button>
         <button
-          onClick={() => go('/discover')}
+          onClick={() => go('/coordinate')}
           className="flex items-center gap-4 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 text-left transition-colors hover:bg-blue-500/10"
         >
           <Users className="w-5 h-5 text-blue-400 flex-shrink-0" />

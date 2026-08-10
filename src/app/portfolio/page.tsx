@@ -294,7 +294,7 @@ export default function PortfolioPage() {
           title: 'Join a syndicate',
           description: 'Pool capital with a group for better odds and shared upside.',
           cta: 'Browse Syndicates',
-          href: '/discover',
+          href: '/coordinate',
         }
       : {
           title: 'Check your tickets',
@@ -321,7 +321,7 @@ export default function PortfolioPage() {
             <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button onClick={() => router.push('/discover')} variant="premium">
+          <Button onClick={() => router.push('/coordinate')} variant="premium">
             <Plus className="w-4 h-4 mr-2" />
             New Syndicate
           </Button>
@@ -451,7 +451,7 @@ export default function PortfolioPage() {
                     <ArrowRight className="w-4 h-4 mr-2" />
                     Bridge Funds
                   </Button>
-                  <Button onClick={() => router.push('/discover')}>
+                  <Button onClick={() => router.push('/coordinate')}>
                     <Users className="w-4 h-4 mr-2" />
                     Browse Syndicates
                   </Button>
@@ -644,7 +644,7 @@ export default function PortfolioPage() {
                 Add more vaults or join a syndicate to diversify.
               </p>
               <div className="flex gap-4 justify-center">
-                <Button onClick={() => router.push('/discover')}>
+                <Button onClick={() => router.push('/coordinate')}>
                   <Users className="w-4 h-4 mr-2" />
                   More Syndicates
                 </Button>
@@ -667,7 +667,7 @@ export default function PortfolioPage() {
                 <p className="text-gray-400 mb-6">
                   Join your first syndicate to start pooling tickets and making impact!
                 </p>
-                <Button onClick={() => router.push('/discover')}>
+                <Button onClick={() => router.push('/coordinate')}>
                   Discover Syndicates
                 </Button>
               </CompactCard>

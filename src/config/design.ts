@@ -416,7 +416,7 @@ export const DOMAIN_ACCENT: Record<string, DesignAccent> = {
   vaults: 'grow',
   portfolio: 'grow',
   'yield-strategies': 'grow',
-  discover: 'coordinate',
+  coordinate: 'coordinate',
   'create-syndicate': 'coordinate',
   syndicate: 'coordinate',
   xlayer: 'coordinate',

@@ -91,7 +91,7 @@ export default function SyndicateDetailPage() {
             accent="coordinate"
             title="No syndicate selected"
             hint="Pick a syndicate from the directory to see its pool, members, and yield."
-            action={{ label: "Browse syndicates", href: "/discover" }}
+            action={{ label: "Browse syndicates", href: "/coordinate" }}
           />
         </ShellSection>
       </PageShell>
@@ -121,7 +121,7 @@ export default function SyndicateDetailPage() {
             accent="coordinate"
             title="Couldn't load this syndicate"
             hint={error || "Syndicate not found."}
-            action={{ label: "Back to syndicates", href: "/discover" }}
+            action={{ label: "Back to syndicates", href: "/coordinate" }}
           />
         </ShellSection>
       </PageShell>

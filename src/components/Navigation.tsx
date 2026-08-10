@@ -20,7 +20,7 @@ import {
 const PRIMARY_NAV = [
   { href: '/', label: 'Play', icon: Ticket },
   { href: '/vaults', label: 'Grow', icon: TrendingUp },
-  { href: '/discover', label: 'Coordinate', icon: Users },
+  { href: '/coordinate', label: 'Coordinate', icon: Users },
 ] as const;
 
 const SECONDARY_NAV = [

@@ -400,7 +400,7 @@ export function PrizePoolDashboard() {
               <span className="mt-2 block text-sm font-semibold text-white">Explore yield strategies</span>
               <span className="mt-1 block text-xs leading-5 text-slate-500">Let yield fund participation.</span>
             </Link>
-            <Link href="/discover" className="rounded-xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-cyan-400/30 hover:bg-white/[0.06]">
+            <Link href="/coordinate" className="rounded-xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-cyan-400/30 hover:bg-white/[0.06]">
               <span className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">Coordinate</span>
               <span className="mt-2 block text-sm font-semibold text-white">Join a syndicate</span>
               <span className="mt-1 block text-xs leading-5 text-slate-500">Pool capital with other participants.</span>

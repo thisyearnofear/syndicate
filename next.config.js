@@ -9,6 +9,14 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
 
+  async redirects() {
+    return [
+      // Ladder canonicalization: /discover was the legacy route for the
+      // Coordinate rung; the canonical URL matches the navigation label.
+      { source: '/discover', destination: '/coordinate', permanent: true },
+    ];
+  },
+
   // Keep production builds lean enough for Vercel's default memory limits.
   // `clientTraceMetadata: ['*']` materially increases webpack's trace payload
   // and can push builds over the heap limit as the client graph grows.

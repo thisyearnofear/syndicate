@@ -59,7 +59,7 @@ export const PRODUCT_MODES: readonly ProductModeConfig[] = [
     description:
       'Multisig Safe pools, 0xSplits shares, or PoolTogether vaults. Winnings are claimed by the coordinator and paid out on-chain — receipt-verified.',
     supportingCopy: 'For syndicates, treasuries, and clubs. Privacy layer in preview.',
-    href: '/discover',
+    href: '/coordinate',
     audience: 'Groups & treasuries',
   },
 ] as const;

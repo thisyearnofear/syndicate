@@ -178,11 +178,11 @@ export default function Home() {
     setShowPurchaseModal(true);
   }, []);
   const handleSeeVaults = useCallback(() => router.push('/vaults'), [router]);
-  const handleDiscover = useCallback(() => router.push('/discover'), [router]);
+  const handleDiscover = useCallback(() => router.push('/coordinate'), [router]);
   const handleModeAction = useCallback((modeId: string) => {
     if (modeId === 'public_play') { handlePurchaseAction('megapot'); return; }
     if (modeId === 'yield_to_tickets') { router.push('/vaults'); return; }
-    router.push('/discover');
+    router.push('/coordinate');
   }, [handlePurchaseAction, router]);
 
   // Listen for successful purchase events to show share prompt
