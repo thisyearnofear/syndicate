@@ -14,6 +14,12 @@ import { basePublicClient } from '@/lib/baseClient';
 import { MEGAPOT_ABI } from '@/config/contracts';
 import { formatUnits } from 'viem';
 import { logger } from '@/lib/logger';
+import {
+  getLatestSettledRound,
+  getRoundPlayers,
+  getRoundWins,
+  megapotAmountToUsd,
+} from '@/services/lotteries/megapotDataApi';
 
 const MEGAPOT_V2_ADDRESS = '0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2' as const;
 
@@ -24,6 +30,12 @@ interface DrawResult {
   drawTime: number; // unix timestamp
   isResolved: boolean;
   winningTicket: number;
+  /** Enriched from the Megapot Data API when reachable (may be absent). */
+  winner?: string;
+  /** Amount actually paid to the top winner (distinct from prize pool). */
+  winnerPrizeUsd?: string;
+  winnerTicketCount?: number;
+  winningNumbers?: { normals: number[]; bonusball: number };
 }
 
 // Cache
@@ -60,7 +72,7 @@ async function fetchLatestDraw(): Promise<DrawResult | null> {
     const prizeUsd = formatUnits(state.prizePool, 6);
     const isResolved = Number(state.winningTicket) > 0 || state.jackpotLock;
 
-    return {
+    const draw: DrawResult = {
       id: Number(lastDrawId),
       prizeUsd,
       ticketsSold: Number(state.globalTicketsBought),
@@ -68,6 +80,31 @@ async function fetchLatestDraw(): Promise<DrawResult | null> {
       isResolved,
       winningTicket: Number(state.winningTicket),
     };
+
+    // Enrich with winner + winning numbers from the Megapot Data API.
+    // This is best-effort: the on-chain fields above remain authoritative
+    // and the enrichment is simply absent if the API is unreachable.
+    if (isResolved) {
+      const settled = await getLatestSettledRound();
+      if (settled && Number(settled.id) === Number(lastDrawId)) {
+        if (settled.winning_numbers) {
+          draw.winningNumbers = settled.winning_numbers;
+        }
+        const wins = await getRoundWins(settled.id, 1);
+        const topWin = wins?.data[0];
+        if (topWin) {
+          draw.winner = topWin.wallet;
+          draw.winnerPrizeUsd = megapotAmountToUsd(topWin.amount);
+        }
+        const players = await getRoundPlayers(settled.id, 1);
+        const topPlayer = players?.data[0];
+        if (topPlayer) {
+          draw.winnerTicketCount = topPlayer.total_ticket_count;
+        }
+      }
+    }
+
+    return draw;
   } catch (err) {
     logger.warn('[Draws] Failed to fetch latest draw', { error: err instanceof Error ? err.message : String(err) });
     return null;

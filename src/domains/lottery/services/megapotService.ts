@@ -12,22 +12,66 @@
 import { CHAIN_IDS } from '@/config';
 import type { JackpotStats, TicketPurchase, DailyGiveawayWin, PurchaseResult } from '../types';
 import { getMegapotOnChainPrize } from '@/services/lotteries/OnChainFallbackService';
+import {
+  getActiveRound,
+  getLatestSettledRound,
+  getRoundWins,
+  getWalletTickets,
+  megapotAmountToUsd,
+  clearMegapotApiCache,
+} from '@/services/lotteries/megapotDataApi';
 import { logger } from '@/lib/logger';
+
+/**
+ * Jackpot (5 normal balls + bonusball) combinations for drawing config:
+ * C(normalsMax, 5) * bonusballMax. Base mainnet currently runs 30/10 →
+ * 1 in 1,425,060 per ticket.
+ */
+function jackpotOddsFromBallPool(normalsMax: number, bonusballMax: number): string {
+  if (normalsMax < 5 || bonusballMax < 1) return '';
+  let combinations = 1;
+  for (let i = 0; i < 5; i++) {
+    combinations = (combinations * (normalsMax - i)) / (i + 1);
+  }
+  return String(Math.round(combinations * bonusballMax));
+}
 
 class MegapotService {
   private cache = new Map<string, { data: unknown; timestamp: number }>();
 
   /**
-   * Jackpot stats are optional homepage content.
-   * If the API is unavailable, fail quietly and let the UI render a stable fallback.
-   *
-   * NOTE: The api.megapot.io REST API has been restructured and all known endpoints
-   * (jackpot stats, ticket purchases, giveaways) now return 404. We read directly from
-   * the on-chain contract instead. To restore API usage when the new endpoints are known,
-   * re-add the makeRequest(this.baseUrl + api.megapot.endpoints.jackpotStats, ...) call
-   * before falling back to getOnChainFallback().
+   * Jackpot stats come primarily from the official Megapot Data API
+   * (api.megapot.io/v1/rounds/active) — see docs.megapot.io/build-on-megapot/pull-data.
+   * If the API is unreachable (network/geo), we fall back to reading the
+   * contract on Base via getOnChainFallback(). Both paths fail quietly with
+   * null so the UI can render its stable fallback.
    */
   async getJackpotStats(): Promise<JackpotStats | null> {
+    const round = await getActiveRound();
+    if (round) {
+      return {
+        prizeUsd: megapotAmountToUsd(round.prize_pool),
+        totalPoolUsd: '0', // Not exposed by the Data API; LP earnings accrue per-round.
+        endTimestamp: round.ended_at ? String(new Date(round.ended_at).getTime()) : '',
+        // True jackpot odds per ticket: 1 / (C(normals_max, 5) * bonusball_max).
+        // ball ranges are per-drawing config from the round itself, never hardcoded.
+        oddsPerTicket: jackpotOddsFromBallPool(round.ball_pool.normals_max, round.ball_pool.bonusball_max),
+        ticketPrice: 1,
+        ticketsSoldCount: round.ticket_count,
+        lastTicketPurchaseBlockNumber: 0,
+        lastTicketPurchaseCount: 0,
+        lastTicketPurchaseTimestamp: round.started_at || '',
+        lastTicketPurchaseTxHash: '',
+        lpPoolTotalBps: megapotAmountToUsd(round.lp_earnings),
+        userPoolTotalBps: '0',
+        feeBps: 0,
+        referralFeeBps: 0,
+        activeLps: 0,
+        activePlayers: round.unique_participants,
+      };
+    }
+
+    logger.info('[MegapotService] Data API unreachable, using on-chain fallback');
     return this.getOnChainFallback();
   }
 
@@ -67,21 +111,50 @@ class MegapotService {
    }
 
   /**
-   * Ticket purchases are no longer available from the api.megapot.io REST API
-   * (all endpoints return 404). Returns empty array to avoid wasted HTTP requests
-   * and 404 console noise. The Envio indexer (UserTicketPurchase event handler)
-   * can be used when it's connected.
+   * Wallet ticket history from the official Megapot Data API
+   * (GET /v1/wallets/{address}/tickets). One row per ticket: the API is
+   * per-ticket, not per-purchase, so each legacy TicketPurchase row
+   * represents a single ticket (ticketsPurchased: 1).
    */
-  async getTicketPurchases(_walletAddress?: string, _limit?: number): Promise<TicketPurchase[]> {
-    return [];
+  async getTicketPurchases(walletAddress?: string, limit?: number): Promise<TicketPurchase[]> {
+    if (!walletAddress) return [];
+    const page = await getWalletTickets(walletAddress, limit ?? 50);
+    if (!page) return [];
+
+    return page.data.map((ticket) => ({
+      jackpotRoundId: Number(ticket.round_id),
+      recipient: ticket.wallet,
+      // Referrer attribution lives on-chain only (bytes32 _source is not
+      // queryable through the Data API per Megapot docs), so we report
+      // an empty string rather than guessing.
+      referrer: '',
+      buyer: ticket.buyer,
+      transactionHashes: [ticket.tx_hash],
+      ticketsPurchasedTotalBps: 0,
+      ticketsPurchased: 1,
+      startTicket: 0,
+      endTicket: 0,
+    }));
   }
 
   /**
-   * Daily giveaway winners are no longer available from the api.megapot.io REST API
-   * (all endpoints return 404). Returns empty array to avoid wasted HTTP requests.
+   * Historical name — now returns the top wins of the latest settled round
+   * from the Data API (GET /v1/rounds/latest-settled + /rounds/{id}/wins).
+   * The legacy "daily giveaway" product was retired upstream.
    */
   async getDailyGiveawayWinners(): Promise<DailyGiveawayWin[]> {
-    return [];
+    const latest = await getLatestSettledRound();
+    if (!latest) return [];
+    const wins = await getRoundWins(latest.id, 50);
+    if (!wins) return [];
+
+    return wins.data.map((win) => ({
+      jackpotRoundId: Number(latest.id),
+      claimTransactionHashes: win.claimed_tx_hash ? [win.claimed_tx_hash] : [],
+      claimedAt: latest.settled_at || '',
+      drawingBlockNumber: win.block_number,
+      prizeValueTotal: Number(megapotAmountToUsd(win.amount)),
+    }));
   }
 
   /**
@@ -171,10 +244,11 @@ class MegapotService {
   }
 
   /**
-    * PERFORMANT: Clear cache for fresh data
+    * PERFORMANT: Clear cache for fresh data (execution cache + Data API cache)
     */
   clearCache(): void {
     this.cache.clear();
+    clearMegapotApiCache();
   }
 
   /**

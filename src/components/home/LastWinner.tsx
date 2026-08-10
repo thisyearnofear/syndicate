@@ -25,9 +25,11 @@ export function LastWinner() {
       .then((r) => r.json())
       .then((data) => {
         if (!cancelled && data.draw?.isResolved && data.draw?.winner) {
+          // winnerPrizeUsd is the amount actually paid to this winner
+          // (Data API); prizeUsd fallback is the round prize pool.
           setWinner({
             address: data.draw.winner,
-            prizeUsd: parseFloat(data.draw.prizeUsd),
+            prizeUsd: parseFloat(data.draw.winnerPrizeUsd ?? data.draw.prizeUsd),
             ticketCount: data.draw.winnerTicketCount ?? 1,
             drawId: data.draw.id,
             timestamp: data.draw.drawTime,
