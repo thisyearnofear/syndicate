@@ -185,6 +185,24 @@ export const MEGAPOT_ABI = [
     outputs: [{ name: '', type: 'uint256' }],
     stateMutability: 'view',
   },
+  {
+    name: 'usersInfo',
+    type: 'function',
+    inputs: [{ name: 'user', type: 'address' }],
+    outputs: [
+      { name: 'ticketsPurchasedTotalBps', type: 'uint256' },
+      { name: 'winningsClaimable', type: 'uint256' },
+      { name: 'active', type: 'bool' },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    name: 'lastWinnerAddress',
+    type: 'function',
+    inputs: [],
+    outputs: [{ name: '', type: 'address' }],
+    stateMutability: 'view',
+  },
   // Write functions
   {
     name: 'buyTickets',
@@ -210,6 +228,13 @@ export const MEGAPOT_ABI = [
     name: 'claimWinnings',
     type: 'function',
     inputs: [{ name: 'ticketIds', type: 'uint256[]' }],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    name: 'withdrawWinnings',
+    type: 'function',
+    inputs: [],
     outputs: [],
     stateMutability: 'nonpayable',
   },

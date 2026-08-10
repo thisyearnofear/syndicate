@@ -361,7 +361,7 @@ export function useUnifiedBridge(): BridgeState & {
           functionName: 'usersInfo',
           args: [evmAddress as `0x${string}`],
         });
-        baseWinnings = formatUnits((userInfo as unknown[])[1] as bigint, 6);
+        baseWinnings = formatUnits(userInfo[1], 6);
       }
 
       let claimableStacks = '0';

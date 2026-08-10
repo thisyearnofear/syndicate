@@ -20,7 +20,7 @@ import {
   getMegapotAddressForChain,
   getUsdcAddressForChain,
 } from "@/config";
-import { RANDOM_TICKET_BUYER_ABI, MEGAPOT_V2_CONTRACTS } from "@/config/contracts";
+import { RANDOM_TICKET_BUYER_ABI, MEGAPOT_V2_CONTRACTS, MEGAPOT_ABI } from "@/config/contracts";
 import { baseChainService, BaseChainService } from "./base/BaseChainService";
 import { ContractDataService } from "./base/ContractDataService";
 import { TransactionExecutor } from "./base/TransactionExecutor";
@@ -31,18 +31,10 @@ import type {
 } from "./base/ContractDataService";
 import type { TicketPurchaseResult } from "./base/TransactionExecutor";
 
-// Megapot V2 Jackpot contract ABI (March 2026 upgrade)
-export const MEGAPOT_ABI = [
-  "function buyTickets(tuple(uint8[] normals, uint8 bonusball)[] _tickets, address _recipient, address[] _referrers, uint256[] _referralSplit, bytes32 _source) external",
-  "function ticketPrice() external view returns (uint256)",
-  "function currentDrawingId() external view returns (uint256)",
-  "function getDrawingState(uint256 drawingId) external view returns (tuple(uint256 prizePool, uint256 ticketPrice, uint256 edgePerTicket, uint256 referralWinShare, uint256 referralFee, uint256 globalTicketsBought, uint256 lpEarnings, uint256 drawingTime, uint256 winningTicket, uint8 ballMax, uint8 bonusballMax, address payoutCalculator, bool jackpotLock))",
-  "function usersInfo(address) external view returns (uint256 ticketsPurchasedTotalBps, uint256 winningsClaimable, bool active)",
-  "function lastWinnerAddress() external view returns (address)",
-  "function withdrawWinnings() external",
-  "event TicketsPurchased(address indexed buyer, uint256[] ticketIds, uint256 totalCost)",
-  "event WinningsClaimed(address indexed winner, uint256 indexed ticketId, uint256 amount)",
-];
+// Megapot V2 Jackpot ABI is shared from @/config/contracts (single source
+// of truth, used by both viem API routes and the ethers path here);
+// re-exported for existing importers.
+export { MEGAPOT_ABI };
 
 // JackpotRandomTicketBuyer ABI is shared from @/config/contracts (single
 // source of truth); re-exported here for existing importers.

@@ -14,47 +14,11 @@
 import { web3Service } from './web3Service';
 import { CONTRACTS } from '@/config';
 
-// Minimal Megapot ABI - just the events we listen to
-const _MEGAPOT_ABI = [
-  {
-    type: 'event',
-    name: 'TicketWon',
-    inputs: [
-      { name: 'winner', type: 'address', indexed: true },
-      { name: 'amount', type: 'uint256', indexed: false },
-      { name: 'ticketId', type: 'uint256', indexed: false },
-    ],
-  },
-  {
-    type: 'event',
-    name: 'JackpotWon',
-    inputs: [
-      { name: 'winner', type: 'address', indexed: true },
-      { name: 'amount', type: 'uint256', indexed: false },
-      { name: 'ticketCount', type: 'uint256', indexed: false },
-    ],
-  },
-];
-
-// SyndicatePool ABI - methods needed to detect/record winnings
-const _SYNDICATE_POOL_ABI = [
-  {
-    type: 'event',
-    name: 'TicketsPurchased',
-    inputs: [
-      { name: 'poolId', type: 'bytes32', indexed: true },
-      { name: 'amount', type: 'uint256', indexed: false },
-      { name: 'ticketCount', type: 'uint256', indexed: false },
-    ],
-  },
-  {
-    type: 'function',
-    name: 'getPoolMembers',
-    inputs: [{ name: 'poolId', type: 'bytes32' }],
-    outputs: [{ name: '', type: 'address[]' }],
-    stateMutability: 'view',
-  },
-];
+// Note: this service previously declared local Megapot winner-event and
+// SyndicatePool ABIs that were never wired to any listener or contract
+// call; removed as dead code. When SyndicatePool distribution is
+// implemented (currently hard-fails as "deployment pending"), define its
+// ABI alongside the other shared contract ABIs in @/config/contracts.
 
 class SyndicateWinningsService {
   private detectionActive = false;
