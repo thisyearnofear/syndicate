@@ -93,7 +93,7 @@ X Layer deployment is a separate experimental path; use [`X_LAYER.md`](X_LAYER.m
 ## Application deployment
 
 1. Configure environment variables in Vercel or the target platform.
-2. Create and migrate Postgres using the repository's migration scripts. The generic runner accepts a SQL file: `pnpm tsx scripts/run-migration.ts scripts/sql/create_purchase_statuses.sql`. Current SQL files live in `scripts/sql/`; review each migration before applying it.
+2. Apply the canonical database schema: `pnpm db:migrate` (requires `POSTGRES_URL` in `.env.local`). Verify with `pnpm db:status` — it exits non-zero if any migration is pending and is the deploy gate. `db:migrate` is idempotent; see "Database & migrations" below.
 3. Deploy the Next.js app:
 
 ```bash
@@ -105,13 +105,20 @@ vercel --prod
 5. Confirm Stacks Chainhook registration and webhook secrets where applicable.
 6. Smoke-test the production route, wallet connection, purchase path, and status polling.
 
-Database setup uses the current scripts in `scripts/sql/` when present. Never run a migration against production without a backup and a rollback plan. The repository currently includes purchase-status and cross-chain-purchase migrations; do not assume archived migration names still exist.
+## Database & migrations
+
+- **Single source of truth:** `src/lib/db/migrations/*.sql`, applied in filename order by `pnpm db:migrate` and journaled in the `schema_migrations` table. Runtime code must never create tables — `src/lib/db/assertTable.ts` enforces presence checks at call sites, and `tests/db/migrations.test.ts` fails CI if `CREATE TABLE` appears outside the migrations directory.
+- **Deploy rule:** run `pnpm db:status` as part of every deployment; `vercel.json`-style CI should call it (or the runner) before `next build`.
+- **Host layout:** Syndicate currently shares a Neon database with another project (its tables co-exist in the same `neondb`). Plan: give Syndicate its own Neon project (or dedicated branch with its own `POSTGRES_URL`) so schema events cannot collide across apps. Until then, do not purge tables you do not recognize — they may belong to a co-tenant app.
+- **Never** run raw one-off SQL against production outside the ledgered runner; never edit an already-applied migration file — add a new numbered file. Migrations must be idempotent (`IF NOT EXISTS`).
+- **Arkiv (watch item, 2026-08):** we evaluated Arkiv (`docs.arkiv.network`, Golem-heritage "DB-chains") as an alternative data layer. It is entity-attribute, **time-scoped** (data expires unless renewed), testnet-only (Braga), and not relational — the wrong shape for canonical financial state (member weights, payout journals). Potentially interesting later as a *transparency layer* (tamper-proof public records of draw results / payout journals) once it ships a stable mainnet; never as system of record for ledgers.
 
 ## Production checklist
 
 ### Before deployment
 
 - [ ] `pnpm build`, `pnpm type-check`, `pnpm lint`, and relevant Jest tests pass.
+- [ ] `pnpm db:status` reports no pending migrations.
 - [ ] Foundry build/tests pass for changed contracts.
 - [ ] Contract addresses and chain IDs are verified.
 - [ ] Production secrets are configured in the platform secret store.

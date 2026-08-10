@@ -9,6 +9,7 @@
  */
 
 import { sql } from '@vercel/postgres';
+import { assertTableExists } from '../assertTable';
 
 export type JobStatus = 'pending' | 'processing' | 'complete' | 'failed';
 export type JobType = 'process_bridge_event' | 'mint_tickets';
@@ -28,30 +29,15 @@ export interface PurchaseJob {
 }
 
 // ---------------------------------------------------------------------------
-// Schema bootstrap (idempotent — safe to call on every cold start)
+// Schema presence check
+// Runtime code must not create tables — schema lives in
+// src/lib/db/migrations/003-purchase-jobs.sql and is applied via
+// `pnpm db:migrate`. This fails fast with a clear error if the table is
+// missing, instead of silently creating divergent schema.
 // ---------------------------------------------------------------------------
 
 export async function ensurePurchaseJobsTable(): Promise<void> {
-  await sql`
-    CREATE TABLE IF NOT EXISTS purchase_jobs (
-      id            SERIAL PRIMARY KEY,
-      job_type      TEXT        NOT NULL,
-      status        TEXT        NOT NULL DEFAULT 'pending',
-      payload       JSONB       NOT NULL DEFAULT '{}',
-      attempts      INTEGER     NOT NULL DEFAULT 0,
-      max_attempts  INTEGER     NOT NULL DEFAULT 5,
-      last_error    TEXT,
-      scheduled_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      processed_at  TIMESTAMPTZ,
-      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
-  `;
-  await sql`
-    CREATE INDEX IF NOT EXISTS idx_purchase_jobs_status_scheduled
-      ON purchase_jobs (status, scheduled_at)
-      WHERE status IN ('pending', 'failed');
-  `;
+  await assertTableExists('purchase_jobs');
 }
 
 // ---------------------------------------------------------------------------

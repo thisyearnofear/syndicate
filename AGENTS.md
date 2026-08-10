@@ -37,6 +37,7 @@ See [`docs/PRODUCT.md`](docs/PRODUCT.md) and [`docs/ARCHITECTURE.md`](docs/ARCHI
 - Verify transaction receipts/events before reporting money movement as complete.
 - Keep private keys, secrets, permits, and plaintext private balances out of logs and source control.
 - User-approved policy remains the authorization boundary for agents and relayers.
+- Database schema lives only in `src/lib/db/migrations` and is applied via `pnpm db:migrate` (ledgered in `schema_migrations`); runtime code never creates tables — use `lib/db/assertTable.ts` for fail-fast presence checks. Run `pnpm db:status` before deploying.
 - Update this status table when a feature or chain status changes.
 - Product copy and hero surfaces follow [`docs/POSITIONING.md`](docs/POSITIONING.md); hero surfaces must be `live` in `src/config/capabilities.ts`.
 

@@ -22,8 +22,9 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage --forceExit --detectOpenHandles",
     "test:gelato-webhook": "tsx scripts/test-gelato-webhook.ts",
-    "migrate:gelato": "tsx scripts/migrate-gelato-db.ts",
-    "migrate": "tsx scripts/run-migration.ts",
+    "db:migrate": "tsx --env-file=.env.local scripts/migrate.ts",
+    "db:status": "tsx --env-file=.env.local scripts/migrate.ts --status",
+    "migrate": "tsx --env-file=.env.local scripts/migrate.ts",
     "postinstall": "echo 'Skipping postinstall'",
     "prepare": "husky"
   },
