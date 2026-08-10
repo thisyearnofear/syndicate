@@ -23,7 +23,8 @@ export type EventCategory =
   | 'vault'
   | 'automation'
   | 'execution'
-  | 'verification';
+  | 'verification'
+  | 'agent';
 
 // ─── Event names ──────────────────────────────────────────────────────────────
 
@@ -56,7 +57,15 @@ export type LifecycleEventName =
   | 'execution.state_changed'
   // Verification
   | 'verification.gate_evaluated'
-  | 'verification.gate_blocked';
+  | 'verification.gate_blocked'
+  // Agent loop (HITL tooling — every transition is an auditable event)
+  | 'agent.plan_created'
+  | 'agent.plan_failed'
+  | 'agent.step_approved'
+  | 'agent.step_rejected'
+  | 'agent.step_executed'
+  | 'agent.step_completed'
+  | 'agent.step_failed';
 
 // ─── Base event structure ─────────────────────────────────────────────────────
 

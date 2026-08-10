@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Bot, Check, Loader, Sparkles, X } from 'lucide-react';
 import { formatUnits, isAddress, type Address } from 'viem';
 import { useReadContract } from 'wagmi';
@@ -7,13 +8,16 @@ import { Button } from '@/shared/components/ui/Button';
 import { CompactCard } from '@/shared/components/premium/CompactLayout';
 import { useUnifiedWallet } from '@/hooks/useUnifiedWallet';
 import { useXLayerAgent } from '@/hooks/useXLayerAgent';
+import { useCapability } from '@/hooks/useCapability';
 import {
   XLAYER_HOOK_ABI,
   XLAYER_HOOK_IS_CONFIGURED,
   XLAYER_PRIZE_POOL_HOOK_ADDRESS,
   XLAYER_TESTNET_CHAIN_ID,
+  xLayerExplorerTx,
 } from '@/config/xlayer';
 import { getAgentTool, ensureXLayerToolsRegistered } from '@/services/agents/tools';
+import { AgentSessionTranscript } from '@/components/xlayer/AgentSessionTranscript';
 import type { AgentToolCall } from '@/services/agents/tools/types';
 import type { XLayerKeeperPoolState } from '@/services/agents/veniceXLayerKeeper';
 
@@ -154,6 +158,8 @@ export function XLayerAgentPanel({
 }) {
   const { address, chainId } = useUnifiedWallet();
   const agent = useXLayerAgent();
+  const capability = useCapability('xlayer_prize_pool');
+  const [tab, setTab] = useState<'steps' | 'transcript'>('steps');
 
   const { data: lastDrawAt } = useReadContract({
     address: HOOK,
@@ -237,6 +243,23 @@ export function XLayerAgentPanel({
           )}
         </div>
 
+        {/* Gates, disclosed up front — the transcript proves them */}
+        <div className="mb-4 flex flex-wrap gap-2">
+          {[
+            'HITL: manual approval',
+            'Receipts required for success',
+            `Write gate: ${capability.canWrite ? 'enabled' : 'disabled (demo)'}`,
+            'Randomness: demo oracle (testnet)',
+          ].map((chip) => (
+            <span
+              key={chip}
+              className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400"
+            >
+              {chip}
+            </span>
+          ))}
+        </div>
+
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
           <Button
             variant="glass"
@@ -279,14 +302,43 @@ export function XLayerAgentPanel({
               <span className="ml-2 text-xs font-normal text-slate-500">· {recommendation.source}</span>
             </p>
             <ul className="mt-2 space-y-1.5 text-sm leading-5 text-slate-300">
-              {recommendation.rationale.slice(0, 3).map((line) => (
+              {recommendation.rationale.map((line) => (
                 <li key={line}>• {line}</li>
               ))}
             </ul>
+            {recommendation.warnings && recommendation.warnings.length > 0 && (
+              <ul className="mt-2 space-y-1.5 border-t border-amber-500/20 pt-2 text-sm leading-5 text-amber-200/80">
+                {recommendation.warnings.map((line) => (
+                  <li key={line}>⚠ {line}</li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
 
-        {loop.plan && (
+        {(loop.plan || loop.memory.history.length > 0) && (
+          <div className="mt-5 flex gap-2 border-b border-white/10 pb-3">
+            {(['steps', 'transcript'] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors touch-manipulation ${
+                  tab === t ? 'bg-violet-500 text-white' : 'bg-white/10 text-slate-300 hover:bg-white/20'
+                }`}
+              >
+                {t === 'steps' ? 'Tools' : 'Transcript'}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {tab === 'transcript' && (
+          <div className="mt-4">
+            <AgentSessionTranscript />
+          </div>
+        )}
+
+        {tab === 'steps' && loop.plan && (
           <div className="mt-5 space-y-3 pb-20 sm:pb-0">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Tools</p>
             {loop.plan.steps.map((step) => {
@@ -313,13 +365,26 @@ export function XLayerAgentPanel({
                   {step.result && (
                     <p className={`mt-2 text-sm ${step.result.ok ? 'text-emerald-300' : 'text-rose-300'}`}>
                       {step.result.message}
-                      {step.result.transactionHash
-                        ? ` · ${step.result.transactionHash.slice(0, 10)}…`
-                        : ''}
+                      {step.result.transactionHash && (
+                        <a
+                          href={xLayerExplorerTx(step.result.transactionHash)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-cyan-300 hover:text-cyan-200"
+                        >
+                          {' '}· receipt {step.result.transactionHash.slice(0, 10)}…
+                        </a>
+                      )}
                     </p>
                   )}
                   {step.error && !step.result && (
                     <p className="mt-2 text-sm text-rose-300">{step.error}</p>
+                  )}
+                  {step.decidedAt && step.status !== 'proposed' && (
+                    <p className="mt-1 text-[11px] text-slate-600">
+                      HITL decision at {new Date(step.decidedAt).toLocaleTimeString()}
+                      {step.completedAt ? ` · resolved ${new Date(step.completedAt).toLocaleTimeString()}` : ''}
+                    </p>
                   )}
                   {isHitl && (step.status === 'proposed' || step.status === 'approved') && (
                     <div className="hidden sm:block">
@@ -336,22 +401,6 @@ export function XLayerAgentPanel({
               );
             })}
           </div>
-        )}
-
-        {loop.memory.history.length > 0 && (
-          <details className="mt-5 border-t border-white/10 pt-4">
-            <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.16em] text-slate-500 touch-manipulation">
-              Session memory ({loop.memory.history.length})
-            </summary>
-            <ul className="mt-2 max-h-28 space-y-1 overflow-y-auto text-xs text-slate-500">
-              {[...loop.memory.history].reverse().map((h, i) => (
-                <li key={`${h.at}-${i}`}>
-                  {h.kind}: {h.detail}
-                  {h.txHash ? ` · ${h.txHash.slice(0, 10)}…` : ''}
-                </li>
-              ))}
-            </ul>
-          </details>
         )}
 
         {!activeHitl && loop.plan && recommendation?.action === 'wait' && (

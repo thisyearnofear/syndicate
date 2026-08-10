@@ -42,6 +42,7 @@ function extractCategory(name: LifecycleEventName): EventCategory {
     case 'automation': return 'automation';
     case 'execution': return 'execution';
     case 'verification': return 'verification';
+    case 'agent': return 'agent';
     default: return 'execution';
   }
 }

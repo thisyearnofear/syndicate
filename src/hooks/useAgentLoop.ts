@@ -23,6 +23,7 @@ import {
   observeStep,
   rejectStep,
 } from '@/services/agents/loop/agentLoop';
+import { recordAgentTransition } from '@/services/agents/transcript/agentSessionTranscript';
 
 export type AgentReadOnlyRunner = (step: AgentToolCall) => AgentToolResult;
 export type AgentMutatingExecutor = (
@@ -41,6 +42,12 @@ export function useAgentLoop() {
 
   const applyFetchedPlan = useCallback((plan: AgentPlan, runReadOnly: AgentReadOnlyRunner) => {
     setLoop((prev) => autoCompleteReadOnlySteps(applyPlan(prev, plan), runReadOnly));
+    recordAgentTransition('agent.plan_created', 'plan', {
+      sessionId: loopRef.current.memory.sessionId,
+      label: `Plan created (${plan.source})`,
+      detail: `${plan.steps.length} step${plan.steps.length === 1 ? '' : 's'} — ${plan.rationale[0] ?? 'no rationale'}`,
+      source: plan.source,
+    });
   }, []);
 
   const failPlan = useCallback((message: string) => {
@@ -49,6 +56,12 @@ export function useAgentLoop() {
       status: 'error',
       error: message,
     }));
+    recordAgentTransition('agent.plan_failed', 'plan_failed', {
+      sessionId: loopRef.current.memory.sessionId,
+      label: 'Plan failed',
+      detail: message,
+      errorMessage: message,
+    });
   }, []);
 
   const withPlanning = useCallback(async (fn: () => Promise<void>) => {
@@ -61,11 +74,29 @@ export function useAgentLoop() {
   }, []);
 
   const approve = useCallback((stepId: string) => {
+    const step = loopRef.current.plan?.steps.find((s) => s.id === stepId);
     setLoop((prev) => approveStep(prev, stepId));
+    if (step) {
+      recordAgentTransition('agent.step_approved', 'approve', {
+        sessionId: loopRef.current.memory.sessionId,
+        toolId: step.toolId,
+        label: `Approved: ${requireAgentTool(step.toolId).label}`,
+        detail: 'HITL: user confirmed the proposed tool call',
+      });
+    }
   }, []);
 
   const reject = useCallback((stepId: string) => {
+    const step = loopRef.current.plan?.steps.find((s) => s.id === stepId);
     setLoop((prev) => rejectStep(prev, stepId));
+    if (step) {
+      recordAgentTransition('agent.step_rejected', 'reject', {
+        sessionId: loopRef.current.memory.sessionId,
+        toolId: step.toolId,
+        label: `Rejected: ${requireAgentTool(step.toolId).label}`,
+        detail: 'HITL: user declined the proposed tool call',
+      });
+    }
   }, []);
 
   const execute = useCallback(
@@ -94,6 +125,14 @@ export function useAgentLoop() {
       if (!step || before.error) return;
 
       const def = requireAgentTool(step.toolId);
+      const sessionId = loopRef.current.memory.sessionId;
+      recordAgentTransition('agent.step_executed', 'execute', {
+        sessionId,
+        toolId: step.toolId,
+        label: `Executing: ${def.label}`,
+        detail: def.requiresHitl ? 'Wallet signature requested' : 'Read-only tool',
+      });
+
       if (def.readOnly) {
         setLoop(observeStep(before, stepId, options.runReadOnly(step)));
         return;
@@ -108,6 +147,19 @@ export function useAgentLoop() {
           message: err instanceof Error ? err.message : 'Execution failed',
         };
       }
+
+      recordAgentTransition(
+        result.ok ? 'agent.step_completed' : 'agent.step_failed',
+        result.ok ? 'complete' : 'fail',
+        {
+          sessionId,
+          toolId: step.toolId,
+          label: `${result.ok ? 'Completed' : 'Failed'}: ${def.label}`,
+          detail: result.message,
+          txHash: result.transactionHash,
+          errorMessage: result.ok ? undefined : result.message,
+        },
+      );
 
       setLoop((prev) => observeStep(prev, stepId, result));
     },
