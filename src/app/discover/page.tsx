@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 import { SyndicateCard } from '@/components/syndicate/SyndicateCard';
+import { PageShell, PageHeader, ShellSection } from '@/components/layout/PageShell';
+import { PageSkeleton, EmptyState } from '@/components/layout/StateViews';
 import { useUnifiedWallet } from '@/hooks';
 
 type PoolType = 'safe' | 'splits' | 'pooltogether' | 'fhenix' | 'all';
@@ -149,22 +151,33 @@ export default function SyndicateDiscoveryPage() {
     { value: 'impact', label: 'Highest Impact' },
   ];
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
-      <div className="max-w-6xl mx-auto pt-8">
-        {/* Header */}
-        <div className="flex flex-col gap-6 mb-8 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Syndicates</h1>
-            <p className="text-gray-400">Pool capital with a group. Encrypted balances, selective reveal, shared upside.</p>
-          </div>
-          <Button onClick={() => router.push('/create-syndicate')} className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700">
-            Create Syndicate
-          </Button>
-        </div>
+  // Loading mirrors the shell: header pulse + card grid, nothing else.
+  if (loading) {
+    return (
+      <PageShell width="wide">
+        <PageSkeleton cards={6} grid />
+      </PageShell>
+    );
+  }
 
+  return (
+    <PageShell width="wide">
+      <PageHeader
+        title="Coordinate"
+        supportingLine="Pool capital with a group. Encrypted balances, selective reveal, shared upside."
+        accent="coordinate"
+      >
+        <Button
+          onClick={() => router.push('/create-syndicate')}
+          className="bg-violet-500 hover:bg-violet-600 text-white border border-violet-400/40"
+        >
+          Create Syndicate
+        </Button>
+      </PageHeader>
+
+      <ShellSection className="space-y-6">
         {/* Search and Filters */}
-        <div className="glass-premium rounded-2xl p-4 mb-6 border border-white/20">
+        <div className="glass-premium rounded-2xl p-4 border border-white/20">
           {/* Search Bar */}
           <div className="flex items-center gap-4 mb-4">
             <div className="flex-1 relative">
@@ -174,7 +187,7 @@ export default function SyndicateDiscoveryPage() {
                 placeholder="Search syndicates, causes..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white/10 border border-white/20 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                className="w-full bg-white/10 border border-white/20 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-violet-500"
               />
             </div>
             <Button 
@@ -200,7 +213,7 @@ export default function SyndicateDiscoveryPage() {
                       onClick={() => setPoolTypeFilter(opt.value)}
                       className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
                         poolTypeFilter === opt.value
-                          ? 'bg-blue-500 text-white'
+                          ? 'bg-violet-500 text-white'
                           : 'bg-white/10 text-gray-300 hover:bg-white/20'
                       }`}
                     >
@@ -220,7 +233,7 @@ export default function SyndicateDiscoveryPage() {
                       onClick={() => setVaultFilter(opt.value)}
                       className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
                         vaultFilter === opt.value
-                          ? 'bg-green-500 text-white'
+                          ? 'bg-violet-500 text-white'
                           : 'bg-white/10 text-gray-300 hover:bg-white/20'
                       }`}
                     >
@@ -240,7 +253,7 @@ export default function SyndicateDiscoveryPage() {
                       onClick={() => setSortBy(opt.value)}
                       className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
                         sortBy === opt.value
-                          ? 'bg-purple-500 text-white'
+                          ? 'bg-violet-500 text-white'
                           : 'bg-white/10 text-gray-300 hover:bg-white/20'
                       }`}
                     >
@@ -262,7 +275,7 @@ export default function SyndicateDiscoveryPage() {
                   setPoolTypeFilter('all');
                   setVaultFilter('all');
                 }}
-                className="text-blue-400 hover:text-blue-300"
+                className="text-violet-400 hover:text-violet-300"
               >
                 Clear filters
               </button>
@@ -271,33 +284,20 @@ export default function SyndicateDiscoveryPage() {
         </div>
 
         {/* Syndicates Grid */}
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="glass-premium rounded-2xl p-5 border border-white/20 animate-pulse">
-                <div className="h-12 bg-gray-700 rounded mb-4"></div>
-                <div className="h-16 bg-gray-700 rounded mb-4"></div>
-                <div className="grid grid-cols-4 gap-2">
-                  {[1, 2, 3, 4].map(j => (
-                    <div key={j} className="h-12 bg-gray-700 rounded"></div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : filteredSyndicates.length === 0 ? (
-          <div className="glass-premium rounded-2xl p-12 border border-white/20 text-center">
-            <Search className="w-16 h-16 text-gray-500 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-white mb-2">No Syndicates Found</h2>
-            <p className="text-gray-400 mb-6">
-              {searchQuery || poolTypeFilter !== 'all' || vaultFilter !== 'all'
-                ? 'Try adjusting your filters'
-                : 'Be the first to create one.'}
-            </p>
-            <Button onClick={() => router.push('/create-syndicate')}>
-              Create Syndicate
-            </Button>
-          </div>
+        {filteredSyndicates.length === 0 ? (
+          <EmptyState
+            accent="coordinate"
+            icon={<Search className="w-6 h-6" />}
+            title="No syndicates found"
+            hint={
+              searchQuery || poolTypeFilter !== 'all' || vaultFilter !== 'all'
+                ? 'Try adjusting your filters.'
+                : 'Be the first to create one.'
+            }
+            action={!searchQuery && poolTypeFilter === 'all' && vaultFilter === 'all'
+              ? { label: 'Create a syndicate', href: '/create-syndicate' }
+              : undefined}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredSyndicates.map(syndicate => (
@@ -308,9 +308,9 @@ export default function SyndicateDiscoveryPage() {
 
         {/* Trending Section - if not already showing trending first */}
         {sortBy !== 'trending' && syndicates.some(s => s.isTrending) && (
-          <div className="mt-12">
+          <div>
             <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-              <TrendingUp className="w-6 h-6 text-purple-400" />
+              <TrendingUp className="w-6 h-6 text-violet-300" />
               Trending Now
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -320,7 +320,7 @@ export default function SyndicateDiscoveryPage() {
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </ShellSection>
+    </PageShell>
   );
 }

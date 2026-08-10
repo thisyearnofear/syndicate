@@ -346,3 +346,87 @@ export const premiumDesign = {
 } as const;
 
 export default premiumDesign;
+// =============================================================================
+// LADDER COLOR LANGUAGE (added by the reveal-grammar design system)
+// =============================================================================
+//
+// The rulebook is docs/DESIGN.md: pages may only take accent colors from
+// ACCENTS, mapped to their domain via DOMAIN_ACCENT. The ladder is the
+// identity: Play=amber, Grow=emerald, Coordinate=violet; infrastructure
+// pages stay neutral. No page invents a new accent family.
+
+import type { ProductModeId } from '@/config/productModes';
+
+export type DesignAccent = 'play' | 'grow' | 'coordinate' | 'neutral';
+
+export interface AccentTokens {
+  /** Gradient used for heading text and hairlines. neutral keeps plain white. */
+  gradientText: string;
+  /** Icon tile background */
+  tile: string;
+  /** Small badge/status line color */
+  badge: string;
+  /** Hover border + glow for cards in this domain */
+  border: string;
+  /** Solid icon/check color */
+  icon: string;
+  /** Hairline gradient under page headers */
+  hairline: string;
+}
+
+export const ACCENTS: Record<DesignAccent, AccentTokens> = {
+  play: {
+    gradientText: 'bg-gradient-to-r from-amber-200 via-yellow-300 to-orange-400 bg-clip-text text-transparent',
+    tile: 'bg-amber-400/15',
+    badge: 'text-amber-300/70',
+    border: 'hover:border-amber-400/40 hover:shadow-[0_10px_40px_-12px_rgba(251,191,36,0.30)]',
+    icon: 'text-amber-300',
+    hairline: 'from-amber-400/70 via-amber-400/20 to-transparent',
+  },
+  grow: {
+    gradientText: 'bg-gradient-to-r from-emerald-200 via-emerald-300 to-teal-400 bg-clip-text text-transparent',
+    tile: 'bg-emerald-400/15',
+    badge: 'text-emerald-300/70',
+    border: 'hover:border-emerald-400/40 hover:shadow-[0_10px_40px_-12px_rgba(52,211,153,0.30)]',
+    icon: 'text-emerald-300',
+    hairline: 'from-emerald-400/70 via-emerald-400/20 to-transparent',
+  },
+  coordinate: {
+    gradientText: 'bg-gradient-to-r from-violet-200 via-purple-300 to-fuchsia-400 bg-clip-text text-transparent',
+    tile: 'bg-violet-400/15',
+    badge: 'text-violet-300/70',
+    border: 'hover:border-violet-400/40 hover:shadow-[0_10px_40px_-12px_rgba(167,139,250,0.30)]',
+    icon: 'text-violet-300',
+    hairline: 'from-violet-400/70 via-violet-400/20 to-transparent',
+  },
+  neutral: {
+    gradientText: 'text-white',
+    tile: 'bg-white/10',
+    badge: 'text-gray-400',
+    border: 'hover:border-white/25 hover:shadow-[0_10px_40px_-12px_rgba(255,255,255,0.15)]',
+    icon: 'text-gray-300',
+    hairline: 'from-white/30 via-white/10 to-transparent',
+  },
+};
+
+/** Route domain → accent. Landing/product-mode accents alias these. */
+export const DOMAIN_ACCENT: Record<string, DesignAccent> = {
+  home: 'play',
+  'my-tickets': 'play',
+  vaults: 'grow',
+  portfolio: 'grow',
+  'yield-strategies': 'grow',
+  discover: 'coordinate',
+  'create-syndicate': 'coordinate',
+  syndicate: 'coordinate',
+  xlayer: 'coordinate',
+  bridge: 'neutral',
+  settings: 'neutral',
+};
+
+/** Alias for the landing's mode ladder (was page-local in app/page.tsx). */
+export const MODE_ACCENTS: Record<ProductModeId, AccentTokens> = {
+  public_play: ACCENTS.play,
+  yield_to_tickets: ACCENTS.grow,
+  private_vaults: ACCENTS.coordinate,
+};

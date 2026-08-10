@@ -16,9 +16,12 @@ import { useTicketHistory } from "@/hooks/useTicketHistory";
 import { Button } from "@/shared/components/ui/Button";
 import { LoadingSpinner } from "@/shared/components/LoadingSpinner";
 import WalletConnectionManager from "@/components/wallet/WalletConnectionManager";
-import { CompactContainer, CompactStack, CompactFlex, CompactSection } from "@/shared/components/premium/CompactLayout";
+import { CompactStack, CompactFlex, CompactSection } from "@/shared/components/premium/CompactLayout";
 import { PuzzlePiece } from "@/shared/components/premium/PuzzlePiece";
-import { ExternalLink, ArrowLeft, RefreshCw } from "lucide-react";
+import { PageShell, PageHeader } from "@/components/layout/PageShell";
+import { EmptyState, DisconnectedState } from "@/components/layout/StateViews";
+import { useSuccessToast, useErrorToast } from "@/shared/components/ui/Toast";
+import { ExternalLink, ArrowLeft, RefreshCw, Ticket } from "lucide-react";
 import Link from "next/link";
 import { WinningsGuide } from "@/components/wallet/WinningsGuide"; // Import the new component
 import { getSourceExplorerUrl } from "@/domains/participation/utils/getSourceExplorerUrl";
@@ -137,15 +140,15 @@ return (
 
 {/* Winnings section - only show if user has claimable winnings */}
 {userTicketInfo && parseFloat(userTicketInfo.winningsClaimable || '0') > 0 && (
-<div className="mt-4 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-center">
-<p className="text-yellow-400 font-semibold mb-2">🏆 Congratulations! You have winnings available!</p>
+<div className="mt-4 p-4 bg-amber-400/10 border border-amber-400/30 rounded-lg text-center">
+<p className="text-amber-300 font-semibold mb-2">🏆 Congratulations! You have winnings available!</p>
 <p className="text-white text-sm mb-3">${parseFloat(userTicketInfo.winningsClaimable).toFixed(2)} USDC ready to claim</p>
 <Button
 variant="default"
 size="lg"
 onClick={onClaimWinnings}
     disabled={isClaimingWinnings}
-className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white disabled:opacity-50"
+className="bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-400 hover:from-amber-400 hover:via-yellow-500 hover:to-orange-500 text-white disabled:opacity-50"
 >
                             {isClaimingWinnings ? 'Claiming...' : 'Claim Winnings'}
                         </Button>
@@ -161,6 +164,8 @@ export default function MyTicketsPage() {
     const { userTicketInfo, refresh: getCurrentTicketInfo, claimWinnings, isClaimingWinnings } = useTicketInfo();
     const { purchases: ticketHistory, isLoading, refreshHistory } = useTicketHistory();
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const showSuccess = useSuccessToast();
+    const showError = useErrorToast();
 
     // Load ticket data when component mounts or wallet connects
     useEffect(() => {
@@ -188,61 +193,49 @@ export default function MyTicketsPage() {
                 getCurrentTicketInfo(),
                 refreshHistory()
             ]);
-            alert(`Winnings claimed successfully! Transaction: ${txHash}`);
+            showSuccess('Winnings claimed', `Transaction: ${txHash}`);
         } catch (error) {
             console.error('Failed to claim winnings:', error);
-            alert('Failed to claim winnings. Please try again.');
+            showError('Failed to claim winnings', 'Please try again.');
         }
     };
 
     if (!isConnected) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
-                <CompactContainer maxWidth="lg" padding="lg">
-                    <CompactStack spacing="lg" align="center" className="min-h-screen justify-center">
-                        <div className="text-center">
-                            <h1 className="font-black text-4xl md:text-6xl bg-gradient-to-r from-purple-400 via-blue-500 to-green-400 bg-clip-text text-transparent mb-4">
-                                My Tickets
-                            </h1>
-                            <p className="text-xl text-gray-300 mb-8">
-                                Connect your wallet to view your ticket history
-                            </p>
-                            <Link href="/">
-                                <Button
-                                    variant="default"
-                                    size="lg"
-                                    className="gradient-cta text-white"
-                                >
-                                    <ArrowLeft className="w-4 h-4 mr-2" />
-                                    Back to Home
-                                </Button>
-                            </Link>
-                        </div>
-                    </CompactStack>
-                </CompactContainer>
-            </div>
+            <PageShell width="wide">
+                <DisconnectedState subject="Your tickets" accent="play">
+                    <Link href="/">
+                        <Button
+                            variant="default"
+                            size="lg"
+                            className="gradient-cta text-white"
+                        >
+                            <ArrowLeft className="w-4 h-4 mr-2" />
+                            Back to Home
+                        </Button>
+                    </Link>
+                </DisconnectedState>
+            </PageShell>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
-            <CompactContainer maxWidth="2xl" padding="lg">
+        <PageShell width="wide">
                 <CompactStack spacing="lg">
                     {/* Header */}
-                    <div className="pt-8 text-center">
-                        <h1 className="font-black text-4xl md:text-6xl bg-gradient-to-r from-purple-400 via-blue-500 to-green-400 bg-clip-text text-transparent">
-                            My Tickets
-                        </h1>
-                        <p className="text-xl text-gray-300 mt-2">
-                            Track your lottery tickets and winnings
-                        </p>
-                        
+                    <div>
+                        <PageHeader
+                            title="Play"
+                            supportingLine="Track your lottery tickets and winnings."
+                            accent="play"
+                        />
+
                         {/* Wallet Connection Status */}
-                        <div className="flex justify-center my-6">
+                        <div className="flex my-6">
                             <WalletConnectionManager />
                         </div>
-                        
-                        <div className="flex items-center gap-4 justify-center mt-4">
+
+                        <div className="flex items-center gap-4">
                             <Button
                                 variant="ghost"
                                 size="sm"
@@ -294,30 +287,19 @@ export default function MyTicketsPage() {
                                 <LoadingSpinner size="lg" color="white" />
                             </div>
                         ) : ticketHistory.length === 0 ? (
-                            <div className="text-center py-12">
-                                <div className="text-6xl mb-4">🎫</div>
-                                <h3 className="font-semibold text-xl text-white mb-2">No tickets yet</h3>
-                                <p className="text-gray-400 mb-6">
-                                    Purchase your first tickets to start playing!
-                                </p>
-
-                                <Link href="/">
-                                    <Button
-                                        variant="default"
-                                        size="lg"
-                                        className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 hover:from-yellow-500 hover:via-orange-600 hover:to-red-600 text-white"
-                                    >
-                                        Buy Tickets Now
-                                    </Button>
-                                </Link>
-                            </div>
+                            <EmptyState
+                                icon={<Ticket className="w-6 h-6" />}
+                                title="No tickets yet"
+                                hint="Purchase your first tickets to start playing."
+                                accent="play"
+                                action={{ label: "Enter the next draw", href: "/#quick-purchase" }}
+                            />
                         ) : (
                             <TicketsList ticketHistory={ticketHistory} />
                         )}
                     </CompactSection>
                 </CompactStack>
-            </CompactContainer>
-        </div>
+        </PageShell>
     );
 }
 

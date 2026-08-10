@@ -4,10 +4,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
 import { CompactCard, CompactStack } from "@/shared/components/premium/CompactLayout";
+import { PageShell, PageHeader } from "@/components/layout/PageShell";
+import { EmptyState } from "@/components/layout/StateViews";
 import { useUnifiedWallet } from "@/hooks";
 import {
   ArrowLeft,
-  Settings as SettingsIcon,
   Zap,
   Pause,
   Play,
@@ -100,26 +101,21 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
-      <div className="max-w-3xl mx-auto py-8">
+    <PageShell width="content">
         <Button
           variant="ghost"
-          className="mb-6 text-gray-400 hover:text-white"
+          className="text-gray-400 hover:text-white -ml-3"
           onClick={() => router.back()}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
 
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center">
-            <SettingsIcon className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white">Settings</h1>
-            <p className="text-gray-400 text-sm">Manage your automation, allocations, and preferences</p>
-          </div>
-        </div>
+        <PageHeader
+          title="Settings"
+          supportingLine="Manage automation, notifications, and security for this browser."
+          accent="neutral"
+        />
 
         <CompactStack spacing="lg">
           {/* Active Permissions Panel */}
@@ -195,13 +191,12 @@ export default function SettingsPage() {
                 </p>
               </div>
             ) : (
-              <div className="text-center py-6 text-gray-400">
-                <Zap className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                <p className="text-sm">No active automation permissions</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Set up auto-purchase from the purchase flow to get started
-                </p>
-              </div>
+              <EmptyState
+                icon={<Zap className="w-6 h-6" />}
+                title="No active automation permissions"
+                hint="Set up auto-purchase from the purchase flow to get started."
+                accent="neutral"
+              />
             )}
           </CompactCard>
 
@@ -243,13 +238,12 @@ export default function SettingsPage() {
                 />
               </div>
             ) : (
-              <div className="text-center py-6 text-gray-400">
-                <TrendingUp className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                <p className="text-sm">No yield allocation configured</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Configure allocation when setting up a yield strategy
-                </p>
-              </div>
+              <EmptyState
+                icon={<TrendingUp className="w-6 h-6" />}
+                title="No yield allocation configured"
+                hint="Configure allocation when setting up a yield strategy."
+                accent="neutral"
+              />
             )}
           </CompactCard>
 
@@ -307,7 +301,6 @@ export default function SettingsPage() {
             </div>
           </CompactCard>
         </CompactStack>
-      </div>
-    </div>
+    </PageShell>
   );
 }

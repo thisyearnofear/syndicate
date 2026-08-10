@@ -37,6 +37,9 @@ import { useTicketHistory } from '@/hooks/useTicketHistory';
 import type { BridgeActivityRecord } from '@/utils/bridgeStateManager';
 import type { VaultDepositActivityRecord } from '@/utils/vaultActivityManager';
 import Link from 'next/link';
+import { ACCENTS } from '@/config/design';
+import { PageShell, PageHeader } from '@/components/layout/PageShell';
+import { PageSkeleton, DisconnectedState } from '@/components/layout/StateViews';
 import { CountUpText } from '@/shared/components/ui/CountUpText';
 import { YieldActionPrompt } from '@/components/portfolio/YieldActionPrompt';
 import {
@@ -208,41 +211,24 @@ export default function PortfolioPage() {
   // Not connected
   if (!isConnected) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
-        <div className="max-w-4xl mx-auto pt-16">
-          <CompactCard variant="glass" padding="lg" hover={false} className="rounded-2xl border border-white/20 text-center">
-            <Wallet className="w-16 h-16 text-gray-500 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-white mb-2">Connect Your Wallet</h1>
-            <p className="text-gray-400 mb-6">
-              Connect your wallet to view your syndicate portfolio, contributions, and winnings.
-            </p>
-              <Button onClick={() => router.push('/')} variant="premium">
-                Go to Home to Connect
-              </Button>
-            </CompactCard>
-        </div>
-      </div>
+      <PageShell width="wide">
+        <DisconnectedState subject="Your portfolio" accent="grow">
+          <Button onClick={() => router.push('/')} variant="premium">
+            Go to Home to Connect
+          </Button>
+        </DisconnectedState>
+      </PageShell>
     );
   }
 
   // Loading - only block on initial portfolio fetch, not all data sources
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
-        <div className="max-w-6xl mx-auto pt-8">
-          <div className="animate-pulse space-y-6">
-            <div className="h-10 bg-gray-700 rounded w-1/3"></div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="h-24 bg-gray-700 rounded"></div>
-              ))}
-            </div>
-            <div className="h-64 bg-gray-700 rounded"></div>
-        </div>
-      </div>
-    </div>
-  );
-}
+      <PageShell width="wide">
+        <PageSkeleton cards={4} />
+      </PageShell>
+    );
+  }
 
 
   const hasAnything =
@@ -318,39 +304,41 @@ export default function PortfolioPage() {
         };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
-      <div className="max-w-6xl mx-auto pt-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>                <h1 className="text-3xl font-bold text-white mb-2">My Portfolio</h1>
-            <p className="text-gray-400 flex items-center gap-2">
-              <span className="font-mono text-sm">{address?.slice(0, 6)}…{address?.slice(-4)}</span>
-              <a
-                href={`https://basescan.org/address/${address}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-400 hover:text-blue-300"
-              >
-                <ExternalLink className="w-4 h-4" />
-              </a>
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-              <Button
-              onClick={handleRefresh} 
-              variant="outline" 
-              disabled={refreshing}
-              className="border-white/20"
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-            <Button onClick={() => router.push('/discover')} variant="premium">
-              <Plus className="w-4 h-4 mr-2" />
-              New Syndicate
-            </Button>
-          </div>
-        </div>
+    <PageShell width="wide">
+      {/* Header */}
+      <div>
+        <PageHeader
+          title="Portfolio"
+          supportingLine="Contributions, yield, and winnings across syndicates and vaults."
+          accent="grow"
+        >
+          <Button
+            onClick={handleRefresh}
+            variant="outline"
+            disabled={refreshing}
+            className="border-white/20"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button onClick={() => router.push('/discover')} variant="premium">
+            <Plus className="w-4 h-4 mr-2" />
+            New Syndicate
+          </Button>
+        </PageHeader>
+        {/* Wallet identity row */}
+        <p className="mt-3 text-gray-500 flex items-center gap-2 text-xs">
+          <span className="font-mono">{address?.slice(0, 6)}…{address?.slice(-4)}</span>
+          <a
+            href={`https://basescan.org/address/${address}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${ACCENTS.grow.icon} hover:underline`}
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </p>
+      </div>
 
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={(tab) => {
@@ -387,9 +375,9 @@ export default function PortfolioPage() {
 
         {/* Summary Cards - Always visible */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <CompactCard variant="glass" padding="sm" hover={false} className="rounded-xl border border-white/20">
+          <CompactCard variant="glass" padding="sm" hover={false} className={`rounded-xl border border-white/20 ${ACCENTS.grow.border}`}>
             <div className="flex items-center gap-2 mb-2">
-              <Wallet className="w-5 h-5 text-green-400" />
+              <Wallet className={`w-5 h-5 ${ACCENTS.grow.icon}`} />
               <span className="text-sm text-gray-400">Total Deposited</span>
             </div>
             <p className="text-2xl font-bold text-white">
@@ -401,20 +389,20 @@ export default function PortfolioPage() {
           </CompactCard>
           <CompactCard variant="glass" padding="sm" hover={false} className="rounded-xl border border-white/20">
             <div className="flex items-center gap-2 mb-2">
-              <Trophy className="w-5 h-5 text-yellow-400" />
+              <Trophy className="w-5 h-5 text-gray-400" />
               <span className="text-sm text-gray-400">Winnings</span>
             </div>
-            <p className="text-2xl font-bold text-green-400">
+            <p className="text-2xl font-bold text-white">
               <CountUpText value={Math.round(summary.totalWinnings)} prefix="$" duration={1200} />
             </p>
             <p className="text-xs text-gray-500">from prize distributions</p>
           </CompactCard>
           <CompactCard variant="glass" padding="sm" hover={false} className="rounded-xl border border-white/20">
             <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="w-5 h-5 text-blue-400" />
+              <TrendingUp className="w-5 h-5 text-gray-400" />
               <span className="text-sm text-gray-400">Total Yield</span>
             </div>
-            <p className="text-2xl font-bold text-blue-400">
+            <p className="text-2xl font-bold text-white">
               <CountUpText value={Math.round(combinedTotalYield)} prefix="$" duration={1200} />
             </p>
             <p className="text-xs text-gray-500">
@@ -423,7 +411,7 @@ export default function PortfolioPage() {
           </CompactCard>
           <CompactCard variant="glass" padding="sm" hover={false} className="rounded-xl border border-white/20">
             <div className="flex items-center gap-2 mb-2">
-              <ChartPie className="w-5 h-5 text-purple-400" />
+              <ChartPie className="w-5 h-5 text-gray-400" />
               <span className="text-sm text-gray-400">Portfolio Value</span>
             </div>
             <p className="text-2xl font-bold text-white">
@@ -980,8 +968,7 @@ export default function PortfolioPage() {
             )}
           </TabsContent>
         </Tabs>
-      </div>
-    </div>
+    </PageShell>
   );
 }
 

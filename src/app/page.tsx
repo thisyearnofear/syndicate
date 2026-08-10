@@ -4,8 +4,9 @@ import { useState, useCallback, useEffect, useMemo, Suspense, lazy } from "react
 import { useRouter } from "next/navigation";
 import { ArrowRight, Clock } from "lucide-react";
 import { useUnifiedWallet, useIsMounted } from "@/hooks";
-import { PRODUCT_MODES, type ProductModeId } from "@/config/productModes";
+import { PRODUCT_MODES } from "@/config/productModes";
 import { getCapability, getCtaState, type CapabilityId } from "@/config/capabilities";
+import { MODE_ACCENTS } from "@/config/design";
 import { useLottery } from "@/domains/lottery/hooks/useLottery";
 import { QuickPurchase } from "@/components/purchase/QuickPurchase";
 import { QuickDeposit } from "@/components/purchase/QuickDeposit";
@@ -72,27 +73,8 @@ function useDrawCountdown(endTimestamp: string | undefined) {
   }, [endTimestamp, now]);
 }
 
-// ─── Ladder accent system: Play=amber, Grow=emerald, Coordinate=violet ────────
-
-const MODE_ACCENTS: Record<ProductModeId, { border: string; tile: string; badge: string }> = {
-  public_play: {
-    border: 'hover:border-amber-400/40 hover:shadow-[0_10px_40px_-12px_rgba(251,191,36,0.30)]',
-    tile: 'bg-amber-400/15',
-    badge: 'text-amber-300/70',
-  },
-  yield_to_tickets: {
-    border: 'hover:border-emerald-400/40 hover:shadow-[0_10px_40px_-12px_rgba(52,211,153,0.30)]',
-    tile: 'bg-emerald-400/15',
-    badge: 'text-emerald-300/70',
-  },
-  private_vaults: {
-    border: 'hover:border-violet-400/40 hover:shadow-[0_10px_40px_-12px_rgba(167,139,250,0.30)]',
-    tile: 'bg-violet-400/15',
-    badge: 'text-violet-300/70',
-  },
-};
-
 // ─── Page ───────────────────────────────────────────────────────────────────
+// Ladder accents come from src/config/design.ts (shared with every page).
 
 export default function Home() {
   const router = useRouter();

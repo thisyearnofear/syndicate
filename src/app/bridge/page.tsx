@@ -21,10 +21,10 @@ import { WalletTypes } from "@/domains/wallet/types";
 import { Button } from "@/shared/components/ui/Button";
 import { WalletConnectionCard } from "@/components/wallet/WalletConnectionCard";
 import {
-  CompactContainer,
   CompactStack,
   CompactSection,
 } from "@/shared/components/premium/CompactLayout";
+import { PageShell, PageHeader } from "@/components/layout/PageShell";
 import { buildVaultExecutionHref, YIELD_ENTRY_BRIDGE } from "@/constants/vaultRouting";
 import type { BridgeResult } from "@/services/bridges/types";
 import {
@@ -43,7 +43,6 @@ interface ChainOption {
   name: string;
   icon: string;
   description: string;
-  gradient: string;
   walletTypes: string[];
   features: string[];
   role: string;
@@ -108,7 +107,6 @@ export default function BridgePage() {
       name: "Solana",
       icon: "⚡",
       description: "USDC via CCTP or Wormhole",
-      gradient: "from-purple-500 to-pink-500",
       walletTypes: ["Phantom", "Solflare"],
       features: ["CCTP", "Wormhole", "~15-20 min"],
       role: "Source",
@@ -119,7 +117,6 @@ export default function BridgePage() {
       name: "NEAR",
       icon: "🌌",
       description: "Intent-based bridge to Base",
-      gradient: "from-blue-500 to-cyan-500",
       walletTypes: ["Nightly", "MyNearWallet"],
       features: ["NEAR Intents", "1Click", "~10-15 min"],
       role: "Source",
@@ -130,7 +127,6 @@ export default function BridgePage() {
       name: "Ethereum",
       icon: "💎",
       description: "Native CCTP to Base",
-      gradient: "from-blue-400 to-purple-500",
       walletTypes: ["MetaMask", "WalletConnect", "Rainbow"],
       features: ["Native CCTP", "Secure", "~15-20 min"],
       role: "Source",
@@ -141,7 +137,6 @@ export default function BridgePage() {
       name: "Starknet",
       icon: "⚡",
       description: "Fast bridge via Orbiter",
-      gradient: "from-blue-600 to-indigo-600",
       walletTypes: ["ArgentX", "Braavos"],
       features: ["Orbiter", "Fast", "~2-5 min"],
       role: "Source",
@@ -197,18 +192,14 @@ export default function BridgePage() {
   }, [needsWalletConnection, needsEvmWallet, bridgeAmount]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
-      <CompactContainer maxWidth="xl" padding="lg">
+    <PageShell width="content">
         <CompactStack spacing="xl">
           {/* Hero Section */}
-          <div className="pt-8 text-center">
-            <h1 className="font-bold text-3xl md:text-4xl text-white mb-3">
-              Fund from any chain
-            </h1>
-            <p className="text-lg text-gray-400 max-w-lg mx-auto">
-              Move USDC from Solana, NEAR, Ethereum, or Starknet into Base — then deposit into vaults or buy tickets.
-            </p>
-          </div>
+          <PageHeader
+            title="Fund"
+            supportingLine="Move USDC from Solana, NEAR, Ethereum, or Starknet into Base — then deposit into vaults or buy tickets."
+            accent="neutral"
+          />
 
           {/* Toggle for NEAR users */}
           {walletType === WalletTypes.NEAR && isConnected && (
@@ -217,8 +208,8 @@ export default function BridgePage() {
                 onClick={() => setShowWithdrawal(false)}
                 className={`px-6 py-2 rounded-lg font-semibold transition-all ${
                   !showWithdrawal
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                    ? 'bg-white/15 text-white border border-white/30'
+                    : 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10'
                 }`}
               >
                 💰 Send USDC
@@ -227,8 +218,8 @@ export default function BridgePage() {
                 onClick={() => setShowWithdrawal(true)}
                 className={`px-6 py-2 rounded-lg font-semibold transition-all ${
                   showWithdrawal
-                    ? 'bg-green-500 text-white'
-                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                    ? 'bg-white/15 text-white border border-white/30'
+                    : 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10'
                 }`}
               >
                 ✨ Withdraw Winnings
@@ -247,13 +238,13 @@ export default function BridgePage() {
                   onSuccess={() => setShowWithdrawal(false)}
                 />
               ) : (
-                <div className="glass-premium p-8 rounded-3xl border border-blue-500/30 backdrop-blur-xl">
+                <div className="glass-premium p-8 rounded-3xl border border-white/15 backdrop-blur-xl">
                   {!isBridging ? (
                     <div className="space-y-6">
                       {/* Step 1: Select Source Chain */}
                       <div>
                         <h3 className="text-white font-semibold text-lg mb-4 flex items-center gap-2">
-                          <span className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-sm">1</span>
+                          <span className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm">1</span>
                           Where are your funds?
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -266,11 +257,11 @@ export default function BridgePage() {
                               onClick={() => setSourceChain(chain.id)}
                               className={`p-4 rounded-xl border-2 transition-all duration-200 text-left ${
                                 sourceChain === chain.id
-                                  ? `border-blue-400 bg-blue-500/10 scale-[1.02]`
+                                  ? `border-white/40 bg-white/10 scale-[1.02]`
                                   : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
                               }`}
                             >
-                              <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${chain.gradient} flex items-center justify-center text-xl mb-3`}>
+                              <div className="w-10 h-10 rounded-lg bg-white/[0.06] border border-white/10 flex items-center justify-center text-xl mb-3">
                                 {chain.icon}
                               </div>
                               <div className="flex items-center justify-between gap-2 mb-1">
@@ -301,7 +292,7 @@ export default function BridgePage() {
                       {/* Step 2: Connect Wallets */}
                       <div>
                         <h3 className="text-white font-semibold text-lg mb-4 flex items-center gap-2">
-                          <span className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-sm">2</span>
+                          <span className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm">2</span>
                           Connect Wallets
                         </h3>
                         
@@ -387,7 +378,7 @@ export default function BridgePage() {
                       {/* Step 3: Choose Destination */}
                       <div>
                         <h3 className="text-white font-semibold text-lg mb-4 flex items-center gap-2">
-                          <span className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-sm">3</span>
+                          <span className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm">3</span>
                           Where should funds go?
                         </h3>
                         <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-gray-400">
@@ -407,7 +398,7 @@ export default function BridgePage() {
                               onClick={() => setDestinationStrategy(strategy.id)}
                               className={`rounded-xl border p-4 text-left transition-all ${
                                 destinationStrategy === strategy.id
-                                  ? "border-emerald-400 bg-emerald-500/10"
+                                  ? "border-white/40 bg-white/10"
                                   : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
                               }`}
                             >
@@ -438,7 +429,7 @@ export default function BridgePage() {
                       {/* Step 4: Bridge Amount */}
                       <div>
                         <h3 className="text-white font-semibold text-lg mb-4 flex items-center gap-2">
-                          <span className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-sm">4</span>
+                          <span className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm">4</span>
                           Amount
                         </h3>
                         <div className="space-y-4">
@@ -499,7 +490,6 @@ export default function BridgePage() {
             CCTP · Wormhole · NEAR Intents · Orbiter — optimized routing, minimal fees
           </div>
         </CompactStack>
-      </CompactContainer>
-    </div>
+    </PageShell>
   );
 }

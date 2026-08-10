@@ -4,9 +4,11 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
 import {
-  Users, Heart, Share2, ArrowLeft, Shield, Share2 as SplitIcon, Coins,
+  Users, Heart, Share2, ArrowLeft,
   LayoutDashboard, Trophy, Activity, TrendingUp, Vote,
 } from "lucide-react";
+import { PageShell, PageHeader, ShellSection } from "@/components/layout/PageShell";
+import { PageSkeleton, EmptyState } from "@/components/layout/StateViews";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/Tabs";
 import SyndicateJoinModal from "@/components/syndicate/SyndicateJoinModal";
 import { SyndicateDashboard } from "@/components/syndicate/SyndicateDashboard";
@@ -75,133 +77,110 @@ export default function SyndicateDetailPage() {
     }
   };
 
+  // ── Missing ID (checked first: fetch never runs without one) ──────────
+  if (!id) {
+    return (
+      <PageShell width="wide">
+        <PageHeader
+          title="Syndicate"
+          supportingLine="This page needs a syndicate to load."
+          accent="coordinate"
+        />
+        <ShellSection>
+          <EmptyState
+            accent="coordinate"
+            title="No syndicate selected"
+            hint="Pick a syndicate from the directory to see its pool, members, and yield."
+            action={{ label: "Browse syndicates", href: "/discover" }}
+          />
+        </ShellSection>
+      </PageShell>
+    );
+  }
+
   // ── Loading ───────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
-        <div className="max-w-4xl mx-auto pt-8">
-          <div className="animate-pulse">
-            <div className="h-6 bg-gray-700 rounded w-1/4 mb-8" />
-            <div className="bg-gray-800 rounded-2xl p-6 mb-6">
-              <div className="h-32 bg-gray-700 rounded mb-6" />
-              <div className="h-4 bg-gray-700 rounded w-3/4 mb-4" />
-              <div className="h-4 bg-gray-700 rounded w-1/2 mb-6" />
-              <div className="h-10 bg-gray-700 rounded w-1/3" />
-            </div>
-          </div>
-        </div>
-      </div>
+      <PageShell width="wide">
+        <PageSkeleton cards={4} />
+      </PageShell>
     );
   }
 
   // ── Error ──────────────────────────────────────────────────────────────
   if (error || !syndicate) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-5xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-white mb-2">Error Loading Syndicate</h1>
-          <p className="text-gray-400 mb-6">{error || "Syndicate not found"}</p>
-          <Button onClick={() => router.back()}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Go Back
-          </Button>
-        </div>
-      </div>
+      <PageShell width="wide">
+        <PageHeader
+          title="Syndicate"
+          supportingLine="Something went wrong loading this pool."
+          accent="coordinate"
+        />
+        <ShellSection>
+          <EmptyState
+            accent="coordinate"
+            title="Couldn't load this syndicate"
+            hint={error || "Syndicate not found."}
+            action={{ label: "Back to syndicates", href: "/discover" }}
+          />
+        </ShellSection>
+      </PageShell>
     );
-  }
-
-  if (!id) {
-    return <div className="p-4 text-center text-red-500">Syndicate ID is required</div>;
   }
 
   // ── Computed ───────────────────────────────────────────────────────────
   const ticketsPerMember = syndicate.ticketsPooled / Math.max(syndicate.membersCount, 1);
+  const poolTypeLabel =
+    syndicate.poolType === "safe"
+      ? "Safe Multisig"
+      : syndicate.poolType === "splits"
+        ? "0xSplits"
+        : syndicate.poolType === "pooltogether"
+          ? "PoolTogether"
+          : syndicate.poolType === "fhenix"
+            ? "Fhenix Private"
+            : null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
-      <div className="max-w-4xl mx-auto pt-8">
+    <PageShell width="wide">
+      <div>
         {/* ── Back ─────────────────────────────────────────────────────── */}
         <Button
           variant="ghost"
-          className="mb-6 text-gray-400 hover:text-white"
+          className="mb-4 text-gray-400 hover:text-white"
           onClick={() => router.back()}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Syndicates
         </Button>
 
-        {/* ── Header Card ─────────────────────────────────────────────── */}
-        <div className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 rounded-2xl p-4 md:p-6 mb-4 md:mb-6 border border-white/10 backdrop-blur-sm">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-start gap-3 md:gap-4">
-              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-xl md:text-2xl font-bold flex-shrink-0">
-                {syndicate.name.charAt(0)}
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 mb-1 md:mb-2 flex-wrap">
-                  <h1 className="text-xl md:text-3xl font-bold text-white truncate">
-                    {syndicate.name}
-                  </h1>
-                  {syndicate.isTrending && (
-                    <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full flex-shrink-0">
-                      Trending
-                    </span>
-                  )}
-                  {syndicate.poolType && (
-                    <span
-                      className={`text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 flex-shrink-0 ${
-                        syndicate.poolType === "safe"
-                          ? "bg-blue-500/80"
-                          : syndicate.poolType === "splits"
-                          ? "bg-green-500/80"
-                          : "bg-purple-500/80"
-                      }`}
-                    >
-                      {syndicate.poolType === "safe" && <Shield className="w-3 h-3" />}
-                      {syndicate.poolType === "splits" && <SplitIcon className="w-3 h-3" />}
-                      {syndicate.poolType === "pooltogether" && <Coins className="w-3 h-3" />}
-                      <span className="hidden sm:inline">
-                        {syndicate.poolType === "safe"
-                          ? "Safe Multisig"
-                          : syndicate.poolType === "splits"
-                          ? "0xSplits"
-                          : "PoolTogether"}
-                      </span>
-                    </span>
-                  )}
-                </div>
-                <p className="text-blue-300 font-medium text-sm md:text-base">
-                  {syndicate.cause.name}
-                </p>
-                <p className="text-gray-400 mt-1 md:mt-2 text-sm md:text-base line-clamp-2 md:line-clamp-none">
-                  {syndicate.description}
-                </p>
-              </div>
-            </div>
+        <PageHeader
+          title={syndicate.name}
+          supportingLine={`${[poolTypeLabel, syndicate.cause.name, syndicate.isTrending ? "Trending" : null].filter(Boolean).join(" · ")}${syndicate.description ? ` — ${syndicate.description}` : ""}`}
+          accent="coordinate"
+          badge={poolTypeLabel ? { label: poolTypeLabel, tone: "violet" } : undefined}
+        >
+          <NotificationBell poolId={id} />
+          <Button
+            variant="outline"
+            className="border-violet-500/50 text-violet-300 hover:bg-violet-500/10 min-h-[44px] flex-1 sm:flex-none"
+            onClick={handleShare}
+            disabled={isSharing}
+          >
+            <Share2 className="w-4 h-4 mr-2" />
+            {isSharing ? "Sharing..." : "Share"}
+          </Button>
+          <Button
+            variant="default"
+            className="flex-1 sm:flex-none min-h-[44px]"
+            onClick={() => setShowJoinModal(true)}
+          >
+            Join Syndicate
+          </Button>
+        </PageHeader>
+      </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              <NotificationBell poolId={id} />
-              <Button
-                variant="outline"
-                className="border-purple-500/50 text-purple-300 hover:bg-purple-500/10 min-h-[44px] flex-1 sm:flex-none"
-                onClick={handleShare}
-                disabled={isSharing}
-              >
-                <Share2 className="w-4 h-4 mr-2" />
-                {isSharing ? "Sharing..." : "Share"}
-              </Button>
-              <Button
-                variant="default"
-                className="flex-1 sm:flex-none min-h-[44px]"
-                onClick={() => setShowJoinModal(true)}
-              >
-                Join Syndicate
-              </Button>
-            </div>
-          </div>
-        </div>
-
+      <ShellSection>
         {/* ── Tabbed Content ────────────────────────────────────────────── */}
         <Tabs value={activeTab} onValueChange={(tab) => {
           setActiveTab(tab);
@@ -275,7 +254,7 @@ export default function SyndicateDetailPage() {
             <GovernanceVoting poolId={id} />
           </TabsContent>
         </Tabs>
-      </div>
+      </ShellSection>
 
       {/* ── Join Modal ─────────────────────────────────────────────────── */}
       {showJoinModal && syndicate && (
@@ -290,14 +269,7 @@ export default function SyndicateDetailPage() {
           }
         />
       )}
-
-      <style>{`
-        .glass-premium {
-          background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
-          backdrop-filter: blur(12px);
-        }
-      `}</style>
-    </div>
+    </PageShell>
   );
 }
 

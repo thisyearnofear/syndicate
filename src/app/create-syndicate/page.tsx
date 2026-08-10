@@ -13,7 +13,8 @@ import {
   Share2,
   Info
 } from "lucide-react";
-import { CompactCard, CompactStack, CompactContainer, CompactSection } from '@/shared/components/premium/CompactLayout';
+import { CompactCard, CompactStack } from '@/shared/components/premium/CompactLayout';
+import { PageShell, PageHeader, ShellSection } from '@/components/layout/PageShell';
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
 import { ImprovedYieldStrategySelector } from '@/components/yield/ImprovedYieldStrategySelector';
 import { useUnifiedWallet } from '@/hooks';
@@ -91,7 +92,7 @@ const SummarySidebar = ({
   data: SyndicateFormData;
   currentStep: number;
 }) => (
-  <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700 h-full flex flex-col gap-6">
+  <div className="bg-white/[0.04] p-6 rounded-xl border border-white/10 h-full flex flex-col gap-6">
     <div>
       <h3 className="text-sm text-gray-400 mb-4 uppercase tracking-wider">
         Active Configuration
@@ -120,7 +121,7 @@ const SummarySidebar = ({
         />
       </div>
     </div>
-    <div className="pt-4 border-t border-gray-700">
+    <div className="pt-4 border-t border-white/10">
       <h4 className="text-xs text-gray-500 uppercase mb-3">Progress</h4>
       <ol className="space-y-2">
         {WIZARD_STEPS.map((s) => {
@@ -133,16 +134,16 @@ const SummarySidebar = ({
                 active
                   ? 'text-white font-semibold'
                   : completed
-                    ? 'text-emerald-400'
+                    ? 'text-violet-300'
                     : 'text-gray-500'
               }`}
             >
               <span
                 className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
                   completed
-                    ? 'bg-emerald-500/20 text-emerald-300'
+                    ? 'bg-violet-500/20 text-violet-300'
                     : active
-                      ? 'bg-blue-500 text-white'
+                      ? 'bg-violet-500 text-white'
                       : 'bg-gray-700 text-gray-400'
                 }`}
               >
@@ -162,14 +163,14 @@ const SummarySidebar = ({
 // the user has already committed to their inputs and the SummarySidebar
 // takes over the right column.
 const SyndicatePreviewCard = ({ data }: { data: SyndicateFormData }) => (
-  <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700 h-full flex flex-col">
+  <div className="bg-white/[0.04] p-6 rounded-xl border border-white/10 h-full flex flex-col">
     <h3 className="text-sm text-gray-400 mb-1 uppercase tracking-wider">
       Live Preview
     </h3>
     <p className="text-xs text-gray-500 mb-4">
       How your syndicate will appear to others.
     </p>
-    <div className="rounded-xl border border-gray-700 bg-gradient-to-br from-slate-800 to-slate-900 p-5 flex-1">
+    <div className="rounded-xl border border-white/10 bg-white/[0.04] p-5 flex-1">
       <div className="flex items-start justify-between gap-2 mb-3">
         <h2 className="text-lg font-bold text-white break-words min-h-[1.75rem]">
           {data.name || 'Your Syndicate'}
@@ -182,7 +183,7 @@ const SyndicatePreviewCard = ({ data }: { data: SyndicateFormData }) => (
         {data.description ||
           'Your description will appear here as you type...'}
       </p>
-      <div className="space-y-2 pt-3 border-t border-gray-700">
+      <div className="space-y-2 pt-3 border-t border-white/10">
         <div className="flex justify-between text-xs">
           <span className="text-gray-400">Cause</span>
           <span
@@ -329,7 +330,7 @@ export default function CreateSyndicatePage() {
                   type="text"
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
-                  className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none transition-colors"
+                  className="w-full p-3 bg-white/5 border border-white/10 rounded-lg text-white focus:border-violet-500 focus:outline-none transition-colors"
                   placeholder="e.g., Ocean Warriors Collective"
                 />
               </div>
@@ -340,7 +341,7 @@ export default function CreateSyndicatePage() {
                   value={formData.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
                   rows={4}
-                  className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none transition-colors"
+                  className="w-full p-3 bg-white/5 border border-white/10 rounded-lg text-white focus:border-violet-500 focus:outline-none transition-colors"
                   placeholder="Describe your syndicate's mission and goals..."
                 />
               </div>
@@ -351,7 +352,7 @@ export default function CreateSyndicatePage() {
                   type="text"
                   value={formData.cause}
                   onChange={(e) => handleInputChange('cause', e.target.value)}
-                  className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none transition-colors"
+                  className="w-full p-3 bg-white/5 border border-white/10 rounded-lg text-white focus:border-violet-500 focus:outline-none transition-colors"
                   placeholder="e.g., Ocean Cleanup, Education Access"
                 />
               </div>
@@ -362,7 +363,7 @@ export default function CreateSyndicatePage() {
                   type="text"
                   value={formData.lotteryId}
                   onChange={(e) => handleInputChange('lotteryId', e.target.value)}
-                  className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none transition-colors"
+                  className="w-full p-3 bg-white/5 border border-white/10 rounded-lg text-white focus:border-violet-500 focus:outline-none transition-colors"
                   placeholder="e.g., draw-2026-04-01"
                 />
                 <p className="text-xs text-gray-500 mt-1">Associate this syndicate with a specific lottery draw</p>
@@ -423,7 +424,7 @@ export default function CreateSyndicatePage() {
             
             <CompactStack spacing="md">
               <div 
-                className="cursor-pointer border-2 border-transparent hover:border-purple-500/50 rounded-xl transition-all duration-300"
+                className="cursor-pointer border-2 border-transparent hover:border-violet-500/50 rounded-xl transition-all duration-300"
                 onClick={() => handleInputChange('governanceModel', 'leader')}
               >
                 <PuzzlePiece 
@@ -451,7 +452,7 @@ export default function CreateSyndicatePage() {
               </div>
               
               <div 
-                className="cursor-pointer border-2 border-transparent hover:border-purple-500/50 rounded-xl transition-all duration-300"
+                className="cursor-pointer border-2 border-transparent hover:border-violet-500/50 rounded-xl transition-all duration-300"
                 onClick={() => handleInputChange('governanceModel', 'dao')}
               >
                 <PuzzlePiece 
@@ -479,7 +480,7 @@ export default function CreateSyndicatePage() {
               </div>
               
               <div 
-                className="cursor-pointer border-2 border-transparent hover:border-purple-500/50 rounded-xl transition-all duration-300"
+                className="cursor-pointer border-2 border-transparent hover:border-violet-500/50 rounded-xl transition-all duration-300"
                 onClick={() => handleInputChange('governanceModel', 'hybrid')}
               >
                 <PuzzlePiece 
@@ -551,7 +552,7 @@ export default function CreateSyndicatePage() {
             
             <CompactStack spacing="md">
               <div 
-                className="cursor-pointer border-2 border-transparent hover:border-blue-500/50 rounded-xl transition-all duration-300"
+                className="cursor-pointer border-2 border-transparent hover:border-violet-500/50 rounded-xl transition-all duration-300"
                 onClick={() => handleInputChange('poolType', 'safe')}
               >
                 <PuzzlePiece 
@@ -588,7 +589,7 @@ export default function CreateSyndicatePage() {
               </div>
               
               <div 
-                className="cursor-pointer border-2 border-transparent hover:border-blue-500/50 rounded-xl transition-all duration-300"
+                className="cursor-pointer border-2 border-transparent hover:border-violet-500/50 rounded-xl transition-all duration-300"
                 onClick={() => handleInputChange('poolType', 'splits')}
               >
                 <PuzzlePiece 
@@ -665,7 +666,7 @@ export default function CreateSyndicatePage() {
               </div>
 
               <div 
-                className="cursor-pointer border-2 border-transparent hover:border-blue-500/50 rounded-xl transition-all duration-300"
+                className="cursor-pointer border-2 border-transparent hover:border-violet-500/50 rounded-xl transition-all duration-300"
                 onClick={() => handleInputChange('poolType', 'pooltogether')}
               >
                 <PuzzlePiece 
@@ -755,7 +756,7 @@ export default function CreateSyndicatePage() {
               </Button>
               <Button
                 variant="default"
-                className="flex-1 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600"
+                className="flex-1 bg-violet-500 hover:bg-violet-600 text-white"
                 onClick={() => setStep(5)}
                 disabled={!formData.vaultStrategy}
               >
@@ -827,7 +828,7 @@ export default function CreateSyndicatePage() {
               </Button>
               <Button
                 variant="default"
-                className="flex-1 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600"
+                className="flex-1 bg-violet-500 hover:bg-violet-600 text-white"
                 onClick={handleSubmit}
                 disabled={loading}
               >
@@ -843,79 +844,68 @@ export default function CreateSyndicatePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
-      <CompactContainer maxWidth="2xl">
-        <CompactSection spacing="lg">
-          <div className="mb-6">
-            <Button 
-              variant="ghost" 
-              className="mb-4 text-gray-400 hover:text-white"
-              onClick={() => router.back()}
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Syndicates
-            </Button>
-            
-            <div className="flex items-center gap-2 mb-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                step >= 1 ? 'bg-blue-500 text-white' : 'bg-gray-700 text-gray-400'
-              }`}>
-                1
+    <PageShell width="content">
+      <div>
+        <Button
+          variant="ghost"
+          className="mb-4 text-gray-400 hover:text-white"
+          onClick={() => router.back()}
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Syndicates
+        </Button>
+        <PageHeader
+          title="Create syndicate"
+          supportingLine="Pool tickets with a group. Winnings split by share."
+          accent="coordinate"
+        />
+      </div>
+
+      <ShellSection>
+        {/* Stepper — reached steps in the Coordinate violet, upcoming quiet */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            {WIZARD_STEPS.map((s, i) => (
+              <div key={s.n} className="flex items-center gap-2">
+                {i > 0 && <div className="h-px w-4 bg-white/10" />}
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    step >= s.n ? 'bg-violet-500 text-white' : 'bg-white/10 text-gray-400'
+                  }`}
+                >
+                  {s.n}
+                </div>
               </div>
-              <div className="h-1 w-4 bg-gray-600"></div>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                step >= 2 ? 'bg-purple-500 text-white' : 'bg-gray-700 text-gray-400'
-              }`}>
-                2
-              </div>
-              <div className="h-1 w-4 bg-gray-600"></div>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                step >= 3 ? 'bg-indigo-500 text-white' : 'bg-gray-700 text-gray-400'
-              }`}>
-                3
-              </div>
-              <div className="h-1 w-4 bg-gray-600"></div>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                step >= 4 ? 'bg-green-500 text-white' : 'bg-gray-700 text-gray-400'
-              }`}>
-                4
-              </div>
-              <div className="h-1 w-4 bg-gray-600"></div>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                step >= 5 ? 'bg-emerald-500 text-white' : 'bg-gray-700 text-gray-400'
-              }`}>
-                5
-              </div>
-            </div>
-            <div className="flex justify-between text-xs text-gray-400">
-              <span>Basic Info</span>
-              <span>Governance</span>
-              <span>Pool Type</span>
-              <span>Yield</span>
-              <span>Review</span>
-            </div>
+            ))}
           </div>
-          
-          {error && (
-            <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-6">
-              <p className="text-red-400">{error}</p>
-            </div>
-          )}
-          
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-            <div className="md:col-span-3">
-              {renderStep()}
-            </div>
-            <div className="md:col-span-2 hidden md:block">
-              {step === 1 ? (
-                <SyndicatePreviewCard data={formData} />
-              ) : (
-                <SummarySidebar data={formData} currentStep={step} />
-              )}
-            </div>
+          <div className="flex justify-between text-xs text-gray-400">
+            <span>Basic Info</span>
+            <span>Governance</span>
+            <span>Pool Type</span>
+            <span>Yield</span>
+            <span>Review</span>
           </div>
-        </CompactSection>
-      </CompactContainer>
-    </div>
+        </div>
+
+        {error && (
+          <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-6">
+            <p className="text-red-400">{error}</p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+          <div className="md:col-span-3">
+            {renderStep()}
+          </div>
+          <div className="md:col-span-2 hidden md:block">
+            {step === 1 ? (
+              <SyndicatePreviewCard data={formData} />
+            ) : (
+              <SummarySidebar data={formData} currentStep={step} />
+            )}
+          </div>
+        </div>
+      </ShellSection>
+    </PageShell>
   );
 }
