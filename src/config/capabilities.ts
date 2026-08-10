@@ -177,7 +177,7 @@ export const CAPABILITIES: readonly Capability[] = [
     writesEnabled: true,
     requiresOptIn: true,
     testnetOnly: true,
-    availabilityMessage: 'Preview mode — try privacy features with testnet funds (no real money).',
+    availabilityMessage: 'Preview mode — CoFHE is upstream testnet-only (Sepolia / Base Sepolia / Arbitrum Sepolia) as of Aug 2026, so privacy features use testnet funds only. Mainnet path is documented in docs/FHENIX.md.',
     walletRequirement: 'EVM wallet on Fhenix testnet',
     productMode: 'private_vaults',
   },

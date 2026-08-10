@@ -7,7 +7,7 @@
 | Component | Status | Source / notes |
 |---|---|---|
 | Base vaults: Aave, Morpho, Spark, PoolTogether | Live | On-chain reads and deposit flows are implemented. Yield attribution is event-based (`net deposits` vs current balance) for all vaults, including Aave. |
-| Fhenix vault/governor | Testnet integrated | Encrypted deposits, sealed-output reveal, APY oracle, signed withdrawals, and governance. See [`docs/FHENIX.md`](docs/FHENIX.md). |
+| Fhenix vault/governor | Testnet integrated; mainnet blocked upstream | Encrypted deposits, sealed-output reveal, APY oracle, signed withdrawals, and governance. CoFHE supports only testnets as of Aug 2026; the ordered mainnet path is documented in [`docs/FHENIX.md`](docs/FHENIX.md). |
 | Safe / 0xSplits / PoolTogether syndicates | Live (creation + reads); payouts receipt-verified journal | Pool creation and reads are on-chain. Winnings credit the pool coordinator, who claims via the solo Megapot path and pays members through the pool's own rail (Safe app proposal, `splitService.distributeToken`, Cabana claims); `POST /api/syndicates/prizes` `{action:'record'}` journals a payout only after verifying its receipt on-chain. The in-app simulate/distribute paths were removed; `syndicate_distribution` is `partial` in `src/config/capabilities.ts`. Deposit tx hashes live on `syndicate_members.tx_hash` (migration 013). |
 | Cross-chain purchase rails | Mixed | Base and Stacks are the strongest paths; see [`docs/BRIDGES.md`](docs/BRIDGES.md) and the chain runbooks. |
 | Stacks x402 | Production-oriented | Resume support, error mapping, health tracking, and operator runbook shipped. Auto-purchase execution is not implemented and reports an explicit failure; it never fabricates a transaction ID. |

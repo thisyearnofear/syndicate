@@ -2,6 +2,16 @@
 
 **Status:** Integrated on the app side; Base Sepolia is the active target. Helium support remains compatibility code and is not the recommended deployment target.
 
+> **Mainnet availability (checked 2026-08-10):** Fhenix CoFHE is upstream-limited to testnets — the official compatibility page lists only Sepolia, Arbitrum Sepolia, and Base Sepolia as supported networks. There is no CoFHE mainnet deployment on any chain, on any date we can verify. A Fhenix **mainnet** path is therefore **blocked upstream**, not on us. Our `fhenix_privacy` capability stays `testnet` for exactly this reason.
+>
+> **When CoFHE mainnet ships, the path is (in order):**
+> 1. Confirm upstream TaskManager/coprocessor addresses on the official compatibility page for the target mainnet (Base preferred).
+> 2. Redeploy `FhenixSyndicateVault` + `FhenixGovernor` to that network via the existing deploy scripts; record broadcast artifacts.
+> 3. Point `NEXT_PUBLIC_FHENIX_*` envs at mainnet (chain id 8453); keep testnet envs selectable for QA.
+> 4. E2E passes on real funds at small caps ($1–$10), incl. encrypted deposit, sealed reveal, EIP-712 coordinator withdrawal, and governance reveal windows.
+> 5. Flip `fhenix_privacy` capability to `live` only after an independent review of contracts, permit handling, and cryptography (promise contract: hero surfaces must be `live`).
+> 6. Update the AGENTS.md status table and this document in the same commit.
+
 Fhenix provides an optional privacy-native path for vaults and syndicates. Amounts and positions are encrypted during on-chain computation; authorized users selectively reveal their own data client-side.
 
 ## Current capabilities
