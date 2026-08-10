@@ -6,6 +6,7 @@
  */
 
 import type { BridgeParams, ChainIdentifier } from '@/services/bridges/types';
+import { STRK_ADDRESSES } from '@/services/bridges/types';
 
 // ---------------------------------------------------------------------------
 // jest.mock — fetch (hoisted above test code)
@@ -59,7 +60,14 @@ describe('StarknetProtocol', () => {
         jest.clearAllMocks();
         mockFetch = jest.fn();
         (global as unknown as { fetch: typeof fetch }).fetch = mockFetch as unknown as typeof fetch;
+        // Configure the relayer deposit address the protocol requires.
+        process.env.NEXT_PUBLIC_STARKNET_BRIDGE_DEPOSIT_ADDRESS =
+            '0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
         protocol = new StarknetProtocol();
+    });
+
+    afterEach(() => {
+        delete process.env.NEXT_PUBLIC_STARKNET_BRIDGE_DEPOSIT_ADDRESS;
     });
 
     // =========================================================================
@@ -126,6 +134,70 @@ describe('StarknetProtocol', () => {
             expect(walletAction.baseAddress).toBe('0x2222222222222222222222222222222222222222');
 
             expect(onStatus).toHaveBeenCalledWith('validating', { protocol: 'starknet' });
+        });
+
+        it('returns a real calls array consumable by the wallet signing hook', async () => {
+            const result = await protocol.bridge(validParams({ amount: '100' }));
+
+            const details = result.details as Record<string, unknown>;
+            const calls = details.calls as Array<{
+                contractAddress: string;
+                entrypoint: string;
+                calldata: string[];
+            }>;
+
+            expect(Array.isArray(calls)).toBe(true);
+            expect(calls).toHaveLength(1);
+
+            const [call] = calls;
+            // Transfer from the Starknet USDC token contract
+            expect(call.contractAddress).toBe(
+                '0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8'
+            );
+            expect(call.entrypoint).toBe('transfer');
+            // calldata: [relayerDepositAddress, u256.low, u256.high]
+            expect(call.calldata).toHaveLength(3);
+            expect(call.calldata[0]).toBe(
+                '0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+            );
+            // 100 USDC = 100 * 10^6 = 100,000,000 raw units → low fits, high = 0
+            expect(call.calldata[1]).toBe('100000000');
+            expect(call.calldata[2]).toBe('0');
+
+            // The wallet action should reference the actual settlement address
+            const walletAction = details.walletAction as Record<string, unknown>;
+            expect(walletAction.relayerDepositAddress).toBe(call.calldata[0]);
+        });
+
+        it('split-encodes amounts above the u256 low limb correctly', async () => {
+            // STRK is 18dp; this amount is exactly 2^128 raw units,
+            // overflowing the low felt limb:
+            // 340282366920938463463 * 10^18 + 374607431768211456 = 2^128
+            const huge = '340282366920938463463.374607431768211456';
+            const result = await protocol.bridge(validParams({
+                amount: huge,
+                tokenAddress: STRK_ADDRESSES.starknet as string, // STRK
+            }));
+
+            const details = result.details as Record<string, unknown>;
+            const calls = details.calls as Array<{ calldata: string[] }>;
+            // Exactly 2^128 raw → low = 0, high = 1
+            expect(calls[0].calldata[1]).toBe('0');
+            expect(calls[0].calldata[2]).toBe('1');
+        });
+
+        it('fails closed when the relayer deposit address is not configured', async () => {
+            delete process.env.NEXT_PUBLIC_STARKNET_BRIDGE_DEPOSIT_ADDRESS;
+
+            const result = await protocol.bridge(validParams());
+
+            expect(result.success).toBe(false);
+            expect(result.status).toBe('failed');
+            expect(result.error).toMatch(/relayer deposit address is not configured/i);
+            expect(result.errorCode).toBe('PROTOCOL_UNAVAILABLE');
+            // Must NOT masquerade as pending_signature: the UI would stall
+            expect(result.status).not.toBe('pending_signature');
+            expect(result.details).toBeUndefined();
         });
 
         it('uses STRK tokenAddress when the user opts in to STRK', async () => {

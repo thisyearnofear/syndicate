@@ -57,6 +57,14 @@ jest.mock('ethers', () => {
     };
 });
 
+// Yield calculator is mocked per-test: getBalance consumes it via
+// getAaveNetDeposits for the principal vs yield split.
+let mockGetAaveNetDeposits: jest.Mock;
+
+jest.mock('@/services/vaults/aaveYieldCalculator', () => ({
+    getAaveNetDeposits: (...args: unknown[]) => mockGetAaveNetDeposits(...args),
+}));
+
 // Import AFTER mocks
 import { AaveVaultProvider } from '@/services/vaults/aaveProvider';
 
@@ -77,6 +85,11 @@ describe('AaveVaultProvider', () => {
         mockWithdraw = jest.fn();
         mockApprove = jest.fn();
         mockAllowance = jest.fn();
+        // Default: event query succeeds with no deposits on record.
+        mockGetAaveNetDeposits = jest.fn().mockResolvedValue({
+            netDepositedRaw: 0n,
+            success: true,
+        });
         provider = new AaveVaultProvider('https://mock-rpc.example.com');
     });
 
@@ -174,6 +187,47 @@ describe('AaveVaultProvider', () => {
             const balance = await provider.getBalance(USER_ADDRESS);
 
             expect(parseFloat(balance.totalBalance)).toBe(500);
+        });
+
+        it('computes real yield as aToken balance minus net deposits', async () => {
+            mockBalanceOf.mockResolvedValue(1050000000n); // 1050 USDC held
+            mockGetAaveNetDeposits.mockResolvedValue({
+                netDepositedRaw: 1000000000n, // 1000 USDC net principal
+                success: true,
+            });
+
+            const balance = await provider.getBalance(USER_ADDRESS);
+
+            expect(parseFloat(balance.deposited)).toBe(1000);
+            expect(parseFloat(balance.yieldAccrued)).toBe(50);
+            expect(parseFloat(balance.totalBalance)).toBe(1050);
+        });
+
+        it('does not turn withdrawals below principal into negative yield', async () => {
+            // Balance below principal can happen if the user migrated funds
+            // through a different interface; yield must clamp to 0.
+            mockBalanceOf.mockResolvedValue(900000000n); // 900 USDC held
+            mockGetAaveNetDeposits.mockResolvedValue({
+                netDepositedRaw: 1000000000n, // 1000 USDC net principal
+                success: true,
+            });
+
+            const balance = await provider.getBalance(USER_ADDRESS);
+
+            expect(parseFloat(balance.yieldAccrued)).toBe(0);
+        });
+
+        it('degrades to deposited=balance and yield=0 when the event query fails', async () => {
+            mockBalanceOf.mockResolvedValue(500000000n); // 500 USDC
+            mockGetAaveNetDeposits.mockResolvedValue({
+                netDepositedRaw: 0n,
+                success: false,
+            });
+
+            const balance = await provider.getBalance(USER_ADDRESS);
+
+            expect(parseFloat(balance.deposited)).toBe(500);
+            expect(parseFloat(balance.yieldAccrued)).toBe(0);
         });
 
         it('throws VaultError on contract failure', async () => {
@@ -286,11 +340,34 @@ describe('AaveVaultProvider', () => {
         it('returns error when no yield available', async () => {
             mockBalanceOf.mockResolvedValue(1000000000n);
             mockScaledBalanceOf.mockResolvedValue(1000000000n);
+            // Principal equals balance → zero yield.
+            mockGetAaveNetDeposits.mockResolvedValue({
+                netDepositedRaw: 1000000000n,
+                success: true,
+            });
 
             const result = await provider.withdrawYield(USER_ADDRESS);
 
             expect(result.success).toBe(false);
             expect(result.error).toBeDefined();
+        });
+
+        it('builds a yield withdrawal when aToken balance exceeds net deposits', async () => {
+            mockBalanceOf.mockResolvedValue(1050000000n); // 1050 USDC held
+            mockGetAaveNetDeposits.mockResolvedValue({
+                netDepositedRaw: 1000000000n, // 1000 USDC principal → 50 yield
+                success: true,
+            });
+
+            const result = await provider.withdrawYield(USER_ADDRESS);
+
+            // Client-signature flow: success stays false, but txData carries
+            // the withdraw calldata for the yield-only amount.
+            expect(result.error).toBeUndefined();
+            expect(result.txData).toBeDefined();
+            const txData = JSON.parse(result.txData as string);
+            expect(txData.action).toBe('withdraw');
+            expect(parseFloat((Number(txData.amount) / 1e6).toString())).toBeCloseTo(50);
         });
     });
 

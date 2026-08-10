@@ -6,15 +6,16 @@
 
 | Component | Status | Source / notes |
 |---|---|---|
-| Base vaults: Aave, Morpho, Spark, PoolTogether | Live | On-chain reads and deposit flows are implemented. |
+| Base vaults: Aave, Morpho, Spark, PoolTogether | Live | On-chain reads and deposit flows are implemented. Yield attribution is event-based (`net deposits` vs current balance) for all vaults, including Aave. |
 | Fhenix vault/governor | Testnet integrated | Encrypted deposits, sealed-output reveal, APY oracle, signed withdrawals, and governance. See [`docs/FHENIX.md`](docs/FHENIX.md). |
-| Safe / 0xSplits / PoolTogether syndicates | Live | Shared custody and distribution providers. |
+| Safe / 0xSplits / PoolTogether syndicates | Live (creation + reads) | Pool creation and reads are on-chain. Distributions execute through wallet-signed flows (Safe app proposal, `splitService.distributeToken`, Cabana claims); providers refuse to fabricate execution results. |
 | Cross-chain purchase rails | Mixed | Base and Stacks are the strongest paths; see [`docs/BRIDGES.md`](docs/BRIDGES.md) and the chain runbooks. |
-| Stacks x402 | Production-oriented | Resume support, error mapping, health tracking, and operator runbook shipped; x402 auto-purchase remains placeholder. |
-| Solana / NEAR / Starknet | Partial | Bridge paths exist but require additional E2E, relayer, and wallet-risk hardening before broad production claims. |
+| Stacks x402 | Production-oriented | Resume support, error mapping, health tracking, and operator runbook shipped. Auto-purchase execution is not implemented and reports an explicit failure; it never fabricates a transaction ID. |
+| Solana / NEAR / Starknet | Partial | Bridge paths exist but require additional E2E, relayer, and wallet-risk hardening before broad production claims. Starknet signing returns a real `calls` array (relayer-deposit transfer) when `NEXT_PUBLIC_STARKNET_BRIDGE_DEPOSIT_ADDRESS` is configured, and fails closed otherwise. |
 | TON / Telegram | Paused | Runtime remains gated until the lottery contract is deployed/configured. |
-| Virtuals ACP automation | Live surface | Persisted tasks, cron processor, kill switch, auto-pause, user management UI, and server-side guards (rate limit, task cap, amount bounds, audit log). |
-| ERC-7715 / 1Shot automation | Live | Permission-scoped recurring purchase and relayer paths. |
+| Virtuals ACP automation | Live surface | Persisted tasks, cron processor, kill switch, auto-pause, user management UI, and server-side guards (rate limit, task cap, amount bounds, audit log). Agent purchases encode the real Megapot `RandomTicketBuyer` payload (≥1 ticket required). `/api/virtuals/email` and `/transaction` fail closed (503) unless `AUTOMATION_API_KEY` is configured. |
+| ERC-7715 / 1Shot automation | Live (1Shot), placeholder (ERC-7715 execution) | 1Shot permission-scoped relayer paths are live. ERC-7715 smart-session redemption is not implemented (draft sessions only); unexecutable strategies report explicit failures instead of simulated hashes. |
+| MegapotAutoPurchaseProxy | Code complete, tested, unverified deployment | Pull/push purchase flows, replay protection, and fail-safe refund covered by `test/MegapotAutoPurchaseProxy.t.sol`. No broadcast/deployment record exists yet — treat `NEXT_PUBLIC_AUTO_PURCHASE_PROXY` as unverified until deployed via `script/DeployAutoPurchaseProxy.s.sol`. |
 | X Layer Prize Pool Hook | Testnet + demo writes | Live on X Layer testnet (1952). `/xlayer`: deposit/fundPot/join (write-gated), agent loop (tool registry + HITL + memory). Base remains product home. Mainnet blocked on reviewed randomness. See [`docs/X_LAYER.md`](docs/X_LAYER.md). |
 | Verification provider | Noop by design | KYC is opt-in infrastructure, not the default ticket-purchase experience. |
 

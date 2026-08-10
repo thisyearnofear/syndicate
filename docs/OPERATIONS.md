@@ -38,7 +38,13 @@ POSTGRES_URL=postgresql://...
 AUTOMATION_API_KEY=...
 GELATO_WEBHOOK_SECRET=...
 CHAINHOOK_SECRET_TOKEN=...
+NEXT_PUBLIC_STARKNET_BRIDGE_DEPOSIT_ADDRESS=0x...
 ```
+
+Notes:
+
+- `AUTOMATION_API_KEY` is required for `/api/virtuals/email` and `/api/virtuals/transaction`; both routes return `503` when it is unset and reject anything but the bearer token otherwise.
+- `NEXT_PUBLIC_STARKNET_BRIDGE_DEPOSIT_ADDRESS` is the Starknet relayer's deposit address. Without it the Starknet → Base route fails closed instead of presenting an unsignable pending state.
 
 Never commit private keys, seed phrases, RPC credentials, API keys, webhook secrets, database URLs, permits, or plaintext private balances. Use a hardware wallet or multisig for production contract ownership. Run the repository's gitleaks pre-commit hook and rotate credentials immediately if compromised.
 
@@ -70,12 +76,15 @@ forge script script/DeployAutoPurchaseProxy.s.sol:DeployAutoPurchaseProxy \
   --etherscan-api-key "$BASESCAN_API_KEY"
 ```
 
-Verify the deployed proxy points at the expected contracts:
+Verify the deployed proxy points at the expected contracts and state:
 
 ```bash
 cast call <PROXY_ADDRESS> "megapot()" --rpc-url "$BASE_RPC_URL"
 cast call <PROXY_ADDRESS> "usdc()" --rpc-url "$BASE_RPC_URL"
+cast call <PROXY_ADDRESS> "supportedTokens(address)(bool)" "$USDC" --rpc-url "$BASE_RPC_URL"
 ```
+
+The proxy is covered by `test/MegapotAutoPurchaseProxy.t.sol` (pull/push flows, replay protection, fail-safe refunds, admin controls). Until a broadcast/deployment record exists for a given address, treat any configured proxy address as unverified.
 
 X Layer deployment is a separate experimental path; use [`X_LAYER.md`](X_LAYER.md), not this Base procedure.
 
@@ -152,7 +161,7 @@ Alert on failed proxy calls, webhook signature failures, database connection fai
 ## Chain readiness
 
 - **Base:** reference production path; verify every release against the end-to-end purchase flow.
-- **Stacks:** use [`STACKS_OPERATOR_RUNBOOK.md`](STACKS_OPERATOR_RUNBOOK.md); x402 auto-purchase remains placeholder.
+- **Stacks:** use [`STACKS_OPERATOR_RUNBOOK.md`](STACKS_OPERATOR_RUNBOOK.md); x402 auto-purchase execution is not implemented and fails explicitly rather than fabricating results.
 - **Solana / NEAR / Starknet:** partial readiness; do not overstate production status until E2E, relayer, and wallet-risk gaps are closed.
 - **Fhenix:** testnet/experimental privacy path; independently review contracts, permits, and target network before real value.
 - **X Layer:** testnet deployment pending; the operator-controlled randomness oracle is demo-only and mainnet is blocked until drand verification exists.

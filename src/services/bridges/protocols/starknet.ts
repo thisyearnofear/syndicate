@@ -21,6 +21,40 @@ import type {
 import { BridgeError, BridgeErrorCode } from '../types';
 import { USDC_ADDRESSES, STRK_ADDRESSES } from '../types';
 
+/**
+ * starknet.js-style call shape consumed by
+ * useUnifiedPurchase.handleStarknetWalletSign (account.execute(calls)).
+ */
+export interface StarknetCall {
+    contractAddress: string;
+    entrypoint: string;
+    calldata: string[];
+}
+
+/**
+ * Relayer deposit address that receives the user's tokens on Starknet;
+ * the relayer settles the equivalent USDC purchase on Base.
+ * Orbiter-style flow: transfer to a known maker/relayer address, relayer
+ * detects it and fulfills the Base leg. Configured per environment.
+ */
+function getRelayerDepositAddress(): string | undefined {
+    return process.env.NEXT_PUBLIC_STARKNET_BRIDGE_DEPOSIT_ADDRESS;
+}
+
+/** Convert a human token amount to raw base units (USDC: 6 dp, STRK: 18 dp). */
+function toRawUnits(amount: string, decimals: number): bigint {
+    const [whole, frac = ''] = amount.split('.');
+    const fracPadded = (frac + '0'.repeat(decimals)).slice(0, decimals);
+    const scaled = BigInt(whole || '0') * 10n ** BigInt(decimals) + BigInt(fracPadded || '0');
+    return scaled;
+}
+
+/** Cairo u256 → (low, high) felts as expected by starknet.js calldata. */
+function toU256Calldata(raw: bigint): [string, string] {
+    const MASK_128 = (1n << 128n) - 1n;
+    return [(raw & MASK_128).toString(), (raw >> 128n).toString()];
+}
+
 export class StarknetProtocol implements BridgeProtocol {
     readonly name = 'starknet' as const;
 
@@ -64,7 +98,45 @@ export class StarknetProtocol implements BridgeProtocol {
             }
 
             const tokenAddress = params.tokenAddress || USDC_ADDRESSES.starknet;
+            if (!tokenAddress) {
+                return {
+                    success: false,
+                    protocol: 'starknet',
+                    status: 'failed',
+                    error: 'No Starknet token contract configured for this route.',
+                    errorCode: BridgeErrorCode.UNSUPPORTED_ROUTE,
+                };
+            }
             const isStrk = tokenAddress === STRK_ADDRESSES.starknet;
+
+            // The transfer leg targets the relayer's deposit address. Without
+            // it there is no counterparty to settle the Base leg, so fail
+            // closed instead of returning a pending_signature the user could
+            // never complete.
+            const depositAddress = getRelayerDepositAddress();
+            if (!depositAddress) {
+                return {
+                    success: false,
+                    protocol: 'starknet',
+                    status: 'failed',
+                    error:
+                        'Starknet → Base bridge is not available: relayer deposit address is not configured ' +
+                        '(NEXT_PUBLIC_STARKNET_BRIDGE_DEPOSIT_ADDRESS). Route will be enabled once the relayer is deployed.',
+                    errorCode: BridgeErrorCode.PROTOCOL_UNAVAILABLE,
+                };
+            }
+
+            // Build the real wallet call the user will sign: transfer tokens
+            // to the relayer deposit address. USDC is 6 dp, STRK is 18 dp.
+            const rawAmount = toRawUnits(amount, isStrk ? 18 : 6);
+            const [amountLow, amountHigh] = toU256Calldata(rawAmount);
+            const calls: StarknetCall[] = [
+                {
+                    contractAddress: tokenAddress,
+                    entrypoint: 'transfer',
+                    calldata: [depositAddress, amountLow, amountHigh],
+                },
+            ];
 
             // Return pending_signature — user needs to sign via Starknet wallet (ArgentX/Braavos)
             // The actual execution happens in useUnifiedPurchase -> handleStarknetWalletSign
@@ -75,24 +147,28 @@ export class StarknetProtocol implements BridgeProtocol {
                 bridgeId: `starknet-bridge-${Date.now()}`,
                 estimatedTimeMs: 240_000,
                 details: {
-                    message: `Sign transaction in Starknet wallet to bridge ${isStrk ? 'STRK' : 'USDC'} to Base.`,
+                    message: `Sign transaction in your Starknet wallet to transfer ${isStrk ? 'STRK' : 'USDC'} to the bridge relayer, which settles your purchase on Base.`,
                     sourceChain: params.sourceChain,
                     destinationChain: params.destinationChain,
                     amount: params.amount,
                     recipient: destinationAddress,
+                    calls,
                     walletAction: {
                         type: 'starknet_contract_call',
                         tokenAddress: tokenAddress,
                         amount: amount,
                         baseAddress: destinationAddress,
-                        // Calls array will be built by the handler using starknet.js
+                        relayerDepositAddress: depositAddress,
                     },
                     steps: [
-                        '1. Sign Starknet transaction (transfers tokens to bridge contract)',
+                        '1. Sign Starknet transaction (transfers tokens to bridge relayer)',
                         '2. Bridge relayer detects transfer',
                         '3. Relayer mints/sends equivalent USDC on Base',
                         '4. Megapot contract executes ticket purchase',
                     ],
+                    note: isStrk
+                        ? 'Relayer converts STRK to USDC on settlement; the final ticket amount depends on the swap rate at settlement time.'
+                        : undefined,
                 },
             };
 

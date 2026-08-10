@@ -21,6 +21,7 @@ import type {
     VaultProtocol,
 } from './vaultProvider';
 import { VaultError, VaultErrorCode } from './vaultProvider';
+import { getAaveNetDeposits } from './aaveYieldCalculator';
 
 // Aave V3 Pool ABI (minimal interface)
 const AAVE_POOL_ABI = [
@@ -98,15 +99,26 @@ export class AaveVaultProvider implements VaultProvider {
     async getBalance(userAddress: string): Promise<VaultBalance> {
         try {
             // aUSDC balance represents deposited USDC + accrued yield
-            // Yield is calculated off-chain using scaledBalanceOf (see aave documentation)
             const aTokenBalance = await this.aTokenContract.balanceOf(userAddress);
-            const _scaledBalance = await this.aTokenContract.scaledBalanceOf(userAddress);
             const totalBalance = ethers.formatUnits(aTokenBalance, 6);
 
-            // Calculate yield: totalBalance - principal
-            // Principal tracking requires storing initial deposit amount per user
-            const deposited = totalBalance;
-            const yieldAccrued = '0';
+            // Principal comes from on-chain Pool Deposit/Withdraw events.
+            // yieldAccrued = aToken balance - net deposits. If the event
+            // query fails, degrade explicitly (yield 0, deposited = balance)
+            // rather than trusting a fabricated split — callers such as the
+            // yield-to-tickets flow must never act on invented yield.
+            const netDeposits = await getAaveNetDeposits(userAddress as `0x${string}`);
+            let deposited = totalBalance;
+            let yieldAccrued = '0';
+            if (netDeposits.success) {
+                deposited = ethers.formatUnits(netDeposits.netDepositedRaw, 6);
+                const yieldRaw = aTokenBalance > netDeposits.netDepositedRaw
+                    ? aTokenBalance - netDeposits.netDepositedRaw
+                    : 0n;
+                yieldAccrued = ethers.formatUnits(yieldRaw, 6);
+            } else {
+                console.warn('[AaveVault] Event query failed; reporting yield as 0 for', userAddress);
+            }
 
             const apy = await this.getCurrentAPY();
 

@@ -107,11 +107,13 @@ export class PoolTogetherV5Provider implements PoolProvider {
     _token: string,
     _from: string
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
-    // Deposits go through the TwabDelegator for syndicate pooling
-    // The actual deposit happens in the useSyndicateDeposit hook
+    // Deposits go through the TwabDelegator for syndicate pooling, signed
+    // client-side in the useSyndicateDeposit hook. This method never
+    // executes a transaction itself, so it must not report success.
     return {
-      success: true,
-      txHash: undefined, // Will be set by the deposit hook
+      success: false,
+      error:
+        'Deposits are signed client-side by the deposit flow (useSyndicateDeposit). This provider method does not execute transactions.',
     };
   }
 
@@ -122,11 +124,14 @@ export class PoolTogetherV5Provider implements PoolProvider {
     _data: string,
     _executor: string
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
-    // Claim prizes on behalf of syndicate
-    // In production, this would call the Claimer contract
+    // Prize claims would call the PoolTogether Claimer contract, which is
+    // not wired here. Never report a fabricated claim — direct the caller
+    // to the real claim surface.
     return {
-      success: true,
-      txHash: `0x${Date.now().toString(16)}`,
+      success: false,
+      error:
+        'Prize claiming via the PoolTogether Claimer contract is not wired yet. ' +
+        'Claim through the Cabana app or the syndicate dashboard claim flow.',
     };
   }
 

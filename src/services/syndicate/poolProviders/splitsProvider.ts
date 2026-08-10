@@ -174,17 +174,21 @@ export class SplitsPoolProvider implements PoolProvider {
     _data: string,
     _executor: string
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
-    // In production, this would distribute funds through the split
-    // using the splitsService.distributeToken function
-    console.log('[SplitsProvider] Execute distribution:', {
+    // Distributing through a split is a real on-chain call
+    // (splitService.distributeToken), but it must be signed by a connected
+    // wallet. This signature only receives an executor *address*, so we
+    // cannot execute here — and must not report a fabricated success.
+    console.log('[SplitsProvider] Distribution requested (not executed):', {
       splitAddress: poolAddress,
       to,
       value,
     });
-    
+
     return {
-      success: true,
-      txHash: `0x${Date.now().toString(16)}`,
+      success: false,
+      error:
+        'Split distributions must be signed by a connected wallet via the distribution flow ' +
+        '(splitService.distributeToken) or the 0xSplits app — automated execution is not available yet.',
     };
   }
 

@@ -231,7 +231,7 @@ describe('Pool Providers', () => {
     });
 
     describe('executeTransaction', () => {
-      it('should distribute funds to split recipients', async () => {
+      it('refuses to fabricate a distribution and returns an actionable error', async () => {
         const result = await splitsProvider.executeTransaction(
           '0xSplitAddress',
           '0xRecipient',
@@ -240,8 +240,12 @@ describe('Pool Providers', () => {
           '0xExecutor'
         );
 
-        expect(result.success).toBe(true);
-        expect(result.txHash).toBeDefined();
+        // Distributions must be signed by a connected wallet; this method
+        // only receives an executor address, so it must fail honestly
+        // instead of returning a fabricated txHash.
+        expect(result.success).toBe(false);
+        expect(result.txHash).toBeUndefined();
+        expect(result.error).toMatch(/signed by a connected wallet/i);
       });
     });
   });
@@ -276,7 +280,7 @@ describe('Pool Providers', () => {
     });
 
     describe('deposit', () => {
-      it('should deposit to vault', async () => {
+      it('defers to the client-side deposit hook without claiming success', async () => {
         const result = await poolTogetherV5Provider.deposit(
           '0xVaultAddress',
           '1000000',
@@ -284,8 +288,10 @@ describe('Pool Providers', () => {
           '0xDepositor'
         );
 
-        expect(result.success).toBe(true);
-        // txHash is intentionally undefined as it's set by the deposit hook
+        // Deposits execute through useSyndicateDeposit, not this method;
+        // it must not report a success it didn't perform.
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/deposit flow/i);
       });
     });
 

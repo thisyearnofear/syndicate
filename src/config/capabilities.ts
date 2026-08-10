@@ -195,7 +195,9 @@ export const CAPABILITIES: readonly Capability[] = [
     label: 'ERC-7715 Auto-Purchase',
     status: FEATURES.enableERC7715SmartSessions ? 'live' : 'paused',
     chains: ['base'],
-    readsEnabled: true,
+    // Paused means gated off entirely: no read or write surfaces while the
+    // smart-accounts-kit integration is incomplete.
+    readsEnabled: FEATURES.enableERC7715SmartSessions,
     writesEnabled: FEATURES.enableERC7715SmartSessions,
     requiresOptIn: true,
     testnetOnly: false,

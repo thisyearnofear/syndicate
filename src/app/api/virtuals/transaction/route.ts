@@ -10,7 +10,9 @@ function getAcpBin(): string {
 
 function isAuthorized(req: NextRequest): boolean {
   const secret = process.env.AUTOMATION_API_KEY;
-  if (!secret) return true;
+  // Fail closed: an unauthenticated route that can broadcast transactions is
+  // worse than a disabled one. Set AUTOMATION_API_KEY to enable this route.
+  if (!secret) return false;
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
   return token === secret;
 }
@@ -20,6 +22,12 @@ const HEX_RE = /^0x[a-fA-F0-9]*$/;
 const SUPPORTED_CHAINS = new Set([1, 8453, 84532, 11155111, 42161]);
 
 export async function POST(request: NextRequest) {
+  if (!process.env.AUTOMATION_API_KEY) {
+    return NextResponse.json(
+      { error: 'Transaction route disabled: AUTOMATION_API_KEY is not configured on the server.' },
+      { status: 503 }
+    );
+  }
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

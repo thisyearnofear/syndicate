@@ -14,13 +14,50 @@
  * 3. Stacks x402 Recurring Authorizations
  */
 
-import { Address, Hash, encodeFunctionData } from 'viem';
+import { Address, Hash, encodeFunctionData, parseAbi, parseEther, zeroHash } from 'viem';
 import { TetherWDKService } from './wdkService';
 import { VirtualsService } from './VirtualsService';
 import { getERC7715Service } from './erc7715Service';
 import { referralManager } from '../referral/ReferralManager';
 import { poolTogetherService, POOLTOGETHER_VAULTS } from '../lotteries/PoolTogetherService';
 import { MEGAPOT_V2_CONTRACTS } from '@/config/contracts';
+
+// Mirror of the real client-side purchase path
+// (TransactionExecutor.purchaseTickets / yieldAutopilotAgent.buildExecutionPlan):
+// Megapot V2 tickets are bought through the JackpotRandomTicketBuyer contract,
+// which pulls USDC and assigns random numbers on-chain. $1 USDC = 1 ticket.
+const RANDOM_TICKET_BUYER_ABI = parseAbi([
+  'function buyTickets(uint256 _count, address _recipient, address[] _referrers, uint256[] _referralSplitBps, bytes32 _source) external',
+]);
+const RANDOM_TICKET_BUYER_ADDRESS = MEGAPOT_V2_CONTRACTS.randomTicketBuyer.address as Address;
+/** 1 USDC (6 decimals) buys 1 ticket on Megapot V2. */
+const USDC_PER_TICKET = 1_000_000n;
+
+function ticketsFromUsdcAmount(amount: bigint): bigint {
+  return amount / USDC_PER_TICKET;
+}
+
+/**
+ * Encode a real Megapot random-ticket purchase for server-side executors
+ * (Gelato, Virtuals agent wallet). Requires the signing wallet to hold the
+ * USDC and to have approved the RandomTicketBuyer for the purchase amount.
+ */
+function encodeRandomTicketPurchase(
+  ticketCount: bigint,
+  recipient: Address,
+): `0x${string}` {
+  return encodeFunctionData({
+    abi: RANDOM_TICKET_BUYER_ABI,
+    functionName: 'buyTickets',
+    args: [
+      ticketCount,
+      recipient,
+      [referralManager.getReferrerFor('megapot') as Address],
+      [parseEther('1')],
+      zeroHash,
+    ],
+  });
+}
 
 // =============================================================================
 // TYPES
@@ -96,14 +133,23 @@ export class AutomationOrchestrator {
     chainId: number = 8453 // Base mainnet
   ): Promise<GelatoTaskResponse | null> {
     try {
+      // Scheduling a task against an unconfigured relayer would burn Gelato
+      // quota on a guaranteed failure — refuse instead.
+      if (this.relayerAddress === '0x0000000000000000000000000000000000000000') {
+        console.warn('[Orchestrator] GELATO_RELAYER_ADDRESS is not configured; refusing to create a Gelato task.');
+        return null;
+      }
+
+      const ticketCount = ticketsFromUsdcAmount(amount);
+      if (ticketCount < 1n) {
+        console.warn('[Orchestrator] Amount is below one Megapot ticket price; refusing to create a Gelato task.', { amount: amount.toString() });
+        return null;
+      }
+
       const intervalSeconds = this.getFrequencyInSeconds(frequency);
       const nextExecTime = Math.floor(Date.now() / 1000) + intervalSeconds;
 
-      const execData = encodeFunctionData({
-        abi: MEGAPOT_V2_CONTRACTS.abi,
-        functionName: 'buyTickets',
-        args: [[], userAddress, [], [], '0x0000000000000000000000000000000000000000000000000000000000000000'],
-      });
+      const execData = encodeRandomTicketPurchase(ticketCount, userAddress);
 
       const response = await fetch('https://api.gelato.digital/tasks', {
         method: 'POST',
@@ -223,14 +269,25 @@ export class AutomationOrchestrator {
     );
 
     // 2. EXECUTION (Via Virtuals Agent Wallet)
+    //
+    // Real Megapot purchase payload, mirrored from the client-side path:
+    // RandomTicketBuyer.buyTickets(count, recipient, referrers, splitBps, source).
+    // Note: the agent wallet must hold the USDC and have approved the
+    // RandomTicketBuyer for the purchase amount, otherwise the transaction
+    // will revert on-chain (and we report that failure, never a success).
+    const ticketCount = ticketsFromUsdcAmount(_task.amount);
+    if (ticketCount < 1n) {
+      return {
+        success: false,
+        reasoning,
+        error: `Amount ${_task.amount} ${_task.tokenSymbol} is below one Megapot ticket price ($1 USDC); no purchase executed.`,
+      };
+    }
+
     const result = await this.virtualsService.executeAgentTransaction({
-      to: MEGAPOT_V2_CONTRACTS.jackpot.address as Address,
+      to: RANDOM_TICKET_BUYER_ADDRESS,
       value: 0n,
-      data: encodeFunctionData({
-        abi: MEGAPOT_V2_CONTRACTS.abi,
-        functionName: 'buyTickets',
-        args: [[], _task.userAddress as Address, [], [], '0x0000000000000000000000000000000000000000000000000000000000000000'],
-      }),
+      data: encodeRandomTicketPurchase(ticketCount, _task.userAddress as Address),
       chainId: 8453
     });
 
@@ -273,11 +330,16 @@ export class AutomationOrchestrator {
 
     console.log(`[Orchestrator] Prepared PoolTogether deposit for ${_task.userAddress}`);
 
-    // 2. Execution (Simulated for consistency)
-    return { 
-      success: true, 
-      txHash: '0x' + 'p'.repeat(64) as Hash,
-      reasoning: 'Yield-optimized deposit into No-Loss Prize Vault with 10% Syndicate prize-split hook configured.'
+    // Execution cannot happen here: depositing into the PrizeVault moves the
+    // user's funds, which requires the user's wallet signature (or a granted
+    // permission). Never fabricate a success — report the strategy as not
+    // executable so the job processor backs off instead of recording a
+    // phantom deposit.
+    return {
+      success: false,
+      error:
+        'No-loss PoolTogether automation is not executable server-side: the deposit requires the user\'s wallet signature. ' +
+        'Use the ERC-7715/1Shot permissioned autopilot path for delegated execution.',
     };
   }
 
@@ -323,17 +385,32 @@ export class AutomationOrchestrator {
       return { success: false, error: validation.reason };
     }
 
-    // 2. EXECUTION (Typically via a backend-signed tx using the permission context)
-    // For now, we simulate success as the actual signing happens in the cron API
-    return { success: true, txHash: '0x' + '1'.repeat(64) as Hash };
+    // 2. EXECUTION: redeeming an ERC-7715 permission into a real transaction
+    // requires the MetaMask smart-accounts-kit integration, which
+    // erc7715Service does not have yet (it stores draft sessions in
+    // localStorage). Report an honest failure instead of a simulated hash —
+    // the job processor will back off and auto-pause after repeated failures.
+    return {
+      success: false,
+      error:
+        'ERC-7715 execution is not available yet: smart session redemption requires the MetaMask smart-accounts-kit integration. ' +
+        'The granted permission is valid but cannot be redeemed automatically at this time.',
+    };
   }
 
   /**
-   * STRATEGY: Stacks x402 (Placeholder for consistency)
+   * STRATEGY: Stacks x402
+   *
+   * Authorization, challenge, limit, and revoke flows are implemented in
+   * stacksX402Service; automated purchase execution is not. Never fabricate
+   * a transaction hash.
    */
   private async executeStacksX402(_task: AutomationTask): Promise<ExecutionResult> {
-    // Logic for Stacks-native recurring purchases
-    return { success: true, txHash: '0x' + 's'.repeat(64) as Hash };
+    return {
+      success: false,
+      error:
+        'Stacks x402 auto-purchase is not implemented yet. Authorization management (create/revoke/limits) is supported; the purchase leg still requires the user to complete a one-off bridge purchase.',
+    };
   }
 
   /**

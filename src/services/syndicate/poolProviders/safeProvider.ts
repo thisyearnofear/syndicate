@@ -114,11 +114,13 @@ export class SafePoolProvider implements PoolProvider {
     _token: string,
     _from: string
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
-    // Deposits are just USDC transfers to the Safe address
-    // This is handled by the useSyndicateDeposit hook
+    // Deposits are plain USDC transfers signed by the user's wallet in the
+    // useSyndicateDeposit hook. This method never executes a transaction
+    // itself, so it must not report success without a real txHash.
     return {
-      success: true,
-      txHash: undefined,
+      success: false,
+      error:
+        'Deposits are signed client-side by the deposit flow (useSyndicateDeposit). This provider method does not execute transactions.',
     };
   }
 
@@ -209,8 +211,10 @@ export class SafePoolProvider implements PoolProvider {
   }
 
   /**
-   * Create and execute a USDC transfer from the Safe
-   * Requires threshold signatures
+   * Create and execute a USDC transfer from the Safe.
+   * Requires threshold signatures from Safe owners, which cannot be
+   * collected in this service today — so this method never fabricates
+   * a result and instead directs the caller to the signing flow.
    */
   async transferFromSafe(
     safeAddress: string,
@@ -219,24 +223,22 @@ export class SafePoolProvider implements PoolProvider {
     _walletClient: WalletClient
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     try {
-      // Create the transfer transaction
-      const _tx = safeService.createUSDCTransfer(recipient, amountUsdc);
-      
-      // In production, this would:
-      // 1. Get current nonce from Safe
-      // 2. Create transaction hash
-      // 3. Collect signatures from owners
-      // 4. Execute when threshold is met
-      
-      logger.info('Safe transfer prepared', {
+      // Build the transfer calldata so callers can hand it to a real
+      // Safe signing flow (Safe app proposal or protocol-kit integration).
+      const tx = safeService.createUSDCTransfer(recipient, amountUsdc);
+
+      logger.info('Safe transfer prepared (not executed)', {
         safeAddress,
         recipient,
         amount: amountUsdc,
+        to: tx.to,
       });
 
       return {
-        success: true,
-        txHash: `0x${Date.now().toString(16)}`,
+        success: false,
+        error:
+          'Executing funds from a Safe requires collecting owner signatures to threshold. ' +
+          'Propose this transfer in the Safe app (app.safe.global) — automated Safe execution is not available yet.',
       };
     } catch (error) {
       logger.error('Safe transfer failed', { error: String(error) });

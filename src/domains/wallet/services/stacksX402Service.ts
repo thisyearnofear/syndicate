@@ -485,20 +485,19 @@ class StacksX402Service {
       };
     }
 
-    // In a full implementation, this would:
-    // 1. Bridge the tokens from Stacks to Base (using the stacks protocol)
-    // 2. Execute the ticket purchase on Base
-    // 3. Return the transaction details
-
-    // For now, return a placeholder result
-    // The actual implementation would integrate with the bridge service
-    logger.info(`[StacksX402] Would execute auto-purchase: ${ticketsCount} tickets for ${amount} USDC`);
+    // Auto-purchase execution is not implemented: it would require
+    // 1. Bridging the tokens from Stacks to Base (using the stacks protocol), and
+    // 2. Executing the ticket purchase on Base.
+    // Until a relayer implements those legs, return an honest failure —
+    // never a fabricated transaction ID — so consumers don't record a
+    // phantom purchase against a valid authorization.
+    logger.info(`[StacksX402] Auto-purchase requested but not executed (execution not implemented): ${ticketsCount} tickets for ${amount} USDC`);
 
     return {
-      success: true,
-      transactionId: `auto-purchase-${Date.now()}`,
-      ticketsPurchased: ticketsCount,
-      amountSpent: amount,
+      success: false,
+      error:
+        'x402 auto-purchase execution is not implemented yet. The authorization is valid; the bridge + purchase legs require the one-off purchase flow until the relayer ships.',
+      errorCode: 'EXECUTION_NOT_IMPLEMENTED',
     };
   }
 

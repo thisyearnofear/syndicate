@@ -391,7 +391,9 @@ describe('executeVirtualsAgentTask — email recipient is no longer hardcoded', 
             status: 'active',
             tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
             tokenSymbol: 'USDC',
-            amount: 0n,
+            // $5 USDC (6 decimals) — at or above one Megapot ticket price,
+            // which the orchestrator now requires before executing.
+            amount: 5_000_000n,
             frequency: 'daily',
             recipientEmail: 'real-user@example.com',
         });
@@ -412,7 +414,9 @@ describe('executeVirtualsAgentTask — email recipient is no longer hardcoded', 
             status: 'active',
             tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
             tokenSymbol: 'USDC',
-            amount: 0n,
+            // $5 USDC (6 decimals) — at or above one Megapot ticket price,
+            // which the orchestrator now requires before executing.
+            amount: 5_000_000n,
             frequency: 'daily',
         });
 
@@ -430,7 +434,9 @@ describe('executeVirtualsAgentTask — email recipient is no longer hardcoded', 
             status: 'active',
             tokenAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
             tokenSymbol: 'USDC',
-            amount: 0n,
+            // $5 USDC (6 decimals) — at or above one Megapot ticket price,
+            // which the orchestrator now requires before executing.
+            amount: 5_000_000n,
             frequency: 'daily',
         });
 

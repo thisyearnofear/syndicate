@@ -138,11 +138,15 @@ export class TetherWDKService {
       return { success: true, txHash: tx.hash };
       */
 
-      // For the hackathon demo, we'll simulate a successful transaction
-      // if the WDK environment isn't fully set up in this container.
-      return { 
-        success: true, 
-        txHash: '0x' + 'f'.repeat(64) as Hash // Placeholder
+      // WDK signing/broadcast is not wired in this environment (see the
+      // pseudocode above for the intended approve → purchaseTicketsFor flow).
+      // Report an honest failure instead of fabricating a transaction hash so
+      // downstream automation backs off instead of recording a phantom purchase.
+      return {
+        success: false,
+        error:
+          'WDK autonomous execution is not available: the WDK account signing path is not integrated yet. ' +
+          'The purchase would be an approve + MegapotAutoPurchaseProxy.purchaseTicketsFor pair, but it is not signed here.',
       };
 
     } catch (error: unknown) {
