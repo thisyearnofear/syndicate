@@ -1,6 +1,6 @@
 # X Layer Prize Pool Hook
 
-**Status:** Testnet deployed on X Layer chain **1952** (Build X AI Season). `/xlayer` supports a live demo loop (deposit / swap join / fundPot / agent HITL draw) when `NEXT_PUBLIC_XLAYER_WRITES_ENABLED=true`. Mainnet blocked until a reviewed randomness oracle replaces the demo oracle.
+**Status:** Testnet deployed on X Layer chain **1952** (Build X AI Season entry, closes 2026-08-21). `/xlayer` supports a live demo loop (deposit / swap join / fundPot / agent HITL draw) when `NEXT_PUBLIC_XLAYER_WRITES_ENABLED=true`. Mainnet randomness path **designed** (drand + permissionless relay with bonded-relay fallback — see Randomness decision) pending precompile verification and independent review.
 
 X Layer is an experimental second engine for Syndicate. **Base/Megapot remains the product home.** The X Layer design moves the game into a Uniswap v4 hook: trading surcharges fund a prize pot, depositor shares set draw odds, and principal remains redeemable between draws.
 
@@ -43,7 +43,7 @@ The contract suite has 104 Foundry tests. The app slice has 3 config tests plus 
 | PoolManager | Self-deployed (see live addresses) | Canonical `0x360e68faccca8ca495c1b759fd9eee466db9fb32` |
 | Explorer | https://www.okx.com/web3/explorer/xlayer-test | https://www.okx.com/web3/explorer/xlayer |
 
-Testnet has no official v4 deployment, so deploy PoolManager yourself. The OKX faucet issues `USDC_TEST` / `USDG` / `USD₮0` — not the older docs USDC address. Mainnet deployment is blocked until the randomness path is production-safe.
+Testnet has no official v4 deployment, so deploy PoolManager yourself. The OKX faucet issues `USDC_TEST` / `USDG` / `USD₮0` — not the older docs USDC address. Mainnet deployment waits on the randomness design above passing its two gates.
 
 ## Live testnet deployment (Build X AI Season)
 
@@ -61,11 +61,20 @@ Verified: hook flags `address & 0x3FFF == 0x10C0`, `poolBound == true`, pot curr
 
 ## Randomness decision
 
-Chainlink VRF and Pyth Entropy are not available on X Layer. The contract uses `IRandomnessOracle` so the source can change without changing draw logic.
+*(Formally reviewed for the Build X AI Season submission, 2026-08-11.)*
+
+Verified on 2026-08-11: **Chainlink VRF and Pyth Entropy are not deployed on X Layer** (checked Chainlink integration announcements and the `pyth-network/pyth-crosschain` chain registry). The contract uses `IRandomnessOracle`, so the source can change without changing draw logic.
 
 - **Testnet:** `SimpleRandomnessOracle`, disclosed operator-controlled demo only.
-- **Production plan:** drand beacon plus permissionless relay with verification and replay protection.
-- **Never:** use the demo oracle or block-derived values for real-value draws.
+- **Production design (primary): drand + permissionless relay.** The League of Entropy beacon network (20+ institutions, threshold-signed rounds, 3s/30s modes) makes winner selection publicly reproducible by anyone, without trusting us or a single relay. Design invariants:
+  - Winner input is `keccak256(drandRoundSeed, potSnapshotId)` where the drand round is chosen from `block.number` at `openDraw()` — the operator cannot pick favorable rounds after the pot snapshots.
+  - On-chain verification of the beacon: BLS12-381 verify via EIP-2537 precompiles. **Verified 2026-08-11 on testnet 1952 by calibrated probe:** `G1ADD (0x0b)` accepts valid encoding and malformed-length `PAIRING (0x0f)` input reverts with a real `PrecompileError` (an absent precompile returns empty success instead). Mainnet 196 should be probed identically pre-launch, but X Layer's Polygon CDK lineage makes parity expected.
+  - Fallback if mainnet probes fail: two-tier bridge — a bonded relay posts beacon signatures with a **challenge window**; any third party can verify the round off-chain and challenge wrong roots, slashing the bond. Draws with prizes below a threshold can resolve unchallenged after the window.
+  - Relay is permissionless: anyone may submit the signed round; replay protection by `(chainId => round => used)` mapping.
+- **Fallback (if drand verification is not viable):** two-party commit-reveal — operator seed committed at `openDraw()`, player-contributed entropy folded per ticket at purchase, reveal after close with slashed-bond penalties for withheld reveals.
+- **Never:** use the demo oracle or bare block-derived values for real-value draws.
+
+Mainnet gate: launch requires (a) the matching precompile probe on chain 196, and (b) independent review of the relay + winner-mapping code, before any non-trivial TVL.
 
 ## Testnet deployment
 
