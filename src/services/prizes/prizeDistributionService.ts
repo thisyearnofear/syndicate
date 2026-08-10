@@ -122,7 +122,7 @@ export class PrizeDistributionService {
     memberCount: number;
   } | null> {
     const result = await sql`
-      SELECT pool_type, safe_address, split_address, pt_vault_address, coordinator_address, member_count
+      SELECT pool_type, safe_address, split_address, pt_vault_address, coordinator_address, members_count
       FROM syndicate_pools
       WHERE id = ${poolId}
     `;
@@ -144,7 +144,7 @@ export class PrizeDistributionService {
       splitAddress: pool.split_address as Address | null,
       ptVaultAddress: pool.pt_vault_address as Address | null,
       coordinatorAddress: pool.coordinator_address as Address,
-      memberCount: parseInt(pool.member_count ?? '0', 10) || 0,
+      memberCount: parseInt(pool.members_count ?? '0', 10) || 0,
     };
   }
 
