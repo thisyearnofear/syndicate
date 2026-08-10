@@ -5,9 +5,10 @@
  * Creates a viral loop: purchase → share → friend enters → repeat.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { X, Share2, Check } from "lucide-react";
 import { Button } from "@/shared/components/ui/Button";
+import { BeamFrame } from "@/components/motion/BeamFrame";
 
 interface SharePromptProps {
   /** Number of tickets just purchased */
@@ -20,13 +21,6 @@ interface SharePromptProps {
 
 export function SharePrompt({ ticketCount, drawId, onDismiss }: SharePromptProps) {
   const [copied, setCopied] = useState(false);
-  const [visible, setVisible] = useState(false);
-
-  // Animate in
-  useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 100);
-    return () => clearTimeout(t);
-  }, []);
 
   const shareText = `Just entered${drawId ? ` draw #${drawId}` : ''} on Syndicate with ${ticketCount} ticket${ticketCount !== 1 ? 's' : ''}. $1 entry, keep your principal forever. No-loss lottery on Base.`;
   const shareUrl = typeof window !== 'undefined' ? window.location.origin : 'https://syndicate.io';
@@ -44,12 +38,9 @@ export function SharePrompt({ ticketCount, drawId, onDismiss }: SharePromptProps
   }, [shareText, shareUrl]);
 
   return (
-    <div
-      className={`fixed inset-x-0 bottom-20 md:bottom-auto md:top-8 md:right-8 md:left-auto z-50 mx-4 md:mx-0 md:w-80 transition-all duration-300 ${
-        visible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
-      }`}
-    >
-      <div className="rounded-2xl border border-white/10 bg-slate-900/95 backdrop-blur-xl p-5 shadow-2xl">
+    <div className="fixed inset-x-0 bottom-20 md:bottom-auto md:top-8 md:right-8 md:left-auto z-50 mx-4 md:mx-0 md:w-80 receipt-in">
+      <BeamFrame color="#fbbf24" duration={1.6} laps={2} className="block rounded-2xl">
+        <div className="rounded-2xl border border-white/10 bg-slate-900/95 backdrop-blur-xl p-5 shadow-2xl">
         {/* Close */}
         <button
           onClick={onDismiss}
@@ -80,7 +71,8 @@ export function SharePrompt({ ticketCount, drawId, onDismiss }: SharePromptProps
             {copied ? 'Copied!' : 'Share'}
           </Button>
         </div>
-      </div>
+        </div>
+      </BeamFrame>
     </div>
   );
 }

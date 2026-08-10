@@ -760,3 +760,167 @@ select:focus-visible {
   backdrop-filter: blur(8px);
   background: rgba(0, 0, 0, 0.1);
 }
+/* =============================================================================
+   REVEAL GRAMMAR — Syndicate motion identity
+   - RoundOrb: round-state visual vocabulary (active / charging / resolving / settled)
+   - BeamFrame: light tracing the contour of "money is moving here"
+   - DecryptLine: ciphered copy that reveals locally under the cursor
+   - SharePrompt receipt: spring entrance, ticket-worthy moment
+   All effects: GPU-composited (transform/opacity/gradient angle), off by default
+   under prefers-reduced-motion.
+   ============================================================================= */
+
+@property --beam-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes beam-rotate {
+  to { --beam-angle: 360deg; }
+}
+
+.beam-frame {
+  position: relative;
+}
+
+.beam-frame::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--beam-angle),
+    transparent 0turn,
+    var(--beam-color, #fbbf24) 0.06turn,
+    transparent 0.16turn
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  animation: beam-rotate var(--beam-duration, 5s) linear var(--beam-count, infinite);
+  pointer-events: none;
+}
+
+/* RoundOrb: layered radial gradients; states swap animation + palette. */
+@keyframes orb-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+
+@keyframes orb-flicker {
+  0% { transform: scale(1); opacity: 0.9; }
+  12% { transform: scale(1.12); opacity: 1; }
+  20% { transform: scale(0.96); opacity: 0.7; }
+  32% { transform: scale(1.06); opacity: 1; }
+  37% { transform: scale(1); opacity: 0.75; }
+  55% { transform: scale(1.15); opacity: 1; }
+  68% { transform: scale(0.98); opacity: 0.8; }
+  80% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.9; }
+}
+
+@keyframes orb-settle {
+  0% { transform: scale(1.35); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.95; }
+}
+
+.round-orb { position: relative; display: inline-block; }
+
+.round-orb .orb-core,
+.round-orb .orb-halo {
+  border-radius: 9999px;
+  position: absolute;
+  inset: 0;
+}
+
+.round-orb .orb-core {
+  animation: orb-pulse var(--orb-speed, 2.6s) ease-in-out infinite;
+}
+
+.round-orb .orb-halo {
+  filter: blur(8px);
+  opacity: 0.7;
+  animation: orb-pulse var(--orb-speed, 2.6s) ease-in-out infinite;
+}
+
+.round-orb[data-state='active'] .orb-core {
+  background: radial-gradient(circle at 35% 35%, #fde68a, #f59e0b 55%, #b45309);
+}
+.round-orb[data-state='active'] .orb-halo { background: #f59e0b; }
+
+.round-orb[data-state='charging'] .orb-core {
+  background: radial-gradient(circle at 35% 35%, #fff7ed, #fb923c 50%, #ea580c);
+  animation: orb-pulse var(--orb-speed, 1.1s) ease-in-out infinite;
+}
+.round-orb[data-state='charging'] .orb-halo {
+  background: #fb923c;
+  animation: orb-pulse var(--orb-speed, 1.1s) ease-in-out infinite;
+}
+
+.round-orb[data-state='resolving'] .orb-core,
+.round-orb[data-state='resolving'] .orb-halo {
+  animation: orb-flicker 1.4s steps(8, end) infinite;
+}
+.round-orb[data-state='resolving'] .orb-core {
+  background: radial-gradient(circle at 35% 35%, #ffffff, #fbbf24 45%, #d97706);
+}
+.round-orb[data-state='resolving'] .orb-halo { background: #fbbf24; }
+
+.round-orb[data-state='settled'] .orb-core {
+  background: radial-gradient(circle at 35% 35%, #d1fae5, #34d399 55%, #059669);
+  animation: orb-settle 3s ease-out both;
+}
+.round-orb[data-state='settled'] .orb-halo {
+  background: #34d399;
+  animation: orb-settle 3s ease-out both;
+}
+
+.round-orb[data-state='idle'] .orb-core {
+  background: radial-gradient(circle at 35% 35%, #94a3b8, #475569 60%, #1e293b);
+  animation-duration: 5s;
+}
+.round-orb[data-state='idle'] .orb-halo {
+  background: #475569;
+  opacity: 0.4;
+  animation-duration: 5s;
+}
+
+/* Receipt spring entrance (SharePrompt) */
+@keyframes receipt-in {
+  0% { transform: translateY(28px) scale(0.94) perspective(600px) rotateX(-14deg); opacity: 0; }
+  60% { transform: translateY(-3px) scale(1.01) perspective(600px) rotateX(2deg); opacity: 1; }
+  100% { transform: translateY(0) scale(1) perspective(600px) rotateX(0deg); opacity: 1; }
+}
+
+.receipt-in {
+  animation: receipt-in 0.55s cubic-bezier(0.22, 1.4, 0.36, 1) both;
+  transform-origin: center top;
+  transform-style: preserve-3d;
+}
+
+/* DecryptLine: subtle shimmer on still-ciphered glyphs */
+@keyframes cipher-flicker {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.9; }
+}
+
+.decrypt-cipher {
+  color: rgba(167, 139, 250, 0.65);
+  animation: cipher-flicker 1.8s ease-in-out infinite;
+}
+
+.decrypt-revealed {
+  color: inherit;
+  transition: color 160ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .beam-frame::after { animation: none; opacity: 0.35; }
+  .round-orb .orb-core,
+  .round-orb .orb-halo { animation: none !important; }
+  .receipt-in { animation: none; }
+  .decrypt-cipher { animation: none; }
+}

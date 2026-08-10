@@ -18,9 +18,10 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { Clock, Users, Ticket, Zap } from "lucide-react";
+import { Clock, Users, Ticket } from "lucide-react";
 import { useLottery } from "@/domains/lottery/hooks/useLottery";
 import { usePlatformStats } from "@/hooks/usePlatformStats";
+import { RoundOrb } from "@/components/motion/RoundOrb";
 
 // ─── Draw Countdown ─────────────────────────────────────────────────────────
 
@@ -51,14 +52,17 @@ function DrawCountdown() {
   if (timeLeft.ended) {
     return (
       <div className="flex items-center gap-2 text-amber-400">
-        <Zap className="w-3.5 h-3.5" />
+        <RoundOrb state="resolving" size={10} />
         <span className="text-xs font-semibold">Drawing now...</span>
       </div>
     );
   }
 
+  const msLeft = timeLeft.hours * 3_600_000 + timeLeft.minutes * 60_000 + timeLeft.seconds * 1000;
+
   return (
     <div className="flex items-center gap-2">
+      <RoundOrb state={msLeft > 30 * 60_000 ? 'active' : 'charging'} size={10} />
       <Clock className="w-3.5 h-3.5 text-gray-500" />
       <span className="text-xs text-gray-400">Next draw in</span>
       <div className="flex items-center gap-1 font-mono text-xs">

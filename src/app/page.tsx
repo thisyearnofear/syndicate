@@ -15,6 +15,9 @@ import { SharePrompt } from "@/components/home/SharePrompt";
 import { YieldTeaser } from "@/components/home/YieldTeaser";
 import { FirstActionPrompt } from "@/components/onboarding/FirstActionPrompt";
 import { Button } from "@/shared/components/ui/Button";
+import { RoundOrb, deriveOrbState } from "@/components/motion/RoundOrb";
+import { BeamFrame } from "@/components/motion/BeamFrame";
+import { DecryptLine } from "@/components/motion/DecryptLine";
 
 // Lazy load heavy components
 const SimplePurchaseModal = lazy(() => import("@/components/modal/SimplePurchaseModal"));
@@ -189,10 +192,10 @@ export default function Home() {
             <div className="w-56 h-56 rounded-full bg-violet-500/10 blur-3xl animate-float" style={{ animationDuration: '14s' }} />
           </div>
 
-          {/* Prize pool — the anchor */}
+          {/* Prize pool — the anchor, marked by the round orb */}
           <div className="animate-fade-in-up">
-            <p className="text-sm uppercase tracking-widest text-amber-200/70 mb-2 flex items-center justify-center gap-2">
-              <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
+            <p className="text-sm uppercase tracking-widest text-amber-200/70 mb-2 flex items-center justify-center gap-2.5">
+              <RoundOrb state={deriveOrbState(jackpotStats?.endTimestamp)} size={14} />
               Current prize pool
             </p>
             <h1 className="font-black text-6xl md:text-8xl leading-none tracking-tight tabular-nums bg-gradient-to-b from-amber-200 via-yellow-300 to-orange-400 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(251,191,36,0.25)]">
@@ -210,20 +213,22 @@ export default function Home() {
 
           {/* CTAs with urgency */}
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-3 animate-fade-in-up" style={{ animationDelay: '150ms' }}>
-            <Button
-              variant="premium"
-              size="lg"
-              className="text-lg px-8 py-5 shadow-2xl shadow-amber-500/10 group"
-              onClick={handleBuyClick}
-            >
-              Enter draw
-              {countdown && (
-                <span className={`ml-2 inline-flex items-center gap-1 text-sm opacity-80 group-hover:opacity-100 ${countdown.urgent ? 'text-amber-200' : ''}`}>
-                  <Clock className="w-3.5 h-3.5" />
-                  {countdown.label}
-                </span>
-              )}
-            </Button>
+            <BeamFrame laps={Infinity} duration={6} className="rounded-2xl inline-block">
+              <Button
+                variant="premium"
+                size="lg"
+                className="text-lg px-8 py-5 shadow-2xl shadow-amber-500/10 group w-full"
+                onClick={handleBuyClick}
+              >
+                Enter draw
+                {countdown && (
+                  <span className={`ml-2 inline-flex items-center gap-1 text-sm opacity-80 group-hover:opacity-100 ${countdown.urgent ? 'text-amber-200' : ''}`}>
+                    <Clock className="w-3.5 h-3.5" />
+                    {countdown.label}
+                  </span>
+                )}
+              </Button>
+            </BeamFrame>
             <Button
               variant="ghost"
               size="lg"
@@ -328,9 +333,13 @@ export default function Home() {
             <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-violet-200 via-white to-violet-200 bg-clip-text text-transparent mb-3">
               A treasury buying 500 tickets doesn&apos;t need every competitor watching.
             </p>
-            <p className="text-gray-400 mb-6">
+            <p className="text-gray-400 mb-2">
               Coordinate privately, win publicly.
             </p>
+            <DecryptLine
+              text="Encrypted balances. Selective reveal. Your rules."
+              className="text-violet-300/80 mb-6 cursor-default select-none"
+            />
             <Button
               variant="ghost"
               size="sm"
