@@ -5,11 +5,15 @@ import Link from "next/link";
 import {
   Activity,
   ArrowRight,
+  Beaker,
+  Bot,
   CircleAlert,
   Clock3,
   ExternalLink,
   Gauge,
   LockKeyhole,
+  Radio,
+  Receipt,
   RefreshCw,
   ShieldCheck,
   Sparkles,
@@ -40,6 +44,7 @@ import {
   XLAYER_TESTNET_CHAIN_ID,
   XLAYER_TESTNET_EXPLORER_URL,
   XLAYER_TESTNET_USDC_ADDRESS,
+  XLAYER_FAUCET_URL,
   formatXLayerShareOdds,
   xLayerExplorerAddress,
 } from "@/config/xlayer";
@@ -260,7 +265,7 @@ export function PrizePoolDashboard() {
         badge={{ label: "X Layer Testnet", tone: "amber" }}
       >
         <div className="flex flex-col items-end gap-2">
-          <span className="text-xs text-slate-500">Chain {XLAYER_TESTNET_CHAIN_ID} · Build X AI Season</span>
+          <span className="text-xs text-slate-500">Chain {XLAYER_TESTNET_CHAIN_ID} · Live on testnet since Aug 9, 2026</span>
           <div className="w-full max-w-none rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl sm:max-w-sm">
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
@@ -285,11 +290,57 @@ export function PrizePoolDashboard() {
             <p className="mt-3 border-t border-white/[0.06] pt-3 text-xs leading-5 text-slate-500">
               {walletType === "evm" && evmAddress ? `Connected ${shorten(evmAddress)}` : "Connect an EVM wallet to preview your share."}
             </p>
+            {activeOnXLayer && (
+              <a href={XLAYER_FAUCET_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-cyan-300 transition hover:text-cyan-200">
+                Get testnet OKB + USDC from the X Layer faucet <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
           </div>
         </div>
       </PageHeader>
 
       <ShellSection className="space-y-6">
+          {/* Product story: what this pool is and who runs it, before any pool stats. */}
+          <CompactCard variant="premium" padding="lg" hover={false} className="border-cyan-300/20 bg-gradient-to-br from-cyan-500/[0.12] to-indigo-500/[0.06]">
+            <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+              <div>
+                <div className="flex items-center gap-2 text-cyan-300">
+                  <Bot className="h-4 w-4" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">How this pool runs</span>
+                </div>
+                <h2 className="mt-3 text-xl font-semibold tracking-tight text-white">An AI agent is the treasurer of this pool.</h2>
+                <p className="mt-3 text-sm leading-6 text-slate-300/80">
+                  It watches the pot, plans draw operations through a permissioned tool registry, and gets human
+                  approval before anything executes. Every money claim it makes is verified against an on-chain
+                  receipt before the UI reports it — pending is never shown as success, here or on Base.
+                </p>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-black/10 p-3">
+                  <Bot className="mt-0.5 h-4 w-4 shrink-0 text-cyan-200" />
+                  <div>
+                    <p className="text-sm font-semibold text-white">Agent, not chatbot</p>
+                    <p className="mt-0.5 text-xs leading-5 text-slate-400">Tool registry, human-in-the-loop gating on draw execution, and a persisted session transcript.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-black/10 p-3">
+                  <Receipt className="mt-0.5 h-4 w-4 shrink-0 text-cyan-200" />
+                  <div>
+                    <p className="text-sm font-semibold text-white">Receipts, not promises</p>
+                    <p className="mt-0.5 text-xs leading-5 text-slate-400">Deposits, draws, and claims link to explorer receipts. Explicit failure states, never fabricated hashes.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-black/10 p-3">
+                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-cyan-200" />
+                  <div>
+                    <p className="text-sm font-semibold text-white">No-loss by design</p>
+                    <p className="mt-0.5 text-xs leading-5 text-slate-400">The pot is funded by swap surcharges; depositor principal stays redeemable between draws.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CompactCard>
+
           {!hasConfiguredHook && (
             <div className="flex gap-4 rounded-2xl border border-cyan-400/20 bg-cyan-300/[0.06] p-5">
               <div className="mt-0.5 rounded-lg bg-cyan-300/10 p-2 text-cyan-200"><Sparkles className="h-4 w-4" /></div>
@@ -348,8 +399,8 @@ export function PrizePoolDashboard() {
             drawResolved={Boolean(drawState?.[1])}
             drawClaimed={Boolean(drawState?.[2])}
           />
-          <DepositPrincipalSection />
-          <JoinPoolSection />
+          <DepositPrincipalSection usdcBalance={evmAddress && tokenBalance ? Number(tokenBalance.formatted) : null} />
+          <JoinPoolSection usdcBalance={evmAddress && tokenBalance ? Number(tokenBalance.formatted) : null} />
 
           <XLayerAgentPanel
             potBalance={potBalance}
@@ -361,6 +412,48 @@ export function PrizePoolDashboard() {
             drawState={drawState}
           />
 
+          {/* Mainnet commitment: the randomness gate, stated on-page for judges. */}
+          <CompactCard variant="glass" padding="lg" hover={false} className="border-white/[0.08] bg-slate-950/50">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Mainnet commitment</p>
+                <h2 className="mt-2 text-xl font-semibold text-white">Testnet today. Mainnet when randomness is real.</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+                  Chainlink VRF and Pyth Entropy are not available on X Layer, so the randomness path was designed,
+                  not deferred. The hook launches on mainnet ({XLAYER_MAINNET_CHAIN_ID}) only once winner selection
+                  is publicly verifiable.
+                </p>
+              </div>
+              <a href="https://github.com/thisyearnofear/syndicate/blob/main/docs/X_LAYER.md#randomness-decision" target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-2 text-xs font-semibold text-cyan-300 hover:text-cyan-200">
+                Full randomness design <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
+                <div className="flex items-center gap-2 text-amber-200"><Beaker className="h-4 w-4" /><span className="text-[10px] font-black uppercase tracking-[0.18em]">Today · testnet</span></div>
+                <p className="mt-3 text-sm leading-6 text-slate-300">
+                  Draws resolve through a disclosed demo oracle, operator-signed and labeled everywhere it appears.
+                  It controls testnet funds only, never real value.
+                </p>
+              </div>
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
+                <div className="flex items-center gap-2 text-cyan-200"><Radio className="h-4 w-4" /><span className="text-[10px] font-black uppercase tracking-[0.18em]">Production design · drand</span></div>
+                <p className="mt-3 text-sm leading-6 text-slate-300">
+                  League of Entropy beacon with a permissionless relay: threshold-signed rounds and publicly
+                  reproducible winner math. EIP-2537 (BLS12-381) precompiles are probe-verified on testnet{" "}
+                  {XLAYER_TESTNET_CHAIN_ID} (2026-08-11), so drand signatures verify fully on-chain.
+                </p>
+              </div>
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
+                <div className="flex items-center gap-2 text-emerald-200"><LockKeyhole className="h-4 w-4" /><span className="text-[10px] font-black uppercase tracking-[0.18em]">Launch gate</span></div>
+                <p className="mt-3 text-sm leading-6 text-slate-300">
+                  Mainnet ships with precompile-verified drand, or an independently reviewed bonded-relay fallback.
+                  The demo oracle never graduates to real value.
+                </p>
+              </div>
+            </div>
+          </CompactCard>
+
           <CompactCard variant="glass" padding="lg" hover={false} className="border-white/[0.08] bg-slate-950/50">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Deployment registry</p><h2 className="mt-2 text-xl font-semibold text-white">Contracts and network</h2></div>
@@ -368,7 +461,7 @@ export function PrizePoolDashboard() {
             </div>
             <div className="mt-5 grid gap-x-8 gap-y-1 md:grid-cols-2">
               <AddressRow label="Network" value={`X Layer Testnet (${XLAYER_TESTNET_CHAIN_ID})`} />
-              <AddressRow label="Mainnet status" value={`Blocked pending drand (${XLAYER_MAINNET_CHAIN_ID})`} />
+              <AddressRow label="Mainnet status" value={`Gated on verifiable randomness (${XLAYER_MAINNET_CHAIN_ID}) — see above`} />
               <AddressRow label="Hook" value={hasConfiguredHook ? shorten(XLAYER_PRIZE_POOL_HOOK_ADDRESS) : "Not configured"} href={hasConfiguredHook ? xLayerExplorerAddress(XLAYER_PRIZE_POOL_HOOK_ADDRESS) : undefined} />
               <AddressRow label="Swap router" value={isAddress(XLAYER_PRIZE_POOL_ROUTER_ADDRESS) ? shorten(XLAYER_PRIZE_POOL_ROUTER_ADDRESS) : "Not configured"} href={isAddress(XLAYER_PRIZE_POOL_ROUTER_ADDRESS) ? xLayerExplorerAddress(XLAYER_PRIZE_POOL_ROUTER_ADDRESS) : undefined} />
               <AddressRow label="PoolManager" value={isAddress(XLAYER_POOL_MANAGER_ADDRESS) ? shorten(XLAYER_POOL_MANAGER_ADDRESS) : "Not configured"} href={isAddress(XLAYER_POOL_MANAGER_ADDRESS) ? xLayerExplorerAddress(XLAYER_POOL_MANAGER_ADDRESS) : undefined} />
@@ -378,7 +471,7 @@ export function PrizePoolDashboard() {
 
           <div className="flex flex-col gap-4 border-t border-white/[0.06] pt-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
             <span className="inline-flex items-center gap-2"><Clock3 className="h-3.5 w-3.5" /> Testnet demo · no real-value draws</span>
-            <span>Base remains the product home · X Layer is the experimental second engine</span>
+            <span>One no-loss mechanism, two engines · Base is the live home, X Layer is the DEX-native one</span>
           </div>
 
           <div className="grid gap-3 border-t border-white/[0.06] pt-5 sm:grid-cols-3">
@@ -403,9 +496,31 @@ export function PrizePoolDashboard() {
   );
 }
 
+// ─── Testnet funding hint ─────────────────────────────────────────────────────
+//
+// The stranger journey dies here if it dies anywhere: a freshly connected wallet
+// has no testnet OKB (gas) or USDC_TEST. The official OKX faucet issues both, so
+// every write surface shows the balance and the funding path inline rather than
+// letting the first transaction revert with an RPC error.
+
+function TestnetFundsHint({ balance, accentClass }: { balance: number; accentClass: string }) {
+  return (
+    <p className="mb-3 flex flex-wrap items-center gap-x-1.5 text-xs text-slate-500">
+      <span>
+        Balance: {balance.toLocaleString(undefined, { maximumFractionDigits: 2 })} USDC_TEST
+      </span>
+      <span aria-hidden>·</span>
+      <a href={XLAYER_FAUCET_URL} target="_blank" rel="noreferrer" className={`inline-flex min-h-11 items-center gap-1 font-semibold transition touch-manipulation sm:min-h-0 ${accentClass}`}>
+        {balance <= 0 ? "Claim testnet OKB + USDC" : "Top up at the X Layer faucet"}
+        <ExternalLink className="h-3 w-3" />
+      </a>
+    </p>
+  );
+}
+
 // ─── Deposit principal (capability-gated) ─────────────────────────────────────
 
-function DepositPrincipalSection() {
+function DepositPrincipalSection({ usdcBalance }: { usdcBalance: number | null }) {
   const { canWrite, message } = useCapability('xlayer_prize_pool');
   const { deposit, execution, isActive, isSuccess, isError, reset } = useXLayerDeposit();
   const [amount, setAmount] = useState('5');
@@ -418,6 +533,10 @@ function DepositPrincipalSection() {
     const parsed = parseFloat(amount);
     if (!parsed || parsed <= 0) {
       setError('Enter a valid USDC amount');
+      return;
+    }
+    if (usdcBalance !== null && parsed > usdcBalance) {
+      setError('Not enough testnet USDC — claim USDC_TEST from the X Layer faucet below.');
       return;
     }
     const result = await deposit({ amountUsdc: amount });
@@ -444,6 +563,9 @@ function DepositPrincipalSection() {
             Lossless path: USDC becomes shares. Your principal stays redeemable between epochs.
           </p>
           {message && <p className="text-xs text-amber-300/80 mb-3">{message}</p>}
+          {usdcBalance !== null && (
+            <TestnetFundsHint balance={usdcBalance} accentClass="text-cyan-300 hover:text-cyan-200" />
+          )}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-3">
             <div className="flex-1">
               <label className="mb-1 block text-xs text-slate-400">Amount (USDC)</label>
@@ -487,7 +609,7 @@ function DepositPrincipalSection() {
 
 // ─── Join via swap (capability-gated) ─────────────────────────────────────────
 
-function JoinPoolSection() {
+function JoinPoolSection({ usdcBalance }: { usdcBalance: number | null }) {
   const { canWrite, message } = useCapability('xlayer_prize_pool');
   const { join, execution, isActive, isSuccess, isError, reset } = useXLayerJoin();
   const [amount, setAmount] = useState('10');
@@ -501,6 +623,10 @@ function JoinPoolSection() {
     const parsed = parseFloat(amount);
     if (!parsed || parsed <= 0) {
       setJoinError('Enter a valid USDC amount');
+      return;
+    }
+    if (usdcBalance !== null && parsed > usdcBalance) {
+      setJoinError('Not enough testnet USDC — claim USDC_TEST from the X Layer faucet below.');
       return;
     }
     const result = await join({ amountUsdc: amount });
@@ -530,6 +656,9 @@ function JoinPoolSection() {
           </p>
           {message && (
             <p className="text-xs text-amber-300/80 mb-3">{message}</p>
+          )}
+          {usdcBalance !== null && (
+            <TestnetFundsHint balance={usdcBalance} accentClass="text-emerald-300 hover:text-emerald-200" />
           )}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-3">
             <div className="flex-1">

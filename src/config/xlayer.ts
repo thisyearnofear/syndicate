@@ -27,6 +27,13 @@ export const xLayerTestnet = defineChain({
 export const XLAYER_TESTNET_EXPLORER_URL =
   'https://www.oklink.com/x-layer-test';
 
+/**
+ * Official OKX faucet: issues testnet OKB (gas) and USDC_TEST / USDG / USD₮0.
+ * This is the only supported funding path for the testnet demo — the pool's
+ * deposit token (0xcb8b…c79d) is what this faucet mints.
+ */
+export const XLAYER_FAUCET_URL = 'https://web3.okx.com/xlayer/faucet';
+
 export const XLAYER_TESTNET_USDC_ADDRESS =
   (process.env.NEXT_PUBLIC_XLAYER_TESTNET_USDC_ADDRESS || '') as Address;
 

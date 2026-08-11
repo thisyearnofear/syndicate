@@ -23,10 +23,14 @@ Judging-criteria mapping:
 |---|---|
 | AI application | Agent loop with a tool registry, HITL gating on draw execution, and persisted task memory (`src/services/agents/tools/`, `/xlayer` agent panel) — not a chat wrapper |
 | X Layer integration | 5 contracts live on testnet 1952 since 2026-08-09 (table in `docs/X_LAYER.md`); write paths gated and receipt-verified |
-| Product completeness | Shared design system (`docs/DESIGN.md`), reveal grammar, receipt-moment ceremonies, state grammar; Base product live today |
+| User value | No-loss mechanics; drawings funded by surcharges/yield, principal redeemable |
+| Innovation | "The DEX is the lottery": prize pool funded by trading surcharges inside the DEX router, not a side contract |
+| Product completeness | Shared design system (`docs/DESIGN.md`), reveal grammar, receipt-moment ceremonies, state grammar; `/xlayer` presents as a live product (story block + mainnet-commitment section, shipped 2026-08-11) — deliberately *not* labeled as a hackathon entry; Base product live today |
 | User value | No-loss mechanics; drawings funded by surcharges/yield, principal redeemable |
 | Innovation | "The DEX is the lottery": prize pool funded by trading surcharges inside the DEX router, not a side contract |
 | Ecosystem contribution | Public repo, operator runbooks, and the randomness design (Section 3) usable by every future lottery on X Layer |
+
+> Win thesis (revised 2026-08-11): we do not out-package the competition — we out-ship it. The page and the pitch are aimed at real users and a real usage trail (working hook, on-chain activity, adoption path), not at contest presentation. Anything that reads as "made for judges" is a liability under that thesis.
 
 ## 3. Randomness story (the question judges will probe)
 
@@ -86,7 +90,7 @@ Recording: Loom or ffmpeg+QuickTime; keep 60fps if possible. If the demo loop is
 ## 8. Timeline (owner-tagged backwards from deadline)
 
 - **Aug 11 (today):** randomness design doc ✅ (this commit); EIP-2537 precompile probe on 1952 ✅ (precompiles present — primary path confirmed); package doc ✅.
-- **Aug 12–14:** agent-loop polish ✅ (shipped 2026-08-11 in `b06dde3`: Steps|Transcript tabs, persisted audit transcript, `agent.*` observability events, full rationale + warnings, gate chips, explorer receipt links); record demo video v1.
+- **Aug 12–14:** agent-loop polish ✅ (shipped 2026-08-11 in `b06dde3`: Steps|Transcript tabs, persisted audit transcript, `agent.*` observability events, full rationale + warnings, gate chips, explorer receipt links); `/xlayer` framing ✅ (2026-08-11: story block — agent treasurer + receipt honesty, mainnet-commitment/randomness section, footer recast as two engines of one mechanism; framed as a live product, not a contest entry); record demo video v1.
 - **Aug 15–16:** X account creation + 3 seed posts; cut final video; screenshots.
 - **Aug 17–18:** internal review against judging criteria; fill Google Form draft offline once more; fix highest-signal gaps only.
 - **Aug 19–20:** final QA pass; rehearse answers for judge Q&A (randomness, custody, failure modes).

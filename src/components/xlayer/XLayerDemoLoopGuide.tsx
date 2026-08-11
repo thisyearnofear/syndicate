@@ -1,8 +1,18 @@
 'use client';
 
-import { Check, Circle } from 'lucide-react';
+import { Check, Circle, ExternalLink } from 'lucide-react';
 import { useCapability } from '@/hooks/useCapability';
 import { CompactCard } from '@/shared/components/premium/CompactLayout';
+import { XLAYER_FAUCET_URL } from '@/config/xlayer';
+
+type GuideStep = {
+  id: string;
+  done: boolean;
+  label: string;
+  detail: string;
+  /** Optional outbound action (e.g. the faucet) for steps a stranger can act on. */
+  href?: string;
+};
 
 /**
  * Live demo checklist for the X Layer end-to-end loop.
@@ -25,14 +35,15 @@ export function XLayerDemoLoopGuide({
 }) {
   const { canWrite } = useCapability('xlayer_prize_pool');
 
-  const steps = [
+  const steps: GuideStep[] = [
     {
-      id: 'writes',
+      id: 'funds',
       done: canWrite,
-      label: 'Testnet writes enabled',
+      label: 'Get testnet funds',
       detail: canWrite
-        ? 'Deposit / join / fundPot are available.'
-        : 'Set NEXT_PUBLIC_XLAYER_WRITES_ENABLED=true and restart.',
+        ? 'Claim OKB (gas) + USDC_TEST from the X Layer faucet, then deposit or join below.'
+        : 'This deployment is read-only — deposits and swaps are gated off by the operator.',
+      href: canWrite ? XLAYER_FAUCET_URL : undefined,
     },
     {
       id: 'shares',
@@ -44,7 +55,7 @@ export function XLayerDemoLoopGuide({
       id: 'pot',
       done: potBalanceUsdc >= minPotUsdc && minPotUsdc > 0,
       label: 'Pot ≥ minimum',
-      detail: 'Owner fundPot or accrue swap surcharges.',
+      detail: 'Every join-via-swap accrues surcharge; the draw opens once the pot clears the minimum.',
     },
     {
       id: 'draw',
@@ -55,8 +66,8 @@ export function XLayerDemoLoopGuide({
     {
       id: 'resolve',
       done: drawResolved || drawClaimed,
-      label: 'Oracle → fulfill',
-      detail: 'setDemoOracle then fulfillRandomness.',
+      label: 'Randomness fulfills',
+      detail: 'Demo oracle resolves the draw (operator-signed, testnet only — see the launch gate above).',
     },
     {
       id: 'claim',
@@ -76,7 +87,7 @@ export function XLayerDemoLoopGuide({
             Demo loop
           </p>
           <p className="mt-1 text-sm text-slate-300">
-            Experimental X Layer path — Base remains the product home.
+            The X Layer engine, live on testnet — walk the loop end to end.
           </p>
         </div>
         <span className="shrink-0 rounded-full bg-white/5 px-2.5 py-1 text-xs text-slate-400">
@@ -96,6 +107,16 @@ export function XLayerDemoLoopGuide({
             <div className="min-w-0">
               <p className={`text-sm font-medium ${step.done ? 'text-emerald-200' : 'text-white'}`}>
                 {step.label}
+                {step.href && (
+                  <a
+                    href={step.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="ml-2 inline-flex items-center gap-1 font-semibold text-cyan-300 transition hover:text-cyan-200"
+                  >
+                    Open faucet <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
               </p>
               <p className="text-xs leading-5 text-slate-500">{step.detail}</p>
             </div>
