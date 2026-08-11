@@ -12,24 +12,34 @@ import UnifiedModal from './modal/UnifiedModal';
 import WalletConnectionOptions from './wallet/WalletConnectionOptions';
 import {
   Ticket, Users, TrendingUp, Menu, X,
-  ArrowLeftRight, LayoutDashboard, Settings, ChevronDown, FlaskConical,
+  ArrowLeftRight, LayoutDashboard, Settings, ChevronDown, Bot,
 } from 'lucide-react';
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
-const PRIMARY_NAV = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  /** Small status chip (e.g. "Testnet") rendered next to the label. */
+  flag?: string;
+  requiresWallet?: boolean;
+}
+
+const PRIMARY_NAV: NavItem[] = [
   { href: '/', label: 'Play', icon: Ticket },
   { href: '/vaults', label: 'Grow', icon: TrendingUp },
   { href: '/coordinate', label: 'Coordinate', icon: Users },
-] as const;
+  // Experimental engine, framed by what it does (AI-run prize pool), not by
+  // chain jargon. Always flagged as testnet (honesty contract).
+  { href: '/xlayer', label: 'Agent Pool', icon: Bot, flag: 'Testnet' },
+];
 
-const SECONDARY_NAV = [
+const SECONDARY_NAV: NavItem[] = [
   { href: '/portfolio', label: 'Portfolio', icon: LayoutDashboard, requiresWallet: true },
   { href: '/bridge', label: 'Fund', icon: ArrowLeftRight },
-  // Experimental engine: visible but always flagged as testnet (honesty contract).
-  { href: '/xlayer', label: 'X Layer', icon: FlaskConical, flag: 'Testnet' },
   { href: '/settings', label: 'Settings', icon: Settings },
-] as const;
+];
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
@@ -151,6 +161,11 @@ export default function Navigation({ className = '' }: NavigationProps) {
                   >
                     <Icon className="w-4 h-4" />
                     {item.label}
+                    {'flag' in item && (
+                      <span className="rounded-full border border-amber-400/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300/80">
+                        {item.flag}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
@@ -287,6 +302,11 @@ export default function Navigation({ className = '' }: NavigationProps) {
                 >
                   <Icon className="w-4 h-4" />
                   {item.label}
+                  {'flag' in item && (
+                    <span className="ml-auto rounded-full border border-amber-400/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300/80">
+                      {item.flag}
+                    </span>
+                  )}
                 </Link>
               );
             })}

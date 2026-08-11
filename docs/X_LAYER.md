@@ -1,6 +1,6 @@
 # X Layer Prize Pool Hook
 
-**Status:** Testnet deployed on X Layer chain **1952** (Build X AI Season entry, closes 2026-08-21). `/xlayer` supports a live demo loop (deposit / swap join / fundPot / agent HITL draw) when `NEXT_PUBLIC_XLAYER_WRITES_ENABLED=true`. Mainnet randomness path **designed** (drand + permissionless relay with bonded-relay fallback — see Randomness decision) pending precompile verification and independent review.
+**Status:** Testnet deployed on X Layer chain **1952** (Build X AI Season entry, closes 2026-08-21). `/xlayer` leads with a guided stranger walkthrough (connect → switch → faucet → shares → agent) plus the agent loop (deposit / swap join / fundPot / HITL draw) when `NEXT_PUBLIC_XLAYER_WRITES_ENABLED=true`. A scheduled operator keeper (daily cron, full-epoch chaining per tick) keeps the pool alive between visitors and persists every transition server-side; the page replays the latest operator run publicly (no wallet needed). Mainnet randomness path **designed** (drand + permissionless relay with bonded-relay fallback — see Randomness decision) pending precompile verification and independent review.
 
 X Layer is an experimental second engine for Syndicate. **Base/Megapot remains the product home.** The X Layer design moves the game into a Uniswap v4 hook: trading surcharges fund a prize pot, depositor shares set draw odds, and principal remains redeemable between draws.
 
@@ -25,7 +25,11 @@ FWA is inspiration for weighted selection, FIFO snapshots, and keep-or-exit dyna
 - `script/DeployPrizePoolHook.s.sol` — deploy the hook stack (precomputes CREATE2 salt before broadcast; optional `HOOK_SALT`).
 - `src/config/xlayer.ts` — chain, address, ABI, and explorer helpers.
 - `src/app/xlayer/page.tsx` — prize pool dashboard route.
-- `src/components/xlayer/PrizePoolDashboard.tsx` — pot, shares, draw, surcharge, deposit/join, demo checklist.
+- `src/components/xlayer/PrizePoolDashboard.tsx` — pot, shares, draw, surcharge; all reads poll on a 12s interval.
+- `src/components/xlayer/XLayerGuidedFlow.tsx` — interactive stranger walkthrough (connect → switch chain → faucet → deposit or swap join → agent), each step auto-checking from live on-chain state. Surfaced in primary nav as "Agent Pool" (Testnet flag) and from the homepage Agent Pool section.
+- `src/components/xlayer/XLayerOperatorRunReplay.tsx` — public replay of the latest operator run; no wallet required.
+- `src/services/jobs/xlayerKeeperProcessor.ts` + `src/app/api/crons/xlayer-keeper/route.ts` — hourly operator keeper (see Operator keeper below).
+- `src/lib/db/migrations/016-add-agent-run-events.sql` + `src/lib/db/repositories/agentRunRepository.ts` — server-side persistence for keeper transitions; `GET /api/agent/xlayer/latest-run` serves the latest session for replay.
 - `src/services/xlayer/useXLayerDeposit.ts` — principal deposit + owner `fundPot`.
 - `src/services/agents/tools/` — shared tool registry (X Layer + Base yield/autopilot).
 
@@ -143,6 +147,17 @@ Record a short screen capture of this loop for Build X submission. Do not use th
 Base product-home tools (`base.getYieldSnapshot`, `base.planYieldSpend`, `base.proposeAutopilotPolicy`) live in the same registry via `POST /api/agent/base/plan` (canonical advice + plan). `POST /api/agent/autopilot/advice` is a thin compatibility wrapper over the same resolver. Client hooks share `useAgentLoop`. MetaMask permission approval remains the Base write boundary.
 
 Legacy advice endpoint `POST /api/agent/xlayer/advice` remains available. Optional: `VENICE_API_KEY` for live Venice plans.
+
+## Operator keeper (cron)
+
+The interactive panel is human-in-the-loop; a stranger who deposits still cannot open draws (owner/oracle/winner gates). So the pool stays alive between visitors, `GET /api/crons/xlayer-keeper` runs on a schedule (Vercel Cron) as the operator-side complement:
+
+- **Per tick — full-cycle chaining:** the demo flow has no waiting requirement, so one tick runs every stage the current state allows: open draw → seed demo oracle → `fulfillRandomness` → claim (only when the operator actually won), re-reading on-chain state between stages. One cron run completes a whole epoch — important on Hobby tier, where crons are daily only. Topping up via owner `fundPot` (with ERC-20 approval) happens first when the pot is below the minimum. Capped at 6 transactions / 4 stages per tick.
+- **Fail-closed:** without `XLAYER_KEEPER_PRIVATE_KEY` the route reports `attempted: false` and records nothing. The key must be a **testnet-only** operator key (it owns the hook and oracle and holds only testnet funds). `XLAYER_KEEPER_FUND_POT_USDC` sets the top-up size (default 25; the shortfall is always covered).
+- **Receipt-verified:** every action waits for its receipt and records `fail` on revert — never a fabricated hash.
+- **Persisted + public:** transitions land in `agent_run_events` (migration 016; run `pnpm db:migrate`). `GET /api/agent/xlayer/latest-run` returns the most recent session, replayed read-only on `/xlayer` — judges and strangers can audit the agent with no wallet.
+
+Cron auth uses the shared `CRON_SECRET` bearer pattern. Schedule in `vercel.json`: `0 0 * * *` (Hobby tier is daily-only). For a livelier cadence during judging, `.github/workflows/xlayer-keeper.yml` pings the same endpoint hourly (inert until the `KEEPER_PING_URL` and `CRON_SECRET` repo secrets are set; GitHub scheduled jobs can lag 10–30m). Manual trigger for demos: `curl -H "Authorization: Bearer $CRON_SECRET" <app>/api/crons/xlayer-keeper`.
 
 ## Roadmap and safety gates
 

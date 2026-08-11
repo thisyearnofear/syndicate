@@ -350,6 +350,34 @@ export default function Home() {
           </div>
         </section>
 
+        {/* ─── AGENT POOL (X Layer testnet) ───────────────────────────────── */}
+        <section className="mb-12">
+          <div className="max-w-3xl mx-auto rounded-2xl border border-cyan-400/20 bg-cyan-500/[0.04] hover:border-cyan-400/35 transition-colors duration-300 p-8 md:p-10 text-center">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-300/80 mb-4">
+              X Layer testnet
+            </span>
+            <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-cyan-200 via-white to-cyan-200 bg-clip-text text-transparent mb-3">
+              An AI agent is the treasurer of this prize pool.
+            </p>
+            <p className="text-gray-400 mb-2">
+              Swap fees fund the pot. Principal stays redeemable. The agent proposes, you approve, receipts prove it.
+            </p>
+            <p className="text-xs text-gray-600 mb-4">
+              The experimental DEX-native engine — live contracts, a scheduled keeper loop, and a public run transcript.
+            </p>
+            <Link href="/xlayer">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="border border-white/10 text-gray-300 hover:text-white hover:border-white/20"
+              >
+                Watch the agent run
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
+          </div>
+        </section>
+
         {/* ─── PRIVACY ──────────────────────────────────────────────────────── */}
         <section className="mb-12">
           <div className="max-w-3xl mx-auto rounded-2xl border border-violet-400/20 bg-violet-500/[0.04] hover:border-violet-400/35 transition-colors duration-300 p-8 md:p-10 text-center">
@@ -358,9 +386,6 @@ export default function Home() {
             </p>
             <p className="text-gray-400 mb-2">
               Coordinate privately, win publicly.
-            </p>
-            <p className="text-xs text-gray-600 mb-4">
-              The experimental DEX-native engine lives on <Link href="/xlayer" className="text-cyan-300/80 hover:text-cyan-200 underline underline-offset-4 decoration-dotted">X Layer testnet</Link>.
             </p>
             <DecryptLine
               text="Encrypted balances. Selective reveal. Your rules."
