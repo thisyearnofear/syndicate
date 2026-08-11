@@ -220,6 +220,31 @@ export async function runXLayerKeeper(): Promise<XLayerKeeperRunResult> {
     };
   };
 
+  /**
+   * The public testnet RPC can serve state from before a just-confirmed
+   * tx (observed 2026-08-12: openDraw confirmed, next read still showed
+   * draw.open=false → a redundant openDraw reverted DrawAlreadyOpen).
+   * After a mutating stage, re-read until the expected effect is visible
+   * before chaining. If the node stays behind, stop honestly — the next
+   * tick resumes the chain from the true state.
+   */
+  const waitForState = async (
+    expect: (s: KeeperState) => boolean,
+    what: string,
+    tries = 5,
+    delayMs = 2_500,
+  ): Promise<KeeperState | null> => {
+    for (let attempt = 0; attempt < tries; attempt++) {
+      const state = await readState();
+      if (expect(state)) return state;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+    await record('plan', 'RPC state lag — pausing chain', {
+      detail: `Node still shows pre-transaction state after ${tries} reads (${what}). Next tick continues from the true on-chain state.`,
+    });
+    return null;
+  };
+
   /** Oracle owner is stable per deployment — read once, not per stage. */
   let oracleOwner: Address | null | undefined;
 
@@ -241,7 +266,9 @@ export async function runXLayerKeeper(): Promise<XLayerKeeperRunResult> {
     await ensureAgentRunEventsTable();
 
     // Chain stages until the pool no longer progresses (stand-down) or the
-    // tick budget/stage cap is hit. State is re-read every stage.
+    // tick budget/stage cap is hit. State is re-read every stage, and after
+    // a mutating stage the next read waits out RPC lag.
+    let expectAfter: ((s: KeeperState) => boolean) | null = null;
     for (let stage = 0; stage < MAX_STAGES_PER_TICK; stage++) {
       if (!budgetLeft()) {
         await record('plan', 'Tick budget exhausted', {
@@ -249,7 +276,9 @@ export async function runXLayerKeeper(): Promise<XLayerKeeperRunResult> {
         });
         break;
       }
-      const state = await readState();
+      const state = expectAfter ? await waitForState(expectAfter, 'stage transition') : await readState();
+      if (!state) break; // node stayed behind — next tick resumes
+      expectAfter = null;
 
       // ── Stage: resolve an open draw ───────────────────────────────────
       if (state.drawOpen && !state.drawResolved) {
@@ -293,6 +322,7 @@ export async function runXLayerKeeper(): Promise<XLayerKeeperRunResult> {
           }),
         );
         if (!fulfillResult.ok) break;
+        expectAfter = (s) => s.drawResolved;
         continue; // resolved → next stage may claim
       }
 
@@ -315,6 +345,7 @@ export async function runXLayerKeeper(): Promise<XLayerKeeperRunResult> {
           }),
         );
         if (!claimResult.ok) break;
+        expectAfter = (s) => s.drawClaimed;
         continue; // claimed → next stage may open a fresh epoch
       }
 
@@ -416,6 +447,7 @@ export async function runXLayerKeeper(): Promise<XLayerKeeperRunResult> {
             }),
           );
           if (!depositResult.ok) break;
+          expectAfter = (s) => s.totalShares > 0n;
         }
       } else {
         await record('plan', 'Open next epoch', {
@@ -431,6 +463,7 @@ export async function runXLayerKeeper(): Promise<XLayerKeeperRunResult> {
         }),
       );
       if (!openResult.ok) break;
+      expectAfter = (s) => s.drawOpen && !s.drawResolved;
       continue; // freshly opened → next stage resolves immediately
     }
 
