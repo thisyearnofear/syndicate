@@ -86,7 +86,9 @@ export function XLayerOperatorRunReplay() {
       </div>
       <p className="mt-2 text-sm leading-6 text-slate-400">
         The operator keeper runs this pool on a schedule — server-signed, receipt-verified, and
-        persisted so anyone can audit it. No wallet needed to read this trail.
+        persisted so anyone can audit it. No wallet needed to read this trail. When the pool has no
+        depositors, the operator seeds an epoch with its own testnet principal (disclosed in the
+        record); winnings it claims recycle back into the pot.
       </p>
 
       {failed && (

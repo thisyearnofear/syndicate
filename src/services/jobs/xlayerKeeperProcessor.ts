@@ -81,6 +81,7 @@ interface KeeperState {
   epochId: bigint;
   winner: Address;
   potBalance: bigint;
+  totalShares: bigint;
   minPotForDraw: bigint;
   drawCooldown: bigint;
   lastDrawAt: bigint;
@@ -93,6 +94,12 @@ function defaultFundAmount(): bigint {
   const raw = process.env.XLAYER_KEEPER_FUND_POT_USDC ?? '25';
   const parsed = Number(raw);
   return parseUnits(Number.isFinite(parsed) && parsed > 0 ? raw : '25', 6);
+}
+
+function defaultDepositAmount(): bigint {
+  const raw = process.env.XLAYER_KEEPER_DEPOSIT_USDC ?? '5';
+  const parsed = Number(raw);
+  return parseUnits(Number.isFinite(parsed) && parsed > 0 ? raw : '5', 6);
 }
 
 export async function runXLayerKeeper(): Promise<XLayerKeeperRunResult> {
@@ -184,10 +191,11 @@ export async function runXLayerKeeper(): Promise<XLayerKeeperRunResult> {
   };
 
   const readState = async (): Promise<KeeperState> => {
-    const [drawRaw, potBalance, minPotForDraw, drawCooldown, lastDrawAt, hookOwner, oracleAddress, block] =
+    const [drawRaw, potBalance, totalShares, minPotForDraw, drawCooldown, lastDrawAt, hookOwner, oracleAddress, block] =
       await Promise.all([
         publicClient.readContract({ address: hook, abi: XLAYER_HOOK_ABI, functionName: 'draw' }),
         publicClient.readContract({ address: hook, abi: XLAYER_HOOK_ABI, functionName: 'potBalance' }),
+        publicClient.readContract({ address: hook, abi: XLAYER_HOOK_ABI, functionName: 'totalShares' }),
         publicClient.readContract({ address: hook, abi: XLAYER_HOOK_ABI, functionName: 'minPotForDraw' }),
         publicClient.readContract({ address: hook, abi: XLAYER_HOOK_ABI, functionName: 'drawCooldown' }),
         publicClient.readContract({ address: hook, abi: XLAYER_HOOK_ABI, functionName: 'lastDrawAt' }),
@@ -202,6 +210,7 @@ export async function runXLayerKeeper(): Promise<XLayerKeeperRunResult> {
       epochId: drawRaw[DRAW_EPOCH_ID] as bigint,
       winner: drawRaw[DRAW_WINNER] as Address,
       potBalance: potBalance as bigint,
+      totalShares: totalShares as bigint,
       minPotForDraw: minPotForDraw as bigint,
       drawCooldown: drawCooldown as bigint,
       lastDrawAt: lastDrawAt as bigint,
@@ -309,7 +318,7 @@ export async function runXLayerKeeper(): Promise<XLayerKeeperRunResult> {
         continue; // claimed → next stage may open a fresh epoch
       }
 
-      // ── Stage: idle — open the next epoch (funding first if needed) ───
+      // ── Stage: idle — open the next epoch (funding/entries first) ────
       const cooldownEndsAt = state.lastDrawAt + state.drawCooldown;
       if (state.lastDrawAt > 0n && state.blockTimestamp < cooldownEndsAt) {
         const waitSeconds = Number(cooldownEndsAt - state.blockTimestamp);
@@ -319,16 +328,28 @@ export async function runXLayerKeeper(): Promise<XLayerKeeperRunResult> {
         break;
       }
 
-      if (state.potBalance < state.minPotForDraw) {
-        if (state.hookOwner.toLowerCase() !== operator) {
-          await record('plan_failed', 'Open next epoch', {
-            detail: `Pot ${state.potBalance} is below the minimum ${state.minPotForDraw} and keeper ${account.address} is not the hook owner — cannot fundPot.`,
-          });
-          break;
-        }
-        const shortfall = state.minPotForDraw - state.potBalance;
-        const fundAmount = defaultFundAmount() > shortfall ? defaultFundAmount() : shortfall;
+      // openDraw reverts NoEntries when nobody holds shares — the keeper
+      // seeds the pool with its own principal so the demo loop is
+      // self-sustaining. Disclosed in the run record and on the replay card:
+      // the operator becomes a depositor and can win; winnings are claimed
+      // and recycled into the testnet pot.
+      const needsFund = state.potBalance < state.minPotForDraw;
+      const needsDeposit = state.totalShares === 0n;
 
+      if (needsFund && state.hookOwner.toLowerCase() !== operator) {
+        await record('plan_failed', 'Open next epoch', {
+          detail: `Pot ${state.potBalance} is below the minimum ${state.minPotForDraw} and keeper ${account.address} is not the hook owner — cannot fundPot.`,
+        });
+        break;
+      }
+
+      const shortfall = needsFund ? state.minPotForDraw - state.potBalance : 0n;
+      const fundAmount =
+        needsFund && defaultFundAmount() > shortfall ? defaultFundAmount() : shortfall;
+      const depositAmount = needsDeposit ? defaultDepositAmount() : 0n;
+      const needed = fundAmount + depositAmount;
+
+      if (needed > 0n) {
         const [usdcBalance, allowance] = await Promise.all([
           publicClient.readContract({
             address: usdc,
@@ -344,41 +365,61 @@ export async function runXLayerKeeper(): Promise<XLayerKeeperRunResult> {
           }),
         ]);
 
-        if ((usdcBalance as bigint) < fundAmount) {
-          await record('plan_failed', 'Fund pot', {
-            detail: `Keeper USDC_TEST balance ${usdcBalance} is below the fund amount ${fundAmount} — top up from the X Layer faucet.`,
+        if ((usdcBalance as bigint) < needed) {
+          await record('plan_failed', needsFund ? 'Fund pot' : 'Seed pool entries', {
+            detail: `Keeper USDC_TEST balance ${usdcBalance} is below the required ${needed} — top up from the X Layer faucet.`,
           });
           break;
         }
 
-        await record('plan', 'Fund pot and open next epoch', {
-          detail: `Pot below minimum; funding ${fundAmount} (shortfall ${shortfall}) then opening the draw.`,
+        const planParts: string[] = [];
+        if (needsFund) planParts.push(`funding ${fundAmount} to the pot (shortfall ${shortfall})`);
+        if (needsDeposit)
+          planParts.push(
+            `depositing ${depositAmount} of operator principal — disclosed: no depositors yet, and openDraw reverts NoEntries without shares`,
+          );
+        await record('plan', 'Fund, seed entries, open next epoch', {
+          detail: `${planParts.join('; ')}.`,
         });
 
-        if ((allowance as bigint) < fundAmount) {
-          const approveResult = await execute('xlayer.approveUsdc', 'Approve USDC for fundPot', () =>
+        if ((allowance as bigint) < needed) {
+          const approveResult = await execute('xlayer.approveUsdc', 'Approve USDC spend', () =>
             walletClient.writeContract({
               address: usdc,
               abi: XLAYER_ERC20_ABI,
               functionName: 'approve',
-              args: [hook, fundAmount],
+              args: [hook, needed],
             }),
           );
           if (!approveResult.ok) break;
         }
 
-        const fundResult = await execute('xlayer.fundPot', 'Fund pot (owner)', () =>
-          walletClient.writeContract({
-            address: hook,
-            abi: XLAYER_KEEPER_HOOK_ABI,
-            functionName: 'fundPot',
-            args: [fundAmount],
-          }),
-        );
-        if (!fundResult.ok) break;
+        if (needsFund) {
+          const fundResult = await execute('xlayer.fundPot', 'Fund pot (owner)', () =>
+            walletClient.writeContract({
+              address: hook,
+              abi: XLAYER_KEEPER_HOOK_ABI,
+              functionName: 'fundPot',
+              args: [fundAmount],
+            }),
+          );
+          if (!fundResult.ok) break;
+        }
+
+        if (needsDeposit) {
+          const depositResult = await execute('xlayer.deposit', 'Deposit operator principal', () =>
+            walletClient.writeContract({
+              address: hook,
+              abi: XLAYER_KEEPER_HOOK_ABI,
+              functionName: 'deposit',
+              args: [depositAmount],
+            }),
+          );
+          if (!depositResult.ok) break;
+        }
       } else {
         await record('plan', 'Open next epoch', {
-          detail: 'Cooldown elapsed and pot clears the minimum.',
+          detail: 'Cooldown elapsed, pot clears the minimum, and shares exist.',
         });
       }
 
