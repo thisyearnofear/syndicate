@@ -3,10 +3,11 @@
 /**
  * GUIDED FLOW — the interactive spine of /xlayer.
  *
- * Replaces the passive demo checklist + scattered connect/switch/deposit
- * cards with one ordered walkthrough a stranger can complete top to bottom:
- * connect → switch chain → faucet funds → get shares → watch the agent.
- * Each step auto-checks from live on-chain state and carries its own CTA.
+ * One ordered walkthrough a stranger completes top to bottom: connect →
+ * switch chain → faucet funds → shares → agent. Progressive disclosure:
+ * completed steps collapse to a checked line, future steps show only a
+ * dimmed title, and exactly one step — the next action — is ever open.
+ * Each step auto-checks from live on-chain state (12s polling upstream).
  *
  * Honesty contract preserved: when writes are gated (read-only deployment)
  * the share step says so instead of hiding; faucet friction is surfaced as
@@ -18,10 +19,8 @@ import {
   Bot,
   Check,
   ChevronDown,
-  Circle,
   ExternalLink,
   Loader,
-  LockKeyhole,
   Sparkles,
 } from 'lucide-react';
 import { formatUnits } from 'viem';
@@ -52,12 +51,16 @@ function StepShell({
   done,
   active,
   children,
+  doneContent,
 }: {
   index: number;
   title: string;
   done: boolean;
+  /** The one open step. Future steps render a dimmed title only. */
   active: boolean;
   children?: React.ReactNode;
+  /** Optional compressed content shown after completion (e.g. add-more). */
+  doneContent?: React.ReactNode;
 }) {
   return (
     <li className="flex gap-3">
@@ -69,28 +72,44 @@ function StepShell({
         ) : (
           <span
             className={`flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-bold ${
-              active ? 'border-cyan-400/50 bg-cyan-500/15 text-cyan-200' : 'border-white/15 text-slate-500'
+              active ? 'border-cyan-400/50 bg-cyan-500/15 text-cyan-200' : 'border-white/10 text-slate-600'
             }`}
           >
-            {active ? index : <Circle className="h-3 w-3" />}
+            {index}
           </span>
         )}
       </span>
       <div className="min-w-0 flex-1">
-        <p className={`text-sm font-semibold ${done ? 'text-emerald-200' : 'text-white'}`}>{title}</p>
-        {children && <div className="mt-2">{children}</div>}
+        <p
+          className={`text-sm font-semibold ${
+            done ? 'text-emerald-200' : active ? 'text-white' : 'text-slate-500'
+          }`}
+        >
+          {title}
+        </p>
+        {done && doneContent}
+        {!done && active && <div className="mt-2">{children}</div>}
       </div>
     </li>
   );
 }
 
-function FundsHint({ usdcBalance, nativeBalance }: { usdcBalance: number | null; nativeBalance: number | null }) {
+function FundsHint({
+  usdcBalance,
+  nativeBalance,
+}: {
+  usdcBalance: number | null;
+  nativeBalance: number | null;
+}) {
   return (
     <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-slate-500">
       <span>
         Balance:{' '}
-        {usdcBalance === null ? '—' : `${usdcBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} USDC_TEST`}
-        {nativeBalance !== null && ` · ${nativeBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })} OKB`}
+        {usdcBalance === null
+          ? '—'
+          : `${usdcBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} USDC_TEST`}
+        {nativeBalance !== null &&
+          ` · ${nativeBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })} OKB`}
       </span>
       <span aria-hidden>·</span>
       <a
@@ -106,7 +125,13 @@ function FundsHint({ usdcBalance, nativeBalance }: { usdcBalance: number | null;
 }
 
 /** Inline share forms — deposit is the default path, swap is the advanced one. */
-function ShareForms({ usdcBalance, nativeBalance }: { usdcBalance: number | null; nativeBalance: number | null }) {
+function ShareForms({
+  usdcBalance,
+  nativeBalance,
+}: {
+  usdcBalance: number | null;
+  nativeBalance: number | null;
+}) {
   const { canWrite, message } = useCapability('xlayer_prize_pool');
   const depositTx = useXLayerDeposit();
   const joinTx = useXLayerJoin();
@@ -209,19 +234,21 @@ function ShareForms({ usdcBalance, nativeBalance }: { usdcBalance: number | null
               {error}
             </p>
           )}
-          {depositTx.isError && depositTx.execution.status === 'failed' && !depositTx.execution.error.userCancelled && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs text-red-300"
-              onClick={() => {
-                depositTx.reset();
-                setError(null);
-              }}
-            >
-              Try again
-            </Button>
-          )}
+          {depositTx.isError &&
+            depositTx.execution.status === 'failed' &&
+            !depositTx.execution.error.userCancelled && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-red-300"
+                onClick={() => {
+                  depositTx.reset();
+                  setError(null);
+                }}
+              >
+                Try again
+              </Button>
+            )}
         </>
       )}
 
@@ -290,19 +317,21 @@ function ShareForms({ usdcBalance, nativeBalance }: { usdcBalance: number | null
                   {joinError}
                 </p>
               )}
-              {joinTx.isError && joinTx.execution.status === 'failed' && !joinTx.execution.error.userCancelled && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mt-2 text-xs text-red-300"
-                  onClick={() => {
-                    joinTx.reset();
-                    setJoinError(null);
-                  }}
-                >
-                  Try again
-                </Button>
-              )}
+              {joinTx.isError &&
+                joinTx.execution.status === 'failed' &&
+                !joinTx.execution.error.userCancelled && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2 text-xs text-red-300"
+                    onClick={() => {
+                      joinTx.reset();
+                      setJoinError(null);
+                    }}
+                  >
+                    Try again
+                  </Button>
+                )}
             </>
           )}
         </div>
@@ -324,21 +353,18 @@ export function XLayerGuidedFlow({
   drawClaimed,
 }: XLayerGuidedFlowProps) {
   const [busy, setBusy] = useState<'connect' | 'switch' | null>(null);
+  const [addMore, setAddMore] = useState(false);
 
   const hasShares = Boolean(userShares && userShares > 0n);
   const hasFunds =
     usdcBalance !== null && usdcBalance > 0 && (nativeBalance === null || nativeBalance > 0);
-  const agentEngaged = drawOpen || drawResolved || drawClaimed;
 
-  const steps = [
-    { done: isConnected },
-    { done: activeOnXLayer },
-    { done: hasFunds },
-    { done: hasShares },
-    { done: agentEngaged },
-  ];
-  const activeIndex = steps.findIndex((s) => !s.done);
+  // The four onboarding steps drive the counter; the agent step is the
+  // standing invitation once you're ready (it never "completes").
+  const steps = [{ done: isConnected }, { done: activeOnXLayer }, { done: hasFunds }, { done: hasShares }];
   const doneCount = steps.filter((s) => s.done).length;
+  const activeIndex = steps.findIndex((s) => !s.done);
+  const readyForAgent = activeIndex === -1;
 
   const handleConnect = async () => {
     setBusy('connect');
@@ -358,81 +384,85 @@ export function XLayerGuidedFlow({
   };
 
   return (
-    <CompactCard variant="premium" padding="lg" hover={false} className="border-cyan-400/25 bg-gradient-to-br from-cyan-500/[0.10] to-indigo-500/[0.05]">
+    <CompactCard variant="glass" padding="lg" hover={false} className="border-white/[0.08] bg-slate-950/50">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Try the loop</p>
-          <p className="mt-1 text-sm text-slate-300">
-            Five steps, about three minutes. Every money step is receipt-verified.
-          </p>
-        </div>
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Try the loop</p>
         <span className="shrink-0 rounded-full bg-white/5 px-2.5 py-1 text-xs text-slate-400">
-          {doneCount}/{steps.length}
+          {readyForAgent ? 'Ready' : `${doneCount}/4`}
         </span>
       </div>
 
-      <ol className="space-y-4">
+      <ol className="space-y-3">
         <StepShell index={1} title="Connect an EVM wallet" done={isConnected} active={activeIndex === 0}>
-          {!isConnected && (
-            <Button
-              variant="default"
-              size="sm"
-              className="min-h-11 bg-cyan-600 px-5 text-white touch-manipulation"
-              onClick={handleConnect}
-              disabled={busy !== null}
-            >
-              {busy === 'connect' ? <Loader className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
-              Connect wallet
-            </Button>
-          )}
+          <Button
+            variant="default"
+            size="sm"
+            className="min-h-11 bg-cyan-600 px-5 text-white touch-manipulation"
+            onClick={handleConnect}
+            disabled={busy !== null}
+          >
+            {busy === 'connect' ? <Loader className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+            Connect wallet
+          </Button>
         </StepShell>
 
         <StepShell index={2} title="Switch to X Layer testnet (1952)" done={activeOnXLayer} active={activeIndex === 1}>
-          {isConnected && !activeOnXLayer && (
-            <Button
-              variant="glass"
-              size="sm"
-              className="min-h-11 border-cyan-400/30 touch-manipulation"
-              onClick={handleSwitch}
-              disabled={busy !== null}
-            >
-              {busy === 'switch' ? <Loader className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
-              Switch network
-            </Button>
-          )}
+          <Button
+            variant="glass"
+            size="sm"
+            className="min-h-11 border-cyan-400/30 touch-manipulation"
+            onClick={handleSwitch}
+            disabled={busy !== null}
+          >
+            {busy === 'switch' ? <Loader className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+            Switch network
+          </Button>
         </StepShell>
 
         <StepShell index={3} title="Get testnet funds" done={hasFunds} active={activeIndex === 2}>
-          {isConnected && activeOnXLayer && (
-            <div className="space-y-1">
-              <FundsHint usdcBalance={usdcBalance} nativeBalance={nativeBalance} />
-              <p className="text-[11px] leading-4 text-slate-600">
-                OKB pays gas; USDC_TEST is the deposit token. Both come from the official faucet.
+          <div className="space-y-1">
+            <FundsHint usdcBalance={usdcBalance} nativeBalance={nativeBalance} />
+            <p className="text-[11px] leading-4 text-slate-600">
+              OKB pays gas; USDC_TEST is the deposit token. Both come from the official faucet.
+            </p>
+          </div>
+        </StepShell>
+
+        <StepShell
+          index={4}
+          title="Get shares (principal stays redeemable)"
+          done={hasShares}
+          active={activeIndex === 3}
+          doneContent={
+            <div className="mt-1">
+              <p className="text-xs text-slate-500">
+                {formatUnits(userShares ?? 0n, 6)} shares held.
               </p>
-            </div>
-          )}
-        </StepShell>
-
-        <StepShell index={4} title="Get shares (principal stays redeemable)" done={hasShares} active={activeIndex === 3}>
-          {isConnected && activeOnXLayer ? (
-            <div className="space-y-2">
-              {hasShares && (
-                <p className="text-xs leading-5 text-slate-400">
-                  {formatUnits(userShares ?? 0n, 6)} shares held. Deposit more below if you want better odds.
-                </p>
+              <button
+                type="button"
+                onClick={() => setAddMore((v) => !v)}
+                className="mt-1 inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-cyan-300 hover:text-cyan-200 touch-manipulation sm:min-h-0"
+                aria-expanded={addMore}
+              >
+                {addMore ? 'Hide deposit' : 'Deposit more'}
+                <ChevronDown className={`h-3 w-3 transition-transform ${addMore ? 'rotate-180' : ''}`} />
+              </button>
+              {addMore && (
+                <div className="mt-2">
+                  <ShareForms usdcBalance={usdcBalance} nativeBalance={nativeBalance} />
+                </div>
               )}
-              <ShareForms usdcBalance={usdcBalance} nativeBalance={nativeBalance} />
             </div>
-          ) : (
-            <p className="text-xs text-slate-500">Complete the steps above first.</p>
-          )}
+          }
+        >
+          <ShareForms usdcBalance={usdcBalance} nativeBalance={nativeBalance} />
         </StepShell>
 
-        <StepShell index={5} title="Watch the agent run the draw" done={agentEngaged} active={activeIndex === 4}>
+        <StepShell index={5} title="Watch the agent run the draw" done={false} active={readyForAgent}>
           <div className="space-y-2">
             <p className="text-xs leading-5 text-slate-400">
-              The agent plans the next keeper action, you approve it, then the receipt closes the loop.
-              A scheduled operator run also keeps epochs moving — its public transcript is below the panel.
+              Plan → approve → sign. A scheduled operator run keeps epochs moving too — its public
+              transcript is below the panel.
             </p>
             <a
               href="#xlayer-agent-panel"
@@ -441,10 +471,13 @@ export function XLayerGuidedFlow({
               <Bot className="h-3.5 w-3.5" />
               Go to the agent panel
             </a>
-            {!agentEngaged && (
-              <p className="flex items-center gap-1.5 text-[11px] text-slate-600">
-                <LockKeyhole className="h-3 w-3" />
-                HITL gated: nothing executes without your signature.
+            {(drawOpen || drawResolved || drawClaimed) && (
+              <p className="text-[11px] text-emerald-300/80">
+                {drawOpen
+                  ? 'An epoch is resolving right now — the orb above is flickering.'
+                  : drawResolved && !drawClaimed
+                    ? 'The current epoch is resolved and awaiting the winner claim.'
+                    : 'The pool is between epochs — the keeper opens the next one.'}
               </p>
             )}
           </div>

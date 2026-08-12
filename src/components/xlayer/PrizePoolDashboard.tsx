@@ -1,35 +1,32 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  Activity,
   ArrowRight,
   Beaker,
   Bot,
+  ChevronDown,
   Clock3,
   ExternalLink,
-  Gauge,
   LockKeyhole,
   Radio,
   Receipt,
-  RefreshCw,
   ShieldCheck,
   Sparkles,
   Trophy,
 } from "lucide-react";
 import { isAddress, type Address, formatUnits } from "viem";
 import { useBalance, useReadContract, useSwitchChain } from "wagmi";
-import { Button } from "@/shared/components/ui/Button";
-import {
-  CompactCard,
-  CompactGrid,
-} from "@/shared/components/premium/CompactLayout";
+import { CompactCard } from "@/shared/components/premium/CompactLayout";
 import { useUnifiedWallet } from "@/hooks/useUnifiedWallet";
 import { XLayerAgentPanel } from "@/components/xlayer/XLayerAgentPanel";
 import { XLayerGuidedFlow } from "@/components/xlayer/XLayerGuidedFlow";
 import { XLayerOperatorRunReplay } from "@/components/xlayer/XLayerOperatorRunReplay";
+import { RoundOrb, type RoundOrbState } from "@/components/motion/RoundOrb";
+import { BeamFrame } from "@/components/motion/BeamFrame";
 import { PageShell, PageHeader, ShellSection } from "@/components/layout/PageShell";
+import { ACCENTS } from "@/config/design";
 import {
   XLAYER_HOOK_ABI,
   XLAYER_HOOK_IS_CONFIGURED,
@@ -70,41 +67,6 @@ const formatDuration = (value: bigint | undefined) => {
 
 const shorten = (value: string) => `${value.slice(0, 6)}…${value.slice(-4)}`;
 
-function MetricCard({
-  label,
-  value,
-  detail,
-  icon: Icon,
-  accent,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  icon: typeof Activity;
-  accent: string;
-}) {
-  return (
-    <CompactCard
-      variant="glass"
-      padding="md"
-      hover={false}
-      className="group relative overflow-hidden border-white/[0.08] bg-slate-950/50"
-    >
-      <div className={`absolute -right-8 -top-8 h-24 w-24 rounded-full blur-2xl ${accent}`} />
-      <div className="relative flex items-start justify-between gap-4">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">{label}</p>
-          <p className="mt-3 text-2xl font-semibold tracking-tight text-white">{value}</p>
-          <p className="mt-1 text-xs text-slate-500">{detail}</p>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-white/[0.06] p-2.5 text-slate-300 transition group-hover:border-cyan-400/30 group-hover:text-cyan-200">
-          <Icon className="h-4 w-4" />
-        </div>
-      </div>
-    </CompactCard>
-  );
-}
-
 function AddressRow({ label, value, href }: { label: string; value: string; href?: string }) {
   return (
     <div className="flex items-start justify-between gap-3 border-b border-white/[0.06] py-3 last:border-0 last:pb-0 sm:items-center sm:gap-4">
@@ -128,6 +90,58 @@ function AddressRow({ label, value, href }: { label: string; value: string; href
   );
 }
 
+/**
+ * Disclosure — reference material behind one tap, per progressive
+ * disclosure. Default closed; the grid-rows trick animates height without
+ * layout work beyond the opened section.
+ */
+function Disclosure({
+  title,
+  subtitle,
+  children,
+  defaultOpen = false,
+}: {
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <CompactCard variant="glass" padding="lg" hover={false} className="border-white/[0.08] bg-slate-950/50">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex min-h-11 w-full items-center justify-between gap-3 text-left touch-manipulation"
+      >
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">{title}</p>
+          <p className="mt-1 text-sm font-semibold text-white">{subtitle}</p>
+        </div>
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-slate-500 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      <div
+        className={`grid transition-all duration-300 ease-out ${
+          open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+        }`}
+      >
+        <div className="overflow-hidden">{children}</div>
+      </div>
+    </CompactCard>
+  );
+}
+
+function Chip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-slate-400">
+      {children}
+    </span>
+  );
+}
+
 export function PrizePoolDashboard() {
   const { address, chainId, connect, switchChain } = useUnifiedWallet();
   const { switchChainAsync } = useSwitchChain();
@@ -135,14 +149,14 @@ export function PrizePoolDashboard() {
   const canReadHook = hasConfiguredHook;
   const activeOnXLayer = chainId === XLAYER_TESTNET_CHAIN_ID;
 
-  const { data: potBalance, refetch: refetchPot } = useReadContract({
+  const { data: potBalance } = useReadContract({
     address: CONFIGURED_HOOK_ADDRESS,
     abi: XLAYER_HOOK_ABI,
     functionName: "potBalance",
     chainId: XLAYER_TESTNET_CHAIN_ID,
     query: { enabled: canReadHook, refetchInterval: POLL_MS },
   });
-  const { data: totalShares, refetch: refetchShares } = useReadContract({
+  const { data: totalShares } = useReadContract({
     address: CONFIGURED_HOOK_ADDRESS,
     abi: XLAYER_HOOK_ABI,
     functionName: "totalShares",
@@ -177,7 +191,7 @@ export function PrizePoolDashboard() {
     chainId: XLAYER_TESTNET_CHAIN_ID,
     query: { enabled: canReadHook, refetchInterval: POLL_MS },
   });
-  const { data: draw, refetch: refetchDraw } = useReadContract({
+  const { data: draw } = useReadContract({
     address: CONFIGURED_HOOK_ADDRESS,
     abi: XLAYER_HOOK_ABI,
     functionName: "draw",
@@ -229,10 +243,6 @@ export function PrizePoolDashboard() {
     [totalShares, userShares],
   );
 
-  const refresh = async () => {
-    await Promise.all([refetchPot(), refetchShares(), refetchDraw()]);
-  };
-
   const handleConnect = async () => {
     await connect("evm", { chainId: XLAYER_TESTNET_CHAIN_ID });
   };
@@ -245,15 +255,35 @@ export function PrizePoolDashboard() {
     }
   };
 
-  const drawLabel = !drawState
-    ? "Awaiting deployment"
-    : drawState[0]
-      ? "Randomness pending"
-      : drawState[1] && !drawState[2]
-        ? "Prize ready to claim"
-        : drawState[3]
+  const drawOpen = Boolean(drawState?.[0]);
+  const drawResolved = Boolean(drawState?.[1]);
+  const drawClaimed = Boolean(drawState?.[2]);
+  const drawCancelled = Boolean(drawState?.[3]);
+  const winner = drawState?.[8];
+
+  const orbState: RoundOrbState = !drawState
+    ? "idle"
+    : drawOpen
+      ? "resolving"
+      : drawResolved && !drawClaimed
+        ? "settled"
+        : drawCancelled
+          ? "idle"
+          : "active";
+
+  const statusLine = !drawState
+    ? "Awaiting first epoch"
+    : drawOpen
+      ? "Draw open — randomness pending"
+      : drawResolved && !drawClaimed
+        ? "Resolved — prize ready to claim"
+        : drawCancelled
           ? "Draw cancelled"
           : "Open for entries";
+
+  const winnerIsYou = Boolean(
+    evmAddress && winner && winner.toLowerCase() === evmAddress.toLowerCase(),
+  );
 
   return (
     <PageShell width="wide" className="overflow-x-hidden pb-mobile-cta sm:pb-0">
@@ -263,17 +293,69 @@ export function PrizePoolDashboard() {
 
       <PageHeader
         title="The DEX is the lottery."
-        supportingLine="Swap fees feed a shared prize pot. Depositors keep their principal, while their share determines their chance of winning the next epoch."
+        supportingLine="Swap fees feed the pot. Principal stays redeemable. An agent runs the draws — you approve, receipts prove it."
         accent="experimental"
         badge={{ label: "X Layer Testnet", tone: "amber" }}
-      >
-        <span className="text-xs text-slate-500">
-          Chain {XLAYER_TESTNET_CHAIN_ID} · Live on testnet since Aug 9, 2026 · auto-refreshing
-        </span>
-      </PageHeader>
+      />
 
       <ShellSection className="space-y-6">
-          {/* The guided path comes first — strangers should be acting, not reading. */}
+          {/* Live pool hero — the reveal moment. Orb carries epoch state. */}
+          <CompactCard variant="premium" padding="lg" hover={false} className="border-cyan-400/25 bg-gradient-to-br from-cyan-500/[0.10] to-indigo-500/[0.05]">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-center gap-4">
+                <RoundOrb state={orbState} size={56} />
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">
+                    {drawState ? `Epoch ${drawState[4].toString()}` : "No live epoch"}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-300">{statusLine}</p>
+                </div>
+              </div>
+              <div className="shrink-0 sm:text-right">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Prize pot</p>
+                <p className={`mt-1 text-4xl font-black tabular-nums tracking-tight ${ACCENTS.experimental.gradientText}`}>
+                  {formatUsdc(potBalance)}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  USDC_TEST{minPotForDraw !== undefined ? ` · draw opens at ${formatUsdc(minPotForDraw)}` : ""}
+                </p>
+              </div>
+            </div>
+
+            {drawResolved && !drawClaimed && winner && (
+              <div className="mt-5">
+                <BeamFrame color="#34d399" laps={2} duration={4} className="block w-full">
+                  <div className="w-full rounded-2xl bg-slate-950/70 px-4 py-3">
+                    <p className="text-sm font-semibold text-emerald-200">
+                      Epoch {drawState?.[4].toString()} resolved{" "}
+                      {winnerIsYou ? "— you won the pot" : `— winner ${shorten(winner)}`}
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-400">
+                      {winnerIsYou
+                        ? "Claim from the agent panel below — receipts close the loop."
+                        : "Waiting on the winner to claim. Principal shares are unaffected."}
+                    </p>
+                  </div>
+                </BeamFrame>
+              </div>
+            )}
+
+            <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-white/[0.06] pt-4">
+              <Chip>{surchargeBps !== undefined ? `${Number(surchargeBps) / 100}% surcharge feeds the pot` : "Surcharge —"}</Chip>
+              <Chip>Cooldown {formatDuration(drawCooldown)}</Chip>
+              <Chip>{formatUsdc(totalShares)} total shares</Chip>
+              {evmAddress ? (
+                <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2.5 py-1 text-[11px] font-semibold text-cyan-200">
+                  You: {formatUsdc(userShares)} shares · {shareOdds} odds
+                  {userPrincipal ? ` · ${formatUsdc(userPrincipal)} principal` : ""}
+                </span>
+              ) : (
+                <span className="text-[11px] text-slate-600">Connect to see your position</span>
+              )}
+            </div>
+          </CompactCard>
+
+          {/* The interactive spine. Completed steps collapse; only the live step is open. */}
           <XLayerGuidedFlow
             isConnected={Boolean(evmAddress)}
             onConnect={handleConnect}
@@ -282,9 +364,9 @@ export function PrizePoolDashboard() {
             nativeBalance={nativeBalance ? Number(nativeBalance.formatted) : null}
             usdcBalance={evmAddress && tokenBalance ? Number(tokenBalance.formatted) : null}
             userShares={userShares}
-            drawOpen={Boolean(drawState?.[0])}
-            drawResolved={Boolean(drawState?.[1])}
-            drawClaimed={Boolean(drawState?.[2])}
+            drawOpen={drawOpen}
+            drawResolved={drawResolved}
+            drawClaimed={drawClaimed}
           />
 
           {!hasConfiguredHook && (
@@ -302,40 +384,6 @@ export function PrizePoolDashboard() {
             </div>
           )}
 
-          <CompactGrid columns={4} gap="sm" className="lg:grid-cols-4">
-            <MetricCard label="Prize pot" value={formatUsdc(potBalance)} detail={minPotForDraw ? `Draw threshold ${formatUsdc(minPotForDraw)} USDC` : "USDC currently available"} icon={Trophy} accent="bg-cyan-400/20" />
-            <MetricCard label="Total shares" value={formatUsdc(totalShares)} detail="Snapshot weight pool" icon={Activity} accent="bg-blue-400/20" />
-            <MetricCard label="Your odds" value={shareOdds} detail={userShares ? `${formatUsdc(userShares)} shares` : "Connect to calculate"} icon={Gauge} accent="bg-indigo-400/20" />
-            <MetricCard label="Surcharge" value={surchargeBps !== undefined ? `${Number(surchargeBps) / 100}%` : "—"} detail={surchargeEnabled ? "Active on routed swaps" : "Awaiting configuration"} icon={Sparkles} accent="bg-amber-400/20" />
-          </CompactGrid>
-
-          <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-            <CompactCard variant="glass" padding="lg" hover={false} className="border-white/[0.08] bg-slate-950/60">
-              <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <div className="flex items-center gap-2 text-cyan-300"><Activity className="h-4 w-4" /><span className="text-[10px] font-black uppercase tracking-[0.2em]">Epoch monitor</span></div>
-                  <h2 className="mt-3 text-2xl font-semibold tracking-tight text-white">{drawState ? `Epoch ${drawState[4].toString()}` : "No live epoch yet"}</h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-400">{drawLabel}. The draw freezes share weights before randomness resolves.</p>
-                </div>
-                <Button variant="glass" size="sm" className="min-h-11 w-full touch-manipulation sm:w-auto" onClick={refresh} disabled={!canReadHook}>
-                  <RefreshCw className="mr-2 h-3.5 w-3.5" /> Refresh
-                </Button>
-              </div>
-              <div className="mt-8 grid gap-4 sm:grid-cols-3">
-                <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4"><p className="text-[10px] uppercase tracking-widest text-slate-500">Snapshot pot</p><p className="mt-2 text-lg font-semibold text-white">{formatUsdc(drawState?.[7])}</p></div>
-                <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4"><p className="text-[10px] uppercase tracking-widest text-slate-500">Snapshot shares</p><p className="mt-2 text-lg font-semibold text-white">{formatUsdc(drawState?.[6])}</p></div>
-                <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4"><p className="text-[10px] uppercase tracking-widest text-slate-500">Draw cooldown</p><p className="mt-2 text-lg font-semibold text-white">{formatDuration(drawCooldown)}</p></div>
-              </div>
-            </CompactCard>
-
-            <CompactCard variant="premium" padding="lg" hover={false} className="border-indigo-300/15 bg-gradient-to-br from-indigo-500/[0.12] to-cyan-400/[0.05]">
-              <div className="flex items-center gap-2 text-indigo-200"><ShieldCheck className="h-4 w-4" /><span className="text-[10px] font-black uppercase tracking-[0.2em]">Lossless design</span></div>
-              <h2 className="mt-4 text-xl font-semibold text-white">Principal stays yours.</h2>
-              <p className="mt-3 text-sm leading-6 text-indigo-100/65">Your deposit creates shares and draw weight. The prize pot is funded by swap surcharges, not by consuming depositor principal.</p>
-              <div className="mt-6 flex items-center gap-3 rounded-xl border border-white/10 bg-black/10 p-3"><LockKeyhole className="h-4 w-4 text-cyan-200" /><span className="text-xs text-indigo-100/70">{userPrincipal ? `${formatUsdc(userPrincipal)} USDC principal tracked` : "Connect to view your principal"}</span></div>
-            </CompactCard>
-          </div>
-
           {/* The agent is the headline — surfaced before any static section. */}
           <div id="xlayer-agent-panel" className="scroll-mt-24">
             <XLayerAgentPanel
@@ -352,21 +400,14 @@ export function PrizePoolDashboard() {
           {/* Public audit trail: latest server-side operator run, no wallet needed. */}
           <XLayerOperatorRunReplay />
 
-          {/* Product story: what this pool is and who runs it. */}
-          <CompactCard variant="premium" padding="lg" hover={false} className="border-cyan-300/20 bg-gradient-to-br from-cyan-500/[0.12] to-indigo-500/[0.06]">
-            <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-              <div>
-                <div className="flex items-center gap-2 text-cyan-300">
-                  <Bot className="h-4 w-4" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">How this pool runs</span>
-                </div>
-                <h2 className="mt-3 text-xl font-semibold tracking-tight text-white">An AI agent is the treasurer of this pool.</h2>
-                <p className="mt-3 text-sm leading-6 text-slate-300/80">
-                  It watches the pot, plans draw operations through a permissioned tool registry, and gets human
-                  approval before anything executes. Every money claim it makes is verified against an on-chain
-                  receipt before the UI reports it — pending is never shown as success, here or on Base.
-                </p>
-              </div>
+          {/* Reference material — one tap away, out of the way. */}
+          <Disclosure title="How this pool runs" subtitle="An AI agent is the treasurer of this pool.">
+            <div className="mt-4 grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+              <p className="text-sm leading-6 text-slate-300/80">
+                It watches the pot, plans draw operations through a permissioned tool registry, and gets human
+                approval before anything executes. Every money claim is verified against an on-chain receipt
+                before the UI reports it — pending is never shown as success, here or on Base.
+              </p>
               <div className="space-y-3">
                 <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-black/10 p-3">
                   <Bot className="mt-0.5 h-4 w-4 shrink-0 text-cyan-200" />
@@ -391,68 +432,66 @@ export function PrizePoolDashboard() {
                 </div>
               </div>
             </div>
-          </CompactCard>
+          </Disclosure>
 
-          {/* Mainnet commitment: the randomness gate, stated on-page for judges. */}
-          <CompactCard variant="glass" padding="lg" hover={false} className="border-white/[0.08] bg-slate-950/50">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Mainnet commitment</p>
-                <h2 className="mt-2 text-xl font-semibold text-white">Testnet today. Mainnet when randomness is real.</h2>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+          <Disclosure title="Mainnet commitment" subtitle="Testnet today. Mainnet when randomness is real.">
+            <div className="mt-4 space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <p className="max-w-2xl text-sm leading-6 text-slate-400">
                   Chainlink VRF and Pyth Entropy are not available on X Layer, so the randomness path was designed,
                   not deferred. The hook launches on mainnet ({XLAYER_MAINNET_CHAIN_ID}) only once winner selection
                   is publicly verifiable.
                 </p>
+                <a href="https://github.com/thisyearnofear/syndicate/blob/main/docs/X_LAYER.md#randomness-decision" target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-2 text-xs font-semibold text-cyan-300 hover:text-cyan-200">
+                  Full randomness design <ExternalLink className="h-3 w-3" />
+                </a>
               </div>
-              <a href="https://github.com/thisyearnofear/syndicate/blob/main/docs/X_LAYER.md#randomness-decision" target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-2 text-xs font-semibold text-cyan-300 hover:text-cyan-200">
-                Full randomness design <ExternalLink className="h-3 w-3" />
-              </a>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
+                  <div className="flex items-center gap-2 text-amber-200"><Beaker className="h-4 w-4" /><span className="text-[10px] font-black uppercase tracking-[0.18em]">Today · testnet</span></div>
+                  <p className="mt-3 text-sm leading-6 text-slate-300">
+                    Draws resolve through a disclosed demo oracle, operator-signed and labeled everywhere it appears.
+                    It controls testnet funds only, never real value.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
+                  <div className="flex items-center gap-2 text-cyan-200"><Radio className="h-4 w-4" /><span className="text-[10px] font-black uppercase tracking-[0.18em]">Production design · drand</span></div>
+                  <p className="mt-3 text-sm leading-6 text-slate-300">
+                    League of Entropy beacon with a permissionless relay: threshold-signed rounds and publicly
+                    reproducible winner math. EIP-2537 (BLS12-381) precompiles are probe-verified on testnet{" "}
+                    {XLAYER_TESTNET_CHAIN_ID} (2026-08-11), so drand signatures verify fully on-chain.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
+                  <div className="flex items-center gap-2 text-emerald-200"><LockKeyhole className="h-4 w-4" /><span className="text-[10px] font-black uppercase tracking-[0.18em]">Launch gate</span></div>
+                  <p className="mt-3 text-sm leading-6 text-slate-300">
+                    Mainnet ships with precompile-verified drand, or an independently reviewed bonded-relay fallback.
+                    The demo oracle never graduates to real value.
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="mt-6 grid gap-4 md:grid-cols-3">
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
-                <div className="flex items-center gap-2 text-amber-200"><Beaker className="h-4 w-4" /><span className="text-[10px] font-black uppercase tracking-[0.18em]">Today · testnet</span></div>
-                <p className="mt-3 text-sm leading-6 text-slate-300">
-                  Draws resolve through a disclosed demo oracle, operator-signed and labeled everywhere it appears.
-                  It controls testnet funds only, never real value.
-                </p>
-              </div>
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
-                <div className="flex items-center gap-2 text-cyan-200"><Radio className="h-4 w-4" /><span className="text-[10px] font-black uppercase tracking-[0.18em]">Production design · drand</span></div>
-                <p className="mt-3 text-sm leading-6 text-slate-300">
-                  League of Entropy beacon with a permissionless relay: threshold-signed rounds and publicly
-                  reproducible winner math. EIP-2537 (BLS12-381) precompiles are probe-verified on testnet{" "}
-                  {XLAYER_TESTNET_CHAIN_ID} (2026-08-11), so drand signatures verify fully on-chain.
-                </p>
-              </div>
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
-                <div className="flex items-center gap-2 text-emerald-200"><LockKeyhole className="h-4 w-4" /><span className="text-[10px] font-black uppercase tracking-[0.18em]">Launch gate</span></div>
-                <p className="mt-3 text-sm leading-6 text-slate-300">
-                  Mainnet ships with precompile-verified drand, or an independently reviewed bonded-relay fallback.
-                  The demo oracle never graduates to real value.
-                </p>
-              </div>
-            </div>
-          </CompactCard>
+          </Disclosure>
 
-          <CompactCard variant="glass" padding="lg" hover={false} className="border-white/[0.08] bg-slate-950/50">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Deployment registry</p><h2 className="mt-2 text-xl font-semibold text-white">Contracts and network</h2></div>
-              <a href={XLAYER_TESTNET_EXPLORER_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-xs font-semibold text-cyan-300 hover:text-cyan-200">Open explorer <ExternalLink className="h-3 w-3" /></a>
+          <Disclosure title="Deployment registry" subtitle="Contracts and network">
+            <div className="mt-4">
+              <div className="mb-2 flex justify-end">
+                <a href={XLAYER_TESTNET_EXPLORER_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-xs font-semibold text-cyan-300 hover:text-cyan-200">Open explorer <ExternalLink className="h-3 w-3" /></a>
+              </div>
+              <div className="grid gap-x-8 gap-y-1 md:grid-cols-2">
+                <AddressRow label="Network" value={`X Layer Testnet (${XLAYER_TESTNET_CHAIN_ID})`} />
+                <AddressRow label="Mainnet status" value={`Gated on verifiable randomness (${XLAYER_MAINNET_CHAIN_ID}) — see above`} />
+                <AddressRow label="Hook" value={hasConfiguredHook ? shorten(XLAYER_PRIZE_POOL_HOOK_ADDRESS) : "Not configured"} href={hasConfiguredHook ? xLayerExplorerAddress(XLAYER_PRIZE_POOL_HOOK_ADDRESS) : undefined} />
+                <AddressRow label="Swap router" value={isAddress(XLAYER_PRIZE_POOL_ROUTER_ADDRESS) ? shorten(XLAYER_PRIZE_POOL_ROUTER_ADDRESS) : "Not configured"} href={isAddress(XLAYER_PRIZE_POOL_ROUTER_ADDRESS) ? xLayerExplorerAddress(XLAYER_PRIZE_POOL_ROUTER_ADDRESS) : undefined} />
+                <AddressRow label="PoolManager" value={isAddress(XLAYER_POOL_MANAGER_ADDRESS) ? shorten(XLAYER_POOL_MANAGER_ADDRESS) : "Not configured"} href={isAddress(XLAYER_POOL_MANAGER_ADDRESS) ? xLayerExplorerAddress(XLAYER_POOL_MANAGER_ADDRESS) : undefined} />
+                <AddressRow label="Your token balance" value={tokenBalance ? `${Number(tokenBalance.formatted).toLocaleString(undefined, { maximumFractionDigits: 2 })} USDC` : "—"} />
+              </div>
             </div>
-            <div className="mt-5 grid gap-x-8 gap-y-1 md:grid-cols-2">
-              <AddressRow label="Network" value={`X Layer Testnet (${XLAYER_TESTNET_CHAIN_ID})`} />
-              <AddressRow label="Mainnet status" value={`Gated on verifiable randomness (${XLAYER_MAINNET_CHAIN_ID}) — see above`} />
-              <AddressRow label="Hook" value={hasConfiguredHook ? shorten(XLAYER_PRIZE_POOL_HOOK_ADDRESS) : "Not configured"} href={hasConfiguredHook ? xLayerExplorerAddress(XLAYER_PRIZE_POOL_HOOK_ADDRESS) : undefined} />
-              <AddressRow label="Swap router" value={isAddress(XLAYER_PRIZE_POOL_ROUTER_ADDRESS) ? shorten(XLAYER_PRIZE_POOL_ROUTER_ADDRESS) : "Not configured"} href={isAddress(XLAYER_PRIZE_POOL_ROUTER_ADDRESS) ? xLayerExplorerAddress(XLAYER_PRIZE_POOL_ROUTER_ADDRESS) : undefined} />
-              <AddressRow label="PoolManager" value={isAddress(XLAYER_POOL_MANAGER_ADDRESS) ? shorten(XLAYER_POOL_MANAGER_ADDRESS) : "Not configured"} href={isAddress(XLAYER_POOL_MANAGER_ADDRESS) ? xLayerExplorerAddress(XLAYER_POOL_MANAGER_ADDRESS) : undefined} />
-              <AddressRow label="Your token balance" value={tokenBalance ? `${Number(tokenBalance.formatted).toLocaleString(undefined, { maximumFractionDigits: 2 })} USDC` : "—"} />
-            </div>
-          </CompactCard>
+          </Disclosure>
 
           <div className="flex flex-col gap-4 border-t border-white/[0.06] pt-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
             <span className="inline-flex items-center gap-2"><Clock3 className="h-3.5 w-3.5" /> Testnet demo · no real-value draws</span>
-            <span>One no-loss mechanism, two engines · Base is the live home, X Layer is the DEX-native one</span>
+            <span className="inline-flex items-center gap-2"><Trophy className="h-3.5 w-3.5" /> One no-loss mechanism, two engines · Base is the live home, X Layer is the DEX-native one</span>
           </div>
 
           <div className="grid gap-3 border-t border-white/[0.06] pt-5 sm:grid-cols-3">
