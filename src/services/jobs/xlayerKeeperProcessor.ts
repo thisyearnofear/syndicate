@@ -102,6 +102,18 @@ function defaultDepositAmount(): bigint {
   return parseUnits(Number.isFinite(parsed) && parsed > 0 ? raw : '5', 6);
 }
 
+/**
+ * Demo-pot floor: minPotForDraw is 0 on this deployment, which lets epochs
+ * cycle with an empty pot — a broken first impression on /xlayer. The
+ * keeper tops the pot up to a small floor so the page always shows a live
+ * number. Testnet USDC only.
+ */
+function minDemoPot(): bigint {
+  const raw = process.env.XLAYER_KEEPER_MIN_DEMO_POT_USDC ?? '5';
+  const parsed = Number(raw);
+  return parseUnits(Number.isFinite(parsed) && parsed > 0 ? raw : '5', 6);
+}
+
 export async function runXLayerKeeper(): Promise<XLayerKeeperRunResult> {
   if (!XLAYER_HOOK_IS_CONFIGURED || !isAddress(XLAYER_PRIZE_POOL_HOOK_ADDRESS)) {
     return { attempted: false, reason: 'X Layer hook is not configured.', actions: [] };
@@ -364,17 +376,19 @@ export async function runXLayerKeeper(): Promise<XLayerKeeperRunResult> {
       // self-sustaining. Disclosed in the run record and on the replay card:
       // the operator becomes a depositor and can win; winnings are claimed
       // and recycled into the testnet pot.
-      const needsFund = state.potBalance < state.minPotForDraw;
+      const potFloor =
+        state.minPotForDraw > minDemoPot() ? state.minPotForDraw : minDemoPot();
+      const needsFund = state.potBalance < potFloor;
       const needsDeposit = state.totalShares === 0n;
 
       if (needsFund && state.hookOwner.toLowerCase() !== operator) {
         await record('plan_failed', 'Open next epoch', {
-          detail: `Pot ${state.potBalance} is below the minimum ${state.minPotForDraw} and keeper ${account.address} is not the hook owner — cannot fundPot.`,
+          detail: `Pot ${state.potBalance} is below the minimum ${potFloor} and keeper ${account.address} is not the hook owner — cannot fundPot.`,
         });
         break;
       }
 
-      const shortfall = needsFund ? state.minPotForDraw - state.potBalance : 0n;
+      const shortfall = needsFund ? potFloor - state.potBalance : 0n;
       const fundAmount =
         needsFund && defaultFundAmount() > shortfall ? defaultFundAmount() : shortfall;
       const depositAmount = needsDeposit ? defaultDepositAmount() : 0n;

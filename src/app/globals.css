@@ -314,6 +314,23 @@ body {
   }
 }
 
+/* Reveal grammar: radial clip reveal for resolve moments (winner strip).
+   Expands from the orb outward — the outcome emerging from the pool. */
+@keyframes clip-reveal-circle {
+  from {
+    clip-path: circle(0% at 72px 50%);
+    opacity: 0.2;
+  }
+  to {
+    clip-path: circle(140% at 72px 50%);
+    opacity: 1;
+  }
+}
+
+.clip-reveal {
+  animation: clip-reveal-circle var(--duration-slow) var(--ease-out) both;
+}
+
 @keyframes pulse-glow {
 
   0%,

@@ -16,17 +16,15 @@ import {
   Sparkles,
   Trophy,
 } from "lucide-react";
-import { isAddress, type Address, formatUnits } from "viem";
+import { isAddress, type Address } from "viem";
 import { useBalance, useReadContract, useSwitchChain } from "wagmi";
 import { CompactCard } from "@/shared/components/premium/CompactLayout";
 import { useUnifiedWallet } from "@/hooks/useUnifiedWallet";
 import { XLayerAgentPanel } from "@/components/xlayer/XLayerAgentPanel";
 import { XLayerGuidedFlow } from "@/components/xlayer/XLayerGuidedFlow";
 import { XLayerOperatorRunReplay } from "@/components/xlayer/XLayerOperatorRunReplay";
-import { RoundOrb, type RoundOrbState } from "@/components/motion/RoundOrb";
-import { BeamFrame } from "@/components/motion/BeamFrame";
+import { XLayerPoolStage } from "@/components/xlayer/XLayerPoolStage";
 import { PageShell, PageHeader, ShellSection } from "@/components/layout/PageShell";
-import { ACCENTS } from "@/config/design";
 import {
   XLAYER_HOOK_ABI,
   XLAYER_HOOK_IS_CONFIGURED,
@@ -47,23 +45,6 @@ const hasConfiguredToken = isAddress(XLAYER_TESTNET_USDC_ADDRESS);
 
 /** Pool state self-refreshes so visitors watch epochs resolve live. */
 const POLL_MS = 12_000;
-
-const formatUsdc = (value: bigint | undefined) => {
-  if (value === undefined) return "—";
-  return Number(formatUnits(value, 6)).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-};
-
-const formatDuration = (value: bigint | undefined) => {
-  if (value === undefined) return "—";
-  const seconds = Number(value);
-  if (seconds === 0) return "Immediate";
-  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
-  if (seconds < 86_400) return `${Math.round(seconds / 3600)}h`;
-  return `${Math.round(seconds / 86_400)}d`;
-};
 
 const shorten = (value: string) => `${value.slice(0, 6)}…${value.slice(-4)}`;
 
@@ -131,14 +112,6 @@ function Disclosure({
         <div className="overflow-hidden">{children}</div>
       </div>
     </CompactCard>
-  );
-}
-
-function Chip({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-slate-400">
-      {children}
-    </span>
   );
 }
 
@@ -258,32 +231,6 @@ export function PrizePoolDashboard() {
   const drawOpen = Boolean(drawState?.[0]);
   const drawResolved = Boolean(drawState?.[1]);
   const drawClaimed = Boolean(drawState?.[2]);
-  const drawCancelled = Boolean(drawState?.[3]);
-  const winner = drawState?.[8];
-
-  const orbState: RoundOrbState = !drawState
-    ? "idle"
-    : drawOpen
-      ? "resolving"
-      : drawResolved && !drawClaimed
-        ? "settled"
-        : drawCancelled
-          ? "idle"
-          : "active";
-
-  const statusLine = !drawState
-    ? "Awaiting first epoch"
-    : drawOpen
-      ? "Draw open — randomness pending"
-      : drawResolved && !drawClaimed
-        ? "Resolved — prize ready to claim"
-        : drawCancelled
-          ? "Draw cancelled"
-          : "Open for entries";
-
-  const winnerIsYou = Boolean(
-    evmAddress && winner && winner.toLowerCase() === evmAddress.toLowerCase(),
-  );
 
   return (
     <PageShell width="wide" className="overflow-x-hidden pb-mobile-cta sm:pb-0">
@@ -299,76 +246,6 @@ export function PrizePoolDashboard() {
       />
 
       <ShellSection className="space-y-6">
-          {/* Live pool hero — the reveal moment. Orb carries epoch state. */}
-          <CompactCard variant="premium" padding="lg" hover={false} className="border-cyan-400/25 bg-gradient-to-br from-cyan-500/[0.10] to-indigo-500/[0.05]">
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-center gap-4">
-                <RoundOrb state={orbState} size={56} />
-                <div className="min-w-0">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">
-                    {drawState ? `Epoch ${drawState[4].toString()}` : "No live epoch"}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-300">{statusLine}</p>
-                </div>
-              </div>
-              <div className="shrink-0 sm:text-right">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Prize pot</p>
-                <p className={`mt-1 text-4xl font-black tabular-nums tracking-tight ${ACCENTS.experimental.gradientText}`}>
-                  {formatUsdc(potBalance)}
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  USDC_TEST{minPotForDraw !== undefined ? ` · draw opens at ${formatUsdc(minPotForDraw)}` : ""}
-                </p>
-              </div>
-            </div>
-
-            {drawResolved && !drawClaimed && winner && (
-              <div className="mt-5">
-                <BeamFrame color="#34d399" laps={2} duration={4} className="block w-full">
-                  <div className="w-full rounded-2xl bg-slate-950/70 px-4 py-3">
-                    <p className="text-sm font-semibold text-emerald-200">
-                      Epoch {drawState?.[4].toString()} resolved{" "}
-                      {winnerIsYou ? "— you won the pot" : `— winner ${shorten(winner)}`}
-                    </p>
-                    <p className="mt-0.5 text-xs text-slate-400">
-                      {winnerIsYou
-                        ? "Claim from the agent panel below — receipts close the loop."
-                        : "Waiting on the winner to claim. Principal shares are unaffected."}
-                    </p>
-                  </div>
-                </BeamFrame>
-              </div>
-            )}
-
-            <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-white/[0.06] pt-4">
-              <Chip>{surchargeBps !== undefined ? `${Number(surchargeBps) / 100}% surcharge feeds the pot` : "Surcharge —"}</Chip>
-              <Chip>Cooldown {formatDuration(drawCooldown)}</Chip>
-              <Chip>{formatUsdc(totalShares)} total shares</Chip>
-              {evmAddress ? (
-                <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2.5 py-1 text-[11px] font-semibold text-cyan-200">
-                  You: {formatUsdc(userShares)} shares · {shareOdds} odds
-                  {userPrincipal ? ` · ${formatUsdc(userPrincipal)} principal` : ""}
-                </span>
-              ) : (
-                <span className="text-[11px] text-slate-600">Connect to see your position</span>
-              )}
-            </div>
-          </CompactCard>
-
-          {/* The interactive spine. Completed steps collapse; only the live step is open. */}
-          <XLayerGuidedFlow
-            isConnected={Boolean(evmAddress)}
-            onConnect={handleConnect}
-            activeOnXLayer={activeOnXLayer}
-            onSwitch={handleSwitch}
-            nativeBalance={nativeBalance ? Number(nativeBalance.formatted) : null}
-            usdcBalance={evmAddress && tokenBalance ? Number(tokenBalance.formatted) : null}
-            userShares={userShares}
-            drawOpen={drawOpen}
-            drawResolved={drawResolved}
-            drawClaimed={drawClaimed}
-          />
-
           {!hasConfiguredHook && (
             <div className="flex gap-4 rounded-2xl border border-cyan-400/20 bg-cyan-300/[0.06] p-5">
               <div className="mt-0.5 rounded-lg bg-cyan-300/10 p-2 text-cyan-200"><Sparkles className="h-4 w-4" /></div>
@@ -384,21 +261,53 @@ export function PrizePoolDashboard() {
             </div>
           )}
 
-          {/* The agent is the headline — surfaced before any static section. */}
-          <div id="xlayer-agent-panel" className="scroll-mt-24">
-            <XLayerAgentPanel
-              potBalance={potBalance}
-              totalShares={totalShares}
-              minPot={minPotForDraw}
-              drawCooldown={drawCooldown}
-              surchargeBps={typeof surchargeBps === "number" ? surchargeBps : surchargeBps !== undefined ? Number(surchargeBps) : undefined}
-              surchargeEnabled={surchargeEnabled}
-              drawState={drawState}
-            />
-          </div>
+          {/* Bento composition: the pool stage + the path in on the left,
+              the agent deck + public audit timeline on the right. */}
+          <div className="grid gap-6 lg:grid-cols-[1.35fr_1fr] lg:items-start">
+            <div className="space-y-6">
+              <XLayerPoolStage
+                potBalance={potBalance}
+                minPotForDraw={minPotForDraw}
+                totalShares={totalShares}
+                drawCooldown={drawCooldown}
+                surchargeBps={typeof surchargeBps === "number" ? surchargeBps : surchargeBps !== undefined ? Number(surchargeBps) : undefined}
+                drawState={drawState}
+                evmAddress={evmAddress}
+                userShares={userShares}
+                userPrincipal={userPrincipal}
+                shareOdds={shareOdds}
+              />
 
-          {/* Public audit trail: latest server-side operator run, no wallet needed. */}
-          <XLayerOperatorRunReplay />
+              <XLayerGuidedFlow
+                isConnected={Boolean(evmAddress)}
+                onConnect={handleConnect}
+                activeOnXLayer={activeOnXLayer}
+                onSwitch={handleSwitch}
+                nativeBalance={nativeBalance ? Number(nativeBalance.formatted) : null}
+                usdcBalance={evmAddress && tokenBalance ? Number(tokenBalance.formatted) : null}
+                userShares={userShares}
+                drawOpen={drawOpen}
+                drawResolved={drawResolved}
+                drawClaimed={drawClaimed}
+              />
+            </div>
+
+            <div className="space-y-6">
+              <div id="xlayer-agent-panel" className="scroll-mt-24">
+                <XLayerAgentPanel
+                  potBalance={potBalance}
+                  totalShares={totalShares}
+                  minPot={minPotForDraw}
+                  drawCooldown={drawCooldown}
+                  surchargeBps={typeof surchargeBps === "number" ? surchargeBps : surchargeBps !== undefined ? Number(surchargeBps) : undefined}
+                  surchargeEnabled={surchargeEnabled}
+                  drawState={drawState}
+                />
+              </div>
+
+              <XLayerOperatorRunReplay />
+            </div>
+          </div>
 
           {/* Reference material — one tap away, out of the way. */}
           <Disclosure title="How this pool runs" subtitle="An AI agent is the treasurer of this pool.">

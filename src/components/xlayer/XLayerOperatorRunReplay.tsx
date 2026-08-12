@@ -1,13 +1,13 @@
 'use client';
 
 /**
- * LATEST OPERATOR RUN — public replay of the server-side keeper loop.
+ * LATEST OPERATOR RUN — public epoch timeline of the server-side keeper.
  *
- * The interactive transcript lives in the visitor's localStorage, which
- * means a judge with no wallet sees an empty panel. This card fetches the
- * latest keeper-cron session (persisted server-side in agent_run_events)
- * and replays it read-only: plan, oracle seeding, draw open, receipt links.
- * No wallet required; entries refresh on a poll.
+ * The run data is temporal, so it renders as a timeline, not a list:
+ * execute+complete/fail pairs collapse into single action nodes spaced
+ * along a spine, newest session readable left → right. Each completed
+ * action carries its explorer receipt. Server-persisted (agent_run_events),
+ * replayable with no wallet — the judge's audit view.
  */
 
 import { useEffect, useState } from 'react';
@@ -26,21 +26,65 @@ interface ReplayEntry {
   createdAt: number;
 }
 
-const KIND_STYLE: Record<string, string> = {
-  plan: 'bg-violet-500/20 text-violet-200',
-  plan_failed: 'bg-rose-500/20 text-rose-200',
-  execute: 'bg-amber-500/20 text-amber-200',
-  complete: 'bg-emerald-500/20 text-emerald-200',
-  fail: 'bg-rose-500/20 text-rose-200',
+interface TimelineNode {
+  id: string;
+  kind: 'plan' | 'plan_failed' | 'complete' | 'fail';
+  label: string;
+  detail?: string | null;
+  txHash?: string | null;
+  at: number;
+}
+
+const DOT_STYLE: Record<TimelineNode['kind'], string> = {
+  plan: 'bg-violet-400',
+  plan_failed: 'bg-rose-400',
+  complete: 'bg-emerald-400',
+  fail: 'bg-rose-400',
 };
 
-const KIND_LABEL: Record<string, string> = {
+const KIND_LABEL: Record<TimelineNode['kind'], string> = {
   plan: 'plan',
   plan_failed: 'plan failed',
-  execute: 'executing',
-  complete: 'completed',
+  complete: 'on-chain',
   fail: 'failed',
 };
+
+/** Collapse an execute + its terminal complete/fail into one action node. */
+function toTimeline(entries: ReplayEntry[]): TimelineNode[] {
+  const nodes: TimelineNode[] = [];
+  for (let i = 0; i < entries.length; i++) {
+    const e = entries[i];
+    if (e.kind === 'execute') {
+      const next = entries[i + 1];
+      if (next && (next.kind === 'complete' || next.kind === 'fail') && next.label === e.label) {
+        nodes.push({
+          id: next.id,
+          kind: next.kind === 'complete' ? 'complete' : 'fail',
+          label: e.label,
+          detail: next.detail,
+          txHash: next.txHash,
+          at: next.createdAt,
+        });
+        i++; // consume the terminal entry
+        continue;
+      }
+      // Orphaned execute (still in flight at snapshot time) — show as plan.
+      nodes.push({ id: e.id, kind: 'plan', label: e.label, detail: e.detail, txHash: null, at: e.createdAt });
+      continue;
+    }
+    if (e.kind === 'plan' || e.kind === 'plan_failed') {
+      nodes.push({
+        id: e.id,
+        kind: e.kind as 'plan' | 'plan_failed',
+        label: e.label,
+        detail: e.detail,
+        txHash: e.txHash,
+        at: e.createdAt,
+      });
+    }
+  }
+  return nodes;
+}
 
 const POLL_MS = 60_000;
 
@@ -71,6 +115,8 @@ export function XLayerOperatorRunReplay() {
     };
   }, []);
 
+  const nodes = entries ? toTimeline(entries) : [];
+
   return (
     <CompactCard variant="glass" padding="lg" hover={false} className="border-violet-400/15 bg-violet-500/[0.04]">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -85,10 +131,9 @@ export function XLayerOperatorRunReplay() {
         )}
       </div>
       <p className="mt-2 text-sm leading-6 text-slate-400">
-        The operator keeper runs this pool on a schedule — server-signed, receipt-verified, and
-        persisted so anyone can audit it. No wallet needed to read this trail. When the pool has no
-        depositors, the operator seeds an epoch with its own testnet principal (disclosed in the
-        record); winnings it claims recycle back into the pot.
+        The operator keeper runs this pool on a schedule — server-signed, receipt-verified, persisted
+        for anyone to audit. When the pool has no depositors it seeds an epoch with its own testnet
+        principal (disclosed below); winnings it claims recycle back into the pot.
       </p>
 
       {failed && (
@@ -103,40 +148,41 @@ export function XLayerOperatorRunReplay() {
         </p>
       )}
 
-      {!failed && entries && entries.length > 0 && (
-        <ul className="mt-4 max-h-72 divide-y divide-white/5 overflow-y-auto rounded-xl border border-white/10 bg-black/20">
-          {entries.map((entry) => (
-            <li key={entry.id} className="px-4 py-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                      KIND_STYLE[entry.kind] ?? 'bg-white/10 text-slate-300'
-                    }`}
-                  >
-                    {KIND_LABEL[entry.kind] ?? entry.kind}
-                  </span>
-                  <span className="truncate text-sm text-white">{entry.label}</span>
-                </div>
-                <span className="shrink-0 text-xs tabular-nums text-slate-500">
-                  {new Date(entry.createdAt).toLocaleTimeString()}
-                </span>
-              </div>
-              {entry.detail && <p className="mt-1 text-xs text-slate-400">{entry.detail}</p>}
-              {entry.txHash && (
-                <a
-                  href={xLayerExplorerTx(entry.txHash)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1 inline-flex items-center gap-1 text-[11px] text-cyan-300 hover:text-cyan-200"
-                >
-                  receipt {entry.txHash.slice(0, 8)}…
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              )}
-            </li>
-          ))}
-        </ul>
+      {!failed && nodes.length > 0 && (
+        <div className="relative mt-6">
+          <div aria-hidden className="absolute left-3 right-3 top-[5px] h-px bg-white/10" />
+          <ol className="flex snap-x gap-7 overflow-x-auto pb-2 pl-1 pt-0">
+            {nodes.map((node) => (
+              <li key={node.id} className="relative w-40 shrink-0 snap-start">
+                <span className={`block h-2.5 w-2.5 rounded-full ring-4 ring-slate-950 ${DOT_STYLE[node.kind]}`} />
+                <p className="mt-2.5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                  {KIND_LABEL[node.kind]}
+                </p>
+                <p className="mt-1 truncate text-sm font-semibold text-white" title={node.label}>
+                  {node.label}
+                </p>
+                {node.detail && (
+                  <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-slate-500" title={node.detail}>
+                    {node.detail}
+                  </p>
+                )}
+                <p className="mt-1 flex items-center gap-2 text-[11px] tabular-nums text-slate-600">
+                  {new Date(node.at).toLocaleTimeString()}
+                  {node.txHash && (
+                    <a
+                      href={xLayerExplorerTx(node.txHash)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-cyan-300 hover:text-cyan-200"
+                    >
+                      receipt <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </div>
       )}
     </CompactCard>
   );
