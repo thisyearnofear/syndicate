@@ -25,7 +25,6 @@ import {
 } from 'lucide-react';
 import { formatUnits } from 'viem';
 import { Button } from '@/shared/components/ui/Button';
-import { CompactCard } from '@/shared/components/premium/CompactLayout';
 import { useCapability } from '@/hooks/useCapability';
 import { useXLayerDeposit, useXLayerJoin } from '@/services/xlayer';
 import { XLAYER_FAUCET_URL } from '@/config/xlayer';
@@ -63,7 +62,7 @@ function StepShell({
   doneContent?: React.ReactNode;
 }) {
   return (
-    <li className="flex gap-3">
+    <li className="flex gap-3 px-1 py-3 first:pt-0.5">
       <span className="mt-0.5 shrink-0">
         {done ? (
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20">
@@ -384,15 +383,15 @@ export function XLayerGuidedFlow({
   };
 
   return (
-    <CompactCard variant="glass" padding="lg" hover={false} className="border-white/[0.08] bg-slate-950/50">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <section aria-label="Get started with the pool">
+      <div className="mb-2 flex items-center justify-between gap-3 px-1">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Try the loop</p>
         <span className="shrink-0 rounded-full bg-white/5 px-2.5 py-1 text-xs text-slate-400">
           {readyForAgent ? 'Ready' : `${doneCount}/4`}
         </span>
       </div>
 
-      <ol className="space-y-3">
+      <ol className="divide-y divide-white/[0.06]">
         <StepShell index={1} title="Connect an EVM wallet" done={isConnected} active={activeIndex === 0}>
           <Button
             variant="default"
@@ -483,6 +482,6 @@ export function XLayerGuidedFlow({
           </div>
         </StepShell>
       </ol>
-    </CompactCard>
+    </section>
   );
 }

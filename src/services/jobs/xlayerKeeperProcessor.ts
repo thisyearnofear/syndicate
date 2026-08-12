@@ -27,6 +27,7 @@ import { randomBytes } from 'node:crypto';
 import {
   createPublicClient,
   createWalletClient,
+  formatUnits,
   http,
   isAddress,
   parseUnits,
@@ -89,6 +90,13 @@ interface KeeperState {
   oracleAddress: Address | null;
   blockTimestamp: bigint;
 }
+
+/** Human-readable USDC for run records — never raw wei in the UI. */
+const fmtUsdc = (value: bigint): string =>
+  Number(formatUnits(value, 6)).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
 function defaultFundAmount(): bigint {
   const raw = process.env.XLAYER_KEEPER_FUND_POT_USDC ?? '25';
@@ -383,7 +391,7 @@ export async function runXLayerKeeper(): Promise<XLayerKeeperRunResult> {
 
       if (needsFund && state.hookOwner.toLowerCase() !== operator) {
         await record('plan_failed', 'Open next epoch', {
-          detail: `Pot ${state.potBalance} is below the minimum ${potFloor} and keeper ${account.address} is not the hook owner — cannot fundPot.`,
+          detail: `Pot ${fmtUsdc(state.potBalance)} USDC is below the minimum ${fmtUsdc(potFloor)} and keeper ${account.address} is not the hook owner — cannot fundPot.`,
         });
         break;
       }
@@ -412,16 +420,16 @@ export async function runXLayerKeeper(): Promise<XLayerKeeperRunResult> {
 
         if ((usdcBalance as bigint) < needed) {
           await record('plan_failed', needsFund ? 'Fund pot' : 'Seed pool entries', {
-            detail: `Keeper USDC_TEST balance ${usdcBalance} is below the required ${needed} — top up from the X Layer faucet.`,
+            detail: `Keeper USDC_TEST balance ${fmtUsdc(usdcBalance as bigint)} is below the required ${fmtUsdc(needed)} — top up from the X Layer faucet.`,
           });
           break;
         }
 
         const planParts: string[] = [];
-        if (needsFund) planParts.push(`funding ${fundAmount} to the pot (shortfall ${shortfall})`);
+        if (needsFund) planParts.push(`funding ${fmtUsdc(fundAmount)} USDC to the pot (shortfall ${fmtUsdc(shortfall)})`);
         if (needsDeposit)
           planParts.push(
-            `depositing ${depositAmount} of operator principal — disclosed: no depositors yet, and openDraw reverts NoEntries without shares`,
+            `depositing ${fmtUsdc(depositAmount)} USDC of operator principal — disclosed: no depositors yet, and openDraw reverts NoEntries without shares`,
           );
         await record('plan', 'Fund, seed entries, open next epoch', {
           detail: `${planParts.join('; ')}.`,

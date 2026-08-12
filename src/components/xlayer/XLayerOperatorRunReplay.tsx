@@ -88,7 +88,7 @@ function toTimeline(entries: ReplayEntry[]): TimelineNode[] {
 
 const POLL_MS = 60_000;
 
-export function XLayerOperatorRunReplay() {
+export function XLayerOperatorRunReplay({ bare = false }: { bare?: boolean }) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [entries, setEntries] = useState<ReplayEntry[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -117,24 +117,34 @@ export function XLayerOperatorRunReplay() {
 
   const nodes = entries ? toTimeline(entries) : [];
 
-  return (
-    <CompactCard variant="glass" padding="lg" hover={false} className="border-violet-400/15 bg-violet-500/[0.04]">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-violet-200">
-          <Radio className="h-4 w-4" />
-          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Latest operator run</span>
+  const body = (
+    <>
+      {!bare && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-violet-200">
+            <Radio className="h-4 w-4" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Latest operator run</span>
+          </div>
+          {sessionId && (
+            <span className="rounded-full bg-white/5 px-2.5 py-1 text-xs text-slate-500">
+              session …{sessionId.slice(-6)}
+            </span>
+          )}
         </div>
-        {sessionId && (
-          <span className="rounded-full bg-white/5 px-2.5 py-1 text-xs text-slate-500">
-            session …{sessionId.slice(-6)}
-          </span>
-        )}
-      </div>
-      <p className="mt-2 text-sm leading-6 text-slate-400">
-        The operator keeper runs this pool on a schedule — server-signed, receipt-verified, persisted
-        for anyone to audit. When the pool has no depositors it seeds an epoch with its own testnet
-        principal (disclosed below); winnings it claims recycle back into the pot.
-      </p>
+      )}
+      {!bare && (
+        <p className="mt-2 text-sm leading-6 text-slate-400">
+          The operator keeper runs this pool on a schedule — server-signed, receipt-verified, persisted
+          for anyone to audit. When the pool has no depositors it seeds an epoch with its own testnet
+          principal (disclosed below); winnings it claims recycle back into the pot.
+        </p>
+      )}
+      {bare && sessionId && (
+        <p className="mb-1 text-[11px] text-slate-500">
+          Latest operator session …{sessionId.slice(-6)} — server-signed, receipt-verified, persisted for
+          anyone to audit.
+        </p>
+      )}
 
       {failed && (
         <p className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4 text-sm text-slate-500">
@@ -184,6 +194,14 @@ export function XLayerOperatorRunReplay() {
           </ol>
         </div>
       )}
+    </>
+  );
+
+  if (bare) return body;
+
+  return (
+    <CompactCard variant="glass" padding="lg" hover={false} className="border-violet-400/15 bg-violet-500/[0.04]">
+      {body}
     </CompactCard>
   );
 }

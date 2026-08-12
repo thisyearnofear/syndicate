@@ -18,6 +18,7 @@ import {
 } from '@/config/xlayer';
 import { getAgentTool, ensureXLayerToolsRegistered } from '@/services/agents/tools';
 import { AgentSessionTranscript } from '@/components/xlayer/AgentSessionTranscript';
+import { XLayerOperatorRunReplay } from '@/components/xlayer/XLayerOperatorRunReplay';
 import type { AgentToolCall } from '@/services/agents/tools/types';
 import type { XLayerKeeperPoolState } from '@/services/agents/veniceXLayerKeeper';
 
@@ -159,7 +160,7 @@ export function XLayerAgentPanel({
   const { address, chainId } = useUnifiedWallet();
   const agent = useXLayerAgent();
   const capability = useCapability('xlayer_prize_pool');
-  const [tab, setTab] = useState<'steps' | 'transcript'>('steps');
+  const [tab, setTab] = useState<'steps' | 'transcript' | 'runs'>('steps');
 
   const { data: lastDrawAt } = useReadContract({
     address: HOOK,
@@ -316,26 +317,43 @@ export function XLayerAgentPanel({
           </div>
         )}
 
-        {(loop.plan || loop.memory.history.length > 0) && (
-          <div className="mt-5 flex gap-2 border-b border-white/10 pb-3">
-            {(['steps', 'transcript'] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors touch-manipulation ${
-                  tab === t ? 'bg-violet-500 text-white' : 'bg-white/10 text-slate-300 hover:bg-white/20'
-                }`}
-              >
-                {t === 'steps' ? 'Tools' : 'Transcript'}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="mt-5 flex gap-2 border-b border-white/10 pb-3">
+          {(
+            [
+              ['steps', 'Tools'],
+              ['transcript', 'Transcript'],
+              ['runs', 'Operator runs'],
+            ] as const
+          ).map(([t, label]) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors touch-manipulation ${
+                tab === t ? 'bg-violet-500 text-white' : 'bg-white/10 text-slate-300 hover:bg-white/20'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
         {tab === 'transcript' && (
           <div className="mt-4">
             <AgentSessionTranscript currentSessionId={loop.memory.sessionId} />
           </div>
+        )}
+
+        {tab === 'runs' && (
+          <div className="mt-4">
+            <XLayerOperatorRunReplay bare />
+          </div>
+        )}
+
+        {tab === 'steps' && !loop.plan && (
+          <p className="mt-5 rounded-xl border border-white/10 bg-black/20 p-4 text-sm text-slate-400">
+            No plan yet — press <span className="font-medium text-white">Plan next actions</span> and
+            the tool cards appear here for your approval.
+          </p>
         )}
 
         {tab === 'steps' && loop.plan && (

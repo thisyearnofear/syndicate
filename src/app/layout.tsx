@@ -67,30 +67,12 @@ export default function RootLayout({
                     </p>
                   </div>
 
-                  {/* Two-column links */}
-                  <div className="grid grid-cols-2 gap-8 max-w-md mx-auto text-center">
-                    <div className="space-y-2">
-                      <Link href="/" className="block text-sm text-gray-500 hover:text-white transition-colors">Play</Link>
-                      <Link href="/vaults" className="block text-sm text-gray-500 hover:text-white transition-colors">Grow</Link>
-                      <Link href="/coordinate" className="block text-sm text-gray-500 hover:text-white transition-colors">Coordinate</Link>
-                      <Link href="/xlayer" className="flex items-center justify-center gap-1.5 text-sm text-gray-500 hover:text-white transition-colors">
-                        X Layer
-                        <span className="rounded-full border border-amber-400/30 px-1 text-[8px] font-bold uppercase text-amber-300/70">testnet</span>
-                      </Link>
-                      <a href="https://docs.megapot.io" target="_blank" rel="noopener noreferrer" className="block text-sm text-gray-500 hover:text-white transition-colors">Docs</a>
-                    </div>
-                    <div className="space-y-2">
-                      <a href="https://warpcast.com/~/channel/syndicate" target="_blank" rel="noopener noreferrer" className="block text-sm text-gray-500 hover:text-white transition-colors">Farcaster</a>
-                      <a href="https://twitter.com/syndicate" target="_blank" rel="noopener noreferrer" className="block text-sm text-gray-500 hover:text-white transition-colors">Twitter</a>
-                      <a href="https://discord.gg/syndicate" target="_blank" rel="noopener noreferrer" className="block text-sm text-gray-500 hover:text-white transition-colors">Discord</a>
-                      <a href="https://github.com/thisyearnofear/syndicate" target="_blank" rel="noopener noreferrer" className="block text-sm text-gray-500 hover:text-white transition-colors">GitHub</a>
-                    </div>
-                  </div>
-
-                  {/* Bottom line */}
-                  <div className="mt-10 pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-600">
+                  {/* Bottom line — nothing here that isn't ours or true */}
+                  <div className="pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-600">
                     <span>Non-custodial · Open-source · Base-native</span>
                     <span>
+                      <a href="https://github.com/thisyearnofear/syndicate" target="_blank" rel="noopener noreferrer" className="hover:text-gray-400 transition-colors">GitHub</a>
+                      {' · '}
                       <a href="https://docs.megapot.io/terms-of-service" target="_blank" rel="noopener noreferrer" className="hover:text-gray-400 transition-colors">Terms</a>
                       {' · '}
                       <a href="https://docs.megapot.io/privacy-policy" target="_blank" rel="noopener noreferrer" className="hover:text-gray-400 transition-colors">Privacy</a>

@@ -18,11 +18,9 @@ import {
 } from "lucide-react";
 import { isAddress, type Address } from "viem";
 import { useBalance, useReadContract, useSwitchChain } from "wagmi";
-import { CompactCard } from "@/shared/components/premium/CompactLayout";
 import { useUnifiedWallet } from "@/hooks/useUnifiedWallet";
 import { XLayerAgentPanel } from "@/components/xlayer/XLayerAgentPanel";
 import { XLayerGuidedFlow } from "@/components/xlayer/XLayerGuidedFlow";
-import { XLayerOperatorRunReplay } from "@/components/xlayer/XLayerOperatorRunReplay";
 import { XLayerPoolStage } from "@/components/xlayer/XLayerPoolStage";
 import { PageShell, PageHeader, ShellSection } from "@/components/layout/PageShell";
 import {
@@ -72,9 +70,9 @@ function AddressRow({ label, value, href }: { label: string; value: string; href
 }
 
 /**
- * Disclosure — reference material behind one tap, per progressive
- * disclosure. Default closed; the grid-rows trick animates height without
- * layout work beyond the opened section.
+ * Disclosure — reference material behind one tap, styled as hairline
+ * sections (editorial), not cards. Default closed; the grid-rows trick
+ * animates height without layout work beyond the opened section.
  */
 function Disclosure({
   title,
@@ -89,12 +87,12 @@ function Disclosure({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <CompactCard variant="glass" padding="lg" hover={false} className="border-white/[0.08] bg-slate-950/50">
+    <section className="border-t border-white/[0.08] py-4">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex min-h-11 w-full items-center justify-between gap-3 text-left touch-manipulation"
+        className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-1 text-left transition hover:bg-white/[0.03] touch-manipulation"
       >
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">{title}</p>
@@ -111,7 +109,7 @@ function Disclosure({
       >
         <div className="overflow-hidden">{children}</div>
       </div>
-    </CompactCard>
+    </section>
   );
 }
 
@@ -305,11 +303,8 @@ export function PrizePoolDashboard() {
                 />
               </div>
 
-              <XLayerOperatorRunReplay />
-            </div>
-          </div>
-
-          {/* Reference material — one tap away, out of the way. */}
+              {/* Reference material — hairline accordions, not cards. */}
+              <div>
           <Disclosure title="How this pool runs" subtitle="An AI agent is the treasurer of this pool.">
             <div className="mt-4 grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
               <p className="text-sm leading-6 text-slate-300/80">
@@ -397,28 +392,13 @@ export function PrizePoolDashboard() {
               </div>
             </div>
           </Disclosure>
+              </div>
+            </div>
+          </div>
 
           <div className="flex flex-col gap-4 border-t border-white/[0.06] pt-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
             <span className="inline-flex items-center gap-2"><Clock3 className="h-3.5 w-3.5" /> Testnet demo · no real-value draws</span>
             <span className="inline-flex items-center gap-2"><Trophy className="h-3.5 w-3.5" /> One no-loss mechanism, two engines · Base is the live home, X Layer is the DEX-native one</span>
-          </div>
-
-          <div className="grid gap-3 border-t border-white/[0.06] pt-5 sm:grid-cols-3">
-            <Link href="/" className="rounded-xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-cyan-400/30 hover:bg-white/[0.06]">
-              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">Play</span>
-              <span className="mt-2 block text-sm font-semibold text-white">Buy Megapot tickets</span>
-              <span className="mt-1 block text-xs leading-5 text-slate-500">Use the live Base experience.</span>
-            </Link>
-            <Link href="/vaults" className="rounded-xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-cyan-400/30 hover:bg-white/[0.06]">
-              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">Grow</span>
-              <span className="mt-2 block text-sm font-semibold text-white">Explore yield strategies</span>
-              <span className="mt-1 block text-xs leading-5 text-slate-500">Let yield fund participation.</span>
-            </Link>
-            <Link href="/coordinate" className="rounded-xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-cyan-400/30 hover:bg-white/[0.06]">
-              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">Coordinate</span>
-              <span className="mt-2 block text-sm font-semibold text-white">Join a syndicate</span>
-              <span className="mt-1 block text-xs leading-5 text-slate-500">Pool capital with other participants.</span>
-            </Link>
           </div>
       </ShellSection>
     </PageShell>
