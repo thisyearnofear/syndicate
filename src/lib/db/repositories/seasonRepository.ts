@@ -802,14 +802,23 @@ export async function getInactiveSeats(
   }));
 }
 
-/** Open call rounds whose cutoff has passed (candidates for expiry). */
+/**
+ * Open call rounds whose cutoff has passed and which have NO live bids
+ * (candidates for expiry). Rounds with a live winning bid stay open so the
+ * winner can execute the receipt-driven settlement.
+ */
 export async function listOpenRoundsPastCutoff(): Promise<SeasonCallRoundRow[]> {
   await ensureSeasonTables();
   const result = await sql`
-    SELECT *
-    FROM season_call_rounds
-    WHERE status = 'open'
-      AND cutoff_at < NOW();
+    SELECT r.*
+    FROM season_call_rounds r
+    WHERE r.status = 'open'
+      AND r.cutoff_at < NOW()
+      AND NOT EXISTS (
+        SELECT 1 FROM season_bids b
+        WHERE b.round_id = r.id
+          AND b.status = 'live'
+      );
   `;
   return result.rows.map(mapRound);
 }

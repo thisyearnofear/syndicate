@@ -20,6 +20,8 @@ import { Button } from '@/shared/components/ui/Button';
 import { RoundOrb, deriveOrbState } from '@/components/motion/RoundOrb';
 import { CrewLadder } from '@/components/season/CrewLadder';
 import { SeatMap, CutBadge } from '@/components/season/SeatMap';
+import { SettlePotPanel } from '@/components/season/SettlePotPanel';
+import { SettlementReveal, type SettlementResult } from '@/components/season/SettlementReveal';
 import type { SeasonSummary, CrewSummary, CrewMember, SeasonEvent } from '@/components/season/types';
 import { useUnifiedWallet } from '@/hooks';
 import { useCapability } from '@/hooks/useCapability';
@@ -62,6 +64,7 @@ export default function SeasonPage() {
   const [bidPct, setBidPct] = useState('');
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [settlement, setSettlement] = useState<SettlementResult | null>(null);
 
   const chainId = CHAIN_IDS.BASE;
 
@@ -333,28 +336,44 @@ export default function SeasonPage() {
                           ))}
                         </ul>
                       )}
-                      {writesAllowed && myMembership ? (
-                        <div className="flex gap-2">
-                          <input
-                            value={bidPct}
-                            onChange={(e) => setBidPct(e.target.value)}
-                            placeholder="Your discount % (1–50)"
-                            inputMode="decimal"
-                            className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() => void handleBid()}
-                            disabled={busy || !myMembership || Number(bidPct) < 1 || Number(bidPct) > 50}
-                          >
-                            Bid
-                          </Button>
-                        </div>
+                      {Date.parse(crewDetail.openRound.cutoffAt) > now ? (
+                        writesAllowed && myMembership ? (
+                          <div className="flex gap-2">
+                            <input
+                              value={bidPct}
+                              onChange={(e) => setBidPct(e.target.value)}
+                              placeholder="Your discount % (1–50)"
+                              inputMode="decimal"
+                              className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => void handleBid()}
+                              disabled={busy || !myMembership || Number(bidPct) < 1 || Number(bidPct) > 50}
+                            >
+                              Bid
+                            </Button>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-500">Only active seats can call the pot.</p>
+                        )
                       ) : (
-                        <p className="text-xs text-gray-500">Only active seats can call the pot.</p>
+                        <SettlePotPanel
+                          round={crewDetail.openRound}
+                          bids={crewDetail.bids}
+                          coordinatorAddress={crewDetail.crew.coordinatorAddress}
+                          canWrite={writesAllowed}
+                          now={now}
+                          onSettled={(r) => {
+                            setSettlement(r);
+                            void fetchCrewDetail(crewDetail.crew.id);
+                            void fetchHq();
+                          }}
+                        />
                       )}
                     </div>
                   )}
+                  {settlement && <SettlementReveal result={settlement} />}
                   {crewDetail.crew.kind === 'quick' && (
                     <p className="text-xs text-gray-500">
                       Quick crew — ladder-only. Found a syndicate pool to unlock the shared chest and Call the Pot.
