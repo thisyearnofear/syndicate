@@ -4,6 +4,12 @@ This file is an index, not a second product strategy. Current implementation sta
 
 ## Active focus
 
+### Inco Summer Game Jam — Megapot track
+
+- **Project:** Season of Tickets / The Tontine Pot — crews pooling real Megapot entries, tontine seat dynamics, and an open call-the-pot auction; every score a real on-chain entry.
+- **Status:** design complete, implementation planned (testnet-first hybrid on Base Sepolia; mainnet receipts for submission). Build window 2026-07-29 → 2026-08-14.
+- **Canonical guide:** [`SEASON.md`](SEASON.md).
+
 ### OKX X Layer Build X — AI Season
 
 - **Project:** Prize Pool Hook — trading-fee-funded weighted lottery on X Layer.

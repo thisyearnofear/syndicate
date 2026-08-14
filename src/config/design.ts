@@ -431,6 +431,7 @@ export const DOMAIN_ACCENT: Record<string, DesignAccent> = {
   coordinate: 'coordinate',
   'create-syndicate': 'coordinate',
   syndicate: 'coordinate',
+  season: 'coordinate',
   xlayer: 'experimental',
   bridge: 'neutral',
   settings: 'neutral',

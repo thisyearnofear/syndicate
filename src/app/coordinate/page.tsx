@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 import { SyndicateCard } from '@/components/syndicate/SyndicateCard';
+import { SeasonBanner } from '@/components/season/SeasonBanner';
 import { PageShell, PageHeader, ShellSection } from '@/components/layout/PageShell';
 import { PageSkeleton, EmptyState } from '@/components/layout/StateViews';
 import { useUnifiedWallet } from '@/hooks';
@@ -284,6 +285,10 @@ export default function SyndicateDiscoveryPage() {
           Create Syndicate
         </Button>
       </PageHeader>
+
+      <ShellSection>
+        <SeasonBanner />
+      </ShellSection>
 
       <ShellSection className="space-y-6">
         {/* Search and Filters */}

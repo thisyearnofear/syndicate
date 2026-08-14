@@ -29,6 +29,14 @@ const XLAYER_WRITES_ENABLED =
   XLAYER_HOOK_IS_CONFIGURED &&
   process.env.NEXT_PUBLIC_XLAYER_WRITES_ENABLED === 'true';
 
+/**
+ * Season of Tickets write gate (docs/SEASON.md): campaign-layer mutations
+ * (found crew, take seat, bid) only when the operator opts in. Reads are
+ * always available so the ladder/HQ render even in preview mode.
+ */
+const SEASON_WRITES_ENABLED =
+  process.env.NEXT_PUBLIC_SEASON_WRITES_ENABLED === 'true';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 /**
@@ -66,6 +74,7 @@ export type CapabilityId =
   | 'automation_virtuals'
   | 'automation_erc7715'
   | 'xlayer_prize_pool'
+  | 'season'
   | 'portfolio'
   // Funding rails
   | 'bridge_base'
@@ -239,6 +248,21 @@ export const CAPABILITIES: readonly Capability[] = [
         ? 'Dashboard live. Set NEXT_PUBLIC_XLAYER_WRITES_ENABLED=true for testnet deposits.'
         : 'Coming soon — not yet available in this environment.',
     walletRequirement: 'EVM wallet on X Layer testnet',
+    productMode: null,
+  },
+  {
+    id: 'season',
+    label: 'Season of Tickets',
+    status: SEASON_WRITES_ENABLED ? 'testnet' : 'read_only',
+    chains: ['base'],
+    readsEnabled: true,
+    writesEnabled: SEASON_WRITES_ENABLED,
+    requiresOptIn: false,
+    testnetOnly: true,
+    availabilityMessage: SEASON_WRITES_ENABLED
+      ? 'Campaign preview — testnet funds only (no real money).'
+      : 'Read-only campaign view. Set NEXT_PUBLIC_SEASON_WRITES_ENABLED=true to enable crew actions.',
+    walletRequirement: 'EVM wallet on Base Sepolia',
     productMode: null,
   },
   {

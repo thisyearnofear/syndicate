@@ -16,6 +16,7 @@ import { LastWinner } from "@/components/home/LastWinner";
 import { SharePrompt } from "@/components/home/SharePrompt";
 import { YieldTeaser } from "@/components/home/YieldTeaser";
 import { FirstActionPrompt } from "@/components/onboarding/FirstActionPrompt";
+import { SeasonBanner } from "@/components/season/SeasonBanner";
 import { Button } from "@/shared/components/ui/Button";
 import { RoundOrb, deriveOrbState, resolveEndMs, type RoundOrbState } from "@/components/motion/RoundOrb";
 import { BeamFrame } from "@/components/motion/BeamFrame";
@@ -284,6 +285,11 @@ export default function Home() {
         {/* ─── LAST WINNER STRIP (thin banner, hidden when no winner) ─────── */}
         <div className="mb-10 max-w-2xl mx-auto">
           <LastWinner />
+        </div>
+
+        {/* ─── SEASON BANNER (campaign layer; self-hides when no active season) ── */}
+        <div className="mb-10 max-w-2xl mx-auto">
+          <SeasonBanner />
         </div>
 
         {/* ─── QUICK ACTIONS (directly under the hero) ─────────────────────── */}
