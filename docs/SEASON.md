@@ -1,6 +1,6 @@
 # Season of Tickets — The Tontine Pot
 
-**Status:** Phases 0–3 built (registry, tontine engine + keeper cron, receipt-verified settlement, `/season` HQ UI, campaign banners, migration 017 applied). Inco Summer Game Jam entry (build window 2026-07-29 → 2026-08-14), Megapot track. Testnet-first hybrid; mainnet receipts for the submission. Remaining: quick-crew scoring wired into the ladder, client-side settlement execution flow + SettlementReveal, share cards, Season view overlay on `/syndicate`, end-to-end testnet smoke test.
+**Status:** Phases 0–3 built (registry, tontine engine + keeper cron, receipt-verified settlement, quick-crew on-chain scoring + `/season` HQ UI, campaign banners, migration 017 applied). Inco Summer Game Jam entry (build window 2026-07-29 → 2026-08-14), Megapot track. Testnet-first hybrid; mainnet receipts for the submission. Remaining: client-side settlement execution flow + SettlementReveal, share cards, Season view overlay on `/syndicate`, end-to-end testnet smoke test.
 
 One-liner: *A crew pools its yield toward real Megapot entries. Every exit feeds the survivors. The last contributing member standing takes the season.*
 
@@ -163,7 +163,7 @@ season_events(id, season_id, crew_id NULL, kind, payload_jsonb, created_at)  -- 
 
 API routes (`src/app/api/season/*`):
 
-- `GET /api/season?chainId=` — active season + crew ladder + event feed (chain-scoped; testnet and mainnet ladders never mix)
+- `GET /api/season?chainId=` — active season + crew ladder + event feed + on-chain scoring (each crew gains `score: {purchases, entries}` counted from real Megapot purchase logs; a `scoring` summary reports the scanned block window and any skipped spans — chain-scoped; testnet and mainnet ladders never mix)
 - `POST /api/season` — create a season; admin-only via `Authorization: Bearer $SEASON_ADMIN_KEY`, fails closed (503) when unset
 - `GET /api/season/crews?seasonId=` / `GET /api/season/crews?code=CREW-…` — ladder list / referral-code resolution
 - `POST /api/season/crews` — found a crew (generates the referrer code)
@@ -178,7 +178,7 @@ Implemented: **all of the above.** Registry endpoints, admin season creation, jo
 Implementation notes (Phase 3 findings):
 
 - Megapot has two contract generations with two event shapes; receipt verification handles both: `TicketPurchased(buyer indexed, ticketCount, referralFeePaid)` on the V2 mainnet jackpot (`0x3bAe…42a2`), and `UserTicketPurchase(recipient indexed, ticketsPurchasedTotalBps, referrer indexed, buyer indexed)` on the classic/sepolia deployment (`0x6f03…5De` Sepolia, `0xbEDd…1B95` mainnet — the address the indexer tracks).
-- The indexed `referrer` in `UserTicketPurchase` is the on-chain hook for quick-crew scoring: `countEntriesForReferrer` walks the block window in 2k-block spans (public-RPC getLogs limits), best-effort, never faked.
+- Quick-crew scoring is address-attributed, not code-attributed: `scoringService.scoreSeasonCrews` walks the season's draw-window block range in 2k-block spans (capped at `SEASON_SCORE_MAX_BLOCKS`, default 30k) and credits quick crews for purchases by any **active seat address**, syndicate crews for purchases by the **coordinator address**. Both event generations decode (`TicketPurchased` V2 / `UserTicketPurchase` classic). Wired into `GET /api/season` (each crew gains `score: {purchases, entries}` + a `scoring` summary; ladder sorts by real entries, falls back to seat counts when the scan is unavailable). Unit-tested with mocked chain + DB (`tests/services/seasonScoringService.test.ts`): V2 / classic / syndicate / freed-seat / RPC-failure paths. The older `countEntriesForReferrer` helper remains for referrer-scoped lookups.
 - Settlement attribution check: the caller-payout receipt must show a purchase attributed to the **winning bidder**; the crew-bonus receipt must show one attributed to the **crew coordinator**. Rejected receipts are journaled as `settle.rejected` with the reason.
 
 Cron: `/api/crons/season-keeper` — wired in `vercel.json` (`0 0 * * *`, mirrors xlayer-keeper), plus manual trigger with `CRON_SECRET`.
@@ -190,7 +190,7 @@ Cron: `/api/crons/season-keeper` — wired in `vercel.json` (`0 0 * * *`, mirror
 | Phase | Dates | Deliverables |
 |---|---|---|
 | **0. Consolidation + rails check** | 07-29/30 | ✅ Orphan-route redirect (`/profile` → `/portfolio`); ✅ Megapot Base Sepolia deployment confirmed already configured (`MEGAPOT_BY_CHAIN` → `0x6f03...5De` with mock MPUSDC, testnet data API via `MEGAPOT_DATA_API_URL`); ✅ migration 017 applied. Remaining: end-to-end testnet ticket purchase smoke test |
-| **1. Crews + ladder** | 07-31–08-03 | ✅ `/season` HQ page (ladder, seat map, join/found, live bid panel, feeds), `/api/season/*` registry endpoints incl. admin `POST /api/season` (fails closed without `SEASON_ADMIN_KEY`), Season banner on `/` and `/coordinate`, `season` capability + `season` domain accent; Remaining: Season view overlay on `/syndicate`, quick-crew scoring from `TicketPurchased` logs |
+| **1. Crews + ladder** | 07-31–08-03 | ✅ `/season` HQ page (ladder, seat map, join/found, live bid panel, feeds), `/api/season/*` registry endpoints incl. admin `POST /api/season` (fails closed without `SEASON_ADMIN_KEY`), Season banner on `/` and `/coordinate`, `season` capability + `season` domain accent, quick-crew on-chain scoring (`scoringService` → `GET /api/season` ladder ranks by real entries, unit-tested). Remaining: Season view overlay on `/syndicate` |
 | **2. Tontine engine** | 08-04–08-06 | ✅ Cut renormalization on every seat change (`recalculateCrewCuts`), inactivity auto-free (`getInactiveSeats` + keeper), round expiry, keeper cron with fail-closed gates + public run replay. Remaining: seat-freedom share cards |
 | **3. Call the Pot** | 08-07–08-09 | ✅ Bid guards + anti-snipe (`placeOrReviseBid`), receipt-verified settlement endpoint (both event generations supported, attribution-checked, rejections journaled), `megapotReceipts` + `settlementService`. Remaining: client-side settlement execution flow (two purchases via existing rails, then POST settle), SettlementReveal animation |
 | **4. Testnet demo** | 08-10–08-11 | Stranger walkthrough, `SEASON_WRITES_ENABLED` gate, demo-video capture on Sepolia |
