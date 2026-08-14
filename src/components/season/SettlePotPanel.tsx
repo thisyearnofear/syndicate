@@ -43,6 +43,8 @@ interface SettlePotPanelProps {
   canWrite: boolean;
   /** Parent-supplied clock tick (avoids impure Date.now() during render). */
   now: number;
+  /** Chain the season runs on — selects the right block explorer in the reveal. */
+  chainId?: number;
   onSettled: (result: SettlementResult) => void;
 }
 
@@ -58,6 +60,7 @@ export function SettlePotPanel({
   coordinatorAddress,
   canWrite,
   now,
+  chainId,
   onSettled,
 }: SettlePotPanelProps) {
   const { address, isConnected } = useUnifiedWallet();
@@ -174,6 +177,7 @@ export function SettlePotPanel({
         bonusTickets: split.bonusTickets,
         callerTxHash: payoutTx,
         bonusTxHash: bonusTx,
+        chainId,
       };
       setResult(settledResult);
       setPhase('done');
@@ -193,6 +197,7 @@ export function SettlePotPanel({
     coordinatorAddress,
     round.id,
     chestUsdc,
+    chainId,
     onSettled,
   ]);
 

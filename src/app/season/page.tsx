@@ -18,7 +18,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Users, Plus, LogIn, Gavel, ArrowLeft, Ticket, Trophy } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Users, Plus, LogIn, Gavel, ArrowLeft, Ticket, Trophy, Copy, Check } from 'lucide-react';
 import { PageShell, PageHeader, ShellSection } from '@/components/layout/PageShell';
 import { PageSkeleton, EmptyState, DisconnectedState } from '@/components/layout/StateViews';
 import { Button } from '@/shared/components/ui/Button';
@@ -106,11 +107,14 @@ export default function SeasonPage() {
   const [newCrewName, setNewCrewName] = useState('');
   const [bidPct, setBidPct] = useState('');
   const [callPct, setCallPct] = useState('25');
+  const [confirmingCall, setConfirmingCall] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [settlement, setSettlement] = useState<SettlementResult | null>(null);
 
   const chainId = CHAIN_IDS.BASE;
+  const searchParams = useSearchParams();
 
   const fetchHq = useCallback(async () => {
     try {
@@ -141,16 +145,35 @@ export default function SeasonPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchHq();
-    const t = setInterval(() => setNow(Date.now()), 30_000);
+    // Calm 30s tick normally; 1s tick when the season draw or an open
+    // auction cutoff is within 10 minutes (anti-snipe extensions move the
+    // target, so the countdown must track it closely).
+    const soon =
+      (season != null && season.drawWindowEnd - now < 10 * 60_000) ||
+      (crewDetail?.openRound != null && Date.parse(crewDetail.openRound.cutoffAt) - now < 10 * 60_000);
+    const t = setInterval(() => setNow(Date.now()), soon ? 1_000 : 30_000);
     return () => clearInterval(t);
-  }, [fetchHq]);
+  }, [fetchHq, season, crewDetail?.openRound, now]);
+
+  // Deep link: /season?crew=<id> opens that crew directly — this is what a
+  // shared invite URL looks like. The crew-detail effect syncs the URL back
+  // (so picks from the ladder are shareable too).
+  useEffect(() => {
+    const crewParam = searchParams ? searchParams.get('crew') : null;
+    if (crewParam && crewParam !== selectedCrewId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedCrewId(crewParam);
+    }
+  }, [searchParams, selectedCrewId]);
 
   useEffect(() => {
     if (!selectedCrewId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCrewDetail(null);
+      window.history.replaceState(null, '', '/season');
       return;
     }
+    window.history.replaceState(null, '', `/season?crew=${selectedCrewId}`);
     void fetchCrewDetail(selectedCrewId);
     const t = setInterval(() => void fetchCrewDetail(selectedCrewId), 10_000);
     return () => clearInterval(t);
@@ -229,6 +252,20 @@ export default function SeasonPage() {
     }
   };
 
+  const copyInvite = async (): Promise<void> => {
+    if (!crewDetail) return;
+    const link = `${window.location.origin}/season?crew=${crewDetail.crew.id}`;
+    try {
+      await navigator.clipboard.writeText(
+        `Join my Megapot crew \u2014 code ${crewDetail.crew.referrerCode} or ${link}`,
+      );
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2_000);
+    } catch {
+      /* clipboard unavailable — the code stays visible on screen */
+    }
+  };
+
   const handleCallPot = async (): Promise<void> => {
     const pct = Number(callPct);
     if (!crewDetail || !address || !season || !Number.isFinite(pct)) return;
@@ -245,6 +282,7 @@ export default function SeasonPage() {
         }),
       });
       if (!res.ok) throw new Error(((await res.json()) as { error?: string }).error ?? 'Call failed');
+      setConfirmingCall(false);
       await fetchCrewDetail(crewDetail.crew.id);
     } catch (e) {
       setFormError(e instanceof Error ? e.message : 'Call failed');
@@ -401,13 +439,21 @@ export default function SeasonPage() {
                       </button>
                       <h2 className="text-lg font-bold text-white truncate">{crewDetail.crew.name}</h2>
                     </div>
-                    {myMembership ? (
-                      <CutBadge cutBps={myMembership.cutBps} />
-                    ) : (
-                      <span className="text-[11px] text-gray-500 shrink-0">
-                        Code {crewDetail.crew.referrerCode}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {myMembership && <CutBadge cutBps={myMembership.cutBps} />}
+                      <button
+                        type="button"
+                        onClick={() => void copyInvite()}
+                        title="Copy invite (code + link)"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-gray-300 hover:text-white hover:bg-white/[0.08] transition-colors"
+                      >
+                        {copiedCode ? (
+                          <><Check className="w-3 h-3 text-emerald-300" /> Copied</>
+                        ) : (
+                          <><Copy className="w-3 h-3" /> {crewDetail.crew.referrerCode}</>
+                        )}
+                      </button>
+                    </div>
                   </div>
 
                   <SeatMap members={crewDetail.members} />
@@ -420,22 +466,41 @@ export default function SeasonPage() {
                         <p className="text-sm font-bold text-white">Call the pot</p>
                       </div>
                       {writesAllowed && myMembership ? (
-                        <div className="flex gap-2">
-                          <input
-                            value={callPct}
-                            onChange={(e) => setCallPct(e.target.value)}
-                            placeholder="Your opening offer to the crew % (1–50)"
-                            inputMode="decimal"
-                            className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() => void handleCallPot()}
-                            disabled={busy || Number(callPct) < 1 || Number(callPct) > 50}
-                          >
-                            <Gavel className="w-4 h-4 mr-1" /> Call
-                          </Button>
-                        </div>
+                        !confirmingCall ? (
+                          <div className="flex gap-2">
+                            <input
+                              value={callPct}
+                              onChange={(e) => setCallPct(e.target.value)}
+                              placeholder="Your opening offer to the crew % (1–50)"
+                              inputMode="decimal"
+                              className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => setConfirmingCall(true)}
+                              disabled={busy || Number(callPct) < 1 || Number(callPct) > 50}
+                            >
+                              <Gavel className="w-4 h-4 mr-1" /> Call
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="rounded-lg border border-amber-400/30 bg-amber-500/[0.08] p-3 space-y-2">
+                            <p className="text-xs text-amber-200">
+                              Confirm: open an auction over the crew chest at{' '}
+                              <span className="font-semibold">{callPct}% to the crew</span>, closing at the
+                              season draw. If your offer wins you <span className="font-semibold">exit your
+                              seat</span> for the rest. This cannot be undone once bids land.
+                            </p>
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="warning" disabled={busy} onClick={() => void handleCallPot()}>
+                                <Gavel className="w-4 h-4 mr-1" /> Confirm call
+                              </Button>
+                              <Button size="sm" variant="outline" disabled={busy} onClick={() => setConfirmingCall(false)}>
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        )
                       ) : (
                         <p className="text-xs text-gray-500">Only active seats can call the pot.</p>
                       )}
@@ -497,6 +562,7 @@ export default function SeasonPage() {
                           coordinatorAddress={crewDetail.crew.coordinatorAddress}
                           canWrite={writesAllowed}
                           now={now}
+                          chainId={season?.chainId ?? chainId}
                           onSettled={(r) => {
                             setSettlement(r);
                             void fetchCrewDetail(crewDetail.crew.id);

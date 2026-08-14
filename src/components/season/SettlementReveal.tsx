@@ -21,6 +21,19 @@ export interface SettlementResult {
   bonusTickets: number;
   callerTxHash: string;
   bonusTxHash: string;
+  /** Chain the purchases were made on — selects the correct block explorer. */
+  chainId?: number;
+}
+
+const EXPLORER_TX_BASE: Record<number, string> = {
+  1: 'https://etherscan.io/tx/',
+  8453: 'https://basescan.org/tx/',
+  84532: 'https://sepolia.basescan.org/tx/',
+};
+
+function txUrl(result: SettlementResult, hash: string): string {
+  const base = result.chainId ? EXPLORER_TX_BASE[result.chainId] : undefined;
+  return `${base ?? 'https://basescan.org/tx/'}${hash}`;
 }
 
 function shortAddr(a: string): string {
@@ -64,7 +77,7 @@ export function SettlementReveal({ result, className = '' }: SettlementRevealPro
             {result.callerTickets} ticket{result.callerTickets !== 1 ? 's' : ''} to the caller
           </span>
           <a
-            href={`https://basescan.org/tx/${result.callerTxHash}`}
+            href={txUrl(result, result.callerTxHash)}
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs text-emerald-300/80 hover:underline underline-offset-4"
@@ -78,7 +91,7 @@ export function SettlementReveal({ result, className = '' }: SettlementRevealPro
             {result.bonusTickets} bonus ticket{result.bonusTickets !== 1 ? 's' : ''} to the crew
           </span>
           <a
-            href={`https://basescan.org/tx/${result.bonusTxHash}`}
+            href={txUrl(result, result.bonusTxHash)}
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs text-emerald-300/80 hover:underline underline-offset-4"

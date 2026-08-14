@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Gavel, Users } from 'lucide-react';
 import { EmptyState } from '@/components/layout/StateViews';
+import { Button } from '@/shared/components/ui/Button';
 import { SeatMap, CutBadge } from '@/components/season/SeatMap';
 import { SettlePotPanel } from '@/components/season/SettlePotPanel';
 import { SettlementReveal, type SettlementResult } from '@/components/season/SettlementReveal';
@@ -61,6 +62,7 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
   const [settlement, setSettlement] = useState<SettlementResult | null>(null);
   const [bidPct, setBidPct] = useState('');
   const [callPct, setCallPct] = useState('25');
+  const [confirmingCall, setConfirmingCall] = useState(false);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -126,6 +128,7 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(((await res.json()) as { error?: string }).error ?? 'Call failed');
+      setConfirmingCall(false);
       await fetchByPool();
     } catch (e) {
       setFormError(e instanceof Error ? e.message : 'Call failed');
@@ -202,23 +205,42 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
             <p className="text-sm font-bold text-white">Call the pot</p>
           </div>
           {writesAllowed && myMembership ? (
-            <div className="flex gap-2">
-              <input
-                value={callPct}
-                onChange={(e) => setCallPct(e.target.value)}
-                placeholder="Your opening offer to the crew % (1–50)"
-                inputMode="decimal"
-                className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
-              />
-              <button
-                type="button"
-                onClick={() => void handleCallPot()}
-                disabled={busy || Number(callPct) < 1 || Number(callPct) > 50}
-                className="rounded-lg bg-amber-500/20 border border-amber-400/40 px-4 py-2 text-sm font-semibold text-amber-200 hover:bg-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Call
-              </button>
-            </div>
+            !confirmingCall ? (
+              <div className="flex gap-2">
+                <input
+                  value={callPct}
+                  onChange={(e) => setCallPct(e.target.value)}
+                  placeholder="Your opening offer to the crew % (1–50)"
+                  inputMode="decimal"
+                  className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
+                />
+                <Button
+                  size="sm"
+                  variant="warning"
+                  onClick={() => setConfirmingCall(true)}
+                  disabled={busy || Number(callPct) < 1 || Number(callPct) > 50}
+                >
+                  Call
+                </Button>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-amber-400/30 bg-amber-500/[0.08] p-3 space-y-2">
+                <p className="text-xs text-amber-200">
+                  Confirm: open an auction over the crew chest at{' '}
+                  <span className="font-semibold">{callPct}% to the crew</span>, closing at the
+                  season draw. If your offer wins you <span className="font-semibold">exit your
+                  seat</span> for the rest. This cannot be undone once bids land.
+                </p>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="warning" disabled={busy} onClick={() => void handleCallPot()}>
+                    Confirm call
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={busy} onClick={() => setConfirmingCall(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )
           ) : (
             <p className="text-xs text-gray-500">Only active seats can open a call-the-pot round.</p>
           )}
@@ -263,14 +285,14 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
                   inputMode="decimal"
                   className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
                 />
-                <button
-                  type="button"
+                <Button
+                  size="sm"
+                  variant="warning"
                   onClick={() => void handleBid()}
                   disabled={busy || !myMembership || Number(bidPct) < 1 || Number(bidPct) > 50}
-                  className="rounded-lg bg-amber-500/20 border border-amber-400/40 px-4 py-2 text-sm font-semibold text-amber-200 hover:bg-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Bid
-                </button>
+                </Button>
               </div>
             ) : (
               <p className="text-xs text-gray-500">Only active seats can bid.</p>
@@ -282,6 +304,7 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
               coordinatorAddress={crew.coordinatorAddress}
               canWrite={writesAllowed}
               now={now}
+              chainId={crewDetail?.season?.chainId}
               onSettled={(r) => {
                 setSettlement(r);
                 void fetchByPool();

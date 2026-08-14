@@ -217,7 +217,7 @@ body {
   padding: 0;
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+  background: linear-gradient(135deg, #020617 0%, #172554 50%, #1e1b4b 100%);
   color: #f8fafc;
   overflow-x: hidden;
 }

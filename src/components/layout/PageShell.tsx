@@ -16,7 +16,8 @@
  */
 
 import { type ReactNode, type CSSProperties } from "react";
-import { ACCENTS, type DesignAccent } from "@/config/design";
+import { usePathname } from "next/navigation";
+import { ACCENTS, DOMAIN_ACCENT, type DesignAccent } from "@/config/design";
 import { RoundOrb, type RoundOrbState } from "@/components/motion/RoundOrb";
 
 const WIDTHS = {
@@ -31,12 +32,27 @@ interface PageShellProps {
   width?: keyof typeof WIDTHS;
   /** Extra classes for the inner container (e.g. pb for footers) */
   className?: string;
+  /** Accent for the ambient background glow. Auto-derived from route when omitted. */
+  accent?: DesignAccent;
 }
 
-export function PageShell({ children, width = "content", className = "" }: PageShellProps) {
+export function PageShell({ children, width = "content", className = "", accent }: PageShellProps) {
+  const pathname = usePathname();
+  // Derive accent from route when not explicitly passed, so every page gets
+  // its domain-colored ambient glow without any per-page wiring.
+  const slug = pathname ? pathname.replace(/^\/+/, "").split("/")[0] : "";
+  const resolvedAccent: DesignAccent = accent ?? DOMAIN_ACCENT[slug] ?? "neutral";
+  const glow = ACCENTS[resolvedAccent].glow;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950 text-white">
-      <div className={`container mx-auto px-4 ${WIDTHS[width]} py-8 md:py-10 space-y-8 ${className}`}>
+    <div className="relative min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950 text-white">
+      {/* Ambient accent glows — decorative only, never intercepts input.
+          Fixed + overflow-hidden so blobs never cause scroll or clip sticky headers. */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        <div className={`absolute -top-32 -left-32 h-[28rem] w-[28rem] rounded-full blur-3xl ${glow.top}`} />
+        <div className={`absolute -bottom-40 -right-32 h-[32rem] w-[32rem] rounded-full blur-3xl ${glow.bottom}`} />
+      </div>
+      <div className={`relative z-10 container mx-auto px-4 ${WIDTHS[width]} py-8 md:py-10 space-y-8 ${className}`}>
         {children}
       </div>
     </div>

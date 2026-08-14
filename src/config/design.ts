@@ -372,6 +372,11 @@ export interface AccentTokens {
   icon: string;
   /** Hairline gradient under page headers */
   hairline: string;
+  /** Ambient backdrop glow blobs (low-opacity, blur-3xl) — brand color as atmosphere */
+  glow: {
+    top: string;
+    bottom: string;
+  };
 }
 
 export const ACCENTS: Record<DesignAccent, AccentTokens> = {
@@ -382,6 +387,10 @@ export const ACCENTS: Record<DesignAccent, AccentTokens> = {
     border: 'hover:border-amber-400/40 hover:shadow-[0_10px_40px_-12px_rgba(251,191,36,0.30)]',
     icon: 'text-amber-300',
     hairline: 'from-amber-400/70 via-amber-400/20 to-transparent',
+    glow: {
+      top: 'bg-amber-500/[0.07]',
+      bottom: 'bg-orange-500/[0.05]',
+    },
   },
   grow: {
     gradientText: 'bg-gradient-to-r from-emerald-200 via-emerald-300 to-teal-400 bg-clip-text text-transparent',
@@ -390,6 +399,10 @@ export const ACCENTS: Record<DesignAccent, AccentTokens> = {
     border: 'hover:border-emerald-400/40 hover:shadow-[0_10px_40px_-12px_rgba(52,211,153,0.30)]',
     icon: 'text-emerald-300',
     hairline: 'from-emerald-400/70 via-emerald-400/20 to-transparent',
+    glow: {
+      top: 'bg-emerald-500/[0.07]',
+      bottom: 'bg-teal-500/[0.05]',
+    },
   },
   coordinate: {
     gradientText: 'bg-gradient-to-r from-violet-200 via-purple-300 to-fuchsia-400 bg-clip-text text-transparent',
@@ -398,6 +411,10 @@ export const ACCENTS: Record<DesignAccent, AccentTokens> = {
     border: 'hover:border-violet-400/40 hover:shadow-[0_10px_40px_-12px_rgba(167,139,250,0.30)]',
     icon: 'text-violet-300',
     hairline: 'from-violet-400/70 via-violet-400/20 to-transparent',
+    glow: {
+      top: 'bg-violet-500/[0.08]',
+      bottom: 'bg-fuchsia-500/[0.05]',
+    },
   },
   neutral: {
     gradientText: 'text-white',
@@ -406,6 +423,10 @@ export const ACCENTS: Record<DesignAccent, AccentTokens> = {
     border: 'hover:border-white/25 hover:shadow-[0_10px_40px_-12px_rgba(255,255,255,0.15)]',
     icon: 'text-gray-300',
     hairline: 'from-white/30 via-white/10 to-transparent',
+    glow: {
+      top: 'bg-blue-500/[0.05]',
+      bottom: 'bg-indigo-500/[0.04]',
+    },
   },
   /**
    * Experimental surfaces (X Layer). A fifth meaning — "this is the R&D
@@ -418,6 +439,10 @@ export const ACCENTS: Record<DesignAccent, AccentTokens> = {
     border: 'hover:border-cyan-400/40 hover:shadow-[0_10px_40px_-12px_rgba(34,211,238,0.30)]',
     icon: 'text-cyan-300',
     hairline: 'from-cyan-400/70 via-cyan-400/20 to-transparent',
+    glow: {
+      top: 'bg-cyan-500/[0.08]',
+      bottom: 'bg-blue-500/[0.05]',
+    },
   },
 };
 
