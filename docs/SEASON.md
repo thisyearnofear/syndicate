@@ -1,6 +1,6 @@
 # Season of Tickets — The Tontine Pot
 
-**Status:** Phases 0–3 complete (registry, tontine engine + keeper cron, receipt-verified settlement incl. client-side execution flow + SettlementReveal, quick-crew on-chain scoring + `/season` HQ UI, campaign banners, migration 017 applied). Inco Summer Game Jam entry (build window 2026-07-29 → 2026-08-14), Megapot track. Testnet-first hybrid; mainnet receipts for the submission. Season view overlay on `/syndicate?id=…` (`SeasonCrewOverlay` + `GET /api/season/crews?poolId=…` + `getCrewBySyndicatePoolId`) and share cards (`ShareCards` wired into `SettlementReveal`) are built. Remaining: end-to-end testnet smoke test (needs funded Base Sepolia wallet), stranger walkthrough, demo-video capture.
+**Status:** Phases 0–3 complete (registry, tontine engine + keeper cron, receipt-verified settlement incl. client-side execution flow + SettlementReveal, quick-crew on-chain scoring + `/season` HQ UI, campaign banners, migration 017 applied). Inco Summer Game Jam entry (build window 2026-07-29 → 2026-08-14), Megapot track. Testnet-first hybrid; mainnet receipts for the submission. Season view overlay on `/syndicate?id=…` (`SeasonCrewOverlay` + `GET /api/season/crews?poolId=…` + `getCrewBySyndicatePoolId`) and share cards (`ShareCards` wired into `SettlementReveal`) are built. API smoke test passes 24/24 (all guards, anti-snipe, receipt rejection, keeper, scoring). Remaining: funded Base Sepolia end-to-end purchase, stranger walkthrough, demo-video capture.
 
 One-liner: *A crew pools its yield toward real Megapot entries. Every exit feeds the survivors. The last contributing member standing takes the season.*
 
@@ -167,13 +167,14 @@ API routes (`src/app/api/season/*`):
 - `POST /api/season` — create a season; admin-only via `Authorization: Bearer $SEASON_ADMIN_KEY`, fails closed (503) when unset
 - `GET /api/season/crews?seasonId=` / `GET /api/season/crews?code=CREW-…` — ladder list / referral-code resolution
 - `POST /api/season/crews` — found a crew (generates the referrer code)
-- `GET /api/season/crews/[id]` — crew detail: members + cuts, open round, bids, feed
+- `GET /api/season/crews/[id]` — crew detail: season row, members + cuts, open round, bids, feed
 - `POST /api/season/crews/[id]/join` — take a seat (renormalizes cuts)
-- `GET /api/season/rounds/[id]/bids`, `POST /api/season/rounds/[id]/bids` (server-side guards: rate limit, bid bounds 100–5000 bps, anti-snipe cutoff extension, event journal)
+- `POST /api/season/crews/[id]/rounds` — Call the Pot: open a round (caller must hold an active seat, one open round per crew, cutoff aligned to the draw end; places the caller's opening bid)
+- `GET /api/season/rounds/[id]/bids`, `POST /api/season/rounds/[id]/bids` (server-side guards: rate limit, bid bounds 100–5000 bps, **active-seat membership check**, anti-snipe cutoff extension, event journal)
 - `POST /api/season/rounds/[id]/settle` — keeper/coordinator only, receipt-verified journal (Phase 3)
 - `GET /api/agent/season/latest-run` — public keeper replay (Phase 2)
 
-Implemented: **all of the above.** Registry endpoints, admin season creation, join/bid with guards, the receipt-verified settle endpoint (`src/services/season/settlementService.ts` + `src/services/season/megapotReceipts.ts`), the keeper cron, and the latest-run replay. All write endpoints are rate-limited and journaled to `season_events`.
+Implemented: **all of the above.** Registry endpoints, admin season creation, round opening + join/bid with guards, the receipt-verified settle endpoint (`src/services/season/settlementService.ts` + `src/services/season/megapotReceipts.ts`), the keeper cron, and the latest-run replay. All write endpoints are rate-limited and journaled to `season_events`.
 
 Implementation notes (Phase 3 findings):
 
@@ -181,6 +182,7 @@ Implementation notes (Phase 3 findings):
 - Quick-crew scoring is address-attributed, not code-attributed: `scoringService.scoreSeasonCrews` walks the season's draw-window block range in 2k-block spans (capped at `SEASON_SCORE_MAX_BLOCKS`, default 30k) and credits quick crews for purchases by any **active seat address**, syndicate crews for purchases by the **coordinator address**. Both event generations decode (`TicketPurchased` V2 / `UserTicketPurchase` classic). Wired into `GET /api/season` (each crew gains `score: {purchases, entries}` + a `scoring` summary; ladder sorts by real entries, falls back to seat counts when the scan is unavailable). Unit-tested with mocked chain + DB (`tests/services/seasonScoringService.test.ts`): V2 / classic / syndicate / freed-seat / RPC-failure paths. The older `countEntriesForReferrer` helper remains for referrer-scoped lookups.
 - Settlement attribution check: the caller-payout receipt must show a purchase attributed to the **winning bidder**; the crew-bonus receipt must show one attributed to the **crew coordinator**. Rejected receipts are journaled as `settle.rejected` with the reason. Client-side `SettlePotPanel` executes the two purchases via `useUnifiedPurchase` (waits for mined receipts), then POSTs both hashes; partial failure retries from the failed purchase without double-buying.
 - Keeper expiry guard: `listOpenRoundsPastCutoff` skips rounds that still have live bids, so a won auction is never expired before the winner can settle.
+- Call-the-Pot UI: both `/season` and the `/syndicate` Season tab show a "Call" form when a syndicate crew has no open round (opening discount input, cutoff = draw window end); bids and the settlement panel appear once a round is open. Full API smoke test passes 24/24 (`/tmp/season_smoke.sh` pattern): season/crew/join/round/bid/settle guards, keeper cron + replay, scoring.
 
 Cron: `/api/crons/season-keeper` — wired in `vercel.json` (`0 0 * * *`, mirrors xlayer-keeper), plus manual trigger with `CRON_SECRET`.
 
@@ -194,7 +196,7 @@ Cron: `/api/crons/season-keeper` — wired in `vercel.json` (`0 0 * * *`, mirror
 | **1. Crews + ladder** | 07-31–08-03 | ✅ `/season` HQ page (ladder, seat map, join/found, live bid panel, feeds), `/api/season/*` registry endpoints incl. admin `POST /api/season` (fails closed without `SEASON_ADMIN_KEY`), Season banner on `/` and `/coordinate`, `season` capability + `season` domain accent, quick-crew on-chain scoring (`scoringService` → `GET /api/season` ladder ranks by real entries, unit-tested). Season overlay tab on `/syndicate` (`SeasonCrewOverlay`, resolved via `poolId` lookup), share cards (`ShareCards`) done. Remaining: — |
 | **2. Tontine engine** | 08-04–08-06 | ✅ Cut renormalization on every seat change (`recalculateCrewCuts`), inactivity auto-free (`getInactiveSeats` + keeper), round expiry, keeper cron with fail-closed gates + public run replay. Remaining: seat-freedom share-card wiring in feed (component `ShareCards` available) |
 | **3. Call the Pot** | 08-07–08-09 | ✅ Bid guards + anti-snipe (`placeOrReviseBid`), receipt-verified settlement endpoint (both event generations supported, attribution-checked, rejections journaled), `megapotReceipts` + `settlementService`, client-side settlement flow (`SettlePotPanel`: winner/coordinator executes both real purchases via `useUnifiedPurchase`, journals hashes; stepwise retry from failed stage), `SettlementReveal` (reveal grammar: DecryptLine chest → BeamFrame winner → receipt links → freed seat) with share card. Remaining: — |
-| **4. Testnet demo** | 08-10–08-11 | Stranger walkthrough, `SEASON_WRITES_ENABLED` gate, demo-video capture on Sepolia |
+| **4. Testnet demo** | 08-10–08-11 | ✅ API smoke test 24/24 (create season → crew → join ×3 → cuts → call round → bids incl. non-member rejection → settle guards + fake-receipt rejection → keeper + replay → scoring). `SEASON_WRITES_ENABLED` gate in place. Remaining: funded Base Sepolia wallet purchase, stranger walkthrough, demo-video capture |
 | **5. Mainnet receipts + submit** | 08-12–08-14 | Flip config to Base mainnet, small-stake real round, final video, README section + jam write-up with pre-existing-rails disclosure |
 
 Buffer rule: if phase 3 slips, ship phases 1–2 + one scripted settlement demo; never fake a receipt.

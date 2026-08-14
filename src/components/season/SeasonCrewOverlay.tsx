@@ -21,9 +21,10 @@ import { SettlePotPanel } from '@/components/season/SettlePotPanel';
 import { SettlementReveal, type SettlementResult } from '@/components/season/SettlementReveal';
 import { useUnifiedWallet } from '@/hooks';
 import { useCapability } from '@/hooks/useCapability';
-import type { CrewSummary, CrewMember, SeasonEvent } from '@/components/season/types';
+import type { CrewSummary, CrewMember, SeasonEvent, SeasonSummary } from '@/components/season/types';
 
 interface CrewDetail {
+  season?: SeasonSummary | null;
   crew: CrewSummary;
   members: CrewMember[];
   events: SeasonEvent[];
@@ -82,6 +83,7 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
   const [notFound, setNotFound] = useState(false);
   const [settlement, setSettlement] = useState<SettlementResult | null>(null);
   const [bidPct, setBidPct] = useState('');
+  const [callPct, setCallPct] = useState('25');
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -127,6 +129,33 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
   ) ?? null;
 
   const writesAllowed = canWrite && ctaState !== 'hidden';
+
+  const handleCallPot = async (): Promise<void> => {
+    const pct = Number(callPct);
+    if (!crewDetail || !address || !Number.isFinite(pct)) return;
+    setBusy(true);
+    setFormError(null);
+    try {
+      const body: Record<string, unknown> = {
+        callerAddress: address,
+        discountBps: Math.round(pct * 100),
+      };
+      if (crewDetail.season?.drawWindowEnd) {
+        body.cutoffAt = crewDetail.season.drawWindowEnd;
+      }
+      const res = await fetch(`/api/season/crews/${crewDetail.crew.id}/rounds`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(((await res.json()) as { error?: string }).error ?? 'Call failed');
+      await fetchByPool();
+    } catch (e) {
+      setFormError(e instanceof Error ? e.message : 'Call failed');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleBid = async (): Promise<void> => {
     const pct = Number(bidPct);
@@ -189,6 +218,40 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
       <SeatMap members={members} />
 
       {/* Call the pot */}
+      {!openRound && crew.kind === 'syndicate' && (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Gavel className="w-4 h-4 text-amber-300" />
+            <p className="text-sm font-bold text-white">Call the pot</p>
+          </div>
+          {writesAllowed && myMembership ? (
+            <div className="flex gap-2">
+              <input
+                value={callPct}
+                onChange={(e) => setCallPct(e.target.value)}
+                placeholder="Opening discount % (1\u201350)"
+                inputMode="decimal"
+                className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
+              />
+              <button
+                type="button"
+                onClick={() => void handleCallPot()}
+                disabled={busy || Number(callPct) < 1 || Number(callPct) > 50}
+                className="rounded-lg bg-amber-500/20 border border-amber-400/40 px-4 py-2 text-sm font-semibold text-amber-200 hover:bg-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Call
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-500">Only active seats can open a call-the-pot round.</p>
+          )}
+          <p className="text-[11px] text-gray-500">
+            Opens a descending-discount auction over the crew chest. The crew keeps bidding until the draw closes.
+          </p>
+          {formError && <p className="text-xs text-red-400">{formError}</p>}
+        </div>
+      )}
+
       {openRound && (
         <div className="rounded-2xl border border-amber-400/25 bg-amber-500/[0.05] p-4 space-y-3">
           <div className="flex items-center gap-2">

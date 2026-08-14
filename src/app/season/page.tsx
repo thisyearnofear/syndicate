@@ -62,6 +62,7 @@ export default function SeasonPage() {
   const [joinCode, setJoinCode] = useState('');
   const [newCrewName, setNewCrewName] = useState('');
   const [bidPct, setBidPct] = useState('');
+  const [callPct, setCallPct] = useState('25');
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [settlement, setSettlement] = useState<SettlementResult | null>(null);
@@ -180,6 +181,30 @@ export default function SeasonPage() {
       await Promise.all([fetchHq(), fetchCrewDetail(crew.id)]);
     } catch (e) {
       setFormError(e instanceof Error ? e.message : 'Create failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleCallPot = async (): Promise<void> => {
+    const pct = Number(callPct);
+    if (!crewDetail || !address || !season || !Number.isFinite(pct)) return;
+    setBusy(true);
+    setFormError(null);
+    try {
+      const res = await fetch(`/api/season/crews/${crewDetail.crew.id}/rounds`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          callerAddress: address,
+          discountBps: Math.round(pct * 100),
+          cutoffAt: season.drawWindowEnd,
+        }),
+      });
+      if (!res.ok) throw new Error(((await res.json()) as { error?: string }).error ?? 'Call failed');
+      await fetchCrewDetail(crewDetail.crew.id);
+    } catch (e) {
+      setFormError(e instanceof Error ? e.message : 'Call failed');
     } finally {
       setBusy(false);
     }
@@ -314,6 +339,38 @@ export default function SeasonPage() {
                   <SeatMap members={crewDetail.members} />
 
                   {/* ── Call the pot ── */}
+                  {crewDetail.crew.kind === 'syndicate' && !crewDetail.openRound && (
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Gavel className="w-4 h-4 text-amber-300" />
+                        <p className="text-sm font-bold text-white">Call the pot</p>
+                      </div>
+                      {writesAllowed && myMembership ? (
+                        <div className="flex gap-2">
+                          <input
+                            value={callPct}
+                            onChange={(e) => setCallPct(e.target.value)}
+                            placeholder="Opening discount % (1\u201350)"
+                            inputMode="decimal"
+                            className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => void handleCallPot()}
+                            disabled={busy || Number(callPct) < 1 || Number(callPct) > 50}
+                          >
+                            <Gavel className="w-4 h-4 mr-1" /> Call
+                          </Button>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-500">Only active seats can open a call-the-pot round.</p>
+                      )}
+                      <p className="text-[11px] text-gray-500 mt-2">
+                        Opens a descending-discount auction over the crew chest. The crew keeps bidding until the draw
+                        closes.
+                      </p>
+                    </div>
+                  )}
                   {crewDetail.crew.kind === 'syndicate' && crewDetail.openRound && (
                     <div className="rounded-2xl border border-amber-400/25 bg-amber-500/[0.05] p-4">
                       <div className="flex items-center gap-2 mb-2">

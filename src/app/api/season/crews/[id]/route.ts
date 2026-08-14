@@ -1,7 +1,7 @@
 /**
  * GET /api/season/crews/[id] — one crew's full state for the Season view:
- * crew row, member seats with cuts, the open call-the-pot round (if any)
- * with its live bids, and the crew's recent event feed.
+ * season row, crew row, member seats with cuts, the open call-the-pot
+ * round (if any) with its live bids, and the crew's recent event feed.
  *
  * Read-only; no wallet required.
  */
@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   ensureSeasonTables,
   getCrewById,
+  getSeasonById,
   listCrewMembers,
   listCrewEvents,
   getOpenCallRound,
@@ -31,15 +32,16 @@ export async function GET(
     const crew = await getCrewById(id);
     if (!crew) return apiNotFound('Crew not found');
 
-    const [members, events, round] = await Promise.all([
+    const [members, events, round, season] = await Promise.all([
       listCrewMembers(id),
       listCrewEvents(id, 30),
       getOpenCallRound(id),
+      getSeasonById(crew.seasonId),
     ]);
 
     const bids = round ? await listRoundBids(round.id) : [];
 
-    return NextResponse.json({ crew, members, events, openRound: round, bids });
+    return NextResponse.json({ season, crew, members, events, openRound: round, bids });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error('[Season] Crew detail failed:', { message });

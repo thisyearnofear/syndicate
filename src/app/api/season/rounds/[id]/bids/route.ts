@@ -15,6 +15,7 @@ import {
   appendSeasonEvent,
   ensureSeasonTables,
   getCallRoundById,
+  listCrewMembers,
   listRoundBids,
   placeOrReviseBid,
 } from '@/lib/db/repositories/seasonRepository';
@@ -81,6 +82,12 @@ export async function POST(
     await ensureSeasonTables();
     const round = await getCallRoundById(id);
     if (!round) return apiNotFound('Round not found');
+
+    const members = await listCrewMembers(round.crewId);
+    const isMember = members.some(
+      (m) => m.memberAddress === bidderAddress.toLowerCase() && m.seatStatus === 'active',
+    );
+    if (!isMember) return apiValidationError('Bidder does not hold an active seat in this crew');
 
     const { bid, round: updatedRound } = await placeOrReviseBid({
       id: randomUUID(),
