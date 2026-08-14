@@ -39,6 +39,7 @@ import { AuctionStage } from '@/components/season/AuctionStage';
 import { SettlePotPanel } from '@/components/season/SettlePotPanel';
 import { SettlementReveal, type SettlementResult } from '@/components/season/SettlementReveal';
 import { TontineLore, HowItWorks } from '@/components/season/TontineLore';
+import { MechanicPreview } from '@/components/season/MechanicPreview';
 import { RefereeStrip } from '@/components/season/RefereeStrip';
 import { eventLabel, timeAgo } from '@/components/season/labels';
 import type { SeasonSummary, CrewSummary, CrewMember, SeasonEvent } from '@/components/season/types';
@@ -394,20 +395,14 @@ export default function SeasonPage() {
             </div>
           </ShellSection>
 
-          {/* ── The history, which is also the rulebook ── */}
+          {/* ── The mechanic before the history: show the reason to play ── */}
           {!selectedCrewId && (
             <ShellSection>
-              <TontineLore />
+              <MechanicPreview />
             </ShellSection>
           )}
 
-          {!selectedCrewId && (
-            <ShellSection>
-              <HowItWorks />
-            </ShellSection>
-          )}
-
-          {/* ── Join / found — shown only until a crew is selected ── */}
+          {/* ── Join / found — the first action for a new visitor ── */}
           {!selectedCrewId && (
             <ShellSection>
               {!isConnected ? (
@@ -475,6 +470,19 @@ export default function SeasonPage() {
                 </div>
               )}
               {formError && <p className="mt-3 text-sm text-red-400">{formError}</p>}
+            </ShellSection>
+          )}
+
+          {/* ── The history, below the first action ── */}
+          {!selectedCrewId && (
+            <ShellSection>
+              <TontineLore />
+            </ShellSection>
+          )}
+
+          {!selectedCrewId && (
+            <ShellSection>
+              <HowItWorks />
             </ShellSection>
           )}
 
@@ -568,6 +576,7 @@ export default function SeasonPage() {
                           : 'Only a held seat can call the pot. Take a seat first.'
                       }
                       onCall={handleCallPot}
+                      currentCutBps={myMembership?.cutBps}
                       busy={busy}
                       error={formError}
                       cutoffLabel="the season draw"
@@ -581,6 +590,7 @@ export default function SeasonPage() {
                       bids={crewDetail.bids}
                       now={now}
                       youAddress={address}
+                      currentCutBps={myMembership?.cutBps}
                       canBid={writesAllowed && !!myMembership}
                       lockedReason={
                         !writesAllowed

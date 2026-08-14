@@ -174,6 +174,7 @@ export function SettlePotPanel({
         callerTxHash: payoutTx,
         bonusTxHash: bonusTx,
         chainId,
+        roundId: round.id,
         survivingSeats,
         survivorCutBps,
       };

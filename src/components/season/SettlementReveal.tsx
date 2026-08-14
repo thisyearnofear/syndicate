@@ -23,6 +23,7 @@
  * now the closing line of a story rather than the frame around it.
  */
 
+import Link from 'next/link';
 import { CircleCheck } from 'lucide-react';
 import { BeamFrame } from '@/components/motion/BeamFrame';
 import { CountUp } from '@/components/motion/CountUp';
@@ -39,6 +40,8 @@ export interface SettlementResult {
   bonusTxHash: string;
   /** Chain the purchases were made on — selects the correct block explorer. */
   chainId?: number;
+  /** Canonical historical replay route for this settled round. */
+  roundId?: string;
   /** Seats still held after the exit, when known — the survivors. */
   survivingSeats?: number;
   /** Each survivor's cut in bps after renormalization, when known. */
@@ -191,6 +194,17 @@ export function SettlementReveal({ result, className = '' }: SettlementRevealPro
           </li>
         ))}
       </ul>
+
+      {result.roundId && (
+        <div className="mt-4 text-right">
+          <Link
+            href={`/season/round/${encodeURIComponent(result.roundId)}`}
+            className="text-xs font-semibold text-[#e3c887] underline-offset-4 hover:underline"
+          >
+            Open the verified replay ↗
+          </Link>
+        </div>
+      )}
 
       <div className="mt-4">
         <ShareCards

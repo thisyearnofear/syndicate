@@ -45,6 +45,8 @@ interface AuctionStageProps {
   /** Parent-supplied clock tick, so render stays pure. */
   now: number;
   youAddress?: string | null;
+  /** Current active-seat cut in basis points, for stay-vs-exit comparison. */
+  currentCutBps?: number | null;
   /** Active seat + writes enabled. */
   canBid: boolean;
   lockedReason?: string;
@@ -78,6 +80,7 @@ export function AuctionStage({
   bids,
   now,
   youAddress,
+  currentCutBps,
   canBid,
   lockedReason = 'Only a held seat can bid.',
   onBid,
@@ -242,6 +245,7 @@ export function AuctionStage({
                 chestUsdc={chestUsdc}
                 ticketPrice={ticketPrice}
                 ticketPriceResolved={resolved}
+                currentCutBps={currentCutBps}
                 disabled={busy}
                 label={yourBid ? 'Raise your offer' : 'Your offer to the crew'}
               />

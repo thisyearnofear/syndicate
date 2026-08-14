@@ -26,6 +26,8 @@ interface CallThePotPanelProps {
   lockedReason?: string;
   /** Opens the round with the caller's opening offer, in basis points. */
   onCall: (discountBps: number) => Promise<void>;
+  /** Current active-seat cut in basis points, for stay-vs-exit comparison. */
+  currentCutBps?: number | null;
   busy?: boolean;
   error?: string | null;
   /** Human-readable close time for the round being opened. */
@@ -37,6 +39,7 @@ export function CallThePotPanel({
   lockedReason = 'Only a held seat can call the pot.',
   onCall,
   busy = false,
+  currentCutBps,
   error,
   cutoffLabel = 'the season draw',
 }: CallThePotPanelProps) {
@@ -67,6 +70,7 @@ export function CallThePotPanel({
             chestUsdc={null}
             ticketPrice={ticketPrice}
             ticketPriceResolved={resolved}
+            currentCutBps={currentCutBps}
             disabled={busy}
             label="Your opening offer to the crew"
           />

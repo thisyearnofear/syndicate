@@ -519,6 +519,42 @@ export async function listRoundBids(roundId: string): Promise<SeasonBidRow[]> {
   return result.rows.map(mapBid);
 }
 
+/**
+ * Complete public bid history for a settled replay. Unlike the live query,
+ * this includes lost bids so the replay shows the whole contest, not just the
+ * surviving leader. It is intentionally separate from listRoundBids so live
+ * auction semantics cannot accidentally expose void/old rows.
+ */
+export async function listHistoricalRoundBids(roundId: string): Promise<SeasonBidRow[]> {
+  await ensureSeasonTables();
+  const result = await sql`
+    SELECT *
+    FROM season_bids
+    WHERE round_id = ${roundId}
+    ORDER BY discount_bps DESC, placed_at ASC;
+  `;
+  return result.rows.map(mapBid);
+}
+
+/**
+ * The settlement event is the persisted receipt-verification record for a
+ * round. Settlement writes it only after both Megapot receipts verify; the
+ * replay endpoint refuses to call a round verified if this record is absent.
+ */
+export async function getRoundSettlementEvent(roundId: string): Promise<SeasonEventRow | null> {
+  await ensureSeasonTables();
+  const result = await sql`
+    SELECT *
+    FROM season_events
+    WHERE kind = 'seat.freed'
+      AND payload->>'roundId' = ${roundId}
+      AND payload ? 'verification'
+    ORDER BY created_at DESC
+    LIMIT 1;
+  `;
+  return result.rows.length ? mapEvent(result.rows[0]) : null;
+}
+
 export async function placeOrReviseBid(params: {
   id: string;
   roundId: string;

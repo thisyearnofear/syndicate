@@ -96,6 +96,12 @@ serif with real history in it.
   re-render: `cut-rise` when a cut renormalizes upward, `bid-land` when an
   offer arrives, `SealBurst` at settlement. The mechanic must be visible in
   motion or players never learn it.
+- **Illustration without fabrication.** A mechanic preview may use a clearly
+  labelled illustrative seat example to teach cut growth, but it must never
+  present invented crew members, balances, bids, prizes, or receipts as live
+  state. Historical replay surfaces use the arena register for the same
+  ceremony, but every payoff number and receipt link must come from persisted,
+  verified settlement data.
 
 The arena accent MAY NOT bleed into `default` pages. There are exactly two
 sanctioned bridges, and both are visually contained:

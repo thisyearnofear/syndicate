@@ -219,6 +219,7 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
                 : 'Only a held seat can call the pot.'
             }
             onCall={handleCallPot}
+            currentCutBps={myMembership?.cutBps}
             busy={busy}
             error={formError}
             cutoffLabel="the season draw"
@@ -232,6 +233,7 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
             bids={bids}
             now={now}
             youAddress={address}
+            currentCutBps={myMembership?.cutBps}
             canBid={writesAllowed && !!myMembership}
             lockedReason={
               !writesAllowed
