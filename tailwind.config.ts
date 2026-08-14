@@ -18,6 +18,11 @@ const config = {
       },
     },
     extend: {
+      fontFamily: {
+        // Arena surface display face (docs/DESIGN.md). Wired from
+        // next/font in src/app/layout.tsx; never hardcode a stack in a page.
+        display: ["var(--font-display)", "Georgia", "Times New Roman", "serif"],
+      },
       colors: {
         // Brand identity scale — the single source of truth for primary accents.
         // Anchored on a sky→blue "ocean" gradient (see .gradient-cta in globals.css).

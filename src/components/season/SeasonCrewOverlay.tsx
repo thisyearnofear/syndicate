@@ -1,23 +1,30 @@
 'use client';
 
 /**
- * SEASON CREW OVERLAY — Season view embedded in the /syndicate detail page.
+ * SEASON CREW OVERLAY — the Season view embedded in /syndicate detail.
  *
- * When a syndicate pool is linked to a Season crew (syndicate_pool_id is
- * set), this overlay shows the crew's Season state: seat map with cuts,
- * the live call-the-pot round (or settlement flow after cutoff), and the
- * crew's event feed. It reuses the same SeatMap / SettlePotPanel /
- * SettlementReveal components as /season so the UX is consistent.
+ * When a syndicate pool is linked to a Season crew (syndicate_pool_id is set),
+ * this overlay shows that crew's Season state: crest, the table of seats with
+ * their cuts, the live call-the-pot auction (or settlement after the bell), and
+ * the crew chronicle.
  *
- * Data is fetched from GET /api/season/crews?poolId=… to resolve the crew,
- * then GET /api/season/crews/[id] for the full detail payload.
+ * Rendered as an **arena inset** (docs/DESIGN.md): the arena register inside a
+ * bounded plate on an otherwise `default`-surface page, so a crew looks like the
+ * same crew on both surfaces. It never touches the host page's background.
+ *
+ * It now composes the *same* CallThePotPanel / AuctionStage / SeatMap that
+ * /season uses. Previously it carried its own near-duplicate copy of the call
+ * and bid markup — two implementations of one game rule, which is exactly how
+ * the two surfaces drifted apart.
  */
 
-import { useCallback, useEffect, useState } from 'react';
-import { Gavel, Users } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Users } from 'lucide-react';
 import { EmptyState } from '@/components/layout/StateViews';
-import { Button } from '@/shared/components/ui/Button';
 import { SeatMap, CutBadge } from '@/components/season/SeatMap';
+import { CrewCrest } from '@/components/season/CrewCrest';
+import { CallThePotPanel } from '@/components/season/CallThePotPanel';
+import { AuctionStage } from '@/components/season/AuctionStage';
 import { SettlePotPanel } from '@/components/season/SettlePotPanel';
 import { SettlementReveal, type SettlementResult } from '@/components/season/SettlementReveal';
 import { eventLabel, timeAgo } from '@/components/season/labels';
@@ -38,20 +45,6 @@ interface SeasonCrewOverlayProps {
   poolId: string;
 }
 
-function shortAddr(a: string): string {
-  return `${a.slice(0, 6)}…${a.slice(-4)}`;
-}
-
-function formatCountdown(ms: number): string {
-  if (ms <= 0) return '0d 0h 0m';
-  const d = Math.floor(ms / 86_400_000);
-  const h = Math.floor((ms % 86_400_000) / 3_600_000);
-  const m = Math.floor((ms % 3_600_000) / 60_000);
-  return `${d}d ${h}h ${m}m`;
-}
-
-
-
 export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
   const { address } = useUnifiedWallet();
   const { ctaState, canWrite } = useCapability('season');
@@ -60,10 +53,6 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [settlement, setSettlement] = useState<SettlementResult | null>(null);
-  const [bidPct, setBidPct] = useState('');
-  const [callPct, setCallPct] = useState('25');
-  const [confirmingCall, setConfirmingCall] = useState(false);
-  const [confirmingBid, setConfirmingBid] = useState(false);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -92,11 +81,9 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
     }
   }, [poolId]);
 
-  // A different linked crew (poolId change) invalidates in-flight confirms/errors.
+  // A different linked crew (poolId change) invalidates in-flight errors.
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
-    setConfirmingCall(false);
-    setConfirmingBid(false);
     setFormError(null);
     setSettlement(null);
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -121,16 +108,21 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
 
   const writesAllowed = canWrite && ctaState !== 'hidden';
 
-  const handleCallPot = async (): Promise<void> => {
-    const pct = Number(callPct);
-    if (!crewDetail || !address || !Number.isFinite(pct)) return;
+  /** Survivor arithmetic for the reveal — see the same block in /season. */
+  const survivors = useMemo(() => {
+    if (!crewDetail) return null;
+    const activeCount = crewDetail.members.filter((m) => m.seatStatus === 'active').length;
+    const remaining = Math.max(0, activeCount - 1);
+    if (remaining === 0) return null;
+    return { seats: remaining, cutBps: Math.round(10_000 / remaining) };
+  }, [crewDetail]);
+
+  const handleCallPot = async (discountBps: number): Promise<void> => {
+    if (!crewDetail || !address) return;
     setBusy(true);
     setFormError(null);
     try {
-      const body: Record<string, unknown> = {
-        callerAddress: address,
-        discountBps: Math.round(pct * 100),
-      };
+      const body: Record<string, unknown> = { callerAddress: address, discountBps };
       if (crewDetail.season?.drawWindowEnd) {
         body.cutoffAt = crewDetail.season.drawWindowEnd;
       }
@@ -140,7 +132,6 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(((await res.json()) as { error?: string }).error ?? 'Call failed');
-      setConfirmingCall(false);
       await fetchByPool();
     } catch (e) {
       setFormError(e instanceof Error ? e.message : 'Call failed');
@@ -149,20 +140,17 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
     }
   };
 
-  const handleBid = async (): Promise<void> => {
-    const pct = Number(bidPct);
-    if (!crewDetail?.openRound || !address || !Number.isFinite(pct)) return;
+  const handleBid = async (discountBps: number): Promise<void> => {
+    if (!crewDetail?.openRound || !address) return;
     setBusy(true);
     setFormError(null);
     try {
       const res = await fetch(`/api/season/rounds/${crewDetail.openRound.id}/bids`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bidderAddress: address, discountBps: Math.round(pct * 100) }),
+        body: JSON.stringify({ bidderAddress: address, discountBps }),
       });
       if (!res.ok) throw new Error(((await res.json()) as { error?: string }).error ?? 'Bid failed');
-      setBidPct('');
-      setConfirmingBid(false);
       await fetchByPool();
     } catch (e) {
       setFormError(e instanceof Error ? e.message : 'Bid failed');
@@ -192,193 +180,105 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
   }
 
   const { crew, members, openRound, bids, events } = crewDetail;
-  const cutoffPassed = openRound ? Date.parse(openRound.cutoffAt) <= now : false;
 
   return (
-    <div className="space-y-6">
-      {/* Crew header */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-lg font-bold text-white truncate">{crew.name}</p>
-          <p className="text-xs text-gray-400">
-            Season crew · Code <span className="font-mono text-violet-300">{crew.referrerCode}</span>
-          </p>
-        </div>
-        {myMembership && <CutBadge cutBps={myMembership.cutBps} />}
-      </div>
-
-      {/* Seat map */}
-      <SeatMap members={members} />
-
-      {/* Call the pot */}
-      {!openRound && crew.kind === 'syndicate' && (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <Gavel className="w-4 h-4 text-amber-300" />
-            <p className="text-sm font-bold text-white">Call the pot</p>
+    /* The arena inset: contained ground, so the host page keeps its own. */
+    <div className="surface-arena relative overflow-hidden rounded-2xl border border-[#c9a227]/20 p-5">
+      <span aria-hidden className="arena-hatch" />
+      <div className="relative space-y-6">
+        {/* Crew identity */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <CrewCrest crewId={crew.id} name={crew.name} accent={crew.crestAccent} size={44} />
+            <div className="min-w-0">
+              <p className="arena-label text-[10px]">Season crew</p>
+              <h3 className="truncate font-display text-xl font-bold text-[#f7ead0]">{crew.name}</h3>
+              <p className="text-[11px] text-[#d8c9ae]/50">
+                Code <span className="font-mono text-[#e3c887]">{crew.referrerCode}</span>
+              </p>
+            </div>
           </div>
-          {writesAllowed && myMembership ? (
-            !confirmingCall ? (
-              <form
-                className="flex gap-2"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setConfirmingCall(true);
-                }}
-              >
-                <input
-                  value={callPct}
-                  onChange={(e) => setCallPct(e.target.value)}
-                  placeholder="Your opening offer to the crew % (1–50)"
-                  inputMode="decimal"
-                  className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
-                />
-                <Button
-                  type="submit"
-                  size="sm"
-                  variant="warning"
-                  disabled={busy || Number(callPct) < 1 || Number(callPct) > 50}
-                >
-                  Call
-                </Button>
-              </form>
-            ) : (
-              <div className="rounded-lg border border-amber-400/30 bg-amber-500/[0.08] p-3 space-y-2">
-                <p className="text-xs text-amber-200">
-                  Confirm: open an auction over the crew chest at{' '}
-                  <span className="font-semibold">{callPct}% to the crew</span>, closing at the
-                  season draw. If your offer wins you <span className="font-semibold">exit your
-                  seat</span> for the rest. This cannot be undone once bids land.
-                </p>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="warning" loading={busy} disabled={busy} onClick={() => void handleCallPot()}>
-                    Confirm call
-                  </Button>
-                  <Button size="sm" variant="outline" disabled={busy} onClick={() => setConfirmingCall(false)}>
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            )
-          ) : (
-            <p className="text-xs text-gray-500">Only active seats can open a call-the-pot round.</p>
-          )}
-          <p className="text-[11px] text-gray-500">
-            Opens an auction over the crew chest. The highest offer wins: the caller exits with the rest, and the offered share becomes bonus tickets for the survivors.
-          </p>
-          {formError && <p className="text-xs text-red-400">{formError}</p>}
+          {myMembership && <CutBadge cutBps={myMembership.cutBps} />}
         </div>
-      )}
 
-      {openRound && (
-        <div className="rounded-2xl border border-amber-400/25 bg-amber-500/[0.05] p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <Gavel className="w-4 h-4 text-amber-300" />
-            <p className="text-sm font-bold text-white">Call the pot</p>
-            <span className="ml-auto text-xs text-gray-400">
-              Chest ${Number(openRound.chestSnapshotUsdc).toFixed(2)} ·{' '}
-              {cutoffPassed ? 'closed' : `closes ${formatCountdown(Date.parse(openRound.cutoffAt) - now)}`}
-            </span>
-          </div>
+        {/* The table */}
+        <SeatMap
+          members={members}
+          youAddress={address}
+          chestUsdc={openRound ? Number(openRound.chestSnapshotUsdc) || 0 : null}
+          entries={crew.score?.entries ?? 0}
+        />
 
-          {bids.length > 0 && (
-            <ul className="space-y-1">
-              {bids.map((b, i) => (
-                <li key={b.id} className="text-xs text-gray-300 flex justify-between">
-                  <span className={i === 0 ? 'text-amber-300 font-semibold' : ''}>
-                    {shortAddr(b.bidderAddress)} — {(b.discountBps / 100).toFixed(1)}% to the crew
-                    {i === 0 ? ' (leading)' : ''}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+        {/* Call the pot — same panel as /season */}
+        {!openRound && crew.kind === 'syndicate' && (
+          <CallThePotPanel
+            canAct={writesAllowed && !!myMembership}
+            lockedReason={
+              !writesAllowed
+                ? 'Crew actions are disabled in this environment (read-only preview).'
+                : 'Only a held seat can call the pot.'
+            }
+            onCall={handleCallPot}
+            busy={busy}
+            error={formError}
+            cutoffLabel="the season draw"
+          />
+        )}
 
-          {!cutoffPassed ? (
-            writesAllowed && myMembership ? (
-              !confirmingBid ? (
-                <form
-                  className="flex gap-2"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    setConfirmingBid(true);
-                  }}
-                >
-                  <input
-                    value={bidPct}
-                    onChange={(e) => setBidPct(e.target.value)}
-                    placeholder="Your offer to the crew % (1–50)"
-                    inputMode="decimal"
-                    className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
-                  />
-                  <Button
-                    type="submit"
-                    size="sm"
-                    variant="warning"
-                    disabled={busy || Number(bidPct) < 1 || Number(bidPct) > 50}
-                  >
-                    Bid
-                  </Button>
-                </form>
-              ) : (
-                <div className="rounded-lg border border-amber-400/30 bg-amber-500/[0.08] p-3 space-y-2">
-                  <p className="text-xs text-amber-200">
-                    Confirm: offer <span className="font-semibold">{bidPct}% of the chest</span> back to the
-                    crew as bonus tickets. You can raise your offer until the cutoff, but you cannot lower it.
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="warning"
-                      loading={busy}
-                      disabled={busy}
-                      onClick={() => void handleBid()}
-                    >
-                      Confirm bid
-                    </Button>
-                    <Button size="sm" variant="outline" disabled={busy} onClick={() => setConfirmingBid(false)}>
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              )
-            ) : (
-              <p className="text-xs text-gray-500">Only active seats can bid.</p>
-            )
-          ) : (
+        {/* The auction — same stage as /season */}
+        {openRound && (
+          <AuctionStage
+            round={openRound}
+            bids={bids}
+            now={now}
+            youAddress={address}
+            canBid={writesAllowed && !!myMembership}
+            lockedReason={
+              !writesAllowed
+                ? 'Crew actions are disabled in this environment (read-only preview).'
+                : 'Only a held seat can bid in this auction.'
+            }
+            onBid={handleBid}
+            busy={busy}
+            error={formError}
+          >
             <SettlePotPanel
               round={openRound}
               bids={bids}
               coordinatorAddress={crew.coordinatorAddress}
               canWrite={writesAllowed}
               now={now}
-              chainId={crewDetail?.season?.chainId}
+              chainId={crewDetail.season?.chainId}
+              survivingSeats={survivors?.seats}
+              survivorCutBps={survivors?.cutBps}
               onSettled={(r) => {
                 setSettlement(r);
                 void fetchByPool();
               }}
             />
-          )}
-          {formError && <p className="text-xs text-red-400">{formError}</p>}
-        </div>
-      )}
+          </AuctionStage>
+        )}
 
-      {settlement && <SettlementReveal result={settlement} />}
+        {settlement && <SettlementReveal result={settlement} />}
 
-      {/* Crew feed */}
-      {events.length > 0 && (
-        <div>
-          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Crew feed</h3>
-          <ul className="space-y-1.5">
-            {events.slice(0, 8).map((ev) => (
-              <li key={ev.id} className="text-xs text-gray-400">
-                <span className="text-gray-300">{eventLabel(ev)}</span>
-                <span className="ml-2 text-gray-600">{timeAgo(ev.createdAt)}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+        {/* Crew chronicle */}
+        {events.length > 0 && (
+          <div className="vellum rounded-xl p-4">
+            <h4 className="arena-label mb-2.5 text-[10px]">Crew chronicle</h4>
+            <ul className="space-y-1.5">
+              {events.slice(0, 8).map((ev) => (
+                <li key={ev.id} className="flex items-baseline gap-2 text-xs">
+                  <span aria-hidden className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-[#c9a227]/60" />
+                  <span className="text-[#d8c9ae]/75">{eventLabel(ev)}</span>
+                  <span className="ml-auto shrink-0 text-[10px] text-[#d8c9ae]/35">
+                    {timeAgo(ev.createdAt)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

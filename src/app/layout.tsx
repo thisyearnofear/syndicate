@@ -1,6 +1,6 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Playfair_Display } from "next/font/google";
 import "@rainbow-me/rainbowkit/styles.css";
 import "@near-wallet-selector/modal-ui/styles.css";
 import { ToastProvider } from "@/shared/components/ui/Toast";
@@ -12,6 +12,18 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 const inter = Inter({ subsets: ["latin"] });
+
+/**
+ * Display serif — the arena surface's type register (docs/DESIGN.md).
+ * A transitional serif carries the period the Season game is set in; Inter
+ * stays the body/UI face everywhere. Exposed as a CSS variable and consumed
+ * via Tailwind's `font-display`, so no page hardcodes a font stack.
+ */
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-display",
+});
 
 export const metadata: Metadata = {
   title: "Syndicate — $1 to play, your deposit back forever",
@@ -33,7 +45,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${inter.className} ${playfair.variable}`}>
         <script
           dangerouslySetInnerHTML={{
             __html: `

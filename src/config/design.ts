@@ -357,7 +357,7 @@ export default premiumDesign;
 
 import type { ProductModeId } from '@/config/productModes';
 
-export type DesignAccent = 'play' | 'grow' | 'coordinate' | 'neutral' | 'experimental';
+export type DesignAccent = 'play' | 'grow' | 'coordinate' | 'neutral' | 'experimental' | 'arena';
 
 export interface AccentTokens {
   /** Gradient used for heading text and hairlines. neutral keeps plain white. */
@@ -444,6 +444,69 @@ export const ACCENTS: Record<DesignAccent, AccentTokens> = {
       bottom: 'bg-blue-500/[0.05]',
     },
   },
+  /**
+   * ARENA — the game layer (Season of Tickets). Antique gold and oxblood:
+   * the 1653 tontine, not a fintech dashboard. Pairs with
+   * `<PageShell surface="arena">` and the .vellum / .ledger-rule utilities
+   * in globals.css. See docs/DESIGN.md "The arena surface".
+   *
+   * Deliberately distinct from `play` amber: play is bright amber on cool
+   * slate, arena is aged brass on warm ink. The surface carries most of the
+   * difference; this accent only has to stay in period with it.
+   */
+  arena: {
+    gradientText:
+      'bg-gradient-to-r from-[#f7ead0] via-[#e3c887] to-[#b8891f] bg-clip-text text-transparent',
+    tile: 'bg-[#c9a227]/15',
+    badge: 'text-[#e3c887]/80',
+    border: 'hover:border-[#c9a227]/45 hover:shadow-[0_10px_40px_-12px_rgba(201,162,39,0.35)]',
+    icon: 'text-[#e3c887]',
+    hairline: 'from-[#c9a227]/80 via-[#c9a227]/25 to-transparent',
+    glow: {
+      top: 'bg-[#7a2018]/[0.22]',
+      bottom: 'bg-[#c9a227]/[0.10]',
+    },
+  },
+};
+
+// =============================================================================
+// SURFACES — the page's ground (docs/DESIGN.md "The two surfaces")
+// =============================================================================
+//
+// A surface bundles background, texture and motion licence. There are two,
+// and a page picks one; it never invents a third inline. `default` is the
+// assumption for every utility/money page. `arena` must be requested and is
+// reserved for routes whose primary purpose is play.
+
+export type DesignSurface = 'default' | 'arena';
+
+export interface SurfaceTokens {
+  /** Page-level background classes applied by PageShell. */
+  background: string;
+  /** When true, PageShell renders the ambient accent glow blobs. */
+  ambientGlow: boolean;
+  /** When true, PageShell renders the arena's licensed ambient ember layer. */
+  ambientEmbers: boolean;
+}
+
+export const SURFACES: Record<DesignSurface, SurfaceTokens> = {
+  default: {
+    background: 'bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950',
+    ambientGlow: true,
+    ambientEmbers: false,
+  },
+  arena: {
+    // Warm ink + oxblood/brass vignette + copperplate hatching, all in
+    // globals.css so the texture is defined once.
+    background: 'surface-arena',
+    ambientGlow: true,
+    ambientEmbers: true,
+  },
+};
+
+/** Route domain → surface. Everything not listed uses `default`. */
+export const DOMAIN_SURFACE: Record<string, DesignSurface> = {
+  season: 'arena',
 };
 
 /** Route domain → accent. Landing/product-mode accents alias these. */
@@ -456,7 +519,7 @@ export const DOMAIN_ACCENT: Record<string, DesignAccent> = {
   coordinate: 'coordinate',
   'create-syndicate': 'coordinate',
   syndicate: 'coordinate',
-  season: 'coordinate',
+  season: 'arena',
   xlayer: 'experimental',
   bridge: 'neutral',
   settings: 'neutral',

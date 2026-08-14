@@ -3,32 +3,43 @@
 /**
  * SEASON HQ — /season
  *
- * Campaign home for Season of Tickets (docs/SEASON.md).
+ * Campaign home for Season of Tickets (docs/SEASON.md), rendered on the
+ * `arena` surface (docs/DESIGN.md "The two surfaces"): warm ink, brass, ruled
+ * plates and a display serif, because the game layer previously wore the same
+ * cool slate chrome as the vault and bridge pages and read as another finance
+ * dashboard.
  *
  * Progressive disclosure: the page renders ONE primary surface per user
  * stage instead of every panel at once:
- *   1. visitor / connected, no crew selected → hero + how-it-works + ladder
- *      + join/found actions
- *   2. crew selected, no round              → seat map + "Call the pot"
- *   3. crew selected, round open            → live auction (bid box)
+ *   1. visitor / connected, no crew selected → hero + lore + how-it-works
+ *      + ladder + join/found actions
+ *   2. crew selected, no round              → the table + "Call the pot"
+ *   3. crew selected, round open            → the auction stage
  *   4. crew selected, past cutoff           → settle panel
  *   5. settled                              → reveal + share card
- * The ladder stays visible as the competition anchor throughout.
+ * The ladder stays visible as the competition anchor throughout, and the
+ * RefereeStrip closes the page: the honesty contract as the argument for why
+ * a 1653 instrument can be trusted here, not as a disclaimer around the game.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Users, Plus, LogIn, Gavel, ArrowLeft, Ticket, Trophy, Copy, Check, RefreshCw } from 'lucide-react';
+import { Users, Plus, LogIn, Trophy, Copy, Check, RefreshCw } from 'lucide-react';
 import { PageShell, PageHeader, ShellSection } from '@/components/layout/PageShell';
 import { PageSkeleton, EmptyState, DisconnectedState } from '@/components/layout/StateViews';
 import { Button } from '@/shared/components/ui/Button';
-import { InfoTooltip } from '@/components/common/InfoTooltip';
-import { RoundOrb, deriveOrbState } from '@/components/motion/RoundOrb';
+import { CountUp } from '@/components/motion/CountUp';
+import { CutoffRing } from '@/components/motion/CutoffRing';
 import { CrewLadder } from '@/components/season/CrewLadder';
+import { CrewCrest } from '@/components/season/CrewCrest';
 import { SeatMap, CutBadge } from '@/components/season/SeatMap';
+import { CallThePotPanel } from '@/components/season/CallThePotPanel';
+import { AuctionStage } from '@/components/season/AuctionStage';
 import { SettlePotPanel } from '@/components/season/SettlePotPanel';
 import { SettlementReveal, type SettlementResult } from '@/components/season/SettlementReveal';
+import { TontineLore, HowItWorks } from '@/components/season/TontineLore';
+import { RefereeStrip } from '@/components/season/RefereeStrip';
 import { eventLabel, timeAgo } from '@/components/season/labels';
 import type { SeasonSummary, CrewSummary, CrewMember, SeasonEvent } from '@/components/season/types';
 import { useUnifiedWallet } from '@/hooks';
@@ -43,6 +54,12 @@ interface CrewDetail {
   bids: Array<{ id: string; bidderAddress: string; discountBps: number; placedAt: string; revisedAt: string | null }>;
 }
 
+const CHAIN_LABELS: Record<number, string> = {
+  1: 'Ethereum',
+  8453: 'Base',
+  84532: 'Base Sepolia',
+};
+
 function formatCountdown(ms: number): string {
   if (ms <= 0) return '0d 0h 0m';
   const d = Math.floor(ms / 86_400_000);
@@ -51,45 +68,17 @@ function formatCountdown(ms: number): string {
   return `${d}d ${h}h ${m}m`;
 }
 
-function shortAddr(a: string): string {
-  return `${a.slice(0, 6)}…${a.slice(-4)}`;
-}
-
-/* ── How-it-works strip: the three-beat story ─────────────────────────────── */
-
-function HowItWorks() {
-  const steps = [
-    {
-      icon: <Users className="w-4 h-4" />,
-      title: '1 · Crew up',
-      body: 'Found a crew or join with a code. Every seat holds a cut of the crew\u2019s claim.',
-    },
-    {
-      icon: <Ticket className="w-4 h-4" />,
-      title: '2 · Pool real entries',
-      body: 'Members buy Megapot tickets — every real purchase climbs the crew ladder.',
-    },
-    {
-      icon: <Gavel className="w-4 h-4" />,
-      title: '3 · Call the pot',
-      body: 'Anyone may exit early via auction: the biggest gift to survivors wins, and every freed seat grows the remaining cuts.',
-    },
-  ];
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      {steps.map((s) => (
-        <div key={s.title} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="w-7 h-7 rounded-lg bg-violet-400/15 flex items-center justify-center text-violet-300">
-              {s.icon}
-            </span>
-            <p className="text-sm font-bold text-white">{s.title}</p>
-          </div>
-          <p className="text-xs text-gray-400 leading-relaxed">{s.body}</p>
-        </div>
-      ))}
-    </div>
-  );
+/** Compact label for the season countdown ring. */
+function ringClock(ms: number): { label: string; sublabel: string } {
+  if (ms <= 0) return { label: '—', sublabel: 'closed' };
+  const d = Math.floor(ms / 86_400_000);
+  if (d >= 1) {
+    const h = Math.floor((ms % 86_400_000) / 3_600_000);
+    return { label: `${d}d ${h}h`, sublabel: 'to the draw' };
+  }
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  return { label: `${h}:${String(m).padStart(2, '0')}`, sublabel: 'to the draw' };
 }
 
 export default function SeasonPage() {
@@ -106,10 +95,6 @@ export default function SeasonPage() {
 
   const [joinCode, setJoinCode] = useState('');
   const [newCrewName, setNewCrewName] = useState('');
-  const [bidPct, setBidPct] = useState('');
-  const [callPct, setCallPct] = useState('25');
-  const [confirmingCall, setConfirmingCall] = useState(false);
-  const [confirmingBid, setConfirmingBid] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -161,8 +146,6 @@ export default function SeasonPage() {
   /** Single entry point for crew selection: resets per-crew transient state. */
   const selectCrew = useCallback((crewId: string | null): void => {
     setSelectedCrewId(crewId);
-    setConfirmingCall(false);
-    setConfirmingBid(false);
     setFormError(null);
     setSettlement(null);
   }, []);
@@ -192,9 +175,7 @@ export default function SeasonPage() {
   }, [selectedCrewId, fetchCrewDetail]);
 
   const msLeft = season ? season.drawWindowEnd - now : 0;
-  const orbState = season
-    ? deriveOrbState(new Date(season.drawWindowEnd).toISOString(), now)
-    : 'idle';
+  const seasonWindowMs = season ? Math.max(1, season.drawWindowEnd - season.drawWindowStart) : 1;
 
   const myMembership = useMemo(() => {
     if (!address || !crewDetail) return null;
@@ -204,6 +185,25 @@ export default function SeasonPage() {
       ) ?? null
     );
   }, [address, crewDetail]);
+
+  /**
+   * Survivor arithmetic for the settlement reveal: how many seats remain once
+   * the winner exits, and what each of those cuts renormalizes to. Presentation
+   * only — the server owns the authoritative renormalization; this just lets the
+   * reveal name a real figure instead of saying "every cut grew" abstractly.
+   */
+  const survivors = useMemo(() => {
+    if (!crewDetail) return null;
+    const activeCount = crewDetail.members.filter((m) => m.seatStatus === 'active').length;
+    const remaining = Math.max(0, activeCount - 1);
+    if (remaining === 0) return null;
+    return { seats: remaining, cutBps: Math.round(10_000 / remaining) };
+  }, [crewDetail]);
+
+  const crewEntries = useMemo(() => {
+    if (!crewDetail) return null;
+    return crewDetail.crew.score?.entries ?? 0;
+  }, [crewDetail]);
 
   const handleJoinByCode = async (): Promise<void> => {
     const code = joinCode.trim().toUpperCase();
@@ -269,7 +269,7 @@ export default function SeasonPage() {
     const link = `${window.location.origin}/season?crew=${crewDetail.crew.id}`;
     try {
       await navigator.clipboard.writeText(
-        `Join my Megapot crew \u2014 code ${crewDetail.crew.referrerCode} or ${link}`,
+        `Take a seat at my Megapot tontine \u2014 code ${crewDetail.crew.referrerCode} or ${link}`,
       );
       setCopiedCode(true);
       setTimeout(() => setCopiedCode(false), 2_000);
@@ -291,9 +291,8 @@ export default function SeasonPage() {
     }
   };
 
-  const handleCallPot = async (): Promise<void> => {
-    const pct = Number(callPct);
-    if (!crewDetail || !address || !season || !Number.isFinite(pct)) return;
+  const handleCallPot = async (discountBps: number): Promise<void> => {
+    if (!crewDetail || !address || !season) return;
     setBusy(true);
     setFormError(null);
     try {
@@ -302,12 +301,11 @@ export default function SeasonPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           callerAddress: address,
-          discountBps: Math.round(pct * 100),
+          discountBps,
           cutoffAt: season.drawWindowEnd,
         }),
       });
       if (!res.ok) throw new Error(((await res.json()) as { error?: string }).error ?? 'Call failed');
-      setConfirmingCall(false);
       await fetchCrewDetail(crewDetail.crew.id);
     } catch (e) {
       setFormError(e instanceof Error ? e.message : 'Call failed');
@@ -316,20 +314,17 @@ export default function SeasonPage() {
     }
   };
 
-  const handleBid = async (): Promise<void> => {
-    const pct = Number(bidPct);
-    if (!crewDetail?.openRound || !address || !Number.isFinite(pct)) return;
+  const handleBid = async (discountBps: number): Promise<void> => {
+    if (!crewDetail?.openRound || !address) return;
     setBusy(true);
     setFormError(null);
     try {
       const res = await fetch(`/api/season/rounds/${crewDetail.openRound.id}/bids`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bidderAddress: address, discountBps: Math.round(pct * 100) }),
+        body: JSON.stringify({ bidderAddress: address, discountBps }),
       });
       if (!res.ok) throw new Error(((await res.json()) as { error?: string }).error ?? 'Bid failed');
-      setBidPct('');
-      setConfirmingBid(false);
       await fetchCrewDetail(crewDetail.crew.id);
     } catch (e) {
       setFormError(e instanceof Error ? e.message : 'Bid failed');
@@ -340,15 +335,18 @@ export default function SeasonPage() {
 
   const writesAllowed = canWrite && ctaState !== 'hidden';
   const roundOpen = crewDetail?.openRound ?? null;
-  const cutoffPassed = roundOpen ? Date.parse(roundOpen.cutoffAt) <= now : false;
+  const clock = ringClock(msLeft);
+  const chainLabel = CHAIN_LABELS[season?.chainId ?? chainId] ?? `chain ${season?.chainId ?? chainId}`;
 
   return (
-    <PageShell width="wide">
+    <PageShell width="wide" surface="arena" accent="arena">
       <PageHeader
         title="Season of Tickets"
-        supportingLine="Crews pool real Megapot entries. Every exit feeds the survivors."
-        accent="coordinate"
-        badge={{ label: 'Campaign', tone: 'violet' }}
+        supportingLine="A tontine on real Megapot entries. Every seat that leaves makes the rest larger."
+        accent="arena"
+        variant="arena"
+        eyebrow="Anno 1653 · The pot that feeds the survivors"
+        badge={{ label: 'Campaign', tone: 'arena' }}
       />
 
       {loading ? (
@@ -356,28 +354,53 @@ export default function SeasonPage() {
       ) : !season ? (
         <EmptyState
           icon={<Trophy className="w-6 h-6" />}
-          title="No active season"
-          hint="When a season is running, the crew ladder, seat map and call-the-pot rounds appear here."
-          accent="coordinate"
+          title="No season is open"
+          hint="When a season runs, the crew ladder, the table of seats and the call-the-pot auctions all appear here."
+          accent="arena"
         />
       ) : (
         <>
-          {/* ── Season header: pot orb + countdown ── */}
+          {/* ── The season itself: countdown and stake ── */}
           <ShellSection>
-            <div className="rounded-2xl border border-violet-400/20 bg-violet-500/[0.05] p-6 flex items-center gap-5">
-              <RoundOrb state={orbState} size={56} />
+            <div className="vellum vellum-raised flex flex-col gap-5 rounded-2xl p-6 sm:flex-row sm:items-center">
+              <CutoffRing
+                msLeft={msLeft}
+                totalMs={seasonWindowMs}
+                size={104}
+                label={clock.label}
+                sublabel={clock.sublabel}
+              />
               <div className="min-w-0 flex-1">
-                <p className="text-lg font-bold text-white">{season.name}</p>
-                <p className="text-sm text-gray-400">
-                  Draw closes in <span className="text-violet-300 font-semibold">{formatCountdown(msLeft)}</span>
-                  {' · '}the crew with the most real entries takes the season.
+                <p className="arena-label text-[10px]">The season</p>
+                <h2 className="font-display text-2xl font-bold text-[#f7ead0] sm:text-3xl">
+                  {season.name}
+                </h2>
+                <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-[#d8c9ae]/70">
+                  Draw closes in{' '}
+                  <span className="font-display font-bold text-[#e3c887]">
+                    {formatCountdown(msLeft)}
+                  </span>
+                  . The crew holding the most real entries takes the season — and any seat may
+                  auction its exit before the bell.
                 </p>
-                {message && <p className="text-xs text-amber-300/70 mt-1">{message}</p>}
+              </div>
+              <div className="shrink-0 sm:text-right">
+                <p className="arena-label text-[10px]">Crews on the board</p>
+                <CountUp
+                  value={crews.length}
+                  className="font-display text-3xl font-bold text-[#f7ead0]"
+                />
               </div>
             </div>
           </ShellSection>
 
-          {/* ── The story in three beats (always visible, collapses to context) ── */}
+          {/* ── The history, which is also the rulebook ── */}
+          {!selectedCrewId && (
+            <ShellSection>
+              <TontineLore />
+            </ShellSection>
+          )}
+
           {!selectedCrewId && (
             <ShellSection>
               <HowItWorks />
@@ -388,15 +411,18 @@ export default function SeasonPage() {
           {!selectedCrewId && (
             <ShellSection>
               {!isConnected ? (
-                <DisconnectedState subject="your season crew" accent="coordinate" />
+                <DisconnectedState subject="Your seat at the table" accent="arena" />
               ) : !writesAllowed ? (
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-[#d8c9ae]/50">
                   Crew actions are disabled in this environment (read-only preview).
                 </p>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                    <p className="text-sm font-semibold text-white mb-2">Join a crew</p>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="vellum rounded-2xl p-4">
+                    <p className="arena-label text-[10px]">With a code</p>
+                    <p className="font-display mb-2.5 text-lg font-bold text-[#f7ead0]">
+                      Take a seat
+                    </p>
                     <form
                       className="flex gap-2"
                       onSubmit={(e) => {
@@ -408,18 +434,21 @@ export default function SeasonPage() {
                         value={joinCode}
                         onChange={(e) => setJoinCode(e.target.value)}
                         placeholder="CREW-XXXXXX"
-                        className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                        className="min-w-0 flex-1 rounded-lg border border-[#c9a227]/25 bg-[#0a0705]/70 px-3 py-2 text-sm text-[#f7ead0] placeholder:text-[#d8c9ae]/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a227]/60"
                       />
                       <Button type="submit" size="sm" loading={busy} disabled={busy || !joinCode.trim()}>
-                        <LogIn className="w-4 h-4 mr-1" /> Join
+                        <LogIn className="mr-1 h-4 w-4" /> Join
                       </Button>
                     </form>
-                    <p className="text-[11px] text-gray-500 mt-2">
-                      Got a code from a friend? Take a seat and your purchases start counting for the crew.
+                    <p className="mt-2 text-[11px] text-[#d8c9ae]/50">
+                      Every ticket you buy from then on counts for the crew as well as for you.
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                    <p className="text-sm font-semibold text-white mb-2">Found a crew</p>
+                  <div className="vellum rounded-2xl p-4">
+                    <p className="arena-label text-[10px]">From nothing</p>
+                    <p className="font-display mb-2.5 text-lg font-bold text-[#f7ead0]">
+                      Found a crew
+                    </p>
                     <form
                       className="flex gap-2"
                       onSubmit={(e) => {
@@ -432,26 +461,27 @@ export default function SeasonPage() {
                         onChange={(e) => setNewCrewName(e.target.value)}
                         placeholder="Crew name"
                         maxLength={40}
-                        className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                        className="min-w-0 flex-1 rounded-lg border border-[#c9a227]/25 bg-[#0a0705]/70 px-3 py-2 text-sm text-[#f7ead0] placeholder:text-[#d8c9ae]/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a227]/60"
                       />
                       <Button type="submit" size="sm" loading={busy} disabled={busy || newCrewName.trim().length < 2}>
-                        <Plus className="w-4 h-4 mr-1" /> Found
+                        <Plus className="mr-1 h-4 w-4" /> Found
                       </Button>
                     </form>
-                    <p className="text-[11px] text-gray-500 mt-2">
-                      You become the coordinator and take the first seat. Share your code to fill the table.
+                    <p className="mt-2 text-[11px] text-[#d8c9ae]/50">
+                      You take the first seat and the whole cut. Share your code before anyone
+                      dilutes it.
                     </p>
                   </div>
                 </div>
               )}
-              {formError && <p className="text-sm text-red-400 mt-3">{formError}</p>}
+              {formError && <p className="mt-3 text-sm text-red-400">{formError}</p>}
             </ShellSection>
           )}
 
           {/* ── Ladder + selected crew ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <ShellSection>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">Crew ladder</h2>
+              <h2 className="arena-label mb-3 text-[11px]">The ladder</h2>
               <CrewLadder crews={crews} selectedCrewId={selectedCrewId} onSelect={selectCrew} />
             </ShellSection>
 
@@ -459,47 +489,52 @@ export default function SeasonPage() {
               {!crewDetail ? (
                 <EmptyState
                   icon={<Users className="w-6 h-6" />}
-                  title="Pick a crew"
-                  hint="Select a crew from the ladder to see its seats, cuts and call-the-pot round."
-                  accent="coordinate"
+                  title="Choose a crew"
+                  hint="Pick a crew from the ladder to see its table of seats, the cuts each seat holds, and any live call-the-pot auction."
+                  accent="arena"
                 />
               ) : (
                 <div className="space-y-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 min-w-0">
+                  {/* Crew identity — crest, name, your cut, invite */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
                       <button
                         type="button"
                         onClick={() => selectCrew(null)}
                         title="Back to the ladder"
                         aria-label="Back to the ladder"
-                        className="shrink-0 w-7 h-7 rounded-lg border border-white/10 bg-white/[0.03] flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/[0.08] transition-colors"
+                        className="shrink-0 rounded-lg border border-[#c9a227]/25 bg-[#0a0705]/60 px-2 py-1 text-[11px] text-[#d8c9ae]/70 transition-colors hover:border-[#c9a227]/50 hover:text-[#f7ead0]"
                       >
-                        <ArrowLeft className="w-4 h-4" />
+                        ← Ladder
                       </button>
-                      <h2 className="text-lg font-bold text-white truncate">{crewDetail.crew.name}</h2>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {myMembership && (
-                        <span className="inline-flex items-center gap-1">
+                      <CrewCrest
+                        crewId={crewDetail.crew.id}
+                        name={crewDetail.crew.name}
+                        accent={crewDetail.crew.crestAccent}
+                        size={44}
+                      />
+                      <div className="min-w-0">
+                        <h2 className="truncate font-display text-xl font-bold text-[#f7ead0]">
+                          {crewDetail.crew.name}
+                        </h2>
+                        {myMembership ? (
                           <CutBadge cutBps={myMembership.cutBps} />
-                          <InfoTooltip
-                            size="sm"
-                            title="What is a cut?"
-                            position="bottom"
-                            content="Your share of the crew's winnings, in percent of the crew claim. It renormalizes upward every time a seat frees — the fewer seats left, the bigger each cut."
-                          />
-                        </span>
-                      )}
+                        ) : (
+                          <p className="text-[11px] text-[#d8c9ae]/45">You hold no seat here</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
                       <button
                         type="button"
                         onClick={() => void copyInvite()}
                         title="Copy invite (code + link)"
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-gray-300 hover:text-white hover:bg-white/[0.08] transition-colors"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-[#c9a227]/25 bg-[#0a0705]/60 px-2.5 py-1 text-[11px] text-[#d8c9ae]/75 transition-colors hover:border-[#c9a227]/50 hover:text-[#f7ead0]"
                       >
                         {copiedCode ? (
-                          <><Check className="w-3 h-3 text-emerald-300" /> Copied</>
+                          <><Check className="h-3 w-3 text-[#e3c887]" /> Copied</>
                         ) : (
-                          <><Copy className="w-3 h-3" /> {crewDetail.crew.referrerCode}</>
+                          <><Copy className="h-3 w-3" /> {crewDetail.crew.referrerCode}</>
                         )}
                       </button>
                       <button
@@ -507,211 +542,116 @@ export default function SeasonPage() {
                         onClick={() => void handleRefresh()}
                         title="Refresh crew + ladder now"
                         aria-label="Refresh crew and ladder data"
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-gray-300 hover:text-white hover:bg-white/[0.08] transition-colors disabled:opacity-50"
+                        className="inline-flex items-center rounded-lg border border-[#c9a227]/25 bg-[#0a0705]/60 px-2 py-1 text-[#d8c9ae]/70 transition-colors hover:border-[#c9a227]/50 hover:text-[#f7ead0] disabled:opacity-50"
                         disabled={refreshing}
                       >
-                        <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
+                        <RefreshCw className={`h-3 w-3 ${refreshing ? 'animate-spin' : ''}`} />
                       </button>
                     </div>
                   </div>
 
-                  <SeatMap members={crewDetail.members} />
+                  {/* The table — the tontine made visible */}
+                  <SeatMap
+                    members={crewDetail.members}
+                    youAddress={address}
+                    chestUsdc={roundOpen ? Number(roundOpen.chestSnapshotUsdc) || 0 : null}
+                    entries={crewEntries}
+                  />
 
-                  {/* ── Stage: no round open → Call the pot ── */}
+                  {/* Stage: no round open → Call the pot */}
                   {crewDetail.crew.kind === 'syndicate' && !roundOpen && (
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Gavel className="w-4 h-4 text-amber-300" />
-                        <p className="text-sm font-bold text-white">Call the pot</p>
-                      </div>
-                      {writesAllowed && myMembership ? (
-                        !confirmingCall ? (
-                          <form
-                            className="flex gap-2"
-                            onSubmit={(e) => {
-                              e.preventDefault();
-                              setConfirmingCall(true);
-                            }}
-                          >
-                            <input
-                              value={callPct}
-                              onChange={(e) => setCallPct(e.target.value)}
-                              placeholder="Your opening offer to the crew % (1–50)"
-                              inputMode="decimal"
-                              className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
-                            />
-                            <Button
-                              type="submit"
-                              size="sm"
-                              disabled={busy || Number(callPct) < 1 || Number(callPct) > 50}
-                            >
-                              <Gavel className="w-4 h-4 mr-1" /> Call
-                            </Button>
-                          </form>
-                        ) : (
-                          <div className="rounded-lg border border-amber-400/30 bg-amber-500/[0.08] p-3 space-y-2">
-                            <p className="text-xs text-amber-200">
-                              Confirm: open an auction over the crew chest at{' '}
-                              <span className="font-semibold">{callPct}% to the crew</span>, closing at the
-                              season draw. If your offer wins you <span className="font-semibold">exit your
-                              seat</span> for the rest. This cannot be undone once bids land.
-                            </p>
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="warning" loading={busy} disabled={busy} onClick={() => void handleCallPot()}>
-                                <Gavel className="w-4 h-4 mr-1" /> Confirm call
-                              </Button>
-                              <Button size="sm" variant="outline" disabled={busy} onClick={() => setConfirmingCall(false)}>
-                                Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        )
-                      ) : (
-                        <p className="text-xs text-gray-500">Only active seats can call the pot.</p>
-                      )}
-                      <p className="text-[11px] text-gray-500 mt-2">
-                        Opens an auction over the crew chest. The highest offer wins: the caller exits with the
-                        rest, and the offered share becomes bonus tickets for the survivors.
-                      </p>
-                    </div>
+                    <CallThePotPanel
+                      canAct={writesAllowed && !!myMembership}
+                      lockedReason={
+                        !writesAllowed
+                          ? 'Crew actions are disabled in this environment (read-only preview).'
+                          : 'Only a held seat can call the pot. Take a seat first.'
+                      }
+                      onCall={handleCallPot}
+                      busy={busy}
+                      error={formError}
+                      cutoffLabel="the season draw"
+                    />
                   )}
 
-                  {/* ── Stage: round open → live auction ── */}
+                  {/* Stage: round open → the auction */}
                   {crewDetail.crew.kind === 'syndicate' && roundOpen && (
-                    <div className="rounded-2xl border border-amber-400/25 bg-amber-500/[0.05] p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Gavel className="w-4 h-4 text-amber-300" />
-                        <p className="text-sm font-bold text-white">Call the pot</p>
-                        <span className="ml-auto inline-flex items-center gap-1 text-xs text-gray-400">
-                          Chest ${Number(roundOpen.chestSnapshotUsdc).toFixed(2)}
-                          <InfoTooltip
-                            size="sm"
-                            title="What is the chest?"
-                            position="bottom"
-                            content="The crew's pooled Megapot entries, valued in USDC at the snapshot. The winning bidder exits with the chest minus their offered share; that share becomes bonus tickets for the survivors."
-                          />
-                          {' · '}
-                          {cutoffPassed ? 'closed' : `closes ${formatCountdown(Date.parse(roundOpen.cutoffAt) - now)}`}
-                        </span>
-                      </div>
-                      {crewDetail.bids.length > 0 && (
-                        <ul className="space-y-1 mb-3">
-                          {crewDetail.bids.map((b, i) => (
-                            <li key={b.id} className="text-xs text-gray-300 flex justify-between">
-                              <span className={i === 0 ? 'text-amber-300 font-semibold' : ''}>
-                                {shortAddr(b.bidderAddress)} — {(b.discountBps / 100).toFixed(1)}% to the crew
-                                {i === 0 ? ' (leading)' : ''}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      {!cutoffPassed ? (
-                        writesAllowed && myMembership ? (
-                          !confirmingBid ? (
-                            <form
-                              className="flex gap-2"
-                              onSubmit={(e) => {
-                                e.preventDefault();
-                                setConfirmingBid(true);
-                              }}
-                            >
-                              <input
-                                value={bidPct}
-                                onChange={(e) => setBidPct(e.target.value)}
-                                placeholder="Your offer to the crew % (1–50)"
-                                inputMode="decimal"
-                                className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
-                              />
-                              <Button
-                                type="submit"
-                                size="sm"
-                                variant="warning"
-                                disabled={busy || Number(bidPct) < 1 || Number(bidPct) > 50}
-                              >
-                                Bid
-                              </Button>
-                            </form>
-                          ) : (
-                            <div className="rounded-lg border border-amber-400/30 bg-amber-500/[0.08] p-3 space-y-2">
-                              <p className="text-xs text-amber-200">
-                                Confirm: offer <span className="font-semibold">{bidPct}% of the chest</span> back to
-                                the crew as bonus tickets. You can raise your offer until the cutoff,
-                                but you cannot lower it.
-                              </p>
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="warning"
-                                  loading={busy}
-                                  disabled={busy}
-                                  onClick={() => void handleBid()}
-                                >
-                                  <Gavel className="w-4 h-4 mr-1" /> Confirm bid
-                                </Button>
-                                <Button size="sm" variant="outline" disabled={busy} onClick={() => setConfirmingBid(false)}>
-                                  Cancel
-                                </Button>
-                              </div>
-                            </div>
-                          )
-                        ) : (
-                          <p className="text-xs text-gray-500">Only active seats can bid.</p>
-                        )
-                      ) : (
-                        <SettlePotPanel
-                          round={roundOpen}
-                          bids={crewDetail.bids}
-                          coordinatorAddress={crewDetail.crew.coordinatorAddress}
-                          canWrite={writesAllowed}
-                          now={now}
-                          chainId={season?.chainId ?? chainId}
-                          onSettled={(r) => {
-                            setSettlement(r);
-                            void fetchCrewDetail(crewDetail.crew.id);
-                            void fetchHq();
-                          }}
-                        />
-                      )}
-                    </div>
+                    <AuctionStage
+                      round={roundOpen}
+                      bids={crewDetail.bids}
+                      now={now}
+                      youAddress={address}
+                      canBid={writesAllowed && !!myMembership}
+                      lockedReason={
+                        !writesAllowed
+                          ? 'Crew actions are disabled in this environment (read-only preview).'
+                          : 'Only a held seat can bid in this auction.'
+                      }
+                      onBid={handleBid}
+                      busy={busy}
+                      error={formError}
+                    >
+                      <SettlePotPanel
+                        round={roundOpen}
+                        bids={crewDetail.bids}
+                        coordinatorAddress={crewDetail.crew.coordinatorAddress}
+                        canWrite={writesAllowed}
+                        now={now}
+                        chainId={season?.chainId ?? chainId}
+                        survivingSeats={survivors?.seats}
+                        survivorCutBps={survivors?.cutBps}
+                        onSettled={(r) => {
+                          setSettlement(r);
+                          void fetchCrewDetail(crewDetail.crew.id);
+                          void fetchHq();
+                        }}
+                      />
+                    </AuctionStage>
                   )}
+
                   {settlement && <SettlementReveal result={settlement} />}
 
-                  {/* ── Quick crew: upgrade funnel ── */}
+                  {/* Quick crew: upgrade funnel */}
                   {crewDetail.crew.kind === 'quick' && (
-                    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                      <p className="text-xs text-gray-400">
-                        Quick crews compete on the ladder only.
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
+                    <div className="vellum rounded-xl p-4">
+                      <p className="arena-label text-[10px]">No chest yet</p>
+                      <p className="mt-1 text-xs leading-relaxed text-[#d8c9ae]/65">
+                        Quick crews race on the ladder only. To unlock the shared chest — and with
+                        it Call the Pot —{' '}
                         <Link
                           href="/coordinate"
-                          className="text-violet-300 font-semibold hover:underline underline-offset-4"
+                          className="font-semibold text-[#e3c887] underline-offset-4 hover:underline"
                         >
-                          Found a syndicate pool
-                        </Link>{' '}
-                        to unlock the shared chest and Call the Pot.
+                          found a syndicate pool
+                        </Link>
+                        .
                       </p>
                     </div>
                   )}
                   {crewDetail.crew.kind === 'syndicate' && crewDetail.crew.syndicatePoolId && (
                     <a
                       href={`/syndicate?id=${encodeURIComponent(crewDetail.crew.syndicatePoolId)}`}
-                      className="text-xs font-semibold text-violet-300 hover:underline underline-offset-4"
+                      className="text-xs font-semibold text-[#e3c887] underline-offset-4 hover:underline"
                     >
-                      View linked syndicate pool &rarr;
+                      View the linked syndicate pool &rarr;
                     </a>
                   )}
 
-                  {/* ── Crew feed ── */}
+                  {/* Crew chronicle */}
                   {crewDetail.events.length > 0 && (
-                    <div>
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Crew feed</h3>
+                    <div className="vellum rounded-xl p-4">
+                      <h3 className="arena-label mb-2.5 text-[10px]">Crew chronicle</h3>
                       <ul className="space-y-1.5">
                         {crewDetail.events.slice(0, 8).map((ev) => (
-                          <li key={ev.id} className="text-xs text-gray-400">
-                            <span className="text-gray-300">{eventLabel(ev)}</span>
-                            <span className="ml-2 text-gray-600">{timeAgo(ev.createdAt)}</span>
+                          <li key={ev.id} className="flex items-baseline gap-2 text-xs">
+                            <span
+                              aria-hidden
+                              className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-[#c9a227]/60"
+                            />
+                            <span className="text-[#d8c9ae]/75">{eventLabel(ev)}</span>
+                            <span className="ml-auto shrink-0 text-[10px] text-[#d8c9ae]/35">
+                              {timeAgo(ev.createdAt)}
+                            </span>
                           </li>
                         ))}
                       </ul>
@@ -722,20 +662,33 @@ export default function SeasonPage() {
             </ShellSection>
           </div>
 
-          {/* ── Season feed ── */}
+          {/* ── Season chronicle ── */}
           {events.length > 0 && (
             <ShellSection>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">Season feed</h2>
-              <ul className="space-y-1.5">
-                {events.slice(0, 12).map((ev) => (
-                  <li key={ev.id} className="text-xs text-gray-400">
-                    <span className="text-gray-300">{eventLabel(ev)}</span>
-                    <span className="ml-2 text-gray-600">{timeAgo(ev.createdAt)}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="vellum rounded-2xl p-5">
+                <h2 className="arena-label mb-3 text-[11px]">The season chronicle</h2>
+                <ul className="space-y-2">
+                  {events.slice(0, 12).map((ev) => (
+                    <li key={ev.id} className="flex items-baseline gap-2.5 text-sm">
+                      <span
+                        aria-hidden
+                        className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[#c9a227]/60"
+                      />
+                      <span className="text-[#d8c9ae]/80">{eventLabel(ev)}</span>
+                      <span className="ml-auto shrink-0 text-[11px] text-[#d8c9ae]/35">
+                        {timeAgo(ev.createdAt)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </ShellSection>
           )}
+
+          {/* ── The honesty contract, as the closing argument ── */}
+          <ShellSection>
+            <RefereeStrip capabilityMessage={message} chainLabel={chainLabel} />
+          </ShellSection>
         </>
       )}
     </PageShell>

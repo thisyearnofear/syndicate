@@ -96,7 +96,9 @@ Never overlap: chains (1952 vs Base), engines (their prize hook vs Megapot), ran
 
 ## 5. UI/UX surfaces
 
-All pages render inside `PageShell`/`PageHeader`, accents from `src/config/design.ts` only, state grammar (`PageSkeleton`/`EmptyState`/`DisconnectedState`) per `DESIGN.md`.
+All pages render inside `PageShell`/`PageHeader`, accents from `src/config/design.ts` only, and state grammar (`PageSkeleton`/`EmptyState`/`DisconnectedState`) per `DESIGN.md`. **Season is the explicit `arena` surface**: warm ink, brass, copperplate hatch, display serif and restrained ambient embers. It is not a second app or an inline background fork; it is the documented game surface in `docs/DESIGN.md`.
+
+The arena exists because the old Season surface inherited the platform's cool slate/Inter/quiet-ledger register. That made a tontine auction look like another finance dashboard in a demo: a novel mechanic was hidden inside forms, 12px feed rows and static numbers. The arena makes the period and the stakes legible without changing the settlement truth.
 
 ### 5.0 Consolidation pass (do before building Season)
 
@@ -121,28 +123,43 @@ Season is a campaign layer, not a fifth silo:
 
 | Route | Content |
 |---|---|
-| `/season` | Season HQ: countdown to draw close, live **Season Pot** (`RoundOrb` charging → resolving), crew ladder (top crews by real entries), found/join CTAs, latest settlement recap |
-| `/syndicate?id=…` (Season view) | Existing syndicate detail page gains a Season overlay: crest + accent, **SeatMap**, per-seat cut badges, live feed, **CallThePotPanel**, quest checklist. No parallel `/season/crew/[id]` route. |
-| `/season/round/[id]` | Round detail: full bid history, settlement receipt links, reveal replay |
+| `/season` | Season HQ on the `arena` surface: Anno 1653 tontine lore, a deadline ring, crew ladder (top crews by real entries), found/join CTAs, the table of seats, the live auction stage and the referee story. |
+| `/syndicate?id=…` (Season view) | Existing syndicate detail page gains a bounded **arena inset**: crest, SeatMap, per-seat cut badges, shared CallThePotPanel/AuctionStage, live chronicle and verified reveal. No parallel `/season/crew/[id]` route. |
+| `/season/round/[id]` | Round detail: full bid history, settlement receipt links, reveal replay (planned route; the HQ contains the live loop). |
 
 ### 5.2 Key components (`src/components/season/`)
 
-- `SeasonPot` — pooled entries as a `RoundOrb`; hidden while accruing, revealed at season close.
-- `CrewLadder` — ranked crews, live entry counts, mid-season flip highlights.
-- `SeatMap` — the visual heart: one tile per member; active seats glow with cut %, freed seats fade with *"seat freed +X% to survivors"* tooltip. The tontine made visible.
-- `CutBadge` — your current cut %, animates up when someone exits.
-- `CallThePotPanel` — chest value, your bid input, **live payout preview** ("you'd receive ≈ N tickets · M tickets go to the crew bonus"), current leading bid (highest offer to the crew), cutoff countdown.
-- `BidFeed` — public auction stream; every bid is a named moment.
-- `SettlementReveal` — the shareable sequence (reveal grammar): chest decrypts (`DecryptLine`-adjacent) → winning bid named (`BeamFrame`) → caller's tickets arrive (`receipt-in`) → bonus splits across surviving seats → the seat fades to freed. Auto-triggers share card.
-- `ShareCards` — bid wins, seat-frees, streaks, season winners, via `socialService` (Farcaster/Twitter) with crew crest + named handle.
+- `TontineLore` — the four-beat history: Lorenzo de Tonti's 1653 proposal, two centuries of national financing, the missing referee, and Megapot's public settlement now.
+- `HowItWorks` — the actual loop in three beats: take a seat, buy real entries, call the pot. Roman numerals and period copy make it a game before the first click.
+- `CrewCrest` — deterministic heraldic SVG derived from `crew.id` + `crest_accent`; no uploads or fake art, and the same crest follows the crew through ladder, table, overlay and share moment.
+- `CrewLadder` — ranked crews, live entry counts, Roman-numeral ranks and proportional standing bars. A crew is an object, not a row of generic text.
+- `SeatMap` — the tontine made visible: seats sit in a ring around the chest, active medallions carry their cut, and freed seats leave an empty chair rather than a strikethrough. `CutBadge`/`CountUp` animate the surviving cuts upward when the data changes.
+- `CallThePotPanel` — opening offer on a brass slider with a proportional payout preview. Before a chest snapshot exists it shows shares only; it never invents a dollar figure.
+- `AuctionStage` — the chest and leading offer get the largest type; `CutoffRing` makes time spatial; the raise-only minimum is visible; an anti-snipe extension is announced instead of silently changing a countdown.
+- `BidFeed` — public auction stream; each offer is a named, ranked ledger moment, with a crown on the leader and a `bid-land` arrival beat.
+- `SettlementReveal` — verified payoff sequence: a seal breaks, the chest visibly splits into caller/crew payouts, the winner is named, survivor growth is stated, and receipt links remain the proof. `DecryptLine` is deliberately not used on a win.
+- `ShareCards` — settlement sharing through `socialService`, now with the arena/crest vocabulary.
+- `RefereeStrip` — receipt verification and capability limits as the closing historical argument: the referee the tontine never had, not disclaimer chrome around the action.
+
+The shared motion grammar is in `src/components/motion/`: `CountUp`, `SealBurst` and `CutoffRing` join `RoundOrb`, `BeamFrame` and `DecryptLine`. `DecryptLine` remains reserved for the privacy narrative; it must not obscure a payoff.
 
 ### 5.3 Where the dynamics surface (the UX thesis)
 
-- **The exit is a celebration, not a loss.** Every seat-freedom bumps every survivor's `CutBadge` in the same animation beat, and the feed copy leads with growth: *"+2.4% to everyone who stayed."*
-- **The auction is theater.** `BidFeed` is public by design; raises get emphasized. The 5-minute anti-snipe extension is announced loudly ("round extended — Ada sniped, make your move").
-- **Nothing pending ever looks complete.** Bids show `live`; settlements show `settling` until the receipt verifies (AGENTS.md: `pending_signature`-style states are incomplete, never successful).
-- **Progressive disclosure by stage.** `/season` renders one primary surface per user stage (hero + how-it-works + join/found → seat map + call form → live bid box → settle panel → reveal), collapsing the join/found cards once a crew is selected and keeping the ladder as the persistent competition anchor. Shared human-readable feed copy lives in `src/components/season/labels.ts` so `/season` and the `/syndicate` overlay tell the same story.
-- **Mobile-first, embed-ready.** Farcaster audience: share cards render as standalone embeds; the whole loop works from a phone wallet.
+- **The exit is a celebration, not a loss.** Every seat-freedom changes a real server-supplied cut and the `CountUp`/`cut-rise` beat makes the increase visible. The freed seat becomes an empty chair, and the copy leads with growth: *"a seat freed — every remaining cut grew."*
+- **The auction is theater.** `BidFeed` is public by design; raises get emphasized, the leading offer is large, and the five-minute anti-snipe extension is announced loudly: *"Round extended. Someone bid at the bell — make your move."*
+- **The offer is a decision, not arithmetic.** A range slider exposes the legal 1–50% tradeoff. Once a real chest snapshot exists, the preview shows the caller's approximate ticket payout and the crew's bonus tickets, with the ticket-price fallback explicitly labelled when the live read is unavailable.
+- **Nothing pending ever looks complete.** Bids show live; settlement shows real payout steps and remains incomplete until the receipt journal verifies both purchases (AGENTS.md: `pending_signature`-style states are incomplete, never successful). `SealBurst` only mounts from the verified result.
+- **The history is product education.** Tontine lore is not ornamental copy: pooled capital, survivor yield, the missing private referee, and public settlement teach the rule before the player acts. The referee strip makes the trust thesis legible without letting compliance chrome frame the game.
+- **Progressive disclosure by stage.** `/season` renders one primary surface per user stage (hero + lore/how-it-works + join/found → table + call form → auction stage → settle panel → reveal), collapsing the join/found cards once a crew is selected and keeping the ladder as the persistent competition anchor. Shared panels are used by `/season` and the `/syndicate` arena inset so the game cannot drift between entry points.
+- **Mobile-first, embed-ready.** The ring falls back to a medallion grid beyond fourteen seats; sliders, rings and the reveal work from a phone wallet. Share cards remain standalone social outputs; the loop needs no hover to understand a win.
+
+### 5.4 Visual rules for future Season work
+
+1. Do not put Season back on the default slate surface. Use `surface="arena"` at HQ or the bounded arena inset in the syndicate view.
+2. Use `CrewCrest` anywhere a crew is named; never introduce another generic avatar or a second crest algorithm.
+3. Any new game state must have a named ceremony beat and a reduced-motion fallback. Do not add ambient animation to utility pages.
+4. The game's numbers are the visual hierarchy: chest, leading offer, payout split and survivor cut must be larger than their explanatory labels.
+5. Honesty stays visible and exact, but the `RefereeStrip`/receipt links carry it after the action; never remove or fabricate verification language to make a demo look smoother.
 
 ---
 

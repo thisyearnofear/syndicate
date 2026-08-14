@@ -40,6 +40,8 @@ const ACCENT_CLASS: Record<string, string> = {
   grow: 'border-emerald-400/40 bg-emerald-500/10',
   coordinate: 'border-violet-400/40 bg-violet-500/10',
   autopilot: 'border-sky-400/40 bg-sky-500/10',
+  // Arena surface (Season) — brass on ink, per docs/DESIGN.md.
+  arena: 'border-[#c9a227]/40 bg-[#c9a227]/10',
 };
 
 export function ShareCards({ data, compact = false, className = '' }: ShareCardsProps) {
