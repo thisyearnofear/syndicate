@@ -89,6 +89,7 @@ export default function SeasonPage() {
   const [season, setSeason] = useState<SeasonSummary | null>(null);
   const [crews, setCrews] = useState<CrewSummary[]>([]);
   const [events, setEvents] = useState<SeasonEvent[]>([]);
+  const [settledRoundIds, setSettledRoundIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCrewId, setSelectedCrewId] = useState<string | null>(null);
   const [crewDetail, setCrewDetail] = useState<CrewDetail | null>(null);
@@ -113,6 +114,7 @@ export default function SeasonPage() {
       setSeason(data.season ?? null);
       setCrews(data.crews ?? []);
       setEvents(data.events ?? []);
+      setSettledRoundIds(data.settledRoundIds ?? []);
     } catch {
       setSeason(null);
     } finally {
@@ -206,6 +208,12 @@ export default function SeasonPage() {
     return crewDetail.crew.score?.entries ?? 0;
   }, [crewDetail]);
 
+  const latestReplayRoundId = settledRoundIds[0] ?? null;
+  const liveChestCrew = useMemo(
+    () => crews.find((crew) => crew.kind === 'syndicate' && crew.status !== 'archived') ?? null,
+    [crews],
+  );
+
   const handleJoinByCode = async (): Promise<void> => {
     const code = joinCode.trim().toUpperCase();
     if (!code || !address) return;
@@ -224,6 +232,26 @@ export default function SeasonPage() {
       setJoinCode('');
       selectCrew(crew.id);
       await Promise.all([fetchHq(), fetchCrewDetail(crew.id)]);
+    } catch (e) {
+      setFormError(e instanceof Error ? e.message : 'Join failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleJoinCrew = async (crewId: string): Promise<void> => {
+    if (!address) return;
+    setBusy(true);
+    setFormError(null);
+    try {
+      const res = await fetch(`/api/season/crews/${crewId}/join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address }),
+      });
+      if (!res.ok) throw new Error(((await res.json()) as { error?: string }).error ?? 'Join failed');
+      selectCrew(crewId);
+      await Promise.all([fetchHq(), fetchCrewDetail(crewId)]);
     } catch (e) {
       setFormError(e instanceof Error ? e.message : 'Join failed');
     } finally {
@@ -343,7 +371,7 @@ export default function SeasonPage() {
     <PageShell width="wide" surface="arena" accent="arena">
       <PageHeader
         title="Season of Tickets"
-        supportingLine="A tontine on real Megapot entries. Every seat that leaves makes the rest larger."
+        supportingLine="Take a seat. If someone exits, your cut grows — and every outcome settles on-chain."
         accent="arena"
         variant="arena"
         eyebrow="Anno 1653 · The pot that feeds the survivors"
@@ -405,7 +433,45 @@ export default function SeasonPage() {
           {/* ── Join / found — the first action for a new visitor ── */}
           {!selectedCrewId && (
             <ShellSection>
-              {!isConnected ? (
+              {latestReplayRoundId && (
+              <div className="vellum vellum-raised flex flex-col gap-3 rounded-2xl border-[#c9a227]/30 bg-[#c9a227]/[0.05] p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="arena-label text-[10px]">Watch before you play</p>
+                  <p className="mt-1 font-display text-lg font-bold text-[#f7ead0]">
+                    See a real pot get called
+                  </p>
+                  <p className="mt-1 text-xs text-[#d8c9ae]/60">
+                    Full bid history, survivor split, and both public receipts — no simulated state.
+                  </p>
+                </div>
+                <Link href={`/season/round/${encodeURIComponent(latestReplayRoundId)}`} className="shrink-0">
+                  <Button size="sm" variant="outline">Watch verified replay →</Button>
+                </Link>
+              </div>
+            )}
+
+            {liveChestCrew && (
+              <div className="vellum flex flex-col gap-3 rounded-2xl border-[#c9a227]/30 bg-[#c9a227]/[0.04] p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="arena-label text-[10px]">Syndicate crew · shared chest</p>
+                  <p className="mt-1 font-display text-lg font-bold text-[#f7ead0]">
+                    Take a seat in {liveChestCrew.name}
+                  </p>
+                  <p className="mt-1 text-xs text-[#d8c9ae]/60">
+                    Inspect its real seats, cuts, and any open exit auction before you join.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => selectCrew(liveChestCrew.id)}
+                >
+                  Open crew table →
+                </Button>
+              </div>
+            )}
+
+            {!isConnected ? (
                 <DisconnectedState subject="Your seat at the table" accent="arena" />
               ) : !writesAllowed ? (
                 <p className="text-sm text-[#d8c9ae]/50">
@@ -440,9 +506,9 @@ export default function SeasonPage() {
                     </p>
                   </div>
                   <div className="vellum rounded-2xl p-4">
-                    <p className="arena-label text-[10px]">From nothing</p>
+                    <p className="arena-label text-[10px]">Score first · no chest yet</p>
                     <p className="font-display mb-2.5 text-lg font-bold text-[#f7ead0]">
-                      Found a crew
+                      Found a score crew
                     </p>
                     <form
                       className="flex gap-2"
@@ -463,8 +529,7 @@ export default function SeasonPage() {
                       </Button>
                     </form>
                     <p className="mt-2 text-[11px] text-[#d8c9ae]/50">
-                      You take the first seat and the whole cut. Share your code before anyone
-                      dilutes it.
+                      The fastest way onto the ladder. Your real entries count immediately; the shared chest and exit auction require a linked syndicate pool.
                     </p>
                   </div>
                 </div>
@@ -565,6 +630,38 @@ export default function SeasonPage() {
                     chestUsdc={roundOpen ? Number(roundOpen.chestSnapshotUsdc) || 0 : null}
                     entries={crewEntries}
                   />
+
+                  {!myMembership &&
+                    crewDetail.crew.kind === 'syndicate' &&
+                    crewDetail.crew.status !== 'archived' && (
+                    <div className="vellum flex flex-col gap-3 rounded-xl border-[#c9a227]/30 bg-[#c9a227]/[0.05] p-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="arena-label text-[10px]">The next move</p>
+                        <p className="mt-1 font-display text-lg font-bold text-[#f7ead0]">
+                          Take a seat in this live chest
+                        </p>
+                        <p className="mt-1 text-xs leading-relaxed text-[#d8c9ae]/60">
+                          Joining moves no money. It registers your seat; your real entries count
+                          when you buy through the crew&apos;s referral path.
+                        </p>
+                      </div>
+                      {!isConnected ? (
+                        <p className="shrink-0 text-xs text-[#d8c9ae]/55">Connect a wallet to join.</p>
+                      ) : !writesAllowed ? (
+                        <p className="shrink-0 text-xs text-[#d8c9ae]/55">Seat-taking is disabled in this environment.</p>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="warning"
+                          loading={busy}
+                          disabled={busy}
+                          onClick={() => void handleJoinCrew(crewDetail.crew.id)}
+                        >
+                          <LogIn className="mr-1 h-4 w-4" /> Take a seat
+                        </Button>
+                      )}
+                    </div>
+                  )}
 
                   {/* Stage: no round open → Call the pot */}
                   {crewDetail.crew.kind === 'syndicate' && !roundOpen && (

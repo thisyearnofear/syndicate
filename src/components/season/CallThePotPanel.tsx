@@ -50,12 +50,11 @@ export function CallThePotPanel({
   return (
     <section className="vellum rounded-2xl p-5">
       <header className="mb-4">
-        <p className="arena-label text-[10px]">The exit auction</p>
-        <h3 className="font-display text-2xl font-bold text-[#f7ead0]">Call the pot</h3>
+        <p className="arena-label text-[10px]">The opening move · not an exit yet</p>
+        <h3 className="font-display text-2xl font-bold text-[#f7ead0]">Start the exit auction</h3>
         <p className="mt-1 text-sm leading-relaxed text-[#d8c9ae]/70">
-          Buy your way out early. Offer a share of the chest to the seats that stay — the largest
-          offer at the bell wins, and the winner walks with the rest. Every crew member can outbid
-          you.
+          You stay seated while the market runs. Offer a share of the chest to the seats that stay;
+          if your offer leads at the bell, you leave with the rest. Every crew member can outbid you.
         </p>
       </header>
 
@@ -72,7 +71,7 @@ export function CallThePotPanel({
             ticketPriceResolved={resolved}
             currentCutBps={currentCutBps}
             disabled={busy}
-            label="Your opening offer to the crew"
+            label="Your opening gift to the crew"
           />
 
           {!confirming ? (
@@ -82,16 +81,17 @@ export function CallThePotPanel({
               disabled={busy || pct < 1 || pct > 50}
               onClick={() => setConfirming(true)}
             >
-              <Gavel className="mr-1 h-4 w-4" /> Call the pot
+              <Gavel className="mr-1 h-4 w-4" /> Open exit auction
             </Button>
           ) : (
             <div className="rounded-xl border border-[#c9a227]/35 bg-[#c9a227]/[0.08] p-3.5">
               <p className="text-xs leading-relaxed text-[#f7ead0]/90">
                 You are opening an auction over the crew chest at{' '}
                 <span className="font-display text-sm font-bold">{pct}% to the crew</span>, closing
-                at {cutoffLabel}. If your offer still leads at the bell you{' '}
-                <span className="font-semibold">give up your seat</span> — and every seat that
-                stays grows. This cannot be undone once bids land.
+                at {cutoffLabel}. You stay seated while the auction runs. If your offer still leads
+                at the bell, you{' '}
+                <span className="font-semibold">give up your seat</span> and take the rest — every
+                seat that stays grows. This cannot be undone once bids land.
               </p>
               <div className="mt-3 flex gap-2">
                 <Button
@@ -101,7 +101,7 @@ export function CallThePotPanel({
                   disabled={busy}
                   onClick={() => void onCall(Math.round(pct * 100))}
                 >
-                  <Gavel className="mr-1 h-4 w-4" /> Confirm the call
+                  <Gavel className="mr-1 h-4 w-4" /> Open auction
                 </Button>
                 <Button size="sm" variant="outline" disabled={busy} onClick={() => setConfirming(false)}>
                   Not yet

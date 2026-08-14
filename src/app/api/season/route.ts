@@ -20,6 +20,7 @@ import {
   appendSeasonEvent,
   listSeasonCrews,
   listSeasonEvents,
+  listSeasonSettledRoundIds,
 } from '@/lib/db/repositories/seasonRepository';
 import { scoreSeasonCrews } from '@/services/season/scoringService';
 import { randomUUID } from 'node:crypto';
@@ -40,12 +41,13 @@ export async function GET(req: NextRequest) {
     await ensureSeasonTables();
     const season = await getActiveSeason(chainId);
     if (!season) {
-      return NextResponse.json({ season: null, crews: [], events: [] });
+      return NextResponse.json({ season: null, crews: [], events: [], settledRoundIds: [] });
     }
 
-    const [crews, events] = await Promise.all([
+    const [crews, events, settledRoundIds] = await Promise.all([
       listSeasonCrews(season.id),
       listSeasonEvents(season.id, 30),
+      listSeasonSettledRoundIds(season.id, 3),
     ]);
 
     // Scoring is best-effort: if the chain scan fails, the ladder falls
@@ -68,7 +70,7 @@ export async function GET(req: NextRequest) {
 
     const scoredCrews = crews.map((crew) => ({ ...crew, score: scores[crew.id] ?? null }));
 
-    return NextResponse.json({ season, crews: scoredCrews, events, scoring });
+    return NextResponse.json({ season, crews: scoredCrews, events, settledRoundIds, scoring });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error('[Season] Read failed:', { message });

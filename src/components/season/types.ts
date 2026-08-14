@@ -27,6 +27,7 @@ export interface CrewSummary {
   syndicatePoolId: string | null;
   referrerCode: string;
   coordinatorAddress: string;
+  status?: 'active' | 'archived';
   activeMembers?: number;
   score?: CrewScore | null;
 }

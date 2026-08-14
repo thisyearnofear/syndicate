@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 280" fill="none">
+  <defs>
+    <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(32)">
+      <path d="M0 0V8" stroke="#f7ead0" stroke-width="1" opacity=".16"/>
+    </pattern>
+    <filter id="soft-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- A restrained engraved map of the rule: three seats become two. -->
+  <g opacity=".42" stroke="#c9a227" stroke-width="1.5">
+    <path d="M126 142C190 72 286 64 350 126" stroke-dasharray="3 9"/>
+    <path d="M450 126C514 64 610 72 674 142" stroke-dasharray="3 9"/>
+    <path d="M394 102V178" stroke="#e3c887" stroke-dasharray="2 7"/>
+    <path d="M382 116l12-14 12 14M382 164l12 14 12-14"/>
+  </g>
+
+  <!-- Before: three smaller active seats. -->
+  <g stroke="#e3c887" stroke-width="2">
+    <circle cx="150" cy="84" r="29" fill="#5e1912"/>
+    <circle cx="96" cy="174" r="29" fill="#5e1912"/>
+    <circle cx="204" cy="174" r="29" fill="#5e1912"/>
+  </g>
+  <g fill="url(#hatch)">
+    <circle cx="150" cy="84" r="25"/>
+    <circle cx="96" cy="174" r="25"/>
+    <circle cx="204" cy="174" r="25"/>
+  </g>
+  <g fill="#f7ead0" opacity=".8">
+    <path d="M150 70l5 10 11 1-8 7 3 11-11-6-11 6 3-11-8-7 11-1z"/>
+    <path d="M96 160l5 10 11 1-8 7 3 11-11-6-11 6 3-11-8-7 11-1z"/>
+    <path d="M204 160l5 10 11 1-8 7 3 11-11-6-11 6 3-11-8-7 11-1z"/>
+  </g>
+
+  <!-- The shared chest. -->
+  <g filter="url(#soft-glow)">
+    <path d="M326 111h148v73H326z" fill="#27150f" stroke="#c9a227" stroke-width="2"/>
+    <path d="M326 111c0-24 33-43 74-43s74 19 74 43" fill="#5e1912" stroke="#e3c887" stroke-width="2"/>
+    <path d="M342 116h116v18H342z" fill="#8f2a1e" opacity=".72"/>
+    <path d="M392 68v116M374 111v73M410 111v73" stroke="#e3c887" stroke-width="1" opacity=".7"/>
+    <path d="M375 144h50v25h-50z" fill="#c9a227" opacity=".18" stroke="#e3c887" stroke-width="1"/>
+    <circle cx="400" cy="156" r="5" fill="#e3c887"/>
+  </g>
+
+  <!-- After: two larger surviving seats and a freed chair. -->
+  <g stroke="#e3c887" stroke-width="2">
+    <circle cx="568" cy="91" r="39" fill="#5e1912"/>
+    <circle cx="632" cy="187" r="39" fill="#5e1912"/>
+  </g>
+  <g fill="url(#hatch)">
+    <circle cx="568" cy="91" r="34"/>
+    <circle cx="632" cy="187" r="34"/>
+  </g>
+  <g fill="#f7ead0" opacity=".9">
+    <path d="M568 72l7 14 15 2-11 10 3 15-14-8-14 8 3-15-11-10 15-2z"/>
+    <path d="M632 168l7 14 15 2-11 10 3 15-14-8-14 8 3-15-11-10 15-2z"/>
+  </g>
+  <g stroke="#8f2a1e" stroke-width="3" opacity=".65">
+    <path d="M704 108v82M680 190h48M690 108h28M690 108v82"/>
+    <path d="M687 106h34"/>
+  </g>
+  <g fill="#c9a227" opacity=".75">
+    <circle cx="512" cy="139" r="3"/><circle cx="528" cy="123" r="2"/><circle cx="596" cy="148" r="3"/>
+    <circle cx="616" cy="126" r="2"/><circle cx="674" cy="150" r="3"/>
+  </g>
+</svg>

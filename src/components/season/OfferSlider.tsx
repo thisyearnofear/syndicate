@@ -69,7 +69,6 @@ export function OfferSlider({
     chestUsdc != null && currentCutPct != null ? chestUsdc * (currentCutPct / 100) : null;
   const exitUsdc = chestUsdc != null ? chestUsdc * (exitSharePct / 100) : null;
   const crewUsdc = chestUsdc != null ? chestUsdc * (clamped / 100) : null;
-  const stayTickets = stayUsdc != null ? Math.max(1, Math.floor(stayUsdc / price)) : null;
   const exitTickets = exitUsdc != null ? Math.max(1, Math.floor(exitUsdc / price)) : null;
   const crewTickets = crewUsdc != null ? Math.max(1, Math.floor(crewUsdc / price)) : null;
 
@@ -114,17 +113,15 @@ export function OfferSlider({
         <p className="arena-label text-[9px]">The decision</p>
         <div className="vellum grid grid-cols-2 gap-px overflow-hidden rounded-xl">
           <div className="bg-[#0a0705]/40 p-3">
-            <p className="arena-label text-[9px]">Stay in the tontine</p>
+            <p className="arena-label text-[9px]">Stay — future crew claim</p>
             {currentCutPct != null ? (
               <>
                 <span className="font-display text-xl font-bold text-[#d8c9ae]">
                   {pctLabel(currentCutPct)}%
                 </span>
                 <p className="mt-0.5 text-[11px] text-[#d8c9ae]/60">
-                  current cut
-                  {stayUsdc != null && (
-                    <> · ≈ ${stayUsdc.toFixed(2)} / {stayTickets} ticket{stayTickets !== 1 ? 's' : ''}</>
-                  )}
+                  current cut of the eventual claim
+                  {stayUsdc != null && <> · ≈ ${stayUsdc.toFixed(2)} if today&apos;s chest were distributed</>}
                 </p>
               </>
             ) : (
@@ -134,7 +131,7 @@ export function OfferSlider({
               </>
             )}
             <p className="mt-2 text-[10px] leading-relaxed text-[#d8c9ae]/45">
-              Keep your seat and its future share of the crew claim.
+              Keep your seat and its cut of the eventual crew claim. Nothing is paid out now.
             </p>
           </div>
           <div className="bg-[#c9a227]/[0.07] p-3">
@@ -162,7 +159,7 @@ export function OfferSlider({
               </>
             )}
             <p className="mt-2 text-[10px] leading-relaxed text-[#d8c9ae]/55">
-              Leave permanently if your offer leads at the bell.
+              Leave permanently if your offer leads at the bell. The amount is an estimate until both receipts verify.
             </p>
           </div>
         </div>
@@ -172,8 +169,8 @@ export function OfferSlider({
             <p className="arena-label text-[9px]">Gift to the survivors</p>
             <p className="text-[11px] text-[#d8c9ae]/65">
               {crewUsdc != null
-                ? `≈ $${crewUsdc.toFixed(2)} · ${crewTickets} bonus ticket${crewTickets !== 1 ? 's' : ''}`
-                : `${pctLabel(clamped)}% of the future chest as bonus tickets`}
+                ? `If this bid wins: ≈ $${crewUsdc.toFixed(2)} · ${crewTickets} bonus ticket${crewTickets !== 1 ? 's' : ''}`
+                : `If this bid wins: ${pctLabel(clamped)}% of the future chest as bonus tickets`}
             </p>
           </div>
           <span className="font-display text-2xl font-bold text-[#e3c887]">{pctLabel(clamped)}%</span>

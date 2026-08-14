@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, CircleCheck, TriangleAlert } from 'lucide-react';
 import { PageHeader, PageShell, ShellSection } from '@/components/layout/PageShell';
@@ -194,6 +195,14 @@ export function SeasonRoundReplay({ roundId }: SeasonRoundReplayProps) {
                   </div>
                 </div>
                 <div className="rounded-xl border border-[#c9a227]/30 bg-[#c9a227]/[0.07] px-4 py-3 sm:text-right">
+                  <Image
+                    src="/season/replay-seal.svg"
+                    alt=""
+                    aria-hidden="true"
+                    width={48}
+                    height={48}
+                    className="mx-auto mb-2 h-12 w-12"
+                  />
                   <p className="arena-label text-[10px]">Receipt status</p>
                   <p className="mt-1 inline-flex items-center gap-1.5 font-display text-lg font-bold text-[#e3c887]">
                     <CircleCheck className="h-4 w-4" /> Verified on-chain
@@ -284,8 +293,11 @@ export function SeasonRoundReplay({ roundId }: SeasonRoundReplayProps) {
           <ShellSection>
             <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[#d8c9ae]/50">
               <span>Read-only replay. This page has no bid, settle, or wallet controls.</span>
-              <Link href="/season" className="font-semibold text-[#e3c887] hover:underline">
-                Watch the next round form on Season HQ →
+              <Link
+                href={`/season?crew=${encodeURIComponent(payload.crew.id)}`}
+                className="font-semibold text-[#e3c887] hover:underline"
+              >
+                Continue to {payload.crew.name} →
               </Link>
             </div>
           </ShellSection>

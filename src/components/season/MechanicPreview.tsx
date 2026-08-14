@@ -9,6 +9,7 @@
  * when one seat leaves, the surviving seats become larger.
  */
 
+import Image from 'next/image';
 import { ArrowRight, TrendingUp, Users } from 'lucide-react';
 
 export function MechanicPreview() {
@@ -26,8 +27,18 @@ export function MechanicPreview() {
           </p>
         </div>
 
-        <div className="flex min-w-0 items-center justify-center gap-2 sm:gap-4" aria-label="Illustrative cut growth example">
-          <div className="vellum min-w-[132px] rounded-xl p-3 text-center sm:min-w-[160px]">
+        <div
+          className="relative isolate flex min-w-0 items-center justify-center gap-2 sm:gap-4"
+          aria-label="Illustrative cut growth example"
+        >
+          <Image
+            src="/season/tontine-mechanic.svg"
+            alt=""
+            aria-hidden="true"
+            width={800}
+            height={280}
+            className="pointer-events-none absolute inset-0 h-full w-full object-contain opacity-45"
+          />          <div className="relative z-10 vellum min-w-[132px] rounded-xl bg-[#0a0705]/85 p-3 text-center sm:min-w-[160px]">
             <p className="arena-label text-[9px]">Before</p>
             <div className="mt-2 flex items-center justify-center gap-1.5 text-[#d8c9ae]/70">
               <Users className="h-3.5 w-3.5" />
@@ -37,9 +48,9 @@ export function MechanicPreview() {
             <p className="text-[10px] text-[#d8c9ae]/45">each cut</p>
           </div>
 
-          <ArrowRight className="h-5 w-5 shrink-0 text-[#c9a227]" aria-hidden />
+          <ArrowRight className="relative z-10 h-5 w-5 shrink-0 text-[#c9a227]" aria-hidden />
 
-          <div className="vellum min-w-[132px] rounded-xl border-[#c9a227]/40 bg-[#c9a227]/[0.08] p-3 text-center sm:min-w-[160px]">
+          <div className="relative z-10 vellum min-w-[132px] rounded-xl border-[#c9a227]/40 bg-[#c9a227]/[0.08] p-3 text-center sm:min-w-[160px]">
             <p className="arena-label text-[9px]">After one exits</p>
             <div className="mt-2 flex items-center justify-center gap-1.5 text-[#e3c887]">
               <TrendingUp className="h-3.5 w-3.5" />

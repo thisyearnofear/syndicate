@@ -672,6 +672,23 @@ export async function listSeasonEvents(seasonId: string, limit = 50): Promise<Se
   return result.rows.map(mapEvent);
 }
 
+export async function listSeasonSettledRoundIds(seasonId: string, limit = 3): Promise<string[]> {
+  await ensureSeasonTables();
+  const result = await sql`
+    SELECT e.payload->>'roundId' AS round_id
+    FROM season_events e
+    JOIN season_crews c ON c.id = e.crew_id
+    WHERE c.season_id = ${seasonId}
+      AND e.kind = 'round.settled'
+      AND e.payload->>'roundId' IS NOT NULL
+    ORDER BY e.created_at DESC
+    LIMIT ${limit};
+  `;
+  return result.rows
+    .map((row) => row.round_id)
+    .filter((roundId): roundId is string => typeof roundId === 'string' && roundId.length > 0);
+}
+
 export async function listCrewEvents(crewId: string, limit = 50): Promise<SeasonEventRow[]> {
   await ensureSeasonTables();
   const result = await sql`
@@ -724,6 +741,9 @@ export async function settleCallRound(params: {
     throw new Error(`Round status ${round.status} cannot be settled.`);
   }
 
+  const crew = await getCrewById(round.crewId);
+  const seasonId = crew?.seasonId ?? null;
+
   await sql`
     UPDATE season_bids
     SET status = CASE WHEN id = ${params.winningBidId} THEN 'won' ELSE 'lost' END
@@ -740,6 +760,7 @@ export async function settleCallRound(params: {
     await freeCrewSeat(round.crewId, bidder, 'freed_exit');
     await appendSeasonEvent({
       id: crypto.randomUUID(),
+      seasonId,
       crewId: round.crewId,
       kind: 'seat.freed',
       payload: {
@@ -753,6 +774,7 @@ export async function settleCallRound(params: {
 
   await appendSeasonEvent({
     id: crypto.randomUUID(),
+    seasonId,
     crewId: round.crewId,
     kind: 'round.settled',
     payload: {
