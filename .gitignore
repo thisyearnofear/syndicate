@@ -90,3 +90,9 @@ yarn.lock
 .claude/
 .openclaude/
 .env*
+
+# Impeccable critique skill artifacts
+.agents/
+.impeccable/
+skills-lock.json
+
