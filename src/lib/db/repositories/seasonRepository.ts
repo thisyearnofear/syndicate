@@ -620,3 +620,196 @@ export async function listCrewEvents(crewId: string, limit = 50): Promise<Season
   `;
   return result.rows.map(mapEvent);
 }
+
+// ─── Settlement (receipt-verified state transitions) ────────────────────────
+
+/**
+ * Mark a call round as settled and resolve the auction:
+ * - winning bid → 'won', all other live bids → 'lost'
+ * - round records the payout/bonus tx hashes (already receipt-verified by
+ *   the caller before this runs)
+ * - the caller's seat frees with reason 'freed_exit'
+ * - cuts renormalize across surviving seats
+ *
+ * Callers MUST verify receipts on-chain first; this function only records
+ * the resulting state.
+ */
+export async function settleCallRound(params: {
+  roundId: string;
+  winningBidId: string;
+  callerPayoutTxHash: string;
+  crewBonusTxHash: string;
+  settleTxHash?: string | null;
+  verification: Record<string, unknown>;
+}): Promise<void> {
+  await ensureSeasonTables();
+
+  const round = await getCallRoundById(params.roundId);
+  if (!round) throw new Error('Call round not found.');
+  if (round.status === 'settled') return; // idempotent replay
+  if (round.status === 'open' || round.status === 'settling') {
+    await sql`
+      UPDATE season_call_rounds
+      SET status = 'settled',
+          winning_bid_id = ${params.winningBidId},
+          caller_payout_tx_hash = ${params.callerPayoutTxHash},
+          crew_bonus_tx_hash = ${params.crewBonusTxHash},
+          settle_tx_hash = ${params.settleTxHash ?? null}
+      WHERE id = ${params.roundId};
+    `;
+  } else {
+    throw new Error(`Round status ${round.status} cannot be settled.`);
+  }
+
+  await sql`
+    UPDATE season_bids
+    SET status = CASE WHEN id = ${params.winningBidId} THEN 'won' ELSE 'lost' END
+    WHERE round_id = ${params.roundId}
+      AND status = 'live';
+  `;
+
+  // Free the winning bidder's seat (they took the early payout).
+  const winningBid = await sql`
+    SELECT bidder_address FROM season_bids WHERE id = ${params.winningBidId} LIMIT 1;
+  `;
+  if (winningBid.rows.length) {
+    const bidder = winningBid.rows[0].bidder_address as string;
+    await freeCrewSeat(round.crewId, bidder, 'freed_exit');
+    await appendSeasonEvent({
+      id: crypto.randomUUID(),
+      crewId: round.crewId,
+      kind: 'seat.freed',
+      payload: {
+        address: bidder,
+        reason: 'freed_exit',
+        roundId: params.roundId,
+        verification: params.verification,
+      },
+    });
+  }
+
+  await appendSeasonEvent({
+    id: crypto.randomUUID(),
+    crewId: round.crewId,
+    kind: 'round.settled',
+    payload: {
+      roundId: params.roundId,
+      winningBidId: params.winningBidId,
+      callerPayoutTxHash: params.callerPayoutTxHash,
+      crewBonusTxHash: params.crewBonusTxHash,
+      chestUsdc: round.chestSnapshotUsdc,
+    },
+  });
+}
+
+/**
+ * Expire an open round past its cutoff with no acceptable settlement —
+ * marks it failed and journals the reason. The chest is untouched (nothing
+ * was paid out), so it rolls into the next round naturally.
+ */
+export async function expireCallRound(roundId: string, reason: string): Promise<void> {
+  await ensureSeasonTables();
+  const round = await getCallRoundById(roundId);
+  if (!round || round.status !== 'open') return;
+
+  await sql`
+    UPDATE season_call_rounds
+    SET status = 'failed'
+    WHERE id = ${roundId};
+  `;
+  await sql`
+    UPDATE season_bids
+    SET status = 'void'
+    WHERE round_id = ${roundId}
+      AND status = 'live';
+  `;
+  await appendSeasonEvent({
+    id: crypto.randomUUID(),
+    crewId: round.crewId,
+    kind: 'round.failed',
+    payload: { roundId, reason },
+  });
+}
+
+/**
+ * Record a verified on-chain contribution for a crew member (their real
+ * ticket purchase, journaled from an event-log scan). Also updates the
+ * seat's last_contribution_draw marker used by the keeper's inactivity
+ * auto-free logic.
+ */
+export async function recordContribution(params: {
+  crewId: string;
+  memberAddress: string;
+  drawId: string;
+  tickets: number;
+  txHash: string;
+}): Promise<void> {
+  await ensureSeasonTables();
+  await sql`
+    UPDATE season_crew_members
+    SET last_contribution_draw = ${params.drawId}
+    WHERE crew_id = ${params.crewId}
+      AND member_address = ${params.memberAddress}
+      AND seat_status = 'active';
+  `;
+  const crew = await getCrewById(params.crewId);
+  await appendSeasonEvent({
+    id: crypto.randomUUID(),
+    seasonId: crew?.seasonId ?? null,
+    crewId: params.crewId,
+    kind: 'contribution',
+    payload: {
+      address: params.memberAddress,
+      tickets: params.tickets,
+      txHash: params.txHash,
+      drawId: params.drawId,
+    },
+  });
+}
+
+// ─── Keeper queries (season-keeper cron) ────────────────────────────────────
+
+/**
+ * Active seats eligible for inactivity auto-free: joined before the cutoff
+ * and never recorded a contribution since. The cutoff is computed by the
+ * keeper from the season's inactivity_draws setting.
+ */
+export async function getInactiveSeats(
+  seasonId: string,
+  joinedBeforeIso: string,
+): Promise<Array<{ id: string; crewId: string; memberAddress: string }>> {
+  await ensureSeasonTables();
+  const result = await sql`
+    SELECT m.id, m.crew_id, m.member_address
+    FROM season_crew_members m
+    JOIN season_crews c ON c.id = m.crew_id
+    WHERE c.season_id = ${seasonId}
+      AND m.seat_status = 'active'
+      AND m.joined_at < ${joinedBeforeIso}::timestamptz
+      AND NOT EXISTS (
+        SELECT 1
+        FROM season_events e
+        WHERE e.crew_id = m.crew_id
+          AND e.kind = 'contribution'
+          AND e.payload->>'address' = m.member_address
+          AND e.created_at > m.joined_at
+      );
+  `;
+  return result.rows.map((row) => ({
+    id: row.id as string,
+    crewId: row.crew_id as string,
+    memberAddress: row.member_address as string,
+  }));
+}
+
+/** Open call rounds whose cutoff has passed (candidates for expiry). */
+export async function listOpenRoundsPastCutoff(): Promise<SeasonCallRoundRow[]> {
+  await ensureSeasonTables();
+  const result = await sql`
+    SELECT *
+    FROM season_call_rounds
+    WHERE status = 'open'
+      AND cutoff_at < NOW();
+  `;
+  return result.rows.map(mapRound);
+}

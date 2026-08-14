@@ -64,12 +64,31 @@ export async function getLatestAgentRunSession(): Promise<{
   sessionId: string;
   entries: AgentRunEvent[];
 } | null> {
-  const latest = await sql`
-    SELECT session_id
-    FROM agent_run_events
-    ORDER BY created_at DESC
-    LIMIT 1;
-  `;
+  return getLatestAgentRunSessionBySource(null);
+}
+
+/**
+ * Same as getLatestAgentRunSession, restricted to one event source
+ * (e.g. 'season-keeper' vs the X Layer keeper). Pass null for any source.
+ */
+export async function getLatestAgentRunSessionBySource(source: string | null): Promise<{
+  sessionId: string;
+  entries: AgentRunEvent[];
+} | null> {
+  const latest = source
+    ? await sql`
+        SELECT session_id
+        FROM agent_run_events
+        WHERE source = ${source}
+        ORDER BY created_at DESC
+        LIMIT 1;
+      `
+    : await sql`
+        SELECT session_id
+        FROM agent_run_events
+        ORDER BY created_at DESC
+        LIMIT 1;
+      `;
   if (latest.rows.length === 0) return null;
 
   const sessionId = latest.rows[0].session_id as string;
