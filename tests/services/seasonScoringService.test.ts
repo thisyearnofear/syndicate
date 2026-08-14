@@ -4,8 +4,11 @@
  * Verifies the honest accounting rules:
  * - quick crews are credited for purchases by their active seat addresses
  * - syndicate crews are credited for purchases by their coordinator address
- * - V2 `TicketPurchased` counts ticketCount; classic `UserTicketPurchase`
- *   counts ticketsPurchasedTotalBps / 10_000
+ * - live V2 mainnet: `RandomTicketsBought` counts `count`; per-ticket
+ *   `TicketPurchased` events are grouped per transaction; a purchase is
+ *   credited once even when both RTB and jackpot events are present
+ * - legacy V2 `TicketPurchased` counts ticketCount; classic
+ *   `UserTicketPurchase` counts ticketsPurchasedTotalBps / 10_000
  * - non-target buyers are never credited
  * - RPC failures skip spans (counted, never faked) and never crash the scan
  */
@@ -22,20 +25,32 @@ jest.mock('@/services/season/megapotReceipts', () => ({
 }));
 
 // Decoded-event fixtures the viem mock returns per ABI (set by each test).
-const decodedFixtures: { v2: unknown[]; classic: unknown[] } = { v2: [], classic: [] };
+const decodedFixtures: {
+  v2: unknown[];
+  classic: unknown[];
+  liveV2: unknown[];
+  rtb: unknown[];
+} = { v2: [], classic: [], liveV2: [], rtb: [] };
 
 jest.mock('viem', () => {
   const actual = jest.requireActual('viem');
   return {
     ...actual,
-    parseEventLogs: jest.fn(({ abi, logs }: { abi: Array<{ name?: string }>; logs: unknown[] }) => {
-      // Respect empty raw input — only decode when the span actually had logs.
-      if (!logs || logs.length === 0) return [] as never;
-      const name = abi?.[0]?.name;
-      if (name === 'TicketPurchased') return decodedFixtures.v2 as never;
-      if (name === 'UserTicketPurchase') return decodedFixtures.classic as never;
-      return [] as never;
-    }),
+    parseEventLogs: jest.fn(
+      ({ abi, logs }: { abi: Array<{ name?: string; inputs?: unknown[] }>; logs: unknown[] }) => {
+        // Respect empty raw input — only decode when the span actually had logs.
+        if (!logs || logs.length === 0) return [] as never;
+        const ev = abi?.[0];
+        if (ev?.name === 'RandomTicketsBought') return decodedFixtures.rtb as never;
+        if (ev?.name === 'UserTicketPurchase') return decodedFixtures.classic as never;
+        if (ev?.name === 'TicketPurchased') {
+          // Live mainnet V2 has 7 params; the legacy shape has 3.
+          const paramCount = Array.isArray(ev.inputs) ? ev.inputs.length : 0;
+          return (paramCount >= 7 ? decodedFixtures.liveV2 : decodedFixtures.v2) as never;
+        }
+        return [] as never;
+      },
+    ),
   };
 });
 
@@ -103,6 +118,8 @@ const member = (crewId: string, address: string, status: SeasonCrewMemberRow['se
 beforeEach(() => {
   decodedFixtures.v2 = [];
   decodedFixtures.classic = [];
+  decodedFixtures.liveV2 = [];
+  decodedFixtures.rtb = [];
   (listCrewMembers as jest.Mock).mockReset();
 });
 
@@ -160,6 +177,43 @@ test('syndicate crew credits coordinator purchases', async () => {
 
   const result = await scoreSeasonCrews(season('syndicatetest'));
   expect(result.scores['delta']).toEqual({ purchases: 1, entries: 12 });
+});
+
+test('live mainnet V2: RTB summary event credits once despite per-ticket jackpot events', async () => {
+  const c1 = crew('mainnetrtb', 'quick', '0x0000000000000000000000000000000000000000');
+  (listSeasonCrews as jest.Mock).mockResolvedValue([c1]);
+  (listCrewMembers as jest.Mock).mockResolvedValue([
+    member('mainnetrtb', '0xAaAa000000000000000000000000000000000001', 'active'),
+  ]);
+  const buyer = '0xAaAa000000000000000000000000000000000001';
+  decodedFixtures.rtb = [
+    { transactionHash: '0xtx1', args: { recipient: buyer, count: 2n } },
+  ];
+  decodedFixtures.liveV2 = [
+    { transactionHash: '0xtx1', args: { recipient: buyer } },
+    { transactionHash: '0xtx1', args: { recipient: buyer } },
+  ];
+
+  const result = await scoreSeasonCrews(season('livev2rtb'));
+  expect(result.scores['mainnetrtb']).toEqual({ purchases: 1, entries: 2 });
+});
+
+test('live mainnet V2: per-ticket events sum when no RTB summary is present', async () => {
+  const c1 = crew('mainnettp', 'quick', '0x0000000000000000000000000000000000000000');
+  (listSeasonCrews as jest.Mock).mockResolvedValue([c1]);
+  (listCrewMembers as jest.Mock).mockResolvedValue([
+    member('mainnettp', '0xBbBb000000000000000000000000000000000002', 'active'),
+  ]);
+  const buyer = '0xBbBb000000000000000000000000000000000002';
+  decodedFixtures.liveV2 = [
+    { transactionHash: '0xtxA', args: { recipient: buyer } },
+    { transactionHash: '0xtxA', args: { recipient: buyer } },
+    { transactionHash: '0xtxB', args: { recipient: buyer } },
+    { transactionHash: '0xtxC', args: { recipient: '0xCcCc000000000000000000000000000000000099' } },
+  ];
+
+  const result = await scoreSeasonCrews(season('livev2tp'));
+  expect(result.scores['mainnettp']).toEqual({ purchases: 2, entries: 3 });
 });
 
 test('RPC failures are skipped and counted, never fatal', async () => {

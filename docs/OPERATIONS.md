@@ -40,15 +40,36 @@ GELATO_WEBHOOK_SECRET=...
 CHAINHOOK_SECRET_TOKEN=...
 NEXT_PUBLIC_STARKNET_BRIDGE_DEPOSIT_ADDRESS=0x...
 MEGAPOT_API_KEY=mpk_live_...
+BASE_MAINNET_ALCHEMY_RPC_URL=https://base-mainnet.g.alchemy.com/v2/<key>
+BASE_MAINNET_WALLET_KEY=0x...
 ```
 
 Notes:
 
 - `AUTOMATION_API_KEY` is required for `/api/virtuals/email` and `/api/virtuals/transaction`; both routes return `503` when it is unset and reject anything but the bearer token otherwise.
 - `NEXT_PUBLIC_STARKNET_BRIDGE_DEPOSIT_ADDRESS` is the Starknet relayer's deposit address. Without it the Starknet → Base route fails closed instead of presenting an unsignable pending state.
+- `BASE_MAINNET_ALCHEMY_RPC_URL` is a dedicated Alchemy RPC endpoint for Base mainnet, used by scripts and server-side receipt verification. Keep it server-side only; do NOT expose as `NEXT_PUBLIC_`.
+- `BASE_MAINNET_WALLET_KEY` is the private key of the dedicated Base mainnet operator wallet for Season mainnet transactions. Current address (rotated 2026-08-14): `0x1552b215274275738039A2765DC0c87d05A283e1`. The previous wallet `0x03804D4Ae86f3Be90844D2f1Ca51bE189bA2d4Ec` made the 2026-08-14 proof purchases and retains a small residual balance; sweep it if its key is recoverable from an external backup. Never commit or log this value; rotate only via `scripts/rotate_wallet.sh`.
 - Megapot history/aggregate reads use the official Data API (`src/services/lotteries/megapotDataApi.ts`); `MEGAPOT_API_KEY` is optional (anonymous tier works), `MEGAPOT_DATA_API_URL` overrides the host for testnet (`https://api-testnet.megapot.io/v1`); live current-drawing state and writes always use the on-chain path.
 
 Never commit private keys, seed phrases, RPC credentials, API keys, webhook secrets, database URLs, permits, or plaintext private balances. Use a hardware wallet or multisig for production contract ownership. Run the repository's gitleaks pre-commit hook and rotate credentials immediately if compromised.
+
+### Wallet key rotation
+
+Never overwrite a wallet key in `.env.local` by hand. Use `scripts/rotate_wallet.sh`:
+
+```bash
+scripts/rotate_wallet.sh BASE_MAINNET_WALLET_KEY \
+  --rpc-var BASE_MAINNET_ALCHEMY_RPC_URL \
+  --token 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+```
+
+The script derives the current address from the stored key without printing it, checks native + listed ERC-20 balances, and **refuses to rotate a funded wallet** unless `--force` is passed. It writes a `0600` backup (`<file>.bak.<timestamp>`, gitignored) before rewriting, then either generates a fresh key via `cast wallet new` or accepts `--new-key`. When both `.env.local` (canonical) and `.env` (backup mirror) exist, the variable is rewritten in both. Rule: sweep funds from the old wallet before rotating; a rotated-out key with no backup makes remaining funds unrecoverable.
+
+Known key status (2026-08-14):
+
+- X Layer testnet deployer/owner `0x9434…674f`: held (`PRIVATE_KEY` / `XLAYER_DEPLOYER_PRIVATE_KEY`).
+- Base mainnet `MegapotAutoPurchaseProxy` owner and Base Sepolia Fhenix vault/governor deployer `0xa7eC…019f`: **not recoverable from this machine** (not in `.env.local`, git history, or shell history; the encrypted `~/.foundry/keystores/verifier` keystore is a candidate but has no address field and needs its password). Impact is limited: the proxy is deprecated (`Do NOT deploy`, interface mismatch) and Fhenix is testnet-only.
 
 Chain-specific variables are documented in:
 

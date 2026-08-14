@@ -3,11 +3,16 @@
  *
  * Verifies real ticket-purchase receipts on the season's own chain before
  * any settlement state is recorded, and scores crew entries from on-chain
- * purchase events. Two contract generations emit two event shapes, so both
- * are tried:
+ * purchase events. Three contract generations emit different event shapes,
+ * all of which are tried:
  *
- * - V2 jackpot (0x3bAe…42a2 mainnet): `TicketPurchased(buyer indexed,
- *   ticketCount, referralFeePaid)` — what /api/activity/recent already reads.
+ * - Live V2 mainnet (jackpot 0x3bAe…42a2 + RandomTicketBuyer 0xb956…3aBd):
+ *   `TicketPurchased(recipient indexed, currentDrawingId indexed,
+ *   source indexed, userTicketId, normals[], bonusball, ticketHash)` (one per
+ *   ticket), `TicketOrderProcessed(caller indexed, recipient indexed,
+ *   currentDrawingId indexed, numberOfTickets, lpEarnings, referralFees)` and
+ *   `RandomTicketsBought(recipient indexed, drawingId indexed, count, cost,
+ *   ticketIds[])` — shapes verified against the 2026-08-14 mainnet receipts.
  * - Classic/sepolia (0x6f03…5De sepolia, 0xbEDd…1B95 mainnet):
  *   `UserTicketPurchase(recipient indexed, ticketsPurchasedTotalBps,
  *   referrer indexed, buyer indexed)` — what the indexer tracks; the
@@ -19,17 +24,38 @@
  */
 
 import { parseAbiItem, parseEventLogs, type Log } from 'viem';
-import { getBaseClientForChain } from '@/lib/baseClient';
+import { getBaseClientForChain, getBaseReceiptClientForChain } from '@/lib/baseClient';
 import { getMegapotAddressForChain, CHAIN_IDS } from '@/config/index';
 import { MEGAPOT_V2 } from '@/config/contracts';
 import { logger } from '@/lib/logger';
 
-const TICKET_PURCHASED_V2 = parseAbiItem(
+const TICKET_PURCHASED_V2_LEGACY = parseAbiItem(
   'event TicketPurchased(address indexed buyer, uint256 ticketCount, uint256 referralFeePaid)',
 );
 
 const USER_TICKET_PURCHASE = parseAbiItem(
   'event UserTicketPurchase(address indexed recipient, uint256 ticketsPurchasedTotalBps, address indexed referrer, address indexed buyer)',
+);
+
+/**
+ * Live mainnet V2 shapes (verified against the 2026-08-14 mainnet receipts
+ * 0x5439…09ef5c and 0xbac9…72f4 and the official ABIs at llms.megapot.io):
+ * the jackpot emits one TicketPurchased event PER TICKET, one
+ * TicketOrderProcessed per order, and the RandomTicketBuyer emits one
+ * RandomTicketsBought per order. The ticket holder is always the first
+ * indexed address (recipient), except TicketOrderProcessed where the caller
+ * (the RTB contract) is first and the recipient second.
+ */
+const TICKET_PURCHASED_LIVE_V2 = parseAbiItem(
+  'event TicketPurchased(address indexed recipient, uint256 indexed currentDrawingId, bytes32 indexed source, uint256 userTicketId, uint8[] normals, uint8 bonusball, bytes32 ticketHash)',
+);
+
+const TICKET_ORDER_PROCESSED = parseAbiItem(
+  'event TicketOrderProcessed(address indexed caller, address indexed recipient, uint256 indexed currentDrawingId, uint256 numberOfTickets, uint256 lpEarnings, uint256 referralFees)',
+);
+
+const RANDOM_TICKETS_BOUGHT = parseAbiItem(
+  'event RandomTicketsBought(address indexed recipient, uint256 indexed drawingId, uint256 count, uint256 cost, uint256[] ticketIds)',
 );
 
 /** Known Megapot contract addresses for a chain (allowlist for log emitters). */
@@ -68,7 +94,11 @@ export async function verifyTicketPurchaseReceipt(params: {
   expectedBuyer: `0x${string}`;
 }): Promise<VerifiedPurchase> {
   const { chainId, txHash, expectedBuyer } = params;
-  const client = getBaseClientForChain(chainId);
+  // Single-object receipt lookups go through the dedicated receipt client
+  // (Alchemy when configured) — public RPCs have proven unreliable for
+  // getTransactionReceipt. Wide getLogs scans elsewhere stay on the public
+  // client because the Alchemy free tier caps eth_getLogs at 10-block ranges.
+  const client = getBaseReceiptClientForChain(chainId);
   const allowed = new Set(getMegapotAddressesForChain(chainId).map((a) => a.toLowerCase()));
 
   let receipt;
@@ -110,9 +140,53 @@ export async function verifyTicketPurchaseReceipt(params: {
     /* fall through to v2 shape */
   }
 
-  // Try the V2 TicketPurchased shape.
+  // Try the live mainnet V2 shapes (RandomTicketBuyer path).
   try {
-    const decoded = parseEventLogs({ abi: [TICKET_PURCHASED_V2], logs: megapotLogs });
+    const bought = parseEventLogs({ abi: [RANDOM_TICKETS_BOUGHT], logs: megapotLogs });
+    for (const d of bought) {
+      if (d.args.recipient?.toLowerCase() === expected) {
+        return {
+          ok: true,
+          txHash,
+          buyer: d.args.recipient,
+          referrer: null,
+          ticketCount: Number(d.args.count ?? 0n),
+        };
+      }
+    }
+
+    const processed = parseEventLogs({ abi: [TICKET_ORDER_PROCESSED], logs: megapotLogs });
+    for (const d of processed) {
+      if (d.args.recipient?.toLowerCase() === expected) {
+        return {
+          ok: true,
+          txHash,
+          buyer: d.args.recipient,
+          referrer: null,
+          ticketCount: Number(d.args.numberOfTickets ?? 0n),
+        };
+      }
+    }
+
+    // One TicketPurchased event per ticket — count the matches.
+    const purchased = parseEventLogs({ abi: [TICKET_PURCHASED_LIVE_V2], logs: megapotLogs });
+    const matching = purchased.filter((d) => d.args.recipient?.toLowerCase() === expected);
+    if (matching.length > 0) {
+      return {
+        ok: true,
+        txHash,
+        buyer: matching[0].args.recipient,
+        referrer: null,
+        ticketCount: matching.length,
+      };
+    }
+  } catch {
+    /* no decodable live V2 purchase event */
+  }
+
+  // Try the legacy V2 TicketPurchased shape.
+  try {
+    const decoded = parseEventLogs({ abi: [TICKET_PURCHASED_V2_LEGACY], logs: megapotLogs });
     for (const d of decoded) {
       if (d.args.buyer?.toLowerCase() === expected) {
         return {

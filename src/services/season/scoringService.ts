@@ -7,9 +7,16 @@
  * made by their coordinator address (the pooled-entry path the existing
  * syndicate rails use).
  *
- * Handles both Megapot event generations:
- * - V2 jackpot/mainnet: `TicketPurchased(buyer indexed, ticketCount, referralFeePaid)`
+ * Handles the Megapot event generations:
+ * - Live V2 mainnet:    `RandomTicketsBought(recipient indexed, drawingId indexed, count, cost, ticketIds[])`,
+ *                       `TicketPurchased(recipient indexed, currentDrawingId indexed, source indexed,
+ *                       userTicketId, normals[], bonusball, ticketHash)` (one per ticket)
+ * - Legacy V2:          `TicketPurchased(buyer indexed, ticketCount, referralFeePaid)`
  * - Classic/sepolia:    `UserTicketPurchase(recipient indexed, ticketsPurchasedTotalBps, referrer indexed, buyer indexed)`
+ *
+ * A single RandomTicketBuyer purchase emits both an RTB summary event and
+ * per-ticket jackpot events in the same transaction, so each transaction is
+ * credited only once.
  *
  * Best-effort by design: public RPCs cap getLogs ranges, so the window is
  * walked in small spans and any span the RPC rejects is skipped (and counted
@@ -33,6 +40,12 @@ const TICKET_PURCHASED_V2 = parseAbiItem(
 );
 const USER_TICKET_PURCHASE = parseAbiItem(
   'event UserTicketPurchase(address indexed recipient, uint256 ticketsPurchasedTotalBps, address indexed referrer, address indexed buyer)',
+);
+const TICKET_PURCHASED_LIVE_V2 = parseAbiItem(
+  'event TicketPurchased(address indexed recipient, uint256 indexed currentDrawingId, bytes32 indexed source, uint256 userTicketId, uint8[] normals, uint8 bonusball, bytes32 ticketHash)',
+);
+const RANDOM_TICKETS_BOUGHT = parseAbiItem(
+  'event RandomTicketsBought(address indexed recipient, uint256 indexed drawingId, uint256 count, uint256 cost, uint256[] ticketIds)',
 );
 
 const MAX_SCAN_BLOCKS = Number(process.env.SEASON_SCORE_MAX_BLOCKS ?? 30_000);
@@ -224,34 +237,86 @@ export async function scoreSeasonCrews(season: SeasonRow): Promise<SeasonScores>
       }),
     );
 
+    // Combine this span's logs across all Megapot addresses, then decode each
+    // event family in priority order. One purchase transaction can emit both an
+    // RTB summary event and per-ticket jackpot events, so credit each tx once.
+    const spanLogs: Log[] = [];
     for (const { logs, failed } of results) {
       if (failed) {
         skippedSpans += 1;
         continue;
       }
+      spanLogs.push(...logs);
+    }
 
-      // V2 events
-      try {
-        const decoded = parseEventLogs({ abi: [TICKET_PURCHASED_V2], logs });
-        for (const log of decoded) {
-          credit(log.args.buyer, Number(log.args.ticketCount ?? 0n));
-        }
-      } catch {
-        /* mixed logs — ignore undecodable */
-      }
+    const creditedTxHashes = new Set<string>();
+    const txKey = (log: unknown): string =>
+      (log as { transactionHash?: string }).transactionHash ?? '';
+    // Only dedupe on a real tx hash; mocked test logs may omit it.
+    const claim = (log: unknown): boolean => {
+      const k = txKey(log);
+      if (!k) return true;
+      if (creditedTxHashes.has(k)) return false;
+      creditedTxHashes.add(k);
+      return true;
+    };
 
-      // Classic events
-      try {
-        const decoded = parseEventLogs({ abi: [USER_TICKET_PURCHASE], logs });
-        for (const log of decoded) {
-          credit(
-            log.args.buyer,
-            Number(log.args.ticketsPurchasedTotalBps ?? 0n) / 10_000,
-          );
-        }
-      } catch {
-        /* mixed logs — ignore undecodable */
+    // Live V2 (mainnet): one RandomTicketsBought per purchase transaction.
+    try {
+      const decoded = parseEventLogs({ abi: [RANDOM_TICKETS_BOUGHT], logs: spanLogs });
+      for (const log of decoded) {
+        if (!claim(log)) continue;
+        credit(log.args.recipient as string | undefined, Number(log.args.count ?? 0n));
       }
+    } catch {
+      /* mixed logs — ignore undecodable */
+    }
+
+    // Live V2 (mainnet): one TicketPurchased event per ticket; group by tx.
+    try {
+      const decoded = parseEventLogs({ abi: [TICKET_PURCHASED_LIVE_V2], logs: spanLogs });
+      const perTx = new Map<string, { recipient: string | undefined; count: number }>();
+      for (const log of decoded) {
+        const k = txKey(log);
+        if (k && creditedTxHashes.has(k)) continue;
+        const entry = perTx.get(k) ?? {
+          recipient: log.args.recipient as string | undefined,
+          count: 0,
+        };
+        entry.count += 1;
+        perTx.set(k, entry);
+      }
+      for (const [k, entry] of perTx) {
+        if (k) creditedTxHashes.add(k);
+        credit(entry.recipient, entry.count);
+      }
+    } catch {
+      /* mixed logs — ignore undecodable */
+    }
+
+    // Legacy V2 events
+    try {
+      const decoded = parseEventLogs({ abi: [TICKET_PURCHASED_V2], logs: spanLogs });
+      for (const log of decoded) {
+        if (!claim(log)) continue;
+        credit(log.args.buyer, Number(log.args.ticketCount ?? 0n));
+      }
+    } catch {
+      /* mixed logs — ignore undecodable */
+    }
+
+    // Classic events
+    try {
+      const decoded = parseEventLogs({ abi: [USER_TICKET_PURCHASE], logs: spanLogs });
+      for (const log of decoded) {
+        if (!claim(log)) continue;
+        credit(
+          log.args.buyer,
+          Number(log.args.ticketsPurchasedTotalBps ?? 0n) / 10_000,
+        );
+      }
+    } catch {
+      /* mixed logs — ignore undecodable */
     }
   }
 

@@ -7,7 +7,7 @@ This file is an index, not a second product strategy. Current implementation sta
 ### Inco Summer Game Jam — Megapot track
 
 - **Project:** Season of Tickets / The Tontine Pot — crews pooling real Megapot entries, tontine seat dynamics, and an open call-the-pot auction; every score a real on-chain entry.
-- **Status:** Implemented and E2E-verified on Base Sepolia (real on-chain purchases + receipt-verified settlement; full game loop re-run 2026-08-14 including auction dynamics, tontine renormalization, scoring, and keeper). Jam rules confirmed: a testnet prototype is a compliant submission; the optional mainnet round is blocked pending wallet funding. Build window 2026-07-29 → 2026-08-14.
+- **Status:** Implemented and E2E-verified on Base Sepolia (real on-chain purchases + receipt-verified settlement; full game loop re-run 2026-08-14 including auction dynamics, tontine renormalization, scoring, and keeper). Dedicated Base mainnet wallet funded; two real mainnet purchases completed via `RandomTicketBuyer.buyTickets` on 2026-08-14; mainnet receipt-verified settle completed 2026-08-14 (live V2 event decoding added). Jam rules confirmed: a testnet prototype is a compliant submission. Build window 2026-07-29 → 2026-08-14.
 - **Canonical guide:** [`SEASON.md`](SEASON.md).
 
 ### OKX X Layer Build X — AI Season
