@@ -23,7 +23,7 @@ A 60-second hackathon submission demo for the Inco Summer Game Jam (Megapot trac
 
 ## Customizations
 
-- Kinetic-type captions, no voiceover (faster to ship, avoids TTS dependency)
+- ElevenLabs scene-matched voiceover with a restrained instrumental bed; narration carries the proof arc while the UI remains readable
 - Use the app's own design tokens: dark slate background (#0f172a), amber accent for "Play" domain, violet for "Coordinate" domain
 - Reveal grammar from the app: DecryptLine for the chest-opening moment, BeamFrame for the winner highlight
 - Data callouts styled as receipt stamps (tx hash, block number, ticket count)

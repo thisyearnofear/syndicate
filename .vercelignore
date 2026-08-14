@@ -1,0 +1,22 @@
+# Keep uploads lean: Vercel only respects root-level ignore rules, so these
+# nested-gitignored artifacts were being shipped on every deploy (videos/ alone
+# is ~33MB of render MP4s).
+.git
+.agents
+.impeccable
+.claude
+.commandcode
+.blackboxcli
+.zencoder
+.junie
+.qoder
+.zenflow
+.openclaude
+.swc
+skills-lock.json
+videos
+out
+cache
+broadcast
+e2e
+playwright.config.ts

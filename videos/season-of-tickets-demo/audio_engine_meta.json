@@ -1,16 +1,24 @@
 {
-  "tts_provider": null,
-  "voice_id": null,
-  "bgm": null,
+  "tts_provider": "elevenlabs",
+  "voice_id": "JBFqnCBsd6RMkjVDRZzb",
+  "bgm": "assets/audio/season-score.mp3",
   "bgm_pending": false,
-  "bgm_provider": null,
-  "bgm_pid": null,
-  "bgm_log": null,
-  "bgm_mode": null,
-  "bgm_target_duration_s": null,
-  "bgm_seed_duration_s": null,
-  "bgm_loop_count": null,
-  "voices": [],
+  "bgm_provider": "elevenlabs",
+  "bgm_mode": "generated",
+  "bgm_target_duration_s": 60,
+  "bgm_seed_duration_s": 60.029375,
+  "bgm_loop_count": 1,
+  "voices": [
+    "assets/audio/vo-01-hook.mp3",
+    "assets/audio/vo-02-rule.mp3",
+    "assets/audio/vo-03-game.mp3",
+    "assets/audio/vo-04-proof.mp3",
+    "assets/audio/vo-05-ladder.mp3",
+    "assets/audio/vo-06-auction.mp3",
+    "assets/audio/vo-07-receipts.mp3",
+    "assets/audio/vo-08-reveal.mp3",
+    "assets/audio/vo-09-end.mp3"
+  ],
   "sfx": [],
-  "total_duration_s": 0
+  "total_duration_s": 60
 }

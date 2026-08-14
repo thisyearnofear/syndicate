@@ -1,6 +1,27 @@
 {
-  "bgm": null,
+  "bgm": {
+    "path": "assets/audio/season-score.mp3",
+    "provider": "elevenlabs",
+    "duration_s": 60.029375,
+    "instrumental": true,
+    "volume": 0.14,
+    "carve": {
+      "dynamic": true,
+      "strength": 0.48,
+      "sources": "narration clips"
+    }
+  },
   "bgm_pending": false,
-  "voices": [],
+  "voices": [
+    { "path": "assets/audio/vo-01-hook.mp3", "start_s": 0, "duration_s": 5.201270 },
+    { "path": "assets/audio/vo-02-rule.mp3", "start_s": 5, "duration_s": 5.526349 },
+    { "path": "assets/audio/vo-03-game.mp3", "start_s": 10, "duration_s": 5.619229 },
+    { "path": "assets/audio/vo-04-proof.mp3", "start_s": 18, "duration_s": 5.665669 },
+    { "path": "assets/audio/vo-05-ladder.mp3", "start_s": 26, "duration_s": 5.479909 },
+    { "path": "assets/audio/vo-06-auction.mp3", "start_s": 33, "duration_s": 7.291066 },
+    { "path": "assets/audio/vo-07-receipts.mp3", "start_s": 41, "duration_s": 6.501587 },
+    { "path": "assets/audio/vo-08-reveal.mp3", "start_s": 48, "duration_s": 6.640907 },
+    { "path": "assets/audio/vo-09-end.mp3", "start_s": 54, "duration_s": 6.009229 }
+  ],
   "sfx": []
 }

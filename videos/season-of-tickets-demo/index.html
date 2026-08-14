@@ -35,6 +35,24 @@
   .scrim-bot{position:absolute;left:0;right:0;bottom:0;height:300px;display:block;
     background:linear-gradient(0deg,rgba(2,6,12,.94) 0%,rgba(2,6,12,.55) 55%,transparent 100%)}
   .frame-border{position:absolute;inset:24px;display:block;border:1px solid var(--hair);pointer-events:none}
+  .clip::before{content:"";position:absolute;inset:48px 96px;display:block;border-top:1px solid rgba(255,255,255,.08);border-bottom:1px solid rgba(255,255,255,.08);pointer-events:none;z-index:4}
+  .clip:nth-of-type(1)::before,.clip:nth-of-type(9)::before{border-color:rgba(5,11,20,.18)}
+  .scene-rail{position:absolute;top:86px;right:96px;bottom:86px;width:1px;background:rgba(255,255,255,.14);z-index:5;pointer-events:none}
+  .scene-rail::before{content:"";position:absolute;top:0;left:-3px;width:7px;height:7px;background:var(--amber);border-radius:50%}
+  .scene-rail::after{content:"";position:absolute;bottom:0;left:-2px;width:5px;height:5px;background:var(--violet);border-radius:50%}
+  .scene-id{position:absolute;right:18px;top:-4px;font-family:var(--mono);font-size:18px;letter-spacing:.18em;color:var(--amber);white-space:nowrap;transform:translateX(100%)}
+  .scene-label{position:absolute;right:18px;bottom:18px;font-family:var(--mono);font-size:15px;letter-spacing:.18em;color:var(--muted);writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap}
+  .scene-meter{position:absolute;right:-2px;top:48px;width:5px;height:116px;background:var(--amber);transform-origin:top;opacity:.8}
+  .audio-marker{position:absolute;left:96px;bottom:34px;font-family:var(--mono);font-size:15px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);z-index:5;pointer-events:none}
+  .audio-marker::before{content:"";display:inline-block;width:22px;height:3px;margin:0 12px 3px 0;background:var(--amber)}
+  .clip:nth-of-type(3) .audio-marker{left:110px;bottom:82px}
+  .clip:nth-of-type(9) .scene-label{bottom:300px}
+  .clip:nth-of-type(1) .scene-rail,.clip:nth-of-type(9) .scene-rail{background:rgba(5,11,20,.22)}
+  .clip:nth-of-type(1) .scene-rail::before,.clip:nth-of-type(9) .scene-rail::before{background:var(--ink)}
+  .clip:nth-of-type(1) .scene-rail::after,.clip:nth-of-type(9) .scene-rail::after{background:rgba(5,11,20,.55)}
+  .clip:nth-of-type(1) .scene-id,.clip:nth-of-type(1) .scene-label,.clip:nth-of-type(9) .scene-id,.clip:nth-of-type(9) .scene-label{color:rgba(5,11,20,.72)}
+  .clip:nth-of-type(1) .audio-marker,.clip:nth-of-type(9) .audio-marker{color:rgba(5,11,20,.72)}
+  .clip:nth-of-type(1) .audio-marker::before,.clip:nth-of-type(9) .audio-marker::before{background:var(--ink)}
 </style>
 </head>
 <body>
@@ -203,10 +221,45 @@
     <div id="f9-tag" class="monoline" style="position:absolute;right:96px;bottom:110px;font-size:22px;color:rgba(5,11,20,.7);opacity:0;display:block">receipt-verified on base · nothing simulated</div>
   </section>
 
+  <!-- AUDIO · narration clips and an instrumental bed -->
+  <audio id="music-bed" class="clip" data-start="0" data-duration="60" data-track-index="20" src="assets/audio/season-score.mp3" preload="auto" volume="0.14" data-fx-carve='{"sources":["narration-hook","narration-rule","narration-game","narration-proof","narration-ladder","narration-auction","narration-receipts","narration-reveal","narration-end"],"strength":0.48,"dynamic":true}' aria-hidden="true"></audio>
+  <audio id="narration-hook" class="clip" data-start="0" data-duration="5" data-track-index="21" src="assets/audio/vo-01-hook.mp3" preload="auto" volume="0.96" aria-hidden="true"></audio>
+  <audio id="narration-rule" class="clip" data-start="5" data-duration="5" data-track-index="22" src="assets/audio/vo-02-rule.mp3" preload="auto" volume="0.96" aria-hidden="true"></audio>
+  <audio id="narration-game" class="clip" data-start="10" data-duration="5.62" data-track-index="23" src="assets/audio/vo-03-game.mp3" preload="auto" volume="0.96" aria-hidden="true"></audio>
+  <audio id="narration-proof" class="clip" data-start="18" data-duration="5.67" data-track-index="24" src="assets/audio/vo-04-proof.mp3" preload="auto" volume="0.96" aria-hidden="true"></audio>
+  <audio id="narration-ladder" class="clip" data-start="26" data-duration="5.48" data-track-index="25" src="assets/audio/vo-05-ladder.mp3" preload="auto" volume="0.96" aria-hidden="true"></audio>
+  <audio id="narration-auction" class="clip" data-start="33" data-duration="7.29" data-track-index="26" src="assets/audio/vo-06-auction.mp3" preload="auto" volume="0.96" aria-hidden="true"></audio>
+  <audio id="narration-receipts" class="clip" data-start="41" data-duration="6.50" data-track-index="27" src="assets/audio/vo-07-receipts.mp3" preload="auto" volume="0.96" aria-hidden="true"></audio>
+  <audio id="narration-reveal" class="clip" data-start="48" data-duration="6" data-track-index="28" src="assets/audio/vo-08-reveal.mp3" preload="auto" volume="0.96" aria-hidden="true"></audio>
+  <audio id="narration-end" class="clip" data-start="54" data-duration="6" data-track-index="29" src="assets/audio/vo-09-end.mp3" preload="auto" volume="0.96" aria-hidden="true"></audio>
+
 </div>
 
 <script>
 window.__timelines = window.__timelines || {};
+const sceneMeta = [
+  ['01 / 09', 'HOOK', '0—5 SEC'],
+  ['02 / 09', 'RULE', '5—10 SEC'],
+  ['03 / 09', 'LIVE BOARD', '10—18 SEC'],
+  ['04 / 09', 'PROOF', '18—26 SEC'],
+  ['05 / 09', 'LADDER', '26—33 SEC'],
+  ['06 / 09', 'AUCTION', '33—41 SEC'],
+  ['07 / 09', 'RECEIPTS', '41—48 SEC'],
+  ['08 / 09', 'REVEAL', '48—54 SEC'],
+  ['09 / 09', 'CALL TO PLAY', '54—60 SEC'],
+];
+document.querySelectorAll('section.clip').forEach((clip, index) => {
+  const [id, label, timing] = sceneMeta[index];
+  const rail = document.createElement('div');
+  rail.className = 'scene-rail';
+  rail.innerHTML = `<span class="scene-id">${id}</span><span class="scene-label">${label}</span><i class="scene-meter"></i>`;
+  rail.querySelector('.scene-meter').style.transform = `scaleY(${Math.min(1, Number(clip.dataset.duration) / 8)})`;
+  clip.appendChild(rail);
+  const marker = document.createElement('div');
+  marker.className = 'audio-marker';
+  marker.textContent = `${timing} · VO + SCORE`;
+  clip.appendChild(marker);
+});
 const tl = gsap.timeline({ paused: true });
 
 // F1 · COVER (0–5)

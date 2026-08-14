@@ -1,11 +1,23 @@
 {
-  "provider": "auto",
+  "provider": "elevenlabs",
+  "voice_id": "JBFqnCBsd6RMkjVDRZzb",
   "speed": 1,
-  "lines": [],
+  "lines": [
+    "This is Season of Tickets. In this social Megapot game, the last seat standing wins.",
+    "A crew pools real lottery entries. When someone leaves, their seat becomes the next contest.",
+    "The live season board turns tickets into a shared strategy: crew up, fund the pot, and call it.",
+    "Here, two mainnet purchases produced three scored tickets and a three USDC crew chest.",
+    "The ladder and feed make every move visible: seats, events, and the moment the pot is called.",
+    "To exit, a player bids a bigger discount back to the crew. The auction only moves forward, and late bids extend the clock.",
+    "Nothing is assumed. Real Base receipts are decoded, confirmed, and checked before settlement can continue.",
+    "Then the chest opens. One player exits, one ticket returns as a bonus, and survivor shares renormalize.",
+    "Season of Tickets: a social layer for Megapot, built for the Inco Summer Game Jam. Crew up. Call the pot."
+  ],
   "bgm": {
-    "mode": "retrieve",
-    "query": "tense, urgent dark-electronic game-show pulse; builds under the auction, resolves warm on the reveal",
-    "blob": "Season of Tickets turns real Megapot entries into a social tontine — crew up, pool tickets, and call the pot. Every score is a real, receipt-verified on-chain entry.",
-    "arc": "Hook → Tontine premise → The game (real UI) → Real-entry proof → The call/auction → Receipt verification → Settlement reveal → CTA"
+    "mode": "generate",
+    "provider": "elevenlabs",
+    "prompt": "Instrumental dark-electronic game-show score for a 60-second onchain game demo. Start with a tense analog pulse and sparse sub bass, add clipped synth percussion and rising arpeggios through the auction, then resolve into a warm confident chord sequence for the receipt reveal and end card.",
+    "arc": "Hook → Tontine premise → The game (real UI) → Real-entry proof → The call/auction → Receipt verification → Settlement reveal → CTA",
+    "duration_s": 60
   }
 }
