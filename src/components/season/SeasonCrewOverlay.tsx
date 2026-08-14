@@ -63,6 +63,7 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
   const [bidPct, setBidPct] = useState('');
   const [callPct, setCallPct] = useState('25');
   const [confirmingCall, setConfirmingCall] = useState(false);
+  const [confirmingBid, setConfirmingBid] = useState(false);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -88,6 +89,16 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
     } finally {
       setLoading(false);
     }
+  }, [poolId]);
+
+  // A different linked crew (poolId change) invalidates in-flight confirms/errors.
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setConfirmingCall(false);
+    setConfirmingBid(false);
+    setFormError(null);
+    setSettlement(null);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [poolId]);
 
   useEffect(() => {
@@ -150,6 +161,7 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
       });
       if (!res.ok) throw new Error(((await res.json()) as { error?: string }).error ?? 'Bid failed');
       setBidPct('');
+      setConfirmingBid(false);
       await fetchByPool();
     } catch (e) {
       setFormError(e instanceof Error ? e.message : 'Bid failed');
@@ -206,7 +218,13 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
           </div>
           {writesAllowed && myMembership ? (
             !confirmingCall ? (
-              <div className="flex gap-2">
+              <form
+                className="flex gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setConfirmingCall(true);
+                }}
+              >
                 <input
                   value={callPct}
                   onChange={(e) => setCallPct(e.target.value)}
@@ -215,14 +233,14 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
                   className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
                 />
                 <Button
+                  type="submit"
                   size="sm"
                   variant="warning"
-                  onClick={() => setConfirmingCall(true)}
                   disabled={busy || Number(callPct) < 1 || Number(callPct) > 50}
                 >
                   Call
                 </Button>
-              </div>
+              </form>
             ) : (
               <div className="rounded-lg border border-amber-400/30 bg-amber-500/[0.08] p-3 space-y-2">
                 <p className="text-xs text-amber-200">
@@ -232,7 +250,7 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
                   seat</span> for the rest. This cannot be undone once bids land.
                 </p>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="warning" disabled={busy} onClick={() => void handleCallPot()}>
+                  <Button size="sm" variant="warning" loading={busy} disabled={busy} onClick={() => void handleCallPot()}>
                     Confirm call
                   </Button>
                   <Button size="sm" variant="outline" disabled={busy} onClick={() => setConfirmingCall(false)}>
@@ -277,23 +295,52 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
 
           {!cutoffPassed ? (
             writesAllowed && myMembership ? (
-              <div className="flex gap-2">
-                <input
-                  value={bidPct}
-                  onChange={(e) => setBidPct(e.target.value)}
-                  placeholder="Your offer to the crew % (1–50)"
-                  inputMode="decimal"
-                  className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
-                />
-                <Button
-                  size="sm"
-                  variant="warning"
-                  onClick={() => void handleBid()}
-                  disabled={busy || !myMembership || Number(bidPct) < 1 || Number(bidPct) > 50}
+              !confirmingBid ? (
+                <form
+                  className="flex gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setConfirmingBid(true);
+                  }}
                 >
-                  Bid
-                </Button>
-              </div>
+                  <input
+                    value={bidPct}
+                    onChange={(e) => setBidPct(e.target.value)}
+                    placeholder="Your offer to the crew % (1–50)"
+                    inputMode="decimal"
+                    className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
+                  />
+                  <Button
+                    type="submit"
+                    size="sm"
+                    variant="warning"
+                    disabled={busy || Number(bidPct) < 1 || Number(bidPct) > 50}
+                  >
+                    Bid
+                  </Button>
+                </form>
+              ) : (
+                <div className="rounded-lg border border-amber-400/30 bg-amber-500/[0.08] p-3 space-y-2">
+                  <p className="text-xs text-amber-200">
+                    Confirm: offer <span className="font-semibold">{bidPct}% of the chest</span> back to the
+                    crew as bonus tickets. You can raise your offer until the cutoff, but you cannot lower it.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="warning"
+                      loading={busy}
+                      disabled={busy}
+                      onClick={() => void handleBid()}
+                    >
+                      Confirm bid
+                    </Button>
+                    <Button size="sm" variant="outline" disabled={busy} onClick={() => setConfirmingBid(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )
             ) : (
               <p className="text-xs text-gray-500">Only active seats can bid.</p>
             )

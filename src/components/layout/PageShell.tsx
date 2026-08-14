@@ -92,7 +92,7 @@ export function PageHeader({
           </h1>
           {badge && (
             <span
-              className={`text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border ${
+              className={`text-[11px] uppercase tracking-widest px-2 py-0.5 rounded-full border ${
                 BADGE_TONES[badge.tone ?? "gray"]
               }`}
             >

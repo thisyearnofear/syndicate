@@ -162,7 +162,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                     <Icon className="w-4 h-4" />
                     {item.label}
                     {'flag' in item && (
-                      <span className="rounded-full border border-amber-400/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300/80">
+                      <span className="rounded-full border border-amber-400/30 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-amber-300/80">
                         {item.flag}
                       </span>
                     )}
@@ -221,7 +221,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                             <Icon className="w-4 h-4" />
                             {item.label}
                             {'flag' in item && (
-                              <span className="ml-auto rounded-full border border-amber-400/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300/80">
+                              <span className="ml-auto rounded-full border border-amber-400/30 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-amber-300/80">
                                 {item.flag}
                               </span>
                             )}
@@ -303,7 +303,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                   <Icon className="w-4 h-4" />
                   {item.label}
                   {'flag' in item && (
-                    <span className="ml-auto rounded-full border border-amber-400/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300/80">
+                    <span className="ml-auto rounded-full border border-amber-400/30 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-amber-300/80">
                       {item.flag}
                     </span>
                   )}
@@ -331,7 +331,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                   <Icon className="w-4 h-4" />
                   {item.label}
                   {'flag' in item && (
-                    <span className="ml-auto rounded-full border border-amber-400/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300/80">
+                    <span className="ml-auto rounded-full border border-amber-400/30 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-amber-300/80">
                       {item.flag}
                     </span>
                   )}

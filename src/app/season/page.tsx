@@ -108,6 +108,7 @@ export default function SeasonPage() {
   const [bidPct, setBidPct] = useState('');
   const [callPct, setCallPct] = useState('25');
   const [confirmingCall, setConfirmingCall] = useState(false);
+  const [confirmingBid, setConfirmingBid] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -155,16 +156,25 @@ export default function SeasonPage() {
     return () => clearInterval(t);
   }, [fetchHq, season, crewDetail?.openRound, now]);
 
+  /** Single entry point for crew selection: resets per-crew transient state. */
+  const selectCrew = useCallback((crewId: string | null): void => {
+    setSelectedCrewId(crewId);
+    setConfirmingCall(false);
+    setConfirmingBid(false);
+    setFormError(null);
+    setSettlement(null);
+  }, []);
+
   // Deep link: /season?crew=<id> opens that crew directly — this is what a
   // shared invite URL looks like. The crew-detail effect syncs the URL back
   // (so picks from the ladder are shareable too).
   useEffect(() => {
     const crewParam = searchParams ? searchParams.get('crew') : null;
     if (crewParam && crewParam !== selectedCrewId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSelectedCrewId(crewParam);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate URL-driven selection
+      selectCrew(crewParam);
     }
-  }, [searchParams, selectedCrewId]);
+  }, [searchParams, selectedCrewId, selectCrew]);
 
   useEffect(() => {
     if (!selectedCrewId) {
@@ -209,7 +219,7 @@ export default function SeasonPage() {
       });
       if (!res.ok) throw new Error(((await res.json()) as { error?: string }).error ?? 'Join failed');
       setJoinCode('');
-      setSelectedCrewId(crew.id);
+      selectCrew(crew.id);
       await Promise.all([fetchHq(), fetchCrewDetail(crew.id)]);
     } catch (e) {
       setFormError(e instanceof Error ? e.message : 'Join failed');
@@ -243,7 +253,7 @@ export default function SeasonPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address }),
       });
-      setSelectedCrewId(crew.id);
+      selectCrew(crew.id);
       await Promise.all([fetchHq(), fetchCrewDetail(crew.id)]);
     } catch (e) {
       setFormError(e instanceof Error ? e.message : 'Create failed');
@@ -304,6 +314,7 @@ export default function SeasonPage() {
       });
       if (!res.ok) throw new Error(((await res.json()) as { error?: string }).error ?? 'Bid failed');
       setBidPct('');
+      setConfirmingBid(false);
       await fetchCrewDetail(crewDetail.crew.id);
     } catch (e) {
       setFormError(e instanceof Error ? e.message : 'Bid failed');
@@ -371,24 +382,36 @@ export default function SeasonPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                     <p className="text-sm font-semibold text-white mb-2">Join a crew</p>
-                    <div className="flex gap-2">
+                    <form
+                      className="flex gap-2"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        void handleJoinByCode();
+                      }}
+                    >
                       <input
                         value={joinCode}
                         onChange={(e) => setJoinCode(e.target.value)}
                         placeholder="CREW-XXXXXX"
                         className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
                       />
-                      <Button size="sm" onClick={() => void handleJoinByCode()} disabled={busy || !joinCode.trim()}>
+                      <Button type="submit" size="sm" loading={busy} disabled={busy || !joinCode.trim()}>
                         <LogIn className="w-4 h-4 mr-1" /> Join
                       </Button>
-                    </div>
+                    </form>
                     <p className="text-[11px] text-gray-500 mt-2">
                       Got a code from a friend? Take a seat and your purchases start counting for the crew.
                     </p>
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                     <p className="text-sm font-semibold text-white mb-2">Found a crew</p>
-                    <div className="flex gap-2">
+                    <form
+                      className="flex gap-2"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        void handleFoundCrew();
+                      }}
+                    >
                       <input
                         value={newCrewName}
                         onChange={(e) => setNewCrewName(e.target.value)}
@@ -396,10 +419,10 @@ export default function SeasonPage() {
                         maxLength={40}
                         className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
                       />
-                      <Button size="sm" onClick={() => void handleFoundCrew()} disabled={busy || newCrewName.trim().length < 2}>
+                      <Button type="submit" size="sm" loading={busy} disabled={busy || newCrewName.trim().length < 2}>
                         <Plus className="w-4 h-4 mr-1" /> Found
                       </Button>
-                    </div>
+                    </form>
                     <p className="text-[11px] text-gray-500 mt-2">
                       You become the coordinator and take the first seat. Share your code to fill the table.
                     </p>
@@ -414,7 +437,7 @@ export default function SeasonPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ShellSection>
               <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">Crew ladder</h2>
-              <CrewLadder crews={crews} selectedCrewId={selectedCrewId} onSelect={setSelectedCrewId} />
+              <CrewLadder crews={crews} selectedCrewId={selectedCrewId} onSelect={selectCrew} />
             </ShellSection>
 
             <ShellSection>
@@ -431,8 +454,9 @@ export default function SeasonPage() {
                     <div className="flex items-center gap-2 min-w-0">
                       <button
                         type="button"
-                        onClick={() => setSelectedCrewId(null)}
+                        onClick={() => selectCrew(null)}
                         title="Back to the ladder"
+                        aria-label="Back to the ladder"
                         className="shrink-0 w-7 h-7 rounded-lg border border-white/10 bg-white/[0.03] flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/[0.08] transition-colors"
                       >
                         <ArrowLeft className="w-4 h-4" />
@@ -467,7 +491,13 @@ export default function SeasonPage() {
                       </div>
                       {writesAllowed && myMembership ? (
                         !confirmingCall ? (
-                          <div className="flex gap-2">
+                          <form
+                            className="flex gap-2"
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              setConfirmingCall(true);
+                            }}
+                          >
                             <input
                               value={callPct}
                               onChange={(e) => setCallPct(e.target.value)}
@@ -476,13 +506,13 @@ export default function SeasonPage() {
                               className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
                             />
                             <Button
+                              type="submit"
                               size="sm"
-                              onClick={() => setConfirmingCall(true)}
                               disabled={busy || Number(callPct) < 1 || Number(callPct) > 50}
                             >
                               <Gavel className="w-4 h-4 mr-1" /> Call
                             </Button>
-                          </div>
+                          </form>
                         ) : (
                           <div className="rounded-lg border border-amber-400/30 bg-amber-500/[0.08] p-3 space-y-2">
                             <p className="text-xs text-amber-200">
@@ -492,7 +522,7 @@ export default function SeasonPage() {
                               seat</span> for the rest. This cannot be undone once bids land.
                             </p>
                             <div className="flex gap-2">
-                              <Button size="sm" variant="warning" disabled={busy} onClick={() => void handleCallPot()}>
+                              <Button size="sm" variant="warning" loading={busy} disabled={busy} onClick={() => void handleCallPot()}>
                                 <Gavel className="w-4 h-4 mr-1" /> Confirm call
                               </Button>
                               <Button size="sm" variant="outline" disabled={busy} onClick={() => setConfirmingCall(false)}>
@@ -536,22 +566,53 @@ export default function SeasonPage() {
                       )}
                       {!cutoffPassed ? (
                         writesAllowed && myMembership ? (
-                          <div className="flex gap-2">
-                            <input
-                              value={bidPct}
-                              onChange={(e) => setBidPct(e.target.value)}
-                              placeholder="Your offer to the crew % (1–50)"
-                              inputMode="decimal"
-                              className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
-                            />
-                            <Button
-                              size="sm"
-                              onClick={() => void handleBid()}
-                              disabled={busy || !myMembership || Number(bidPct) < 1 || Number(bidPct) > 50}
+                          !confirmingBid ? (
+                            <form
+                              className="flex gap-2"
+                              onSubmit={(e) => {
+                                e.preventDefault();
+                                setConfirmingBid(true);
+                              }}
                             >
-                              Bid
-                            </Button>
-                          </div>
+                              <input
+                                value={bidPct}
+                                onChange={(e) => setBidPct(e.target.value)}
+                                placeholder="Your offer to the crew % (1–50)"
+                                inputMode="decimal"
+                                className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
+                              />
+                              <Button
+                                type="submit"
+                                size="sm"
+                                variant="warning"
+                                disabled={busy || Number(bidPct) < 1 || Number(bidPct) > 50}
+                              >
+                                Bid
+                              </Button>
+                            </form>
+                          ) : (
+                            <div className="rounded-lg border border-amber-400/30 bg-amber-500/[0.08] p-3 space-y-2">
+                              <p className="text-xs text-amber-200">
+                                Confirm: offer <span className="font-semibold">{bidPct}% of the chest</span> back to
+                                the crew as bonus tickets. You can raise your offer until the cutoff,
+                                but you cannot lower it.
+                              </p>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="warning"
+                                  loading={busy}
+                                  disabled={busy}
+                                  onClick={() => void handleBid()}
+                                >
+                                  <Gavel className="w-4 h-4 mr-1" /> Confirm bid
+                                </Button>
+                                <Button size="sm" variant="outline" disabled={busy} onClick={() => setConfirmingBid(false)}>
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          )
                         ) : (
                           <p className="text-xs text-gray-500">Only active seats can bid.</p>
                         )
