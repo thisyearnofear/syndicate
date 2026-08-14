@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "preferences": {
+    "flow": {
+      "value": "automation",
+      "confirmed_in": [
+        "season-of-tickets-demo"
+      ],
+      "updated_at": "2026-08-14T18:01:16.554Z"
+    },
+    "aspect": {
+      "value": "1920x1080",
+      "confirmed_in": [
+        "season-of-tickets-demo"
+      ],
+      "updated_at": "2026-08-14T18:01:16.587Z"
+    },
+    "language": {
+      "value": "en",
+      "confirmed_in": [
+        "season-of-tickets-demo"
+      ],
+      "updated_at": "2026-08-14T18:01:16.631Z"
+    },
+    "destination": {
+      "value": "youtube",
+      "confirmed_in": [
+        "season-of-tickets-demo"
+      ],
+      "updated_at": "2026-08-14T18:01:16.663Z"
+    },
+    "storyboard": {
+      "value": "no",
+      "confirmed_in": [
+        "season-of-tickets-demo"
+      ],
+      "updated_at": "2026-08-14T18:01:16.695Z"
+    }
+  },
+  "sightings": {}
+}

@@ -1,0 +1,7 @@
+node_modules/
+.build/
+capture/
+capture-home/
+snapshots/
+renders/*.mp4
+*.log

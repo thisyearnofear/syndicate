@@ -1,0 +1,11 @@
+{
+  "provider": "auto",
+  "speed": 1,
+  "lines": [],
+  "bgm": {
+    "mode": "retrieve",
+    "query": "tense, urgent dark-electronic game-show pulse; builds under the auction, resolves warm on the reveal",
+    "blob": "Season of Tickets turns real Megapot entries into a social tontine — crew up, pool tickets, and call the pot. Every score is a real, receipt-verified on-chain entry.",
+    "arc": "Hook → Tontine premise → The game (real UI) → Real-entry proof → The call/auction → Receipt verification → Settlement reveal → CTA"
+  }
+}

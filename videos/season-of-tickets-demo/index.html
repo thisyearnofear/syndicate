@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1920, height=1080" />
+<title>Season of Tickets — Demo</title>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+  :root{
+    --ink:#050B14; --panel:#0F172A; --cream:#F8FAFC; --muted:#94A3B8; --hint:#64748B;
+    --amber:#FBBF24; --violet:#A78BFA; --hair:rgba(255,255,255,0.10);
+    --display:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --mono:'JetBrains Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#000;color:var(--cream);font-family:var(--display)}
+  #root{position:relative;width:1920px;height:1080px;overflow:hidden;background:var(--ink)}
+  .clip{position:absolute;inset:0;overflow:hidden}
+  .bg{position:absolute;inset:0;display:block}
+  .bg-dark{background:radial-gradient(120% 90% at 50% 8%, #0B1424 0%, var(--ink) 55%, #02060C 100%)}
+  .bg-amber{background:var(--amber)}
+  .grid-tex{position:absolute;inset:0;display:block;opacity:.5;
+    background-image:linear-gradient(var(--hair) 1px,transparent 1px),linear-gradient(90deg,var(--hair) 1px,transparent 1px);
+    background-size:96px 96px;
+    -webkit-mask-image:radial-gradient(80% 70% at 50% 40%, #000 30%, transparent 100%);
+    mask-image:radial-gradient(80% 70% at 50% 40%, #000 30%, transparent 100%);}
+  .kicker{position:absolute;display:flex;align-items:center;gap:20px;font-family:var(--mono);
+    font-size:22px;font-weight:500;letter-spacing:.32em;text-transform:uppercase}
+  .kicker .stub{display:block;width:56px;height:4px;background:var(--amber)}
+  .display{font-family:var(--display);font-weight:900;letter-spacing:-.035em;line-height:.96;text-transform:lowercase}
+  .monoline{font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase}
+  .plate-img{position:absolute;inset:0;width:1920px;height:1080px;object-fit:cover;display:block}
+  .scrim-top{position:absolute;left:0;right:0;top:0;height:280px;display:block;
+    background:linear-gradient(180deg,rgba(2,6,12,.92) 0%,rgba(2,6,12,.55) 55%,transparent 100%)}
+  .scrim-bot{position:absolute;left:0;right:0;bottom:0;height:300px;display:block;
+    background:linear-gradient(0deg,rgba(2,6,12,.94) 0%,rgba(2,6,12,.55) 55%,transparent 100%)}
+  .frame-border{position:absolute;inset:24px;display:block;border:1px solid var(--hair);pointer-events:none}
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="60">
+
+  <!-- F1 · COVER · 0–5 -->
+  <section id="f1" class="clip" data-start="0" data-duration="5" data-track-index="1">
+    <div class="bg bg-amber"></div>
+    <div id="f1-kicker" class="kicker" style="left:96px;top:88px;color:rgba(5,11,20,.82)">
+      <span class="stub" style="background:var(--ink)"></span>
+      <span>syndicate presents · inco summer game jam</span>
+    </div>
+    <div id="f1-title" class="display" style="position:absolute;left:92px;top:330px;width:1740px;font-size:150px;color:var(--ink)">the last seat wins.</div>
+    <div id="f1-sub" class="monoline" style="position:absolute;left:96px;top:560px;width:1500px;font-size:26px;line-height:1.7;color:rgba(5,11,20,.78)">
+      season of tickets — a tontine pot built on real megapot entries
+    </div>
+    <div id="f1-rule" style="position:absolute;left:96px;bottom:120px;width:220px;height:6px;background:var(--ink);display:block"></div>
+    <div id="f1-tag" class="monoline" style="position:absolute;left:96px;bottom:64px;font-size:20px;color:rgba(5,11,20,.62);display:block">
+      every score is a receipt-verified on-chain ticket · nothing is simulated
+    </div>
+  </section>
+
+  <!-- F2 · TONTINE PREMISE · 5–10 -->
+  <section id="f2" class="clip" data-start="5" data-duration="5" data-track-index="2">
+    <div class="bg bg-dark"></div>
+    <div class="grid-tex"></div>
+    <div id="f2-kicker" class="kicker" style="left:96px;top:200px;color:var(--amber)">
+      <span class="stub"></span><span>the tontine rule</span>
+    </div>
+    <div id="f2-l1" class="display" style="position:absolute;left:92px;top:300px;width:1740px;font-size:96px;color:var(--cream)">your crew pools real tickets.</div>
+    <div id="f2-l2" class="display" style="position:absolute;left:92px;top:440px;width:1740px;font-size:96px;color:var(--amber)">last seat standing takes the pot.</div>
+    <div id="f2-sub" class="monoline" style="position:absolute;left:96px;top:620px;width:1400px;font-size:24px;line-height:1.8;color:var(--muted);display:block">
+      leave early? your tickets are auctioned back to the crew as a bonus.
+    </div>
+    <div class="frame-border"></div>
+  </section>
+
+  <!-- F3 · REAL UI · 10–18 -->
+  <section id="f3" class="clip" data-start="10" data-duration="8" data-track-index="3">
+    <div class="bg bg-dark"></div>
+    <img id="f3-img" class="plate-img" src="assets/season-hero.png" alt="" style="inset:60px auto auto 110px;width:1700px;height:956px;object-fit:cover;border:1px solid var(--hair)" />
+    <div class="scrim-top" style="height:180px"></div>
+    <div id="f3-kicker" class="kicker" style="left:96px;top:52px;color:var(--cream)">
+      <span class="stub"></span><span>live on /season — the crew ladder is real</span>
+    </div>
+    <div id="f3-c1" class="monoline" style="position:absolute;left:110px;bottom:26px;font-size:22px;color:var(--amber);display:block">01 · crew up</div>
+    <div id="f3-c2" class="monoline" style="position:absolute;left:560px;bottom:26px;font-size:22px;color:var(--amber);display:block">02 · pool real entries</div>
+    <div id="f3-c3" class="monoline" style="position:absolute;left:1160px;bottom:26px;font-size:22px;color:var(--amber);display:block">03 · call the pot</div>
+  </section>
+
+  <!-- F4 · REAL-ENTRY STATS · 18–26 -->
+  <section id="f4" class="clip" data-start="18" data-duration="8" data-track-index="4">
+    <div class="bg bg-dark"></div>
+    <div class="grid-tex"></div>
+    <div id="f4-kicker" class="kicker" style="left:96px;top:120px;color:var(--amber)">
+      <span class="stub"></span><span>real entries only — base mainnet</span>
+    </div>
+    <div id="f4-title" class="display" style="position:absolute;left:92px;top:210px;width:1740px;font-size:72px;color:var(--cream)">every point is a real ticket</div>
+
+    <div id="f4-card1" style="position:absolute;left:96px;top:380px;width:540px;height:400px;background:var(--panel);border:1px solid var(--hair);border-top:3px solid var(--amber);display:block;padding:48px">
+      <div id="f4-n1" class="display" style="position:static;display:block;font-size:170px;color:var(--cream)">0</div>
+      <div class="monoline" style="position:static;display:block;margin-top:28px;font-size:24px;color:var(--cream)">mainnet purchases</div>
+      <div class="monoline" style="position:static;display:block;margin-top:14px;font-size:19px;color:var(--hint)">RandomTicketBuyer · buyTickets</div>
+    </div>
+    <div id="f4-card2" style="position:absolute;left:690px;top:380px;width:540px;height:400px;background:var(--panel);border:1px solid var(--hair);border-top:3px solid var(--violet);display:block;padding:48px">
+      <div id="f4-n2" class="display" style="position:static;display:block;font-size:170px;color:var(--cream)">0</div>
+      <div class="monoline" style="position:static;display:block;margin-top:28px;font-size:24px;color:var(--cream)">tickets scored</div>
+      <div class="monoline" style="position:static;display:block;margin-top:14px;font-size:19px;color:var(--hint)">event-decoded from live receipts</div>
+    </div>
+    <div id="f4-card3" style="position:absolute;left:1284px;top:380px;width:540px;height:400px;background:var(--panel);border:1px solid var(--hair);border-top:3px solid var(--amber);display:block;padding:48px">
+      <div class="display" style="position:static;display:block;font-size:170px;color:var(--cream)">3<span style="font-size:64px;font-weight:700;color:var(--muted)"> USDC</span></div>
+      <div class="monoline" style="position:static;display:block;margin-top:28px;font-size:24px;color:var(--cream)">the called chest</div>
+      <div class="monoline" style="position:static;display:block;margin-top:14px;font-size:19px;color:var(--hint)">paid forward as bonus tickets</div>
+    </div>
+    <div class="frame-border"></div>
+  </section>
+
+  <!-- F5 · LADDER + FEED · 26–33 -->
+  <section id="f5" class="clip" data-start="26" data-duration="7" data-track-index="5">
+    <div class="bg bg-dark"></div>
+    <img id="f5-img" class="plate-img" src="assets/season-ladder.png" alt="" style="inset:60px auto auto 110px;width:1700px;height:956px;object-fit:cover;border:1px solid var(--hair)" />
+    <div class="scrim-top" style="height:180px"></div>
+    <div id="f5-kicker" class="kicker" style="left:96px;top:52px;color:var(--cream)">
+      <span class="stub"></span><span>crew ladder + season feed — real rows, real events</span>
+    </div>
+    <div class="scrim-bot" style="height:220px"></div>
+    <div id="f5-e1" class="monoline" style="position:absolute;left:110px;bottom:150px;font-size:22px;color:var(--muted);display:block">▸ crew founded — mainnet proof crew</div>
+    <div id="f5-e2" class="monoline" style="position:absolute;left:110px;bottom:110px;font-size:22px;color:var(--muted);display:block">▸ seat taken — real usdc entry</div>
+    <div id="f5-e3" class="monoline" style="position:absolute;left:110px;bottom:70px;font-size:22px;color:var(--amber);display:block">▸ the pot was called — 33.3% offered back to the crew</div>
+  </section>
+
+  <!-- F6 · CALL THE POT / AUCTION · 33–41 -->
+  <section id="f6" class="clip" data-start="33" data-duration="8" data-track-index="6">
+    <div class="bg bg-dark"></div>
+    <div class="grid-tex"></div>
+    <div id="f6-wash" style="position:absolute;inset:0;background:var(--amber);opacity:0;display:block"></div>
+    <div id="f6-kicker" class="kicker" style="left:96px;top:110px;color:var(--violet)">
+      <span class="stub" style="background:var(--violet)"></span><span>call the pot — the exit auction</span>
+    </div>
+    <div id="f6-title" class="display" style="position:absolute;left:92px;top:190px;width:1000px;font-size:88px;color:var(--cream)">leaving is a bid.</div>
+    <div id="f6-sub" class="monoline" style="position:absolute;left:96px;top:420px;width:820px;font-size:23px;line-height:1.9;color:var(--muted);display:block">
+      to exit, bid your seat's tickets back to the crew.<br/>highest discount wins — raise only.
+    </div>
+    <div id="f6-counter" class="monoline" style="position:absolute;right:120px;top:280px;width:820px;text-align:right;font-size:196px;font-weight:700;color:var(--amber);display:block">25.0%</div>
+    <div id="f6-clabel" class="monoline" style="position:absolute;right:124px;top:586px;width:820px;text-align:right;font-size:24px;color:var(--cream);display:block">winning bid — discount to the crew</div>
+    <div id="f6-chip1" class="monoline" style="position:absolute;left:96px;bottom:150px;font-size:22px;color:var(--ink);background:var(--amber);padding:14px 26px;display:block">raise-only — you can only get more generous</div>
+    <div id="f6-chip2" class="monoline" style="position:absolute;left:96px;bottom:80px;font-size:22px;color:var(--ink);background:var(--violet);padding:14px 26px;display:block">anti-snipe — late bid extends the cutoff +5:00</div>
+    <div class="frame-border"></div>
+  </section>
+
+  <!-- F7 · RECEIPTS · 41–48 -->
+  <section id="f7" class="clip" data-start="41" data-duration="7" data-track-index="7">
+    <div class="bg bg-dark"></div>
+    <div class="grid-tex"></div>
+    <div id="f7-kicker" class="kicker" style="left:96px;top:96px;opacity:0;color:var(--amber)">
+      <span class="stub"></span><span>receipts, not promises</span>
+    </div>
+    <div id="f7-badge" class="monoline" style="position:absolute;right:96px;top:96px;font-size:22px;color:var(--ink);background:var(--amber);padding:12px 24px;opacity:0;display:block">base mainnet · chain 8453</div>
+    <div id="f7-card1" style="position:absolute;left:96px;top:230px;width:840px;height:380px;background:var(--panel);border:1px solid var(--hair);border-top:3px solid var(--amber);opacity:0;display:block;padding:44px 48px">
+      <div class="monoline" style="position:static;display:block;font-size:20px;color:var(--muted)">megapot · RandomTicketBuyer</div>
+      <div class="display" style="position:static;display:block;margin-top:22px;font-size:104px;color:var(--cream)">2 tickets</div>
+      <div class="monoline" style="position:static;display:block;margin-top:26px;font-size:24px;color:var(--muted)">0x543995da…09ef5c</div>
+      <div class="monoline" style="position:static;display:block;margin-top:10px;font-size:20px;color:var(--muted)">block 49967099 · status: confirmed</div>
+      <div id="f7-stamp1" class="monoline" style="position:absolute;right:44px;top:52px;font-size:34px;font-weight:700;color:var(--amber);border:3px solid var(--amber);padding:12px 22px;opacity:0;display:block;transform:rotate(-8deg)">verified</div>
+    </div>
+    <div id="f7-card2" style="position:absolute;left:984px;top:230px;width:840px;height:380px;background:var(--panel);border:1px solid var(--hair);border-top:3px solid var(--violet);opacity:0;display:block;padding:44px 48px">
+      <div class="monoline" style="position:static;display:block;font-size:20px;color:var(--muted)">megapot · RandomTicketBuyer</div>
+      <div class="display" style="position:static;display:block;margin-top:22px;font-size:104px;color:var(--cream)">1 ticket</div>
+      <div class="monoline" style="position:static;display:block;margin-top:26px;font-size:24px;color:var(--muted)">0xbac9941a…72f4</div>
+      <div class="monoline" style="position:static;display:block;margin-top:10px;font-size:20px;color:var(--muted)">block 49967525 · status: confirmed</div>
+      <div id="f7-stamp2" class="monoline" style="position:absolute;right:44px;top:52px;font-size:34px;font-weight:700;color:var(--violet);border:3px solid var(--violet);padding:12px 22px;opacity:0;display:block;transform:rotate(-8deg)">verified</div>
+    </div>
+    <div id="f7-note" class="monoline" style="position:absolute;left:96px;bottom:110px;width:1720px;font-size:23px;color:var(--muted);opacity:0;display:block">settlement fires only after the receipt confirms — otherwise it fails closed. no simulated hashes, ever.</div>
+    <div class="frame-border"></div>
+  </section>
+
+  <!-- F8 · SETTLEMENT REVEAL · 48–54 -->
+  <section id="f8" class="clip" data-start="48" data-duration="6" data-track-index="8">
+    <div class="bg bg-dark"></div>
+    <div class="grid-tex"></div>
+    <div id="f8-kicker" class="kicker" style="left:96px;top:96px;opacity:0;color:var(--violet)">
+      <span class="stub" style="background:var(--violet)"></span><span>settlement — receipt-verified reveal</span>
+    </div>
+    <div id="f8-l1" class="monoline" style="position:absolute;left:96px;top:230px;font-size:22px;color:var(--hint);opacity:0;display:block">the chest</div>
+    <div id="f8-v1" class="display" style="position:absolute;left:92px;top:286px;font-size:110px;color:var(--cream);display:block;clip-path:inset(0 100% 0 0)">3.0 USDC</div>
+    <div id="f8-strip" style="position:absolute;left:96px;top:470px;width:1728px;height:150px;background:var(--panel);border:1px solid var(--hair);border-left:6px solid var(--violet);opacity:0;display:block;overflow:hidden">
+      <div id="f8-beam" style="position:absolute;left:-520px;top:0;width:480px;height:150px;display:block;background:linear-gradient(90deg,transparent,rgba(167,139,250,0.35),transparent)"></div>
+      <div class="monoline" style="position:absolute;left:44px;top:30px;font-size:22px;color:var(--hint);display:block">caller exits</div>
+      <div class="display" style="position:absolute;left:44px;top:62px;font-size:56px;color:var(--cream);display:block">2 tickets paid out · 1 ticket crew bonus</div>
+    </div>
+    <div id="f8-l3" class="monoline" style="position:absolute;left:96px;top:700px;font-size:22px;color:var(--hint);opacity:0;display:block">seat freed</div>
+    <div id="f8-v3" class="display" style="position:absolute;left:92px;top:756px;font-size:76px;color:var(--amber);opacity:0;display:block">survivors' cuts renormalize</div>
+    <div class="frame-border"></div>
+  </section>
+
+  <!-- F9 · END CARD · 54–60 -->
+  <section id="f9" class="clip" data-start="54" data-duration="6" data-track-index="9">
+    <div class="bg bg-amber"></div>
+    <div id="f9-kicker" class="kicker" style="left:96px;top:88px;opacity:0;color:rgba(5,11,20,.82)">
+      <span class="stub" style="background:var(--ink)"></span><span>megapot track · inco summer game jam</span>
+    </div>
+    <div id="f9-title" class="display" style="position:absolute;left:92px;top:300px;width:1740px;font-size:148px;color:var(--ink);opacity:0;display:block">season of tickets.</div>
+    <div id="f9-sub" class="monoline" style="position:absolute;left:96px;top:540px;width:1600px;font-size:26px;line-height:1.8;color:rgba(5,11,20,.8);opacity:0;display:block">a tontine pot on megapot — crew up, pool real entries, call the pot</div>
+    <div id="f9-rule" style="position:absolute;left:96px;bottom:180px;width:220px;height:6px;background:var(--ink);opacity:0;display:block"></div>
+    <div id="f9-repo" class="monoline" style="position:absolute;left:96px;bottom:110px;font-size:24px;color:var(--ink);opacity:0;display:block">github.com/thisyearnofear/syndicate</div>
+    <div id="f9-tag" class="monoline" style="position:absolute;right:96px;bottom:110px;font-size:22px;color:rgba(5,11,20,.7);opacity:0;display:block">receipt-verified on base · nothing simulated</div>
+  </section>
+
+</div>
+
+<script>
+window.__timelines = window.__timelines || {};
+const tl = gsap.timeline({ paused: true });
+
+// F1 · COVER (0–5)
+tl.fromTo('#f1-kicker', { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power3.out' }, 0.15);
+tl.fromTo('#f1-title', { opacity: 0, y: 64 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, 0.35);
+tl.fromTo('#f1-sub', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 0.95);
+tl.fromTo('#f1-rule', { opacity: 0, scaleX: 0 }, { opacity: 1, scaleX: 1, duration: 0.5, ease: 'power3.out', transformOrigin: 'left center' }, 1.25);
+tl.fromTo('#f1-tag', { opacity: 0 }, { opacity: 1, duration: 0.5 }, 1.5);
+
+// F2 · PREMISE (5–10)
+tl.fromTo('#f2-kicker', { opacity: 0, x: -24 }, { opacity: 1, x: 0, duration: 0.4, ease: 'power3.out' }, 5.15);
+tl.fromTo('#f2-l1', { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out' }, 5.35);
+tl.fromTo('#f2-l2', { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out' }, 5.8);
+tl.fromTo('#f2-sub', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 6.4);
+
+// F3 · REAL UI (10–18)
+tl.fromTo('#f3-img', { scale: 1.06 }, { scale: 1, duration: 7.8, ease: 'sine.out' }, 10.05);
+tl.fromTo('#f3-kicker', { opacity: 0, y: -14 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power3.out' }, 10.3);
+tl.fromTo('#f3-c1', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, 11.2);
+tl.fromTo('#f3-c2', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, 11.55);
+tl.fromTo('#f3-c3', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, 11.9);
+
+// F4 · STATS (18–26)
+tl.fromTo('#f4-kicker', { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, 18.15);
+tl.fromTo('#f4-title', { opacity: 0, y: 32 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 18.35);
+tl.fromTo('#f4-card1', { opacity: 0, y: 36 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 18.75);
+tl.fromTo('#f4-card2', { opacity: 0, y: 36 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 19.05);
+tl.fromTo('#f4-card3', { opacity: 0, y: 36 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 19.35);
+const s4 = { a: 0, b: 0 };
+tl.to(s4, { a: 2, duration: 1.2, ease: 'power2.out', onUpdate: () => { document.getElementById('f4-n1').textContent = String(Math.round(s4.a)); } }, 19.0);
+tl.to(s4, { b: 3, duration: 1.2, ease: 'power2.out', onUpdate: () => { document.getElementById('f4-n2').textContent = String(Math.round(s4.b)); } }, 19.3);
+
+// F5 · LADDER + FEED (26–33)
+tl.fromTo('#f5-img', { scale: 1.06 }, { scale: 1, duration: 6.8, ease: 'sine.out' }, 26.05);
+tl.fromTo('#f5-kicker', { opacity: 0, y: -14 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power3.out' }, 26.3);
+tl.fromTo('#f5-e1', { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.4, ease: 'power3.out' }, 26.9);
+tl.fromTo('#f5-e2', { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.4, ease: 'power3.out' }, 27.6);
+tl.fromTo('#f5-e3', { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.4, ease: 'power3.out' }, 28.4);
+
+// F6 · AUCTION (33–41)
+tl.fromTo('#f6-kicker', { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, 33.15);
+tl.fromTo('#f6-title', { opacity: 0, y: 44 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out' }, 33.35);
+tl.fromTo('#f6-sub', { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 33.85);
+tl.fromTo('#f6-counter', { opacity: 0 }, { opacity: 1, duration: 0.4 }, 33.7);
+tl.fromTo('#f6-clabel', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power3.out' }, 34.5);
+const bid = { v: 25.0 };
+tl.to(bid, { v: 33.3, duration: 2.6, ease: 'power1.inOut', onUpdate: () => { document.getElementById('f6-counter').textContent = bid.v.toFixed(1) + '%'; } }, 34.3);
+tl.fromTo('#f6-chip1', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, 37.3);
+tl.fromTo('#f6-chip2', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, 37.9);
+tl.fromTo('#f6-wash', { opacity: 0 }, { opacity: 0.16, duration: 2.2, ease: 'sine.inOut' }, 38.3);
+
+// F7 · RECEIPTS (41–48)
+tl.fromTo('#f7-kicker', { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, 41.15);
+tl.fromTo('#f7-badge', { opacity: 0, y: -14 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, 41.4);
+tl.fromTo('#f7-card1', { opacity: 0, scale: 1.28, rotation: -3 }, { opacity: 1, scale: 1, rotation: 0, duration: 0.5, ease: 'back.out(1.7)' }, 41.8);
+tl.fromTo('#f7-stamp1', { opacity: 0, scale: 1.6, rotation: -16 }, { opacity: 1, scale: 1, rotation: -8, duration: 0.35, ease: 'power4.out' }, 42.35);
+tl.fromTo('#f7-card2', { opacity: 0, scale: 1.28, rotation: 3 }, { opacity: 1, scale: 1, rotation: 0, duration: 0.5, ease: 'back.out(1.7)' }, 43.0);
+tl.fromTo('#f7-stamp2', { opacity: 0, scale: 1.6, rotation: -16 }, { opacity: 1, scale: 1, rotation: -8, duration: 0.35, ease: 'power4.out' }, 43.55);
+tl.fromTo('#f7-note', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 44.7);
+
+// F8 · REVEAL (48–54)
+tl.fromTo('#f8-kicker', { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, 48.2);
+tl.fromTo('#f8-l1', { opacity: 0 }, { opacity: 1, duration: 0.3 }, 48.35);
+tl.fromTo('#f8-v1', { clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0% 0 0)', duration: 0.8, ease: 'power3.inOut' }, 48.55);
+tl.fromTo('#f8-strip', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 50.15);
+tl.fromTo('#f8-beam', { x: 0 }, { x: 2400, duration: 1.1, ease: 'power2.inOut' }, 50.35);
+tl.fromTo('#f8-l3', { opacity: 0 }, { opacity: 1, duration: 0.3 }, 51.9);
+tl.fromTo('#f8-v3', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 52.05);
+
+// F9 · END CARD (54–60)
+tl.fromTo('#f9-kicker', { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, 54.2);
+tl.fromTo('#f9-title', { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.65, ease: 'power3.out' }, 54.4);
+tl.fromTo('#f9-sub', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 55.0);
+tl.fromTo('#f9-rule', { opacity: 0, scaleX: 0 }, { opacity: 1, scaleX: 1, duration: 0.45, ease: 'power3.out', transformOrigin: 'left center' }, 55.35);
+tl.fromTo('#f9-repo', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power3.out' }, 55.6);
+tl.fromTo('#f9-tag', { opacity: 0 }, { opacity: 1, duration: 0.5 }, 55.9);
+
+tl.to({}, { duration: 0.01 }, 59.99);
+window.__timelines['main'] = tl;
+</script>
+</body>
+</html>
