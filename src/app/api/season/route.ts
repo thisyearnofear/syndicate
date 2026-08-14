@@ -21,6 +21,7 @@ import {
   listSeasonCrews,
   listSeasonEvents,
 } from '@/lib/db/repositories/seasonRepository';
+import { scoreSeasonCrews } from '@/services/season/scoringService';
 import { randomUUID } from 'node:crypto';
 import { CHAIN_IDS } from '@/config/contracts';
 import { apiError } from '@/lib/api/response';
@@ -47,7 +48,27 @@ export async function GET(req: NextRequest) {
       listSeasonEvents(season.id, 30),
     ]);
 
-    return NextResponse.json({ season, crews, events });
+    // Scoring is best-effort: if the chain scan fails, the ladder falls
+    // back to member counts. Nothing is ever fabricated.
+    let scores: Record<string, { purchases: number; entries: number }> = {};
+    let scoring: { ok: boolean; error?: string } = { ok: false, error: 'Scoring unavailable' };
+    if (crews.length > 0) {
+      try {
+        const scored = await scoreSeasonCrews(season);
+        scores = scored.scores;
+        scoring = scored.summary.error
+          ? { ok: scored.summary.ok, error: scored.summary.error }
+          : { ok: scored.summary.ok };
+      } catch (error) {
+        logger.warn('[Season] Scoring skipped', {
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    const scoredCrews = crews.map((crew) => ({ ...crew, score: scores[crew.id] ?? null }));
+
+    return NextResponse.json({ season, crews: scoredCrews, events, scoring });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error('[Season] Read failed:', { message });

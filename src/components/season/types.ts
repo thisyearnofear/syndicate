@@ -13,6 +13,11 @@ export interface SeasonSummary {
   inactivityDraws: number;
 }
 
+export interface CrewScore {
+  purchases: number;
+  entries: number;
+}
+
 export interface CrewSummary {
   id: string;
   seasonId: string;
@@ -23,6 +28,7 @@ export interface CrewSummary {
   referrerCode: string;
   coordinatorAddress: string;
   activeMembers?: number;
+  score?: CrewScore | null;
 }
 
 export interface CrewMember {
