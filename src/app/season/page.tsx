@@ -3,17 +3,22 @@
 /**
  * SEASON HQ — /season
  *
- * Campaign home for Season of Tickets (docs/SEASON.md): countdown to the
- * draw close, the Season Pot orb, the crew ladder, and — for a selected
- * crew — the seat map, live call-the-pot round, and event feed.
+ * Campaign home for Season of Tickets (docs/SEASON.md).
  *
- * Read paths are always available; crew/bid mutations are gated by the
- * `season` capability (NEXT_PUBLIC_SEASON_WRITES_ENABLED) and a connected
- * wallet, matching the app's write-boundary conventions.
+ * Progressive disclosure: the page renders ONE primary surface per user
+ * stage instead of every panel at once:
+ *   1. visitor / connected, no crew selected → hero + how-it-works + ladder
+ *      + join/found actions
+ *   2. crew selected, no round              → seat map + "Call the pot"
+ *   3. crew selected, round open            → live auction (bid box)
+ *   4. crew selected, past cutoff           → settle panel
+ *   5. settled                              → reveal + share card
+ * The ladder stays visible as the competition anchor throughout.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Users, Plus, LogIn, Gavel } from 'lucide-react';
+import Link from 'next/link';
+import { Users, Plus, LogIn, Gavel, ArrowLeft, Ticket, Trophy } from 'lucide-react';
 import { PageShell, PageHeader, ShellSection } from '@/components/layout/PageShell';
 import { PageSkeleton, EmptyState, DisconnectedState } from '@/components/layout/StateViews';
 import { Button } from '@/shared/components/ui/Button';
@@ -22,6 +27,7 @@ import { CrewLadder } from '@/components/season/CrewLadder';
 import { SeatMap, CutBadge } from '@/components/season/SeatMap';
 import { SettlePotPanel } from '@/components/season/SettlePotPanel';
 import { SettlementReveal, type SettlementResult } from '@/components/season/SettlementReveal';
+import { eventLabel, timeAgo } from '@/components/season/labels';
 import type { SeasonSummary, CrewSummary, CrewMember, SeasonEvent } from '@/components/season/types';
 import { useUnifiedWallet } from '@/hooks';
 import { useCapability } from '@/hooks/useCapability';
@@ -45,6 +51,43 @@ function formatCountdown(ms: number): string {
 
 function shortAddr(a: string): string {
   return `${a.slice(0, 6)}…${a.slice(-4)}`;
+}
+
+/* ── How-it-works strip: the three-beat story ─────────────────────────────── */
+
+function HowItWorks() {
+  const steps = [
+    {
+      icon: <Users className="w-4 h-4" />,
+      title: '1 · Crew up',
+      body: 'Found a crew or join with a code. Every seat holds a cut of the crew\u2019s claim.',
+    },
+    {
+      icon: <Ticket className="w-4 h-4" />,
+      title: '2 · Pool real entries',
+      body: 'Members buy Megapot tickets — every real purchase climbs the crew ladder.',
+    },
+    {
+      icon: <Gavel className="w-4 h-4" />,
+      title: '3 · Call the pot',
+      body: 'Anyone may exit early via auction: the biggest gift to survivors wins, and every freed seat grows the remaining cuts.',
+    },
+  ];
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {steps.map((s) => (
+        <div key={s.title} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="w-7 h-7 rounded-lg bg-violet-400/15 flex items-center justify-center text-violet-300">
+              {s.icon}
+            </span>
+            <p className="text-sm font-bold text-white">{s.title}</p>
+          </div>
+          <p className="text-xs text-gray-400 leading-relaxed">{s.body}</p>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function SeasonPage() {
@@ -232,6 +275,8 @@ export default function SeasonPage() {
   };
 
   const writesAllowed = canWrite && ctaState !== 'hidden';
+  const roundOpen = crewDetail?.openRound ?? null;
+  const cutoffPassed = roundOpen ? Date.parse(roundOpen.cutoffAt) <= now : false;
 
   return (
     <PageShell width="wide">
@@ -246,7 +291,7 @@ export default function SeasonPage() {
         <PageSkeleton cards={3} />
       ) : !season ? (
         <EmptyState
-          icon={<Users className="w-6 h-6" />}
+          icon={<Trophy className="w-6 h-6" />}
           title="No active season"
           hint="When a season is running, the crew ladder, seat map and call-the-pot rounds appear here."
           accent="coordinate"
@@ -261,58 +306,71 @@ export default function SeasonPage() {
                 <p className="text-lg font-bold text-white">{season.name}</p>
                 <p className="text-sm text-gray-400">
                   Draw closes in <span className="text-violet-300 font-semibold">{formatCountdown(msLeft)}</span>
+                  {' · '}the crew with the most real entries takes the season.
                 </p>
                 {message && <p className="text-xs text-amber-300/70 mt-1">{message}</p>}
               </div>
             </div>
           </ShellSection>
 
-          {/* ── Join / found ── */}
-          <ShellSection>
-            {!isConnected ? (
-              <DisconnectedState subject="your season crew" accent="coordinate" />
-            ) : !writesAllowed ? (
-              <p className="text-sm text-gray-500">
-                Crew actions are disabled in this environment (read-only preview).
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                  <p className="text-sm font-semibold text-white mb-2">Join a crew</p>
-                  <div className="flex gap-2">
-                    <input
-                      value={joinCode}
-                      onChange={(e) => setJoinCode(e.target.value)}
-                      placeholder="CREW-XXXXXX"
-                      className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
-                    />
-                    <Button size="sm" onClick={() => void handleJoinByCode()} disabled={busy || !joinCode.trim()}>
-                      <LogIn className="w-4 h-4 mr-1" /> Join
-                    </Button>
+          {/* ── The story in three beats (always visible, collapses to context) ── */}
+          {!selectedCrewId && (
+            <ShellSection>
+              <HowItWorks />
+            </ShellSection>
+          )}
+
+          {/* ── Join / found — shown only until a crew is selected ── */}
+          {!selectedCrewId && (
+            <ShellSection>
+              {!isConnected ? (
+                <DisconnectedState subject="your season crew" accent="coordinate" />
+              ) : !writesAllowed ? (
+                <p className="text-sm text-gray-500">
+                  Crew actions are disabled in this environment (read-only preview).
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                    <p className="text-sm font-semibold text-white mb-2">Join a crew</p>
+                    <div className="flex gap-2">
+                      <input
+                        value={joinCode}
+                        onChange={(e) => setJoinCode(e.target.value)}
+                        placeholder="CREW-XXXXXX"
+                        className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                      />
+                      <Button size="sm" onClick={() => void handleJoinByCode()} disabled={busy || !joinCode.trim()}>
+                        <LogIn className="w-4 h-4 mr-1" /> Join
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-2">
+                      Got a code from a friend? Take a seat and your purchases start counting for the crew.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                    <p className="text-sm font-semibold text-white mb-2">Found a crew</p>
+                    <div className="flex gap-2">
+                      <input
+                        value={newCrewName}
+                        onChange={(e) => setNewCrewName(e.target.value)}
+                        placeholder="Crew name"
+                        maxLength={40}
+                        className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                      />
+                      <Button size="sm" onClick={() => void handleFoundCrew()} disabled={busy || newCrewName.trim().length < 2}>
+                        <Plus className="w-4 h-4 mr-1" /> Found
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-2">
+                      You become the coordinator and take the first seat. Share your code to fill the table.
+                    </p>
                   </div>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                  <p className="text-sm font-semibold text-white mb-2">Found a crew</p>
-                  <div className="flex gap-2">
-                    <input
-                      value={newCrewName}
-                      onChange={(e) => setNewCrewName(e.target.value)}
-                      placeholder="Crew name"
-                      maxLength={40}
-                      className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
-                    />
-                    <Button size="sm" onClick={() => void handleFoundCrew()} disabled={busy || newCrewName.trim().length < 2}>
-                      <Plus className="w-4 h-4 mr-1" /> Found
-                    </Button>
-                  </div>
-                  <p className="text-[11px] text-gray-500 mt-2">
-                    You become the coordinator and take the first seat.
-                  </p>
-                </div>
-              </div>
-            )}
-            {formError && <p className="text-sm text-red-400 mt-3">{formError}</p>}
-          </ShellSection>
+              )}
+              {formError && <p className="text-sm text-red-400 mt-3">{formError}</p>}
+            </ShellSection>
+          )}
 
           {/* ── Ladder + selected crew ── */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -332,14 +390,30 @@ export default function SeasonPage() {
               ) : (
                 <div className="space-y-5">
                   <div className="flex items-center justify-between gap-3">
-                    <h2 className="text-lg font-bold text-white truncate">{crewDetail.crew.name}</h2>
-                    {myMembership && <CutBadge cutBps={myMembership.cutBps} />}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCrewId(null)}
+                        title="Back to the ladder"
+                        className="shrink-0 w-7 h-7 rounded-lg border border-white/10 bg-white/[0.03] flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/[0.08] transition-colors"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                      </button>
+                      <h2 className="text-lg font-bold text-white truncate">{crewDetail.crew.name}</h2>
+                    </div>
+                    {myMembership ? (
+                      <CutBadge cutBps={myMembership.cutBps} />
+                    ) : (
+                      <span className="text-[11px] text-gray-500 shrink-0">
+                        Code {crewDetail.crew.referrerCode}
+                      </span>
+                    )}
                   </div>
 
                   <SeatMap members={crewDetail.members} />
 
-                  {/* ── Call the pot ── */}
-                  {crewDetail.crew.kind === 'syndicate' && !crewDetail.openRound && (
+                  {/* ── Stage: no round open → Call the pot ── */}
+                  {crewDetail.crew.kind === 'syndicate' && !roundOpen && (
                     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                       <div className="flex items-center gap-2 mb-2">
                         <Gavel className="w-4 h-4 text-amber-300" />
@@ -350,7 +424,7 @@ export default function SeasonPage() {
                           <input
                             value={callPct}
                             onChange={(e) => setCallPct(e.target.value)}
-                            placeholder="Opening discount % (1\u201350)"
+                            placeholder="Your opening offer to the crew % (1–50)"
                             inputMode="decimal"
                             className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
                           />
@@ -363,22 +437,24 @@ export default function SeasonPage() {
                           </Button>
                         </div>
                       ) : (
-                        <p className="text-xs text-gray-500">Only active seats can open a call-the-pot round.</p>
+                        <p className="text-xs text-gray-500">Only active seats can call the pot.</p>
                       )}
                       <p className="text-[11px] text-gray-500 mt-2">
-                        Opens a descending-discount auction over the crew chest. The crew keeps bidding until the draw
-                        closes.
+                        Opens an auction over the crew chest. The highest offer wins: the caller exits with the
+                        rest, and the offered share becomes bonus tickets for the survivors.
                       </p>
                     </div>
                   )}
-                  {crewDetail.crew.kind === 'syndicate' && crewDetail.openRound && (
+
+                  {/* ── Stage: round open → live auction ── */}
+                  {crewDetail.crew.kind === 'syndicate' && roundOpen && (
                     <div className="rounded-2xl border border-amber-400/25 bg-amber-500/[0.05] p-4">
                       <div className="flex items-center gap-2 mb-2">
                         <Gavel className="w-4 h-4 text-amber-300" />
                         <p className="text-sm font-bold text-white">Call the pot</p>
                         <span className="ml-auto text-xs text-gray-400">
-                          Chest ${Number(crewDetail.openRound.chestSnapshotUsdc).toFixed(2)} · closes{' '}
-                          {formatCountdown(Date.parse(crewDetail.openRound.cutoffAt) - now)}
+                          Chest ${Number(roundOpen.chestSnapshotUsdc).toFixed(2)} ·{' '}
+                          {cutoffPassed ? 'closed' : `closes ${formatCountdown(Date.parse(roundOpen.cutoffAt) - now)}`}
                         </span>
                       </div>
                       {crewDetail.bids.length > 0 && (
@@ -386,20 +462,20 @@ export default function SeasonPage() {
                           {crewDetail.bids.map((b, i) => (
                             <li key={b.id} className="text-xs text-gray-300 flex justify-between">
                               <span className={i === 0 ? 'text-amber-300 font-semibold' : ''}>
-                                {shortAddr(b.bidderAddress)} — {(b.discountBps / 100).toFixed(1)}% discount
+                                {shortAddr(b.bidderAddress)} — {(b.discountBps / 100).toFixed(1)}% to the crew
                                 {i === 0 ? ' (leading)' : ''}
                               </span>
                             </li>
                           ))}
                         </ul>
                       )}
-                      {Date.parse(crewDetail.openRound.cutoffAt) > now ? (
+                      {!cutoffPassed ? (
                         writesAllowed && myMembership ? (
                           <div className="flex gap-2">
                             <input
                               value={bidPct}
                               onChange={(e) => setBidPct(e.target.value)}
-                              placeholder="Your discount % (1–50)"
+                              placeholder="Your offer to the crew % (1–50)"
                               inputMode="decimal"
                               className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
                             />
@@ -412,11 +488,11 @@ export default function SeasonPage() {
                             </Button>
                           </div>
                         ) : (
-                          <p className="text-xs text-gray-500">Only active seats can call the pot.</p>
+                          <p className="text-xs text-gray-500">Only active seats can bid.</p>
                         )
                       ) : (
                         <SettlePotPanel
-                          round={crewDetail.openRound}
+                          round={roundOpen}
                           bids={crewDetail.bids}
                           coordinatorAddress={crewDetail.crew.coordinatorAddress}
                           canWrite={writesAllowed}
@@ -431,10 +507,23 @@ export default function SeasonPage() {
                     </div>
                   )}
                   {settlement && <SettlementReveal result={settlement} />}
+
+                  {/* ── Quick crew: upgrade funnel ── */}
                   {crewDetail.crew.kind === 'quick' && (
-                    <p className="text-xs text-gray-500">
-                      Quick crew — ladder-only. Found a syndicate pool to unlock the shared chest and Call the Pot.
-                    </p>
+                    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                      <p className="text-xs text-gray-400">
+                        Quick crews compete on the ladder only.
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        <Link
+                          href="/coordinate"
+                          className="text-violet-300 font-semibold hover:underline underline-offset-4"
+                        >
+                          Found a syndicate pool
+                        </Link>{' '}
+                        to unlock the shared chest and Call the Pot.
+                      </p>
+                    </div>
                   )}
                   {crewDetail.crew.kind === 'syndicate' && crewDetail.crew.syndicatePoolId && (
                     <a
@@ -482,30 +571,4 @@ export default function SeasonPage() {
       )}
     </PageShell>
   );
-}
-
-function eventLabel(ev: SeasonEvent): string {
-  const p = ev.payload as Record<string, unknown>;
-  switch (ev.kind) {
-    case 'crew.created':
-      return `Crew “${String(p.name ?? '')}” founded`;
-    case 'seat.taken':
-      return `${shortAddr(String(p.address ?? ''))} took a seat`;
-    case 'seat.freed':
-      return `A seat freed — every remaining cut just grew`;
-    case 'bid.placed':
-      return `${shortAddr(String(p.bidder ?? ''))} offered ${((Number(p.discountBps) || 0) / 100).toFixed(1)}%`;
-    case 'round.settled':
-      return `Pot called — payout settled on-chain`;
-    default:
-      return ev.kind;
-  }
-}
-
-function timeAgo(iso: string): string {
-  const ms = Date.now() - Date.parse(iso);
-  if (ms < 60_000) return 'just now';
-  if (ms < 3_600_000) return `${Math.floor(ms / 60_000)}m ago`;
-  if (ms < 86_400_000) return `${Math.floor(ms / 3_600_000)}h ago`;
-  return `${Math.floor(ms / 86_400_000)}d ago`;
 }

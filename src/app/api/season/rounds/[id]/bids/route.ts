@@ -1,9 +1,10 @@
 /**
  * GET/POST /api/season/rounds/[id]/bids — the call-the-pot auction.
  *
- * GET lists the live bids (lowest discount first — that is the current
+ * GET lists the live bids (highest discount first — that is the current
  * leader). POST places or revises the caller's bid; the server enforces the
- * bid bounds (1%–50%), that the bidder holds an active seat in the crew, and
+ * bid bounds (1%–50%), that the bidder holds an active seat in the crew, that
+ * a revised bid must be higher than the bidder's current offer, and
  * the anti-snipe rule (a bid in the final 5 minutes extends the cutoff by 5).
  * Bids commit nothing on-chain — settlement happens separately with
  * receipt-verified purchases.
@@ -107,6 +108,9 @@ export async function POST(
     return NextResponse.json({ bid, round: updatedRound }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    if (message.includes('must be higher')) {
+      return apiValidationError(message);
+    }
     if (message.includes('not open') || message.includes('has closed')) {
       return apiError(message, 409);
     }

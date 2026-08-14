@@ -1,9 +1,9 @@
 /**
  * POST /api/season/crews/[id]/rounds — "Call the Pot": open a call round.
  *
- * Any active seat may call the pot. Calling opens a descending-discount
- * auction over the crew's accumulated yield chest and places the caller's
- * initial bid. No money moves at call time — settlement later performs the
+ * Any active seat may call the pot. Calling opens an ascending auction
+ * (highest offer to the crew wins) over the crew's accumulated yield chest
+ * and places the caller's initial bid. No money moves at call time — settlement later performs the
  * real on-chain purchases (see /api/season/rounds/[id]/settle).
  *
  * Body:

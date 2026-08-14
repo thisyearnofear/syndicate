@@ -1,6 +1,6 @@
 # Season of Tickets — The Tontine Pot
 
-**Status:** Phases 0–3 complete (registry, tontine engine + keeper cron, receipt-verified settlement incl. client-side execution flow + SettlementReveal, quick-crew on-chain scoring + `/season` HQ UI, campaign banners, migration 017 applied). Inco Summer Game Jam entry (build window 2026-07-29 → 2026-08-14), Megapot track. Testnet-first hybrid; mainnet receipts for the submission. Season view overlay on `/syndicate?id=…` (`SeasonCrewOverlay` + `GET /api/season/crews?poolId=…` + `getCrewBySyndicatePoolId`) and share cards (`ShareCards` wired into `SettlementReveal`) are built. API smoke test passes 24/24 (all guards, anti-snipe, receipt rejection, keeper, scoring). Remaining: funded Base Sepolia end-to-end purchase, stranger walkthrough, demo-video capture.
+**Status:** Phases 0–3 complete (registry, tontine engine + keeper cron, receipt-verified settlement incl. client-side execution flow + SettlementReveal, quick-crew on-chain scoring + `/season` HQ UI, campaign banners, migration 017 applied). Inco Summer Game Jam entry (build window 2026-07-29 → 2026-08-14), Megapot track. Testnet-first hybrid; mainnet receipts for the submission. Season view overlay on `/syndicate?id=…` (`SeasonCrewOverlay` + `GET /api/season/crews?poolId=…` + `getCrewBySyndicatePoolId`) and share cards (`ShareCards` wired into `SettlementReveal`) are built. API smoke test passes 25/25 (all guards, anti-snipe, highest-bid-wins ordering, lower-bid rejection, receipt rejection, keeper, scoring). Auction direction corrected to highest-offer-to-crew wins (ascending). End-to-end testnet purchase + receipt-verified settlement completed on Base Sepolia. Remaining: stranger walkthrough, demo-video capture, mainnet flip.
 
 One-liner: *A crew pools its yield toward real Megapot entries. Every exit feeds the survivors. The last contributing member standing takes the season.*
 
@@ -10,7 +10,7 @@ This is a **showcase/proof** (per `POSITIONING.md`: hackathon tracks are proofs,
 
 ## 1. The game in one paragraph
 
-A **Season** is a time-boxed competition (aligned to Megapot draw windows, ~1 week each). Players found or join **Crews**. Members contribute real Megapot entries (direct purchases and yield→ticket conversions through the existing rails). The crew is a **tontine**: when a member exits, their share of the crew's eventual claim redistributes to everyone who stays, and the exit itself pays real tickets forward. Each round, any member may **Call the Pot** — auction-style — to take the crew's accumulated yield chest early at a self-bid discount; the discount is purchased as bonus tickets for the survivors. The last contributing member standing holds the season's accumulated crew claim, settled through the coordinator's existing prize-distribution path.
+A **Season** is a time-boxed competition (aligned to Megapot draw windows, ~1 week each). Players found or join **Crews**. Members contribute real Megapot entries (direct purchases and yield→ticket conversions through the existing rails). The crew is a **tontine**: when a member exits, their share of the crew's eventual claim redistributes to everyone who stays, and the exit itself pays real tickets forward. Each round, any member may **Call the Pot** — auction-style — to take the crew's accumulated yield chest early in exchange for gifting a self-bid share back to the crew; the gifted share is purchased as bonus tickets for the survivors. The last contributing member standing holds the season's accumulated crew claim, settled through the coordinator's existing prize-distribution path.
 
 ### Virality ingredients (by design)
 
@@ -35,7 +35,7 @@ Quick crews get a visible upgrade funnel: *"Found a syndicate pool to unlock the
 
 - Each member holds one **seat**. A seat's **cut** = its share of the crew's eventual claim, normalized across active seats.
 - A seat frees up exactly two ways:
-  1. **Voluntary exit via Call the Pot** — the member takes their chest cut early at a discount; the discount is paid forward as bonus tickets to survivors. Leaving can only *feed* the crew. (This resolves the tontine "incentive problem" without harm: no ejections, no griefing, no adversarial churn.)
+  1. **Voluntary exit via Call the Pot** — the member takes the chest early, gifting a self-bid share of it back to the crew; that share is paid forward as bonus tickets to survivors. Leaving can only *feed* the crew. (This resolves the tontine "incentive problem" without harm: no ejections, no griefing, no adversarial churn.)
   2. **Inactivity** — a seat missing N consecutive draws (announced grace window, N=3 in v1) auto-frees with **zero** bonus. This is retention pressure, not a weapon.
 - When a seat frees, remaining cuts renormalize; every departure fires a tease, not a condolence: *"A seat just freed up — every remaining cut just grew."*
 
@@ -43,12 +43,12 @@ Quick crews get a visible upgrade funnel: *"Found a syndicate pool to unlock the
 
 **What's called:** the crew's **yield chest** — real pooled yield accrued by members' vault positions through the autopilot, held unconverted until called or season end.
 
-**Auction format: open descending-discount auction with cutoff**
+**Auction format: open ascending-gift auction with cutoff (highest offer to the crew wins)**
 
 - Bidding window opens when the chest ≥ minimum threshold (v1: $1 equivalent).
-- Bids are **public and visible live** in the round feed ("Ada offered 12% — Tunde undercut at 9%"). The negotiation drama *is* the content.
+- Bids are **public and visible live** in the round feed ("Ada offered 12% — Tunde raised to 15%"). The negotiation drama *is* the content.
 - Cutoff aligns to the next Megapot draw close. **Anti-snipe:** any bid in the final 5 minutes extends the cutoff by 5 minutes.
-- **Lowest discount wins.** Ties break to the earlier bid. A member may revise their own bid down until cutoff.
+- **Highest discount wins** — the member who offers the most back to the crew earns the right to exit early with the remainder. Ties break to the earlier bid. A member may only raise their own bid until cutoff.
 
 **Settlement — one coordinator batch, zero new contracts, all existing rails:**
 
@@ -131,7 +131,7 @@ Season is a campaign layer, not a fifth silo:
 - `CrewLadder` — ranked crews, live entry counts, mid-season flip highlights.
 - `SeatMap` — the visual heart: one tile per member; active seats glow with cut %, freed seats fade with *"seat freed +X% to survivors"* tooltip. The tontine made visible.
 - `CutBadge` — your current cut %, animates up when someone exits.
-- `CallThePotPanel` — chest value, your bid input, **live payout preview** ("you'd receive ≈ N tickets · M tickets go to the crew bonus"), current lowest bid, cutoff countdown.
+- `CallThePotPanel` — chest value, your bid input, **live payout preview** ("you'd receive ≈ N tickets · M tickets go to the crew bonus"), current leading bid (highest offer to the crew), cutoff countdown.
 - `BidFeed` — public auction stream; every bid is a named moment.
 - `SettlementReveal` — the shareable sequence (reveal grammar): chest decrypts (`DecryptLine`-adjacent) → winning bid named (`BeamFrame`) → caller's tickets arrive (`receipt-in`) → bonus splits across surviving seats → the seat fades to freed. Auto-triggers share card.
 - `ShareCards` — bid wins, seat-frees, streaks, season winners, via `socialService` (Farcaster/Twitter) with crew crest + named handle.
@@ -139,8 +139,9 @@ Season is a campaign layer, not a fifth silo:
 ### 5.3 Where the dynamics surface (the UX thesis)
 
 - **The exit is a celebration, not a loss.** Every seat-freedom bumps every survivor's `CutBadge` in the same animation beat, and the feed copy leads with growth: *"+2.4% to everyone who stayed."*
-- **The auction is theater.** `BidFeed` is public by design; undercuts get emphasized. The 5-minute anti-snipe extension is announced loudly ("round extended — Ada sniped, make your move").
+- **The auction is theater.** `BidFeed` is public by design; raises get emphasized. The 5-minute anti-snipe extension is announced loudly ("round extended — Ada sniped, make your move").
 - **Nothing pending ever looks complete.** Bids show `live`; settlements show `settling` until the receipt verifies (AGENTS.md: `pending_signature`-style states are incomplete, never successful).
+- **Progressive disclosure by stage.** `/season` renders one primary surface per user stage (hero + how-it-works + join/found → seat map + call form → live bid box → settle panel → reveal), collapsing the join/found cards once a crew is selected and keeping the ladder as the persistent competition anchor. Shared human-readable feed copy lives in `src/components/season/labels.ts` so `/season` and the `/syndicate` overlay tell the same story.
 - **Mobile-first, embed-ready.** Farcaster audience: share cards render as standalone embeds; the whole loop works from a phone wallet.
 
 ---
@@ -181,8 +182,10 @@ Implementation notes (Phase 3 findings):
 - Megapot has two contract generations with two event shapes; receipt verification handles both: `TicketPurchased(buyer indexed, ticketCount, referralFeePaid)` on the V2 mainnet jackpot (`0x3bAe…42a2`), and `UserTicketPurchase(recipient indexed, ticketsPurchasedTotalBps, referrer indexed, buyer indexed)` on the classic/sepolia deployment (`0x6f03…5De` Sepolia, `0xbEDd…1B95` mainnet — the address the indexer tracks).
 - Quick-crew scoring is address-attributed, not code-attributed: `scoringService.scoreSeasonCrews` walks the season's draw-window block range in 2k-block spans (capped at `SEASON_SCORE_MAX_BLOCKS`, default 30k) and credits quick crews for purchases by any **active seat address**, syndicate crews for purchases by the **coordinator address**. Both event generations decode (`TicketPurchased` V2 / `UserTicketPurchase` classic). Wired into `GET /api/season` (each crew gains `score: {purchases, entries}` + a `scoring` summary; ladder sorts by real entries, falls back to seat counts when the scan is unavailable). Unit-tested with mocked chain + DB (`tests/services/seasonScoringService.test.ts`): V2 / classic / syndicate / freed-seat / RPC-failure paths. The older `countEntriesForReferrer` helper remains for referrer-scoped lookups.
 - Settlement attribution check: the caller-payout receipt must show a purchase attributed to the **winning bidder**; the crew-bonus receipt must show one attributed to the **crew coordinator**. Rejected receipts are journaled as `settle.rejected` with the reason. Client-side `SettlePotPanel` executes the two purchases via `useUnifiedPurchase` (waits for mined receipts), then POSTs both hashes; partial failure retries from the failed purchase without double-buying.
+- **Auction direction corrected (2026-08-14):** The original "lowest discount wins" design was strategically degenerate (rational callers bid the 1% floor, collapsing the generosity mechanic). Corrected to **highest discount wins** — an ascending auction where members compete to give the most back to the crew in exchange for the right to exit early with the remainder. Revision rule: a member may only *raise* their own bid (`placeOrReviseBid` enforces strictly-greater). Bid ordering in `listRoundBids`: `ORDER BY discount_bps DESC, placed_at ASC`. All UI copy updated across `/season`, `SeasonCrewOverlay`, and `SettlementReveal`.
+
 - Keeper expiry guard: `listOpenRoundsPastCutoff` skips rounds that still have live bids, so a won auction is never expired before the winner can settle.
-- Call-the-Pot UI: both `/season` and the `/syndicate` Season tab show a "Call" form when a syndicate crew has no open round (opening discount input, cutoff = draw window end); bids and the settlement panel appear once a round is open. Full API smoke test passes 24/24 (`/tmp/season_smoke.sh` pattern): season/crew/join/round/bid/settle guards, keeper cron + replay, scoring.
+- Call-the-Pot UI: both `/season` and the `/syndicate` Season tab show a "Call" form when a syndicate crew has no open round (opening discount input, cutoff = draw window end); bids and the settlement panel appear once a round is open. Full API smoke test passes 25/25 (`/tmp/season_smoke.sh` pattern): season/crew/join/round/bid/settle guards (incl. highest-bid-wins ordering and lower-self-bid rejection), keeper cron + replay, scoring.
 
 **End-to-end testnet proof (Base Sepolia, 2026-08-14).** Funded wallet `STACKS_BRIDGE_OPERATOR_KEY` → `0x6407…7f22` (~0.05 ETH gas). Flow proven on-chain: minted MPUSDC (`mint(address,uint256)` on `0xA425…509f`), approved the classic Megapot (`0x6f03…5De`), purchased real tickets via `purchaseTickets(address referrer, uint256 amountUsdc, address recipient)` — 1 MPUSDC per ticket, events report `ticketsPurchasedTotalBps` = 8500 (0.85 entries after the 15% protocol fee). Real receipts: payout tx `0x0b88796019bdd767b3cc690345d648286ed57411a18363fb78eb973d1bf662ba` (block 45470512), bonus tx `0x2d91c8c5ae9df78f585c38900f97aa9f96cb7bb81b69993e6038b8f5f0e92ae8` (block 45470518), plus `0x0678f0e1…` / `0x5b431fe1…` (blocks 45470582/45470589). Settlement against these real hashes returned `ok:true` with verified attribution (winner = caller = coordinator, both receipts decoded from `UserTicketPurchase`); a transient RPC receipt-lookup failure earlier was correctly journaled as `settle.rejected` and retried — never fabricated. Scoring with a 7-day draw window detected all 4 purchases: `purchases=4, entries=3.4`. Note: the classic Sepolia buyer takes `(referrer, amount, recipient)` — NOT the V2 `RandomTicketBuyer.buyTickets(uint256,address,address[],uint256[],bytes32)` shape the app's client path uses.
 
@@ -197,8 +200,8 @@ Cron: `/api/crons/season-keeper` — wired in `vercel.json` (`0 0 * * *`, mirror
 | **0. Consolidation + rails check** | 07-29/30 | ✅ Orphan-route redirect (`/profile` → `/portfolio`); ✅ Megapot Base Sepolia deployment confirmed already configured (`MEGAPOT_BY_CHAIN` → `0x6f03...5De` with mock MPUSDC, testnet data API via `MEGAPOT_DATA_API_URL`); ✅ migration 017 applied. Remaining: end-to-end testnet ticket purchase smoke test |
 | **1. Crews + ladder** | 07-31–08-03 | ✅ `/season` HQ page (ladder, seat map, join/found, live bid panel, feeds), `/api/season/*` registry endpoints incl. admin `POST /api/season` (fails closed without `SEASON_ADMIN_KEY`), Season banner on `/` and `/coordinate`, `season` capability + `season` domain accent, quick-crew on-chain scoring (`scoringService` → `GET /api/season` ladder ranks by real entries, unit-tested). Season overlay tab on `/syndicate` (`SeasonCrewOverlay`, resolved via `poolId` lookup), share cards (`ShareCards`) done. Remaining: — |
 | **2. Tontine engine** | 08-04–08-06 | ✅ Cut renormalization on every seat change (`recalculateCrewCuts`), inactivity auto-free (`getInactiveSeats` + keeper), round expiry, keeper cron with fail-closed gates + public run replay. Remaining: seat-freedom share-card wiring in feed (component `ShareCards` available) |
-| **3. Call the Pot** | 08-07–08-09 | ✅ Bid guards + anti-snipe (`placeOrReviseBid`), receipt-verified settlement endpoint (both event generations supported, attribution-checked, rejections journaled), `megapotReceipts` + `settlementService`, client-side settlement flow (`SettlePotPanel`: winner/coordinator executes both real purchases via `useUnifiedPurchase`, journals hashes; stepwise retry from failed stage), `SettlementReveal` (reveal grammar: DecryptLine chest → BeamFrame winner → receipt links → freed seat) with share card. Remaining: — |
-| **4. Testnet demo** | 08-10–08-11 | ✅ API smoke test 24/24 (create season → crew → join ×3 → cuts → call round → bids incl. non-member rejection → settle guards + fake-receipt rejection → keeper + replay → scoring). ✅ End-to-end on-chain test: minted MPUSDC on Base Sepolia, purchased 4 real tickets via `purchaseTickets(address,uint256,address)`, scoring detected all purchases (4 purchases, 3.4 entries), receipt-verified settlement succeeded with real tx hashes. `SEASON_WRITES_ENABLED` gate in place. Remaining: stranger walkthrough, demo-video capture |
+| **3. Call the Pot** | 08-07–08-09 | ✅ Bid guards + anti-snipe + highest-bid-wins ordering (`placeOrReviseBid`), receipt-verified settlement endpoint (both event generations supported, attribution-checked, rejections journaled), `megapotReceipts` + `settlementService`, client-side settlement flow (`SettlePotPanel`: winner/coordinator executes both real purchases via `useUnifiedPurchase`, journals hashes; stepwise retry from failed stage), `SettlementReveal` (reveal grammar: DecryptLine chest → BeamFrame winner → receipt links → freed seat) with share card. Remaining: — |
+| **4. Testnet demo** | 08-10–08-11 | ✅ API smoke test 25/25 (create season → crew → join ×3 → cuts → call round → bids incl. non-member rejection + lower-self-bid rejection → highest-bid-wins ordering → settle guards + fake-receipt rejection → keeper + replay → scoring). ✅ End-to-end on-chain test: minted MPUSDC on Base Sepolia, purchased 4 real tickets via `purchaseTickets(address,uint256,address)`, scoring detected all purchases (4 purchases, 3.4 entries), receipt-verified settlement succeeded with real tx hashes. `SEASON_WRITES_ENABLED` gate in place. Remaining: stranger walkthrough, demo-video capture |
 | **5. Mainnet receipts + submit** | 08-12–08-14 | Flip config to Base mainnet, small-stake real round, final video, README section + jam write-up with pre-existing-rails disclosure |
 
 Buffer rule: if phase 3 slips, ship phases 1–2 + one scripted settlement demo; never fake a receipt.
@@ -206,7 +209,7 @@ Buffer rule: if phase 3 slips, ship phases 1–2 + one scripted settlement demo;
 ## 8. Judging-criteria mapping
 
 - **Depth of Megapot integration (30%)** — Megapot is the scoring substrate and the payout currency: entries, chest conversions, bonuses, and claims are all real on-chain Megapot activity.
-- **Gameplay & originality (25%)** — tontine seat dynamics + an open descending-discount auction inside a friend crew is a novel social mechanic; no other entry turns *exiting* into the winning move.
+- **Gameplay & originality (25%)** — tontine seat dynamics + an open ascending-gift auction (highest offer to the crew wins the right to exit) inside a friend crew is a novel social mechanic; no other entry turns *exiting* into the winning move.
 - **Working product & UX (25%)** — reuses live Play/Grow/Coordinate rails, reveal grammar, and state grammar; works because the rails already do.
 - **Attract & retain (20%)** — seasons + streaks retain; referral seats, public bids, named share cards, and risk-free testnet onboarding acquire.
 

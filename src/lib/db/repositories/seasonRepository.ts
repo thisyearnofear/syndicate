@@ -500,6 +500,13 @@ export async function getCallRoundById(roundId: string): Promise<SeasonCallRound
   return result.rows.length ? mapRound(result.rows[0]) : null;
 }
 
+/**
+ * Live + won bids for a round, leader first.
+ *
+ * The auction is ascending: the HIGHEST discount (biggest gift back to the
+ * crew) wins, ties broken by the earliest placement. Index 0 is therefore
+ * the current leader.
+ */
 export async function listRoundBids(roundId: string): Promise<SeasonBidRow[]> {
   await ensureSeasonTables();
   const result = await sql`
@@ -507,7 +514,7 @@ export async function listRoundBids(roundId: string): Promise<SeasonBidRow[]> {
     FROM season_bids
     WHERE round_id = ${roundId}
       AND status IN ('live', 'won')
-    ORDER BY discount_bps ASC, placed_at ASC;
+    ORDER BY discount_bps DESC, placed_at ASC;
   `;
   return result.rows.map(mapBid);
 }
@@ -536,6 +543,13 @@ export async function placeOrReviseBid(params: {
 
   let bidRow: Record<string, unknown>;
   if (existing.rows.length) {
+    // Ascending auction: a member may only RAISE their own offer to the crew.
+    const currentBps = Number(existing.rows[0].discount_bps);
+    if (params.discountBps <= currentBps) {
+      throw new Error(
+        `New bid must be higher than your current offer (${currentBps} bps).`,
+      );
+    }
     const updated = await sql`
       UPDATE season_bids
       SET discount_bps = ${params.discountBps},

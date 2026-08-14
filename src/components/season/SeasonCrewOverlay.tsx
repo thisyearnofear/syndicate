@@ -19,6 +19,7 @@ import { EmptyState } from '@/components/layout/StateViews';
 import { SeatMap, CutBadge } from '@/components/season/SeatMap';
 import { SettlePotPanel } from '@/components/season/SettlePotPanel';
 import { SettlementReveal, type SettlementResult } from '@/components/season/SettlementReveal';
+import { eventLabel, timeAgo } from '@/components/season/labels';
 import { useUnifiedWallet } from '@/hooks';
 import { useCapability } from '@/hooks/useCapability';
 import type { CrewSummary, CrewMember, SeasonEvent, SeasonSummary } from '@/components/season/types';
@@ -48,31 +49,7 @@ function formatCountdown(ms: number): string {
   return `${d}d ${h}h ${m}m`;
 }
 
-function eventLabel(ev: SeasonEvent): string {
-  const p = ev.payload as Record<string, unknown>;
-  switch (ev.kind) {
-    case 'crew.created':
-      return `Crew “${String(p.name ?? '')}” founded`;
-    case 'seat.taken':
-      return `${shortAddr(String(p.address ?? ''))} took a seat`;
-    case 'seat.freed':
-      return `A seat freed — every remaining cut just grew`;
-    case 'bid.placed':
-      return `${shortAddr(String(p.bidder ?? ''))} offered ${((Number(p.discountBps) || 0) / 100).toFixed(1)}%`;
-    case 'round.settled':
-      return `Pot called — payout settled on-chain`;
-    default:
-      return ev.kind;
-  }
-}
 
-function timeAgo(iso: string): string {
-  const ms = Date.now() - Date.parse(iso);
-  if (ms < 60_000) return 'just now';
-  if (ms < 3_600_000) return `${Math.floor(ms / 60_000)}m ago`;
-  if (ms < 86_400_000) return `${Math.floor(ms / 3_600_000)}h ago`;
-  return `${Math.floor(ms / 86_400_000)}d ago`;
-}
 
 export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
   const { address } = useUnifiedWallet();
@@ -229,7 +206,7 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
               <input
                 value={callPct}
                 onChange={(e) => setCallPct(e.target.value)}
-                placeholder="Opening discount % (1\u201350)"
+                placeholder="Your opening offer to the crew % (1–50)"
                 inputMode="decimal"
                 className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
               />
@@ -246,7 +223,7 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
             <p className="text-xs text-gray-500">Only active seats can open a call-the-pot round.</p>
           )}
           <p className="text-[11px] text-gray-500">
-            Opens a descending-discount auction over the crew chest. The crew keeps bidding until the draw closes.
+            Opens an auction over the crew chest. The highest offer wins: the caller exits with the rest, and the offered share becomes bonus tickets for the survivors.
           </p>
           {formError && <p className="text-xs text-red-400">{formError}</p>}
         </div>
@@ -268,7 +245,7 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
               {bids.map((b, i) => (
                 <li key={b.id} className="text-xs text-gray-300 flex justify-between">
                   <span className={i === 0 ? 'text-amber-300 font-semibold' : ''}>
-                    {shortAddr(b.bidderAddress)} — {(b.discountBps / 100).toFixed(1)}% discount
+                    {shortAddr(b.bidderAddress)} — {(b.discountBps / 100).toFixed(1)}% to the crew
                     {i === 0 ? ' (leading)' : ''}
                   </span>
                 </li>
@@ -282,7 +259,7 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
                 <input
                   value={bidPct}
                   onChange={(e) => setBidPct(e.target.value)}
-                  placeholder="Your discount % (1–50)"
+                  placeholder="Your offer to the crew % (1–50)"
                   inputMode="decimal"
                   className="flex-1 min-w-0 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
                 />
@@ -296,7 +273,7 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
                 </button>
               </div>
             ) : (
-              <p className="text-xs text-gray-500">Only active seats can call the pot.</p>
+              <p className="text-xs text-gray-500">Only active seats can bid.</p>
             )
           ) : (
             <SettlePotPanel

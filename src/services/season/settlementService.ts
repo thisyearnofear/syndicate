@@ -7,6 +7,9 @@
  *   1. chest × (1 − d) of tickets to the caller's own address
  *   2. chest × d of tickets to the coordinator's pooled entry (survivor bonus)
  *
+ * d is the WINNING (highest) bid — the share the caller gifts to the crew
+ * in exchange for the right to exit early with the rest.
+ *
  * This service never moves funds and never simulates hashes. It verifies
  * both receipts on the season's chain (megapotReceipts.ts), checks the
  * winning bid is the caller, then records the state transition
@@ -74,8 +77,8 @@ export async function settleCallRoundByReceipts(params: {
   const season = await getSeasonById(crew.seasonId);
   if (!season) return { ok: false, error: 'Season not found' };
 
-  // Winner = lowest live discount at cutoff (ties broken by earlier bid —
-  // the repository lists them in that order).
+  // Winner = highest live discount at cutoff (biggest gift to the crew;
+  // ties broken by earlier bid — the repository lists them in that order).
   const bids = await listRoundBids(round.id);
   if (bids.length === 0) return { ok: false, error: 'Round has no live bids' };
   const winningBid = bids[0];

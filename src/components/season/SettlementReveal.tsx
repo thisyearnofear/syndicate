@@ -52,7 +52,7 @@ export function SettlementReveal({ result, className = '' }: SettlementRevealPro
         <div className="rounded-2xl bg-slate-950/70 px-4 py-3">
           <p className="text-sm text-white">
             <span className="font-semibold text-emerald-300">{shortAddr(result.winnerAddress)}</span>{' '}
-            took the pot at a <span className="font-semibold">{discountPct}%</span> discount
+            took the pot and gave <span className="font-semibold">{discountPct}%</span> back to the crew
           </p>
         </div>
       </BeamFrame>
@@ -89,14 +89,14 @@ export function SettlementReveal({ result, className = '' }: SettlementRevealPro
       </ul>
 
       <p className="text-xs text-emerald-200/80">
-        A seat just freed — every remaining cut grew. The discount was paid forward as real tickets.
+        A seat just freed — every remaining cut grew. The winner’s offer was paid forward as real bonus tickets.
       </p>
 
       <ShareCards
         compact
         data={{
           title: 'Pot settled',
-          body: `${result.callerTickets} tickets to the caller + ${result.bonusTickets} bonus tickets to the crew — ${discountPct}% discount paid forward.`,
+          body: `${result.callerTickets} tickets to the caller + ${result.bonusTickets} bonus tickets to the crew — ${discountPct}% paid forward to survivors.`,
           accent: 'coordinate',
           url: typeof window !== 'undefined' ? `${window.location.origin}/season` : undefined,
         }}
