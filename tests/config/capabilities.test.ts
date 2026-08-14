@@ -115,7 +115,7 @@ describe('Capability Registry', () => {
     });
 
     it('returns a message for non-live capabilities', () => {
-      expect(getAvailabilityMessage('fhenix_privacy')).toContain('testnet');
+      expect(getAvailabilityMessage('fhenix_privacy')).toContain('Deprecated');
     });
   });
 

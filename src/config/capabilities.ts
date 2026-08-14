@@ -182,7 +182,7 @@ export const CAPABILITIES: readonly Capability[] = [
     label: 'Private Vaults (Fhenix)',
     status: 'paused',
     chains: ['fhenix_testnet'],
-    readsEnabled: true,
+    readsEnabled: false,
     writesEnabled: false,
     requiresOptIn: true,
     testnetOnly: true,

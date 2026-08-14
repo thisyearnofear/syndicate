@@ -174,6 +174,7 @@ contract PrizePoolHook is IHooks {
         address winner;
         uint256 randomValue;
     }
+
     DrawState public draw;
 
     uint256 public minPotForDraw;
@@ -188,6 +189,7 @@ contract PrizePoolHook is IHooks {
         address router;
         uint256 executeAfter;
     }
+
     PendingRouterChange public pendingRouterChange;
 
     struct PendingConfiguration {
@@ -199,6 +201,7 @@ contract PrizePoolHook is IHooks {
         uint256 drawResolutionTimeout;
         uint256 executeAfter;
     }
+
     PendingConfiguration public pendingConfiguration;
 
     /// @notice The single pool this hook instance serves (configured before afterInitialize).

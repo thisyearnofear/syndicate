@@ -113,11 +113,8 @@ contract PrizePoolSwapRouter is IUnlockCallback {
         uint256 netIn = amountIn - surcharge;
         bytes memory hookData = abi.encode(ROUTER_MAGIC, surcharge);
 
-        try poolManager.unlock(
-            abi.encode(zeroForOne, netIn, minAmountOut, sqrtPriceLimitX96, msg.sender, hookData)
-        ) returns (
-            bytes memory result
-        ) {
+        try poolManager.unlock(abi.encode(zeroForOne, netIn, minAmountOut, sqrtPriceLimitX96, msg.sender, hookData))
+        returns (bytes memory result) {
             amountOut = abi.decode(result, (uint256));
         } catch (bytes memory reason) {
             // A failed lock rolled back all inner state (including any surcharge the
@@ -161,7 +158,9 @@ contract PrizePoolSwapRouter is IUnlockCallback {
         Currency output = zeroForOne ? poolKey.currency1 : poolKey.currency0;
 
         IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
-            zeroForOne: zeroForOne, amountSpecified: -int256(netIn), sqrtPriceLimitX96: sqrtPriceLimitX96
+            zeroForOne: zeroForOne,
+            amountSpecified: -int256(netIn),
+            sqrtPriceLimitX96: sqrtPriceLimitX96
         });
         BalanceDelta delta = poolManager.swap(poolKey, params, hookData);
         // afterSwap fired during the swap: for USDC-input swaps the hook pulled the

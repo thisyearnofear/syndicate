@@ -39,9 +39,8 @@ contract DeployPrizePoolHook is Script {
 
         // Predict addresses that will be created during the broadcast sequence.
         // Order: optional PoolManager, factory, oracle, then factory.deployAndInitialize.
-        address pmAddress = hasPoolManager
-            ? vm.envAddress("POOL_MANAGER_ADDRESS")
-            : vm.computeCreateAddress(deployer, nonce);
+        address pmAddress =
+            hasPoolManager ? vm.envAddress("POOL_MANAGER_ADDRESS") : vm.computeCreateAddress(deployer, nonce);
         address factoryAddress = vm.computeCreateAddress(deployer, hasPoolManager ? nonce : nonce + 1);
 
         (address c0, address c1) = usdc < token1 ? (usdc, token1) : (token1, usdc);
