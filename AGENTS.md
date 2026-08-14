@@ -23,7 +23,7 @@
 ## Product model
 
 - **Base** executes vault, syndicate, settlement, and Megapot flows.
-- **Fhenix** adds privacy to eligible vault and syndicate flows.
+- **Fhenix** was the privacy rail for eligible vault and syndicate flows; its Base Sepolia deployment is now deprecated (paused, orphaned coordinator key), with a re-deploy vs. Inco Lightning migration under review.
 - **Other chains** are funding/routing rails into the Base-native product.
 - **Megapot** is the lottery engine; Syndicate owns coordination, yield routing, privacy, and automation.
 - **X Layer** is an experimental DEX-native prize-pool engine, separate from Base/Megapot.

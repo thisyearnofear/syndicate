@@ -17,7 +17,8 @@ This is the canonical documentation index. Keep durable product and operational 
 - [`PRODUCT.md`](PRODUCT.md) — Base, Fhenix, funding rails, yield-to-tickets, syndicates, and automation.
 - [`BRIDGES.md`](BRIDGES.md) — bridge protocol reference and cross-chain status.
 - [`X_LAYER.md`](X_LAYER.md) — complete X Layer Prize Pool Hook strategy, contract model, deployment, and app integration.
-- [`FHENIX.md`](FHENIX.md) — complete Fhenix vault, governance, privacy, and demo guide.
+- [`SEASON.md`](SEASON.md) — Season of Tickets / Tontine Pot campaign, settlement rules, and proof records.
+- [`FHENIX.md`](FHENIX.md) — deprecated Fhenix vault/governor integration and future privacy-rail review.
 
 ## Operations and chain runbooks
 
