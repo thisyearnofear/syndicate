@@ -1,6 +1,6 @@
 # Season of Tickets — The Tontine Pot
 
-**Status:** Phase 0–1 infrastructure built (consolidation pass done; registry, `/api/season/*`, `/season` HQ, Season banner, crew join/bid, season-creation admin endpoint; migration 017 applied). Inco Summer Game Jam entry (build window 2026-07-29 → 2026-08-14), Megapot track. Testnet-first hybrid; mainnet receipts for the submission.
+**Status:** Phases 0–3 built (registry, tontine engine + keeper cron, receipt-verified settlement, `/season` HQ UI, campaign banners, migration 017 applied). Inco Summer Game Jam entry (build window 2026-07-29 → 2026-08-14), Megapot track. Testnet-first hybrid; mainnet receipts for the submission. Remaining: quick-crew scoring wired into the ladder, client-side settlement execution flow + SettlementReveal, share cards, Season view overlay on `/syndicate`, end-to-end testnet smoke test.
 
 One-liner: *A crew pools its yield toward real Megapot entries. Every exit feeds the survivors. The last contributing member standing takes the season.*
 
@@ -87,7 +87,7 @@ Reuse (pattern-level, no shared funds/contracts/chain):
 
 - Guided stranger walkthrough + write-gate env flag (`XLayerGuidedFlow` pattern).
 - **Shared agent tool registry** (`src/services/agents/tools/`, explicitly X Layer + Base): add `crew.found`, `crew.join`, `pot.call`, `bid.place`, `seat.status` with HITL + receipt gates.
-- **Season keeper** cron modeled on `/api/crons/xlayer-keeper`: full-epoch chaining per tick (auto-free inactive seats, settle matured rounds, snapshot cuts), receipt-verified, fail-closed without `SEASON_KEEPER_PRIVATE_KEY`, persisted to `agent_run_events`, replayed at `/api/agent/season/latest-run`.
+- **Season keeper** cron, built as `/api/crons/season-keeper` + `src/services/jobs/seasonKeeperProcessor.ts`: full-epoch chaining per tick (auto-free inactive seats past the season's grace window, expire open rounds past cutoff), persisted to `agent_run_events` (source `season-keeper`), replayed publicly at `/api/agent/season/latest-run`. **Keyless by design:** the keeper holds no private key and signs nothing — settlement is receipt-driven (the winner executes the real purchases client-side; `POST /api/season/rounds/[id]/settle` verifies both receipts before journaling). Gates fail closed: `CRON_SECRET` bearer auth on the route, `SEASON_KEEPER_ENABLED=true` in the processor.
 - Session transcript + public latest-run replay for the demo video.
 
 Never overlap: chains (1952 vs Base), engines (their prize hook vs Megapot), randomness (Megapot owns draw randomness; do not import X Layer's oracle design here), or submission identity (AI Season closes 2026-08-21; jam closes 2026-08-14 — one week apart; keep docs and repos cleanly separated).
@@ -173,9 +173,15 @@ API routes (`src/app/api/season/*`):
 - `POST /api/season/rounds/[id]/settle` — keeper/coordinator only, receipt-verified journal (Phase 3)
 - `GET /api/agent/season/latest-run` — public keeper replay (Phase 2)
 
-Implemented so far: everything above except `rounds/[id]/settle` and the keeper cron/replay (Phases 2–3). All write endpoints are rate-limited and journaled to `season_events`.
+Implemented: **all of the above.** Registry endpoints, admin season creation, join/bid with guards, the receipt-verified settle endpoint (`src/services/season/settlementService.ts` + `src/services/season/megapotReceipts.ts`), the keeper cron, and the latest-run replay. All write endpoints are rate-limited and journaled to `season_events`.
 
-Cron: `/api/crons/season-keeper` (daily Vercel Cron + optional hourly GitHub pinger, mirroring xlayer-keeper) — Phase 2.
+Implementation notes (Phase 3 findings):
+
+- Megapot has two contract generations with two event shapes; receipt verification handles both: `TicketPurchased(buyer indexed, ticketCount, referralFeePaid)` on the V2 mainnet jackpot (`0x3bAe…42a2`), and `UserTicketPurchase(recipient indexed, ticketsPurchasedTotalBps, referrer indexed, buyer indexed)` on the classic/sepolia deployment (`0x6f03…5De` Sepolia, `0xbEDd…1B95` mainnet — the address the indexer tracks).
+- The indexed `referrer` in `UserTicketPurchase` is the on-chain hook for quick-crew scoring: `countEntriesForReferrer` walks the block window in 2k-block spans (public-RPC getLogs limits), best-effort, never faked.
+- Settlement attribution check: the caller-payout receipt must show a purchase attributed to the **winning bidder**; the crew-bonus receipt must show one attributed to the **crew coordinator**. Rejected receipts are journaled as `settle.rejected` with the reason.
+
+Cron: `/api/crons/season-keeper` — wired in `vercel.json` (`0 0 * * *`, mirrors xlayer-keeper), plus manual trigger with `CRON_SECRET`.
 
 ---
 
@@ -185,8 +191,8 @@ Cron: `/api/crons/season-keeper` (daily Vercel Cron + optional hourly GitHub pin
 |---|---|---|
 | **0. Consolidation + rails check** | 07-29/30 | ✅ Orphan-route redirect (`/profile` → `/portfolio`); ✅ Megapot Base Sepolia deployment confirmed already configured (`MEGAPOT_BY_CHAIN` → `0x6f03...5De` with mock MPUSDC, testnet data API via `MEGAPOT_DATA_API_URL`); ✅ migration 017 applied. Remaining: end-to-end testnet ticket purchase smoke test |
 | **1. Crews + ladder** | 07-31–08-03 | ✅ `/season` HQ page (ladder, seat map, join/found, live bid panel, feeds), `/api/season/*` registry endpoints incl. admin `POST /api/season` (fails closed without `SEASON_ADMIN_KEY`), Season banner on `/` and `/coordinate`, `season` capability + `season` domain accent; Remaining: Season view overlay on `/syndicate`, quick-crew scoring from `TicketPurchased` logs |
-| **2. Tontine engine** | 08-04–08-06 | Cut renormalization, inactivity auto-free, keeper cron (epoch chaining), seat-freedom feed + share cards |
-| **3. Call the Pot** | 08-07–08-09 | Bid UI + guards, auction cutoff/anti-snipe, settlement batch (two real purchases, receipts), SettlementReveal |
+| **2. Tontine engine** | 08-04–08-06 | ✅ Cut renormalization on every seat change (`recalculateCrewCuts`), inactivity auto-free (`getInactiveSeats` + keeper), round expiry, keeper cron with fail-closed gates + public run replay. Remaining: seat-freedom share cards |
+| **3. Call the Pot** | 08-07–08-09 | ✅ Bid guards + anti-snipe (`placeOrReviseBid`), receipt-verified settlement endpoint (both event generations supported, attribution-checked, rejections journaled), `megapotReceipts` + `settlementService`. Remaining: client-side settlement execution flow (two purchases via existing rails, then POST settle), SettlementReveal animation |
 | **4. Testnet demo** | 08-10–08-11 | Stranger walkthrough, `SEASON_WRITES_ENABLED` gate, demo-video capture on Sepolia |
 | **5. Mainnet receipts + submit** | 08-12–08-14 | Flip config to Base mainnet, small-stake real round, final video, README section + jam write-up with pre-existing-rails disclosure |
 
