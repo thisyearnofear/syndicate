@@ -8,7 +8,41 @@
  * cuts come from the server-renormalized crew_members.cut_bps.
  */
 
+import { InfoTooltip } from '@/components/common/InfoTooltip';
 import type { CrewMember } from './types';
+
+/**
+ * One-line legend with the season vocabulary in a tooltip. Rendered under
+ * the seat map so "cut" / "chest" are defined where they are used.
+ */
+export function SeasonGlossary() {
+  return (
+    <div className="flex items-start gap-1.5 text-[11px] leading-relaxed text-gray-500">
+      <InfoTooltip
+        size="sm"
+        title="Season glossary"
+        position="bottom"
+        content={
+          <div className="space-y-1.5">
+            <p>
+              <span className="font-semibold text-violet-300">Cut</span> — a seat’s share of the
+              crew’s winnings. Whenever a seat frees, every remaining cut grows.
+            </p>
+            <p>
+              <span className="font-semibold text-violet-300">Chest</span> — the value of the
+              Megapot entries the crew holds together.
+            </p>
+            <p>
+              <span className="font-semibold text-violet-300">Call the pot</span> — offer a share
+              of the chest back to the crew to exit early; the biggest offer wins the auction.
+            </p>
+          </div>
+        }
+      />
+      <span>Cut = a seat’s share of the crew’s winnings · Chest = what the crew holds together</span>
+    </div>
+  );
+}
 
 export function CutBadge({ cutBps }: { cutBps: number }) {
   const pct = (cutBps / 100).toFixed(cutBps % 100 === 0 ? 0 : 1);
@@ -25,6 +59,7 @@ export function SeatMap({ members }: { members: CrewMember[] }) {
   }
 
   return (
+    <div className="space-y-2">
     <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
       {members.map((member) => {
         const shortAddress = `${member.memberAddress.slice(0, 6)}…${member.memberAddress.slice(-4)}`;
@@ -61,5 +96,7 @@ export function SeatMap({ members }: { members: CrewMember[] }) {
         );
       })}
     </ul>
+    <SeasonGlossary />
+    </div>
   );
 }

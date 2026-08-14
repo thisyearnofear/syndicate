@@ -19,10 +19,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Users, Plus, LogIn, Gavel, ArrowLeft, Ticket, Trophy, Copy, Check } from 'lucide-react';
+import { Users, Plus, LogIn, Gavel, ArrowLeft, Ticket, Trophy, Copy, Check, RefreshCw } from 'lucide-react';
 import { PageShell, PageHeader, ShellSection } from '@/components/layout/PageShell';
 import { PageSkeleton, EmptyState, DisconnectedState } from '@/components/layout/StateViews';
 import { Button } from '@/shared/components/ui/Button';
+import { InfoTooltip } from '@/components/common/InfoTooltip';
 import { RoundOrb, deriveOrbState } from '@/components/motion/RoundOrb';
 import { CrewLadder } from '@/components/season/CrewLadder';
 import { SeatMap, CutBadge } from '@/components/season/SeatMap';
@@ -110,6 +111,7 @@ export default function SeasonPage() {
   const [confirmingCall, setConfirmingCall] = useState(false);
   const [confirmingBid, setConfirmingBid] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [settlement, setSettlement] = useState<SettlementResult | null>(null);
@@ -273,6 +275,19 @@ export default function SeasonPage() {
       setTimeout(() => setCopiedCode(false), 2_000);
     } catch {
       /* clipboard unavailable — the code stays visible on screen */
+    }
+  };
+
+  /** Manual refresh — the 10s/30s polls still run; this just doesn't make you wait. */
+  const handleRefresh = async (): Promise<void> => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        fetchHq(),
+        selectedCrewId ? fetchCrewDetail(selectedCrewId) : Promise.resolve(),
+      ]);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -464,7 +479,17 @@ export default function SeasonPage() {
                       <h2 className="text-lg font-bold text-white truncate">{crewDetail.crew.name}</h2>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      {myMembership && <CutBadge cutBps={myMembership.cutBps} />}
+                      {myMembership && (
+                        <span className="inline-flex items-center gap-1">
+                          <CutBadge cutBps={myMembership.cutBps} />
+                          <InfoTooltip
+                            size="sm"
+                            title="What is a cut?"
+                            position="bottom"
+                            content="Your share of the crew's winnings, in percent of the crew claim. It renormalizes upward every time a seat frees — the fewer seats left, the bigger each cut."
+                          />
+                        </span>
+                      )}
                       <button
                         type="button"
                         onClick={() => void copyInvite()}
@@ -476,6 +501,16 @@ export default function SeasonPage() {
                         ) : (
                           <><Copy className="w-3 h-3" /> {crewDetail.crew.referrerCode}</>
                         )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleRefresh()}
+                        title="Refresh crew + ladder now"
+                        aria-label="Refresh crew and ladder data"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-gray-300 hover:text-white hover:bg-white/[0.08] transition-colors disabled:opacity-50"
+                        disabled={refreshing}
+                      >
+                        <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
                       </button>
                     </div>
                   </div>
@@ -547,8 +582,15 @@ export default function SeasonPage() {
                       <div className="flex items-center gap-2 mb-2">
                         <Gavel className="w-4 h-4 text-amber-300" />
                         <p className="text-sm font-bold text-white">Call the pot</p>
-                        <span className="ml-auto text-xs text-gray-400">
-                          Chest ${Number(roundOpen.chestSnapshotUsdc).toFixed(2)} ·{' '}
+                        <span className="ml-auto inline-flex items-center gap-1 text-xs text-gray-400">
+                          Chest ${Number(roundOpen.chestSnapshotUsdc).toFixed(2)}
+                          <InfoTooltip
+                            size="sm"
+                            title="What is the chest?"
+                            position="bottom"
+                            content="The crew's pooled Megapot entries, valued in USDC at the snapshot. The winning bidder exits with the chest minus their offered share; that share becomes bonus tickets for the survivors."
+                          />
+                          {' · '}
                           {cutoffPassed ? 'closed' : `closes ${formatCountdown(Date.parse(roundOpen.cutoffAt) - now)}`}
                         </span>
                       </div>

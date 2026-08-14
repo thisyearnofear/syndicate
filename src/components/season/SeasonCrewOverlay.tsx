@@ -68,8 +68,9 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
-  const fetchByPool = useCallback(async () => {
-    setLoading(true);
+  const fetchByPool = useCallback(async (silent = false) => {
+    // silent=true for polling: no skeleton flash on every 15s refresh
+    if (!silent) setLoading(true);
     setNotFound(false);
     try {
       const res = await fetch(`/api/season/crews?poolId=${encodeURIComponent(poolId)}`);
@@ -110,7 +111,7 @@ export function SeasonCrewOverlay({ poolId }: SeasonCrewOverlayProps) {
 
   useEffect(() => {
     if (!crewDetail) return;
-    const t = setInterval(() => void fetchByPool(), 15_000);
+    const t = setInterval(() => void fetchByPool(true), 15_000);
     return () => clearInterval(t);
   }, [crewDetail, fetchByPool]);
 
