@@ -18,6 +18,7 @@ import { PageShell, PageHeader, ShellSection } from '@/components/layout/PageShe
 import { PuzzlePiece } from '@/shared/components/premium/PuzzlePiece';
 import { ImprovedYieldStrategySelector } from '@/components/yield/ImprovedYieldStrategySelector';
 import { useUnifiedWallet } from '@/hooks';
+import { useCapability } from '@/hooks/useCapability';
 import { useToast } from '@/shared/components/ui/Toast';
 import type { SupportedYieldStrategyId } from '@/config/yieldStrategies';
 
@@ -237,6 +238,12 @@ export default function CreateSyndicatePage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // The Fhenix private-vault pool type is gated by the capability registry.
+  // The Base Sepolia deployment is deprecated/orphaned (docs/FHENIX.md), so the
+  // tile disappears entirely when `fhenix_privacy` is paused.
+  const { ctaState: fhenixCtaState } = useCapability('fhenix_privacy');
+  const fhenixVisible = fhenixCtaState !== 'hidden';
 
   const handleInputChange = <K extends keyof SyndicateFormData>(field: K, value: SyndicateFormData[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -625,6 +632,7 @@ export default function CreateSyndicatePage() {
                 </PuzzlePiece>
               </div>
               
+              {fhenixVisible && (
               <div 
                 className="cursor-pointer border-2 border-transparent hover:border-amber-500/50 rounded-xl transition-all duration-300"
                 onClick={() => handleInputChange('poolType', 'fhenix')}
@@ -664,6 +672,7 @@ export default function CreateSyndicatePage() {
                   </div>
                 </PuzzlePiece>
               </div>
+              )}
 
               <div 
                 className="cursor-pointer border-2 border-transparent hover:border-violet-500/50 rounded-xl transition-all duration-300"

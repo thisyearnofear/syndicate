@@ -180,13 +180,14 @@ export const CAPABILITIES: readonly Capability[] = [
   {
     id: 'fhenix_privacy',
     label: 'Private Vaults (Fhenix)',
-    status: 'testnet',
+    status: 'paused',
     chains: ['fhenix_testnet'],
     readsEnabled: true,
-    writesEnabled: true,
+    writesEnabled: false,
     requiresOptIn: true,
     testnetOnly: true,
-    availabilityMessage: 'Preview mode — CoFHE is upstream testnet-only (Sepolia / Base Sepolia / Arbitrum Sepolia) as of Aug 2026, so privacy features use testnet funds only. Mainnet path is documented in docs/FHENIX.md.',
+    availabilityMessage:
+      'Deprecated — the Base Sepolia Fhenix deployment (vault 0x2bB4…, governor 0xcE39…) is orphaned: its coordinator key was rotated out and is unrecoverable, and the contracts hold no funds or members. Do not send funds to them. The privacy rail is paused pending a re-deploy vs. Inco Lightning review (docs/FHENIX.md).',
     walletRequirement: 'EVM wallet on Fhenix testnet',
     productMode: 'private_vaults',
   },
