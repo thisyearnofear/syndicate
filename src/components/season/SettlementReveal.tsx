@@ -11,6 +11,7 @@ import { CircleCheck } from 'lucide-react';
 import { BeamFrame } from '@/components/motion/BeamFrame';
 import { DecryptLine } from '@/components/motion/DecryptLine';
 import { RoundOrb } from '@/components/motion/RoundOrb';
+import { ShareCards } from './ShareCards';
 
 export interface SettlementResult {
   winnerAddress: string;
@@ -90,6 +91,16 @@ export function SettlementReveal({ result, className = '' }: SettlementRevealPro
       <p className="text-xs text-emerald-200/80">
         A seat just freed — every remaining cut grew. The discount was paid forward as real tickets.
       </p>
+
+      <ShareCards
+        compact
+        data={{
+          title: 'Pot settled',
+          body: `${result.callerTickets} tickets to the caller + ${result.bonusTickets} bonus tickets to the crew — ${discountPct}% discount paid forward.`,
+          accent: 'coordinate',
+          url: typeof window !== 'undefined' ? `${window.location.origin}/season` : undefined,
+        }}
+      />
     </div>
   );
 }

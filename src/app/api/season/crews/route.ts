@@ -2,6 +2,7 @@
  * POST /api/season/crews — found a new crew for the active season.
  * GET  /api/season/crews?seasonId=… — list a season's crews (ladder).
  * GET  /api/season/crews?code=CREW-… — resolve a single crew by referral code.
+ * GET  /api/season/crews?poolId=… — resolve the season crew linked to a syndicate pool.
  *
  * No money moves here: a crew is a named seat registry plus a referral code
  * members use when buying their real Megapot tickets. Writes are
@@ -15,6 +16,7 @@ import {
   createCrew,
   ensureSeasonTables,
   getCrewByReferrerCode,
+  getCrewBySyndicatePoolId,
   getSeasonById,
   listSeasonCrews,
   type SeasonCrewKind,
@@ -52,8 +54,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ crew });
     }
 
+    const poolId = req.nextUrl.searchParams.get('poolId');
+    if (poolId) {
+      const crew = await getCrewBySyndicatePoolId(poolId);
+      if (!crew) return apiNotFound('No season crew linked to that syndicate pool');
+      return NextResponse.json({ crew });
+    }
+
     const seasonId = req.nextUrl.searchParams.get('seasonId');
-    if (!seasonId) return apiValidationError('seasonId or code is required');
+    if (!seasonId) return apiValidationError('seasonId, code, or poolId is required');
     const crews = await listSeasonCrews(seasonId);
     return NextResponse.json({ crews });
   } catch (error) {

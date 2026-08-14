@@ -295,6 +295,19 @@ export async function getCrewByReferrerCode(referrerCode: string): Promise<Seaso
   return result.rows.length ? mapCrew(result.rows[0]) : null;
 }
 
+export async function getCrewBySyndicatePoolId(
+  poolId: string,
+): Promise<SeasonCrewRow | null> {
+  await ensureSeasonTables();
+  const result = await sql`
+    SELECT *
+    FROM season_crews
+    WHERE syndicate_pool_id = ${poolId}
+    LIMIT 1;
+  `;
+  return result.rows.length ? mapCrew(result.rows[0]) : null;
+}
+
 export async function createCrew(params: {
   id: string;
   seasonId: string;

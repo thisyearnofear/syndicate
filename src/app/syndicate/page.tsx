@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
 import {
   Users, Heart, Share2, ArrowLeft,
-  LayoutDashboard, Trophy, Activity, TrendingUp, Vote,
+  LayoutDashboard, Trophy, Activity, TrendingUp, Vote, Gavel,
 } from "lucide-react";
 import { PageShell, PageHeader, ShellSection } from "@/components/layout/PageShell";
 import { PageSkeleton, EmptyState } from "@/components/layout/StateViews";
@@ -17,6 +17,7 @@ import { TransactionHistory } from "@/components/syndicate/TransactionHistory";
 import { SyndicateYieldDashboard } from "@/components/syndicate/SyndicateYieldDashboard";
 import { GovernanceVoting } from "@/components/syndicate/GovernanceVoting";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { SeasonCrewOverlay } from "@/components/season/SeasonCrewOverlay";
 import type { SyndicateInfo } from "@/domains/lottery/types";
 import { useUnifiedWallet } from "@/hooks";
 
@@ -210,6 +211,10 @@ export default function SyndicateDetailPage() {
               <Vote className="w-4 h-4" />
               <span className="hidden sm:inline">Governance</span>
             </TabsTrigger>
+            <TabsTrigger value="season">
+              <Gavel className="w-4 h-4" />
+              <span className="hidden sm:inline">Season</span>
+            </TabsTrigger>
           </TabsList>
 
           {/* ── Overview Tab ─────────────────────────────────────────────── */}
@@ -252,6 +257,11 @@ export default function SyndicateDetailPage() {
           {/* ── Governance Tab ────────────────────────────────────────────── */}
           <TabsContent value="governance">
             <GovernanceVoting poolId={id} />
+          </TabsContent>
+
+          {/* ── Season Tab ──────────────────────────────────────────────── */}
+          <TabsContent value="season">
+            <SeasonCrewOverlay poolId={id} />
           </TabsContent>
         </Tabs>
       </ShellSection>
