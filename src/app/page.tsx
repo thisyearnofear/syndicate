@@ -16,7 +16,8 @@ import { LastWinner } from "@/components/home/LastWinner";
 import { SharePrompt } from "@/components/home/SharePrompt";
 import { YieldTeaser } from "@/components/home/YieldTeaser";
 import { FirstActionPrompt } from "@/components/onboarding/FirstActionPrompt";
-import { SeasonBanner } from "@/components/season/SeasonBanner";
+import { PageShell } from "@/components/layout/PageShell";
+import { SeasonLivingRoom, SeasonPoolChip } from "@/components/season/SeasonLivingRoom";
 import { Button } from "@/shared/components/ui/Button";
 import { RoundOrb, deriveOrbState, resolveEndMs, type RoundOrbState } from "@/components/motion/RoundOrb";
 import { BeamFrame } from "@/components/motion/BeamFrame";
@@ -81,7 +82,7 @@ function useDrawCountdown(endTimestamp: string | undefined) {
 export default function Home() {
   const router = useRouter();
   const isMounted = useIsMounted();
-  const { isConnected } = useUnifiedWallet();
+  const { isConnected, address } = useUnifiedWallet();
   const { jackpotStats, refresh: refreshLottery } = useLottery();
 
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
@@ -197,23 +198,14 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950 relative overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.08),transparent_50%)] animate-pulse" style={{ animationDuration: "10s" }} />
-
-      <div className="relative z-10 container mx-auto px-4 py-8 md:py-16 max-w-5xl pb-28 md:pb-16">
+    <PageShell width="wide" accent="play" className="pb-28 md:pb-10">
+      <div className="relative z-10 max-w-5xl mx-auto">
 
         {/* ─── HERO ─────────────────────────────────────────────────────────── */}
         <section className="text-center mb-16 space-y-5 relative">
           {/* Ambient orbs behind the anchor */}
           <div aria-hidden className="pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2 -z-10">
-            <div className="w-72 h-72 rounded-full bg-amber-500/15 blur-3xl animate-float" style={{ animationDuration: '9s' }} />
-          </div>
-          <div aria-hidden className="pointer-events-none absolute top-24 -left-10 -z-10 hidden md:block">
-            <div className="w-56 h-56 rounded-full bg-emerald-500/10 blur-3xl animate-float" style={{ animationDuration: '12s' }} />
-          </div>
-          <div aria-hidden className="pointer-events-none absolute top-24 -right-10 -z-10 hidden md:block">
-            <div className="w-56 h-56 rounded-full bg-violet-500/10 blur-3xl animate-float" style={{ animationDuration: '14s' }} />
+            <div className="w-72 h-72 rounded-full bg-amber-500/15 blur-3xl" />
           </div>
 
           {/* Prize pool — the anchor, marked by the round orb */}
@@ -239,7 +231,7 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-3 animate-fade-in-up" style={{ animationDelay: '150ms' }}>
             <BeamFrame laps={Infinity} duration={6} className="rounded-2xl inline-block">
               <Button
-                variant="premium"
+                variant="warning"
                 size="lg"
                 className="text-lg px-8 py-5 shadow-2xl shadow-amber-500/10 group w-full"
                 onClick={handleBuyClick}
@@ -253,14 +245,14 @@ export default function Home() {
                 )}
               </Button>
             </BeamFrame>
-            <Button
-              variant="ghost"
-              size="lg"
-              className="text-lg px-8 py-5 border border-emerald-400/25 text-emerald-100/90 hover:text-white hover:border-emerald-300/40 hover:bg-emerald-400/5"
-              onClick={handleSeeVaults}
-            >
-              Deposit &amp; Grow
-            </Button>
+              <Button
+                variant="ghost"
+                size="lg"
+                className="text-lg px-8 py-5 border border-[#c9a227]/30 text-[#e3c887] hover:text-[#f7ead0] hover:border-[#c9a227]/50"
+                onClick={() => router.push('/season')}
+              >
+                Take a seat
+              </Button>
           </div>
 
           {/* Trust + odds line */}
@@ -287,13 +279,13 @@ export default function Home() {
           <LastWinner />
         </div>
 
-        {/* ─── SEASON BANNER (campaign layer; self-hides when no active season) ── */}
-        <div className="mb-10 max-w-2xl mx-auto">
-          <SeasonBanner />
+        <div className="mb-10">
+          <SeasonLivingRoom />
         </div>
 
         {/* ─── QUICK ACTIONS (directly under the hero) ─────────────────────── */}
         <section id="quick-purchase" className="mb-12 scroll-mt-24 transition-[box-shadow] duration-300 rounded-2xl">
+          {isMounted && isConnected && <SeasonPoolChip address={address} />}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 [&>*]:transition-all [&>*]:duration-300 [&>*]:hover:-translate-y-1">
             <QuickPurchase onAdvanced={() => handleOpenAdvanced('megapot')} />
             <QuickDeposit onExploreVaults={handleSeeVaults} />
@@ -433,7 +425,7 @@ export default function Home() {
             </h2>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button
-                variant="premium"
+                variant="warning"
                 size="lg"
                 className="text-lg px-10 py-5 shadow-2xl"
                 onClick={handleBuyClick}
@@ -489,9 +481,9 @@ export default function Home() {
       {/* Desktop floating CTA */}
       <div className="fixed bottom-8 right-8 z-40 hidden md:block">
         <Button
-          variant="premium"
+          variant="warning"
           size="lg"
-          className="shadow-2xl hover:shadow-brand-500/30 border border-brand-400/30 animate-float"
+          className="shadow-2xl hover:shadow-amber-500/30 border border-amber-400/30"
           onClick={handleBuyClick}
         >
           Enter draw
@@ -508,7 +500,7 @@ export default function Home() {
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-slate-950/95 px-4 pt-3 backdrop-blur-xl safe-bottom md:hidden">
         <div className="mx-auto flex max-w-lg gap-2">
           <Button
-            variant="premium"
+            variant="warning"
             size="lg"
             className="min-h-12 flex-1 touch-manipulation"
             onClick={handleBuyClick}
@@ -520,12 +512,12 @@ export default function Home() {
             variant="glass"
             size="lg"
             className="min-h-12 flex-1 touch-manipulation border-white/15"
-            onClick={handleDiscover}
+            onClick={() => router.push('/season')}
           >
-            Syndicate
+            Take a seat
           </Button>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

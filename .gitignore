@@ -96,3 +96,8 @@ yarn.lock
 .impeccable/
 skills-lock.json
 
+# HyperFrames demo plates, posters, and renders (source HTML/audio stay tracked)
+videos/**/assets/*.png
+videos/**/renders/
+videos/**/*.mp4
+

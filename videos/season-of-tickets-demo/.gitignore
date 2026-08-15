@@ -3,5 +3,6 @@ node_modules/
 capture/
 capture-home/
 snapshots/
-renders/*.mp4
+renders/
+assets/*.png
 *.log

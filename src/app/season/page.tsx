@@ -45,6 +45,7 @@ import { eventLabel, timeAgo } from '@/components/season/labels';
 import type { SeasonSummary, CrewSummary, CrewMember, SeasonEvent } from '@/components/season/types';
 import { useUnifiedWallet } from '@/hooks';
 import { useCapability } from '@/hooks/useCapability';
+import { rememberSeatedCrew } from '@/hooks/useActiveSeason';
 import { CHAIN_IDS } from '@/config/contracts';
 
 interface CrewDetail {
@@ -188,6 +189,10 @@ export default function SeasonPage() {
       ) ?? null
     );
   }, [address, crewDetail]);
+
+  useEffect(() => {
+    if (myMembership && selectedCrewId) rememberSeatedCrew(selectedCrewId);
+  }, [myMembership, selectedCrewId]);
 
   /**
    * Survivor arithmetic for the settlement reveal: how many seats remain once
@@ -471,8 +476,12 @@ export default function SeasonPage() {
               </div>
             )}
 
-            {!isConnected ? (
-                <DisconnectedState subject="Your seat at the table" accent="arena" />
+                {!isConnected ? (
+                <DisconnectedState
+                  subject="Take a seat"
+                  hint="Connecting doesn't move money. A seat is a registration; real tickets come next."
+                  accent="arena"
+                />
               ) : !writesAllowed ? (
                 <p className="text-sm text-[#d8c9ae]/50">
                   Crew actions are disabled in this environment (read-only preview).
@@ -631,6 +640,24 @@ export default function SeasonPage() {
                     entries={crewEntries}
                   />
 
+                  {myMembership && (
+                    <div className="vellum flex flex-col gap-3 rounded-xl border-[#c9a227]/30 bg-[#c9a227]/[0.05] p-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="arena-label text-[10px]">Pool an entry</p>
+                        <p className="mt-1 font-display text-lg font-bold text-[#f7ead0]">
+                          Buy a real ticket for this crew
+                        </p>
+                        <p className="mt-1 text-xs leading-relaxed text-[#d8c9ae]/60">
+                          Purchases from this wallet count when the on-chain scan scores them.
+                          The crew code is a join code, not a Megapot referrer.
+                        </p>
+                      </div>
+                      <Link href="/#quick-purchase" className="shrink-0">
+                        <Button size="sm" variant="warning">Enter draw</Button>
+                      </Link>
+                    </div>
+                  )}
+
                   {!myMembership &&
                     crewDetail.crew.kind === 'syndicate' &&
                     crewDetail.crew.status !== 'archived' && (
@@ -641,8 +668,8 @@ export default function SeasonPage() {
                           Take a seat in this live chest
                         </p>
                         <p className="mt-1 text-xs leading-relaxed text-[#d8c9ae]/60">
-                          Joining moves no money. It registers your seat; your real entries count
-                          when you buy through the crew&apos;s referral path.
+                          Joining moves no money. It registers your seat; real entries count
+                          when this wallet buys a Megapot ticket.
                         </p>
                       </div>
                       {!isConnected ? (

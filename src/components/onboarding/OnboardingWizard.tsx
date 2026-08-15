@@ -106,12 +106,12 @@ export function OnboardingWizard() {
 function StepWelcome() {
   return (
     <div className="text-center space-y-4">
-      <div className="w-14 h-14 rounded-2xl bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center mx-auto">
-        <span className="text-white font-bold text-xl">S</span>
+      <div className="w-14 h-14 rounded-2xl border border-amber-400/35 bg-slate-800 flex items-center justify-center mx-auto">
+        <span className="text-amber-200 font-bold text-xl">S</span>
       </div>
-      <h2 className="text-2xl font-bold text-white">No-loss lottery on Base</h2>
+      <h2 className="text-2xl font-bold text-white">Sit at the table. Then buy a ticket.</h2>
       <p className="text-gray-400 max-w-sm mx-auto">
-        $1 tickets with daily draws. Or deposit and let yield enter every draw for you — withdraw your full principal anytime.
+        $1 to enter a real Megapot draw. Your deposit back forever. Season is the crew table those tickets feed.
       </p>
     </div>
   );
@@ -120,15 +120,24 @@ function StepWelcome() {
 function StepHow() {
   return (
     <div className="space-y-5">
-      <h2 className="text-xl font-bold text-white text-center">Three ways to use it</h2>
+      <h2 className="text-xl font-bold text-white text-center">One session</h2>
       <div className="space-y-3">
+        <div className="flex items-center gap-4 rounded-xl bg-white/5 p-4">
+          <div className="w-10 h-10 rounded-lg bg-[#c9a227]/20 flex items-center justify-center flex-shrink-0">
+            <Users className="w-5 h-5 text-[#e3c887]" />
+          </div>
+          <div>
+            <p className="text-white font-semibold">Take a seat</p>
+            <p className="text-sm text-gray-400">Joining a crew registers you. It does not move money.</p>
+          </div>
+        </div>
         <div className="flex items-center gap-4 rounded-xl bg-white/5 p-4">
           <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0">
             <Ticket className="w-5 h-5 text-amber-400" />
           </div>
           <div>
-            <p className="text-white font-semibold">Play</p>
-            <p className="text-sm text-gray-400">Buy tickets. $1 each, daily draw, paid instantly on win.</p>
+            <p className="text-white font-semibold">Buy a real ticket</p>
+            <p className="text-sm text-gray-400">$1, daily draw. Your wallet&apos;s purchase scores the crew on-chain.</p>
           </div>
         </div>
         <div className="flex items-center gap-4 rounded-xl bg-white/5 p-4">
@@ -136,17 +145,8 @@ function StepHow() {
             <TrendingUp className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
-            <p className="text-white font-semibold">Grow</p>
-            <p className="text-sm text-gray-400">Deposit once. Yield buys tickets every cycle. Withdraw anytime.</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-4 rounded-xl bg-white/5 p-4">
-          <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-            <Users className="w-5 h-5 text-blue-400" />
-          </div>
-          <div>
-            <p className="text-white font-semibold">Coordinate</p>
-            <p className="text-sm text-gray-400">Pool capital with a group. Encrypted balances, selective reveal.</p>
+            <p className="text-white font-semibold">Grow later</p>
+            <p className="text-sm text-gray-400">Deposit when you want yield to enter draws for you. Withdraw anytime.</p>
           </div>
         </div>
       </div>
@@ -159,16 +159,27 @@ function StepStart({ router, onComplete }: { router: { push: (p: string) => void
 
   return (
     <div className="space-y-5">
-      <h2 className="text-xl font-bold text-white text-center">Pick your path</h2>
+      <h2 className="text-xl font-bold text-white text-center">Start this session</h2>
       <div className="grid grid-cols-1 gap-3">
+        <button
+          onClick={() => go('/season')}
+          className="flex items-center gap-4 rounded-xl border border-[#c9a227]/30 bg-[#c9a227]/5 p-4 text-left transition-colors hover:bg-[#c9a227]/10"
+        >
+          <Users className="w-5 h-5 text-[#e3c887] flex-shrink-0" />
+          <div>
+            <p className="text-white font-semibold">Take a seat</p>
+            <p className="text-xs text-gray-400">See the table. Joining moves no money.</p>
+          </div>
+          <ArrowRight className="w-4 h-4 text-gray-600 ml-auto" />
+        </button>
         <button
           onClick={() => go('/')}
           className="flex items-center gap-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-left transition-colors hover:bg-amber-500/10"
         >
           <Ticket className="w-5 h-5 text-amber-400 flex-shrink-0" />
           <div>
-            <p className="text-white font-semibold">Buy tickets now</p>
-            <p className="text-xs text-gray-400">Fastest way into today&apos;s draw</p>
+            <p className="text-white font-semibold">Buy a ticket</p>
+            <p className="text-xs text-gray-400">$1 into today&apos;s live Megapot draw</p>
           </div>
           <ArrowRight className="w-4 h-4 text-gray-600 ml-auto" />
         </button>

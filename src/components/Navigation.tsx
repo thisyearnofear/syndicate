@@ -12,8 +12,9 @@ import UnifiedModal from './modal/UnifiedModal';
 import WalletConnectionOptions from './wallet/WalletConnectionOptions';
 import {
   Ticket, Users, TrendingUp, Menu, X,
-  ArrowLeftRight, LayoutDashboard, Settings, ChevronDown, Bot,
+  ArrowLeftRight, LayoutDashboard, Settings, ChevronDown, Bot, Crown,
 } from 'lucide-react';
+import { useActiveSeason } from '@/hooks/useActiveSeason';
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
@@ -30,12 +31,17 @@ const PRIMARY_NAV: NavItem[] = [
   { href: '/', label: 'Play', icon: Ticket },
   { href: '/vaults', label: 'Grow', icon: TrendingUp },
   { href: '/coordinate', label: 'Coordinate', icon: Users },
-  // Experimental engine, framed by what it does (AI-run prize pool), not by
-  // chain jargon. Always flagged as testnet (honesty contract).
-  { href: '/xlayer', label: 'Agent Pool', icon: Bot, flag: 'Testnet' },
 ];
 
+const CAMPAIGN_NAV: NavItem = {
+  href: '/season',
+  label: 'Season',
+  icon: Crown,
+  flag: 'Campaign',
+};
+
 const SECONDARY_NAV: NavItem[] = [
+  { href: '/xlayer', label: 'Agent Pool', icon: Bot, flag: 'Testnet' },
   { href: '/portfolio', label: 'Portfolio', icon: LayoutDashboard, requiresWallet: true },
   { href: '/bridge', label: 'Fund', icon: ArrowLeftRight },
   { href: '/settings', label: 'Settings', icon: Settings },
@@ -51,6 +57,11 @@ export default function Navigation({ className = '' }: NavigationProps) {
   const pathname = usePathname();
   const { isConnected, walletType, chain, connect } = useUnifiedWallet();
   const mounted = useIsMounted();
+  const { visible: seasonVisible } = useActiveSeason();
+
+  const primaryItems = seasonVisible
+    ? [PRIMARY_NAV[0], CAMPAIGN_NAV, ...PRIMARY_NAV.slice(1)]
+    : PRIMARY_NAV;
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -71,7 +82,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
     } catch (error) {
       console.error("Connection failed:", error);
     }
-  }, [connect]);
+  }, [connect, setShowWalletModal]);
 
   const handleWalletPillClick = useCallback(() => {
     if (!walletDetailsOpen && walletPillRef.current) {
@@ -100,6 +111,15 @@ export default function Navigation({ className = '' }: NavigationProps) {
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
     return pathname?.startsWith(href) ?? false;
+  };
+
+  const navLinkClass = (href: string, active: boolean) => {
+    if (active && href === '/') return 'bg-amber-400/10 text-amber-100';
+    if (active && href === '/season') return 'bg-[#c9a227]/15 text-[#f7ead0]';
+    if (active && href === '/vaults') return 'bg-emerald-400/10 text-emerald-100';
+    if (active && href === '/coordinate') return 'bg-violet-400/10 text-violet-100';
+    if (active) return 'bg-white/10 text-white';
+    return 'text-gray-400 hover:text-white hover:bg-white/5';
   };
 
   const getWalletIcon = () => {
@@ -139,25 +159,21 @@ export default function Navigation({ className = '' }: NavigationProps) {
           {/* Left: Logo + primary links */}
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2" aria-label="Syndicate home">
-              <div className="w-7 h-7 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xs">S</span>
+              <div className="w-7 h-7 rounded-lg border border-amber-400/35 bg-slate-800 flex items-center justify-center">
+                <span className="text-amber-200 font-bold text-xs">S</span>
               </div>
               <span className="font-bold text-white text-lg">Syndicate</span>
             </Link>
 
             <div className="flex items-center gap-1">
-              {PRIMARY_NAV.map((item) => {
+              {primaryItems.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/80 ${
-                      active
-                        ? 'bg-white/10 text-white'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                    }`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 ${navLinkClass(item.href, active)}`}
                   >
                     <Icon className="w-4 h-4" />
                     {item.label}
@@ -266,8 +282,8 @@ export default function Navigation({ className = '' }: NavigationProps) {
       <nav className={`md:hidden ${className}`} aria-label="Main navigation">
         <div className="flex items-center justify-between py-3 px-1">
           <Link href="/" className="flex items-center gap-2" aria-label="Syndicate home">
-            <div className="w-7 h-7 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xs">S</span>
+            <div className="w-7 h-7 rounded-lg border border-amber-400/35 bg-slate-800 flex items-center justify-center">
+              <span className="text-amber-200 font-bold text-xs">S</span>
             </div>
             <span className="font-bold text-white text-lg">Syndicate</span>
           </Link>
@@ -287,18 +303,14 @@ export default function Navigation({ className = '' }: NavigationProps) {
         {mobileOpen && (
           <div className="pb-4 pt-2 border-t border-white/10 space-y-1">
             {/* Primary */}
-            {PRIMARY_NAV.map((item) => {
+            {primaryItems.map((item) => {
               const Icon = item.icon;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors touch-manipulation ${
-                    isActive(item.href)
-                      ? 'bg-white/10 text-white'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors touch-manipulation ${navLinkClass(item.href, isActive(item.href))}`}
                 >
                   <Icon className="w-4 h-4" />
                   {item.label}

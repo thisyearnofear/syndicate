@@ -112,12 +112,22 @@ User feedback says the app is already hard to navigate; Season must not add clut
 | `/syndicates` | already redirects → `/coordinate` ✓ | nothing to do |
 | `/my-tickets` | keep (3 contextual links: home dashboard, bridge form, portfolio) | candidate to fold into a Portfolio tab later, out of scope for the jam |
 
-### 5.1 Entry points — no new permanent nav item
+### 5.1 Entry points — campaign, not a fifth silo
 
-Season is a campaign layer, not a fifth silo:
+Season is a campaign layer on Play, not a fourth philosophy:
 
-- **Time-limited banner/chip** on Play (`/`) and Coordinate (`/coordinate`) → `/season`. Removed after the season ends; no nav scar.
-- `/season` is the HQ page only. Crew pages reuse the existing syndicate surface.
+- **Living-room inset** on Play (`/`): the real crew table inside a bounded
+  arena plate. Take a seat is the campaign action; Enter draw stays the live
+  Megapot CTA. Scoring is address-attributed (the buyer's wallet), not the
+  `CREW-…` join code — that code is Syndicate-internal.
+- **Time-bound Campaign chip** in primary nav while a season is active,
+  plus the banner on `/coordinate`. Both hide when there is no season.
+  This is not a permanent fourth rung.
+- `/season` is the HQ page. Crew pages reuse the existing syndicate surface.
+
+Season may become an unlabeled home hero only when the `season` capability
+is `live` with mainnet writes — the same promise contract as every other
+hero (`POSITIONING.md`).
 
 ### 5.2 Routes
 

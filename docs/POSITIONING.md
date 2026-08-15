@@ -40,7 +40,9 @@ Consumer-first for the next 6–8 weeks, balanced thereafter:
 
 No surface competes for hero status; each is a rung.
 
-- `/` — Play (consumer acquisition).
+- `/` — Play (consumer acquisition). The live promise is the Megapot draw.
+  Season of Tickets is the social layer of Play: a labeled campaign inset
+  (the table) on this route, not a second unlabeled product.
 - `/vaults` — Grow (retention).
 - `/discover` — Coordinate (groups; testnet surfaces are labeled as such).
 - `/xlayer` — engine experiment (demo labeling stays explicit).

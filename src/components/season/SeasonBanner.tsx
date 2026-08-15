@@ -1,49 +1,21 @@
 'use client';
 
 /**
- * SEASON BANNER — the only Season entry point in the core app.
- *
- * A slim, time-limited campaign chip (no permanent nav item, per
- * docs/SEASON.md §5.1). Renders nothing when there is no active season or
- * the capability is hidden, so it never becomes dead chrome.
+ * SEASON BANNER — campaign chip on Coordinate (and any leftover host).
+ * Play home uses SeasonLivingRoom instead (docs/DESIGN.md).
  */
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { Crown, ArrowRight } from 'lucide-react';
-import { useCapability } from '@/hooks/useCapability';
+import { useActiveSeason } from '@/hooks/useActiveSeason';
 import { CHAIN_IDS } from '@/config/contracts';
 
-interface SeasonSummary {
-  id: string;
-  name: string;
-  drawWindowEnd: number;
-  status: string;
-}
-
 export function SeasonBanner({ chainId = CHAIN_IDS.BASE }: { chainId?: number }) {
-  const { ctaState } = useCapability('season');
-  const [season, setSeason] = useState<SeasonSummary | null>(null);
-  // Snapshot time once (SocialProof pattern) so the countdown is pure render.
+  const { visible, season } = useActiveSeason(chainId);
   const [now] = useState(() => Date.now());
 
-  useEffect(() => {
-    if (ctaState === 'hidden') return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(`/api/season?chainId=${chainId}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled && data?.season) setSeason(data.season);
-      } catch {
-        /* fail closed: no banner */
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [chainId, ctaState]);
-
-  if (ctaState === 'hidden' || !season) return null;
+  if (!visible || !season) return null;
 
   const msLeft = season.drawWindowEnd - now;
   const daysLeft = Math.max(0, Math.ceil(msLeft / 86_400_000));
@@ -53,8 +25,6 @@ export function SeasonBanner({ chainId = CHAIN_IDS.BASE }: { chainId?: number })
       href="/season"
       className="group relative block overflow-hidden rounded-xl border border-[#c9a227]/25 bg-[#0e0a06] px-4 py-3 transition-colors duration-300 hover:border-[#c9a227]/50"
     >
-      {/* A slice of the arena ground, so the campaign reads as its own world
-          even while it sits on a default-surface page (docs/DESIGN.md). */}
       <span
         aria-hidden
         className="pointer-events-none absolute inset-0"

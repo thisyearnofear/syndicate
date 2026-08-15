@@ -103,17 +103,26 @@ serif with real history in it.
   ceremony, but every payoff number and receipt link must come from persisted,
   verified settlement data.
 
-The arena accent MAY NOT bleed into `default` pages. There are exactly two
-sanctioned bridges, and both are visually contained:
+The arena accent MAY NOT bleed into `default` pages. There are exactly three
+sanctioned bridges, and all are visually contained:
 
-- The Season banner on `/` and `/coordinate` wears the arena accent so the
-  campaign reads as one world.
+- The Season banner on `/coordinate` (and a time-bound Campaign chip in
+  primary nav while a season is active) wears the arena accent so the
+  campaign reads as one world. The chip is not a fourth philosophy rung
+  and must hide when there is no active season.
+- The **living-room inset** on Play (`/`): a bounded arena plate that shows
+  the real crew table. `/` stays `surface="default"` with Play amber; the
+  inset never sets the page ground. Take-a-seat is the campaign action;
+  Enter-draw remains the live Megapot money CTA.
 - The Season overlay on `/syndicate?id=…` is an **arena inset**: the arena
   register (ground, vellum, serif, brass) inside its own bounded, rounded
   plate. It must never set the host page's background, and the host page
   keeps its own accent everywhere outside the inset. This exists so a crew
   looks like the same crew on both surfaces instead of being restyled twice
   and drifting.
+
+Play home uses `PageShell` (`accent="play"`). The live prize figure is the
+page title on that route; it does not invent a third page ground.
 
 ## The reveal grammar (motion primitives)
 
@@ -173,6 +182,7 @@ island:
 
 1. New pages render inside `PageShell`/`PageHeader` or they don't ship,
    and they pick one of the two surfaces — never a bespoke background.
+   Play home (`/`) uses `PageShell`; the live prize figure is that route's title.
 2. Colors come from `src/config/design.ts` only. Don't fork accents; if a
    new meaning genuinely exists, add it to the config so everyone uses it.
 3. No `alert()` for app events — the shared Toast system.

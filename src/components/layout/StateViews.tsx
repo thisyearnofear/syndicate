@@ -91,12 +91,19 @@ export function EmptyState({ icon, title, hint, accent = "neutral", action }: Em
 interface DisconnectedStateProps {
   /** What the wallet unlocks: "Your tickets", "Your portfolio" */
   subject: string;
+  /** Invitation line. Defaults to custody copy. */
+  hint?: string;
   accent?: DesignAccent;
   /** Optional connect UI (RainbowKit button etc.); when omitted, a hint line shows */
   children?: ReactNode;
 }
 
-export function DisconnectedState({ subject, accent = "neutral", children }: DisconnectedStateProps) {
+export function DisconnectedState({
+  subject,
+  hint = "Connect a wallet to continue. Non-custodial — your keys, your funds.",
+  accent = "neutral",
+  children,
+}: DisconnectedStateProps) {
   const a = ACCENTS[accent];
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-12 text-center max-w-md mx-auto">
@@ -105,7 +112,7 @@ export function DisconnectedState({ subject, accent = "neutral", children }: Dis
       </div>
       <p className="text-xl font-bold text-white">{subject}</p>
       <p className="mt-2 text-sm text-gray-400">
-        Connect a wallet to see what&apos;s yours. Non-custodial — your keys, your funds.
+        {hint}
       </p>
       {children && <div className="mt-6 flex justify-center">{children}</div>}
     </div>

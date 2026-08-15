@@ -1256,3 +1256,12 @@ select:focus-visible {
   .seal-fleck { opacity: 0; }
   .cutoff-ring-progress { transition: none; }
 }
+
+/* Shared chrome follows the page surface without restyling Grow/Coordinate. */
+body:has([data-surface="arena"]) footer {
+  border-color: rgba(201, 162, 39, 0.18);
+  background: rgba(10, 7, 5, 0.88);
+}
+.site-nav-arena {
+  background: linear-gradient(180deg, rgba(10, 7, 5, 0.55), transparent);
+}
