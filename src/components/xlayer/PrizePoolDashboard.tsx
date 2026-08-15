@@ -309,38 +309,40 @@ export function PrizePoolDashboard() {
                 />
               </div>
 
-              {/* Reference material — hairline accordions, not cards. */}
+              {/* Reference material — mechanic cards visible, then hairline accordions. */}
               <div>
-          <Disclosure title="How this pool runs" subtitle="An AI agent is the treasurer of this pool.">
-            <div className="mt-4 grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+          {/* Mechanic pillars — always visible, not behind a tap */}
+          <div className="mb-2 grid gap-3 sm:grid-cols-3">
+            <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-black/10 p-3">
+              <Bot className="mt-0.5 h-4 w-4 shrink-0 text-cyan-200" />
+              <div>
+                <p className="text-sm font-semibold text-white">Agent, not chatbot</p>
+                <p className="mt-0.5 text-xs leading-5 text-slate-400">Tool registry, human-in-the-loop gating on draw execution, and a persisted session transcript.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-black/10 p-3">
+              <Receipt className="mt-0.5 h-4 w-4 shrink-0 text-cyan-200" />
+              <div>
+                <p className="text-sm font-semibold text-white">Receipts, not promises</p>
+                <p className="mt-0.5 text-xs leading-5 text-slate-400">Deposits, draws, and claims link to explorer receipts. Explicit failure states, never fabricated hashes.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-black/10 p-3">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-cyan-200" />
+              <div>
+                <p className="text-sm font-semibold text-white">No-loss by design</p>
+                <p className="mt-0.5 text-xs leading-5 text-slate-400">The pot is funded by swap surcharges; depositor principal stays redeemable between draws.</p>
+              </div>
+            </div>
+          </div>
+
+          <Disclosure title="How this pool runs" subtitle="An AI agent is the treasurer of this pool." defaultOpen>
+            <div className="mt-4">
               <p className="text-sm leading-6 text-slate-300/80">
                 It watches the pot, plans draw operations through a permissioned tool registry, and gets human
                 approval before anything executes. Every money claim is verified against an on-chain receipt
                 before the UI reports it — pending is never shown as success, here or on Base.
               </p>
-              <div className="space-y-3">
-                <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-black/10 p-3">
-                  <Bot className="mt-0.5 h-4 w-4 shrink-0 text-cyan-200" />
-                  <div>
-                    <p className="text-sm font-semibold text-white">Agent, not chatbot</p>
-                    <p className="mt-0.5 text-xs leading-5 text-slate-400">Tool registry, human-in-the-loop gating on draw execution, and a persisted session transcript.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-black/10 p-3">
-                  <Receipt className="mt-0.5 h-4 w-4 shrink-0 text-cyan-200" />
-                  <div>
-                    <p className="text-sm font-semibold text-white">Receipts, not promises</p>
-                    <p className="mt-0.5 text-xs leading-5 text-slate-400">Deposits, draws, and claims link to explorer receipts. Explicit failure states, never fabricated hashes.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-black/10 p-3">
-                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-cyan-200" />
-                  <div>
-                    <p className="text-sm font-semibold text-white">No-loss by design</p>
-                    <p className="mt-0.5 text-xs leading-5 text-slate-400">The pot is funded by swap surcharges; depositor principal stays redeemable between draws.</p>
-                  </div>
-                </div>
-              </div>
             </div>
           </Disclosure>
 

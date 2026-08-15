@@ -16,6 +16,8 @@ import { useEffect, useRef, useState } from 'react';
 import { isAddress, type Address } from 'viem';
 import { RoundOrb, type RoundOrbState } from '@/components/motion/RoundOrb';
 import { BeamFrame } from '@/components/motion/BeamFrame';
+import { CountUp } from '@/components/motion/CountUp';
+import { MechanicFlow } from '@/components/xlayer/MechanicFlow';
 import { ACCENTS } from '@/config/design';
 
 export interface XLayerPoolStageProps {
@@ -52,30 +54,13 @@ const formatUsdc = (value: bigint | undefined) => {
   });
 };
 
-const formatDuration = (value: bigint | undefined) => {
-  if (value === undefined) return '—';
-  const seconds = Number(value);
-  if (seconds === 0) return 'Immediate';
-  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
-  if (seconds < 86_400) return `${Math.round(seconds / 3600)}h`;
-  return `${Math.round(seconds / 86_400)}d`;
-};
-
 const shorten = (value: string) => `${value.slice(0, 6)}…${value.slice(-4)}`;
-
-function Chip({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-slate-400">
-      {children}
-    </span>
-  );
-}
 
 export function XLayerPoolStage({
   potBalance,
   minPotForDraw,
   totalShares,
-  drawCooldown,
+  drawCooldown: _drawCooldown,
   surchargeBps,
   drawState,
   evmAddress,
@@ -110,8 +95,12 @@ export function XLayerPoolStage({
   // Resolve choreography: only when polling observes the actual
   // transition does the winner strip clip-reveal (fresh mounts render
   // it statically).
-  const prevRef = useRef<{ open: boolean; resolved: boolean; claimed: boolean } | null>(null);
+  const prevRef = useRef<{ open: boolean; resolved: boolean; claimed: boolean; pot: bigint } | null>(null);
   const [revealKey, setRevealKey] = useState(0);
+
+  // Pot-fill delta flash: track balance changes between polls.
+  const [deltaUsdc, setDeltaUsdc] = useState<number | null>(null);
+  const [deltaKey, setDeltaKey] = useState(0);
 
   const drawOpen = Boolean(drawState?.[0]);
   const drawResolved = Boolean(drawState?.[1]);
@@ -121,11 +110,24 @@ export function XLayerPoolStage({
 
   useEffect(() => {
     const prev = prevRef.current;
-    prevRef.current = { open: drawOpen, resolved: drawResolved, claimed: drawClaimed };
-    if (prev && prev.open && !prev.resolved && drawResolved && !drawClaimed) {
+    const currentPot = potBalance ?? 0n;
+    prevRef.current = { open: drawOpen, resolved: drawResolved, claimed: drawClaimed, pot: currentPot };
+    if (!prev) return;
+
+    // Resolve animation
+    if (prev.open && !prev.resolved && drawResolved && !drawClaimed) {
       setRevealKey((k) => k + 1);
     }
-  }, [drawOpen, drawResolved, drawClaimed]);
+
+    // Pot-fill delta flash: only when balance grew (surcharge accrued)
+    if (currentPot > prev.pot && !drawOpen) {
+      const delta = Number(currentPot - prev.pot) / 1e6;
+      if (delta >= 0.001) {
+        setDeltaUsdc(delta);
+        setDeltaKey((k) => k + 1);
+      }
+    }
+  }, [drawOpen, drawResolved, drawClaimed, potBalance]);
 
   const orbState: RoundOrbState = !drawState
     ? 'idle'
@@ -137,19 +139,27 @@ export function XLayerPoolStage({
           ? 'idle'
           : 'active';
 
+  // Rich contextual status — replaces flat "Open for entries"
+  const potUsdcNum = potBalance !== undefined ? Number(potBalance) / 1e6 : null;
+  const minUsdcNum = minPotForDraw !== undefined && minPotForDraw > 0n ? Number(minPotForDraw) / 1e6 : null;
+
   const statusLine = !drawState
-    ? 'Awaiting first epoch'
+    ? 'Collecting surcharges — pot filling'
     : drawOpen
-      ? 'Randomness pending — resolving'
+      ? 'Draw in progress — randomness resolving'
       : drawResolved && !drawClaimed
-        ? 'Resolved — prize ready to claim'
+        ? `Epoch ${drawState[4].toString()} won — winner can claim ${formatUsdc(drawState[7])}`
         : drawCancelled
-          ? 'Draw cancelled'
-          : 'Open for entries';
+          ? 'Draw cancelled — pot carries to next epoch'
+          : potUsdcNum !== null && minUsdcNum !== null && potUsdcNum < minUsdcNum
+            ? `Pot at ${formatUsdc(potBalance)} · ${Math.round((potUsdcNum / minUsdcNum) * 100)}% toward draw`
+            : `Pot ready · ${formatUsdc(totalShares)} total shares · draw eligible`;
 
   const winnerIsYou = Boolean(
     evmAddress && winner && isAddress(winner) && winner.toLowerCase() === evmAddress.toLowerCase(),
   );
+
+  const potAsNumber = potBalance !== undefined ? Number(potBalance) / 1e6 : 0;
 
   return (
     <div
@@ -182,7 +192,16 @@ export function XLayerPoolStage({
         <div className="flex flex-col gap-8 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-5">
             <div className="relative shrink-0">
-              <div className="absolute -inset-3 rounded-full bg-cyan-400/10 blur-xl" />
+              {/* Breathing halo: pulses slowly when the pool is alive but waiting */}
+              <div
+                className={`absolute -inset-3 rounded-full blur-xl ${
+                  orbState === 'idle' || orbState === 'active'
+                    ? 'bg-cyan-400/10 animate-orb-breathe'
+                    : orbState === 'resolving'
+                      ? 'bg-cyan-400/20 animate-pulse'
+                      : 'bg-cyan-400/10'
+                }`}
+              />
               <RoundOrb state={orbState} size={96} />
             </div>
             <div className="min-w-0">
@@ -193,17 +212,22 @@ export function XLayerPoolStage({
             </div>
           </div>
 
-          <div className="shrink-0 sm:text-right">
+          {/* Prize pot figure with delta flash */}
+          <div className="relative shrink-0 sm:text-right">
             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Prize pot</p>
             <p className={`mt-1 font-mono text-6xl font-semibold tabular-nums tracking-tight md:text-7xl ${ACCENTS.experimental.gradientText}`}>
-              {formatUsdc(potBalance)}
+              <CountUp value={potAsNumber} decimals={2} durationMs={700} />
             </p>
-            <p className="mt-1 text-xs text-slate-500">
-              USDC_TEST
-              {minPotForDraw !== undefined && minPotForDraw > 0n
-                ? ` · draw opens at ${formatUsdc(minPotForDraw)}`
-                : ''}
-            </p>
+            <p className="mt-1 text-xs text-slate-500">USDC_TEST</p>
+            {/* Delta flash chip — animates in when surcharge accrues */}
+            {deltaUsdc !== null && (
+              <span
+                key={deltaKey}
+                className="absolute -right-1 -top-1 rounded-full border border-cyan-400/40 bg-cyan-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-300 animate-delta-rise pointer-events-none"
+              >
+                +{deltaUsdc.toFixed(4)}
+              </span>
+            )}
           </div>
         </div>
 
@@ -228,19 +252,28 @@ export function XLayerPoolStage({
           </div>
         )}
 
-        <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-white/[0.06] pt-4">
-          <Chip>{surchargeBps !== undefined ? `${surchargeBps / 100}% surcharge feeds the pot` : 'Surcharge —'}</Chip>
-          <Chip>Cooldown {formatDuration(drawCooldown)}</Chip>
-          <Chip>{formatUsdc(totalShares)} total shares</Chip>
-          {evmAddress ? (
+        {/* Mechanic flow diagram — teaches the v4 hook in one glance */}
+        <div className="mt-6 border-t border-white/[0.06] pt-5">
+          <MechanicFlow
+            surchargeBps={surchargeBps}
+            orbState={orbState}
+            potBalance={potBalance}
+            minPotForDraw={minPotForDraw}
+          />
+        </div>
+
+        {/* Your position chip */}
+        {evmAddress && (
+          <div className="mt-4">
             <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2.5 py-1 text-[11px] font-semibold text-cyan-200">
               You: {formatUsdc(userShares)} shares · {shareOdds} odds
               {userPrincipal ? ` · ${formatUsdc(userPrincipal)} principal` : ''}
             </span>
-          ) : (
-            <span className="text-[11px] text-slate-600">Connect to see your position</span>
-          )}
-        </div>
+          </div>
+        )}
+        {!evmAddress && (
+          <p className="mt-4 text-[11px] text-slate-600">Connect to see your position</p>
+        )}
       </div>
     </div>
   );

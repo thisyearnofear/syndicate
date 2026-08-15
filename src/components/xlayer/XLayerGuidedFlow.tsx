@@ -51,6 +51,7 @@ function StepShell({
   active,
   children,
   doneContent,
+  isInvite = false,
 }: {
   index: number;
   title: string;
@@ -60,9 +61,14 @@ function StepShell({
   children?: React.ReactNode;
   /** Optional compressed content shown after completion (e.g. add-more). */
   doneContent?: React.ReactNode;
+  /** Whether this is the standing invitation step (step 5 — pulses when ready). */
+  isInvite?: boolean;
 }) {
+  // Format index as zero-padded mono counter: "01 /"
+  const counter = String(index).padStart(2, '0');
+
   return (
-    <li className="flex gap-3 px-1 py-3 first:pt-0.5">
+    <li className={`flex gap-3 px-1 py-3 first:pt-0.5 ${isInvite && active ? 'rounded-xl border animate-step-invite -mx-1 px-2 transition-colors' : ''}`}>
       <span className="mt-0.5 shrink-0">
         {done ? (
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20">
@@ -70,18 +76,22 @@ function StepShell({
           </span>
         ) : (
           <span
-            className={`flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-bold ${
-              active ? 'border-cyan-400/50 bg-cyan-500/15 text-cyan-200' : 'border-white/10 text-slate-600'
+            className={`flex h-7 items-center font-mono text-[11px] font-bold tabular-nums ${
+              active
+                ? isInvite
+                  ? 'text-violet-300'
+                  : 'text-cyan-300'
+                : 'text-slate-600'
             }`}
           >
-            {index}
+            {counter} /
           </span>
         )}
       </span>
       <div className="min-w-0 flex-1">
         <p
           className={`text-sm font-semibold ${
-            done ? 'text-emerald-200' : active ? 'text-white' : 'text-slate-500'
+            done ? 'text-emerald-200' : active ? (isInvite ? 'text-violet-100' : 'text-white') : 'text-slate-500'
           }`}
         >
           {title}
@@ -123,7 +133,7 @@ function FundsHint({
   );
 }
 
-/** Inline share forms — deposit is the default path, swap is the advanced one. */
+/** Inline share forms — swap-join is the primary (DEX-native) path, deposit is advanced. */
 function ShareForms({
   usdcBalance,
   nativeBalance,
@@ -134,11 +144,11 @@ function ShareForms({
   const { canWrite, message } = useCapability('xlayer_prize_pool');
   const depositTx = useXLayerDeposit();
   const joinTx = useXLayerJoin();
-  const [amount, setAmount] = useState('5');
-  const [error, setError] = useState<string | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [joinAmount, setJoinAmount] = useState('10');
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [showDeposit, setShowDeposit] = useState(false);
+  const [amount, setAmount] = useState('5');
+  const [error, setError] = useState<string | null>(null);
 
   if (!canWrite) {
     return (
@@ -148,21 +158,6 @@ function ShareForms({
       </p>
     );
   }
-
-  const handleDeposit = async () => {
-    setError(null);
-    const parsed = parseFloat(amount);
-    if (!parsed || parsed <= 0) {
-      setError('Enter a valid USDC amount');
-      return;
-    }
-    if (usdcBalance !== null && parsed > usdcBalance) {
-      setError('Not enough testnet USDC — claim USDC_TEST from the faucet above.');
-      return;
-    }
-    const result = await depositTx.deposit({ amountUsdc: amount });
-    if (!result.success && result.error) setError(result.error);
-  };
 
   const handleJoin = async () => {
     setJoinError(null);
@@ -179,158 +174,117 @@ function ShareForms({
     if (!result.success && result.error) setJoinError(result.error);
   };
 
+  const handleDeposit = async () => {
+    setError(null);
+    const parsed = parseFloat(amount);
+    if (!parsed || parsed <= 0) {
+      setError('Enter a valid USDC amount');
+      return;
+    }
+    if (usdcBalance !== null && parsed > usdcBalance) {
+      setError('Not enough testnet USDC — claim USDC_TEST from the faucet above.');
+      return;
+    }
+    const result = await depositTx.deposit({ amountUsdc: amount });
+    if (!result.success && result.error) setError(result.error);
+  };
+
   return (
     <div className="space-y-3">
       <FundsHint usdcBalance={usdcBalance} nativeBalance={nativeBalance} />
       {message && <p className="text-xs text-amber-300/80">{message}</p>}
 
-      {depositTx.isSuccess ? (
-        <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/[0.08] p-3">
-          <p className="text-sm font-semibold text-emerald-200">Principal deposited</p>
-          <p className="mt-1 text-xs text-slate-400">
-            Shares are active for draw eligibility. The agent handles the rest.
-          </p>
-          <Button variant="glass" size="sm" className="mt-3" onClick={depositTx.reset}>
-            Deposit again
-          </Button>
+      {/* PRIMARY: swap-join — the DEX-native path that actually funds the pot */}
+      <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/[0.06] p-3">
+        <div className="mb-2 flex items-center gap-1.5">
+          <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
+          <p className="text-xs font-semibold text-cyan-200">Join via swap <span className="font-normal text-slate-500">— the DEX-native path</span></p>
         </div>
-      ) : (
-        <>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-            <div className="flex-1">
-              <label className="mb-1 block text-xs text-slate-400">Amount (USDC)</label>
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                inputMode="decimal"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                disabled={depositTx.isActive}
-                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-3 text-base text-white focus:border-cyan-400/50 focus:outline-none disabled:opacity-50 sm:py-2 sm:text-sm"
-                placeholder="5.00"
-              />
-            </div>
-            <Button
-              variant="default"
-              size="sm"
-              className="min-h-12 w-full bg-gradient-to-r from-cyan-500 to-blue-600 px-6 text-white touch-manipulation sm:min-h-11 sm:w-auto"
-              onClick={handleDeposit}
-              disabled={depositTx.isActive}
-            >
-              {depositTx.isActive ? (
-                <>
-                  <Loader className="mr-1.5 h-3 w-3 animate-spin" />
-                  Depositing…
-                </>
-              ) : (
-                'Deposit'
-              )}
-            </Button>
+        <p className="mb-3 text-xs leading-5 text-slate-400">
+          Route a USDC swap through the prize-pool router. The 1% surcharge goes to the pot; you receive shares. This is how the hook funds draws.
+        </p>
+        {joinTx.isSuccess ? (
+          <div>
+            <p className="text-sm font-semibold text-emerald-200">Joined via swap</p>
+            <p className="mt-1 text-xs text-slate-400">Shares + surcharge contribution confirmed.</p>
+            <Button variant="glass" size="sm" className="mt-3" onClick={joinTx.reset}>Swap again</Button>
           </div>
-          {error && (
-            <p className="text-xs text-red-400" role="alert">
-              {error}
-            </p>
-          )}
-          {depositTx.isError &&
-            depositTx.execution.status === 'failed' &&
-            !depositTx.execution.error.userCancelled && (
+        ) : (
+          <>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <div className="flex-1">
+                <label className="mb-1 block text-xs text-slate-400">Amount (USDC)</label>
+                <input
+                  type="number" min="0.01" step="0.01" inputMode="decimal"
+                  value={joinAmount} onChange={(e) => setJoinAmount(e.target.value)}
+                  disabled={joinTx.isActive}
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-3 text-base text-white focus:border-cyan-400/50 focus:outline-none disabled:opacity-50 sm:py-2 sm:text-sm"
+                  placeholder="10.00"
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleJoin(); }}
+                />
+              </div>
               <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-red-300"
-                onClick={() => {
-                  depositTx.reset();
-                  setError(null);
-                }}
+                variant="default" size="sm"
+                className="min-h-12 w-full bg-gradient-to-r from-cyan-500 to-blue-600 px-6 text-white touch-manipulation sm:min-h-11 sm:w-auto"
+                onClick={handleJoin} disabled={joinTx.isActive}
               >
-                Try again
+                {joinTx.isActive ? <><Loader className="mr-1.5 h-3 w-3 animate-spin" />Joining…</> : 'Join via swap'}
               </Button>
+            </div>
+            {joinError && <p className="mt-2 text-xs text-red-400" role="alert">{joinError}</p>}
+            {joinTx.isError && joinTx.execution.status === 'failed' && !joinTx.execution.error.userCancelled && (
+              <Button variant="ghost" size="sm" className="mt-2 text-xs text-red-300" onClick={() => { joinTx.reset(); setJoinError(null); }}>Try again</Button>
             )}
-        </>
-      )}
+          </>
+        )}
+      </div>
 
+      {/* SECONDARY: direct deposit — principal only, no surcharge */}
       <button
         type="button"
-        onClick={() => setShowAdvanced((v) => !v)}
+        onClick={() => setShowDeposit((v) => !v)}
         className="flex min-h-11 w-full items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] px-3 text-xs font-semibold text-slate-400 transition hover:text-white touch-manipulation sm:min-h-0 sm:py-2"
-        aria-expanded={showAdvanced}
+        aria-expanded={showDeposit}
       >
-        <span className="inline-flex items-center gap-1.5">
-          <Sparkles className="h-3.5 w-3.5 text-emerald-300" />
-          Advanced: join via swap instead (surcharge feeds the pot)
-        </span>
-        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+        <span>Advanced: deposit principal directly (no surcharge)</span>
+        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showDeposit ? 'rotate-180' : ''}`} />
       </button>
 
-      {showAdvanced && (
-        <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/[0.05] p-3">
-          {joinTx.isSuccess ? (
-            <div>
-              <p className="text-sm font-semibold text-emerald-200">Joined via swap</p>
-              <p className="mt-1 text-xs text-slate-400">Shares + surcharge contribution confirmed.</p>
-              <Button variant="glass" size="sm" className="mt-3" onClick={joinTx.reset}>
-                Swap again
-              </Button>
+      {showDeposit && (
+        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+          <p className="mb-2 text-xs leading-5 text-slate-400">Deposit USDC directly as lossless principal. Your shares set your draw odds; principal is always redeemable.</p>
+          {depositTx.isSuccess ? (
+            <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/[0.08] p-3">
+              <p className="text-sm font-semibold text-emerald-200">Principal deposited</p>
+              <p className="mt-1 text-xs text-slate-400">Shares are active for draw eligibility. The agent handles the rest.</p>
+              <Button variant="glass" size="sm" className="mt-3" onClick={depositTx.reset}>Deposit again</Button>
             </div>
           ) : (
             <>
-              <p className="mb-2 text-xs leading-5 text-slate-400">
-                Route a USDC swap through the prize-pool router. The surcharge accrues to the pot; you receive shares.
-              </p>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                 <div className="flex-1">
                   <label className="mb-1 block text-xs text-slate-400">Amount (USDC)</label>
                   <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    inputMode="decimal"
-                    value={joinAmount}
-                    onChange={(e) => setJoinAmount(e.target.value)}
-                    disabled={joinTx.isActive}
-                    className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-3 text-base text-white focus:border-emerald-400/50 focus:outline-none disabled:opacity-50 sm:py-2 sm:text-sm"
-                    placeholder="10.00"
+                    type="number" min="0.01" step="0.01" inputMode="decimal"
+                    value={amount} onChange={(e) => setAmount(e.target.value)}
+                    disabled={depositTx.isActive}
+                    className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-3 text-base text-white focus:border-cyan-400/50 focus:outline-none disabled:opacity-50 sm:py-2 sm:text-sm"
+                    placeholder="5.00"
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleDeposit(); }}
                   />
                 </div>
                 <Button
-                  variant="default"
-                  size="sm"
-                  className="min-h-12 w-full bg-gradient-to-r from-emerald-500 to-teal-600 px-6 text-white touch-manipulation hover:from-emerald-600 hover:to-teal-700 sm:min-h-11 sm:w-auto"
-                  onClick={handleJoin}
-                  disabled={joinTx.isActive}
+                  variant="default" size="sm"
+                  className="min-h-12 w-full bg-gradient-to-r from-slate-600 to-slate-700 px-6 text-white touch-manipulation sm:min-h-11 sm:w-auto"
+                  onClick={handleDeposit} disabled={depositTx.isActive}
                 >
-                  {joinTx.isActive ? (
-                    <>
-                      <Loader className="mr-1.5 h-3 w-3 animate-spin" />
-                      Joining…
-                    </>
-                  ) : (
-                    'Join via swap'
-                  )}
+                  {depositTx.isActive ? <><Loader className="mr-1.5 h-3 w-3 animate-spin" />Depositing…</> : 'Deposit'}
                 </Button>
               </div>
-              {joinError && (
-                <p className="mt-2 text-xs text-red-400" role="alert">
-                  {joinError}
-                </p>
+              {error && <p className="mt-2 text-xs text-red-400" role="alert">{error}</p>}
+              {depositTx.isError && depositTx.execution.status === 'failed' && !depositTx.execution.error.userCancelled && (
+                <Button variant="ghost" size="sm" className="mt-2 text-xs text-red-300" onClick={() => { depositTx.reset(); setError(null); }}>Try again</Button>
               )}
-              {joinTx.isError &&
-                joinTx.execution.status === 'failed' &&
-                !joinTx.execution.error.userCancelled && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="mt-2 text-xs text-red-300"
-                    onClick={() => {
-                      joinTx.reset();
-                      setJoinError(null);
-                    }}
-                  >
-                    Try again
-                  </Button>
-                )}
             </>
           )}
         </div>
@@ -419,11 +373,37 @@ export function XLayerGuidedFlow({
         </StepShell>
 
         <StepShell index={3} title="Get testnet funds" done={hasFunds} active={activeIndex === 2}>
-          <div className="space-y-1">
-            <FundsHint usdcBalance={usdcBalance} nativeBalance={nativeBalance} />
-            <p className="text-[11px] leading-4 text-slate-600">
-              OKB pays gas; USDC_TEST is the deposit token. Both come from the official faucet.
-            </p>
+          <div className="space-y-2">
+            <div className="rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2.5 font-mono text-xs space-y-1.5">
+              <p>
+                <span className="text-slate-600">$ </span>
+                <span className="text-cyan-300">request</span>
+                <span className="text-white"> USDC_TEST</span>
+                <span className="text-slate-500 ml-2">→ deposit token</span>
+              </p>
+              <p>
+                <span className="text-slate-600">$ </span>
+                <span className="text-cyan-300">request</span>
+                <span className="text-white"> OKB</span>
+                <span className="text-slate-500 ml-2">→ gas (testnet native)</span>
+              </p>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] leading-4 text-slate-600">
+                {usdcBalance !== null && usdcBalance > 0
+                  ? `${usdcBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} USDC_TEST`
+                  : 'No USDC_TEST yet'}
+                {nativeBalance !== null && ` · ${nativeBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })} OKB`}
+              </p>
+              <a
+                href={XLAYER_FAUCET_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-h-11 shrink-0 items-center gap-1 font-mono text-xs font-semibold text-cyan-300 transition hover:text-cyan-200 touch-manipulation sm:min-h-0"
+              >
+                open faucet <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
           </div>
         </StepShell>
 
@@ -457,7 +437,7 @@ export function XLayerGuidedFlow({
           <ShareForms usdcBalance={usdcBalance} nativeBalance={nativeBalance} />
         </StepShell>
 
-        <StepShell index={5} title="Watch the agent run the draw" done={false} active={readyForAgent}>
+        <StepShell index={5} title="Watch the agent run the draw" done={false} active={readyForAgent} isInvite>
           <div className="space-y-2">
             <p className="text-xs leading-5 text-slate-400">
               Plan → approve → sign. A scheduled operator run keeps epochs moving too — its public
@@ -465,10 +445,10 @@ export function XLayerGuidedFlow({
             </p>
             <a
               href="#xlayer-agent-panel"
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-violet-400/30 bg-violet-500/10 px-3 text-xs font-semibold text-violet-200 transition hover:bg-violet-500/20 touch-manipulation sm:min-h-0 sm:py-2"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-violet-400/30 bg-violet-500/10 px-3 text-xs font-semibold text-violet-200 transition hover:bg-violet-500/20 touch-manipulation sm:min-h-0 sm:py-2 animate-step-invite"
             >
               <Bot className="h-3.5 w-3.5" />
-              Go to the agent panel
+              <span className="font-mono">→ agent panel</span>
             </a>
             {(drawOpen || drawResolved || drawClaimed) && (
               <p className="text-[11px] text-emerald-300/80">

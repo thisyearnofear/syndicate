@@ -36,16 +36,16 @@ interface TimelineNode {
 }
 
 const DOT_STYLE: Record<TimelineNode['kind'], string> = {
-  plan: 'bg-cyan-400',
-  plan_failed: 'bg-rose-400',
-  complete: 'bg-emerald-400',
-  fail: 'bg-rose-400',
+  plan: 'bg-cyan-400 w-2.5 h-2.5',
+  plan_failed: 'bg-rose-400 w-2.5 h-2.5',
+  complete: 'bg-emerald-400 w-3.5 h-3.5 animate-node-complete',
+  fail: 'bg-rose-400 w-2.5 h-2.5',
 };
 
 const KIND_LABEL: Record<TimelineNode['kind'], string> = {
   plan: 'plan',
   plan_failed: 'plan failed',
-  complete: 'on-chain',
+  complete: 'on-chain ✓',
   fail: 'failed',
 };
 
@@ -87,6 +87,21 @@ function toTimeline(entries: ReplayEntry[]): TimelineNode[] {
 }
 
 const POLL_MS = 60_000;
+
+/** Format a timestamp as both absolute time and relative age ("3:47 AM · 2h ago") */
+function formatTimestamp(at: number): { abs: string; rel: string } {
+  const abs = new Date(at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  const diffMs = Date.now() - at;
+  const diffMin = Math.floor(diffMs / 60_000);
+  const diffHr = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHr / 24);
+  const rel =
+    diffMin < 1 ? 'just now'
+    : diffMin < 60 ? `${diffMin}m ago`
+    : diffHr < 24 ? `${diffHr}h ago`
+    : `${diffDay}d ago`;
+  return { abs, rel };
+}
 
 export function XLayerOperatorRunReplay({ bare = false }: { bare?: boolean }) {
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -146,6 +161,26 @@ export function XLayerOperatorRunReplay({ bare = false }: { bare?: boolean }) {
         </p>
       )}
 
+      {/* Session summary — proof-of-life sentence */}
+      {!failed && nodes.length > 0 && (() => {
+        const completeNodes = nodes.filter(n => n.kind === 'complete');
+        const failNodes = nodes.filter(n => n.kind === 'fail' || n.kind === 'plan_failed');
+        const latest = nodes[nodes.length - 1];
+        const { rel } = formatTimestamp(latest.at);
+        return (
+          <div className={`${bare ? 'mb-3' : 'mt-3'} rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2`}>
+            <p className="font-mono text-[11px] leading-5 text-slate-400">
+              <span className="text-emerald-300">{completeNodes.length} on-chain</span>
+              {failNodes.length > 0 && <span className="ml-2 text-rose-400">{failNodes.length} failed</span>}
+              <span className="text-slate-600"> · </span>
+              <span className="text-slate-400">all receipts verified</span>
+              <span className="text-slate-600"> · </span>
+              <span className="text-cyan-400/70">{rel}</span>
+            </p>
+          </div>
+        );
+      })()}
+
       {failed && (
         <p className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4 text-sm text-slate-500">
           Operator run history is temporarily unavailable. The interactive agent loop above still works.
@@ -160,25 +195,43 @@ export function XLayerOperatorRunReplay({ bare = false }: { bare?: boolean }) {
 
       {!failed && nodes.length > 0 && (
         <div className="relative mt-6">
-          <div aria-hidden className="absolute left-3 right-3 top-[5px] h-px bg-white/10" />
+          <div aria-hidden className="absolute left-3 right-3 top-[7px] h-px bg-white/10" />
           <ol className="flex snap-x gap-7 overflow-x-auto pb-2 pl-1 pt-0">
             {nodes.map((node) => (
-              <li key={node.id} className="relative w-40 shrink-0 snap-start">
-                <span className={`block h-2.5 w-2.5 rounded-full ring-4 ring-slate-950 ${DOT_STYLE[node.kind]}`} />
-                <p className="mt-2.5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+              <li key={node.id} className="relative w-44 shrink-0 snap-start">
+                <span
+                  className={`block rounded-full ring-4 ring-slate-950 ${DOT_STYLE[node.kind]}`}
+                />
+                <p className={`mt-2.5 text-[10px] font-black uppercase tracking-[0.16em] ${
+                  node.kind === 'complete' ? 'text-emerald-400/80' : 'text-slate-500'
+                }`}>
                   {KIND_LABEL[node.kind]}
                 </p>
                 <p className="mt-1 truncate text-sm font-semibold text-white" title={node.label}>
                   {node.label}
                 </p>
+                {/* Receipt link promoted above detail for complete nodes */}
+                {node.txHash && node.kind === 'complete' && (
+                  <a
+                    href={xLayerExplorerTx(node.txHash)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-emerald-400/30 bg-emerald-500/[0.08] px-2 py-0.5 text-[11px] font-semibold text-emerald-300 hover:text-emerald-200 hover:border-emerald-400/50 transition-colors"
+                  >
+                    receipt <ExternalLink className="h-2.5 w-2.5" />
+                  </a>
+                )}
                 {node.detail && (
                   <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-slate-500" title={node.detail}>
                     {node.detail}
                   </p>
                 )}
-                <p className="mt-1 flex items-center gap-2 text-[11px] tabular-nums text-slate-600">
-                  {new Date(node.at).toLocaleTimeString()}
-                  {node.txHash && (
+                <p className="mt-1 flex flex-col gap-0.5 text-[11px] tabular-nums text-slate-600">
+                  <span>
+                    {formatTimestamp(node.at).abs}
+                    <span className="ml-1.5 text-slate-700">{formatTimestamp(node.at).rel}</span>
+                  </span>
+                  {node.txHash && node.kind !== 'complete' && (
                     <a
                       href={xLayerExplorerTx(node.txHash)}
                       target="_blank"

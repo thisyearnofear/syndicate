@@ -350,10 +350,18 @@ export function XLayerAgentPanel({
         )}
 
         {tab === 'steps' && !loop.plan && (
-          <p className="mt-5 rounded-xl border border-white/10 bg-black/20 p-4 text-sm text-slate-400">
-            No plan yet — press <span className="font-medium text-white">Plan next actions</span> and
-            the tool cards appear here for your approval.
-          </p>
+          <div className="mt-5 rounded-xl border border-white/[0.08] bg-black/30 p-5 font-mono">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-cyan-400/60 mb-3">agent loop · ready</p>
+            <p className="text-sm text-slate-300">
+              <span className="text-cyan-400/70">$</span>{' '}
+              <span className="text-slate-200">plan_next_actions</span>
+              <span className="inline-block w-[9px] h-[1.1em] ml-0.5 bg-cyan-400/70 align-middle animate-cursor-blink" aria-hidden />
+            </p>
+            <p className="mt-3 text-xs leading-5 text-slate-500">
+              Press <span className="text-white font-semibold">Plan next actions</span> — the tool cards
+              appear here for your approval before anything executes.
+            </p>
+          </div>
         )}
 
         {tab === 'steps' && loop.plan && (
