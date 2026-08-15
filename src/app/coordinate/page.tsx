@@ -25,6 +25,7 @@ import { Button } from '@/shared/components/ui/Button';
 import { SyndicateCard } from '@/components/syndicate/SyndicateCard';
 import { SeasonBanner } from '@/components/season/SeasonBanner';
 import { PageShell, PageHeader, ShellSection } from '@/components/layout/PageShell';
+import { HonestyChip } from '@/components/layout/HonestyChip';
 import { PageSkeleton, EmptyState } from '@/components/layout/StateViews';
 import { useUnifiedWallet } from '@/hooks';
 
@@ -196,9 +197,11 @@ export default function SyndicateDiscoveryPage() {
     {
       icon: Lock,
       name: 'Fhenix Private Vault',
-      description: 'Encrypted balances, selective reveal. Pool size and members visible; amounts hidden.',
-      note: 'Testnet',
+      description:
+        'This privacy vault is paused. Don’t send funds — a re-deploy is under review.',
+      note: 'Paused',
       testnet: true,
+      paused: true,
     },
   ] as const;
 
@@ -232,35 +235,61 @@ export default function SyndicateDiscoveryPage() {
 
           {/* Creation paths */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {creationPaths.map((path) => (
+            {creationPaths.map((path) => {
+              const paused = 'paused' in path && path.paused;
+              const inner = (
+                <>
+                <div className="flex items-center justify-between">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-400/15 text-xl text-violet-300">
+                    <path.icon className="h-5 w-5" />
+                  </div>
+                  {paused ? (
+                    <HonestyChip capability="fhenix_privacy" />
+                  ) : (
+                    <span
+                      className={`rounded-full border px-2.5 py-0.5 text-[10px] uppercase tracking-widest ${
+                        path.testnet
+                          ? 'border-amber-400/30 text-amber-300/80'
+                          : 'border-emerald-400/30 text-emerald-300/80'
+                      }`}
+                    >
+                      {path.note}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <p className={`text-lg font-bold ${paused ? 'text-gray-300' : 'text-white'}`}>{path.name}</p>
+                  <p className="mt-1 text-sm text-gray-400">{path.description}</p>
+                </div>
+                {!paused && (
+                  <span className="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-violet-300 group-hover:gap-2.5 transition-all">
+                    Start <ArrowRight className="h-4 w-4" />
+                  </span>
+                )}
+                </>
+              );
+
+              if (paused) {
+                return (
+                  <div
+                    key={path.name}
+                    className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-6 text-left opacity-80"
+                  >
+                    {inner}
+                  </div>
+                );
+              }
+
+              return (
               <button
                 key={path.name}
                 onClick={() => router.push('/create-syndicate')}
                 className="group flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-left transition-all duration-300 hover:-translate-y-1 hover:border-violet-400/40 hover:bg-violet-500/[0.05] hover:shadow-[0_10px_40px_-12px_rgba(167,139,250,0.30)]"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-400/15 text-xl text-violet-300">
-                    <path.icon className="h-5 w-5" />
-                  </div>
-                  <span
-                    className={`rounded-full border px-2.5 py-0.5 text-[10px] uppercase tracking-widest ${
-                      path.testnet
-                        ? 'border-amber-400/30 text-amber-300/80'
-                        : 'border-emerald-400/30 text-emerald-300/80'
-                    }`}
-                  >
-                    {path.note}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-lg font-bold text-white">{path.name}</p>
-                  <p className="mt-1 text-sm text-gray-400">{path.description}</p>
-                </div>
-                <span className="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-violet-300 group-hover:gap-2.5 transition-all">
-                  Start <ArrowRight className="h-4 w-4" />
-                </span>
+                {inner}
               </button>
-            ))}
+              );
+            })}
           </div>
 
           <p className="text-center text-xs text-gray-500">

@@ -102,7 +102,7 @@ The arena exists because the old Season surface inherited the platform's cool sl
 
 ### 5.0 Consolidation pass (do before building Season)
 
-User feedback says the app is already hard to navigate; Season must not add clutter. The top nav itself is clean (Play / Grow / Coordinate / Agent Pool + Portfolio / Fund / Settings), so consolidation targets orphaned deep routes. **Completed (Phase 0):**
+User feedback says the app is already hard to navigate; Season must not add clutter. Nav is a ladder (Play / Grow / Coordinate) plus a flagged worlds cluster (Season, Agent Pool) and overflow (Portfolio / Fund / Settings). Consolidation targets orphaned deep routes. **Completed (Phase 0):**
 
 | Route | Action | Rationale |
 |---|---|---|

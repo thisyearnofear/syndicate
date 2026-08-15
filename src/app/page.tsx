@@ -17,6 +17,7 @@ import { SharePrompt } from "@/components/home/SharePrompt";
 import { YieldTeaser } from "@/components/home/YieldTeaser";
 import { FirstActionPrompt } from "@/components/onboarding/FirstActionPrompt";
 import { PageShell } from "@/components/layout/PageShell";
+import { HonestyChip } from "@/components/layout/HonestyChip";
 import { SeasonLivingRoom, SeasonPoolChip } from "@/components/season/SeasonLivingRoom";
 import { Button } from "@/shared/components/ui/Button";
 import { RoundOrb, deriveOrbState, resolveEndMs, type RoundOrbState } from "@/components/motion/RoundOrb";
@@ -348,26 +349,29 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ─── AGENT POOL (X Layer testnet) ───────────────────────────────── */}
+        {/* ─── AGENT POOL (bounded lab inset — docs/DESIGN.md) ─────────────── */}
         <section className="mb-12">
-          <div className="max-w-3xl mx-auto rounded-2xl border border-cyan-400/20 bg-cyan-500/[0.04] hover:border-cyan-400/35 transition-colors duration-300 p-8 md:p-10 text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-300/80 mb-4">
-              X Layer testnet
-            </span>
-            <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-cyan-200 via-white to-cyan-200 bg-clip-text text-transparent mb-3">
+          <div className="hud mx-auto max-w-3xl overflow-hidden rounded-2xl p-8 md:p-10 text-center">
+            <div className="mb-4 flex justify-center">
+              <HonestyChip capability="xlayer_prize_pool" />
+            </div>
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-cyan-300/80 mb-3">
+              Agent Pool
+            </p>
+            <p className="font-mono text-2xl md:text-3xl font-semibold bg-gradient-to-r from-cyan-200 via-white to-cyan-200 bg-clip-text text-transparent mb-3">
               An AI agent is the treasurer of this prize pool.
             </p>
             <p className="text-gray-400 mb-2">
               Swap fees fund the pot. Principal stays redeemable. The agent proposes, you approve, receipts prove it.
             </p>
-            <p className="text-xs text-gray-600 mb-4">
-              The experimental DEX-native engine — live contracts, a scheduled keeper loop, and a public run transcript.
+            <p className="text-xs text-gray-600 mb-6">
+              A separate engine on X Layer — not the Base draw. Watch it run, then come back to Play.
             </p>
             <Link href="/xlayer">
               <Button
                 variant="ghost"
                 size="sm"
-                className="border border-white/10 text-gray-300 hover:text-white hover:border-white/20"
+                className="border border-cyan-400/25 text-cyan-100 hover:text-white hover:border-cyan-400/40"
               >
                 Watch the agent run
                 <ArrowRight className="w-4 h-4 ml-2" />
@@ -379,6 +383,9 @@ export default function Home() {
         {/* ─── PRIVACY ──────────────────────────────────────────────────────── */}
         <section className="mb-12">
           <div className="max-w-3xl mx-auto rounded-2xl border border-violet-400/20 bg-violet-500/[0.04] hover:border-violet-400/35 transition-colors duration-300 p-8 md:p-10 text-center">
+            <div className="mb-4">
+              <HonestyChip capability="fhenix_privacy" />
+            </div>
             <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-violet-200 via-white to-violet-200 bg-clip-text text-transparent mb-3">
               A treasury buying 500 tickets doesn&apos;t need every competitor watching.
             </p>

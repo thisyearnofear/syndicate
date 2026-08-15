@@ -36,7 +36,7 @@ interface TimelineNode {
 }
 
 const DOT_STYLE: Record<TimelineNode['kind'], string> = {
-  plan: 'bg-violet-400',
+  plan: 'bg-cyan-400',
   plan_failed: 'bg-rose-400',
   complete: 'bg-emerald-400',
   fail: 'bg-rose-400',
@@ -121,7 +121,7 @@ export function XLayerOperatorRunReplay({ bare = false }: { bare?: boolean }) {
     <>
       {!bare && (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-violet-200">
+          <div className="flex items-center gap-2 text-cyan-200">
             <Radio className="h-4 w-4" />
             <span className="text-[10px] font-black uppercase tracking-[0.2em]">Latest operator run</span>
           </div>
@@ -200,7 +200,7 @@ export function XLayerOperatorRunReplay({ bare = false }: { bare?: boolean }) {
   if (bare) return body;
 
   return (
-    <CompactCard variant="glass" padding="lg" hover={false} className="border-violet-400/15 bg-violet-500/[0.04]">
+    <CompactCard variant="glass" padding="lg" hover={false} className="hud border-cyan-400/15">
       {body}
     </CompactCard>
   );

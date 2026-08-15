@@ -709,8 +709,8 @@ export function AutoPurchaseModal({
                   <label className="block text-sm font-medium text-gray-300">
                     Source vault
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(['spark', 'fhenix', 'pooltogether'] as const).map((vault) => (
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['spark', 'pooltogether'] as const).map((vault) => (
                       <button
                         key={vault}
                         onClick={() => setConfig(prev => ({ ...prev, sourceVault: vault }))}

@@ -27,7 +27,14 @@ interface NavItem {
   requiresWallet?: boolean;
 }
 
-const PRIMARY_NAV: NavItem[] = [
+/**
+ * Nav IA (docs/DESIGN.md, docs/POSITIONING.md):
+ *   Ladder (left)  — Play / Grow / Coordinate. Unlabeled. The product.
+ *   Worlds (right) — Season + Agent Pool. Flagged satellites, always visible,
+ *                    never mixed into the three rungs.
+ *   Overflow       — Fund / Portfolio / Settings.
+ */
+const LADDER_NAV: NavItem[] = [
   { href: '/', label: 'Play', icon: Ticket },
   { href: '/vaults', label: 'Grow', icon: TrendingUp },
   { href: '/coordinate', label: 'Coordinate', icon: Users },
@@ -40,8 +47,14 @@ const CAMPAIGN_NAV: NavItem = {
   flag: 'Campaign',
 };
 
+const AGENT_POOL_NAV: NavItem = {
+  href: '/xlayer',
+  label: 'Agent Pool',
+  icon: Bot,
+  flag: 'Testnet',
+};
+
 const SECONDARY_NAV: NavItem[] = [
-  { href: '/xlayer', label: 'Agent Pool', icon: Bot, flag: 'Testnet' },
   { href: '/portfolio', label: 'Portfolio', icon: LayoutDashboard, requiresWallet: true },
   { href: '/bridge', label: 'Fund', icon: ArrowLeftRight },
   { href: '/settings', label: 'Settings', icon: Settings },
@@ -58,10 +71,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
   const { isConnected, walletType, chain, connect } = useUnifiedWallet();
   const mounted = useIsMounted();
   const { visible: seasonVisible } = useActiveSeason();
-
-  const primaryItems = seasonVisible
-    ? [PRIMARY_NAV[0], CAMPAIGN_NAV, ...PRIMARY_NAV.slice(1)]
-    : PRIMARY_NAV;
+  const worldItems = seasonVisible ? [CAMPAIGN_NAV, AGENT_POOL_NAV] : [AGENT_POOL_NAV];
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -118,6 +128,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
     if (active && href === '/season') return 'bg-[#c9a227]/15 text-[#f7ead0]';
     if (active && href === '/vaults') return 'bg-emerald-400/10 text-emerald-100';
     if (active && href === '/coordinate') return 'bg-violet-400/10 text-violet-100';
+    if (active && href === '/xlayer') return 'bg-cyan-400/10 text-cyan-100';
     if (active) return 'bg-white/10 text-white';
     return 'text-gray-400 hover:text-white hover:bg-white/5';
   };
@@ -145,6 +156,21 @@ export default function Navigation({ className = '' }: NavigationProps) {
     }
   };
 
+  const flagChip = (item: NavItem, extra = '') =>
+    item.flag ? (
+      <span
+        className={`${extra} rounded-full border px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider ${
+          item.href === '/xlayer'
+            ? 'border-cyan-400/30 text-cyan-300/80'
+            : item.href === '/season'
+              ? 'border-[#c9a227]/40 text-[#e3c887]/85'
+              : 'border-amber-400/30 text-amber-300/80'
+        }`}
+      >
+        {item.flag}
+      </span>
+    ) : null;
+
   const secondaryItems = SECONDARY_NAV.filter(
     (item) => !('requiresWallet' in item && item.requiresWallet) || isConnected
   );
@@ -155,99 +181,67 @@ export default function Navigation({ className = '' }: NavigationProps) {
     <>
       {/* Desktop */}
       <nav className={`hidden md:block ${className}`} aria-label="Main navigation">
-        <div className="flex items-center justify-between py-3 px-1">
-          {/* Left: Logo + primary links */}
-          <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2" aria-label="Syndicate home">
+        <div className="flex items-center justify-between py-3 px-1 gap-3">
+          <div className="flex min-w-0 items-center gap-5">
+            <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="Syndicate home">
               <div className="w-7 h-7 rounded-lg border border-amber-400/35 bg-slate-800 flex items-center justify-center">
                 <span className="text-amber-200 font-bold text-xs">S</span>
               </div>
-              <span className="font-bold text-white text-lg">Syndicate</span>
+              <span className="hidden font-bold text-white text-lg lg:inline">Syndicate</span>
             </Link>
 
-            <div className="flex items-center gap-1">
-              {primaryItems.map((item) => {
+            <div className="flex items-center gap-0.5">
+              {LADDER_NAV.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 ${navLinkClass(item.href, active)}`}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 ${navLinkClass(item.href, active)}`}
                   >
                     <Icon className="w-4 h-4" />
                     {item.label}
-                    {'flag' in item && (
-                      <span className="rounded-full border border-amber-400/30 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-amber-300/80">
-                        {item.flag}
-                      </span>
-                    )}
                   </Link>
                 );
               })}
             </div>
           </div>
 
-          {/* Right: Wallet + user menu */}
-          <div className="flex items-center gap-3">
-            {isConnected ? (
-              <>
-                <button
-                  type="button"
-                  ref={walletPillRef}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-green-500/15 border border-green-500/25 rounded-full hover:bg-green-500/25 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/80"
-                  onClick={handleWalletPillClick}
-                  aria-expanded={walletDetailsOpen}
-                  aria-label="Wallet details"
-                >
-                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                  <span className="text-green-400 text-sm font-medium">
-                    {getWalletIcon()} {getChainLabel()}
-                  </span>
-                </button>
-
-                {/* User menu (secondary nav) */}
-                <div className="relative" ref={userMenuRef}>
-                  <button
-                    type="button"
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/80"
-                    onClick={() => setUserMenuOpen((v) => !v)}
-                    aria-expanded={userMenuOpen}
-                    aria-label="More navigation"
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="flex items-center gap-0.5 border-l border-white/10 pl-3">
+              {worldItems.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/80 ${navLinkClass(item.href, active)}`}
                   >
-                    <Menu className="w-4 h-4" />
-                    <ChevronDown className={`w-3 h-3 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
-                  </button>
+                    <Icon className="w-4 h-4" />
+                    <span className="hidden xl:inline">{item.label}</span>
+                    <span className="xl:hidden">{item.href === '/xlayer' ? 'Agent' : item.label}</span>
+                    <span className="hidden lg:inline">{flagChip(item)}</span>
+                  </Link>
+                );
+              })}
+            </div>
 
-                  {userMenuOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900/95 border border-white/10 rounded-xl shadow-2xl backdrop-blur-xl py-1 z-50">
-                      {secondaryItems.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            onClick={() => setUserMenuOpen(false)}
-                            className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                              isActive(item.href)
-                                ? 'text-white bg-white/5'
-                                : 'text-gray-400 hover:text-white hover:bg-white/5'
-                            }`}
-                          >
-                            <Icon className="w-4 h-4" />
-                            {item.label}
-                            {'flag' in item && (
-                              <span className="ml-auto rounded-full border border-amber-400/30 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-amber-300/80">
-                                {item.flag}
-                              </span>
-                            )}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </>
+            {isConnected ? (
+              <button
+                type="button"
+                ref={walletPillRef}
+                className="flex items-center gap-2 px-3 py-1.5 bg-green-500/15 border border-green-500/25 rounded-full hover:bg-green-500/25 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/80"
+                onClick={handleWalletPillClick}
+                aria-expanded={walletDetailsOpen}
+                aria-label="Wallet details"
+              >
+                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                <span className="text-green-400 text-sm font-medium">
+                  {getWalletIcon()} {getChainLabel()}
+                </span>
+              </button>
             ) : (
               <Button
                 variant="ghost"
@@ -255,9 +249,45 @@ export default function Navigation({ className = '' }: NavigationProps) {
                 onClick={() => setShowWalletModal(true)}
                 className="text-gray-400 hover:text-white border border-white/10 hover:border-white/20 text-sm"
               >
-                Connect Wallet
+                Connect
               </Button>
             )}
+
+            <div className="relative" ref={userMenuRef}>
+              <button
+                type="button"
+                className="flex items-center gap-1 px-2.5 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/80"
+                onClick={() => setUserMenuOpen((v) => !v)}
+                aria-expanded={userMenuOpen}
+                aria-label="More navigation"
+              >
+                <Menu className="w-4 h-4" />
+                <ChevronDown className={`w-3 h-3 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {userMenuOpen && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900/95 border border-white/10 rounded-xl shadow-2xl backdrop-blur-xl py-1 z-50">
+                  {secondaryItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setUserMenuOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                          isActive(item.href)
+                            ? 'text-white bg-white/5'
+                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -302,8 +332,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
 
         {mobileOpen && (
           <div className="pb-4 pt-2 border-t border-white/10 space-y-1">
-            {/* Primary */}
-            {primaryItems.map((item) => {
+            {LADDER_NAV.map((item) => {
               const Icon = item.icon;
               return (
                 <Link
@@ -314,19 +343,28 @@ export default function Navigation({ className = '' }: NavigationProps) {
                 >
                   <Icon className="w-4 h-4" />
                   {item.label}
-                  {'flag' in item && (
-                    <span className="ml-auto rounded-full border border-amber-400/30 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-amber-300/80">
-                      {item.flag}
-                    </span>
-                  )}
                 </Link>
               );
             })}
 
-            {/* Divider */}
             <div className="border-t border-white/5 my-2" />
+            {worldItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors touch-manipulation ${navLinkClass(item.href, isActive(item.href))}`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {item.label}
+                  {flagChip(item, 'ml-auto')}
+                </Link>
+              );
+            })}
 
-            {/* Secondary */}
+            <div className="border-t border-white/5 my-2" />
             {secondaryItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -342,11 +380,6 @@ export default function Navigation({ className = '' }: NavigationProps) {
                 >
                   <Icon className="w-4 h-4" />
                   {item.label}
-                  {'flag' in item && (
-                    <span className="ml-auto rounded-full border border-amber-400/30 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-amber-300/80">
-                      {item.flag}
-                    </span>
-                  )}
                 </Link>
               );
             })}

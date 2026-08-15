@@ -383,7 +383,7 @@ export function XLayerGuidedFlow({
   };
 
   return (
-    <section aria-label="Get started with the pool">
+    <section aria-label="Get started with the pool" className="hud rounded-2xl p-5">
       <div className="mb-2 flex items-center justify-between gap-3 px-1">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Try the loop</p>
         <span className="shrink-0 rounded-full bg-white/5 px-2.5 py-1 text-xs text-slate-400">

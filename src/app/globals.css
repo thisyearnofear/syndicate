@@ -331,6 +331,22 @@ body {
   animation: clip-reveal-circle var(--duration-slow) var(--ease-out) both;
 }
 
+/* Lab analogue of clip-reveal: a CRT sweep when an epoch resolves. */
+@keyframes lab-resolve-sweep {
+  from {
+    clip-path: inset(0 100% 0 0);
+    opacity: 0.35;
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+}
+
+.lab-resolve {
+  animation: lab-resolve-sweep 0.7s var(--ease-out) both;
+}
+
 @keyframes pulse-glow {
 
   0%,
@@ -1264,4 +1280,67 @@ body:has([data-surface="arena"]) footer {
 }
 .site-nav-arena {
   background: linear-gradient(180deg, rgba(10, 7, 5, 0.55), transparent);
+}
+
+/* ── Lab surface (Agent Pool / X Layer) ─────────────────────────────────────
+   Cool control room, not a second tontine. CRT grid + a slow scanline.
+   Opposite temperature from the arena: cyan on near-black, mono figures. */
+
+.surface-lab {
+  background-color: #02080c;
+  background-image:
+    radial-gradient(110% 70% at 8% -10%, rgba(34, 211, 238, 0.16) 0%, transparent 55%),
+    radial-gradient(90% 60% at 108% 108%, rgba(79, 70, 229, 0.18) 0%, transparent 58%),
+    linear-gradient(180deg, #031018 0%, #02080c 55%, #010507 100%);
+  background-attachment: fixed;
+}
+
+.lab-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(34, 211, 238, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 238, 0.045) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(120% 90% at 50% 20%, transparent 18%, #000 82%);
+          mask-image: radial-gradient(120% 90% at 50% 20%, transparent 18%, #000 82%);
+}
+
+.lab-scanline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 96px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, rgba(34, 211, 238, 0.07), transparent);
+  animation: lab-scan 16s linear infinite;
+  will-change: transform;
+}
+
+@keyframes lab-scan {
+  0% { transform: translate3d(0, -10vh, 0); }
+  100% { transform: translate3d(0, 110vh, 0); }
+}
+
+/* HUD plate — lab analogue of .vellum: a console, not pressed paper. */
+.hud {
+  position: relative;
+  background-color: rgba(4, 16, 22, 0.72);
+  border: 1px solid rgba(34, 211, 238, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(165, 243, 252, 0.06),
+    0 24px 60px -34px rgba(0, 0, 0, 0.9);
+}
+
+body:has([data-surface="lab"]) footer {
+  border-color: rgba(34, 211, 238, 0.16);
+  background: rgba(2, 8, 12, 0.88);
+}
+.site-nav-lab {
+  background: linear-gradient(180deg, rgba(2, 8, 12, 0.62), transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-scanline { animation: none !important; opacity: 0.2; }
 }

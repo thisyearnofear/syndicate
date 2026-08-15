@@ -3,16 +3,14 @@
 /**
  * PAGE SHELL + PAGE HEADER — the only way a page opens (docs/DESIGN.md).
  *
- * PageShell: two surfaces, two widths, entrance stagger. Pages must not
+ * PageShell: three surfaces, two widths, entrance stagger. Pages must not
  * define their own page-level background — navigation should feel like
  * turning pages of one book, not switching apps.
  *
- * Surfaces (docs/DESIGN.md "The two surfaces"):
+ * Surfaces (docs/DESIGN.md "The three surfaces"):
  *   - `default` — cool slate ground for every utility/money page. Quiet.
- *   - `arena`   — warm ink + brass ground for the game layer (/season),
- *                 with a licensed low-amplitude ambient ember drift and the
- *                 display serif register. Requested explicitly; new routes
- *                 don't get it without a doc change.
+ *   - `arena`   — warm ink + brass ground for the game layer (/season)
+ *   - `lab`     — cool CRT / control-room ground for Agent Pool (/xlayer)
  *
  * PageHeader: domain-accented title + one supporting line + hairline +
  * optional eyebrow + optional actions. Titles follow the ladder (Play /
@@ -86,7 +84,9 @@ export function PageShell({
         {/* Arena only: copperplate hatching + slow ember drift. Defined once
             in globals.css; both stop under prefers-reduced-motion. */}
         {resolvedSurface === "arena" && <span className="arena-hatch" />}
+        {resolvedSurface === "lab" && <span className="lab-grid" />}
         {ground.ambientEmbers && <ArenaEmbers />}
+        {ground.ambientScan && <LabScan />}
       </div>
       <div className={`relative z-10 container mx-auto px-4 ${WIDTHS[width]} py-8 md:py-10 space-y-8 ${className}`}>
         {children}
@@ -132,6 +132,10 @@ function ArenaEmbers() {
   );
 }
 
+function LabScan() {
+  return <span aria-hidden className="lab-scanline" />;
+}
+
 const entrance = (delayMs: number): CSSProperties => ({ animationDelay: `${delayMs}ms` });
 
 interface PageHeaderProps {
@@ -148,7 +152,7 @@ interface PageHeaderProps {
    */
   eyebrow?: string;
   /** Type register. `arena` sets the display serif; default is Inter. */
-  variant?: "default" | "arena";
+  variant?: "default" | "arena" | "lab";
   /** Right-aligned actions (buttons, tabs) */
   children?: ReactNode;
 }
@@ -165,12 +169,13 @@ export function PageHeader({
 }: PageHeaderProps) {
   const a = ACCENTS[accent];
   const arena = variant === "arena";
+  const lab = variant === "lab";
   return (
     <header className="animate-fade-in-up" style={entrance(0)}>
       {eyebrow && (
         <p
           className={`mb-2 text-[10px] font-bold uppercase tracking-[0.32em] ${a.badge} ${
-            arena ? "font-display tracking-[0.28em]" : ""
+            arena ? "font-display tracking-[0.28em]" : lab ? "font-mono tracking-[0.28em]" : ""
           }`}
         >
           {eyebrow}
@@ -183,7 +188,9 @@ export function PageHeader({
             className={
               arena
                 ? `font-display text-4xl md:text-5xl font-bold tracking-tight leading-[1.05] ${a.gradientText}`
-                : `text-3xl md:text-4xl font-black tracking-tight ${a.gradientText}`
+                : lab
+                  ? `font-mono text-3xl md:text-4xl font-semibold tracking-tight leading-[1.1] ${a.gradientText}`
+                  : `text-3xl md:text-4xl font-black tracking-tight ${a.gradientText}`
             }
           >
             {title}
@@ -200,7 +207,7 @@ export function PageHeader({
         </div>
         {children && <div className="flex items-center gap-3">{children}</div>}
       </div>
-      <p className={`mt-2 text-sm md:text-base ${arena ? "text-[#d8c9ae]/75" : "text-gray-400"} max-w-xl`}>
+      <p className={`mt-2 text-sm md:text-base ${arena ? "text-[#d8c9ae]/75" : lab ? "text-cyan-100/55" : "text-gray-400"} max-w-xl`}>
         {supportingLine}
       </p>
       <div

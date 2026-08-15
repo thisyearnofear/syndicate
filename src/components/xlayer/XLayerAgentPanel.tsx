@@ -211,10 +211,10 @@ export function XLayerAgentPanel({
         variant="glass"
         padding="md"
         hover={false}
-        className="border-violet-400/20 bg-violet-500/[0.05] sm:p-6"
+        className="hud border-cyan-400/20 bg-cyan-500/[0.04] sm:p-6"
       >
-        <div className="mb-3 flex items-start gap-3 text-violet-200 sm:mb-4">
-          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/15">
+        <div className="mb-3 flex items-start gap-3 text-cyan-200 sm:mb-4">
+          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-500/15">
             <Bot className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">

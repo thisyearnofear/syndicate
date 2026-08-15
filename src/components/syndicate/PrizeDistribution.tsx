@@ -32,6 +32,7 @@ import {
   ClipboardCheck,
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
+import { HonestyChip } from '@/components/layout/HonestyChip';
 import { web3Service } from '@/services/web3Service';
 
 type DistributionStatus =
@@ -302,6 +303,7 @@ export function PrizeDistribution({
           <div className="flex items-center gap-2">
             <Trophy className="w-5 h-5 text-[#FBCC5C]" />
             <h3 className="text-lg font-bold text-white">Winnings &amp; Payouts</h3>
+            <HonestyChip capability="syndicate_distribution" />
           </div>
           <button
             onClick={() => fetchData(true)}

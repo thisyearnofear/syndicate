@@ -75,7 +75,7 @@ export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
     icon: '🌍',
     color: 'bg-gradient-to-br from-green-500 to-emerald-400',
     risk: 'Low',
-    networkStatus: 'MVP Mock',
+    networkStatus: 'Preview',
     isOctant: true,
   },
   {
@@ -90,11 +90,13 @@ export const YIELD_STRATEGIES: YieldStrategyConfig[] = [
   {
     id: 'fhenix',
     name: 'Fhenix FHE Vault',
-    description: 'Privacy-preserving FHE vault — encrypted on-chain deposits with coordinator-managed yield (~5% APY)',
+    description:
+      'Paused — this privacy vault is not taking deposits. Don’t send funds; a re-deploy is under review.',
     icon: '🔐',
     color: 'bg-gradient-to-br from-violet-500 to-indigo-600',
     risk: 'Low',
-    networkStatus: IS_MAINNET ? 'Live on Base' : 'Testnet (Base Sepolia)',
+    networkStatus: 'Paused',
+    isPaused: true,
   },
 ];
 

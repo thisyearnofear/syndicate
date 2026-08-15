@@ -470,15 +470,14 @@ export const ACCENTS: Record<DesignAccent, AccentTokens> = {
 };
 
 // =============================================================================
-// SURFACES — the page's ground (docs/DESIGN.md "The two surfaces")
+// SURFACES — the page's ground (docs/DESIGN.md "The three surfaces")
 // =============================================================================
 //
-// A surface bundles background, texture and motion licence. There are two,
-// and a page picks one; it never invents a third inline. `default` is the
-// assumption for every utility/money page. `arena` must be requested and is
-// reserved for routes whose primary purpose is play.
+// A surface bundles background, texture and motion licence. There are three,
+// and a page picks one; it never invents a fourth inline. `default` is the
+// assumption for every utility/money page. `arena` and `lab` must be requested.
 
-export type DesignSurface = 'default' | 'arena';
+export type DesignSurface = 'default' | 'arena' | 'lab';
 
 export interface SurfaceTokens {
   /** Page-level background classes applied by PageShell. */
@@ -487,6 +486,8 @@ export interface SurfaceTokens {
   ambientGlow: boolean;
   /** When true, PageShell renders the arena's licensed ambient ember layer. */
   ambientEmbers: boolean;
+  /** When true, PageShell renders the lab's licensed scanline layer. */
+  ambientScan: boolean;
 }
 
 export const SURFACES: Record<DesignSurface, SurfaceTokens> = {
@@ -494,6 +495,7 @@ export const SURFACES: Record<DesignSurface, SurfaceTokens> = {
     background: 'bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950',
     ambientGlow: true,
     ambientEmbers: false,
+    ambientScan: false,
   },
   arena: {
     // Warm ink + oxblood/brass vignette + copperplate hatching, all in
@@ -501,12 +503,21 @@ export const SURFACES: Record<DesignSurface, SurfaceTokens> = {
     background: 'surface-arena',
     ambientGlow: true,
     ambientEmbers: true,
+    ambientScan: false,
+  },
+  lab: {
+    // Cool CRT / control-room ground for the Agent Pool (X Layer).
+    background: 'surface-lab',
+    ambientGlow: true,
+    ambientEmbers: false,
+    ambientScan: true,
   },
 };
 
 /** Route domain → surface. Everything not listed uses `default`. */
 export const DOMAIN_SURFACE: Record<string, DesignSurface> = {
   season: 'arena',
+  xlayer: 'lab',
 };
 
 /** Route domain → accent. Landing/product-mode accents alias these. */

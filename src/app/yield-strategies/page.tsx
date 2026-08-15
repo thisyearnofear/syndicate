@@ -60,7 +60,6 @@ const DIRECT_DEPOSIT_STRATEGIES = [
   "morpho",
   "spark",
   "pooltogether",
-  "fhenix",
 ] as const;
 
 type FlowStep = 1 | 2 | 3;
@@ -237,8 +236,7 @@ function YieldStrategiesContent() {
       targetStrategy === "pooltogether" ||
       targetStrategy === "octant" ||
       targetStrategy === "uniswap" ||
-      targetStrategy === "lifiearn" ||
-      targetStrategy === "fhenix"
+      targetStrategy === "lifiearn"
     ) {
       setSelectedStrategy(targetStrategy as SupportedYieldStrategyId);
     }

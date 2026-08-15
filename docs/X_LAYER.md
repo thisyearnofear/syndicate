@@ -26,7 +26,7 @@ FWA is inspiration for weighted selection, FIFO snapshots, and keep-or-exit dyna
 - `src/config/xlayer.ts` — chain, address, ABI, and explorer helpers.
 - `src/app/xlayer/page.tsx` — prize pool dashboard route.
 - `src/components/xlayer/PrizePoolDashboard.tsx` — pot, shares, draw, surcharge; all reads poll on a 12s interval.
-- `src/components/xlayer/XLayerGuidedFlow.tsx` — interactive stranger walkthrough (connect → switch chain → faucet → deposit or swap join → agent), each step auto-checking from live on-chain state. Surfaced in primary nav as "Agent Pool" (Testnet flag) and from the homepage Agent Pool section.
+- `src/components/xlayer/XLayerGuidedFlow.tsx` — interactive stranger walkthrough (connect → switch chain → faucet → deposit or swap join → agent), each step auto-checking from live on-chain state. Surfaced in the nav worlds cluster as "Agent Pool" (Testnet flag) and from a bounded lab inset on the homepage. `/xlayer` uses `surface="lab"`.
 - `src/components/xlayer/XLayerOperatorRunReplay.tsx` — public replay of the latest operator run; no wallet required.
 - `src/services/jobs/xlayerKeeperProcessor.ts` + `src/app/api/crons/xlayer-keeper/route.ts` — hourly operator keeper (see Operator keeper below).
 - `src/lib/db/migrations/016-add-agent-run-events.sql` + `src/lib/db/repositories/agentRunRepository.ts` — server-side persistence for keeper transitions; `GET /api/agent/xlayer/latest-run` serves the latest session for replay.

@@ -34,6 +34,7 @@ import {
 } from "@/config/yieldStrategies";
 import { nearIntentsService } from "@/services/nearIntentsService";
 import { nearWalletSelectorService } from "@/domains/wallet/services/nearWalletSelectorService";
+import { HonestyChip } from "@/components/layout/HonestyChip";
 import { getCapability, type CapabilityId } from "@/config/capabilities";
 
 type SourceChain = "solana" | "near" | "ethereum" | "starknet";
@@ -62,7 +63,7 @@ export default function BridgePage() {
   const [nearDerivedAddress, setNearDerivedAddress] = useState<string | undefined>();
   const [nearAccountId, setNearAccountId] = useState<string | undefined>();
   const bridgeTargetStrategies = useMemo(
-    () => YIELD_STRATEGIES.filter((strategy) => !strategy.isOctant && strategy.id !== "uniswap"),
+    () => YIELD_STRATEGIES.filter((strategy) => !strategy.isOctant && !strategy.isPaused && strategy.id !== "uniswap"),
     []
   );
   const selectedStrategyConfig = getStrategyById(destinationStrategy);
@@ -266,9 +267,12 @@ export default function BridgePage() {
                               </div>
                               <div className="flex items-center justify-between gap-2 mb-1">
                                 <div className="text-white font-semibold">{chain.name}</div>
-                                <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-gray-300">
-                                  {chain.role}
-                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  <HonestyChip capability={chain.capabilityId} />
+                                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-gray-300">
+                                    {chain.role}
+                                  </span>
+                                </div>
                               </div>
                               <div className="text-gray-400 text-xs mb-2">{chain.description}</div>
                               {isPartial && cap.availabilityMessage && (

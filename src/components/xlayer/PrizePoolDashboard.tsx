@@ -23,6 +23,7 @@ import { XLayerAgentPanel } from "@/components/xlayer/XLayerAgentPanel";
 import { XLayerGuidedFlow } from "@/components/xlayer/XLayerGuidedFlow";
 import { XLayerPoolStage } from "@/components/xlayer/XLayerPoolStage";
 import { PageShell, PageHeader, ShellSection } from "@/components/layout/PageShell";
+import { honestyChipFor } from "@/config/capabilities";
 import {
   XLAYER_HOOK_ABI,
   XLAYER_HOOK_IS_CONFIGURED,
@@ -231,7 +232,7 @@ export function PrizePoolDashboard() {
   const drawClaimed = Boolean(drawState?.[2]);
 
   return (
-    <PageShell width="wide" className="overflow-x-hidden pb-mobile-cta sm:pb-0">
+    <PageShell width="wide" accent="experimental" surface="lab" className="overflow-x-hidden pb-mobile-cta sm:pb-0">
       <Link href="/" className="inline-flex -mb-2 text-sm font-medium text-gray-500 transition-colors hover:text-white">
         ← Back to product home (Base)
       </Link>
@@ -240,7 +241,12 @@ export function PrizePoolDashboard() {
         title="The DEX is the lottery."
         supportingLine="Swap fees feed the pot. Principal stays redeemable. An agent runs the draws — you approve, receipts prove it."
         accent="experimental"
-        badge={{ label: "X Layer Testnet", tone: "amber" }}
+        variant="lab"
+        eyebrow="Agent Pool · X Layer"
+        badge={(() => {
+          const chip = honestyChipFor("xlayer_prize_pool");
+          return chip ? { label: chip.label, tone: chip.tone } : { label: "Testnet", tone: "amber" as const };
+        })()}
       />
 
       <ShellSection className="space-y-6">

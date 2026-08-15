@@ -118,6 +118,13 @@ export function useSyndicateDeposit(): UseSyndicateDepositResult {
     ptVaultAddress?: `0x${string}`;
   }): Promise<string | null> => {
     const isFhenix = poolType === 'fhenix';
+    if (isFhenix) {
+      setError(
+        'Fhenix deposits are paused. The Base Sepolia vault is deprecated — do not send funds.',
+      );
+      setStatus('error');
+      return null;
+    }
     if (walletType !== 'evm') {
       setError('Syndicate deposits require an EVM wallet such as MetaMask or WalletConnect.');
       setStatus('error');

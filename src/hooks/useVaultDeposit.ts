@@ -9,7 +9,6 @@ import { AAVE_CONFIG } from '@/services/vaults/aaveProvider';
 import { MORPHO_CONFIG } from '@/services/vaults/morphoProvider';
 import { SPARK_CONFIG } from '@/services/vaults/sparkProvider';
 import type { VaultProtocol } from '@/services/vaults';
-import { approveAndDepositEncrypted, withdrawFromFhenixVault } from '@/services/fhe/fhenixActions';
 import { ERC20_ABI } from '@/abis/erc20';
 import { mapErrorMessage } from '@/services/vaults/router';
 import { lifecycle } from '@/services/observability';
@@ -249,28 +248,9 @@ export function useVaultDeposit() {
           // LI.FI Earn uses Composer - requires cross-chain deposit flow
           throw new Error('LI.FI Earn requires cross-chain deposit. Use useLifiEarnVaultDeposit hook for Composer execution.');
         } else if (protocol === 'fhenix') {
-          // Fhenix FHE vault: encrypt amount then call depositEncrypted on vault
-          await ensureFhenixChain();
-          if (walletType !== 'evm') throw new Error('Vault deposits require an EVM wallet (MetaMask, WalletConnect, etc.)');
-          if (!fhenixWalletClient || !fhenixPublicClient || !address) throw new Error(`Connect an EVM wallet on ${fhenixChainName} to deposit into this Fhenix vault.`);
-          const amountWei = parseUnits(amount, 6);
-          const userAddr = address as `0x${string}`;
-
-          const { FHENIX_POOL_CONFIG } = await import('@/services/syndicate/poolProviders/fhenixProvider');
-          const vaultAddress = FHENIX_POOL_CONFIG.VAULT_ADDRESS;
-          const usdcAddress = FHENIX_POOL_CONFIG.USDC_ADDRESS as `0x${string}`;
-
-          setState(prev => ({ ...prev, status: 'checking_allowance' }));
-          const { approveTxHash, depositTxHash } = await approveAndDepositEncrypted({
-            walletClient: fhenixWalletClient as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- wagmi injects account
-            publicClient: fhenixPublicClient as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- wagmi injects account
-            userAddress: userAddr,
-            vaultAddress,
-            usdcAddress,
-            amountWei,
-          });
-          if (approveTxHash) setState(prev => ({ ...prev, approveTxHash }));
-          result = { success: true, txHash: depositTxHash };
+          throw new Error(
+            'Fhenix deposits are paused. The Base Sepolia vault is deprecated — do not send funds.',
+          );
         } else {
           throw new Error(`Deposit not yet supported for ${protocol}`);
         }
@@ -377,20 +357,9 @@ export function useVaultDeposit() {
           // Uniswap V3 requires complex position management - not yet implemented
           throw new Error('Uniswap V3 withdrawals require position management UI. Coming soon.');
         } else if (protocol === 'fhenix') {
-          // Fhenix FHE vault withdrawal — coordinator-attested plain amount
-          await ensureFhenixChain();
-          if (walletType !== 'evm') throw new Error('Vault deposits require an EVM wallet (MetaMask, WalletConnect, etc.)');
-          if (!fhenixWalletClient || !fhenixPublicClient || !address) throw new Error(`Connect an EVM wallet on ${fhenixChainName} to withdraw from this Fhenix vault.`);
-          const amountWei = parseUnits(amount, 6);
-          const { FHENIX_POOL_CONFIG } = await import('@/services/syndicate/poolProviders/fhenixProvider');
-          setState(prev => ({ ...prev, status: 'signing' }));
-          const { withdrawTxHash } = await withdrawFromFhenixVault({
-            walletClient: fhenixWalletClient as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- wagmi injects account
-            publicClient: fhenixPublicClient as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- wagmi injects account
-            vaultAddress: FHENIX_POOL_CONFIG.VAULT_ADDRESS,
-            amountWei,
-          });
-          result = { success: true, txHash: withdrawTxHash };
+          throw new Error(
+            'Fhenix withdrawals are paused. The Base Sepolia vault is deprecated.',
+          );
         } else {
           throw new Error(`Withdrawal not yet supported for ${protocol}`);
         }

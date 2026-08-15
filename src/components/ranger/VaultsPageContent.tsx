@@ -15,6 +15,8 @@ import { PageShell, PageHeader, ShellSection } from '@/components/layout/PageShe
 import { ACCENTS } from '@/config/design';
 import { YIELD_STRATEGIES } from '@/config/yieldStrategies';
 import type { SupportedYieldStrategyId } from '@/config/yieldStrategies';
+import { HonestyChip } from '@/components/layout/HonestyChip';
+import { getCapability } from '@/config/capabilities';
 import { buildVaultExecutionHref } from '@/constants/vaultRouting';
 import { trackEvent } from '@/services/analytics/client';
 
@@ -33,27 +35,10 @@ const APY_MAP: Record<SupportedYieldStrategyId, string> = {
   fhenix: '~5.0%',
 };
 
-const STATUS_MAP: Record<SupportedYieldStrategyId, { label: string; style: string }> = {
-  aave: { label: 'Live on Base Sepolia', style: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' },
-  morpho: { label: 'Live on Base Sepolia', style: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' },
-  spark: { label: 'Live on Base Sepolia', style: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' },
-  pooltogether: { label: 'Live on Base Sepolia', style: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' },
-  octant: { label: 'MVP Mock', style: 'text-amber-400 border-amber-500/30 bg-amber-500/10' },
-  uniswap: { label: 'Coming Soon', style: 'text-gray-400 border-gray-500/30 bg-gray-500/10' },
-  lifiearn: { label: 'Live Cross-Chain', style: 'text-indigo-400 border-indigo-500/30 bg-indigo-500/10' },
-  fhenix: { label: 'Live on Base Sepolia', style: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' },
+const STATUS_MAP: Partial<Record<SupportedYieldStrategyId, { label: string; style: string }>> = {
+  octant: { label: 'Preview', style: 'text-gray-400 border-white/15' },
+  uniswap: { label: 'Soon', style: 'text-gray-400 border-white/15' },
 };
-
-// Privacy vault treatment — coordinate (violet) tokens, pre-composed in design.ts
-const FEATURED = {
-  card: 'border-violet-500/40 bg-violet-500/[0.04] hover:border-violet-500/60 hover:bg-violet-500/[0.08] shadow-lg shadow-violet-500/10',
-  chip: 'bg-violet-500/20 text-violet-300 border-violet-500/30',
-  title: 'text-violet-200',
-  arrow: 'text-violet-400',
-  value: 'text-violet-400',
-  divider: 'border-violet-500/20',
-  note: 'text-violet-300/70',
-} as const;
 
 export function VaultsPageContent({
   showOperatorTools = false,
@@ -66,7 +51,6 @@ export function VaultsPageContent({
         title="Grow"
         accent="grow"
         supportingLine="Deposit once. Yield buys tickets every cycle. Withdraw your full principal anytime."
-        badge={{ label: 'Fhenix on testnet', tone: 'violet' }}
       >
         {showOperatorTools ? (
           <Link href="/vaults">
@@ -93,61 +77,29 @@ export function VaultsPageContent({
       </div>
 
       <ShellSection className="space-y-4">
-        {/* Fhenix — featured full-width card at top */}
+        {/* Fhenix — paused; shown so the gap is honest, not a deposit CTA */}
         {(() => {
           const fhenix = YIELD_STRATEGIES.find(s => s.id === 'fhenix');
           if (!fhenix) return null;
-          const apy = APY_MAP[fhenix.id];
-          const status = STATUS_MAP[fhenix.id];
-          const href = buildVaultExecutionHref('strategies', 'vaults', { strategy: fhenix.id });
+          const pauseNote =
+            getCapability('fhenix_privacy').availabilityMessage ?? fhenix.description;
 
           return (
-            <Link
-              key={fhenix.id}
-              href={href}
-              onClick={() =>
-                trackEvent({
-                  eventName: 'vault_card_click',
-                  properties: { strategy: fhenix.id, source: showOperatorTools ? 'operator' : 'public' },
-                })
-              }
-              className={`group relative flex flex-col justify-between rounded-2xl border p-6 transition-all ${FEATURED.card}`}
+            <div
+              className="relative rounded-2xl border border-white/10 bg-white/[0.02] p-6 opacity-80"
+              aria-disabled="true"
             >
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-4">
-                  <span className="text-3xl">{fhenix.icon}</span>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${FEATURED.chip}`}>
-                        Private
-                      </span>
-                      <span className="rounded-full border border-violet-400/30 bg-violet-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-violet-300/80">
-                        Testnet
-                      </span>
-                      <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${status.style}`}>
-                        {status.label}
-                      </span>
-                    </div>
-                    <h3 className={`text-xl font-bold ${FEATURED.title}`}>{fhenix.name}</h3>
-                    <p className="mt-1 text-sm leading-relaxed text-gray-400 max-w-lg">{fhenix.description}</p>
+              <div className="flex items-start gap-4">
+                <span className="text-3xl grayscale">{fhenix.icon}</span>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <HonestyChip capability="fhenix_privacy" />
                   </div>
-                </div>
-                <ArrowRight className={`h-5 w-5 transition-transform group-hover:translate-x-1 mt-2 ${FEATURED.arrow}`} />
-              </div>
-              <div className={`mt-5 flex items-center gap-6 border-t pt-4 ${FEATURED.divider}`}>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">APY</p>
-                  <p className={`text-xl font-black ${FEATURED.value}`}>{apy}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Risk</p>
-                  <p className="text-sm font-bold text-white">{fhenix.risk}</p>
-                </div>
-                <div className={`ml-auto text-xs font-medium ${FEATURED.note}`}>
-                  Balances encrypted inside the vault · Private governance · Local balance reveal
+                  <h3 className="text-xl font-bold text-gray-300">{fhenix.name}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-gray-500 max-w-2xl">{pauseNote}</p>
                 </div>
               </div>
-            </Link>
+            </div>
           );
         })()}
 
@@ -175,9 +127,11 @@ export function VaultsPageContent({
                   <div className="flex items-start justify-between">
                     <span className="text-2xl">{strategy.icon}</span>
                     <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                      <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${status.style}`}>
-                        {status.label}
-                      </span>
+                      {status && (
+                        <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${status.style}`}>
+                          {status.label}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -211,7 +165,7 @@ export function VaultsPageContent({
           <div className="flex items-center gap-3">
             <Shield className="h-4 w-4 text-blue-400" />
             <p className="text-sm text-gray-400">
-              Vaults support both public yield flows and privacy-native coordinated capital experiences.
+              Public vaults on Base are live. The Fhenix privacy rail is deprecated and paused — do not send funds to it.
             </p>
           </div>
           <div className="flex gap-3">

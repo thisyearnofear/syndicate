@@ -14,6 +14,8 @@ import {
   isNavVisible,
   isWriteEnabled,
   isReadEnabled,
+  honestyChip,
+  honestyChipFor,
   getAvailabilityMessage,
   getCapabilitiesForChain,
   getNonLiveCapabilities,
@@ -115,7 +117,7 @@ describe('Capability Registry', () => {
     });
 
     it('returns a message for non-live capabilities', () => {
-      expect(getAvailabilityMessage('fhenix_privacy')).toContain('Deprecated');
+      expect(getAvailabilityMessage('fhenix_privacy')).toMatch(/Paused/i);
     });
   });
 
@@ -128,6 +130,22 @@ describe('Capability Registry', () => {
     it('bridge_ton has neither', () => {
       expect(isWriteEnabled('bridge_ton')).toBe(false);
       expect(isReadEnabled('bridge_ton')).toBe(false);
+    });
+  });
+
+  describe('honestyChip()', () => {
+    it('leaves live unlabeled', () => {
+      expect(honestyChip('live')).toBeNull();
+      expect(honestyChipFor('megapot')).toBeNull();
+    });
+
+    it('uses Paused for gated-off rails', () => {
+      expect(honestyChipFor('fhenix_privacy')).toEqual({ label: 'Paused', tone: 'gray' });
+      expect(honestyChipFor('bridge_ton')).toEqual({ label: 'Paused', tone: 'gray' });
+    });
+
+    it('uses Partial for incomplete payouts', () => {
+      expect(honestyChipFor('syndicate_distribution')).toEqual({ label: 'Partial', tone: 'amber' });
     });
   });
 

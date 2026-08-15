@@ -187,7 +187,7 @@ export const CAPABILITIES: readonly Capability[] = [
     requiresOptIn: true,
     testnetOnly: true,
     availabilityMessage:
-      'Deprecated — the Base Sepolia Fhenix deployment (vault 0x2bB4…, governor 0xcE39…) is orphaned: its coordinator key was rotated out and is unrecoverable, and the contracts hold no funds or members. Do not send funds to them. The privacy rail is paused pending a re-deploy vs. Inco Lightning review (docs/FHENIX.md).',
+      'Paused — this privacy vault is not taking deposits. The testnet coordinator key was lost, so funds sent there cannot be recovered. A re-deploy is under review.',
     walletRequirement: 'EVM wallet on Fhenix testnet',
     productMode: 'private_vaults',
   },
@@ -355,7 +355,7 @@ export const CAPABILITIES: readonly Capability[] = [
     writesEnabled: false,
     requiresOptIn: false,
     testnetOnly: false,
-    availabilityMessage: 'Coming soon — TON support is in development.',
+    availabilityMessage: 'Paused — TON support is not available yet.',
     walletRequirement: 'TON wallet',
     productMode: null,
   },
@@ -407,7 +407,36 @@ export function isVisible(id: CapabilityId): boolean {
   return cap.readsEnabled && cap.status !== 'paused';
 }
 
-/** Get the user-facing availability message, or null if fully live. */
+export type HonestyChipSpec = {
+  label: 'Paused' | 'Testnet' | 'Preview' | 'Partial' | 'Soon';
+  tone: 'amber' | 'gray';
+};
+
+/**
+ * User-facing honesty chip. Live surfaces stay unlabeled (docs/DESIGN.md).
+ * Operator language ("deprecated", env flags) stays in docs, not in the chip.
+ */
+export function honestyChip(status: CapabilityStatus): HonestyChipSpec | null {
+  switch (status) {
+    case 'live':
+      return null;
+    case 'paused':
+      return { label: 'Paused', tone: 'gray' };
+    case 'testnet':
+      return { label: 'Testnet', tone: 'amber' };
+    case 'read_only':
+      return { label: 'Preview', tone: 'gray' };
+    case 'partial':
+      return { label: 'Partial', tone: 'amber' };
+    case 'placeholder':
+      return { label: 'Soon', tone: 'gray' };
+  }
+}
+
+export function honestyChipFor(id: CapabilityId): HonestyChipSpec | null {
+  return honestyChip(getCapability(id).status);
+}
+
 export function getAvailabilityMessage(id: CapabilityId): string | null {
   return getCapability(id).availabilityMessage;
 }

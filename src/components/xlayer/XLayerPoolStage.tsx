@@ -154,7 +154,7 @@ export function XLayerPoolStage({
   return (
     <div
       ref={stageRef}
-      className="relative overflow-hidden rounded-3xl border border-cyan-400/25 bg-gradient-to-br from-cyan-500/[0.10] via-slate-950/40 to-indigo-500/[0.08] p-6 sm:p-8"
+      className="hud relative overflow-hidden rounded-2xl p-6 sm:p-8"
     >
       {/* Parallax depth field — three rates, transform-only */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
@@ -195,7 +195,7 @@ export function XLayerPoolStage({
 
           <div className="shrink-0 sm:text-right">
             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Prize pot</p>
-            <p className={`mt-1 text-6xl font-black tabular-nums tracking-tight md:text-7xl ${ACCENTS.experimental.gradientText}`}>
+            <p className={`mt-1 font-mono text-6xl font-semibold tabular-nums tracking-tight md:text-7xl ${ACCENTS.experimental.gradientText}`}>
               {formatUsdc(potBalance)}
             </p>
             <p className="mt-1 text-xs text-slate-500">
@@ -212,7 +212,7 @@ export function XLayerPoolStage({
             <BeamFrame color="#34d399" laps={2} duration={4} className="block w-full">
               <div
                 key={revealKey}
-                className={`w-full rounded-2xl bg-slate-950/70 px-4 py-3 ${revealKey > 0 ? 'clip-reveal' : ''}`}
+                className={`w-full rounded-2xl bg-slate-950/70 px-4 py-3 ${revealKey > 0 ? 'lab-resolve' : ''}`}
               >
                 <p className="text-sm font-semibold text-emerald-200">
                   Epoch {drawState?.[4].toString()} resolved{' '}

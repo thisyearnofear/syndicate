@@ -14,7 +14,7 @@ accrues, a draw resolves, a balance decrypts, winnings become claimable.
 Every motion in the app should be an act of revealing, in response to the
 user or to state. Nothing animates as ambient decoration — with one
 licensed exception, the arena surface, where a game is being played and
-stillness reads as vacancy (see "The two surfaces").
+stillness reads as vacancy (see "The three surfaces").
 
 ## The color ladder (color = meaning)
 
@@ -40,7 +40,7 @@ Nav labels match page titles so the ladder lands ("Grow" → `Grow`).
   and two **surfaces** (below). No page defines its own page-level
   background or max-width.
 - `PageHeader` — title + one supporting line + accent hairline + optional
-  honesty badge ("Testnet", "Partial") + optional round orb + optional
+  honesty badge (`Paused`, `Testnet`, `Preview`, `Partial`, `Soon`) + optional round orb + optional
   eyebrow + actions.
 - `ShellSection` — content wrapper with the standard entrance delay.
 
@@ -48,22 +48,26 @@ Motion budget per page: exactly one entrance (header at 0ms, content at
 120ms). After that, motion only happens when state changes — **except on
 the arena surface**, which carries a licensed ambient layer (below).
 
-## The two surfaces
+## The three surfaces
 
 A surface is the page's ground: background, texture, type register, and
-motion licence. There are exactly two, and a page picks one — it never
-invents a third inline.
+motion licence. There are exactly three, and a page picks one — it never
+invents a fourth inline.
 
 | Surface | Ground | Type | Motion licence | Used by |
 |---|---|---|---|---|
 | `default` | `from-slate-950 via-blue-950 to-indigo-950` + two accent glow blobs | Inter throughout | one entrance; then state-driven only | every utility, money, and infrastructure page |
 | `arena` | warm ink with an oxblood/brass vignette, copperplate hatching, drifting embers | display serif (`font-display`) for titles and figures; Inter for body | entrance, state-driven, **plus** a low-amplitude ambient layer | the game layer (`/season`) |
+| `lab` | cool near-black with cyan/indigo vignette, CRT grid, a slow scanline | `font-mono` for titles and figures; Inter for body | entrance, state-driven, **plus** a low-amplitude scanline | the R&D engine (`/xlayer`) |
 
 The rule that matters: **utility surfaces stay quiet so money reads as
-serious; the arena is allowed to perform, because a game that looks like a
-ledger does not get played.** `default` is the assumption. `arena` must be
-requested explicitly (`<PageShell surface="arena">`) and is reserved for
-routes whose primary purpose is play, not custody.
+serious; the arena is allowed to perform because a game that looks like a
+ledger does not get played; the lab is allowed to perform because an agent
+loop that looks like a dashboard does not get watched.** `default` is the
+assumption. `arena` and `lab` must be requested explicitly. They are
+opposites on purpose: Season is 1653 (warm, human, ceremonial); Agent Pool
+is a control room (cool, machine, live). Never restyle one in the other's
+register.
 
 ## The arena surface (Season of Tickets)
 
@@ -103,23 +107,23 @@ serif with real history in it.
   ceremony, but every payoff number and receipt link must come from persisted,
   verified settlement data.
 
-The arena accent MAY NOT bleed into `default` pages. There are exactly three
-sanctioned bridges, and all are visually contained:
+The arena accent MAY NOT bleed into `default` pages. Lab MAY NOT bleed either.
+Sanctioned bridges are visually contained:
 
-- The Season banner on `/coordinate` (and a time-bound Campaign chip in
-  primary nav while a season is active) wears the arena accent so the
-  campaign reads as one world. The chip is not a fourth philosophy rung
-  and must hide when there is no active season.
+- Nav: **ladder** (Play / Grow / Coordinate, left) vs **worlds** (Season +
+  Agent Pool, right of a hairline, always visible, flagged) vs **overflow**
+  (Fund / Portfolio / Settings). Never flatten those into five equal rungs.
+  Season's Campaign chip hides when there is no active season.
 - The **living-room inset** on Play (`/`): a bounded arena plate that shows
   the real crew table. `/` stays `surface="default"` with Play amber; the
   inset never sets the page ground. Take-a-seat is the campaign action;
-  Enter-draw remains the live Megapot money CTA.
+  Enter-draw remains the live Megapot money CTA. Mobile sticky stays those
+  two actions — Agent Pool is not a third thumb button.
+- The **lab inset** on Play (`/`): a bounded HUD plate that points at
+  `/xlayer`. Same rule as the living room — it never paints the home ground
+  cyan. One CTA: watch the agent run.
 - The Season overlay on `/syndicate?id=…` is an **arena inset**: the arena
-  register (ground, vellum, serif, brass) inside its own bounded, rounded
-  plate. It must never set the host page's background, and the host page
-  keeps its own accent everywhere outside the inset. This exists so a crew
-  looks like the same crew on both surfaces instead of being restyled twice
-  and drifting.
+  register inside its own bounded plate. Host accent stays outside it.
 
 Play home uses `PageShell` (`accent="play"`). The live prize figure is the
 page title on that route; it does not invent a third page ground.
@@ -160,19 +164,21 @@ From `src/components/layout/StateViews.tsx`:
 - `DisconnectedState` — one wallet-gate shape for the whole app; subject
   names the prize ("Your tickets"), and it may carry the page's connect UI.
 
-## The experimental accent (X Layer)
+## The experimental accent (X Layer / Agent Pool)
 
 X Layer is a separate experimental prize-pool product (see
-[`X_LAYER.md`](X_LAYER.md)), but it is **family, flagged** — not an
-island:
+[`X_LAYER.md`](X_LAYER.md)). It is **family, flagged, and on its own
+ground** — not a cyan restyle of Season, and not an unlabeled core page:
 
-- It renders inside `PageShell`/`PageHeader` like every other page, with
-  accent `'experimental'` (cyan) from the config. Cyan means one thing:
-  "this is the R&D engine."
-- It always carries a Testnet badge (header + nav + footer), and its
-  Write gate state stays visibly disclosed. Convergence stops at
-  chrome — the badges are the honesty contract and never get polished
-  away.
+- It renders inside `PageShell`/`PageHeader` with `surface="lab"` and
+  accent `'experimental'` (cyan). Cyan means one thing: "this is the R&D
+  engine." Titles and prize figures use `font-mono`. Panels use `.hud`
+  (console plate), never `.vellum`.
+- Agent Pool lives in the **worlds cluster** (not the Play/Grow/Coordinate
+  ladder) with a Testnet chip in cyan. Always visible — never wallet-gated
+  overflow. The chip is honesty, not decoration.
+- Write-gate state stays visibly disclosed. Convergence stops at chrome —
+  the badges are the honesty contract and never get polished away.
 - Its accent MAY NOT bleed into core Base pages; core pages may not
   ship their own "experimental" variants without the same badges.
 - Cross-links run both ways: home acknowledges the experimental engine;
@@ -181,21 +187,22 @@ island:
 ## Hard rules
 
 1. New pages render inside `PageShell`/`PageHeader` or they don't ship,
-   and they pick one of the two surfaces — never a bespoke background.
+   and they pick one of the three surfaces — never a bespoke background.
    Play home (`/`) uses `PageShell`; the live prize figure is that route's title.
 2. Colors come from `src/config/design.ts` only. Don't fork accents; if a
    new meaning genuinely exists, add it to the config so everyone uses it.
 3. No `alert()` for app events — the shared Toast system.
 4. Beams are for money-path surfaces only. If everything beams, nothing does.
 5. `prefers-reduced-motion` disables all non-essential animation, including
-   the arena's ambient layer and every ceremony beat. Count-ups snap to
+   the arena's ambient layer, the lab scanline, and every ceremony beat. Count-ups snap to
    their final value; nothing important is conveyed by motion alone.
 6. Don't inline material design tokens (`.glass-premium` forks, duplicated
    keyframes) — import from globals or extend them globally.
 7. Honesty beats polish, but honesty is not chrome. Capability badges
-   ("Testnet", "Partial") and receipt links must be **present, truthful,
+   (`Paused`, `Testnet`, `Preview`, `Partial`, `Soon` from `honestyChip()`)
+   and receipt links must be **present, truthful,
    and reachable on the same screen as the action** — they must not be the
-   loudest element on a play surface. On the arena, the honesty contract is
+   loudest element on a play surface. Live surfaces stay unlabeled. On the arena, the honesty contract is
    carried by `RefereeStrip`, which states the same facts as narrative
    ("the referee the tontine never had") rather than as disclaimer. Empty
    data still renders an EmptyState, never fake entries, and nothing
