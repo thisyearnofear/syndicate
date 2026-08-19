@@ -198,6 +198,11 @@ export function useVaultDeposit() {
         return { success: false, error: err };
       }
 
+      // Captured before the routing chain below narrows `protocol` (the
+      // fhenix/uniswap/lifiearn branches throw, so `protocol === 'fhenix'`
+      // no-overlaps past that point). Used by the success-path emits.
+      const isFhenix = protocol === 'fhenix';
+
       setState({ isDepositing: true, error: null, txHash: null, approveTxHash: null, status: 'building_tx' });
       execution.prepare(`Preparing ${protocol} deposit`);
       lifecycle.emit('vault.deposit_initiated', {
@@ -260,13 +265,13 @@ export function useVaultDeposit() {
         // The inner handlers (depositAave, depositERC4626) have already
         // waited for waitForTransactionReceipt, so the tx is confirmed.
         if (result.txHash) {
-          const chainId = protocol === 'fhenix' ? 84532 : 8453;
+          const chainId = isFhenix ? 84532 : 8453;
           try {
             // Re-read the receipt to get blockNumber for the ConfirmedReceipt
-            const client = protocol === 'fhenix' ? fhenixPublicClient : publicClient;
+            const client = isFhenix ? fhenixPublicClient : publicClient;
             if (client) {
               const receipt = await client.getTransactionReceipt({ hash: result.txHash as `0x${string}` });
-              execution.awaitSignature(protocol === 'fhenix' ? 'fhenix_testnet' : 'base');
+              execution.awaitSignature(isFhenix ? 'fhenix_testnet' : 'base');
               execution.submit(result.txHash, chainId);
               execution.confirm(result.txHash, chainId);
               execution.complete({
@@ -282,8 +287,8 @@ export function useVaultDeposit() {
           }
         }
         lifecycle.emit('vault.deposit_confirmed', {
-          chain: protocol === 'fhenix' ? 'fhenix_testnet' : 'base',
-          chainId: protocol === 'fhenix' ? 84532 : 8453,
+          chain: isFhenix ? 'fhenix_testnet' : 'base',
+          chainId: isFhenix ? 84532 : 8453,
           operation: 'deposit',
           provider: protocol,
           transactionHash: result.txHash || undefined,
@@ -293,7 +298,7 @@ export function useVaultDeposit() {
         invalidatePortfolio({
           operation: 'deposit',
           provider: protocol,
-          chain: protocol === 'fhenix' ? 'fhenix_testnet' : 'base',
+          chain: isFhenix ? 'fhenix_testnet' : 'base',
           transactionHash: result.txHash || undefined,
         });
         return result;

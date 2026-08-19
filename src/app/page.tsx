@@ -261,10 +261,13 @@ export default function Home() {
               <Button
                 variant="ghost"
                 size="lg"
-                className="text-lg px-8 py-5 border border-white/15 text-gray-200 hover:bg-white/10 hover:text-white"
+                className="px-8 py-4 border border-white/15 text-gray-200 hover:bg-white/10 hover:text-white"
                 onClick={() => router.push('/season')}
               >
-                Take a seat
+                <span className="flex flex-col items-center leading-tight">
+                  <span className="text-lg">Take a seat</span>
+                  <span className="text-[11px] font-normal text-gray-400">Season of Tickets · crew vs. crew</span>
+                </span>
               </Button>
           </div>
 

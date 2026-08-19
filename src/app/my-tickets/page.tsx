@@ -25,6 +25,7 @@ import { ExternalLink, ArrowLeft, RefreshCw, Ticket } from "lucide-react";
 import Link from "next/link";
 import { WinningsGuide } from "@/components/wallet/WinningsGuide"; // Import the new component
 import { BeamFrame } from "@/components/motion/BeamFrame";
+import { CountUp } from "@/components/motion/CountUp";
 import { getSourceExplorerUrl } from "@/domains/participation/utils/getSourceExplorerUrl";
 import {
     formatTicketHistoryDate,
@@ -116,24 +117,26 @@ return (
             <CompactStack spacing="md">
 <h2 className="font-bold text-2xl text-white">Your Stats</h2>
 
+{/* These figures change when history refreshes or a claim lands — CountUp
+    makes the delta visible instead of a silent re-render (reveal grammar). */}
 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 <div className="text-center">
 <div className="text-3xl font-black text-blue-400 mb-2">
-    {totalTickets}
+    <CountUp value={totalTickets} grouped durationMs={700} />
     </div>
                         <p className="text-sm text-gray-400">Total Tickets Purchased</p>
 </div>
 
 <div className="text-center">
 <div className="text-3xl font-black text-green-400 mb-2">
-    ${totalSpent.toFixed(2)}
+    <CountUp value={totalSpent} decimals={2} prefix="$" durationMs={700} />
     </div>
                         <p className="text-sm text-gray-400">Total Spent</p>
 </div>
 
 <div className="text-center">
 <div className="text-3xl font-black text-purple-400 mb-2">
-    {totalPurchases}
+    <CountUp value={totalPurchases} grouped durationMs={700} />
     </div>
         <p className="text-sm text-gray-400">Total Purchases</p>
                     </div>
