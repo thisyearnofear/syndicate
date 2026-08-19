@@ -88,6 +88,27 @@ export default function SyndicateDiscoveryPage() {
     fetchSyndicates();
   }, [fetchSyndicates]);
 
+  // Silent refresh: pool membership and ticket counts move while the page is
+  // open. Show loading only on the first fetch so the grid doesn't pulse on
+  // every poll; card figures (CountUp) make the change visible.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetch('/api/syndicates')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (!data) return;
+          const list = Array.isArray(data) ? data : data.syndicates || [];
+          const normalized = list.map((s: Record<string, unknown>) => ({
+            ...s,
+            cause: typeof s.cause === 'object' ? (s.cause as Record<string, unknown>)?.name || '' : s.cause || '',
+          }));
+          setSyndicates(normalized);
+        })
+        .catch(() => {});
+    }, 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Apply filters
   useEffect(() => {
     let filtered = [...syndicates];

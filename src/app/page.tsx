@@ -215,9 +215,18 @@ export default function Home() {
               <RoundOrb state={orbState} size={14} />
               Current prize pool
             </p>
-            <h1 className="font-black text-6xl md:text-8xl leading-none tracking-tight tabular-nums bg-gradient-to-b from-amber-200 via-yellow-300 to-orange-400 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(251,191,36,0.25)]">
-              {prizeDisplay}
-            </h1>
+            {jackpotStats ? (
+              <h1 className="font-black text-6xl md:text-8xl leading-none tracking-tight tabular-nums bg-gradient-to-b from-amber-200 via-yellow-300 to-orange-400 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(251,191,36,0.25)]">
+                {prizeDisplay}
+              </h1>
+            ) : (
+              /* No data yet: an honest skeleton. A placeholder figure would
+                 read as a claim on a lottery page (docs/DESIGN.md state grammar). */
+              <div
+                aria-hidden
+                className="mx-auto h-20 w-3/4 max-w-xl animate-pulse rounded-2xl bg-white/[0.06] md:h-28"
+              />
+            )}
           </div>
 
           {/* Value prop + mechanism — one breath each */}
@@ -246,10 +255,13 @@ export default function Home() {
                 )}
               </Button>
             </BeamFrame>
+              {/* Neutral register on purpose: the arena accent may not bleed
+                 into the Play hero (docs/DESIGN.md). The arena world lives in
+                 the living-room inset below. */}
               <Button
                 variant="ghost"
                 size="lg"
-                className="text-lg px-8 py-5 border border-[#c9a227]/30 text-[#e3c887] hover:text-[#f7ead0] hover:border-[#c9a227]/50"
+                className="text-lg px-8 py-5 border border-white/15 text-gray-200 hover:bg-white/10 hover:text-white"
                 onClick={() => router.push('/season')}
               >
                 Take a seat
@@ -358,7 +370,7 @@ export default function Home() {
             <p className="font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-cyan-300/80 mb-3">
               Agent Pool
             </p>
-            <p className="font-mono text-2xl md:text-3xl font-semibold bg-gradient-to-r from-cyan-200 via-white to-cyan-200 bg-clip-text text-transparent mb-3">
+            <p className="font-mono text-2xl md:text-3xl font-semibold text-white mb-3">
               An AI agent is the treasurer of this prize pool.
             </p>
             <p className="text-gray-400 mb-2">
@@ -386,7 +398,7 @@ export default function Home() {
             <div className="mb-4">
               <HonestyChip capability="fhenix_privacy" />
             </div>
-            <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-violet-200 via-white to-violet-200 bg-clip-text text-transparent mb-3">
+            <p className="text-2xl md:text-3xl font-bold text-white mb-3">
               A treasury buying 500 tickets doesn&apos;t need every competitor watching.
             </p>
             <p className="text-gray-400 mb-2">
@@ -424,30 +436,23 @@ export default function Home() {
           </section>
         )}
 
-        {/* ─── FINAL CTA ────────────────────────────────────────────────────── */}
+        {/* ─── CLOSER ───────────────────────────────────────────────────────── */}
+        {/* The money CTA is carried by the hero, the desktop float, and the
+            mobile sticky bar — repeating it here was a fourth voice saying the
+            same thing. The closer names the next domain instead. */}
         <section className="text-center">
           <div className="max-w-2xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-6">
               Play today, grow tomorrow, coordinate when you&apos;re ready.
             </h2>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button
-                variant="warning"
-                size="lg"
-                className="text-lg px-10 py-5 shadow-2xl"
-                onClick={handleBuyClick}
-              >
-                Enter the draw
-              </Button>
-              <Button
-                variant="ghost"
-                size="lg"
-                className="text-lg px-10 py-5 border border-white/15 text-gray-200 hover:text-white"
-                onClick={handleDiscover}
-              >
-                Start a Syndicate
-              </Button>
-            </div>
+            <Button
+              variant="ghost"
+              size="lg"
+              className="text-lg px-10 py-5 border border-white/15 text-gray-200 hover:text-white"
+              onClick={handleDiscover}
+            >
+              Start a Syndicate
+            </Button>
           </div>
         </section>
       </div>

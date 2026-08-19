@@ -3,14 +3,16 @@
 /**
  * PAGE SHELL + PAGE HEADER — the only way a page opens (docs/DESIGN.md).
  *
- * PageShell: three surfaces, two widths, entrance stagger. Pages must not
+ * PageShell: four surfaces, two widths, entrance stagger. Pages must not
  * define their own page-level background — navigation should feel like
  * turning pages of one book, not switching apps.
  *
- * Surfaces (docs/DESIGN.md "The three surfaces"):
+ * Surfaces (docs/DESIGN.md "The surfaces"):
  *   - `default` — cool slate ground for every utility/money page. Quiet.
  *   - `arena`   — warm ink + brass ground for the game layer (/season)
  *   - `lab`     — cool CRT / control-room ground for Agent Pool (/xlayer)
+ *   - `grow`    — the yield domain; licensed ambient bloom (yield accrues,
+ *                 a still page says the opposite)
  *
  * PageHeader: domain-accented title + one supporting line + hairline +
  * optional eyebrow + optional actions. Titles follow the ladder (Play /
@@ -81,12 +83,13 @@ export function PageShell({
             <div className={`absolute -bottom-40 -right-32 h-[32rem] w-[32rem] rounded-full blur-3xl ${glow.bottom}`} />
           </>
         )}
-        {/* Arena only: copperplate hatching + slow ember drift. Defined once
-            in globals.css; both stop under prefers-reduced-motion. */}
+        {/* Licensed ambient layers, defined once in globals.css; all stop
+            under prefers-reduced-motion. */}
         {resolvedSurface === "arena" && <span className="arena-hatch" />}
         {resolvedSurface === "lab" && <span className="lab-grid" />}
         {ground.ambientEmbers && <ArenaEmbers />}
         {ground.ambientScan && <LabScan />}
+        {ground.ambientBloom && <span aria-hidden className="grow-bloom" />}
       </div>
       <div className={`relative z-10 container mx-auto px-4 ${WIDTHS[width]} py-8 md:py-10 space-y-8 ${className}`}>
         {children}

@@ -12,9 +12,9 @@ Disclaimer: this is visual language only. Copy rules live in
 **Reveal.** The whole product is information gradually unhiding — a pool
 accrues, a draw resolves, a balance decrypts, winnings become claimable.
 Every motion in the app should be an act of revealing, in response to the
-user or to state. Nothing animates as ambient decoration — with one
-licensed exception, the arena surface, where a game is being played and
-stillness reads as vacancy (see "The three surfaces").
+user or to state. Nothing animates as ambient decoration — with three
+licensed exceptions, the arena, the lab, and the grow surfaces, where a
+live process is happening and stillness would lie (see "The surfaces").
 
 ## The color ladder (color = meaning)
 
@@ -37,7 +37,7 @@ Nav labels match page titles so the ladder lands ("Grow" → `Grow`).
 
 - `PageShell` (`src/components/layout/PageShell.tsx`) — the only page-level
   wrapper. Two widths (`content` = forms/flows, `wide` = grids/dashboards)
-  and two **surfaces** (below). No page defines its own page-level
+  and four **surfaces** (below). No page defines its own page-level
   background or max-width.
 - `PageHeader` — title + one supporting line + accent hairline + optional
   honesty badge (`Paused`, `Testnet`, `Preview`, `Partial`, `Soon`) + optional round orb + optional
@@ -46,28 +46,40 @@ Nav labels match page titles so the ladder lands ("Grow" → `Grow`).
 
 Motion budget per page: exactly one entrance (header at 0ms, content at
 120ms). After that, motion only happens when state changes — **except on
-the arena surface**, which carries a licensed ambient layer (below).
+the arena, lab, and grow surfaces**, which each carry one licensed ambient
+layer (below).
 
-## The three surfaces
+## The surfaces
 
 A surface is the page's ground: background, texture, type register, and
-motion licence. There are exactly three, and a page picks one — it never
-invents a fourth inline.
+motion licence. There are exactly four, and a page picks one — it never
+invents a fifth inline.
 
 | Surface | Ground | Type | Motion licence | Used by |
 |---|---|---|---|---|
 | `default` | `from-slate-950 via-blue-950 to-indigo-950` + two accent glow blobs | Inter throughout | one entrance; then state-driven only | every utility, money, and infrastructure page |
 | `arena` | warm ink with an oxblood/brass vignette, copperplate hatching, drifting embers | display serif (`font-display`) for titles and figures; Inter for body | entrance, state-driven, **plus** a low-amplitude ambient layer | the game layer (`/season`) |
 | `lab` | cool near-black with cyan/indigo vignette, CRT grid, a slow scanline | `font-mono` for titles and figures; Inter for body | entrance, state-driven, **plus** a low-amplitude scanline | the R&D engine (`/xlayer`) |
+| `grow` | the default cool ground with an emerald drift, **plus** one slow breathing bloom at the base of the page | Inter throughout; figures in `CountUp` | entrance, state-driven, **plus** one licensed bloom | the yield domain (`/vaults`, `/portfolio`, `/yield-strategies`) |
 
 The rule that matters: **utility surfaces stay quiet so money reads as
 serious; the arena is allowed to perform because a game that looks like a
 ledger does not get played; the lab is allowed to perform because an agent
-loop that looks like a dashboard does not get watched.** `default` is the
-assumption. `arena` and `lab` must be requested explicitly. They are
+loop that looks like a dashboard does not get watched; grow is allowed one
+bloom because yield is accruing and a still page says the opposite.**
+`default` is the assumption. `arena`, `lab`, and `grow` must be requested
+explicitly (or land via `DOMAIN_SURFACE`). Arena, lab, and grow are
 opposites on purpose: Season is 1653 (warm, human, ceremonial); Agent Pool
-is a control room (cool, machine, live). Never restyle one in the other's
-register.
+is a control room (cool, machine, live); Grow is quiet-but-alive (the
+bloom is air, never spectacle). Never restyle one in the other's register.
+
+The grow bloom is deliberately the weakest of the three ambient layers:
+one radial gradient, one 11s ease-in-out scale/opacity breath, no
+particles. Its licence contract matches the arena embers and lab scanline —
+low amplitude, GPU-composited, `.grow-bloom` in `globals.css`, stopped
+under `prefers-reduced-motion`. Grow figures should be `CountUp` so the
+accrual is felt when the 30s poll ticks; the bloom is the room, the count
+is the event.
 
 ## The arena surface (Season of Tickets)
 
@@ -93,8 +105,9 @@ serif with real history in it.
   identity costs zero assets and never collides.
 - **Ambient licence.** The arena may run one slow ambient layer (drifting
   embers, breathing chest glow) at low amplitude. It stops at
-  `prefers-reduced-motion`. This is the single documented exception to
-  "nothing animates as ambient decoration", and it exists because ambient
+  `prefers-reduced-motion`. This is one of the documented exceptions to
+  "nothing animates as ambient decoration" (the others: the lab scanline,
+  the grow bloom — see "The surfaces"), and it exists because ambient
   stillness reads as "nothing is happening here."
 - **Ceremony beats.** State changes on the arena get a *named* beat, not a
   re-render: `cut-rise` when a cut renormalizes upward, `bid-land` when an
@@ -187,15 +200,16 @@ ground** — not a cyan restyle of Season, and not an unlabeled core page:
 ## Hard rules
 
 1. New pages render inside `PageShell`/`PageHeader` or they don't ship,
-   and they pick one of the three surfaces — never a bespoke background.
+   and they pick one of the four surfaces — never a bespoke background.
    Play home (`/`) uses `PageShell`; the live prize figure is that route's title.
 2. Colors come from `src/config/design.ts` only. Don't fork accents; if a
    new meaning genuinely exists, add it to the config so everyone uses it.
 3. No `alert()` for app events — the shared Toast system.
 4. Beams are for money-path surfaces only. If everything beams, nothing does.
 5. `prefers-reduced-motion` disables all non-essential animation, including
-   the arena's ambient layer, the lab scanline, and every ceremony beat. Count-ups snap to
-   their final value; nothing important is conveyed by motion alone.
+   the arena's ambient layer, the lab scanline, the grow bloom, and every
+   ceremony beat. Count-ups snap to their final value; nothing important is
+   conveyed by motion alone.
 6. Don't inline material design tokens (`.glass-premium` forks, duplicated
    keyframes) — import from globals or extend them globally.
 7. Honesty beats polish, but honesty is not chrome. Capability badges

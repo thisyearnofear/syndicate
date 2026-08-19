@@ -41,6 +41,7 @@ import { ACCENTS } from '@/config/design';
 import { PageShell, PageHeader } from '@/components/layout/PageShell';
 import { PageSkeleton, DisconnectedState } from '@/components/layout/StateViews';
 import { CountUpText } from '@/shared/components/ui/CountUpText';
+import { CountUp } from '@/components/motion/CountUp';
 import { YieldActionPrompt } from '@/components/portfolio/YieldActionPrompt';
 import {
   BridgeActivityCard,
@@ -797,7 +798,7 @@ export default function PortfolioPage() {
                           <div>
                             <h3 className="font-bold text-white">{position.protocol.toUpperCase()} Vault</h3>
                             <p className="text-green-300 text-sm">
-                              {position.balance.apy.toFixed(2)}% APY
+                              <CountUp value={position.balance.apy} decimals={2} suffix="% APY" durationMs={900} />
                             </p>
                             {latestDepositActivity ? (
                               <p className="text-xs text-white/60 mt-1">
@@ -824,22 +825,24 @@ export default function PortfolioPage() {
 
                       {/* Vault Stats */}
                       <div className="grid grid-cols-3 gap-3 mb-3">
+                        {/* Live figures: useUserVaults re-fetches every 30s, so
+                            CountUp makes the accrual felt when it ticks. */}
                         <div className="bg-white/5 rounded-lg p-2 text-center">
                           <p className="text-xs text-gray-400">Deposited</p>
                           <p className="text-sm font-bold text-white">
-                            ${parseFloat(position.balance.deposited).toFixed(2)}
+                            <CountUp value={parseFloat(position.balance.deposited)} decimals={2} prefix="$" durationMs={600} />
                           </p>
                         </div>
                         <div className="bg-white/5 rounded-lg p-2 text-center">
                           <p className="text-xs text-gray-400">Yield</p>
                           <p className="text-sm font-bold text-blue-400">
-                            ${parseFloat(position.balance.yieldAccrued).toFixed(2)}
+                            <CountUp value={parseFloat(position.balance.yieldAccrued)} decimals={2} prefix="$" durationMs={900} />
                           </p>
                         </div>
                         <div className="bg-white/5 rounded-lg p-2 text-center">
                           <p className="text-xs text-gray-400">Total</p>
                           <p className="text-sm font-bold text-green-400">
-                            ${parseFloat(position.balance.totalBalance).toFixed(2)}
+                            <CountUp value={parseFloat(position.balance.totalBalance)} decimals={2} prefix="$" durationMs={900} />
                           </p>
                         </div>
                       </div>

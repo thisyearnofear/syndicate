@@ -7,7 +7,6 @@
 
 import { useState, useEffect } from "react";
 import { Trophy } from "lucide-react";
-import { BeamFrame } from "@/components/motion/BeamFrame";
 
 interface WinnerData {
   address: string;
@@ -54,24 +53,25 @@ export function LastWinner() {
     maximumFractionDigits: 0,
   });
 
+  // The strip is a state moment, not chrome: a fresh winner arriving fires the
+  // one-shot `winner-in` beat (keyed by drawId), then stays still. Beams are
+  // reserved for money-path surfaces and infinite loops read as decoration.
   return (
-    <BeamFrame color="#fbbf24" duration={6} laps={Infinity} className="block rounded-xl">
-      <div className="relative overflow-hidden rounded-xl border border-yellow-500/20 bg-gradient-to-r from-yellow-500/5 via-amber-500/5 to-orange-500/5 px-4 py-3">
-        {/* Shimmer animation */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400/5 to-transparent animate-shimmer" />
-
-        <div className="relative flex items-center justify-center gap-3 text-sm">
-          <Trophy className="w-4 h-4 text-yellow-400 animate-bounce" style={{ animationDuration: '2s' }} />
-          <span className="text-gray-400">
-            <span className="font-mono text-yellow-300">{short}</span>
-            {' won '}
-            <span className="font-bold text-white">{prize}</span>
-            {winner.ticketCount <= 10 && (
-              <span className="text-gray-500"> from {winner.ticketCount} ticket{winner.ticketCount !== 1 ? 's' : ''}</span>
-            )}
-          </span>
-        </div>
+    <div
+      key={winner.drawId}
+      className="winner-in relative overflow-hidden rounded-xl border border-yellow-500/20 bg-gradient-to-r from-yellow-500/5 via-amber-500/5 to-orange-500/5 px-4 py-3"
+    >
+      <div className="flex items-center justify-center gap-3 text-sm">
+        <Trophy className="w-4 h-4 text-yellow-400" />
+        <span className="text-gray-400">
+          <span className="font-mono text-yellow-300">{short}</span>
+          {' won '}
+          <span className="font-bold text-white">{prize}</span>
+          {winner.ticketCount <= 10 && (
+            <span className="text-gray-500"> from {winner.ticketCount} ticket{winner.ticketCount !== 1 ? 's' : ''}</span>
+          )}
+        </span>
       </div>
-    </BeamFrame>
+    </div>
   );
 }

@@ -1424,3 +1424,53 @@ body:has([data-surface="lab"]) footer {
 @media (prefers-reduced-motion: reduce) {
   .lab-scanline { animation: none !important; opacity: 0.2; }
 }
+
+/* ── Grow surface (vaults / portfolio / yield) ───────────────────────────────
+   Yield accrues continuously; a still page says the opposite. The grow ground
+   carries one licensed ambient layer — a single emerald bloom that breathes at
+   the base of the page. Same licence contract as the arena embers and lab
+   scanline: low amplitude, GPU-composited, stops under prefers-reduced-motion.
+   Figures on grow surfaces should use CountUp so accrual is felt. */
+
+.grow-bloom {
+  position: absolute;
+  left: 50%;
+  bottom: -18vh;
+  width: 90vw;
+  max-width: 72rem;
+  height: 42vh;
+  transform: translateX(-50%);
+  border-radius: 9999px;
+  pointer-events: none;
+  background: radial-gradient(
+    50% 60% at 50% 100%,
+    rgba(52, 211, 153, 0.10) 0%,
+    rgba(52, 211, 153, 0.045) 45%,
+    transparent 72%
+  );
+  animation: grow-breathe 11s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes grow-breathe {
+  0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.7; }
+  50% { transform: translateX(-50%) scale(1.06); opacity: 1; }
+}
+
+/* winner-in: the home winner strip's arrival beat. A fresh winner is state
+   arriving, so the strip reveals once (rise + settle) instead of running an
+   infinite loop. Re-fires when the winner identity changes (keyed remount). */
+@keyframes winner-in {
+  0% { transform: translateY(10px) scale(0.985); opacity: 0; }
+  60% { transform: translateY(-2px) scale(1); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.winner-in {
+  animation: winner-in 640ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grow-bloom { animation: none !important; opacity: 0.7; }
+  .winner-in { animation: none !important; }
+}

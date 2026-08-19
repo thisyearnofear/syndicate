@@ -16,6 +16,7 @@ import {
   Share2,
   Coins
 } from 'lucide-react';
+import { CountUp } from '@/components/motion/CountUp';
 
 type PoolType = 'safe' | 'splits' | 'pooltogether' | 'fhenix';
 type VaultStrategy = 'aave' | 'morpho' | 'spark' | 'pooltogether' | 'octant' | 'uniswap' | 'fhenix' | 'lifiearn';
@@ -74,12 +75,6 @@ export function SyndicateCard({ syndicate, compact = false }: SyndicateCardProps
     return vaultLabels[strategy];
   };
 
-  const formatNumber = (num: number) => {
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-    return num.toString();
-  };
-
   if (compact) {
     return (
       <Link href={`/syndicate?id=${syndicate.id}`} className="block">
@@ -101,11 +96,11 @@ export function SyndicateCard({ syndicate, compact = false }: SyndicateCardProps
           <div className="flex items-center gap-4 text-sm text-gray-400">
             <span className="flex items-center gap-1">
               <Users className="w-4 h-4 text-blue-400" />
-              {formatNumber(syndicate.membersCount)}
+              <CountUp value={syndicate.membersCount} grouped durationMs={700} />
             </span>
             <span className="flex items-center gap-1">
               <Trophy className="w-4 h-4 text-yellow-400" />
-              {formatNumber(syndicate.ticketsPooled)}
+              <CountUp value={syndicate.ticketsPooled} grouped durationMs={700} />
             </span>
             <span className="flex items-center gap-1">
               <Heart className="w-4 h-4 text-red-400" />
@@ -135,7 +130,9 @@ export function SyndicateCard({ syndicate, compact = false }: SyndicateCardProps
           </div>
           <div className="flex flex-col items-end gap-1">
             {syndicate.isTrending && (
-              <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full">
+              /* Coordinate-domain accent (violet), per the ladder — the old
+                 purple/pink gradient was off-ladder. */
+              <span className="bg-violet-500/20 text-violet-200 text-xs px-2 py-1 rounded-full">
                 Trending
               </span>
             )}
@@ -164,16 +161,18 @@ export function SyndicateCard({ syndicate, compact = false }: SyndicateCardProps
 
         {/* Stats */}
         <div className="grid grid-cols-4 gap-3 mb-4">
+          {/* CountUp (not formatNumber) so a silent 60s refresh reads as the
+              pool growing, not as a silent re-render. */}
           <div className="text-center">
-            <p className="text-lg font-bold text-white">{formatNumber(syndicate.membersCount)}</p>
+            <p className="text-lg font-bold text-white"><CountUp value={syndicate.membersCount} grouped durationMs={900} /></p>
             <p className="text-xs text-gray-400">Members</p>
           </div>
           <div className="text-center">
-            <p className="text-lg font-bold text-white">{formatNumber(syndicate.ticketsPooled)}</p>
+            <p className="text-lg font-bold text-white"><CountUp value={syndicate.ticketsPooled} grouped durationMs={900} /></p>
             <p className="text-xs text-gray-400">Tickets</p>
           </div>
           <div className="text-center">
-            <p className="text-lg font-bold text-green-400">${formatNumber(syndicate.totalImpact)}</p>
+            <p className="text-lg font-bold text-green-400"><CountUp value={syndicate.totalImpact} grouped prefix="$" durationMs={900} /></p>
             <p className="text-xs text-gray-400">Impact</p>
           </div>
           <div className="text-center">
