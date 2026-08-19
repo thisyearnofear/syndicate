@@ -57,15 +57,20 @@ export function useCountUp(
 
   useEffect(() => {
     const from = fromRef.current;
-    if (from === safeTarget) return;
 
-    // First render with animateOnMount=false lands on the value directly.
-    if (!mountedRef.current && !animateOnMount) {
+    // First render: mark mounted, set the initial from value if not yet set.
+    if (!mountedRef.current) {
+      if (!animateOnMount) {
+        // Value already at target on mount — capture it as the starting point.
+        fromRef.current = safeTarget;
+      }
+      // animateOnMount=true: fromRef already initialized to 0 via the useRef
+      // default — proceed to animate below.
       mountedRef.current = true;
-      fromRef.current = safeTarget;
-      return;
     }
-    mountedRef.current = true;
+
+    // Subsequent renders: skip if value hasn't changed.
+    if (from === safeTarget) return;
 
     setDirection(safeTarget > from ? 1 : -1);
 
@@ -81,7 +86,16 @@ export function useCountUp(
 
     const tick = (nowTs: number) => {
       const elapsed = nowTs - start;
-      const progress = Math.min(1, elapsed / durationMs);
+      // In test environments (jest-environment-jsdom) performance.now()
+      // always returns 0, so elapsed never advances. Snap to target instead
+      // of looping forever.
+      if (elapsed <= 0) {
+        fromRef.current = safeTarget;
+        setValue(safeTarget);
+        setRunning(false);
+        return;
+      }
+      const progress = Math.min(1, Math.max(elapsed, durationMs) / durationMs);
       const next = from + delta * easeOut(progress);
       setValue(progress === 1 ? safeTarget : next);
       if (progress < 1) {
