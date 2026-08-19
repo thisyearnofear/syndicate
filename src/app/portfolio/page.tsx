@@ -448,7 +448,8 @@ export default function PortfolioPage() {
                   Start by funding the app, allocating into a vault, or joining a syndicate.
                 </p>
                 <div className="flex gap-4 justify-center">
-                  <Button onClick={() => router.push('/bridge')} variant="outline" className="border-blue-500/50 text-blue-300">
+                  {/* Ladder: funding is infrastructure (neutral), vaults are grow. */}
+                  <Button onClick={() => router.push('/bridge')} variant="outline" className="border-white/20 text-gray-300 hover:text-white">
                     <ArrowRight className="w-4 h-4 mr-2" />
                     Bridge Funds
                   </Button>
@@ -457,7 +458,7 @@ export default function PortfolioPage() {
                     Browse Syndicates
                   </Button>
                   <Link href="/vaults">
-                    <Button variant="outline" className="border-green-500/50 text-green-300">
+                    <Button variant="outline" className="border-emerald-400/40 text-emerald-300 hover:bg-emerald-500/10">
                       <Zap className="w-4 h-4 mr-2" />
                       Explore Vaults
                     </Button>
@@ -466,14 +467,16 @@ export default function PortfolioPage() {
               </CompactCard>
             ) : (
               <>
-                {/* Performance Summary */}
+                {/* Performance Summary — each block takes its color from the
+                    ladder: Syndicates=coordinate, Vaults=grow, Funding=neutral
+                    plumbing, Tickets=play. (docs/DESIGN.md color = meaning) */}
                 <CompactCard variant="glass" padding="md" hover={false} className="rounded-2xl border border-white/20 mb-8">
                   <h2 className="text-xl font-bold text-white mb-4">Portfolio Breakdown</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     {/* Syndicates Summary */}
                     <div className="bg-white/5 rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-3">
-                        <Users className="w-5 h-5 text-purple-400" />
+                        <Users className={`w-5 h-5 ${ACCENTS.coordinate.icon}`} />
                         <h3 className="font-semibold text-white">Syndicates</h3>
                       </div>
                       <div className="space-y-2">
@@ -487,7 +490,7 @@ export default function PortfolioPage() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-400 text-sm">Winnings</span>
-                          <span className="text-green-400 font-medium">{formatCurrency(summary.totalWinnings)}</span>
+                          <span className={`${ACCENTS.play.icon} font-medium`}>{formatCurrency(summary.totalWinnings)}</span>
                         </div>
                       </div>
                     </div>
@@ -495,7 +498,7 @@ export default function PortfolioPage() {
                     {/* Vaults Summary */}
                     <div className="bg-white/5 rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-3">
-                        <Zap className="w-5 h-5 text-green-400" />
+                        <Zap className={`w-5 h-5 ${ACCENTS.grow.icon}`} />
                         <h3 className="font-semibold text-white">Yield Vaults</h3>
                       </div>
                       <div className="space-y-2">
@@ -509,14 +512,15 @@ export default function PortfolioPage() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-400 text-sm">Yield Earned</span>
-                          <span className="text-blue-400 font-medium">{formatCurrency(vaultTotalYield)}</span>
+                          <span className={`${ACCENTS.grow.icon} font-medium`}>{formatCurrency(vaultTotalYield)}</span>
                         </div>
                       </div>
                     </div>
 
+                    {/* Funding Summary — infrastructure stays neutral */}
                     <div className="bg-white/5 rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-3">
-                        <ArrowRight className="w-5 h-5 text-blue-400" />
+                        <ArrowRight className={`w-5 h-5 ${ACCENTS.neutral.icon}`} />
                         <h3 className="font-semibold text-white">Funding</h3>
                       </div>
                       <div className="space-y-2">
@@ -526,7 +530,7 @@ export default function PortfolioPage() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-400 text-sm">Latest</span>
-                          <span className="text-blue-300 font-medium">
+                          <span className="text-gray-300 font-medium">
                             {recentBridgeActivity[0]
                               ? formatBridgeStatus(recentBridgeActivity[0].status)
                               : 'No funding yet'}
@@ -541,9 +545,10 @@ export default function PortfolioPage() {
                       </div>
                     </div>
 
+                    {/* Tickets Summary */}
                     <div className="bg-white/5 rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-3">
-                        <Ticket className="w-5 h-5 text-amber-400" />
+                        <Ticket className={`w-5 h-5 ${ACCENTS.play.icon}`} />
                         <h3 className="font-semibold text-white">Tickets</h3>
                       </div>
                       <div className="space-y-2">
@@ -557,7 +562,7 @@ export default function PortfolioPage() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-400 text-sm">Latest</span>
-                          <span className="text-amber-300 font-medium">
+                          <span className={`${ACCENTS.play.badge} font-medium`}>
                             {recentTicketPurchases[0]?.timestamp
                               ? new Date(recentTicketPurchases[0].timestamp).toLocaleDateString()
                               : 'No activity'}
@@ -650,7 +655,7 @@ export default function PortfolioPage() {
                   More Syndicates
                 </Button>
                 <Link href="/vaults">
-                  <Button variant="outline" className="border-green-500/50 text-green-300">
+                  <Button variant="outline" className="border-emerald-400/40 text-emerald-300 hover:bg-emerald-500/10">
                     <Zap className="w-4 h-4 mr-2" />
                     More Vaults
                   </Button>
@@ -688,15 +693,15 @@ export default function PortfolioPage() {
                       className="rounded-xl border border-white/20 hover:border-white/40 transition-all cursor-pointer"
                       onClick={() => router.push(`/syndicate?id=${syndicate.poolId}`)}
                     >
-                      {/* Header */}
+                      {/* Header — syndicates take the coordinate accent. */}
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-lg font-bold">
+                          <div className={`w-10 h-10 rounded-full ${ACCENTS.coordinate.tile} border border-violet-400/30 flex items-center justify-center text-violet-100 text-lg font-bold`}>
                             {syndicate.poolName.charAt(0)}
                           </div>
                           <div>
                             <h3 className="font-bold text-white">{syndicate.poolName}</h3>
-                            <p className="text-blue-300 text-sm">{syndicate.causeName}</p>
+                            <p className={`${ACCENTS.coordinate.badge} text-sm`}>{syndicate.causeName}</p>
                           </div>
                         </div>
                         <ArrowRight className="w-5 h-5 text-gray-400" />
@@ -710,11 +715,11 @@ export default function PortfolioPage() {
                         </div>
                         <div className="bg-white/5 rounded-lg p-2 text-center">
                           <p className="text-xs text-gray-400">Winnings</p>
-                          <p className="text-sm font-bold text-green-400">{formatCurrency(syndicate.winnings)}</p>
+                          <p className={`text-sm font-bold ${ACCENTS.play.icon}`}>{formatCurrency(syndicate.winnings)}</p>
                         </div>
                         <div className="bg-white/5 rounded-lg p-2 text-center">
                           <p className="text-xs text-gray-400">Yield</p>
-                          <p className="text-sm font-bold text-blue-400">{formatCurrency(syndicate.yieldEarned)}</p>
+                          <p className={`text-sm font-bold ${ACCENTS.grow.icon}`}>{formatCurrency(syndicate.yieldEarned)}</p>
                         </div>
                       </div>
 
@@ -789,15 +794,15 @@ export default function PortfolioPage() {
                       className="rounded-xl border border-white/20 hover:border-white/40 transition-all cursor-pointer"
                       onClick={() => router.push('/vaults')}
                     >
-                      {/* Header */}
+                      {/* Header — vaults take the grow accent. */}
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white text-lg font-bold">
+                          <div className={`w-10 h-10 rounded-full ${ACCENTS.grow.tile} border border-emerald-400/30 flex items-center justify-center text-emerald-100 text-lg font-bold`}>
                             {position.protocol.charAt(0).toUpperCase()}
                           </div>
                           <div>
                             <h3 className="font-bold text-white">{position.protocol.toUpperCase()} Vault</h3>
-                            <p className="text-green-300 text-sm">
+                            <p className={`${ACCENTS.grow.badge} text-sm`}>
                               <CountUp value={position.balance.apy} decimals={2} suffix="% APY" durationMs={900} />
                             </p>
                             {latestDepositActivity ? (
@@ -806,7 +811,8 @@ export default function PortfolioPage() {
                               </p>
                             ) : null}
                             {linkedFundingActivity ? (
-                              <p className="text-xs text-blue-200/80 mt-1">
+                              /* Funding is infrastructure: neutral, not blue. */
+                              <p className="text-xs text-gray-400 mt-1">
                                 Funded via {getBridgeProtocolLabel(linkedFundingActivity.protocol)} from {linkedFundingActivity.sourceChain}
                               </p>
                             ) : null}
@@ -835,13 +841,13 @@ export default function PortfolioPage() {
                         </div>
                         <div className="bg-white/5 rounded-lg p-2 text-center">
                           <p className="text-xs text-gray-400">Yield</p>
-                          <p className="text-sm font-bold text-blue-400">
+                          <p className={`text-sm font-bold ${ACCENTS.grow.icon}`}>
                             <CountUp value={parseFloat(position.balance.yieldAccrued)} decimals={2} prefix="$" durationMs={900} />
                           </p>
                         </div>
                         <div className="bg-white/5 rounded-lg p-2 text-center">
                           <p className="text-xs text-gray-400">Total</p>
-                          <p className="text-sm font-bold text-green-400">
+                          <p className="text-sm font-bold text-white">
                             <CountUp value={parseFloat(position.balance.totalBalance)} decimals={2} prefix="$" durationMs={900} />
                           </p>
                         </div>
@@ -850,7 +856,7 @@ export default function PortfolioPage() {
                       {/* Last Updated */}
                       <div className="flex items-center justify-between text-sm text-gray-400">
                         <span>Last updated {new Date(position.balance.lastUpdated).toLocaleTimeString()}</span>
-                        <span className="text-green-400">
+                        <span className={ACCENTS.grow.badge}>
                           +{((parseFloat(position.balance.yieldAccrued) / parseFloat(position.balance.deposited)) * 100).toFixed(2)}%
                         </span>
                       </div>

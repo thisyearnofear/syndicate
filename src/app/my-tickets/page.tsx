@@ -17,16 +17,15 @@ import { Button } from "@/shared/components/ui/Button";
 import { LoadingSpinner } from "@/shared/components/LoadingSpinner";
 import WalletConnectionManager from "@/components/wallet/WalletConnectionManager";
 import { CompactStack, CompactFlex, CompactSection } from "@/shared/components/premium/CompactLayout";
-import { PuzzlePiece } from "@/shared/components/premium/PuzzlePiece";
 import { PageShell, PageHeader } from "@/components/layout/PageShell";
 import { EmptyState, DisconnectedState } from "@/components/layout/StateViews";
 import { useSuccessToast, useErrorToast } from "@/shared/components/ui/Toast";
 import { ExternalLink, ArrowLeft, RefreshCw, Ticket } from "lucide-react";
 import Link from "next/link";
 import { WinningsGuide } from "@/components/wallet/WinningsGuide"; // Import the new component
-import { BeamFrame } from "@/components/motion/BeamFrame";
 import { CountUp } from "@/components/motion/CountUp";
 import { getSourceExplorerUrl } from "@/domains/participation/utils/getSourceExplorerUrl";
+import { ACCENTS } from "@/config/design";
 import {
     formatTicketHistoryDate,
     getTicketHistoryStatusMeta,
@@ -45,7 +44,7 @@ function TicketHistoryCard({ ticket }: { ticket: TicketPurchaseHistory }) {
     const baseExplorerUrl = getSourceExplorerUrl('base', ticket.txHash);
 
     return (
-        <div className="glass-premium rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 hover:scale-[1.02]">
+        <div className="rounded-xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 bg-white/[0.04]">
             <CompactFlex align="center" justify="between" className="mb-4">
                 <div className="flex items-center gap-3">
                     <span className="text-2xl">{statusMeta.icon}</span>
@@ -59,7 +58,7 @@ function TicketHistoryCard({ ticket }: { ticket: TicketPurchaseHistory }) {
                         </p>
                         {/* Show cross-chain information */}
                         {ticket.sourceChain && (
-                            <p className="text-xs text-purple-400 mt-1">
+                            <p className="text-xs text-gray-500 mt-1">
                                 Purchased via {ticket.sourceChain} → Base bridge
                             </p>
                         )}
@@ -72,8 +71,8 @@ function TicketHistoryCard({ ticket }: { ticket: TicketPurchaseHistory }) {
             </CompactFlex>
 
             {ticket.referrer && ticket.referrer !== '0x0000000000000000000000000000000000000000' && (
-            <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-            <p className="text-sm text-blue-400">
+            <div className="mb-4 p-3 bg-white/[0.04] border border-white/10 rounded-lg">
+            <p className="text-sm text-gray-400">
             Referred by: {ticket.referrer.slice(0, 6)}...{ticket.referrer.slice(-4)}
             </p>
             </div>
@@ -92,7 +91,7 @@ function TicketHistoryCard({ ticket }: { ticket: TicketPurchaseHistory }) {
                     href={baseExplorerUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm transition-colors"
+                    className="flex items-center gap-1 text-gray-400 hover:text-white text-sm transition-colors"
                 >
                     View Transaction
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -111,57 +110,54 @@ function TicketStats({ userTicketInfo, ticketHistory, onClaimWinnings, isClaimin
     isClaimingWinnings: boolean;
 }) {
     const { totalTickets, totalSpent, totalPurchases } = getTicketHistorySummary(ticketHistory);
+    const a = ACCENTS.play;
 
-return (
-<PuzzlePiece variant="primary" size="lg" shape="rounded" glow>
-            <CompactStack spacing="md">
-<h2 className="font-bold text-2xl text-white">Your Stats</h2>
+    return (
+        <div className={`rounded-2xl border ${a.border} bg-white/[0.04] p-6 md:p-8`}>
+            <h2 className={`font-bold text-2xl ${a.gradientText} mb-6`}>Your Stats</h2>
 
 {/* These figures change when history refreshes or a claim lands — CountUp
-    makes the delta visible instead of a silent re-render (reveal grammar). */}
+    makes the delta visible instead of a silent re-render (reveal grammar).
+    All figures use the play accent per the ladder (docs/DESIGN.md). */}
 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 <div className="text-center">
-<div className="text-3xl font-black text-blue-400 mb-2">
+<div className={`text-3xl font-black ${a.icon} mb-2`}>
     <CountUp value={totalTickets} grouped durationMs={700} />
     </div>
                         <p className="text-sm text-gray-400">Total Tickets Purchased</p>
 </div>
 
 <div className="text-center">
-<div className="text-3xl font-black text-green-400 mb-2">
+<div className={`text-3xl font-black ${a.icon} mb-2`}>
     <CountUp value={totalSpent} decimals={2} prefix="$" durationMs={700} />
     </div>
                         <p className="text-sm text-gray-400">Total Spent</p>
 </div>
 
 <div className="text-center">
-<div className="text-3xl font-black text-purple-400 mb-2">
+<div className={`text-3xl font-black ${a.icon} mb-2`}>
     <CountUp value={totalPurchases} grouped durationMs={700} />
     </div>
         <p className="text-sm text-gray-400">Total Purchases</p>
                     </div>
 </div>
 
-{/* Winnings section - only show if user has claimable winnings */}
 {userTicketInfo && parseFloat(userTicketInfo.winningsClaimable || '0') > 0 && (
-<BeamFrame color="#fbbf24" duration={5} laps={Infinity} className="mt-4 block rounded-lg">
-<div className="p-4 bg-amber-400/10 border border-amber-400/30 rounded-lg text-center">
-<p className="text-amber-300 font-semibold mb-2">🏆 Congratulations! You have winnings available!</p>
+<div className="mt-6 rounded-xl border border-amber-400/20 bg-amber-500/[0.04] p-4 text-center">
+<p className="text-amber-200 font-semibold mb-2">You have winnings available!</p>
 <p className="text-white text-sm mb-3">${parseFloat(userTicketInfo.winningsClaimable).toFixed(2)} USDC ready to claim</p>
 <Button
-variant="default"
+variant="warning"
 size="lg"
 onClick={onClaimWinnings}
     disabled={isClaimingWinnings}
-className="bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-400 hover:from-amber-400 hover:via-yellow-500 hover:to-orange-500 text-white disabled:opacity-50"
+className="text-white"
 >
                             {isClaimingWinnings ? 'Claiming...' : 'Claim Winnings'}
                         </Button>
                 </div>
-</BeamFrame>
                 )}
-            </CompactStack>
-        </PuzzlePiece>
+            </div>
     );
 }
 
@@ -212,9 +208,8 @@ export default function MyTicketsPage() {
                 <DisconnectedState subject="Your tickets" accent="play">
                     <Link href="/">
                         <Button
-                            variant="default"
+                            variant="warning"
                             size="lg"
-                            className="gradient-cta text-white"
                         >
                             <ArrowLeft className="w-4 h-4 mr-2" />
                             Back to Home

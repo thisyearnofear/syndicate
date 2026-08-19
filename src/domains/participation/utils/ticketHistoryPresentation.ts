@@ -6,6 +6,12 @@ export interface TicketHistoryStatusMeta {
   className: string;
 }
 
+/**
+ * Status badges are state grammar (docs/DESIGN.md): each state takes its
+ * color from the accent ladder, never an off-ladder hue.
+ * won → amber (play), claimed → emerald (money secured), drawn → violet
+ * (round resolved through the pool), active/default → neutral.
+ */
 export function getTicketHistoryStatusMeta(
   status: TicketPurchaseHistory['status'],
 ): TicketHistoryStatusMeta {
@@ -14,26 +20,26 @@ export function getTicketHistoryStatusMeta(
       return {
         label: 'Winner',
         icon: '🏆',
-        className: 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30',
+        className: 'text-amber-300 bg-amber-500/15 border-amber-400/30',
       };
     case 'claimed':
       return {
         label: 'Claimed',
         icon: '✅',
-        className: 'text-emerald-400 bg-emerald-500/20 border-emerald-500/30',
+        className: 'text-emerald-300 bg-emerald-500/15 border-emerald-400/30',
       };
     case 'drawn':
       return {
         label: 'Drawn',
         icon: '🧾',
-        className: 'text-purple-400 bg-purple-500/20 border-purple-500/30',
+        className: 'text-violet-300 bg-violet-500/15 border-violet-400/30',
       };
     case 'active':
     default:
       return {
         label: 'Completed',
         icon: '✅',
-        className: 'text-blue-400 bg-blue-500/20 border-blue-500/30',
+        className: 'text-gray-300 bg-white/10 border-white/20',
       };
   }
 }

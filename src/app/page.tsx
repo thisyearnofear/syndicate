@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, Clock } from "lucide-react";
 import { useUnifiedWallet, useIsMounted } from "@/hooks";
+import { useCountUp } from "@/hooks/useCountUp";
 import { PRODUCT_MODES } from "@/config/productModes";
 import { getCapability, getCtaState, type CapabilityId } from "@/config/capabilities";
 import { MODE_ACCENTS } from "@/config/design";
@@ -30,29 +31,6 @@ const UserDashboard = lazy(() => import("@/components/home/UserDashboard"));
 const OnboardingWizard = lazy(() => import("@/components/onboarding/OnboardingWizard"));
 
 // ─── Animated number hook (rAF count-up for the hero jackpot) ───────────────
-
-function useCountUp(target: number, durationMs = 1200) {
-  const [value, setValue] = useState(0);
-  const previous = useState(() => ({ current: 0 }))[0];
-
-  useEffect(() => {
-    const from = previous.current;
-    if (from === target) return;
-    const start = performance.now();
-    let frame: number;
-    const tick = (now: number) => {
-      const t = Math.min((now - start) / durationMs, 1);
-      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
-      setValue(from + (target - from) * eased);
-      if (t < 1) frame = requestAnimationFrame(tick);
-      else previous.current = target;
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [target, durationMs, previous]);
-
-  return value;
-}
 
 // ─── Countdown hook for hero CTA ────────────────────────────────────────────
 
@@ -133,15 +111,20 @@ export default function Home() {
       ? 'settled'
       : deriveOrbState(jackpotStats?.endTimestamp, liveNow);
 
-  // Prize pool, animated
+  // Prize pool, animated via the shared reveal-grammar hook (the page-local
+  // copy was removed in the distill pass — one CountUp implementation).
   const prizeUsd = jackpotStats?.prizeUsd ? parseFloat(jackpotStats.prizeUsd) : 0;
-  const animatedPrize = useCountUp(prizeUsd, 1500);
+  const { value: animatedPrize } = useCountUp(prizeUsd, {
+    durationMs: 1500,
+    animateOnMount: true,
+  });
   const prizeDisplay = useMemo(() => {
-    if (!prizeUsd) return "$1,000,000+";
+    // Honesty contract: never invent a figure. A fresh round with $0 shows
+    // $0; the skeleton covers the not-loaded-yet case (docs/DESIGN.md).
     const n = animatedPrize;
     if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
     return `$${Math.round(n).toLocaleString()}`;
-  }, [prizeUsd, animatedPrize]);
+  }, [animatedPrize]);
 
   const oddsDisplay = jackpotStats?.oddsPerTicket
     ? `1 in ${parseInt(jackpotStats.oddsPerTicket).toLocaleString()}`
@@ -171,8 +154,9 @@ export default function Home() {
     const el = document.getElementById('quick-purchase');
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      el.classList.add('ring-2', 'ring-brand-400/50');
-      setTimeout(() => el.classList.remove('ring-2', 'ring-brand-400/50'), 2000);
+      // Play amber ring: the ladder owns the home accent (docs/DESIGN.md).
+      el.classList.add('ring-2', 'ring-amber-400/50');
+      setTimeout(() => el.classList.remove('ring-2', 'ring-amber-400/50'), 2000);
     }
   }, []);
 
@@ -216,7 +200,10 @@ export default function Home() {
               Current prize pool
             </p>
             {jackpotStats ? (
-              <h1 className="font-black text-6xl md:text-8xl leading-none tracking-tight tabular-nums bg-gradient-to-b from-amber-200 via-yellow-300 to-orange-400 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(251,191,36,0.25)]">
+              /* The live prize figure is the page title on this route
+                 (docs/DESIGN.md), so it takes the same gradient-text token
+                 every PageShell title uses — the ladder, not an inline copy. */
+              <h1 className={`font-black text-6xl md:text-8xl leading-none tracking-tight tabular-nums ${MODE_ACCENTS.public_play.gradientText}`}>
                 {prizeDisplay}
               </h1>
             ) : (
@@ -364,67 +351,73 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ─── AGENT POOL (bounded lab inset — docs/DESIGN.md) ─────────────── */}
+        {/* ─── ADJACENT WORLDS (two bounded insets, side by side) ──────────── */}
+        {/* Distill: the lab inset and the privacy callout each pointed at a
+            world beyond the ladder. Stacked, they were two full-width
+            marketing interruptions before the dashboard; side by side they
+            read as two adjacent doors. Both stay bounded plates with their
+            own accent — neither paints the home ground (docs/DESIGN.md). */}
         <section className="mb-12">
-          <div className="hud mx-auto max-w-3xl overflow-hidden rounded-2xl p-8 md:p-10 text-center">
-            <div className="mb-4 flex justify-center">
-              <HonestyChip capability="xlayer_prize_pool" />
+          <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
+            {/* Agent Pool — bounded lab inset */}
+            <div className="hud overflow-hidden rounded-2xl p-6 md:p-8 text-center flex flex-col items-center">
+              <div className="mb-3">
+                <HonestyChip capability="xlayer_prize_pool" />
+              </div>
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-cyan-300/80 mb-2">
+                Agent Pool
+              </p>
+              <p className="font-mono text-lg md:text-xl font-semibold text-white mb-2">
+                An AI agent is the treasurer of this prize pool.
+              </p>
+              <p className="text-sm text-gray-400 mb-1">
+                Swap fees fund the pot. Principal stays redeemable. The agent proposes, you approve, receipts prove it.
+              </p>
+              <p className="text-xs text-gray-600 mb-5">
+                A separate engine on X Layer — not the Base draw.
+              </p>
+              <Link href="/xlayer" className="mt-auto">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="border border-cyan-400/25 text-cyan-100 hover:text-white hover:border-cyan-400/40"
+                >
+                  Watch the agent run
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
             </div>
-            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-cyan-300/80 mb-3">
-              Agent Pool
-            </p>
-            <p className="font-mono text-2xl md:text-3xl font-semibold text-white mb-3">
-              An AI agent is the treasurer of this prize pool.
-            </p>
-            <p className="text-gray-400 mb-2">
-              Swap fees fund the pot. Principal stays redeemable. The agent proposes, you approve, receipts prove it.
-            </p>
-            <p className="text-xs text-gray-600 mb-6">
-              A separate engine on X Layer — not the Base draw. Watch it run, then come back to Play.
-            </p>
-            <Link href="/xlayer">
+
+            {/* Privacy — bounded coordinate inset */}
+            <div className="rounded-2xl border border-violet-400/20 bg-violet-500/[0.04] hover:border-violet-400/35 transition-colors duration-300 p-6 md:p-8 text-center flex flex-col items-center">
+              <div className="mb-3">
+                <HonestyChip capability="fhenix_privacy" />
+              </div>
+              <p className="text-lg md:text-xl font-bold text-white mb-2">
+                A treasury buying 500 tickets doesn&apos;t need every competitor watching.
+              </p>
+              <p className="text-sm text-gray-400 mb-1">
+                Coordinate privately, win publicly.
+              </p>
+              <DecryptLine
+                text="Encrypted balances. Selective reveal. Your rules."
+                className="text-violet-300/80 mb-5 cursor-default select-none text-sm"
+              />
               <Button
                 variant="ghost"
                 size="sm"
-                className="border border-cyan-400/25 text-cyan-100 hover:text-white hover:border-cyan-400/40"
+                className="mt-auto border border-white/10 text-gray-300 hover:text-white hover:border-white/20"
+                onClick={handleDiscover}
               >
-                Watch the agent run
+                Explore private syndicates
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
-            </Link>
-          </div>
-        </section>
-
-        {/* ─── PRIVACY ──────────────────────────────────────────────────────── */}
-        <section className="mb-12">
-          <div className="max-w-3xl mx-auto rounded-2xl border border-violet-400/20 bg-violet-500/[0.04] hover:border-violet-400/35 transition-colors duration-300 p-8 md:p-10 text-center">
-            <div className="mb-4">
-              <HonestyChip capability="fhenix_privacy" />
+              {getCapability('fhenix_privacy').availabilityMessage && (
+                <p className="text-xs text-amber-300/60 mt-3">
+                  {getCapability('fhenix_privacy').availabilityMessage}
+                </p>
+              )}
             </div>
-            <p className="text-2xl md:text-3xl font-bold text-white mb-3">
-              A treasury buying 500 tickets doesn&apos;t need every competitor watching.
-            </p>
-            <p className="text-gray-400 mb-2">
-              Coordinate privately, win publicly.
-            </p>
-            <DecryptLine
-              text="Encrypted balances. Selective reveal. Your rules."
-              className="text-violet-300/80 mb-6 cursor-default select-none"
-            />
-            <Button
-              variant="ghost"
-              size="sm"
-              className="border border-white/10 text-gray-300 hover:text-white hover:border-white/20"
-              onClick={handleDiscover}
-            >
-              Explore private syndicates
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-            {getCapability('fhenix_privacy').availabilityMessage && (
-              <p className="text-xs text-amber-300/60 mt-4">
-                {getCapability('fhenix_privacy').availabilityMessage}
-              </p>
-            )}
           </div>
         </section>
 
