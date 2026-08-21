@@ -92,9 +92,10 @@ export function SeasonLivingRoom() {
             {season.name}
           </h2>
           <p className="mt-1 max-w-xl text-sm text-[#d8c9ae]/65">
-            Take a seat, then buy a real ticket. Entries count for this crew when
-            this wallet&apos;s purchase is scored on-chain — the join code is not a
-            Megapot referrer.
+            The table is a tontine: when a seat empties, the cut for the crews who
+            remain rises. Sit with a crew, then buy a real ticket — entries count for
+            this crew when this wallet&apos;s purchase is scored on-chain. The join code
+            is not a Megapot referrer.
           </p>
         </div>
         <span className="rounded-full border border-[#c9a227]/35 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#e3c887]/85">

@@ -108,7 +108,7 @@ function StepActions({
         <Button
           size="sm"
           variant="default"
-          className={`bg-gradient-to-r from-violet-500 to-indigo-600 text-white ${width}`}
+          className={`bg-cyan-500/15 border border-cyan-400/30 text-cyan-100 hover:bg-cyan-500/25 ${width}`}
           disabled={isExecuting}
           onClick={onExecute}
         >
@@ -329,7 +329,7 @@ export function XLayerAgentPanel({
               key={t}
               onClick={() => setTab(t)}
               className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors touch-manipulation ${
-                tab === t ? 'bg-violet-500 text-white' : 'bg-white/10 text-slate-300 hover:bg-white/20'
+                tab === t ? 'bg-cyan-600 text-white' : 'bg-white/10 text-slate-300 hover:bg-white/20'
               }`}
             >
               {label}

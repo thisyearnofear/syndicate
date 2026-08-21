@@ -20,9 +20,10 @@ import { CompactStack, CompactFlex, CompactSection } from "@/shared/components/p
 import { PageShell, PageHeader } from "@/components/layout/PageShell";
 import { EmptyState, DisconnectedState } from "@/components/layout/StateViews";
 import { useSuccessToast, useErrorToast } from "@/shared/components/ui/Toast";
-import { ExternalLink, ArrowLeft, RefreshCw, Ticket } from "lucide-react";
+import { ExternalLink, ArrowLeft, Ticket } from "lucide-react";
 import Link from "next/link";
 import { WinningsGuide } from "@/components/wallet/WinningsGuide"; // Import the new component
+import { RecurringEntriesCard } from "@/components/automation/RecurringEntriesCard";
 import { CountUp } from "@/components/motion/CountUp";
 import { getSourceExplorerUrl } from "@/domains/participation/utils/getSourceExplorerUrl";
 import { ACCENTS } from "@/config/design";
@@ -78,12 +79,9 @@ function TicketHistoryCard({ ticket }: { ticket: TicketPurchaseHistory }) {
             </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                    <p className="text-xs text-gray-400">Total Cost</p>
-                    <p className="font-semibold text-white">${ticket.totalCost} USDC</p>
-                </div>
-                
+            <div className="mb-4">
+                <p className="text-xs text-gray-400">Total Cost</p>
+                <p className="font-semibold text-white">${ticket.totalCost} USDC</p>
             </div>
 
             <CompactFlex align="center" justify="between">
@@ -120,26 +118,26 @@ function TicketStats({ userTicketInfo, ticketHistory, onClaimWinnings, isClaimin
     makes the delta visible instead of a silent re-render (reveal grammar).
     All figures use the play accent per the ladder (docs/DESIGN.md). */}
 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-<div className="text-center">
-<div className={`text-3xl font-black ${a.icon} mb-2`}>
-    <CountUp value={totalTickets} grouped durationMs={700} />
+    <div className="text-center">
+        <div className={`text-3xl font-black ${a.icon} mb-2`}>
+            <CountUp value={totalTickets} grouped durationMs={700} />
+        </div>
+        <p className="text-sm text-gray-400">Total Tickets Purchased</p>
     </div>
-                        <p className="text-sm text-gray-400">Total Tickets Purchased</p>
-</div>
 
-<div className="text-center">
-<div className={`text-3xl font-black ${a.icon} mb-2`}>
-    <CountUp value={totalSpent} decimals={2} prefix="$" durationMs={700} />
+    <div className="text-center">
+        <div className={`text-3xl font-black ${a.icon} mb-2`}>
+            <CountUp value={totalSpent} decimals={2} prefix="$" durationMs={700} />
+        </div>
+        <p className="text-sm text-gray-400">Total Spent</p>
     </div>
-                        <p className="text-sm text-gray-400">Total Spent</p>
-</div>
 
-<div className="text-center">
-<div className={`text-3xl font-black ${a.icon} mb-2`}>
-    <CountUp value={totalPurchases} grouped durationMs={700} />
-    </div>
+    <div className="text-center">
+        <div className={`text-3xl font-black ${a.icon} mb-2`}>
+            <CountUp value={totalPurchases} grouped durationMs={700} />
+        </div>
         <p className="text-sm text-gray-400">Total Purchases</p>
-                    </div>
+    </div>
 </div>
 
 {userTicketInfo && parseFloat(userTicketInfo.winningsClaimable || '0') > 0 && (
@@ -165,7 +163,6 @@ export default function MyTicketsPage() {
     const { isConnected } = useUnifiedWallet();
     const { userTicketInfo, refresh: getCurrentTicketInfo, claimWinnings, isClaimingWinnings } = useTicketInfo();
     const { purchases: ticketHistory, isLoading, refreshHistory } = useTicketHistory();
-    const [isRefreshing, setIsRefreshing] = useState(false);
     const showSuccess = useSuccessToast();
     const showError = useErrorToast();
 
@@ -175,15 +172,6 @@ export default function MyTicketsPage() {
             void getCurrentTicketInfo();
         }
     }, [isConnected, getCurrentTicketInfo]);
-
-    const handleRefresh = async () => {
-        setIsRefreshing(true);
-        await Promise.all([
-            refreshHistory(),
-            getCurrentTicketInfo()
-        ]);
-        setIsRefreshing(false);
-    };
 
     const handleClaimWinnings = async () => {
         if (!userTicketInfo || parseFloat(userTicketInfo.winningsClaimable || '0') <= 0) return;
@@ -236,18 +224,10 @@ export default function MyTicketsPage() {
                             <WalletConnectionManager />
                         </div>
 
+                        {/* History auto-polls every 60s (useTicketHistory) and
+                            refreshes instantly after purchases and claims — the
+                            manual Refresh button was redundant (distill). */}
                         <div className="flex items-center gap-4">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleRefresh}
-                                disabled={isRefreshing}
-                                className="text-gray-400 hover:text-white"
-                            >
-                                <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                                Refresh
-                            </Button>
-
                             <Link href="/">
                                 <Button
                                     variant="ghost"
@@ -272,16 +252,22 @@ export default function MyTicketsPage() {
                         isClaimingWinnings={isClaimingWinnings}
                     />
 
+                    {/* Recurring entries — automation surfaced on the ticket
+                        surface, not buried in Settings */}
+                    <RecurringEntriesCard />
+
                     {/* Ticket History */}
                     <CompactSection spacing="lg">
                         <div className="flex items-center justify-center mb-2">
                             <h2 className="font-bold text-2xl text-white">Ticket History</h2>
                         </div>
-                        <div className="flex items-center justify-center mb-6">
-                            <span className="text-sm text-gray-400">
-                                Showing {Math.min(ticketHistory.length, 10)} of {ticketHistory.length} purchase{ticketHistory.length !== 1 ? 's' : ''}
-                            </span>
-                        </div>
+                        {ticketHistory.length > 10 && (
+                            <div className="flex items-center justify-center mb-6">
+                                <span className="text-sm text-gray-400">
+                                    Showing {Math.min(ticketHistory.length, 10)} of {ticketHistory.length} purchase{ticketHistory.length !== 1 ? 's' : ''}
+                                </span>
+                            </div>
+                        )}
 
                         {isLoading ? (
                             <div className="flex justify-center py-12">

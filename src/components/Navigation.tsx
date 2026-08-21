@@ -13,6 +13,7 @@ import WalletConnectionOptions from './wallet/WalletConnectionOptions';
 import {
   Ticket, Users, TrendingUp, Menu, X,
   ArrowLeftRight, LayoutDashboard, Settings, ChevronDown, Bot, Crown,
+  Wallet, Ghost, Orbit, Bitcoin, Zap,
 } from 'lucide-react';
 import { useActiveSeason } from '@/hooks/useActiveSeason';
 
@@ -133,14 +134,16 @@ export default function Navigation({ className = '' }: NavigationProps) {
     return 'text-gray-400 hover:text-white hover:bg-white/5';
   };
 
+  // One icon family for every wallet type — emoji were breaking the lucide
+  // language and reading as unpolished chrome (docs/DESIGN.md).
   const getWalletIcon = () => {
     switch (walletType) {
-      case 'evm': return '🔗';
-      case 'solana': return '👻';
-      case 'near': return '🌌';
-      case 'stacks': return '₿';
-      case 'starknet': return '⚡';
-      default: return '💼';
+      case 'evm': return Wallet;
+      case 'solana': return Ghost;
+      case 'near': return Orbit;
+      case 'stacks': return Bitcoin;
+      case 'starknet': return Zap;
+      default: return Wallet;
     }
   };
 
@@ -238,8 +241,12 @@ export default function Navigation({ className = '' }: NavigationProps) {
                 aria-label="Wallet details"
               >
                 <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                <span className="text-green-400 text-sm font-medium">
-                  {getWalletIcon()} {getChainLabel()}
+                <span className="text-green-400 text-sm font-medium inline-flex items-center gap-1.5">
+                  {(() => {
+                    const Icon = getWalletIcon();
+                    return <Icon className="w-3.5 h-3.5" aria-hidden />;
+                  })()}
+                  {getChainLabel()}
                 </span>
               </button>
             ) : (
@@ -389,8 +396,12 @@ export default function Navigation({ className = '' }: NavigationProps) {
               {isConnected ? (
                 <div className="flex items-center gap-2 px-4 py-2">
                   <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                  <span className="text-green-400 text-sm font-medium">
-                    {getWalletIcon()} {getChainLabel()} connected
+                  <span className="text-green-400 text-sm font-medium inline-flex items-center gap-1.5">
+                    {(() => {
+                      const Icon = getWalletIcon();
+                      return <Icon className="w-3.5 h-3.5" aria-hidden />;
+                    })()}
+                    {getChainLabel()} connected
                   </span>
                 </div>
               ) : (

@@ -173,7 +173,7 @@ export default function SyndicateJoinModal({
           <Button
             variant="default"
             size="sm"
-            className="flex-1 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+            className="flex-1 bg-violet-500/15 border border-violet-400/30 text-violet-100 hover:bg-violet-500/25"
             onClick={handleJoin}
             disabled={isJoining || !joinAmount}
           >

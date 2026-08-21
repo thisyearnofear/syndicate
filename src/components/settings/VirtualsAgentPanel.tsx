@@ -1,8 +1,8 @@
 /**
  * VIRTUALS AGENT PANEL
  *
- * The "Manage" modal for the Syndicate Strategist (Virtuals ACP) agent card
- * in AutoPurchaseSettings. Lets the user:
+ * The "Manage" surface for the Syndicate Strategist (Virtuals ACP) agent.
+ * Lets the user:
  *
  *   1. Create a new task (amount, frequency, recipient email).
  *   2. See existing tasks with status badges and last reasoning.
@@ -95,19 +95,19 @@ export function VirtualsAgentPanel({ open, onOpenChange }: VirtualsAgentPanelPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-slate-900 text-white border-white/10">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <Brain className="w-5 h-5 text-indigo-600" />
+            <Brain className="w-5 h-5 text-indigo-300" />
             <DialogTitle>Syndicate Strategist (Virtuals)</DialogTitle>
           </div>
-          <DialogDescription>
+          <DialogDescription className="text-gray-400">
             Autonomous yield strategist for private vaults. Venice AI reasoning → agent wallet execution → email report. The cron at <code className="text-[10px]">/api/crons/process-jobs</code> picks up due tasks daily.
           </DialogDescription>
         </DialogHeader>
 
         {!address && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
             Connect an EVM wallet to manage Virtuals tasks.
           </div>
         )}
@@ -117,29 +117,29 @@ export function VirtualsAgentPanel({ open, onOpenChange }: VirtualsAgentPanelPro
             {/* Create form */}
             <form
               onSubmit={handleCreate}
-              className="rounded-lg border border-gray-200 bg-gray-50/50 p-4 space-y-3"
+              className="rounded-lg border border-white/10 bg-white/[0.03] p-4 space-y-3"
             >
-              <h4 className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+              <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
                 <Plus className="w-4 h-4" /> New task
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <label className="block">
-                  <span className="text-xs font-semibold text-gray-700">Amount (USDC)</span>
+                  <span className="text-xs font-semibold text-gray-300">Amount (USDC)</span>
                   <input
                     type="number"
                     step="0.01"
                     min="0.01"
                     value={amount}
                     onChange={e => setAmount(e.target.value)}
-                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="mt-1 w-full rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
                   />
                 </label>
                 <label className="block">
-                  <span className="text-xs font-semibold text-gray-700">Frequency</span>
+                  <span className="text-xs font-semibold text-gray-300">Frequency</span>
                   <select
                     value={frequency}
                     onChange={e => setFrequency(e.target.value as VirtualsTaskFrequency)}
-                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="mt-1 w-full rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
                   >
                     {FREQUENCY_OPTIONS.map(o => (
                       <option key={o.value} value={o.value}>{o.label}</option>
@@ -148,17 +148,17 @@ export function VirtualsAgentPanel({ open, onOpenChange }: VirtualsAgentPanelPro
                 </label>
               </div>
               <label className="block">
-                <span className="text-xs font-semibold text-gray-700">Recipient email (for the post-execution report)</span>
+                <span className="text-xs font-semibold text-gray-300">Recipient email (for the post-execution report)</span>
                 <input
                   type="email"
                   value={recipientEmail}
                   onChange={e => setRecipientEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="mt-1 w-full rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
                 />
               </label>
               {formError && (
-                <p className="text-xs text-red-600">{formError}</p>
+                <p className="text-xs text-red-300">{formError}</p>
               )}
               <Button
                 type="submit"
@@ -176,7 +176,7 @@ export function VirtualsAgentPanel({ open, onOpenChange }: VirtualsAgentPanelPro
             {/* Tasks list */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-bold text-gray-900">
+                <h4 className="text-sm font-bold text-white">
                   Active tasks ({activeTasks.length})
                 </h4>
                 <Button
@@ -191,17 +191,17 @@ export function VirtualsAgentPanel({ open, onOpenChange }: VirtualsAgentPanelPro
               </div>
 
               {error && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 mb-2">
+                <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300 mb-2">
                   {error}
                 </div>
               )}
 
               {isInitialLoading && activeTasks.length === 0 ? (
-                <div className="flex items-center justify-center py-8 text-sm text-gray-500">
+                <div className="flex items-center justify-center py-8 text-sm text-gray-400">
                   <Loader className="w-4 h-4 mr-2 animate-spin" /> Loading tasks...
                 </div>
               ) : activeTasks.length === 0 ? (
-                <div className="rounded-lg border-2 border-dashed border-gray-200 p-6 text-center text-sm text-gray-500">
+                <div className="rounded-lg border-2 border-dashed border-white/10 p-6 text-center text-sm text-gray-400">
                   No active tasks yet. Create one above to start the cron-driven review cycle.
                 </div>
               ) : (
@@ -220,26 +220,26 @@ export function VirtualsAgentPanel({ open, onOpenChange }: VirtualsAgentPanelPro
 
             {/* Recent activity */}
             {(lastReasoning || lastTxHash) && (
-              <div className="rounded-lg border border-gray-200 bg-white p-4 space-y-2">
-                <h4 className="text-sm font-bold text-gray-900">Recent activity</h4>
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4 space-y-2">
+                <h4 className="text-sm font-bold text-white">Recent activity</h4>
                 {lastReasoning && (
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">
                       Latest reasoning
                     </p>
-                    <p className="text-sm text-gray-800 leading-relaxed">{lastReasoning}</p>
+                    <p className="text-sm text-gray-100 leading-relaxed">{lastReasoning}</p>
                   </div>
                 )}
                 {lastTxHash && (
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">
                       Latest tx
                     </p>
                     <a
                       href={`https://basescan.org/tx/${lastTxHash}`}
                       target="_blank"
                       rel="noreferrer noopener"
-                      className="text-xs font-mono text-indigo-600 hover:underline break-all"
+                      className="text-xs font-mono text-indigo-300 hover:underline break-all"
                     >
                       {lastTxHash}
                     </a>
@@ -249,8 +249,8 @@ export function VirtualsAgentPanel({ open, onOpenChange }: VirtualsAgentPanelPro
             )}
 
             {/* Safety note */}
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-[11px] text-gray-600 leading-relaxed">
-              <strong>Safety:</strong> Tasks auto-pause after 3 consecutive failures. Delete a task to cancel it permanently. The cron uses the <code className="text-[10px]">is_active</code> flag as a hard kill switch.
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-[11px] text-gray-400 leading-relaxed">
+              <strong className="text-gray-200">Safety:</strong> Tasks auto-pause after 3 consecutive failures. Delete a task to cancel it permanently. The cron uses the <code className="text-[10px]">is_active</code> flag as a hard kill switch.
             </div>
           </div>
         )}
@@ -269,27 +269,27 @@ function TaskRow({ task, onTogglePause, onDelete }: {
   onDelete: () => void;
 }) {
   const statusColor = {
-    active: 'bg-emerald-100 text-emerald-700',
-    paused: 'bg-amber-100 text-amber-700',
-    failed: 'bg-red-100 text-red-700',
-    cancelled: 'bg-gray-200 text-gray-600',
+    active: 'bg-emerald-500/15 text-emerald-300',
+    paused: 'bg-amber-500/15 text-amber-300',
+    failed: 'bg-red-500/15 text-red-300',
+    cancelled: 'bg-white/10 text-gray-400',
   }[task.status];
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-3">
+    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-semibold text-gray-900">
+            <span className="text-sm font-semibold text-white">
               ${(Number(task.amount) / 1_000_000).toFixed(2)} USDC
             </span>
-            <span className="text-xs text-gray-500 capitalize">· {task.frequency}</span>
+            <span className="text-xs text-gray-400 capitalize">· {task.frequency}</span>
             <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase ${statusColor}`}>
               {task.status}
             </span>
           </div>
-          <p className="text-xs text-gray-600 truncate">{task.recipientEmail}</p>
-          <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-500 font-mono">
+          <p className="text-xs text-gray-300 truncate">{task.recipientEmail}</p>
+          <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-400 font-mono">
             <span>Runs: {task.executionCount}</span>
             {task.lastExecutedAt && (
               <span>Last: {new Date(task.lastExecutedAt).toLocaleString()}</span>
@@ -297,7 +297,7 @@ function TaskRow({ task, onTogglePause, onDelete }: {
             <span>Next: {new Date(task.nextExecutionAt).toLocaleString()}</span>
           </div>
           {task.lastError && (
-            <p className="mt-1 text-[10px] text-red-600 truncate">
+            <p className="mt-1 text-[10px] text-red-300 truncate">
               Last error: {task.lastError}
             </p>
           )}
@@ -316,7 +316,7 @@ function TaskRow({ task, onTogglePause, onDelete }: {
             variant="ghost"
             size="sm"
             onClick={onDelete}
-            className="text-xs h-7 px-2 text-red-600 hover:text-red-700"
+            className="text-xs h-7 px-2 text-red-300 hover:text-red-200"
             title="Cancel and remove task"
           >
             <Trash2 className="w-3 h-3" />

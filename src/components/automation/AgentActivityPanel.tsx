@@ -88,8 +88,8 @@ export function AgentActivityPanel({ className = "" }: AgentActivityPanelProps) 
       <div className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-              <Bot className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-lg bg-white/10 border border-white/10 flex items-center justify-center">
+              <Bot className="w-5 h-5 text-gray-300" />
             </div>
             <div>
               <h3 className="font-bold text-white">Syndicate Strategist</h3>

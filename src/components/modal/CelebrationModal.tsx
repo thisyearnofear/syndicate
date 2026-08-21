@@ -71,7 +71,7 @@ export default function CelebrationModal({ isOpen, onClose, achievement }: Celeb
       )}
 
       {/* Modal Content */}
-      <div className="bg-gradient-to-br from-purple-900 to-blue-900 rounded-2xl p-8 max-w-md w-full border border-purple-500/30 shadow-2xl transform animate-scale-in">
+      <div className="bg-slate-900 rounded-2xl p-8 max-w-md w-full border border-amber-400/25 shadow-2xl transform animate-scale-in">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"

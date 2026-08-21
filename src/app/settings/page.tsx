@@ -7,6 +7,7 @@ import { CompactCard, CompactStack } from "@/shared/components/premium/CompactLa
 import { PageShell, PageHeader } from "@/components/layout/PageShell";
 import { EmptyState } from "@/components/layout/StateViews";
 import { useUnifiedWallet } from "@/hooks";
+import { AutoPurchaseSettings } from "@/components/settings/AutoPurchaseSettings";
 import {
   ArrowLeft,
   Zap,
@@ -121,7 +122,7 @@ export default function SettingsPage() {
           {/* Active Permissions Panel */}
           <CompactCard variant="premium" padding="lg">
             <div className="flex items-center gap-3 mb-4">
-              <Shield className="w-5 h-5 text-blue-400" />
+              <Shield className="w-5 h-5 text-gray-300" />
               <h2 className="text-lg font-bold text-white">Active Permissions</h2>
             </div>
 
@@ -200,10 +201,14 @@ export default function SettingsPage() {
             )}
           </CompactCard>
 
+          {/* Automation Hub — recurring/automated purchase paths, surfaced here
+              and on My Tickets (docs/DESIGN.md; formerly orphaned) */}
+          <AutoPurchaseSettings />
+
           {/* Yield Allocation Panel */}
           <CompactCard variant="premium" padding="lg">
             <div className="flex items-center gap-3 mb-4">
-              <TrendingUp className="w-5 h-5 text-indigo-400" />
+              <TrendingUp className="w-5 h-5 text-emerald-400" />
               <h2 className="text-lg font-bold text-white">Yield Allocation</h2>
             </div>
 
@@ -280,7 +285,7 @@ export default function SettingsPage() {
           <CompactCard variant="premium" padding="lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Bell className="w-5 h-5 text-amber-400" />
+                <Bell className="w-5 h-5 text-gray-300" />
                 <div>
                   <h2 className="text-lg font-bold text-white">Notifications</h2>
                   <p className="text-sm text-gray-400">Receive alerts for activity and yield events</p>

@@ -28,6 +28,9 @@ export function OnboardingWizard() {
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Intent-gated, never auto-fired: a fresh visitor gets the hero untouched
+  // until they actually engage — first tap anywhere, or a real scroll. Skip
+  // persists, so this never interrupts the same visitor twice.
   useEffect(() => {
     try {
       const stored = localStorage.getItem('syndicate_onboarding');
@@ -37,12 +40,29 @@ export function OnboardingWizard() {
         if (state.completed) { setLoading(false); return; }
         setStep(state.currentStep);
       }
-      setShow(true);
+      setLoading(false);
     } catch {
-      setShow(true);
-    } finally {
       setLoading(false);
     }
+
+    let revealed = false;
+    const reveal = () => {
+      if (revealed) return;
+      revealed = true;
+      cleanup();
+      setShow(true);
+    };
+    const onPointer = () => reveal();
+    const onScroll = () => {
+      if (window.scrollY > 160) reveal();
+    };
+    const cleanup = () => {
+      window.removeEventListener('pointerdown', onPointer);
+      window.removeEventListener('scroll', onScroll);
+    };
+    window.addEventListener('pointerdown', onPointer);
+    window.addEventListener('scroll', onScroll);
+    return cleanup;
   }, []);
 
   const save = (s: number, done = false) => {

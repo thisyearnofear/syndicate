@@ -325,7 +325,7 @@ export function WinningsWithdrawalFlow({
             // The hook will use the EVM wallet to send USDC to the deposit address
           }}
           disabled={true}
-          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-4"
+          className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold py-4"
         >
           {nearWithdrawalTxHash ? (
             <>

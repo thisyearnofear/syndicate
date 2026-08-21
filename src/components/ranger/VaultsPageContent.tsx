@@ -103,6 +103,13 @@ export function VaultsPageContent({
           );
         })()}
 
+        {/* Decision-point teaching: answers the worry a deposit raises, in the
+            grow register — your principal is never spent, only its yield is. */}
+        <p className="text-sm text-gray-400 max-w-2xl">
+          Your principal never leaves your control — only the yield it earns is
+          spent, on tickets, every cycle.
+        </p>
+
         {/* Other vaults grid */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {YIELD_STRATEGIES.filter(s => s.id !== 'uniswap' && s.id !== 'fhenix').map((strategy) => {
@@ -163,7 +170,7 @@ export function VaultsPageContent({
       <ShellSection>
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/5 bg-white/[0.02] px-5 py-4">
           <div className="flex items-center gap-3">
-            <Shield className="h-4 w-4 text-blue-400" />
+            <Shield className="h-4 w-4 text-amber-400" />
             <p className="text-sm text-gray-400">
               Public vaults on Base are live. The Fhenix privacy rail is deprecated and paused — do not send funds to it.
             </p>

@@ -89,9 +89,9 @@ export function FirstActionPrompt({ onGrow, className = "" }: FirstActionPromptP
               Deposit into a yield vault — your principal stays safe, and the earnings automatically buy tickets for future draws. No effort needed.
             </p>
             <Button
-              variant="default"
+              variant="success"
               size="sm"
-              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs group"
+              className="text-xs group"
               onClick={handleGrow}
             >
               Try Grow

@@ -23,16 +23,17 @@ import {
 import { WalletType } from "@/domains/wallet/types";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { walletLoader } from "@/lib/walletLoader";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Wallet, Ghost, Orbit, Bitcoin, Zap } from "lucide-react";
 import { useWalletContext } from "@/context/WalletContext";
 
 // Data-driven wallet configuration (ENHANCEMENT FIRST + DRY)
 interface WalletConfig {
   name: string;
   type: WalletType;
-  icon: string;
+  icon: React.ComponentType<{ className?: string }>;
   description: string;
-  gradient: string;
+  /** Tinted tile classes — the system's tile language, not gradient fills. */
+  tile: string;
   bgColor: string;
   isWalletConnect?: boolean;
 }
@@ -49,42 +50,42 @@ const WALLET_SECTIONS: WalletSection[] = [
       {
         name: "WalletConnect",
         type: "evm" as WalletType,
-        icon: "🔗",
+        icon: Wallet,
         description: "Connect via WalletConnect (300+ wallets including MetaMask)",
-        gradient: "from-blue-500 to-purple-500",
+        tile: "bg-blue-500/15 border border-blue-500/30",
         bgColor: "bg-blue-500/10 border-blue-500/20",
         isWalletConnect: true,
       },
       {
         name: "Phantom",
         type: "solana" as WalletType,
-        icon: "👻",
+        icon: Ghost,
         description: "Solana & multi-chain wallet",
-        gradient: "from-purple-500 to-pink-500",
+        tile: "bg-purple-500/15 border border-purple-500/30",
         bgColor: "bg-purple-500/10 border-purple-500/20",
       },
       {
         name: "NEAR",
         type: "near" as WalletType,
-        icon: "🌌",
+        icon: Orbit,
         description: "NEAR account via Wallet Selector",
-        gradient: "from-blue-500 to-cyan-500",
+        tile: "bg-blue-500/15 border border-blue-500/30",
         bgColor: "bg-blue-500/10 border-blue-500/20",
       },
       {
         name: "Stacks",
         type: "stacks" as WalletType,
-        icon: "₿",
+        icon: Bitcoin,
         description: "BTC L2 wallets",
-        gradient: "from-amber-600 to-orange-600",
+        tile: "bg-amber-600/15 border border-amber-600/30",
         bgColor: "bg-amber-600/10 border-amber-600/20",
       },
       {
         name: "Starknet",
         type: "starknet" as WalletType,
-        icon: "⚡",
+        icon: Zap,
         description: "ArgentX or Braavos wallet",
-        gradient: "from-blue-600 to-indigo-600",
+        tile: "bg-blue-600/15 border border-blue-600/30",
         bgColor: "bg-blue-600/10 border-blue-600/20",
       },
     ],
@@ -188,8 +189,8 @@ export function WalletConnectionCard({
         >
           <CompactFlex justify="between" className="w-full">
             <CompactFlex gap="md" align="center">
-              <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${wallet.gradient} flex items-center justify-center text-lg shadow-sm`}>
-                {wallet.icon}
+              <div className={`w-10 h-10 rounded-lg ${wallet.tile} flex items-center justify-center shadow-sm`}>
+                <wallet.icon className="w-5 h-5" />
               </div>
               <div className="text-left">
                 <div className="text-white font-medium">{wallet.name}</div>
@@ -215,8 +216,8 @@ export function WalletConnectionCard({
       >
         <CompactFlex justify="between" className="w-full">
           <CompactFlex gap="md" align="center">
-            <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${wallet.gradient} flex items-center justify-center text-lg shadow-sm`}>
-              {wallet.icon}
+            <div className={`w-10 h-10 rounded-lg ${wallet.tile} flex items-center justify-center shadow-sm`}>
+              <wallet.icon className="w-5 h-5" />
             </div>
             <div className="text-left">
               <div className="text-white font-medium">
@@ -242,8 +243,8 @@ export function WalletConnectionCard({
       {/* Header - only show when not compact */}
       {!compact && (
         <div className="space-y-3">
-          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-brand-400 to-brand-600 rounded-2xl flex items-center justify-center text-3xl shadow-lg">
-            🔗
+          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-brand-400 to-brand-600 rounded-2xl flex items-center justify-center shadow-lg">
+            <Wallet className="w-8 h-8 text-white" />
           </div>
           <h3 className="font-bold text-white text-2xl">
             {title}
@@ -290,7 +291,7 @@ export function WalletConnectionCard({
           <div key={section.title}>
             {/* Section Header */}
             <div className="flex items-center gap-2 mb-3 px-1">
-              <div className="text-lg">{section.title === "Stacks (Bitcoin L2)" ? "₿" : "🔗"}</div>
+              <Wallet className="w-4 h-4 text-gray-400" />
               <h4 className="text-sm font-semibold text-gray-300">{section.title}</h4>
             </div>
 

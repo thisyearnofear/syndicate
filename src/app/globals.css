@@ -280,18 +280,6 @@ body {
   animation: scaleIn var(--duration-normal) var(--ease-out) forwards;
 }
 
-@keyframes glow {
-
-  0%,
-  100% {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
-  }
-
-  50% {
-    box-shadow: 0 0 30px rgba(59, 130, 246, 0.8);
-  }
-}
-
 @keyframes float {
 
   0%,
@@ -301,16 +289,6 @@ body {
 
   50% {
     transform: translateY(-10px);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-
-  100% {
-    transform: translateX(100%);
   }
 }
 
@@ -393,20 +371,8 @@ body {
   animation: scaleIn var(--duration-normal) var(--ease-out);
 }
 
-.animate-glow {
-  animation: glow 2s ease-in-out infinite;
-}
-
 .animate-float {
   animation: float 3s ease-in-out infinite;
-}
-
-.animate-shimmer {
-  animation: shimmer 2s ease-in-out infinite;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
 }
 
 /* Lab orb breathing — slow ambient pulse for idle/active pool stage */
@@ -561,15 +527,13 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* .glass-premium — legacy alias folded onto the system's frosted panel
+   (bg-white/[0.04] + border-white/10). Kept as a class so the ~54 existing
+   call sites converge on one look without a rename sweep; new code should use
+   the system tokens directly (docs/DESIGN.md rule 6). */
 .glass-premium {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.glass-dark {
-  background: rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(15px);
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -589,89 +553,6 @@ a.gradient-cta:hover,
 button.gradient-cta:hover,
 [role="button"].gradient-cta:hover {
   filter: brightness(1.08);
-}
-
-.gradient-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.gradient-secondary {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
-.gradient-success {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-}
-
-.gradient-jackpot {
-  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-}
-
-.gradient-text-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.gradient-text-rainbow {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* =============================================================================
-   PREMIUM SHADOWS
-   ============================================================================= */
-
-.shadow-premium {
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 30px rgba(59, 130, 246, 0.1);
-}
-
-.shadow-glow-blue {
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
-}
-
-.shadow-glow-purple {
-  box-shadow: 0 0 20px rgba(147, 51, 234, 0.5);
-}
-
-.shadow-glow-green {
-  box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
-}
-
-.shadow-glow-yellow {
-  box-shadow: 0 0 20px rgba(251, 191, 36, 0.5);
-}
-
-/* =============================================================================
-   PREMIUM HOVER EFFECTS
-   ============================================================================= */
-
-.hover-lift {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.hover-lift:hover {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-}
-
-.hover-glow {
-  transition: all 0.3s ease;
-}
-
-.hover-glow:hover {
-  filter: drop-shadow(0 0 20px currentColor);
-}
-
-.hover-scale {
-  transition: transform 0.2s ease;
-}
-
-.hover-scale:hover {
-  transform: scale(1.05);
 }
 
 /* =============================================================================
@@ -748,38 +629,6 @@ select:focus-visible {
    PREMIUM LOADING STATES
    ============================================================================= */
 
-.skeleton {
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 25%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite;
-}
-
-.loading-dots::after {
-  content: '';
-  animation: loading-dots 1.5s infinite;
-}
-
-@keyframes loading-dots {
-
-  0%,
-  20% {
-    content: '';
-  }
-
-  40% {
-    content: '.';
-  }
-
-  60% {
-    content: '..';
-  }
-
-  80%,
-  100% {
-    content: '...';
-  }
-}
-
 /* =============================================================================
    PREMIUM PRINT STYLES
    ============================================================================= */
@@ -798,17 +647,6 @@ select:focus-visible {
 /* =============================================================================
    PREMIUM ACCESSIBILITY
    ============================================================================= */
-
-@media (prefers-reduced-motion: reduce) {
-
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
 
 @media (prefers-color-scheme: light) {
   .auto-dark {

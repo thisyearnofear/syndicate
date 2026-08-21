@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useUnifiedWallet, useTicketInfo } from "@/hooks";
 import { Button } from "@/shared/components/ui/Button";
 import Link from "next/link";
-import { Zap } from "lucide-react";
+import { Zap, Ticket, Coins, TrendingUp } from "lucide-react";
 
 export default function UserDashboard() {
   const { address } = useUnifiedWallet();
@@ -36,13 +36,13 @@ export default function UserDashboard() {
         Your Dashboard
       </h2>
 
-      {/* Automation active banner */}
+      {/* Automation active banner — play ladder (amber), not indigo */}
       {automationActive && (
-        <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-4 flex items-center justify-between gap-4">
+        <div className="bg-amber-400/10 border border-amber-400/30 rounded-xl p-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Zap className="w-5 h-5 text-indigo-400 flex-shrink-0" />
+            <Zap className="w-5 h-5 text-amber-300 flex-shrink-0" />
             <div>
-              <p className="text-sm font-medium text-indigo-300">Auto-purchase active</p>
+              <p className="text-sm font-medium text-amber-200">Auto-purchase active</p>
               <p className="text-xs text-gray-400">Recurring purchases are running in the background</p>
             </div>
           </div>
@@ -58,8 +58,8 @@ export default function UserDashboard() {
         {/* Tickets */}
         <div className="bg-white/5 border border-white/10 rounded-xl p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center text-2xl">
-              🎫
+            <div className="w-12 h-12 rounded-lg bg-amber-400/15 flex items-center justify-center">
+              <Ticket className="w-6 h-6 text-amber-300" />
             </div>
             <div>
               <h3 className="text-lg font-bold text-white">My Tickets</h3>
@@ -79,8 +79,8 @@ export default function UserDashboard() {
         {/* Winnings */}
         <div className="bg-white/5 border border-white/10 rounded-xl p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-lg bg-emerald-500/20 flex items-center justify-center text-2xl">
-              💰
+            <div className="w-12 h-12 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+              <Coins className="w-6 h-6 text-emerald-400" />
             </div>
             <div>
               <h3 className="text-lg font-bold text-white">Winnings</h3>
@@ -110,8 +110,8 @@ export default function UserDashboard() {
         {/* Vaults */}
         <div className="bg-white/5 border border-white/10 rounded-xl p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-lg bg-purple-500/20 flex items-center justify-center text-2xl">
-              📈
+            <div className="w-12 h-12 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+              <TrendingUp className="w-6 h-6 text-emerald-400" />
             </div>
             <div>
               <h3 className="text-lg font-bold text-white">Vaults</h3>

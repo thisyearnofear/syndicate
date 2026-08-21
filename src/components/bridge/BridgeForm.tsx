@@ -233,7 +233,7 @@ export function BridgeForm({ onComplete }: { onComplete?: (result: BridgeResult)
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 asChild
-                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                className="flex-1 gradient-cta text-white hover:brightness-110"
               >
                 <a href="/my-tickets">
                   <span>🎫</span>

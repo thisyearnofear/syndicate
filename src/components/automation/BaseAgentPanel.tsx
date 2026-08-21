@@ -10,12 +10,12 @@ import { getCapability } from '@/config/capabilities';
 ensureBaseToolsRegistered();
 
 const STATUS_STYLE: Record<string, string> = {
-  proposed: 'bg-slate-100 text-slate-600',
-  completed: 'bg-emerald-50 text-emerald-700',
-  failed: 'bg-rose-50 text-rose-700',
-  approved: 'bg-cyan-50 text-cyan-700',
-  rejected: 'bg-rose-50 text-rose-700',
-  executing: 'bg-amber-50 text-amber-700',
+  proposed: 'bg-white/10 text-gray-300',
+  completed: 'bg-emerald-500/15 text-emerald-300',
+  failed: 'bg-red-500/15 text-red-300',
+  approved: 'bg-cyan-500/15 text-cyan-300',
+  rejected: 'bg-red-500/15 text-red-300',
+  executing: 'bg-amber-500/15 text-amber-300',
 };
 
 /**
@@ -39,19 +39,19 @@ export function BaseAgentPanel() {
   const demoYield = Number(process.env.NEXT_PUBLIC_YIELD_AUTOPILOT_DEMO_YIELD_USDC ?? 0) || 3;
 
   return (
-    <div className="space-y-3 rounded-xl border border-indigo-100 bg-indigo-50/40 p-4">
+    <div className="space-y-3 rounded-xl border border-indigo-500/25 bg-indigo-500/[0.06] p-4">
       <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700">
+        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-300">
           <Bot className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h4 className="text-sm font-bold text-gray-900">Base agent tools</h4>
-            <span className="rounded bg-white px-2 py-0.5 text-[10px] font-semibold text-indigo-700">
+            <h4 className="text-sm font-bold text-white">Base agent tools</h4>
+            <span className="rounded bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-indigo-200">
               {agent.loop.status}
             </span>
           </div>
-          <p className="mt-1 text-xs leading-5 text-gray-600">
+          <p className="mt-1 text-xs leading-5 text-gray-300">
             Plan yield spend on Base. MetaMask permission approval stays the write boundary — same
             registry pattern as the X Layer demo.
           </p>
@@ -62,7 +62,7 @@ export function BaseAgentPanel() {
         <Button
           size="sm"
           variant="outline"
-          className="min-h-11 border-indigo-200 text-indigo-800 touch-manipulation"
+          className="min-h-11 border-indigo-400/30 text-indigo-200 touch-manipulation"
           disabled={agent.planning}
           onClick={() =>
             agent.plan({
@@ -97,7 +97,7 @@ export function BaseAgentPanel() {
         )}
       </div>
 
-      {agent.loop.error && <p className="text-xs text-rose-600">{agent.loop.error}</p>}
+      {agent.loop.error && <p className="text-xs text-red-300">{agent.loop.error}</p>}
 
       {agent.loop.plan && (
         <ul className="space-y-2">
@@ -106,13 +106,13 @@ export function BaseAgentPanel() {
             return (
               <li
                 key={step.id}
-                className="rounded-lg border border-white bg-white/80 px-3 py-2.5 shadow-sm"
+                className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">{def?.label ?? step.toolId}</p>
+                    <p className="text-sm font-semibold text-white">{def?.label ?? step.toolId}</p>
                     {step.result && (
-                      <p className="mt-1 text-xs leading-5 text-gray-600">{step.result.message}</p>
+                      <p className="mt-1 text-xs leading-5 text-gray-300">{step.result.message}</p>
                     )}
                   </div>
                   <span
@@ -127,7 +127,7 @@ export function BaseAgentPanel() {
         </ul>
       )}
 
-      <p className="text-[11px] leading-4 text-gray-500">
+      <p className="text-[11px] leading-4 text-gray-400">
         Base remains the product home. Use Settings → yield autopilot to approve a capped policy.
       </p>
     </div>

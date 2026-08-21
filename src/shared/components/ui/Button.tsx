@@ -44,10 +44,6 @@ const buttonVariants = cva(
           "bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/30",
         warning:
           "bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-md shadow-amber-500/20 hover:shadow-lg hover:shadow-amber-500/30",
-        "gradient-primary":
-          "gradient-cta text-white shadow-lg shadow-brand-500/20 hover:shadow-xl hover:shadow-brand-500/30",
-        "gradient-secondary":
-          "bg-gradient-to-br from-pink-400 to-rose-500 text-white shadow-lg shadow-pink-500/20 hover:shadow-xl hover:shadow-pink-500/30",
       },
       size: {
         default: "h-10 px-4 py-2 text-sm rounded-xl",

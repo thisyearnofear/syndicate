@@ -287,10 +287,10 @@ export function ImprovedYieldStrategySelector({
               {/* LI.FI Earn specific content */}
               {isLifiEarn && (
                 <div className="mt-4 space-y-4">
-                  <div className="p-4 rounded-lg bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
+                  <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                        <Globe className="w-5 h-5 text-white" />
+                      <div className="w-10 h-10 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center flex-shrink-0">
+                        <Globe className="w-5 h-5 text-emerald-300" />
                       </div>
                       <div>
                         <p className="font-semibold text-indigo-300 mb-1">Cross-Chain Vault Aggregator</p>

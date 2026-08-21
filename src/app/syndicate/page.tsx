@@ -84,7 +84,7 @@ export default function SyndicateDetailPage() {
       <PageShell width="wide">
         <PageHeader
           title="Syndicate"
-          supportingLine="This page needs a syndicate to load."
+          supportingLine="A syndicate is your group&apos;s ticket treasury — pooled entries, split winnings, one shared rail."
           accent="coordinate"
         />
         <ShellSection>

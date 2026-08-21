@@ -512,6 +512,10 @@ export function FocusedBridgeFlow({
             Bridge USDC to Base
           </h3>
           <p className="text-gray-400">
+            Fund from the chain where your money already sits. It arrives on Base
+            as USDC, ready for tickets or a vault.
+          </p>
+          <p className="text-gray-500">
             Select a bridge protocol to transfer{" "}
             <span className="text-white font-medium">{amountInput} USDC</span>
           </p>

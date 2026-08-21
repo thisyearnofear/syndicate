@@ -47,18 +47,21 @@ const CHAIN_NAMES: Record<number, string> = {
   100: 'Gnosis',
 };
 
+// Chain hue as a tinted chip, not a gradient — the system's tile language
+// (ACCENTS tile / honesty chip), keeping chain semantics without the
+// gradient costume (docs/DESIGN.md).
 const CHAIN_COLORS: Record<number, string> = {
-  1: 'from-blue-500 to-blue-600',
-  8453: 'from-blue-400 to-cyan-500',
-  42161: 'from-indigo-500 to-purple-500',
-  10: 'from-red-500 to-orange-500',
-  137: 'from-purple-500 to-pink-500',
-  56: 'from-yellow-500 to-orange-500',
-  43114: 'from-red-500 to-red-600',
-  324: 'from-blue-600 to-indigo-600',
-  59144: 'from-emerald-500 to-teal-500',
-  5000: 'from-cyan-500 to-blue-500',
-  100: 'from-green-500 to-emerald-500',
+  1: 'bg-blue-500/15 text-blue-200 border border-blue-500/30',
+  8453: 'bg-cyan-500/15 text-cyan-200 border border-cyan-500/30',
+  42161: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/30',
+  10: 'bg-orange-500/15 text-orange-200 border border-orange-500/30',
+  137: 'bg-purple-500/15 text-purple-200 border border-purple-500/30',
+  56: 'bg-yellow-500/15 text-yellow-200 border border-yellow-500/30',
+  43114: 'bg-red-500/15 text-red-200 border border-red-500/30',
+  324: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/30',
+  59144: 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/30',
+  5000: 'bg-cyan-500/15 text-cyan-200 border border-cyan-500/30',
+  100: 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/30',
 };
 
 interface LifiEarnVaultSelectorProps {
@@ -203,7 +206,7 @@ export function LifiEarnVaultSelector({
       <CompactCard variant="premium" padding="md">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-lg bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center">
               <Globe className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -316,7 +319,7 @@ export function LifiEarnVaultSelector({
                     <span className="font-semibold text-white truncate">
                       {vault.protocol.name}
                     </span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full bg-gradient-to-r ${CHAIN_COLORS[vault.chainId] || 'from-gray-500 to-gray-600'} text-white`}>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${CHAIN_COLORS[vault.chainId] || 'bg-gray-500/15 text-gray-300 border border-gray-500/30'}`}>
                       {CHAIN_NAMES[vault.chainId] || `Chain ${vault.chainId}`}
                     </span>
                   </div>
@@ -373,7 +376,7 @@ export function LifiEarnVaultSelector({
         <CompactCard variant="premium" padding="lg">
           <div className="space-y-4">
             <div className="flex items-start gap-4">
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${CHAIN_COLORS[selectedVault.chainId] || 'from-gray-500 to-gray-600'} flex items-center justify-center flex-shrink-0`}>
+              <div className={`w-12 h-12 rounded-xl ${CHAIN_COLORS[selectedVault.chainId] || 'bg-gray-500/15 border border-gray-500/30'} flex items-center justify-center flex-shrink-0`}>
                 <Zap className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1">
@@ -499,7 +502,7 @@ export function LifiEarnVaultSelector({
                 <Button
                   onClick={handleDeposit}
                   disabled={isDepositing || !effectiveAddress}
-                  className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
+                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700"
                   variant="default"
                 >
                   {isDepositing ? (

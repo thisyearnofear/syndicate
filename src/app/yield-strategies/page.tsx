@@ -606,7 +606,7 @@ function YieldStrategiesContent() {
     <CompactStack spacing="lg">
       <div className="px-1">
         <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          <Globe className="h-5 w-5 text-indigo-400" />
+          <Globe className="h-5 w-5 text-emerald-400" />
           Cross-chain deposit
         </h2>
         <p className="mt-1 text-sm text-gray-400">

@@ -34,9 +34,9 @@ export function YieldPipelineViz({
       label: "Yield Vault",
       value: `${apy.toFixed(1)}% APY`,
       sub: "accruing",
-      icon: <TrendingUp className="w-5 h-5 text-indigo-400" />,
-      bg: "from-indigo-500/20 to-indigo-600/10",
-      border: "border-indigo-500/30",
+      icon: <TrendingUp className="w-5 h-5 text-emerald-400" />,
+      bg: "bg-emerald-500/10",
+      border: "border-emerald-500/30",
     },
     {
       label: "Annual Yield",
@@ -62,7 +62,7 @@ export function YieldPipelineViz({
         {stages.map((stage, i) => (
           <div key={stage.label} className="flex items-center flex-1">
             <div
-              className={`flex-1 bg-gradient-to-br ${stage.bg} border ${stage.border} rounded-xl p-3 sm:p-4 text-center transition-all duration-300 hover:scale-[1.02]`}
+              className={`flex-1 ${stage.bg} border ${stage.border} rounded-xl p-3 sm:p-4 text-center transition-all duration-300 hover:scale-[1.02]`}
             >
               <div className="flex justify-center mb-2">{stage.icon}</div>
               <p className="text-xs text-gray-400 mb-1">{stage.label}</p>

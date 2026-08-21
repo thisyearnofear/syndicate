@@ -186,12 +186,12 @@ export function CrossChainTracker({
             ? `Funding Base from ${sourceChain.toUpperCase()}`
             : "Processing your public-play transaction on Base"}
         </p>
-        <div className="mt-3 h-1 w-full bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-pink-500/30 rounded-full"></div>
+        <div className="mt-3 h-1 w-full bg-gradient-to-r from-blue-500/30 via-cyan-400/30 to-emerald-500/30 rounded-full"></div>
       </div>
 
       {/* Wallet Linking Info (for cross-chain only) */}
       {isCrossChain && walletInfo && (
-        <div className="mb-6 p-4 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-xl">
+        <div className="mb-6 p-4 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/20 rounded-xl">
           <div className="flex items-center gap-2 mb-2">
             <Link2 className="w-4 h-4 text-indigo-400" />
             <span className="text-xs font-semibold text-indigo-300 uppercase">

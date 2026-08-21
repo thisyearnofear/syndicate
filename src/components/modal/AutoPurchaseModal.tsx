@@ -598,8 +598,8 @@ export function AutoPurchaseModal({
           <div className="space-y-6">
             <DialogHeader className="text-center">
               <div className="flex items-center justify-center gap-3 mb-2">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center">
-                  <Zap className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 rounded-full bg-white/10 border border-white/10 flex items-center justify-center">
+                  <Zap className="w-6 h-6 text-gray-300" />
                 </div>
               </div>
               <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent">

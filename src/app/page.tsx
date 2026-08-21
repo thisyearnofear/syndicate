@@ -182,6 +182,25 @@ export default function Home() {
     return () => window.removeEventListener('syndicate:purchase-success', handler as EventListener);
   }, []);
 
+  // Keyboard accelerators (flexibility/efficiency): E = enter draw, S = take a
+  // seat. Invisible to novices, one key for experts; never fires while typing.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      if (e.key === 'e' || e.key === 'E') {
+        e.preventDefault();
+        handleBuyClick();
+      } else if (e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        router.push('/season');
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [handleBuyClick, router]);
+
   return (
     <PageShell width="wide" accent="play" className="pb-28 md:pb-10">
       <div className="relative z-10 max-w-5xl mx-auto">
@@ -221,7 +240,7 @@ export default function Home() {
             $1 to enter. Your deposit back forever.
           </p>
           <p className="text-sm text-gray-500 max-w-sm mx-auto">
-            Keep your capital. Its earnings play — alone or as a group, publicly or privately.
+            Keep your capital. The yield it earns buys your tickets — solo, in a group, or privately.
           </p>
 
           {/* CTAs with urgency */}
@@ -231,6 +250,7 @@ export default function Home() {
                 variant="warning"
                 size="lg"
                 className="text-lg px-8 py-5 shadow-2xl shadow-amber-500/10 group w-full"
+                title="Enter draw (E)"
                 onClick={handleBuyClick}
               >
                 Enter draw
@@ -249,11 +269,12 @@ export default function Home() {
                 variant="ghost"
                 size="lg"
                 className="px-8 py-4 border border-white/15 text-gray-200 hover:bg-white/10 hover:text-white"
+                title="Take a seat (S)"
                 onClick={() => router.push('/season')}
               >
                 <span className="flex flex-col items-center leading-tight">
                   <span className="text-lg">Take a seat</span>
-                  <span className="text-[11px] font-normal text-gray-400">Season of Tickets · crew vs. crew</span>
+                  <span className="text-[11px] font-normal text-gray-400">Season of Tickets · sit with a crew</span>
                 </span>
               </Button>
           </div>
@@ -295,6 +316,17 @@ export default function Home() {
           </div>
         </section>
 
+        {/* ─── USER DASHBOARD (connected only) — personal data first ─────────── */}
+        {isMounted && isConnected && (
+          <section className="mb-12">
+            <Suspense fallback={
+              <div className="h-64 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
+            }>
+              <UserDashboard />
+            </Suspense>
+          </section>
+        )}
+
         {/* ─── ACTIVITY PROOF ───────────────────────────────────────────────── */}
         <section className="mb-12 max-w-3xl mx-auto">
           <SocialProof />
@@ -335,16 +367,17 @@ export default function Home() {
                   <p className="text-sm text-white font-medium mb-1">{mode.tagline}</p>
                   <p className="text-sm text-gray-400 leading-relaxed mb-2">{mode.description}</p>
                   <p className="text-xs text-gray-500 mb-auto">{mode.supportingCopy}</p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={`mt-5 w-full justify-between border border-white/10 text-gray-200 hover:bg-white/10 hover:text-white ${ctaState === 'disabled' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    onClick={() => handleModeAction(mode.id)}
+                  {/* Quiet text link, not a competing CTA card — the mode cards
+                      explain; the hero + sticky bar own the action (distill). */}
+                  <button
+                    type="button"
                     disabled={ctaState === 'disabled'}
+                    onClick={() => handleModeAction(mode.id)}
+                    className={`mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-gray-400 transition-colors hover:text-white disabled:opacity-40 disabled:cursor-not-allowed group ${ctaState === 'disabled' ? 'cursor-not-allowed' : ''}`}
                   >
                     {mode.id === 'public_play' ? 'Buy tickets' : mode.id === 'yield_to_tickets' ? 'Explore vaults' : 'Discover syndicates'}
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                  </button>
                 </div>
               );
             })}
@@ -421,36 +454,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ─── USER DASHBOARD (connected only) ──────────────────────────────── */}
-        {isMounted && isConnected && (
-          <section className="mb-12">
-            <Suspense fallback={
-              <div className="h-64 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
-            }>
-              <UserDashboard />
-            </Suspense>
-          </section>
-        )}
-
-        {/* ─── CLOSER ───────────────────────────────────────────────────────── */}
-        {/* The money CTA is carried by the hero, the desktop float, and the
-            mobile sticky bar — repeating it here was a fourth voice saying the
-            same thing. The closer names the next domain instead. */}
-        <section className="text-center">
-          <div className="max-w-2xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-6">
-              Play today, grow tomorrow, coordinate when you&apos;re ready.
-            </h2>
-            <Button
-              variant="ghost"
-              size="lg"
-              className="text-lg px-10 py-5 border border-white/15 text-gray-200 hover:text-white"
-              onClick={handleDiscover}
-            >
-              Start a Syndicate
-            </Button>
-          </div>
-        </section>
       </div>
 
       {/* ─── MODALS & OVERLAYS ────────────────────────────────────────────── */}
@@ -486,25 +489,9 @@ export default function Home() {
         />
       )}
 
-      {/* Desktop floating CTA */}
-      <div className="fixed bottom-8 right-8 z-40 hidden md:block">
-        <Button
-          variant="warning"
-          size="lg"
-          className="shadow-2xl hover:shadow-amber-500/30 border border-amber-400/30"
-          onClick={handleBuyClick}
-        >
-          Enter draw
-          {countdown && (
-            <span className="ml-2 text-sm opacity-80">
-              <Clock className="w-3 h-3 inline mr-0.5" />
-              {countdown.label}
-            </span>
-          )}
-        </Button>
-      </div>
-
-      {/* Mobile sticky CTA */}
+      {/* Mobile sticky CTA — the only persistent purchase affordance; the
+          hero carries it at the top, so the desktop float was a third voice
+          saying the same thing (docs/DESIGN.md motion/CTA discipline). */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-slate-950/95 px-4 pt-3 backdrop-blur-xl safe-bottom md:hidden">
         <div className="mx-auto flex max-w-lg gap-2">
           <Button

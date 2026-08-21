@@ -273,7 +273,7 @@ export function QuickSyndicate({ onExplore, className = "" }: QuickSyndicateProp
       <Button
         variant="default"
         size="lg"
-        className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-semibold text-base py-4 shadow-lg shadow-purple-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+        className="w-full bg-violet-500/15 border border-violet-400/30 text-violet-100 hover:bg-violet-500/25 font-semibold text-base py-4 shadow-lg shadow-violet-500/10 transition-all hover:scale-[1.02] active:scale-[0.98]"
         onClick={handleJoin}
         disabled={!selectedSyndicate || !amount || parseFloat(amount) <= 0}
       >
