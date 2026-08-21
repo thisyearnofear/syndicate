@@ -5,4 +5,11 @@ capture-home/
 snapshots/
 renders/
 assets/*.png
+capture_current_season.mjs
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.avi
+*.m4v
 *.log
