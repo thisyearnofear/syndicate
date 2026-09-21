@@ -27,7 +27,16 @@
  * viem type instances; client-typed values do not cross module boundaries).
  */
 
-import { randomBytes } from 'node:crypto';
+/**
+ * Short random hex suffix for session/id salt. Deliberately Math.random, not
+ * node:crypto — this module is client-reachable via AutomationOrchestrator's
+ * dynamic import, and a node builtin here breaks the browser webpack build.
+ * Uniqueness (not unpredictability) is the requirement for these identifiers.
+ */
+const randomHexId = (bytes = 3): string =>
+  Math.floor(Math.random() * 16 ** (bytes * 2))
+    .toString(16)
+    .padStart(bytes * 2, '0');
 import {
   getStacksKeeperChainId,
   getStacksKeeperPrivateKey,
@@ -90,7 +99,7 @@ export async function runStacksKeeper(): Promise<StacksKeeperRunResult> {
   }
 
   const chainId = getStacksKeeperChainId();
-  const sessionId = `stackskeeper_${Date.now()}_${randomBytes(3).toString('hex')}`;
+  const sessionId = `stackskeeper_${Date.now()}_${randomHexId(3)}`;
   let seq = 0;
 
   const record = async (
@@ -245,7 +254,7 @@ export async function executeAuthorizedPurchase(params: {
   // No purchase_statuses row exists for an x402 task; use a namespaced
   // synthetic source id so the audit trail stays joinable and the status
   // row remains receipt-verified like every other settlement.
-  const sourceTxId = `x402-${Date.now()}-${randomBytes(3).toString('hex')}`;
+  const sourceTxId = `x402-${Date.now()}-${randomHexId(3)}`;
 
   const result = await settleStacksPurchase(
     {
