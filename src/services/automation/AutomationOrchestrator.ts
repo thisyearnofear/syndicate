@@ -400,16 +400,37 @@ export class AutomationOrchestrator {
   /**
    * STRATEGY: Stacks x402
    *
-   * Authorization, challenge, limit, and revoke flows are implemented in
-   * stacksX402Service; automated purchase execution is not. Never fabricate
-   * a transaction hash.
+   * Authorization, challenge, limit, and revoke flows live in
+   * stacksX402Service. The purchase leg delegates to the Stacks settlement
+   * keeper (same receipt-verified pipeline as the cron). When the keeper is
+   * disabled/unfunded this reports an explicit failure — never a fabricated
+   * transaction hash.
    */
   private async executeStacksX402(_task: AutomationTask): Promise<ExecutionResult> {
-    return {
-      success: false,
-      error:
-        'Stacks x402 auto-purchase is not implemented yet. Authorization management (create/revoke/limits) is supported; the purchase leg still requires the user to complete a one-off bridge purchase.',
-    };
+    try {
+      const { executeAuthorizedPurchase } = await import('@/services/jobs/stacksKeeperProcessor');
+      const ticketCount = ticketsFromUsdcAmount(_task.amount);
+      if (ticketCount < 1n) {
+        return {
+          success: false,
+          error: `Amount ${_task.amount} ${_task.tokenSymbol} is below one Megapot ticket price ($1 USDC); no purchase executed.`,
+        };
+      }
+      const result = await executeAuthorizedPurchase({
+        baseAddress: _task.userAddress,
+        ticketCount: Number(ticketCount),
+      });
+      return {
+        success: result.success,
+        txHash: result.txHash as Hash | undefined,
+        error: result.error,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
 
   /**

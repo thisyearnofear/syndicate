@@ -124,9 +124,10 @@ The arena accent MAY NOT bleed into `default` pages. Lab MAY NOT bleed either.
 Sanctioned bridges are visually contained:
 
 - Nav: **ladder** (Play / Grow / Coordinate, left) vs **worlds** (Season +
-  Agent Pool, right of a hairline, always visible, flagged) vs **overflow**
-  (Fund / Portfolio / Settings). Never flatten those into five equal rungs.
-  Season's Campaign chip hides when there is no active season.
+  Agent Pool + Operators, right of a hairline, always visible, flagged) vs
+  **overflow** (Fund / Portfolio / Settings). Never flatten those into five
+  equal rungs. Season's Campaign chip hides when there is no active season;
+  Operators' chip is the proof claim itself ("Proof").
 - The **living-room inset** on Play (`/`): a bounded arena plate that shows
   the real crew table. `/` stays `surface="default"` with Play amber; the
   inset never sets the page ground. Take-a-seat is the campaign action;
@@ -177,6 +178,32 @@ From `src/components/layout/StateViews.tsx`:
 - `DisconnectedState` — one wallet-gate shape for the whole app; subject
   names the prize ("Your tickets"), and it may carry the page's connect UI.
 
+## The operators surface (/operators)
+
+Operators is the proof story made visible: one neutral page unifying the
+three keepers' run replays (Agent Pool, Season referee, Stacks settlement).
+It lives in the worlds cluster and follows the lab's *type register*
+(`font-mono` figures) without the lab's ground — neutral default surface,
+slate accents, no scanline. The shared grammar is `OperatorRunTimeline`
+(one component for every replay: execute/terminal pairs collapse to action
+nodes, completed nodes carry explorer receipts). Liveness is a `RoundOrb`.
+Rules: every receipt links to its explorer; empty states are truthful
+("No run recorded yet"); a down replay shows "replay offline" and never a
+fabricated timeline. This page is the brand's proof layer rendered
+(docs/POSITIONING.md "The proof layer"), not a product hero — it never
+carries an acquisition CTA.
+
+The proof loop closes at the moment of maximum anxiety — the waiting screen.
+`/purchase-status` embeds a per-purchase operator trace for Stacks flows
+(`OperatorStacksTrace`, joined by the keeper's structured `tool_id` key):
+one card per keeper run that touched the purchase, retries shown as history,
+empty state truthful ("no operator has touched this purchase yet"). Tracker
+links anchor in-page (`#operator-trace`) rather than leaving for
+`/operators`; the `/operators` Stacks card deep-links back to
+`/purchase-status?chain=stacks`, whose no-tx landing is a paste-to-trace
+form — never a fabricated in-progress tracker for a purchase that does not
+exist.
+
 ## The experimental accent (X Layer / Agent Pool)
 
 X Layer is a separate experimental prize-pool product (see
@@ -218,8 +245,9 @@ ground** — not a cyan restyle of Season, and not an unlabeled core page:
    and reachable on the same screen as the action** — they must not be the
    loudest element on a play surface. Live surfaces stay unlabeled. On the arena, the honesty contract is
    carried by `RefereeStrip`, which states the same facts as narrative
-   ("the referee the tontine never had") rather than as disclaimer. Empty
-   data still renders an EmptyState, never fake entries, and nothing
+   ("the referee the tontine never had") rather than as disclaimer. On the
+   operators surface, honesty is the product: receipts are the content.
+   Empty data still renders an EmptyState, never fake entries, and nothing
    pending may be styled as complete.
 8. The core mechanic must be visible in motion. If a rule of the game
    changes a number, that number animates when it changes — otherwise

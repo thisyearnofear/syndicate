@@ -465,10 +465,14 @@ class StacksX402Service {
   }
 
   /**
-   * Execute an auto-purchase if authorized
-   * 
-   * This would typically be called by a relayer service that monitors
-   * for authorized purchases and executes them on behalf of the user.
+   * Execute an auto-purchase if authorized.
+   *
+   * Delegates the purchase leg to the Stacks settlement keeper, which runs
+   * the same receipt-verified pipeline as the cron (float check → Megapot
+   * purchase → verifyTicketPurchaseReceipt). Requires the keeper to be
+   * enabled and funded (STACKS_KEEPER_ENABLED=true + keeper key + token
+   * float on the purchase chain); otherwise returns an honest failure —
+   * never a fabricated transaction ID.
    */
   async executeAutoPurchase(
     authId: string,
@@ -485,20 +489,47 @@ class StacksX402Service {
       };
     }
 
-    // Auto-purchase execution is not implemented: it would require
-    // 1. Bridging the tokens from Stacks to Base (using the stacks protocol), and
-    // 2. Executing the ticket purchase on Base.
-    // Until a relayer implements those legs, return an honest failure —
-    // never a fabricated transaction ID — so consumers don't record a
-    // phantom purchase against a valid authorization.
-    logger.info(`[StacksX402] Auto-purchase requested but not executed (execution not implemented): ${ticketsCount} tickets for ${amount} USDC`);
+    const auth = this.authorizations.get(authId);
+    if (!auth || !/^0x[a-fA-F0-9]{40}$/.test(auth.userEvmAddress)) {
+      return {
+        success: false,
+        error:
+          'Authorization has no usable Base recipient address; re-authorize with the EVM address that should receive the tickets.',
+        errorCode: 'RECIPIENT_MISSING',
+      };
+    }
 
-    return {
-      success: false,
-      error:
-        'x402 auto-purchase execution is not implemented yet. The authorization is valid; the bridge + purchase legs require the one-off purchase flow until the relayer ships.',
-      errorCode: 'EXECUTION_NOT_IMPLEMENTED',
-    };
+    try {
+      const { executeAuthorizedPurchase } = await import(
+        '@/services/jobs/stacksKeeperProcessor'
+      );
+      const result = await executeAuthorizedPurchase({
+        baseAddress: auth.userEvmAddress,
+        ticketCount: ticketsCount,
+      });
+
+      if (result.success && result.txHash) {
+        return {
+          success: true,
+          transactionId: result.txHash,
+          ticketsPurchased: ticketsCount,
+          amountSpent: amount,
+        };
+      }
+
+      return {
+        success: false,
+        error: result.error ?? 'Keeper settlement did not complete; no purchase recorded.',
+        errorCode: 'EXECUTION_FAILED',
+      };
+    } catch (error) {
+      logger.error('[StacksX402] Auto-purchase execution threw', { error: String(error) });
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Auto-purchase execution failed',
+        errorCode: 'EXECUTION_FAILED',
+      };
+    }
   }
 
   /**

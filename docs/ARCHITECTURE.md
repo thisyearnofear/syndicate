@@ -17,11 +17,11 @@ Next.js app + wallet adapters
     ▼
 Domain hooks and services
     │
-    ├── bridge protocols → Base
+    ├── bridge protocols → Base (chainhook → keeper settlement for Stacks)
     ├── vault providers → yield positions
     ├── pool providers → syndicates
-    ├── Megapot proxy → lottery tickets
-    └── agents / relayers → approved execution
+    ├── Megapot entrypoints → lottery tickets (receipt-verified)
+    └── agents / relayers / keepers → approved execution
 ```
 
 ## Chain roles
@@ -35,7 +35,7 @@ Domain hooks and services
 
 ### Lottery and purchases
 
-Megapot is the lottery engine. `MegapotAutoPurchaseProxy` receives or pulls USDC and performs atomic ticket purchases. Cross-chain flows bridge or settle funds before calling the Base purchase path.
+Megapot is the lottery engine. The Base purchase leg calls Megapot entrypoints directly — `RandomTicketBuyer.buyTickets` on mainnet, the classic `purchaseTickets` on Base Sepolia — and every purchase is receipt-verified against allowlisted Megapot emitters before being reported complete. `MegapotAutoPurchaseProxy` is do-not-deploy (interface mismatch; see `AGENTS.md`). Cross-chain flows are completed server-side by the **Stacks settlement keeper** (`/api/crons/stacks-keeper`): float check → optional CCTP relay → purchase → receipt verification, journaled to `agent_run_events` and fail-closed without `STACKS_KEEPER_ENABLED` + keeper key. See [`BRIDGES.md`](BRIDGES.md) and [`STACKS_OPERATOR_RUNBOOK.md`](STACKS_OPERATOR_RUNBOOK.md).
 
 ### Yield
 

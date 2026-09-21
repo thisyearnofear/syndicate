@@ -12,6 +12,10 @@
     {
       "path": "/api/crons/season-keeper",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/crons/stacks-keeper",
+      "schedule": "0 0 * * *"
     }
   ]
 }

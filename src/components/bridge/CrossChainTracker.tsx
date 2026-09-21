@@ -78,7 +78,7 @@ const getStepsForChain = (sourceChain?: SourceChainType): Step[] => {
         : sourceChain === "near"
           ? "Using Rainbow Bridge. This may take 2-5 minutes."
           : sourceChain === "stacks"
-            ? "Using Circle xReserve + CCTP. Attestation-based mint/burn of USDCx (~2–3 minutes)."
+            ? "A settlement operator completes the purchase from a verified float — no EVM wallet needed on your side."
             : "Our bridge operator is handling the conversion.";
 
     const estimatedTime =
@@ -87,7 +87,7 @@ const getStepsForChain = (sourceChain?: SourceChainType): Step[] => {
         : sourceChain === "near"
           ? 4
           : sourceChain === "stacks"
-            ? 3
+            ? 30
             : 3;
 
     baseSteps.push({
@@ -96,7 +96,7 @@ const getStepsForChain = (sourceChain?: SourceChainType): Step[] => {
       icon: ArrowRightLeft,
       description:
         sourceChain === "stacks"
-          ? `Circle attestation mints/burns USDCx; Gateway relays to Base.`
+          ? `Our operator settles this on its next run — receipts verify every step.`
           : `Converting your ${chainName} payment to USDC on Base.`,
       tip: bridgeTip,
       estimatedMinutes: estimatedTime,
@@ -141,8 +141,11 @@ export function CrossChainTracker({
   const steps = getStepsForChain(sourceChain);
   const isCrossChain =
     sourceChain && sourceChain !== "base" && sourceChain !== "ethereum";
-  // P1.2: Prefer new prop, fallback to deprecated only for compatibility
+  // P1.2: Prefer new prop, fallback to deprecated only for API compatibility
   const txId = sourceTxId || stacksTxId;
+  // The per-purchase operator trace panel renders on this page for Stacks
+  // flows only; other chains deep-link to the public operators surface.
+  const operatorTraceHref = sourceChain === "stacks" ? "#operator-trace" : "/operators";
   
   const getStepStatus = (
     stepId: string,
@@ -340,6 +343,18 @@ export function CrossChainTracker({
               <p className="text-red-300 text-sm">
                 {error || "An unknown error occurred. Please try again."}
               </p>
+              {isCrossChain && (
+                <p className="mt-2 text-xs text-gray-400">
+                  A settlement operator retries this automatically; your status above is the live state.{" "}
+                  <a
+                    href={operatorTraceHref}
+                    className="text-blue-400 underline-offset-2 hover:underline"
+                  >
+                    Watch the operator settle it
+                  </a>
+                  .
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -404,6 +419,18 @@ export function CrossChainTracker({
           <p className="text-xs text-gray-400 text-center">
             ✨ Your tickets are now active for the next Megapot draw on Base
           </p>
+          {isCrossChain && (
+            <p className="text-xs text-gray-500 text-center">
+              Settled and receipt-verified by a public operator —{" "}
+              <a
+                href={operatorTraceHref}
+                className="text-blue-400 underline-offset-2 hover:underline"
+              >
+                replay the settlement trace
+              </a>
+              .
+            </p>
+          )}
         </div>
       )}
     </div>

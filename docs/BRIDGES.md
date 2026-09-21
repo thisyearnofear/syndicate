@@ -1,6 +1,6 @@
 # Bridges
 
-Syndicate is Base-native. External chains provide funding and routing rails; the common destination for ticket purchases is `MegapotAutoPurchaseProxy` on Base.
+Syndicate is Base-native. External chains provide funding and routing rails; the Base purchase leg calls Megapot's entrypoints directly — `RandomTicketBuyer.buyTickets(uint256,address,address[],uint256[],bytes32)` on Base mainnet, the classic `purchaseTickets(address,uint256,address)` on Base Sepolia. `MegapotAutoPurchaseProxy` is **do-not-deploy** (mainnet selector probes confirmed the jackpot and RandomTicketBuyer do not expose its `purchaseTickets(address,uint256,address)` interface; see `AGENTS.md`). Server-side completion of cross-chain purchases is the **Stacks settlement keeper** (`/api/crons/stacks-keeper`), described below.
 
 ## Shared bridge contract
 
@@ -23,7 +23,7 @@ A bridge result is not a completed purchase until the destination receipt/event 
 | Origin | Protocol/path | Status | Notes |
 |---|---|---|---|
 | **Base** | Direct EVM purchase | Live* | Fastest path; no bridge required. |
-| **Stacks** | USDCx/sBTC + x402/CCTP | Production-oriented* | Resume support, error mapping, health tracking, and runbook shipped. |
+| **Stacks** | USDCx/sBTC → chainhook → settlement keeper | Keeper implemented (testnet-first)* | Chainhook, durable job queue, and receipt-verified settlement keeper shipped (float → optional CCTP relay → purchase). x402 auto-purchase delegates to the keeper. Funded keeper E2E run pending. |
 | **Solana** | deBridge DLN | Partial | Happy path exists; relayer dependence and transaction review remain. |
 | **NEAR** | Intents + Chain Signatures | Partial | Two execution paths; expiry and E2E coverage remain. |
 | **Starknet** | Starknet.js + relayer | Partial | Resume path exists; wallet/relayer E2E coverage remains. |
@@ -32,51 +32,66 @@ A bridge result is not a completed purchase until the destination receipt/event 
 
 See [`STACKS_OPERATOR_RUNBOOK.md`](STACKS_OPERATOR_RUNBOOK.md) for Stacks operations and [`STARKNET.md`](STARKNET.md) for the Starknet integration.
 
-\* Status reflects the current repository assessment; verify network state and deployment addresses before operating with real funds.\n\n## Settlement model
+\* Status reflects the current repository assessment; verify network state and deployment addresses before operating with real funds.\n\n## Settlement models
+
+**Direct (EVM origins, live path).**
 
 ```text
-Source wallet
+Source wallet → approve + RandomTicketBuyer.buyTickets
     │
     ▼
-Bridge protocol / source-chain contract
+Receipt verified (allowlisted Megapot emitters, recipient attribution)
     │
     ▼
-Base settlement and attestation
-    │
-    ▼
-MegapotAutoPurchaseProxy
-    │
-    ▼
-Megapot tickets for the requested recipient
+Tickets held by the requested recipient
 ```
 
-The proxy supports:
+**Keeper-mediated (Stacks origin).**
 
-- **Pull model:** the caller approves USDC, then the proxy pulls funds and buys tickets.
-- **Push model:** a bridge delivers USDC first, then the proxy executes a verified bridge purchase.
-- **Fail-safe behavior:** if the ticket purchase fails, funds are returned to the intended recipient according to the contract path.
-- **Replay protection:** bridge identifiers are tracked for push settlements.
+```text
+User signs bridge-and-purchase on Stacks (funds → bridge-address principal)
+    │
+    ▼
+Chainhook → /api/chainhook → durable purchase_jobs queue
+    │
+    ▼
+/api/crons/stacks-keeper (fail-closed: STACKS_KEEPER_ENABLED + keeper key)
+    │  1. float check on the purchase chain (keeper wallet holds purchase token)
+    │  2. optional CCTP relay: Iris attestation → MessageTransmitter.receiveMessage
+    │  3. classic Megapot purchaseTickets(referrer, amount, recipient) (testnet shape)
+    │  4. verifyTicketPurchaseReceipt → only then status=complete with the real tx hash
+    ▼
+Tickets held by the Stacks user's chosen Base address
+```
+
+Custody note: the USDCx peg-out (Circle xReserve) settles native USDC on **Ethereum**, not Base — there is no Stacks→Base CCTP hop. The keeper therefore purchases from its own funded float (treasury tops up; testnet: minted MPUSDC) and the bridge-address principal's funds are reconciled separately. Stacks tx hashes are source evidence only and are never recorded as Base completion. See [`STACKS_OPERATOR_RUNBOOK.md`](STACKS_OPERATOR_RUNBOOK.md).
+
+Fail-safe and replay rules: a purchase status row only reaches `complete` after destination receipt verification attributes Megapot purchase events to the requested recipient; rejected verifications are journaled as `settle.rejected` and retried, and nothing pending is ever styled as complete.
 
 ## Key contracts
 
 | Contract | Network | Address |
 |---|---|---|
-| MegapotAutoPurchaseProxy | Base | `0x707043a8c35254876B8ed48F6537703F7736905c` |
-| Megapot V2 | Base | `0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2` |
+| Megapot V2 jackpot | Base | `0x3bAe643002069dBCbcd62B1A4eb4C4A397d042a2` |
+| RandomTicketBuyer | Base | `0xb9560b43b91dE2c1DaF5dfbb76b2CFcDaFc13aBd` |
+| Classic Megapot (testnet entry) | Base Sepolia | `0x6f03c7BCaDAdBf5E6F5900DA3d56AdD8FbDac5De` (MPUSDC `0xA425…509f`) |
 | USDC | Base | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
+| MegapotAutoPurchaseProxy | Base | `0x707043a8c35254876B8ed48F6537703F7736905c` — **do not deploy** (interface mismatch) |
 | Lottery source contract | Stacks | `SP31BERCCX5RJ20W9Y10VNMBGGXXW8TJCCR2P6GPG.stacks-lottery-v3` |
+| CCTP V1 addresses (verified 2026-09-21) | ETH/Base + sepolias | `src/config/stacksKeeper.ts` (`CCTP_V1_ADDRESSES`) |
 
 ## Per-chain flows
 
 ### Stacks → Base
 
 ```text
-Leather/Xverse → Stacks bridge-and-purchase
-→ CCTP/attestation → user signature or resume
-→ Base proxy → Megapot
+Leather/Xverse → Stacks bridge-and-purchase (funds to bridge-address principal)
+→ Hiro Chainhooks 2.0 → /api/chainhook → purchase_jobs queue
+→ /api/crons/stacks-keeper → float → CCTP (optional) → Megapot → receipt verification
+→ status=complete with the real Base tx hash
 ```
 
-The Stacks handler maps wallet rejection, insufficient balances, SIP-018 errors, chainhook delays, attestation timeouts, and network failures into user-facing states.
+The Stacks handler maps wallet rejection, insufficient balances, SIP-018 errors, chainhook delays, attestation timeouts, and network failures into user-facing states. The keeper adds server-side settlement so completion no longer depends on the user's browser staying open. The keeper's run journal replays publicly at `/api/agent/stacks/latest-run`.
 
 ### Solana → Base
 
@@ -136,6 +151,7 @@ Never manually mark a purchase complete without destination-chain evidence.
 - Orchestration: `src/services/bridges/index.ts` (`UnifiedBridgeManager`)
 - Unified purchase flow: `src/hooks/useUnifiedPurchase.ts`
 - Status persistence: `src/lib/db/` and `src/app/api/`
-- Base proxy: `contracts/MegapotAutoPurchaseProxy.sol`
+- Stacks settlement keeper: `src/services/stacks/stacksSettlementService.ts`, `src/services/jobs/stacksKeeperProcessor.ts`, `src/config/stacksKeeper.ts`
+- Receipt verification: `src/services/season/megapotReceipts.ts`
 
 For deployment, secrets, and readiness gates, see [`OPERATIONS.md`](OPERATIONS.md).

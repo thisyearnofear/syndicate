@@ -136,6 +136,24 @@ export async function jobExistsForTxId(txId: string): Promise<boolean> {
   return result.rows.length > 0;
 }
 
+/**
+ * Stacks keeper: fetch the chainhook job payload for a Stacks tx so the
+ * settlement leg knows the real ticket count. The payload->>'txId' index
+ * makes this a cheap lookup. Returns null when no job exists.
+ */
+export async function getBridgeEventPayloadByTxId(
+  txId: string,
+): Promise<Record<string, unknown> | null> {
+  const result = await sql`
+    SELECT payload FROM purchase_jobs
+    WHERE payload->>'txId' = ${txId}
+      AND job_type = 'process_bridge_event'
+    ORDER BY id DESC
+    LIMIT 1;
+  `;
+  return (result.rows[0]?.payload as Record<string, unknown> | undefined) ?? null;
+}
+
 // ---------------------------------------------------------------------------
 // Row mapper
 // ---------------------------------------------------------------------------

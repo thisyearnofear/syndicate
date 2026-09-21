@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef, Suspense, lazy } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Clock } from "lucide-react";
+import { ArrowRight, Clock, Globe } from "lucide-react";
 import { useUnifiedWallet, useIsMounted } from "@/hooks";
 import { useCountUp } from "@/hooks/useCountUp";
 import { PRODUCT_MODES } from "@/config/productModes";
@@ -295,6 +295,20 @@ export default function Home() {
                 <span className="text-amber-300/80 font-semibold">{oddsDisplay} per ticket</span>
               </>
             )}
+          </div>
+
+          {/* Access line — the chain-abstracted promise (docs/POSITIONING.md).
+              One sentence, neutral register: play from other chains without
+              leaving your wallet behind. Links to the unified proof surface. */}
+          <div className="pt-2 animate-fade-in-up" style={{ animationDelay: '320ms' }}>
+            <Link
+              href="/operators"
+              className="group inline-flex items-center gap-1.5 text-xs text-gray-500 transition-colors hover:text-gray-300"
+            >
+              <Globe className="h-3 w-3" aria-hidden />
+              Play from Stacks — no EVM wallet needed. Our operators settle it, receipts prove it.
+              <ArrowRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
+            </Link>
           </div>
         </section>
 

@@ -46,6 +46,9 @@ No surface competes for hero status; each is a rung.
 - `/vaults` — Grow (retention).
 - `/discover` — Coordinate (groups; testnet surfaces are labeled as such).
 - `/xlayer` — engine experiment (demo labeling stays explicit).
+- `/operators` — the proof surface (worlds cluster): one page unifying every
+  keeper's live/replayable run. Neutral accent; it is the machine room,
+  not a product hero. Receipts link out; nothing is simulated.
 
 ## Hackathon tracks are proofs, not products
 
@@ -54,6 +57,21 @@ Submissions demonstrate the mechanism, never invent a separate identity:
 - **Fhenix** — the privacy proof.
 - **MetaMask / 1Shot / Venice** — the automation proof.
 - **X Layer (Build X)** — the generalizability proof (same engine, new funding source).
+
+## The proof layer: Proof, Access, Coordination
+
+The mechanism sentence is the emotional hook; this is the credibility layer beneath it — why the promise is believable rather than cute. In order of defensibility (hardest to copy first):
+
+1. **Proof.** Every claim carries a receipt. Entries, splits, wins, and operator actions are verified on-chain before being reported. The discipline is institutionalized in the **keepers** — server-side operators that run the house: fail-closed keys, receipt-verified writes, and public run replays at `/operators`. Three keepers, one contract: *fail-closed → execute → receipt*. This is the brand differentiator no competitor copies without adopting the discipline.
+2. **Access.** Get in from any chain, play without leaving your wallet behind. The Stacks rail is the flagship claim — a Stacks-native user plays a Base lottery with **no EVM wallet**, settled by the settlement keeper, receipt-verified. Access is chain-abstracted in the UI: one app, one visual language, never per-chain islands.
+3. **Coordination.** Syndicates, Season, and distribution — the collective expression, already the documented ladder rung.
+
+Copy rules:
+
+- Consumer surfaces (Play/Grow/Coordinate) lead with the **mechanism**; docs, grants, and the worlds lead with **proof**. Do not mix registers on the same surface.
+- "No EVM wallet needed" is a factual claim tied to the keeper's custody model — say it only where the keeper actually settles the flow (Stacks purchases). Never generalize it to rails that still require destination-side user action.
+- Operator claims may say "our operators settle it — receipts prove it." They may not say "trustless" or "fully automated" while any leg requires manual reconciliation (see [`STACKS_OPERATOR_RUNBOOK.md`](STACKS_OPERATOR_RUNBOOK.md) "What is NOT in this runbook").
+- The waiting screen is a proof surface. Purchase tracking links to the per-purchase operator trace (`/purchase-status` → `OperatorStacksTrace`), anchors in-page instead of punting to `/operators`, and states absence ("no operator has touched this purchase yet") rather than papering over it. Never render progress for a purchase that does not exist.
 
 ## Promise contract
 

@@ -12,7 +12,7 @@ import UnifiedModal from './modal/UnifiedModal';
 import WalletConnectionOptions from './wallet/WalletConnectionOptions';
 import {
   Ticket, Users, TrendingUp, Menu, X,
-  ArrowLeftRight, LayoutDashboard, Settings, ChevronDown, Bot, Crown,
+  ArrowLeftRight, LayoutDashboard, Settings, ChevronDown, Bot, Crown, Receipt,
   Wallet, Ghost, Orbit, Bitcoin, Zap,
 } from 'lucide-react';
 import { useActiveSeason } from '@/hooks/useActiveSeason';
@@ -31,8 +31,8 @@ interface NavItem {
 /**
  * Nav IA (docs/DESIGN.md, docs/POSITIONING.md):
  *   Ladder (left)  — Play / Grow / Coordinate. Unlabeled. The product.
- *   Worlds (right) — Season + Agent Pool. Flagged satellites, always visible,
- *                    never mixed into the three rungs.
+ *   Worlds (right) — Season + Agent Pool + Operators. Flagged satellites,
+ *                    always visible, never mixed into the three rungs.
  *   Overflow       — Fund / Portfolio / Settings.
  */
 const LADDER_NAV: NavItem[] = [
@@ -55,6 +55,13 @@ const AGENT_POOL_NAV: NavItem = {
   flag: 'Testnet',
 };
 
+const OPERATORS_NAV: NavItem = {
+  href: '/operators',
+  label: 'Operators',
+  icon: Receipt,
+  flag: 'Proof',
+};
+
 const SECONDARY_NAV: NavItem[] = [
   { href: '/portfolio', label: 'Portfolio', icon: LayoutDashboard, requiresWallet: true },
   { href: '/bridge', label: 'Fund', icon: ArrowLeftRight },
@@ -72,7 +79,9 @@ export default function Navigation({ className = '' }: NavigationProps) {
   const { isConnected, walletType, chain, connect } = useUnifiedWallet();
   const mounted = useIsMounted();
   const { visible: seasonVisible } = useActiveSeason();
-  const worldItems = seasonVisible ? [CAMPAIGN_NAV, AGENT_POOL_NAV] : [AGENT_POOL_NAV];
+  const worldItems = seasonVisible
+    ? [CAMPAIGN_NAV, AGENT_POOL_NAV, OPERATORS_NAV]
+    : [AGENT_POOL_NAV, OPERATORS_NAV];
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -130,6 +139,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
     if (active && href === '/vaults') return 'bg-emerald-400/10 text-emerald-100';
     if (active && href === '/coordinate') return 'bg-violet-400/10 text-violet-100';
     if (active && href === '/xlayer') return 'bg-cyan-400/10 text-cyan-100';
+    if (active && href === '/operators') return 'bg-white/10 text-white';
     if (active) return 'bg-white/10 text-white';
     return 'text-gray-400 hover:text-white hover:bg-white/5';
   };
@@ -224,7 +234,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                   >
                     <Icon className="w-4 h-4" />
                     <span className="hidden xl:inline">{item.label}</span>
-                    <span className="xl:hidden">{item.href === '/xlayer' ? 'Agent' : item.label}</span>
+                    <span className="xl:hidden">{item.href === '/xlayer' ? 'Agent' : item.href === '/operators' ? 'Ops' : item.label}</span>
                     <span className="hidden lg:inline">{flagChip(item)}</span>
                   </Link>
                 );
