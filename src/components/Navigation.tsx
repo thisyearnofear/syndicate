@@ -13,7 +13,7 @@ import WalletConnectionOptions from './wallet/WalletConnectionOptions';
 import {
   Ticket, Users, TrendingUp, Menu, X,
   ArrowLeftRight, LayoutDashboard, Settings, ChevronDown, Bot, Crown, Receipt,
-  Wallet, Ghost, Orbit, Bitcoin, Zap,
+  Wallet, Ghost, Orbit, Bitcoin, Zap, DoorOpen,
 } from 'lucide-react';
 import { useActiveSeason } from '@/hooks/useActiveSeason';
 
@@ -65,6 +65,7 @@ const OPERATORS_NAV: NavItem = {
 const SECONDARY_NAV: NavItem[] = [
   { href: '/portfolio', label: 'Portfolio', icon: LayoutDashboard, requiresWallet: true },
   { href: '/bridge', label: 'Fund', icon: ArrowLeftRight },
+  { href: '/ways-in', label: 'Ways in', icon: DoorOpen },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 

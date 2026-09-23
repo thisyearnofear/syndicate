@@ -25,6 +25,8 @@ export interface OperatorReplayEntry {
   toolId?: string | null;
   txHash?: string | null;
   source?: string | null;
+  /** Chain the txHash lives on (e.g. 'base', 'xlayer'); drives explorer routing. */
+  chain?: string | null;
   createdAt: number;
 }
 
@@ -34,6 +36,7 @@ export interface OperatorTimelineNode {
   label: string;
   detail?: string | null;
   txHash?: string | null;
+  chain?: string | null;
   at: number;
 }
 
@@ -65,6 +68,7 @@ export function toOperatorTimeline(entries: OperatorReplayEntry[]): OperatorTime
           label: e.label,
           detail: next.detail ?? e.detail ?? null,
           txHash: next.txHash ?? e.txHash ?? null,
+          chain: next.chain ?? e.chain ?? null,
           at: next.createdAt,
         });
         i++; // consume the terminal pair
@@ -77,6 +81,7 @@ export function toOperatorTimeline(entries: OperatorReplayEntry[]): OperatorTime
         label: e.label,
         detail: e.detail ?? null,
         txHash: e.txHash ?? null,
+        chain: e.chain ?? null,
         at: e.createdAt,
       });
       continue;
@@ -89,6 +94,7 @@ export function toOperatorTimeline(entries: OperatorReplayEntry[]): OperatorTime
         label: e.label,
         detail: e.detail ?? null,
         txHash: e.txHash ?? null,
+        chain: e.chain ?? null,
         at: e.createdAt,
       });
     }
@@ -112,7 +118,8 @@ export function OperatorRunTimeline({
   emptyMessage = 'No operator run recorded yet.',
 }: {
   entries: OperatorReplayEntry[];
-  explorerTx: (hash: string) => string;
+  /** Receives the node's chain tag when present; single-arg callers ignore it. */
+  explorerTx: (hash: string, chain?: string | null) => string;
   emptyMessage?: string;
 }) {
   const nodes = toOperatorTimeline(entries);
@@ -157,7 +164,7 @@ export function OperatorRunTimeline({
               </span>
               {node.txHash && (
                 <a
-                  href={explorerTx(node.txHash)}
+                  href={explorerTx(node.txHash, node.chain)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 font-mono text-[11px] text-gray-400 underline-offset-2 hover:text-white hover:underline"

@@ -13,6 +13,7 @@
  */
 
 import React, { useState, useMemo, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FocusedBridgeFlow } from "@/components/bridge/FocusedBridgeFlow";
 import { WinningsWithdrawalFlow } from "@/components/bridge/WinningsWithdrawalFlow";
@@ -201,6 +202,16 @@ export default function BridgePage() {
             supportingLine="Move USDC from Solana, NEAR, Ethereum, or Starknet into Base — then deposit into vaults or buy tickets."
             accent="neutral"
           />
+
+          <p className="text-xs text-gray-500">
+            Rather not bridge?{' '}
+            <Link
+              href="/ways-in"
+              className="text-gray-300 underline-offset-2 hover:text-white hover:underline"
+            >
+              Enter from another chain or your agent → Ways in
+            </Link>
+          </p>
 
           {/* Toggle for NEAR users */}
           {walletType === WalletTypes.NEAR && isConnected && (

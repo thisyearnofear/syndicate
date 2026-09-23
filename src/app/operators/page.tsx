@@ -3,10 +3,10 @@
 /**
  * OPERATORS — the public proof surface.
  *
- * The three keepers (Agent Pool, Season, Stacks settlement) are one crew of
- * server-side operators: fail-closed keys, receipt-verified writes, public
- * run replays. This page is where that story becomes visible — every claim
- * the product makes about automation is auditable here without a wallet.
+ * Four operators (Agent Pool, Season, Stacks settlement, Agent Rail) are one
+ * crew of server-side operators: fail-closed keys, receipt-verified writes,
+ * public run replays. This page is where that story becomes visible — every
+ * claim the product makes about automation is auditable here without a wallet.
  *
  * Design law: default surface, neutral accent, font-mono figures (the lab
  * register borrowed for one page because operators ARE the machine room),
@@ -16,12 +16,14 @@
  */
 
 import Link from 'next/link';
-import { ArrowRight, Bot, Crown, Globe } from 'lucide-react';
+import { ArrowRight, Bot, Crown, Globe, Waypoints } from 'lucide-react';
 import { PageHeader, PageShell } from '@/components/layout/PageShell';
 import { RoundOrb } from '@/components/motion/RoundOrb';
 import { OperatorRunTimeline } from '@/components/operators/OperatorRunTimeline';
 import { useOperatorRun } from '@/hooks/useOperatorRuns';
 import { xLayerExplorerTx } from '@/config/xlayer';
+import { explorerTxForChain } from '@/config/explorers';
+import { getCapability, honestyChip } from '@/config/capabilities';
 import { CHAINS } from '@/config/index';
 
 function baseSepoliaTx(hash: string): string {
@@ -36,6 +38,16 @@ function seasonTx(hash: string): string {
   return baseSepoliaTx(hash);
 }
 
+/** Rail entries span X Layer (payment) and Base (ticket) — route by the
+ * entry's own chain tag, falling back to the purchase chain. */
+function railTx(hash: string, chain?: string | null): string {
+  return explorerTxForChain(hash, chain, baseSepoliaTx);
+}
+
+const railStatus = getCapability('rail_xlayer').status;
+const railChip =
+  railStatus === 'live' ? 'Mainnet' : (honestyChip(railStatus)?.label ?? 'Paused');
+
 const WORLDS = [
   {
     world: 'xlayer' as const,
@@ -43,7 +55,8 @@ const WORLDS = [
     icon: Bot,
     explorerTx: xLayerExplorerTx,
     role: 'Treasurer of the X Layer prize pool',
-    cadence: 'Opens epochs, seeds the demo oracle, fulfills randomness, claims only when it wins.',
+    cadence:
+      'Opens epochs, seeds the demo oracle, fulfills randomness, claims only when it wins. No outside players yet — the operator seeds its own entries.',
     chip: 'Testnet',
     footHref: '/xlayer',
     footLabel: 'Open Agent Pool',
@@ -70,6 +83,18 @@ const WORLDS = [
     footHref: '/purchase-status?chain=stacks',
     footLabel: 'Trace a purchase by its Stacks tx id',
   },
+  {
+    world: 'rail' as const,
+    name: 'Agent Rail · Syndicate Tickets',
+    icon: Waypoints,
+    explorerTx: railTx,
+    role: 'Settles agent purchases paid on X Layer',
+    cadence:
+      'Payment verified → float check → Megapot purchase on Base → receipt verified → payment settled.',
+    chip: railChip,
+    footHref: '/ways-in#agents',
+    footLabel: 'How agents enter',
+  },
 ] as const;
 
 function OperatorOrb({ status }: { status: 'idle' | 'loading' | 'ok' | 'error' }) {
@@ -82,8 +107,9 @@ export default function OperatorsPage() {
   const xlayer = useOperatorRun('xlayer');
   const season = useOperatorRun('season');
   const stacks = useOperatorRun('stacks');
+  const rail = useOperatorRun('rail');
 
-  const states = { xlayer, season, stacks } as const;
+  const states = { xlayer, season, stacks, rail } as const;
 
   return (
     <PageShell accent="neutral" width="wide">
@@ -98,7 +124,7 @@ export default function OperatorsPage() {
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
           <p className="text-sm text-gray-300">
             Automation here is not a promise — it is a public crew with keys scoped by policy,
-            writes verified on-chain, and runs anyone can replay. Three operators, one contract:{' '}
+            writes verified on-chain, and runs anyone can replay. Four operators, one contract:{' '}
             <span className="font-mono text-xs text-gray-400">
               fail-closed → execute → receipt
             </span>
@@ -107,7 +133,7 @@ export default function OperatorsPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <section className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {WORLDS.map(({ world, name, icon: Icon, footHref, explorerTx, role, cadence, chip, footLabel }) => {
           const state = states[world];
           const lastEntry = state.entries[state.entries.length - 1];

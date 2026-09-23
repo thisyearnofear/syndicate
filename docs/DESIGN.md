@@ -125,7 +125,7 @@ Sanctioned bridges are visually contained:
 
 - Nav: **ladder** (Play / Grow / Coordinate, left) vs **worlds** (Season +
   Agent Pool + Operators, right of a hairline, always visible, flagged) vs
-  **overflow** (Fund / Portfolio / Settings). Never flatten those into five
+  **overflow** (Fund / Ways in / Portfolio / Settings). Never flatten those into five
   equal rungs. Season's Campaign chip hides when there is no active season;
   Operators' chip is the proof claim itself ("Proof").
 - The **living-room inset** on Play (`/`): a bounded arena plate that shows
@@ -181,7 +181,9 @@ From `src/components/layout/StateViews.tsx`:
 ## The operators surface (/operators)
 
 Operators is the proof story made visible: one neutral page unifying the
-three keepers' run replays (Agent Pool, Season referee, Stacks settlement).
+keepers' run replays (Agent Pool, Season referee, Stacks settlement, and the
+X Layer Agent Rail) in a 2×2 grid. Each receipt link routes to its own chain's
+explorer, via the per-entry `chain` on the journal.
 It lives in the worlds cluster and follows the lab's *type register*
 (`font-mono` figures) without the lab's ground — neutral default surface,
 slate accents, no scanline. The shared grammar is `OperatorRunTimeline`
@@ -203,6 +205,31 @@ links anchor in-page (`#operator-trace`) rather than leaving for
 `/purchase-status?chain=stacks`, whose no-tx landing is a paste-to-trace
 form — never a fabricated in-progress tracker for a purchase that does not
 exist.
+
+## Ways in (/ways-in) and the rail receipt
+
+Access made legible. `/ways-in` is an infrastructure page: default surface,
+neutral accent, and an overflow nav item beside Fund. It is never a worlds item.
+It sorts entry rails by the visitor's situation ("I have a Base wallet" /
+"My funds are on another chain" / "An agent acts for me"), not by chain
+brand. The page speaks to every stakeholder through one pain (the prize is
+here, you are elsewhere) and one utility (enter from where you are, get a
+receipt).
+
+- **Five rail facts, always.** Every rail card states From / Pay / Held in
+  transit / Settled by / Proof as a mono-labelled definition list. Custody
+  is written in plain words ("our operator, until its next run"; "nothing —
+  charged only after your ticket is verified"). Rails differ
+  only in these facts, never in visual register.
+- **Chips come from the registry.** A rail's honesty chip is its
+  capability; live rails stay unlabeled.
+- **The rail receipt.** Operator-settled agent purchases finish within the
+  call, so `/purchase-status?chain=xlayer` renders a receipt, not a waiting
+  tracker. It has two legs, *Paid* (source chain) and *Ticket* (Base). A leg is
+  stamped only when its receipt exists. `receipt-in` plus `BeamFrame` fire only
+  when both legs are final. A payment that is still settling, or that the operator absorbed,
+  is stated as such, never styled complete. The operator trace follows the
+  receipt in-page.
 
 ## The experimental accent (X Layer / Agent Pool)
 

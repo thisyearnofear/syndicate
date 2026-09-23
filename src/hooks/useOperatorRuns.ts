@@ -15,7 +15,7 @@
 import { useEffect, useState } from 'react';
 import type { OperatorReplayEntry } from '@/components/operators/OperatorRunTimeline';
 
-export type OperatorWorld = 'xlayer' | 'season' | 'stacks';
+export type OperatorWorld = 'xlayer' | 'season' | 'stacks' | 'rail';
 
 export interface OperatorRunState {
   sessionId: string | null;
@@ -35,6 +35,7 @@ const ENDPOINTS: Record<OperatorWorld, string> = {
   xlayer: '/api/agent/xlayer/latest-run',
   season: '/api/agent/season/latest-run',
   stacks: '/api/agent/stacks/latest-run',
+  rail: '/api/agent/xlayer-rail/latest-run',
 };
 
 function normalize(json: unknown): OperatorRunState {

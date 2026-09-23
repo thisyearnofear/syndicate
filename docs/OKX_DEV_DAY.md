@@ -144,7 +144,8 @@ Every way in is a **rail** described by the same five facts: *source → payment
 |---|---|---|---|---|
 | Direct | Base wallet | You, throughout | Your own tx | Base receipt |
 | Bridge | Solana, NEAR, Ethereum, Starknet | Bridge protocol | You, on Base | Bridge + Base receipts |
-| Operator-settled | Stacks; **X Layer agent rail** | Our operator, for seconds (float) | Settlement keeper | Source receipt + Base receipt + operator trace |
+| Operator-settled (Stacks) | Stacks | Our operator, until its next run (keeper cron is daily) | Stacks settlement keeper | Stacks receipt + Base receipt + operator trace |
+| Operator-fronted (agent) | **X Layer agent rail** | Nothing: the operator buys first from its own float, and the payment is collected only after the ticket is verified | Agent Rail operator | X Layer receipt + Base receipt + operator trace |
 
 ```
 agent (OKX.AI / any x402 client)
@@ -168,7 +169,7 @@ Decisions:
 
 1. **`/ways-in`: new page, "Ways in"** (default surface, neutral accent; Read mode with light Persuade). Supporting line: *"Enter the Base draw from any chain, any wallet, or an agent acting for you. Every entry comes back with a receipt."*
    - Three lanes grouped by the visitor's situation: **I have a Base wallet** → Enter draw. **My funds are on another chain** → Stacks purchase, bridges via Fund. **An agent acts for me** → Syndicate Tickets.
-   - Each rail card shows the five rail facts plus a capability chip. Custody is written as plain language ("our operator holds it for seconds"), never hidden.
+   - Each rail card shows the five rail facts plus a capability chip. Custody is written as plain language, never hidden.
    - An `#agents` section for builders: endpoint, price, a request/response sample, the OKX.AI listing link, and "any x402 client that can pay USD₮0 on X Layer".
    - Proof strip: the latest `xlayer-rail` run.
    - No invented numbers. Rails that aren't live render their availability message.
@@ -194,7 +195,7 @@ Component moves: generalize `OperatorStacksTrace` → `OperatorTrace({ source, s
 ### OKX.AI listing copy (A2MCP)
 
 - **Name:** Syndicate Tickets
-- **Description:** Enter the Megapot jackpot on Base from X Layer. Pay 1 USD₮0 and 1 real ticket is delivered to your wallet address on Base, with on-chain receipts for both the payment and the ticket, plus a public operator trace. Settled by Syndicate's operator (we hold the funds for seconds while buying). Free companion endpoint: current jackpot and draw time.
+- **Description:** Enter the Megapot jackpot on Base from X Layer. Pay 1 USD₮0 and 1 real ticket is delivered to your wallet address on Base, with on-chain receipts for both the payment and the ticket, plus a public operator trace. Our operator buys the ticket first with its own USDC; your payment is collected only after the ticket is verified on-chain. If anything fails, you are not charged. Free companion endpoint: current jackpot and draw time.
 - **Price:** 1 USD₮0 per call (1 ticket).
 - **Endpoint:** `https://<prod-domain>/api/okx/tickets` (confirm the production domain before listing).
 
