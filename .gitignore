@@ -96,13 +96,6 @@ yarn.lock
 .impeccable/
 skills-lock.json
 
-# Video binaries (composition source HTML/audio stay tracked)
-videos/**/*.mp4
-videos/**/*.mov
-videos/**/*.webm
-videos/**/*.mkv
-videos/**/*.avi
-videos/**/*.m4v
-videos/**/assets/*.png
-videos/**/renders/
+# Video projects (compositions, audio, renders) are local-only
+videos/
 
