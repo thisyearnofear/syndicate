@@ -2,7 +2,7 @@ import { sql } from '@vercel/postgres';
 
 export interface PurchaseStatusRecord {
   sourceTxId: string;
-  sourceChain: 'stacks' | 'solana' | 'near' | 'ethereum' | 'base';
+  sourceChain: 'stacks' | 'solana' | 'near' | 'ethereum' | 'base' | 'xlayer';
   stacksTxId?: string | null;
   bridgeId?: string | null;
   status: string;
@@ -119,7 +119,7 @@ export async function getPurchaseStatusByTxId(txId: string): Promise<PurchaseSta
   };
 }
 
-export async function getPendingPurchaseStatusesByChain(sourceChain: 'solana' | 'near' | 'stacks' | 'ethereum' | 'base') {
+export async function getPendingPurchaseStatusesByChain(sourceChain: 'solana' | 'near' | 'stacks' | 'ethereum' | 'base' | 'xlayer') {
   const result = await sql`
     SELECT
       stacks_tx_id,
@@ -215,6 +215,63 @@ export async function claimPendingStacksPurchases(
     recipientBaseAddress: row.recipient_base_address,
     purchaseId: row.purchase_id,
   }));
+}
+
+/**
+ * Insert-if-absent claim for non-Stacks rails (the OKX x402 X Layer rail).
+ * Returns true when this call created the row — the caller owns the
+ * settlement; false means a row for this sourceTxId already exists and the
+ * caller must branch on its stored status instead of purchasing again.
+ */
+export async function claimPurchaseIfAbsent(record: {
+  sourceTxId: string;
+  sourceChain: 'xlayer';
+  status?: string;
+  recipientBaseAddress?: string | null;
+}): Promise<boolean> {
+  const normalizedSourceId = normalizeTxId(record.sourceTxId);
+  const result = await sql`
+    INSERT INTO purchase_statuses (
+      stacks_tx_id,
+      source_tx_id,
+      source_chain,
+      status,
+      recipient_base_address,
+      updated_at
+    )
+    VALUES (
+      ${normalizedSourceId},
+      ${normalizedSourceId},
+      ${record.sourceChain},
+      ${record.status ?? 'settling'},
+      ${record.recipientBaseAddress ?? null},
+      NOW()
+    )
+    ON CONFLICT (stacks_tx_id) DO NOTHING
+    RETURNING id;
+  `;
+  return result.rows.length > 0;
+}
+
+/**
+ * Persist the source-chain payment settlement tx (X Layer USD₮0 transfer)
+ * on an existing rail row. Reuses bridge_id — for x402 rails that column
+ * carries the source-chain settlement hash, matching its original role as
+ * "the upstream tx that paid for this purchase".
+ */
+export async function recordSourceSettlementTx(
+  sourceTxId: string,
+  sourceChain: 'xlayer',
+  settlementTxHash: string,
+): Promise<void> {
+  const normalizedId = normalizeTxId(sourceTxId);
+  await sql`
+    UPDATE purchase_statuses
+    SET bridge_id = ${settlementTxHash},
+        updated_at = NOW()
+    WHERE source_tx_id = ${normalizedId}
+      AND source_chain = ${sourceChain};
+  `;
 }
 
 /**

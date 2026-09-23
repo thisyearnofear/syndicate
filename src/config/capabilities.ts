@@ -37,6 +37,14 @@ const XLAYER_WRITES_ENABLED =
 const SEASON_WRITES_ENABLED =
   process.env.NEXT_PUBLIC_SEASON_WRITES_ENABLED === 'true';
 
+/**
+ * X Layer ticket rail visibility (docs/OKX_DEV_DAY.md): mirrors the
+ * server-side OKX_RAIL_ENABLED gate so the registry can surface the rail
+ * without reading server secrets.
+ */
+const OKX_RAIL_PUBLIC_ENABLED =
+  process.env.NEXT_PUBLIC_OKX_RAIL_ENABLED === 'true';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 /**
@@ -60,6 +68,7 @@ export type CapabilityChain =
   | 'near'
   | 'starknet'
   | 'ton'
+  | 'xlayer'
   | 'xlayer_testnet'
   | 'fhenix_testnet';
 
@@ -83,6 +92,7 @@ export type CapabilityId =
   | 'bridge_near'
   | 'bridge_starknet'
   | 'bridge_ton'
+  | 'rail_xlayer'
   // Verification
   | 'verification';
 
@@ -357,6 +367,22 @@ export const CAPABILITIES: readonly Capability[] = [
     testnetOnly: false,
     availabilityMessage: 'Paused — TON support is not available yet.',
     walletRequirement: 'TON wallet',
+    productMode: null,
+  },
+  {
+    id: 'rail_xlayer',
+    label: 'X Layer rail (OKX agents)',
+    // Server env (OKX_RAIL_*, OKX_* facilitator creds) can't be read
+    // client-side; the public flag mirrors operator opt-in.
+    status: OKX_RAIL_PUBLIC_ENABLED ? 'partial' : 'paused',
+    chains: ['xlayer', 'base'],
+    readsEnabled: OKX_RAIL_PUBLIC_ENABLED,
+    writesEnabled: OKX_RAIL_PUBLIC_ENABLED,
+    requiresOptIn: false,
+    testnetOnly: false,
+    availabilityMessage:
+      'Agent-only rail: pay USD₮0 on X Layer, our operator buys on Base — receipts prove it.',
+    walletRequirement: null,
     productMode: null,
   },
 

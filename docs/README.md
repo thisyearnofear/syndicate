@@ -29,6 +29,7 @@ This is the canonical documentation index. Keep durable product and operational 
 ## Submissions and historical material
 
 - [`HACKATHONS.md`](HACKATHONS.md) — short index of active/completed submissions.
+- [`OKX_DEV_DAY.md`](OKX_DEV_DAY.md) — OKX Dev Day 2026 entry: X Layer ticket rail on OKX.AI, plan and records.
 - [`archive/`](archive/) — preserved strategy briefs, UI plans, demo scripts, submission packets, and superseded operational documents. Archive files are historical references, not current source of truth.
 
 ## Source of truth

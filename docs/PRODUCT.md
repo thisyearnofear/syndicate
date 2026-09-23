@@ -27,7 +27,7 @@ Syndicate is not trying to replace Megapot or PoolTogether. Those protocols prov
 | **Base** | Product execution: vaults, syndicates, settlement, and Megapot purchases |
 | **Fhenix** | Privacy layer for encrypted vault and syndicate flows |
 | **Solana, Stacks, NEAR, Ethereum, Starknet** | Funding and routing rails into the Base-native experience |
-| **X Layer** | Experimental second engine: trading-fee-funded Prize Pool Hook |
+| **X Layer** | Two separate roles: experimental second engine (trading-fee-funded Prize Pool Hook, testnet) and a planned operator-settled entry rail for agents (USD₮0 via x402 → Megapot on Base; see [`OKX_DEV_DAY.md`](OKX_DEV_DAY.md)) |
 
 Do not describe every chain as an equal product home. Base executes, Fhenix adds privacy, and the other chains primarily provide access and funding.
 

@@ -43,8 +43,11 @@ import {
   createWalletClient,
   http,
   keccak256,
+  parseAbi,
+  parseEther,
   parseUnits,
   toHex,
+  zeroHash,
   type Address,
   type Hex,
 } from 'viem';
@@ -59,6 +62,9 @@ import {
   getPurchaseTokenForChain,
   irisUrlForChain,
 } from '@/config/stacksKeeper';
+import { CHAIN_IDS } from '@/config/index';
+import { MEGAPOT_V2_CONTRACTS, RANDOM_TICKET_BUYER_ABI } from '@/config/contracts';
+import { referralManager } from '@/services/referral/ReferralManager';
 import { verifyTicketPurchaseReceipt } from '@/services/season/megapotReceipts';
 import { upsertPurchaseStatus } from '@/lib/db/repositories/purchaseStatusRepository';
 import { logger } from '@/lib/logger';
@@ -166,6 +172,11 @@ export interface StackSettlementInput {
   cctpMessage?: string;
   /** Attestation for stage B (0x-prefixed). When omitted, polled from Iris. */
   attestation?: string;
+  /**
+   * Origin rail for the purchase_statuses row. The OKX x402 rail settles
+   * through the same pipeline but journals under 'xlayer'.
+   */
+  sourceChain?: 'stacks' | 'xlayer';
 }
 
 export interface SettlementStageResult {
@@ -298,6 +309,8 @@ const ERC20_ABI = [
   },
 ] as const;
 
+const RANDOM_TICKET_BUYER_PARSED_ABI = parseAbi(RANDOM_TICKET_BUYER_ABI);
+
 /**
  * Approve (if needed) then purchase. Requires the wallet to hold
  * `ticketCount` worth of the purchase token. Throws StacksSettlementError on
@@ -310,32 +323,41 @@ export async function purchaseTicketsForRecipient(
   clients: KeeperClients,
 ): Promise<Hex> {
   const { walletClient, publicClient } = clients;
-  const megapot = getMegapotForKeeperChain(chainId);
   const token = getPurchaseTokenForChain(chainId);
   const amount = BigInt(ticketCount) * USDC_PER_TICKET;
 
-  // Reads before writes: resolve allowance + price BEFORE approving, so a
-  // price sanity failure never burns an approval transaction.
-  const [allowance, ticketPrice] = (await Promise.all([
-    publicClient.readContract({
-      address: token,
-      abi: ERC20_ABI,
-      functionName: 'allowance',
-      args: [walletClient.account.address, megapot],
-    }),
-    publicClient.readContract({
+  // Mainnet purchases go through JackpotRandomTicketBuyer.buyTickets — the
+  // 2026-08 selector probes confirmed the live jackpot does not expose the
+  // classic purchaseTickets entrypoint (see MegapotAutoPurchaseProxy row).
+  const isV2 = chainId === CHAIN_IDS.BASE;
+  const megapot = getMegapotForKeeperChain(chainId);
+  const spender = isV2
+    ? (MEGAPOT_V2_CONTRACTS.randomTicketBuyer.address as Address)
+    : megapot;
+
+  // Reads before writes: resolve allowance (+ price sanity on the classic
+  // generation) BEFORE approving, so a failure never burns a transaction.
+  // RandomTicketBuyer exposes no ticketPrice; the V2 price is fixed at
+  // 1 USDC per ticket by contract.
+  const allowance = (await publicClient.readContract({
+    address: token,
+    abi: ERC20_ABI,
+    functionName: 'allowance',
+    args: [walletClient.account.address, spender],
+  })) as bigint;
+
+  if (!isV2) {
+    const ticketPrice = (await publicClient.readContract({
       address: megapot,
       abi: CLASSIC_MEGAPOT_ABI,
       functionName: 'ticketPrice',
-    }),
-  ])) as [bigint, bigint];
-
-  // Sanity: price must be 1 unit per ticket for the count math to hold.
-  if (ticketPrice !== USDC_PER_TICKET) {
-    throw new StacksSettlementError(
-      `Unexpected on-chain ticket price ${ticketPrice}; refusing to purchase on stale price assumptions`,
-      'purchase',
-    );
+    })) as bigint;
+    if (ticketPrice !== USDC_PER_TICKET) {
+      throw new StacksSettlementError(
+        `Unexpected on-chain ticket price ${ticketPrice}; refusing to purchase on stale price assumptions`,
+        'purchase',
+      );
+    }
   }
 
   // Allowance: top up to the exact purchase amount when short.
@@ -344,12 +366,30 @@ export async function purchaseTicketsForRecipient(
       address: token,
       abi: ERC20_ABI,
       functionName: 'approve',
-      args: [megapot, amount],
+      args: [spender, amount],
     });
     const approveReceipt = await publicClient.waitForTransactionReceipt({ hash: approveHash });
     if (approveReceipt.status !== 'success') {
       throw new StacksSettlementError('USDC approve reverted on-chain', 'purchase');
     }
+  }
+
+  if (isV2) {
+    // Same arg shape as encodeRandomTicketPurchase in
+    // AutomationOrchestrator.ts: buyTickets(count, recipient, [referrer],
+    // [1e18 split bps], zeroHash source).
+    const referrer = referralManager.getReferrerFor('megapot') as Address;
+    const purchaseHash = await walletClient.writeContract({
+      address: spender,
+      abi: RANDOM_TICKET_BUYER_PARSED_ABI,
+      functionName: 'buyTickets',
+      args: [BigInt(ticketCount), recipient, [referrer], [parseEther('1')], zeroHash],
+    });
+    const receipt = await publicClient.waitForTransactionReceipt({ hash: purchaseHash });
+    if (receipt.status !== 'success') {
+      throw new StacksSettlementError('buyTickets reverted on-chain', 'purchase');
+    }
+    return purchaseHash;
   }
 
   // Classic entrypoint — docs/SEASON.md §218 testnet proof shape.
@@ -395,7 +435,7 @@ export async function completeSettlement(
       // re-verify once RPC flakes clear.
       await upsertPurchaseStatus({
         sourceTxId: input.sourceTxId,
-        sourceChain: 'stacks',
+        sourceChain: input.sourceChain ?? 'stacks',
         status: 'error',
         error: `settle.rejected: ${verification.reason ?? 'unverified purchase'}`,
         recipientBaseAddress: input.baseAddress,
@@ -406,7 +446,7 @@ export async function completeSettlement(
 
     await upsertPurchaseStatus({
       sourceTxId: input.sourceTxId,
-      sourceChain: 'stacks',
+      sourceChain: input.sourceChain ?? 'stacks',
       status: 'complete',
       baseTxId: purchaseTxHash,
       recipientBaseAddress: input.baseAddress,

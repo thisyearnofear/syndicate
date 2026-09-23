@@ -231,6 +231,23 @@ describe('completeSettlement', () => {
     jest.clearAllMocks();
   });
 
+  it('writes the passed sourceChain instead of hardcoding stacks', async () => {
+    (verifyTicketPurchaseReceipt as jest.Mock).mockResolvedValue({
+      ok: true,
+      txHash: '0xgood',
+      buyer: baseInput.baseAddress,
+      ticketCount: 1,
+    });
+
+    const { ok } = await completeSettlement(
+      { ...baseInput, sourceChain: 'xlayer' },
+      8453,
+      '0xgood',
+    );
+    expect(ok).toBe(true);
+    expect((upsertPurchaseStatus as jest.Mock).mock.calls[0][0].sourceChain).toBe('xlayer');
+  });
+
   it('flips the row to complete only after verification attributes the purchase', async () => {
     (verifyTicketPurchaseReceipt as jest.Mock).mockResolvedValue({
       ok: true,
@@ -259,6 +276,61 @@ describe('completeSettlement', () => {
     const upsert = (upsertPurchaseStatus as jest.Mock).mock.calls[0][0];
     expect(upsert.status).toBe('error');
     expect(upsert.error).toContain('settle.rejected');
+  });
+});
+
+describe('Base mainnet V2 purchase branch', () => {
+  const RANDOM_TICKET_BUYER = '0xb9560b43b91dE2c1DaF5dfbb76b2CFcDaFc13aBd';
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (verifyTicketPurchaseReceipt as jest.Mock).mockResolvedValue({
+      ok: true,
+      txHash: '0xhash0',
+      buyer: baseInput.baseAddress,
+      ticketCount: 1,
+    });
+  });
+
+  it('approves RandomTicketBuyer and calls buyTickets on chain 8453', async () => {
+    const clients = makeClients();
+    const result = await settleStacksPurchase(
+      { ...baseInput, ticketCount: 1 },
+      8453,
+      '0x' + '11'.repeat(32),
+      clients,
+    );
+
+    expect(result.complete).toBe(true);
+
+    const calls = (clients.walletClient.writeContract as jest.Mock).mock.calls.map(
+      (c: Array<{ address: string; functionName: string; args?: unknown[] }>) => c[0],
+    );
+    expect(calls.map((c: { functionName: string }) => c.functionName)).toEqual([
+      'approve',
+      'buyTickets',
+    ]);
+    // approve targets the RandomTicketBuyer spender, not the jackpot.
+    expect(calls[0].args?.[0]).toBe(RANDOM_TICKET_BUYER);
+    // buyTickets(count, recipient, [referrer], [1e18], zeroHash)
+    expect(calls[1].address).toBe(RANDOM_TICKET_BUYER);
+    expect(calls[1].args?.[0]).toBe(1n);
+    expect(calls[1].args?.[1]).toBe(baseInput.baseAddress);
+    expect(Array.isArray(calls[1].args?.[2])).toBe(true);
+    expect(calls[1].args?.[3]).toEqual([10n ** 18n]);
+    expect(calls[1].args?.[4]).toBe(
+      '0x0000000000000000000000000000000000000000000000000000000000000000',
+    );
+  });
+
+  it('keeps the classic purchaseTickets path on Base Sepolia (84532)', async () => {
+    const clients = makeClients();
+    await settleStacksPurchase(baseInput, 84532, '0x' + '11'.repeat(32), clients);
+
+    const names = (clients.walletClient.writeContract as jest.Mock).mock.calls.map(
+      (c: Array<{ functionName: string }>) => c[0].functionName,
+    );
+    expect(names).toEqual(['approve', 'purchaseTickets']);
   });
 });
 

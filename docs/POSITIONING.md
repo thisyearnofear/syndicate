@@ -57,6 +57,7 @@ Submissions demonstrate the mechanism, never invent a separate identity:
 - **Fhenix** — the privacy proof.
 - **MetaMask / 1Shot / Venice** — the automation proof.
 - **X Layer (Build X)** — the generalizability proof (same engine, new funding source).
+- **OKX Dev Day (X Layer ticket rail)** — the access proof for agents: an OKX agent enters Megapot from X Layer, settled by our operator, receipt-verified. Operator-float custody applies, so the same claim rules as the Stacks rail hold.
 
 ## The proof layer: Proof, Access, Coordination
 

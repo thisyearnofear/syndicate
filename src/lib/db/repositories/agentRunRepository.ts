@@ -32,6 +32,12 @@ export interface AgentRunEvent {
   toolId?: string | null;
   txHash?: string | null;
   source?: string | null;
+  /**
+   * Optional chain tag ('xlayer_testnet' DB default when omitted). Rails
+   * that span chains set it per entry — e.g. 'base' for the purchase leg,
+   * 'xlayer' for the payment settlement.
+   */
+  chain?: string | null;
   createdAt: number;
 }
 
@@ -41,10 +47,11 @@ export async function ensureAgentRunEventsTable(): Promise<void> {
 
 export async function appendAgentRunEvent(event: AgentRunEvent): Promise<void> {
   await sql`
-    INSERT INTO agent_run_events (id, session_id, kind, label, detail, tool_id, tx_hash, source, created_at)
+    INSERT INTO agent_run_events (id, session_id, chain, kind, label, detail, tool_id, tx_hash, source, created_at)
     VALUES (
       ${event.id},
       ${event.sessionId},
+      ${event.chain ?? 'xlayer_testnet'},
       ${event.kind},
       ${event.label},
       ${event.detail ?? null},
@@ -93,7 +100,7 @@ export async function getLatestAgentRunSessionBySource(source: string | null): P
 
   const sessionId = latest.rows[0].session_id as string;
   const result = await sql`
-    SELECT id, session_id, kind, label, detail, tool_id, tx_hash, source, created_at
+    SELECT id, session_id, chain, kind, label, detail, tool_id, tx_hash, source, created_at
     FROM agent_run_events
     WHERE session_id = ${sessionId}
     ORDER BY created_at ASC;
@@ -110,6 +117,7 @@ export async function getLatestAgentRunSessionBySource(source: string | null): P
       toolId: row.tool_id as string | null,
       txHash: row.tx_hash as string | null,
       source: row.source as string | null,
+      chain: row.chain as string | null,
       createdAt: Number(row.created_at),
     })),
   };

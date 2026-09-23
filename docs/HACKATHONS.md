@@ -4,6 +4,15 @@ This file is an index, not a second product strategy. Current implementation sta
 
 ## Active focus
 
+### OKX Dev Day 2026 — Build a Company track
+
+- **Project:** X Layer ticket rail — Megapot entries for OKX agents, paid in USD₮0 on X Layer via x402, listed on OKX.AI as an A2MCP service.
+- **Status:** Planned (2026-09-23). Nothing OKX-specific shipped in the build window before this; the rail, endpoint, and listing are the in-window work.
+- **Deadline:** 2026-09-25 23:59 UTC. OKX.AI listing review takes up to 24h.
+- **Canonical guide:** [`OKX_DEV_DAY.md`](OKX_DEV_DAY.md).
+
+## Closed (outcome not recorded here)
+
 ### Inco Summer Game Jam — Megapot track
 
 - **Project:** Season of Tickets / The Tontine Pot — crews pooling real Megapot entries, tontine seat dynamics, and an open call-the-pot auction; every score a real on-chain entry.
@@ -14,7 +23,7 @@ This file is an index, not a second product strategy. Current implementation sta
 ### OKX X Layer Build X — AI Season
 
 - **Project:** Prize Pool Hook — trading-fee-funded weighted lottery on X Layer.
-- **Status:** Testnet deployed on chain 1952; `/xlayer` agent loop (tool registry, HITL, receipts, session memory); deposit writes still capability-gated.
+- **Status:** Closed 2026-08-21. Testnet deployed on chain 1952; `/xlayer` agent loop (tool registry, HITL, receipts, session memory); deposit writes still capability-gated. As of 2026-09-23 the pool's only participant is the operator keeper (self-play).
 - **Canonical guide:** [`X_LAYER.md`](X_LAYER.md).
 
 ### MetaMask / 1Shot / Venice

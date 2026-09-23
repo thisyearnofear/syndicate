@@ -1,6 +1,10 @@
 # X Layer Prize Pool Hook
 
-**Status:** Testnet deployed on X Layer chain **1952** (Build X AI Season entry, closes 2026-08-21). `/xlayer` leads with a guided stranger walkthrough (connect → switch → faucet → shares → agent) plus the agent loop (deposit / swap join / fundPot / HITL draw) when `NEXT_PUBLIC_XLAYER_WRITES_ENABLED=true`. A scheduled operator keeper (daily cron, full-epoch chaining per tick) keeps the pool alive between visitors and persists every transition server-side; the page replays the latest operator run publicly (no wallet needed). Mainnet randomness path **designed** (drand + permissionless relay with bonded-relay fallback — see Randomness decision) pending precompile verification and independent review.
+**Status:** Testnet deployed on X Layer chain **1952** (Build X AI Season entry, closed 2026-08-21). `/xlayer` leads with a guided stranger walkthrough (connect → switch → faucet → shares → agent) plus the agent loop (deposit / swap join / fundPot / HITL draw) when `NEXT_PUBLIC_XLAYER_WRITES_ENABLED=true`. A scheduled operator keeper (daily cron, full-epoch chaining per tick) keeps the pool alive between visitors and persists every transition server-side; the page replays the latest operator run publicly (no wallet needed). Mainnet randomness path **designed** (drand + permissionless relay with bonded-relay fallback — see Randomness decision) pending precompile verification and independent review.
+
+**Activity (verified on-chain 2026-09-23):** epoch 522, but `totalShares == shares(owner)` and the latest winner is the owner/keeper `0x9434…674f` — the keeper funds, enters, and wins its own pot. The replay proves liveness, not usage.
+
+**Separate role:** X Layer mainnet is also planned as a *ticket rail* into Base for OKX.AI agents (USD₮0 via x402). That rail does not use this hook; see [`OKX_DEV_DAY.md`](OKX_DEV_DAY.md).
 
 X Layer is an experimental second engine for Syndicate. **Base/Megapot remains the product home.** The X Layer design moves the game into a Uniswap v4 hook: trading surcharges fund a prize pot, depositor shares set draw odds, and principal remains redeemable between draws.
 
@@ -42,7 +46,7 @@ The contract suite has 104 Foundry tests. The app slice has 3 config tests plus 
 | Chain ID | **1952** | 196 |
 | RPC | `https://testrpc.xlayer.tech/terigon` | `https://rpc.xlayer.tech` |
 | Gas | OKB | OKB |
-| Pot / deposit token | Faucet **USDC_TEST** `0xcb8bf24c6ce16ad21d707c9505421a17f2bec79d` | USDC `0xB6CEceAB302E2E4948951eE7843FC24E92933061` |
+| Pot / deposit token | Faucet **USDC_TEST** `0xcb8bf24c6ce16ad21d707c9505421a17f2bec79d` | **Unconfirmed.** Two contracts report symbol `USDC` on 196 (`0xB6CE…3061`, ~18.5M supply; `0x74b7…6d22`, ~1.06M) — verify the canonical one before any mainnet deploy. OKX Payment SDK settles in USD₮0 `0x779ded0c9e1022225f8e0630b35a9b54be713736`. |
 | Pair token (TOKEN1) | WOKB `0x4200000000000000000000000000000000000006` | WOKB / paired asset |
 | PoolManager | Self-deployed (see live addresses) | Canonical `0x360e68faccca8ca495c1b759fd9eee466db9fb32` |
 | Explorer | https://www.okx.com/web3/explorer/xlayer-test | https://www.okx.com/web3/explorer/xlayer |
