@@ -45,6 +45,8 @@ interface ReceiptStripProps {
   status?: ReceiptStatus;
   compact?: boolean;
   className?: string;
+  /** Fired when the explorer link is opened — for proof-audit instrumentation. */
+  onOpen?: () => void;
 }
 
 export function ReceiptStrip({
@@ -55,6 +57,7 @@ export function ReceiptStrip({
   status = "verified",
   compact = false,
   className = "",
+  onOpen,
 }: ReceiptStripProps) {
   const resolved = resolveReceiptStatus(status, txHash);
   const dot =
@@ -81,6 +84,7 @@ export function ReceiptStrip({
           href={explorerUrl}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={onOpen}
           className="inline-flex items-center gap-1 font-mono text-gray-300 underline-offset-2 hover:text-white hover:underline"
         >
           {shortHash(txHash)}

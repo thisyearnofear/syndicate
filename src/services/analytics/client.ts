@@ -35,3 +35,10 @@ export async function trackEvent(payload: AnalyticsPayload): Promise<void> {
     // Analytics should never block UX.
   }
 }
+
+/** Ms since navigation start — the clock for time-to-CTA metrics. */
+export function timeFromLoadMs(): number {
+  if (typeof window === 'undefined') return 0;
+  const start = performance.getEntriesByType?.('navigation')[0]?.startTime;
+  return Math.max(0, Math.round(performance.now() - (start ?? 0)));
+}

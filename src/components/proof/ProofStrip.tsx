@@ -11,6 +11,7 @@
 
 import { ExternalLink } from "lucide-react";
 import { RoundOrb } from "@/components/motion/RoundOrb";
+import { trackEvent } from "@/services/analytics/client";
 import type { LatestDrawData } from "@/hooks/useLatestDraw";
 
 function shortAddr(addr: string): string {
@@ -68,6 +69,7 @@ export function ProofStrip({
                 href={winnerTxUrl(draw.winner)}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackEvent({ eventName: "receipt_open", properties: { surface: "proof_strip" } })}
                 className="inline-flex items-center gap-1 font-mono text-amber-200/90 underline-offset-2 hover:text-amber-100 hover:underline"
               >
                 {shortAddr(draw.winner)}
@@ -90,6 +92,7 @@ export function ProofStrip({
       </span>
       <a
         href="/operators"
+        onClick={() => trackEvent({ eventName: "keeper_replay_click" })}
         className="text-gray-500 transition-colors hover:text-gray-200"
       >
         Replay all runs →

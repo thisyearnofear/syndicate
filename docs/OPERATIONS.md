@@ -202,3 +202,22 @@ Alert on failed proxy calls, webhook signature failures, database connection fai
 ## Rollback
 
 Prefer a revert through the normal review process, then redeploy the known-good commit. For configuration issues, restore the previous verified environment values. Do not manually rewrite purchase status to `complete`; use an on-chain recovery or mark an audited error state with an operator note.
+
+## Product funnel events
+
+Client events post to `POST /api/analytics/track` (logged as `[AnalyticsEvent]`,
+optionally forwarded to `ANALYTICS_WEBHOOK_URL`). Names emitted today:
+
+| Event | Surface | Properties | Answers |
+|---|---|---|---|
+| `home_cta_click` | `/` Enter-draw (button, hero, E key) | `timeToCtaMs` | time-to-CTA |
+| `home_purchase_success` | `/` purchase-success event | `ticketCount`, `drawId` | first-purchase conversion |
+| `campaign_seat_click` | `/` CampaignBanner | — | campaign → Season CTR |
+| `ways_in_compare_click` | `/` rails door | — | rail-compare clickthrough |
+| `proof_door_click` | `/` proof door | — | proof curiosity |
+| `receipt_open` | ProofStrip winner link, any `ReceiptStrip` with `onOpen` | `surface` | receipts actually audited |
+| `keeper_replay_click` | ProofStrip → `/operators` | — | keeper-replay clickthrough |
+| `operator_world_exit` | `/operators` card foot links | `world` | which world the proof sends people to |
+
+Autopilot survive-2-cycles is measured server-side from `agent_run_events`
+and Virtuals task audit rows, not a client event.
