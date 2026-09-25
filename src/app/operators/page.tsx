@@ -129,7 +129,9 @@ export default function OperatorsPage() {
             <span className="font-mono text-xs text-gray-400">
               fail-closed → execute → receipt
             </span>
-            .
+            . To audit in ten seconds: open any card&apos;s timeline, click a receipt
+            hash, confirm it on the explorer — repeat for one failed step if you want
+            to see fail-closed work.
           </p>
         </div>
       </section>

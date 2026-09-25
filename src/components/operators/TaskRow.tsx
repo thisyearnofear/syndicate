@@ -49,8 +49,10 @@ function dotClass(kind: OperatorTimelineNode["kind"]): string {
   }
 }
 
-function toolChips(label: string): string[] {
-  return label
+function toolChips(node: OperatorTimelineNode): string[] {
+  const chips = node.toolId ? [node.toolId] : [];
+  if (chips.length > 0) return chips;
+  return node.label
     .toLowerCase()
     .replace(/[^a-z0-9\s→/-]/g, "")
     .split(/→|\||,|;/)
@@ -71,12 +73,19 @@ export function OperatorTaskRow({
   node,
   explorerTx,
   defaultOpen = false,
+  now,
 }: {
   node: OperatorTimelineNode;
   explorerTx: (hash: string, chain?: string | null) => string;
   defaultOpen?: boolean;
+  /** Wall clock from the timeline; enables live elapsed on in-flight rows. */
+  now?: number;
 }) {
-  const chips = toolChips(node.label);
+  const chips = toolChips(node);
+  const elapsed =
+    node.kind === "plan" && now !== undefined
+      ? `${Math.max(0, Math.floor((now - node.at) / 1000))}s`
+      : null;
 
   return (
     <li className="relative flex items-start gap-3 pl-1">
@@ -84,8 +93,9 @@ export function OperatorTaskRow({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
           <p className="text-sm font-medium text-gray-200">{node.label}</p>
-          <span className={`shrink-0 text-[11px] font-medium ${statusTone(node.kind)}`}>
+          <span className={`shrink-0 text-[11px] font-medium tabular-nums ${statusTone(node.kind)}`}>
             {statusLabel(node.kind)}
+            {elapsed ? ` · ${elapsed}` : ""}
           </span>
         </div>
 

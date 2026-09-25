@@ -262,7 +262,11 @@ export function RailReceiptView({
         </>
       )}
 
-      {showTrace && txId && <OperatorTrace source="xlayer-rail" sourceTxId={txId} />}
+      {showTrace && txId && (
+        <div id="operator-trace" className="scroll-mt-6">
+          <OperatorTrace source="xlayer-rail" sourceTxId={txId} />
+        </div>
+      )}
     </div>
   );
 }

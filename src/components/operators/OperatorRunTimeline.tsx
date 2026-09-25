@@ -56,6 +56,7 @@ export function toOperatorTimeline(entries: OperatorReplayEntry[]): OperatorTime
           kind: next.kind as 'complete' | 'fail',
           label: e.label,
           detail: next.detail ?? e.detail ?? null,
+          toolId: next.toolId ?? e.toolId ?? null,
           txHash: next.txHash ?? e.txHash ?? null,
           chain: next.chain ?? e.chain ?? null,
           at: next.createdAt,
@@ -69,6 +70,7 @@ export function toOperatorTimeline(entries: OperatorReplayEntry[]): OperatorTime
         kind: 'plan',
         label: e.label,
         detail: e.detail ?? null,
+        toolId: e.toolId ?? null,
         txHash: e.txHash ?? null,
         chain: e.chain ?? null,
         at: e.createdAt,
@@ -82,6 +84,7 @@ export function toOperatorTimeline(entries: OperatorReplayEntry[]): OperatorTime
         kind: e.kind as OperatorTimelineNode['kind'],
         label: e.label,
         detail: e.detail ?? null,
+        toolId: e.toolId ?? null,
         txHash: e.txHash ?? null,
         chain: e.chain ?? null,
         at: e.createdAt,
@@ -104,6 +107,19 @@ function useElapsedSeconds(active: boolean): number {
   return active ? elapsed : 0;
 }
 
+/** Wall clock that ticks only while something is in flight (for row elapsed). */
+function useNow(active: boolean): number {
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    const tick = () => setNow(Date.now());
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [active]);
+  return now;
+}
+
 export function OperatorRunTimeline({
   entries,
   explorerTx,
@@ -118,13 +134,15 @@ export function OperatorRunTimeline({
   loading?: boolean;
 }) {
   const nodes = toOperatorTimeline(entries);
-  const elapsed = useElapsedSeconds(loading && nodes.length === 0);
+  const journalElapsed = useElapsedSeconds(loading && nodes.length === 0);
+  const anyInFlight = nodes.some((n) => n.kind === 'plan');
+  const now = useNow(loading || anyInFlight);
 
   if (nodes.length === 0) {
     if (loading) {
       return (
         <p className="py-6 text-center font-mono text-sm text-gray-500">
-          Reading keeper journal… {elapsed}s
+          Reading keeper journal… {journalElapsed}s
         </p>
       );
     }
@@ -142,7 +160,7 @@ export function OperatorRunTimeline({
       {/* The spine */}
       <span aria-hidden className="absolute left-[5px] top-2 bottom-2 w-px bg-white/10" />
       {nodes.map((node) => (
-        <OperatorTaskRow key={node.id} node={node} explorerTx={explorerTx} />
+        <OperatorTaskRow key={node.id} node={node} explorerTx={explorerTx} now={now} />
       ))}
     </ol>
   );

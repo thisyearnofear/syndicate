@@ -17,7 +17,9 @@ import { ArrowRight } from 'lucide-react';
 import { PageHeader, PageShell, ShellSection } from '@/components/layout/PageShell';
 import { HonestyChip } from '@/components/layout/HonestyChip';
 import { OperatorRunTimeline } from '@/components/operators/OperatorRunTimeline';
+import { ProofStrip } from '@/components/proof/ProofStrip';
 import { useIsMounted } from '@/hooks/useIsMounted';
+import { useLatestDraw } from '@/hooks/useLatestDraw';
 import { useOperatorRun } from '@/hooks/useOperatorRuns';
 import { explorerTxForChain } from '@/config/explorers';
 import { getCapability, type CapabilityId } from '@/config/capabilities';
@@ -111,6 +113,7 @@ export default function WaysInPage() {
   const origin = process.env.NEXT_PUBLIC_APP_URL ?? (mounted ? window.location.origin : '');
 
   const rail = useOperatorRun('rail');
+  const { draw: latestDraw, loaded: drawLoaded } = useLatestDraw();
   const listingUrl = process.env.NEXT_PUBLIC_OKX_AI_LISTING_URL;
 
   return (
@@ -120,6 +123,10 @@ export default function WaysInPage() {
         eyebrow="Access"
         supportingLine="Enter the Base draw from any chain, any wallet, or an agent acting for you. Every entry comes back with a receipt."
       />
+
+      <ShellSection>
+        <ProofStrip draw={latestDraw} loaded={drawLoaded} />
+      </ShellSection>
 
       <ShellSection>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -187,7 +194,8 @@ export default function WaysInPage() {
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
             <h2 className="mb-1 text-base font-semibold text-white">An agent acts for me</h2>
             <p className="mb-4 text-xs text-gray-500">
-              A paid API call; the operator buys the ticket on Base.
+              A paid API call; the operator buys the ticket on Base. The rail is a door —
+              the pool below is our experiment, not one for you to enter.
             </p>
             <Rail
               name="Syndicate Tickets"
@@ -200,6 +208,19 @@ export default function WaysInPage() {
                 { label: 'Proof', value: 'X Layer + Base receipts + operator trace' },
               ]}
               cta={{ label: 'How it works', href: '#agents' }}
+            />
+            <Rail
+              name="Agent Pool"
+              capability="xlayer_prize_pool"
+              facts={[
+                { label: 'From', value: 'X Layer (testnet)' },
+                { label: 'Pay', value: 'Operator-seeded demo entries' },
+                { label: 'Held in transit', value: 'Pool operator keys, scoped by policy' },
+                { label: 'Settled by', value: 'Agent Pool operator' },
+                { label: 'Proof', value: 'X Layer receipts + run replay' },
+              ]}
+              note="R&D engine, not a door for you — no outside players yet. It seeds its own demo entries; replays live on /operators."
+              cta={{ label: 'Open Agent Pool', href: '/xlayer' }}
             />
           </div>
         </div>
