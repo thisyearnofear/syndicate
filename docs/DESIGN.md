@@ -277,3 +277,10 @@ ground** — not a cyan restyle of Season, and not an unlabeled core page:
 8. The core mechanic must be visible in motion. If a rule of the game
    changes a number, that number animates when it changes — otherwise
    players learn the rule from documentation, which means they don't.
+9. The lab/arena register is route-scoped and lint-enforced: `.hud`,
+   `.surface-arena`, `.lab-scanline`, arena embers/hatch, seal/cutoff and
+   bloom tokens may only appear in `components/xlayer/**`,
+   `components/season/**`, the motion/layout primitives that define them,
+   and `home/CampaignBanner.tsx` (the one sanctioned arena inset).
+   `eslint.config.js` fails the build on leakage — everything else speaks
+   `ACCENTS` from `src/config/design.ts`.

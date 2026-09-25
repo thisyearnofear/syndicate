@@ -18,6 +18,7 @@ const eslintConfig = [
     ignores: [
       'lib/openzeppelin-contracts/**',
       'lib/v4-core/**',
+      '.agents/**',
       'contracts/**',
       'dev-tools/**',
       'empty-module/**',
