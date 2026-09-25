@@ -3,8 +3,9 @@
 /**
  * PLAY HERO — the only pitch on `/`.
  *
- * One figure (live pot), one CTA (Enter draw), one mechanism line, one
- * proof microline. Play accent + Inter only. No arena/lab sampling.
+ * One figure (live pot), one CTA (Enter draw), one mechanism line.
+ * Proof lives in ProofStrip below — never a fake "verified" microline
+ * without a settlement hash. Play accent + Inter only.
  */
 
 import { Clock } from "lucide-react";
@@ -20,12 +21,7 @@ interface PlayHeroProps {
   countdownLabel?: string | null;
   countdownUrgent?: boolean;
   oddsDisplay?: string | null;
-  lastWin?: { address: string; prizeLabel: string; drawId: number } | null;
   onEnter: () => void;
-}
-
-function shortAddr(addr: string): string {
-  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 }
 
 export function PlayHero({
@@ -35,7 +31,6 @@ export function PlayHero({
   countdownLabel,
   countdownUrgent,
   oddsDisplay,
-  lastWin,
   onEnter,
 }: PlayHeroProps) {
   return (
@@ -75,7 +70,8 @@ export function PlayHero({
       </p>
 
       <div className="flex justify-center pt-3 animate-fade-in-up" style={{ animationDelay: "150ms" }}>
-        <BeamFrame laps={Infinity} duration={6} className="rounded-2xl inline-block">
+        {/* Finite laps: money CTA earns a beam, not a forever glow (DESIGN.md). */}
+        <BeamFrame laps={2} duration={4} className="rounded-2xl inline-block">
           <Button
             variant="warning"
             size="lg"
@@ -108,16 +104,6 @@ export function PlayHero({
           <>
             <span className="text-gray-700">·</span>
             <span className="text-amber-300/80 font-semibold">{oddsDisplay} per ticket</span>
-          </>
-        )}
-        {lastWin && (
-          <>
-            <span className="text-gray-700">·</span>
-            <span>
-              Last win{" "}
-              <span className="font-mono text-gray-300">{shortAddr(lastWin.address)}</span>{" "}
-              <span className="font-semibold text-white">{lastWin.prizeLabel}</span>
-            </span>
           </>
         )}
       </div>

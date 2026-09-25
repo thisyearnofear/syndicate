@@ -210,7 +210,6 @@ export default function Home() {
           countdownLabel={countdown?.label ?? null}
           countdownUrgent={countdown?.urgent ?? false}
           oddsDisplay={oddsDisplay}
-          lastWin={latestWin}
           onEnter={handleBuyClick}
         />
 
@@ -237,56 +236,50 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ─── CONNECTED CONFIRMATION — receipts, not a second dashboard ── */}
+        {/* ─── CONNECTED — tickets only; Grow has its own door ───────────── */}
         {isConnected && address && (
-          <section aria-label="Your entries" className="mb-14">
-            <div className="mx-auto max-w-xl rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-center">
-              <p className="text-sm text-gray-300">
-                Connected as{" "}
-                <span className="font-mono text-white">
-                  {address.slice(0, 6)}...{address.slice(-4)}
-                </span>
-              </p>
-              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:justify-center">
-                <Button variant="glass" size="sm" onClick={() => router.push('/my-tickets')}>
-                  View my tickets
-                </Button>
-                <Button variant="glass" size="sm" onClick={handleSeeVaults}>
-                  Deposit to Grow
-                </Button>
-              </div>
-            </div>
+          <section aria-label="Your entries" className="mb-14 text-center">
+            <p className="text-sm text-gray-400">
+              Connected as{" "}
+              <span className="font-mono text-gray-200">
+                {address.slice(0, 6)}...{address.slice(-4)}
+              </span>
+            </p>
+            <button
+              type="button"
+              onClick={() => router.push("/my-tickets")}
+              className="mt-2 text-xs text-gray-500 transition-colors hover:text-amber-200"
+            >
+              View my tickets →
+            </button>
           </section>
         )}
 
-        {/* ─── DOORS — quiet links to the other rungs + proof ────────────── */}
-        <section aria-label="More ways to play" className="mb-12 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {/* ─── DOORS — quiet text links; Play amber owns the page accent ─── */}
+        <section
+          aria-label="More ways to play"
+          className="mb-12 flex flex-col items-center gap-2 text-center sm:flex-row sm:justify-center sm:gap-6"
+        >
           <button
             type="button"
             onClick={handleSeeVaults}
-            className="group rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.04] p-5 text-left transition-colors hover:border-emerald-400/40"
+            className="text-xs text-gray-500 transition-colors hover:text-gray-200"
           >
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-300/70">Grow</p>
-            <p className="mt-1 text-sm font-semibold text-white">Deposit once. Yield enters every draw.</p>
-            <p className="mt-1 text-xs text-gray-500">Withdraw the full deposit anytime. <span className="text-emerald-300/80 group-hover:text-emerald-200">Open vaults →</span></p>
+            Grow — deposit once, yield enters every draw →
           </button>
           <button
             type="button"
-            onClick={() => router.push('/coordinate')}
-            className="group rounded-2xl border border-violet-400/20 bg-violet-400/[0.04] p-5 text-left transition-colors hover:border-violet-400/40"
+            onClick={() => router.push("/coordinate")}
+            className="text-xs text-gray-500 transition-colors hover:text-gray-200"
           >
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-violet-300/70">Coordinate</p>
-            <p className="mt-1 text-sm font-semibold text-white">Pool capital. Play as a group.</p>
-            <p className="mt-1 text-xs text-gray-500">Safe pools, 0xSplits shares. <span className="text-violet-300/80 group-hover:text-violet-200">Coordinate →</span></p>
+            Coordinate — pool capital, play as a group →
           </button>
           <button
             type="button"
-            onClick={() => router.push('/operators')}
-            className="group rounded-2xl border border-white/10 bg-white/[0.02] p-5 text-left transition-colors hover:border-white/25"
+            onClick={() => router.push("/operators")}
+            className="text-xs text-gray-500 transition-colors hover:text-gray-200"
           >
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-500">Proof</p>
-            <p className="mt-1 text-sm font-semibold text-white">Every action receipted. Every run replayable.</p>
-            <p className="mt-1 text-xs text-gray-500">Fail-closed → execute → receipt. <span className="text-gray-300 group-hover:text-white">Watch operators →</span></p>
+            Proof — every run receipted and replayable →
           </button>
         </section>
 

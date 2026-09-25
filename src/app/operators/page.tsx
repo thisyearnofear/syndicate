@@ -21,6 +21,7 @@ import { PageHeader, PageShell } from '@/components/layout/PageShell';
 import { RoundOrb } from '@/components/motion/RoundOrb';
 import { OperatorRunTimeline } from '@/components/operators/OperatorRunTimeline';
 import { useOperatorRun } from '@/hooks/useOperatorRuns';
+import { timeAgo } from '@/components/proof/ReceiptStrip';
 import { xLayerExplorerTx } from '@/config/xlayer';
 import { explorerTxForChain } from '@/config/explorers';
 import { getCapability, honestyChip } from '@/config/capabilities';
@@ -168,7 +169,7 @@ export default function OperatorsPage() {
                 )}
                 {state.status === 'ok' && lastEntry && (
                   <span className="font-mono text-[10px] text-gray-500">
-                    last seen {new Date(lastEntry.createdAt).toLocaleString()}
+                    last seen {timeAgo(lastEntry.createdAt)}
                   </span>
                 )}
               </div>
@@ -177,11 +178,8 @@ export default function OperatorsPage() {
                 <OperatorRunTimeline
                   entries={state.entries.slice(-6)}
                   explorerTx={explorerTx}
-                  emptyMessage={
-                    state.status === 'loading' || state.status === 'idle'
-                      ? 'Reading the latest run…'
-                      : 'No run recorded yet.'
-                  }
+                  loading={state.status === 'loading' || state.status === 'idle'}
+                  emptyMessage="No run recorded yet."
                 />
               </div>
 

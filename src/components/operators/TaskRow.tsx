@@ -1,18 +1,16 @@
 /**
- * OPERATOR TASK ROW — agent-native keeper row (BeautifulUI Task Rows translation).
+ * OPERATOR TASK ROW — agent-native keeper row (BeautifulUI Task Rows).
  *
- * Status + collapsed thinking + tool chips + receipt. Renders the
- * OperatorTimelineNode shape from toOperatorTimeline so /operators, /ways-in
- * and /purchase-status share one language. Named OperatorTaskRow to avoid
- * colliding with the Virtuals settings TaskRow.
+ * Status + ThinkingTrace + tool chips + ReceiptStrip. Renders the
+ * OperatorTimelineNode shape from toOperatorTimeline so /operators,
+ * /ways-in and /purchase-status share one language.
  */
 
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, ExternalLink } from "lucide-react";
 import type { OperatorTimelineNode } from "./OperatorRunTimeline";
-import { shortHash, timeAgo } from "@/components/proof/ReceiptStrip";
+import { ReceiptStrip } from "@/components/proof/ReceiptStrip";
+import { ThinkingTrace } from "@/components/agent/ThinkingTrace";
 
 function statusTone(kind: OperatorTimelineNode["kind"]): string {
   switch (kind) {
@@ -29,7 +27,7 @@ function statusTone(kind: OperatorTimelineNode["kind"]): string {
 function statusLabel(kind: OperatorTimelineNode["kind"]): string {
   switch (kind) {
     case "complete":
-      return "completed · on-chain ✓";
+      return "completed";
     case "fail":
       return "failed";
     case "plan_failed":
@@ -61,6 +59,14 @@ function toolChips(label: string): string[] {
     .slice(0, 4);
 }
 
+function receiptStatus(
+  kind: OperatorTimelineNode["kind"],
+): "verified" | "pending" | "absorbed" {
+  if (kind === "complete") return "verified";
+  if (kind === "fail" || kind === "plan_failed") return "absorbed";
+  return "pending";
+}
+
 export function OperatorTaskRow({
   node,
   explorerTx,
@@ -70,7 +76,6 @@ export function OperatorTaskRow({
   explorerTx: (hash: string, chain?: string | null) => string;
   defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
   const chips = toolChips(node.label);
 
   return (
@@ -79,63 +84,47 @@ export function OperatorTaskRow({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
           <p className="text-sm font-medium text-gray-200">{node.label}</p>
-          <time
-            className="shrink-0 text-[11px] text-gray-500"
-            dateTime={new Date(node.at).toISOString()}
-          >
-            {timeAgo(node.at)}
-          </time>
-        </div>
-
-        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-          <span className={`text-[11px] font-medium ${statusTone(node.kind)}`}>
+          <span className={`shrink-0 text-[11px] font-medium ${statusTone(node.kind)}`}>
             {statusLabel(node.kind)}
           </span>
-          {chips.length > 1 && (
-            <span className="flex flex-wrap items-center gap-1">
-              {chips.map((chip) => (
-                <span
-                  key={chip}
-                  className="rounded border border-white/10 bg-white/[0.04] px-1.5 py-px font-mono text-[10px] text-gray-500"
-                >
-                  {chip}
-                </span>
-              ))}
-            </span>
-          )}
-          {node.txHash && (
-            <a
-              href={explorerTx(node.txHash, node.chain)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 font-mono text-[11px] text-gray-400 underline-offset-2 hover:text-white hover:underline"
-            >
-              {shortHash(node.txHash)}
-              <ExternalLink className="h-3 w-3" aria-hidden />
-            </a>
-          )}
         </div>
 
-        {node.detail ? (
-          <div className="mt-1">
-            <button
-              type="button"
-              onClick={() => setOpen((v) => !v)}
-              aria-expanded={open}
-              className="inline-flex items-center gap-1 text-[11px] text-gray-500 transition-colors hover:text-gray-300"
-            >
-              <ChevronDown
-                className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`}
-                aria-hidden
-              />
-              {open ? "Hide thinking" : "Show thinking"}
-            </button>
-            {open && (
-              <p className="mt-1 break-words rounded-lg border border-white/[0.07] bg-black/30 p-2.5 font-mono text-[11px] leading-relaxed text-gray-400">
-                {node.detail}
-              </p>
-            )}
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          {chips.length > 1 &&
+            chips.map((chip) => (
+              <span
+                key={chip}
+                className="rounded border border-white/10 bg-white/[0.04] px-1.5 py-px font-mono text-[10px] text-gray-500"
+              >
+                {chip}
+              </span>
+            ))}
+        </div>
+
+        {node.txHash ? (
+          <div className="mt-1.5">
+            <ReceiptStrip
+              label="receipt"
+              txHash={node.txHash}
+              explorerUrl={explorerTx(node.txHash, node.chain)}
+              at={node.at}
+              status={receiptStatus(node.kind)}
+              compact
+            />
           </div>
+        ) : (
+          <div className="mt-1">
+            <ReceiptStrip
+              label={node.kind === "plan" ? "in flight" : "no receipt"}
+              at={node.at}
+              status={receiptStatus(node.kind)}
+              compact
+            />
+          </div>
+        )}
+
+        {node.detail ? (
+          <ThinkingTrace detail={node.detail} defaultOpen={defaultOpen} className="mt-1" />
         ) : null}
       </div>
     </li>

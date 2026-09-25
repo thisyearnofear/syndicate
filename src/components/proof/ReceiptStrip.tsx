@@ -5,6 +5,7 @@
  *
  * Every money claim ends here: status dot + label + mono hash + explorer
  * link + age. No receipt = not complete. Neutral register, mono hash only.
+ * Never paints "verified" without a tx hash.
  */
 
 import { ExternalLink } from "lucide-react";
@@ -24,12 +25,24 @@ export function timeAgo(ts: number): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+export type ReceiptStatus = "verified" | "pending" | "absorbed";
+
+/** Honesty: verified requires a hash. Callers that omit one get absorbed. */
+export function resolveReceiptStatus(
+  status: ReceiptStatus | undefined,
+  txHash?: string | null,
+): ReceiptStatus {
+  const requested = status ?? "verified";
+  if (requested === "verified" && !txHash) return "absorbed";
+  return requested;
+}
+
 interface ReceiptStripProps {
   label: string;
   txHash?: string | null;
   explorerUrl?: string | null;
   at?: number | null;
-  status?: "verified" | "pending" | "absorbed";
+  status?: ReceiptStatus;
   compact?: boolean;
   className?: string;
 }
@@ -43,14 +56,19 @@ export function ReceiptStrip({
   compact = false,
   className = "",
 }: ReceiptStripProps) {
+  const resolved = resolveReceiptStatus(status, txHash);
   const dot =
-    status === "verified"
+    resolved === "verified"
       ? "bg-emerald-400"
-      : status === "pending"
+      : resolved === "pending"
         ? "bg-amber-400 animate-pulse"
         : "bg-gray-500";
   const statusText =
-    status === "verified" ? "verified" : status === "pending" ? "pending" : "operator-absorbed";
+    resolved === "verified"
+      ? "verified"
+      : resolved === "pending"
+        ? "pending"
+        : "operator-absorbed";
 
   return (
     <span
@@ -71,7 +89,7 @@ export function ReceiptStrip({
       ) : txHash ? (
         <span className="font-mono text-gray-300">{shortHash(txHash)}</span>
       ) : null}
-      <span className={status === "verified" ? "text-emerald-400/80" : "text-gray-500"}>
+      <span className={resolved === "verified" ? "text-emerald-400/80" : "text-gray-500"}>
         {statusText}
       </span>
       {at ? <span className="text-gray-600">· {timeAgo(at)}</span> : null}

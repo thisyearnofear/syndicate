@@ -15,6 +15,7 @@
  * each operator panel adds its own world's badge above the timeline.
  */
 
+import { useEffect, useState } from 'react';
 import { OperatorTaskRow } from './TaskRow';
 
 export interface OperatorReplayEntry {
@@ -35,6 +36,8 @@ export interface OperatorTimelineNode {
   kind: 'plan' | 'plan_failed' | 'complete' | 'fail';
   label: string;
   detail?: string | null;
+  /** Keeper tool that performed the step (float-check, buyTickets, verify…). */
+  toolId?: string | null;
   txHash?: string | null;
   chain?: string | null;
   at: number;
@@ -88,19 +91,43 @@ export function toOperatorTimeline(entries: OperatorReplayEntry[]): OperatorTime
   return nodes;
 }
 
+function useElapsedSeconds(active: boolean): number {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    const started = Date.now();
+    const tick = () => setElapsed(Math.floor((Date.now() - started) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [active]);
+  return active ? elapsed : 0;
+}
+
 export function OperatorRunTimeline({
   entries,
   explorerTx,
   emptyMessage = 'No operator run recorded yet.',
+  loading = false,
 }: {
   entries: OperatorReplayEntry[];
   /** Receives the node's chain tag when present; single-arg callers ignore it. */
   explorerTx: (hash: string, chain?: string | null) => string;
   emptyMessage?: string;
+  /** When true and empty, show elapsed-aware journal read instead of a skeleton. */
+  loading?: boolean;
 }) {
   const nodes = toOperatorTimeline(entries);
+  const elapsed = useElapsedSeconds(loading && nodes.length === 0);
 
   if (nodes.length === 0) {
+    if (loading) {
+      return (
+        <p className="py-6 text-center font-mono text-sm text-gray-500">
+          Reading keeper journal… {elapsed}s
+        </p>
+      );
+    }
     return (
       <p className="py-6 text-center text-sm text-gray-500">{emptyMessage}</p>
     );

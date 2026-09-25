@@ -301,11 +301,8 @@ export default function WaysInPage() {
           <OperatorRunTimeline
             entries={rail.entries.slice(-4)}
             explorerTx={railTx}
-            emptyMessage={
-              rail.status === 'loading' || rail.status === 'idle'
-                ? 'Reading the latest run…'
-                : 'No agent-rail run recorded yet — the first paid call will appear here.'
-            }
+            loading={rail.status === 'loading' || rail.status === 'idle'}
+            emptyMessage="No agent-rail run recorded yet — the first paid call will appear here."
           />
         </div>
       </ShellSection>
