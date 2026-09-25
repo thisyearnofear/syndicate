@@ -29,7 +29,7 @@ const STORAGE_KEY = "syndicate_automation_task";
 const STRATEGY_LABELS: Record<string, string> = {
   "yield-autopilot": "Yield Autopilot",
   "no-loss": "Prize Savings Agent",
-  autonomous: "Autonomous Agent",
+  autonomous: "Yield Agent",
   scheduled: "Scheduled entries",
 };
 

@@ -102,7 +102,7 @@ export function VirtualsAgentPanel({ open, onOpenChange }: VirtualsAgentPanelPro
             <DialogTitle>Syndicate Strategist (Virtuals)</DialogTitle>
           </div>
           <DialogDescription className="text-gray-400">
-            Autonomous yield strategist for private vaults. Venice AI reasoning → agent wallet execution → email report. The cron at <code className="text-[10px]">/api/crons/process-jobs</code> picks up due tasks daily.
+            Yield strategist for private vaults — enters every draw for you within task bounds. Venice AI reasoning → agent wallet execution → email report. The cron at <code className="text-[10px]">/api/crons/process-jobs</code> picks up due tasks daily.
           </DialogDescription>
         </DialogHeader>
 

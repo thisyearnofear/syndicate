@@ -137,7 +137,7 @@ export default function SettingsPage() {
                           : automationTask.strategy === "no-loss"
                           ? "Prize Savings Agent"
                           : automationTask.strategy === "autonomous"
-                          ? "Autonomous Agent"
+                          ? "Yield Agent"
                           : "Scheduled Public Play"}
                       </p>
                       <p className="text-sm text-gray-400">

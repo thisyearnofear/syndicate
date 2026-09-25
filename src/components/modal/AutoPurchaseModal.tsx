@@ -33,6 +33,7 @@ import { AUTOMATION_MODE_META } from "@/config/automationModes";
 import { getCapability } from "@/config/capabilities";
 import { permissionedAutopilotService } from "@/services/metamask/permissionedAutopilotService";
 import type { VaultProtocol } from "@/services/vaults/vaultProvider";
+import { PolicyApprovalCard } from "@/components/agent/PolicyApprovalCard";
 
 type Step = "select-type" | "configure" | "review" | "approving" | "success" | "error";
 type AgentStrategy = "scheduled" | "autonomous" | "no-loss" | "yield-autopilot";
@@ -536,7 +537,7 @@ export function AutoPurchaseModal({
                 </button>
               )}
 
-              {/* AUTONOMOUS OPTION (WDK - AI) */}
+              {/* Yield agent option (WDK) */}
               <button
                 onClick={() => {
                   setConfig(prev => ({ ...prev, strategy: 'autonomous', paymentToken: 'usdt', frequency: 'opportunistic' }));
@@ -944,73 +945,43 @@ export function AutoPurchaseModal({
                 </div>
               </div>
 
-              {/* Spending cap visualization */}
-              <div className="bg-slate-800/50 border border-slate-600 rounded-lg p-4 space-y-3">
-                <p className="text-sm font-medium text-white">
-                  Monthly spending cap: ${config.totalAmount} USDC
-                </p>
-                <div className="relative h-2 bg-gray-700 rounded-full overflow-hidden">
-                  <div className="absolute top-0 left-0 h-full w-0 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full" />
-                </div>
-                <div className="flex justify-between text-xs text-gray-400">
-                  <span>$0 / ${config.totalAmount} used</span>
-                  <span>You control the cap</span>
-                </div>
-                <div className="flex flex-wrap gap-3 text-xs text-gray-400 pt-1">
-                  <span className="flex items-center gap-1"><span className="text-green-400">✓</span> You control the cap</span>
-                  <span className="flex items-center gap-1"><span className="text-green-400">✓</span> Revoke anytime</span>
-                  <span className="flex items-center gap-1"><span className="text-green-400">✓</span> Base only</span>
-                </div>
-              </div>
-
-              {/* Different warning/info for Stacks vs EVM */}
-              {isStacksWallet ? (
-              <div className="bg-purple-900/30 border border-purple-700/50 rounded-lg p-4">
-                <div className="flex items-start gap-2">
-                  <Zap className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-purple-200">
-                      {strategyMeta.approvalDescriptionStacks}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              ) : (
-              <div className="bg-blue-900/30 border border-blue-700/50 rounded-lg p-4">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-blue-200">
-                      {strategyMeta.approvalDescriptionEvm}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              )}
-            </div>
-
-            <div className="flex gap-3 mt-4">
-              <Button
-                onClick={() => setStep("configure")}
-                variant="outline"
-                className="flex-1 border-slate-600 text-white hover:bg-slate-700/50"
-              >
-                Back
-              </Button>
-              <Button
-                onClick={handleApprove}
-                disabled={isRequesting}
-                className="flex-1 gradient-cta"
-              >
-                {isRequesting ? (
-                  <span className="flex items-center">
-                    <Loader className="w-4 h-4 mr-2 animate-spin" />
-                    {isStacksWallet ? 'Signing...' : 'Approving...'}
-                  </span>
-                ) : (
-                  isStacksWallet ? 'Sign with Stacks Wallet' : 'Approve in MetaMask'
-                )}
-              </Button>
+              <PolicyApprovalCard
+                title="Approve policy"
+                mechanism="Enters every draw for you — within these bounds."
+                description={
+                  isStacksWallet
+                    ? strategyMeta.approvalDescriptionStacks
+                    : strategyMeta.approvalDescriptionEvm
+                }
+                bounds={[
+                  {
+                    label: "Tickets",
+                    value: `${config.ticketCount} / ${config.frequency}`,
+                  },
+                  {
+                    label: "Cap",
+                    value: `~$${config.totalAmount} USDC / month`,
+                  },
+                  {
+                    label: "Chain",
+                    value: isStacksWallet ? "Stacks → Base" : "Base",
+                  },
+                  {
+                    label: "Token",
+                    value: isStacksWallet
+                      ? `${config.paymentToken.toUpperCase()} (Stacks)`
+                      : "USDC (Base)",
+                  },
+                ]}
+                onSkip={() => setStep("configure")}
+                skipLabel="Back"
+                onApprove={handleApprove}
+                approveLabel={
+                  isStacksWallet ? "Sign with Stacks Wallet" : "Approve in MetaMask"
+                }
+                approveDisabled={isRequesting}
+                approving={isRequesting}
+              />
             </div>
           </div>
         )}

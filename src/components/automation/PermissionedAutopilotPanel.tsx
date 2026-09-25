@@ -1,13 +1,15 @@
 "use client";
 
-import { Activity, ShieldCheck, TimerReset, Zap } from "lucide-react";
-import { Button } from "@/shared/components/ui/Button";
+import { Activity, TimerReset, Zap } from "lucide-react";
 import {
   usePermissionedAutopilotPolicies,
   useYieldAutopilotActivity,
   useYieldAutopilotExecution,
   useYieldAutopilotExecutionLog,
 } from "@/hooks";
+import { PolicyApprovalCard } from "@/components/agent/PolicyApprovalCard";
+import { ReceiptStrip } from "@/components/proof/ReceiptStrip";
+import { explorerTxForChain } from "@/config/explorers";
 
 function formatUsdc(amount: string): string {
   const value = Number(BigInt(amount)) / 1_000_000;
@@ -60,34 +62,47 @@ export function PermissionedAutopilotPanel() {
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {activePolicies.map((policy) => (
-          <div key={policy.id} className="bg-white/[0.04] border border-cyan-500/25 rounded-xl p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <ShieldCheck className="w-4 h-4 text-cyan-300" />
-                  <h4 className="font-bold text-white text-sm">Principal-preserving ticket policy</h4>
-                </div>
-                <p className="text-xs text-gray-400">
-                  Use {policy.sourceVault} yield for up to {policy.ticketCount} tickets, capped at ${formatUsdc(policy.maxSpendPerPeriod)} per {policy.period}.
-                </p>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-xs"
-                onClick={() => deactivatePolicy(policy.id)}
-              >
-                Disable
-              </Button>
-            </div>
+        {activePolicies.map((policy) => {
+          const currentActivity = activity.find((item) => item.policyId === policy.id);
+          const executionPlan = currentActivity?.executionPlan;
+          const latestEntry = entries.find((entry) => entry.policyId === policy.id);
+          const ready = currentActivity?.status === "ready" && !!executionPlan;
+
+          return (
+          <div key={policy.id} className="space-y-3">
+            <PolicyApprovalCard
+              title="Yield autopilot policy"
+              mechanism="Enters every draw for you — yield only, never principal."
+              description={`Use ${policy.sourceVault} yield for up to ${policy.ticketCount} tickets, capped at $${formatUsdc(policy.maxSpendPerPeriod)} per ${policy.period}.`}
+              bounds={[
+                { label: "Tickets", value: String(policy.ticketCount) },
+                {
+                  label: "Cap / period",
+                  value: `$${formatUsdc(policy.maxSpendPerPeriod)} / ${policy.period}`,
+                },
+                { label: "Expires", value: formatDate(policy.expiresAt) },
+                {
+                  label: "Relayer",
+                  value: policy.relayer === "1shot" ? "1Shot" : "Direct",
+                },
+              ]}
+              onRevoke={() => deactivatePolicy(policy.id)}
+              revokeLabel="Revoke this policy"
+              onSkip={ready ? refresh : undefined}
+              skipLabel="Skip this draw"
+              onApprove={
+                ready
+                  ? () => void submitPlan(executionPlan)
+                  : undefined
+              }
+              approveLabel={isSubmitting ? "Submitting…" : "Approve this draw"}
+              approveDisabled={isSubmitting || isChecking}
+              approving={isSubmitting}
+            />
 
             {(() => {
-              const currentActivity = activity.find((item) => item.policyId === policy.id);
-              const executionPlan = currentActivity?.executionPlan;
-              const latestEntry = entries.find((entry) => entry.policyId === policy.id);
               return (
-                <div className="mt-4 bg-slate-950 rounded-lg px-3 py-2 font-mono text-[11px] space-y-2 border border-white/10">
+                <div className="rounded-xl border border-white/10 bg-slate-950 px-3 py-2 font-mono text-[11px] space-y-2">
                   <div className="flex items-center justify-between gap-3">
                     <span className={
                         currentActivity?.status === 'ready'
@@ -114,24 +129,25 @@ export function PermissionedAutopilotPanel() {
                       {executionPlan.relayer === "1shot" && (
                         <div>prepared.permissionContext: {executionPlan.permissionContext?.length ? `${executionPlan.permissionContext.length} delegation(s)` : "missing"}</div>
                       )}
-                      <button
-                        className="mt-2 text-emerald-300 hover:text-emerald-100 disabled:text-slate-600"
-                        onClick={() => void submitPlan(executionPlan)}
-                        disabled={isSubmitting}
-                      >
-                        {isSubmitting ? 'Submitting intent...' : 'Submit execution intent'}
-                      </button>
                     </div>
                   )}
                   {latestEntry && (
-                    <div className="text-slate-500 border-t border-slate-800 pt-2 space-y-1">
+                    <div className="text-slate-500 border-t border-slate-800 pt-2 space-y-1.5">
                       <div>last.intent: {latestEntry.status} - {latestEntry.message}</div>
-                      {latestEntry.approvalHash && (
-                        <div>last.approval: {latestEntry.approvalHash.slice(0, 18)}...{latestEntry.approvalHash.slice(-8)}</div>
-                      )}
-                      {latestEntry.transactionHash && (
-                        <div>last.tx: {latestEntry.transactionHash.slice(0, 18)}...{latestEntry.transactionHash.slice(-8)}</div>
-                      )}
+                      {latestEntry.transactionHash ? (
+                        <ReceiptStrip
+                          label="last.tx"
+                          txHash={latestEntry.transactionHash}
+                          explorerUrl={explorerTxForChain(latestEntry.transactionHash, "base")}
+                          status={
+                            latestEntry.status === "direct-submitted" ||
+                            latestEntry.status === "relayer-submitted"
+                              ? "verified"
+                              : "pending"
+                          }
+                          compact
+                        />
+                      ) : null}
                       {latestEntry.relayerRequestId && (
                         <div>last.1shot.task: {latestEntry.relayerRequestId.slice(0, 18)}...{latestEntry.relayerRequestId.slice(-8)}</div>
                       )}
@@ -147,16 +163,14 @@ export function PermissionedAutopilotPanel() {
               );
             })()}
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
-              <div className="bg-cyan-500/10 border border-cyan-500/25 rounded-lg p-3">
-                <div className="flex items-center gap-1.5 text-cyan-300 mb-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="bg-white/[0.03] border border-white/10 rounded-lg p-3">
+                <div className="flex items-center gap-1.5 text-gray-400 mb-1">
                   <Zap className="w-3 h-3" />
                   <span className="text-[10px] font-bold uppercase">Next action</span>
                 </div>
                 <p className="text-xs font-semibold text-white">
-                  {activity.find((item) => item.policyId === policy.id)?.status === 'ready'
-                    ? 'Prepare purchase'
-                    : 'Check accrued yield'}
+                  {ready ? 'Approve this draw' : 'Check accrued yield'}
                 </p>
               </div>
               <div className="bg-white/[0.03] border border-white/10 rounded-lg p-3">
@@ -166,22 +180,16 @@ export function PermissionedAutopilotPanel() {
                 </div>
                 <p className="text-xs font-semibold text-white">{formatDate(policy.expiresAt)}</p>
               </div>
-              <div className="bg-white/[0.03] border border-white/10 rounded-lg p-3">
-                <div className="flex items-center gap-1.5 text-gray-400 mb-1">
-                  <Activity className="w-3 h-3" />
-                  <span className="text-[10px] font-bold uppercase">Relayer</span>
-                </div>
-                <p className="text-xs font-semibold text-white">{policy.relayer === "1shot" ? "1Shot" : "Direct execution"}</p>
-              </div>
             </div>
 
-            <div className="mt-4 border-t border-white/10 pt-3 font-mono text-[11px] text-gray-400 space-y-1">
+            <div className="border-t border-white/10 pt-3 font-mono text-[11px] text-gray-400 space-y-1">
               <div>policy.created: {new Date(policy.createdAt).toISOString()}</div>
               <div>permission.id: {policy.permissionId}</div>
               <div>target: {policy.targetFunction} @ {policy.targetContract}</div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
