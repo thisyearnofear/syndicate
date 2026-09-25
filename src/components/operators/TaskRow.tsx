@@ -82,9 +82,10 @@ export function OperatorTaskRow({
   now?: number;
 }) {
   const chips = toolChips(node);
+  // now is 0 until the timeline's clock starts (SSR-safe first paint).
   const elapsed =
-    node.kind === "plan" && now !== undefined
-      ? `${Math.max(0, Math.floor((now - node.at) / 1000))}s`
+    node.kind === "plan" && now
+      ? `${Math.floor((now - node.at) / 1000)}s`
       : null;
 
   return (
