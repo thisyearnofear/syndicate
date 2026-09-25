@@ -234,9 +234,17 @@ const BADGE_TONES = {
 } as const;
 
 /** Content wrapper applying the standard 120ms entrance delay. */
-export function ShellSection({ children, className = "" }: { children: ReactNode; className?: string }) {
+export function ShellSection({
+  children,
+  className = "",
+  id,
+}: {
+  children: ReactNode;
+  className?: string;
+  id?: string;
+}) {
   return (
-    <section className={`animate-fade-in-up ${className}`} style={entrance(120)}>
+    <section id={id} className={`animate-fade-in-up ${className}`} style={entrance(120)}>
       {children}
     </section>
   );

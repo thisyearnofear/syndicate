@@ -194,6 +194,25 @@ export default function SeasonPage() {
     if (myMembership && selectedCrewId) rememberSeatedCrew(selectedCrewId);
   }, [myMembership, selectedCrewId]);
 
+  // Keyboard accelerator: S = take a seat (docs/DESIGN.md — lives on /season
+  // only; home's single shortcut is E). Never fires while typing.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      if (e.key === 's' || e.key === 'S') {
+        const seat = document.getElementById('seat');
+        if (!seat) return;
+        e.preventDefault();
+        seat.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        (seat.querySelector('input') as HTMLInputElement | null)?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   /**
    * Survivor arithmetic for the settlement reveal: how many seats remain once
    * the winner exits, and what each of those cuts renormalizes to. Presentation
@@ -437,7 +456,7 @@ export default function SeasonPage() {
 
           {/* ── Join / found — the first action for a new visitor ── */}
           {!selectedCrewId && (
-            <ShellSection>
+            <ShellSection id="seat">
               {latestReplayRoundId && (
               <div className="vellum vellum-raised flex flex-col gap-3 rounded-2xl border-[#c9a227]/30 bg-[#c9a227]/[0.05] p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>

@@ -297,7 +297,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                         key={item.href}
                         href={item.href}
                         onClick={() => setUserMenuOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                        className={`flex min-h-11 touch-manipulation items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
                           isActive(item.href)
                             ? 'text-white bg-white/5'
                             : 'text-gray-400 hover:text-white hover:bg-white/5'
