@@ -13,6 +13,7 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/shared/components/ui/Button";
 import { CrewCrest } from "@/components/season/CrewCrest";
 import { useActiveSeason } from "@/hooks/useActiveSeason";
+import { trackEvent } from "@/services/analytics/client";
 
 function formatEnd(ms: number): string {
   const d = new Date(ms);
@@ -22,16 +23,8 @@ function formatEnd(ms: number): string {
 export function CampaignBanner() {
   const { visible, season, crews, loading } = useActiveSeason();
 
-  if (!visible && !loading) return null;
-  if (loading) {
-    return (
-      <div
-        aria-hidden
-        className="mx-auto h-28 max-w-3xl animate-pulse rounded-2xl border border-[#c9a227]/20 bg-[#c9a227]/[0.03]"
-      />
-    );
-  }
-  if (!season) return null;
+  // No arena chrome while loading — avoid a flash when there is no season.
+  if (loading || !visible || !season) return null;
 
   const lead = [...crews].sort((a, b) => (b.score?.entries ?? 0) - (a.score?.entries ?? 0))[0];
   const seatCount = crews.reduce((n, c) => n + (c.activeMembers ?? 0), 0);
@@ -67,7 +60,10 @@ export function CampaignBanner() {
         purchase is scored on-chain.
       </p>
       <div className="mt-4">
-        <Link href={lead ? `/season?crew=${encodeURIComponent(lead.id)}` : "/season"}>
+        <Link
+          href={lead ? `/season?crew=${encodeURIComponent(lead.id)}` : "/season"}
+          onClick={() => trackEvent({ eventName: "campaign_seat_click" })}
+        >
           <Button variant="warning" size="lg" className="w-full sm:w-auto">
             Take a seat
             <ArrowRight className="ml-2 h-4 w-4" />

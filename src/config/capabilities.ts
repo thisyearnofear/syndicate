@@ -265,15 +265,17 @@ export const CAPABILITIES: readonly Capability[] = [
     id: 'season',
     label: 'Season of Tickets',
     status: SEASON_WRITES_ENABLED ? 'testnet' : 'read_only',
+    // Campaign chain defaults to Base Sepolia; override via NEXT_PUBLIC_SEASON_CHAIN_ID.
+    // UI probes Sepolia then mainnet so a live row on either surfaces (src/config/season.ts).
     chains: ['base'],
     readsEnabled: true,
     writesEnabled: SEASON_WRITES_ENABLED,
     requiresOptIn: false,
     testnetOnly: true,
     availabilityMessage: SEASON_WRITES_ENABLED
-      ? 'Campaign preview — testnet funds only (no real money).'
+      ? 'Campaign preview — primarily Base Sepolia; mainnet receipts optional (docs/SEASON.md).'
       : 'Read-only campaign view. Set NEXT_PUBLIC_SEASON_WRITES_ENABLED=true to enable crew actions.',
-    walletRequirement: 'EVM wallet on Base Sepolia',
+    walletRequirement: 'EVM wallet on Base Sepolia (or Base if the season row is mainnet)',
     productMode: null,
   },
   {

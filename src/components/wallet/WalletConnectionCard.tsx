@@ -253,7 +253,7 @@ export function WalletConnectionCard({
             {subtitle}
           </p>
           <p className="text-gray-500 text-xs max-w-sm mx-auto italic">
-            Base is the execution layer. Fhenix powers private vault mode. Wallets from ecosystems like Solana and Stacks act as funding or access rails into the product.
+            Base is the execution layer. Wallets from Stacks, Solana, and other ecosystems fund into the product — operators settle with receipts.
           </p>
         </div>
       )}

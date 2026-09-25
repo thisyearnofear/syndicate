@@ -21,10 +21,12 @@ import { PageHeader, PageShell } from '@/components/layout/PageShell';
 import { RoundOrb } from '@/components/motion/RoundOrb';
 import { OperatorRunTimeline } from '@/components/operators/OperatorRunTimeline';
 import { useOperatorRun } from '@/hooks/useOperatorRuns';
+import { useActiveSeason } from '@/hooks/useActiveSeason';
 import { timeAgo } from '@/components/proof/ReceiptStrip';
 import { xLayerExplorerTx } from '@/config/xlayer';
 import { explorerTxForChain } from '@/config/explorers';
 import { getCapability, honestyChip } from '@/config/capabilities';
+import { trackEvent } from '@/services/analytics/client';
 import { CHAINS } from '@/config/index';
 
 function baseSepoliaTx(hash: string): string {
@@ -109,6 +111,7 @@ export default function OperatorsPage() {
   const season = useOperatorRun('season');
   const stacks = useOperatorRun('stacks');
   const rail = useOperatorRun('rail');
+  const { visible: seasonCampaignVisible } = useActiveSeason();
 
   const states = { xlayer, season, stacks, rail } as const;
 
@@ -140,6 +143,12 @@ export default function OperatorsPage() {
         {WORLDS.map(({ world, name, icon: Icon, footHref, explorerTx, role, cadence, chip, footLabel }) => {
           const state = states[world];
           const lastEntry = state.entries[state.entries.length - 1];
+          const resolvedFootLabel =
+            world === 'season'
+              ? seasonCampaignVisible
+                ? 'Open Season HQ'
+                : 'Season HQ (no active campaign)'
+              : footLabel;
           return (
             <div
               key={world}
@@ -187,9 +196,10 @@ export default function OperatorsPage() {
 
               <Link
                 href={footHref}
+                onClick={() => trackEvent({ eventName: 'operator_world_exit', properties: { world } })}
                 className="mt-auto inline-flex items-center gap-1.5 text-sm text-gray-400 transition-colors hover:text-white"
               >
-                {footLabel}
+                {resolvedFootLabel}
                 <ArrowRight className="h-3.5 w-3.5" aria-hidden />
               </Link>
             </div>

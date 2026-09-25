@@ -2,7 +2,7 @@
  * Coordinate page (canonical route: /coordinate; /discover redirects here).
  *
  * - No pools exist yet: creation surface — how coordinating works + the
- *   four creation paths (Safe / 0xSplits / PoolTogether / Fhenix testnet).
+ *   three live paths (Safe / 0xSplits / PoolTogether). Paused privacy is a footnote.
  * - Pools exist: directory — search by name/cause, filter by pool type
  *   and yield strategy, sort by members/tickets/impact.
  */
@@ -18,19 +18,18 @@ import {
   Shield,
   Users,
   Trophy,
-  Lock,
   ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 import { SyndicateCard } from '@/components/syndicate/SyndicateCard';
 import { SeasonBanner } from '@/components/season/SeasonBanner';
 import { PageShell, PageHeader, ShellSection } from '@/components/layout/PageShell';
-import { HonestyChip } from '@/components/layout/HonestyChip';
 import { PageSkeleton, EmptyState } from '@/components/layout/StateViews';
 import { useUnifiedWallet } from '@/hooks';
+import { getCapability } from '@/config/capabilities';
 
-type PoolType = 'safe' | 'splits' | 'pooltogether' | 'fhenix' | 'all';
-type VaultStrategy = 'aave' | 'morpho' | 'pooltogether' | 'fhenix' | 'all';
+type PoolType = 'safe' | 'splits' | 'pooltogether' | 'all';
+type VaultStrategy = 'aave' | 'morpho' | 'pooltogether' | 'all';
 type SortBy = 'trending' | 'members' | 'tickets' | 'impact' | 'newest';
 
 interface SyndicateData {
@@ -161,7 +160,6 @@ export default function SyndicateDiscoveryPage() {
     { value: 'safe', label: 'Safe Multisig' },
     { value: 'splits', label: '0xSplits' },
     { value: 'pooltogether', label: 'PoolTogether' },
-    { value: 'fhenix', label: 'Private Vaults' },
   ];
 
   const vaultOptions: { value: VaultStrategy; label: string }[] = [
@@ -169,7 +167,6 @@ export default function SyndicateDiscoveryPage() {
     { value: 'aave', label: 'Aave V3' },
     { value: 'morpho', label: 'Morpho Blue' },
     { value: 'pooltogether', label: 'PoolTogether' },
-    { value: 'fhenix', label: 'Fhenix Private' },
   ];
 
   const sortOptions: { value: SortBy; label: string }[] = [
@@ -190,8 +187,9 @@ export default function SyndicateDiscoveryPage() {
 
   // ─── Zero-content case: this is a creation surface, not an empty list ────
   // No pools exist yet, so directory chrome (search/filters) would be dead
-  // UI. Show how coordinating works and the four honest ways to start.
+  // UI. Show how coordinating works and the three live ways to start.
   const hasPools = syndicates.length > 0;
+  const fhenixPausedNote = getCapability('fhenix_privacy').availabilityMessage;
 
   const creationPaths = [
     {
@@ -214,15 +212,6 @@ export default function SyndicateDiscoveryPage() {
       description: 'Tickets pooled into the PoolTogether prize pool, with each member claiming their own wins.',
       note: 'Live on Base',
       testnet: false,
-    },
-    {
-      icon: Lock,
-      name: 'Fhenix Private Vault',
-      description:
-        'This privacy vault is paused. Don’t send funds — a re-deploy is under review.',
-      note: 'Paused',
-      testnet: true,
-      paused: true,
     },
   ] as const;
 
@@ -254,68 +243,41 @@ export default function SyndicateDiscoveryPage() {
             ))}
           </div>
 
-          {/* Creation paths */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {creationPaths.map((path) => {
-              const paused = 'paused' in path && path.paused;
-              const inner = (
-                <>
-                <div className="flex items-center justify-between">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-400/15 text-xl text-violet-300">
-                    <path.icon className="h-5 w-5" />
-                  </div>
-                  {paused ? (
-                    <HonestyChip capability="fhenix_privacy" />
-                  ) : (
-                    <span
-                      className={`rounded-full border px-2.5 py-0.5 text-[10px] uppercase tracking-widest ${
-                        path.testnet
-                          ? 'border-amber-400/30 text-amber-300/80'
-                          : 'border-emerald-400/30 text-emerald-300/80'
-                      }`}
-                    >
-                      {path.note}
-                    </span>
-                  )}
-                </div>
-                <div>
-                  <p className={`text-lg font-bold ${paused ? 'text-gray-300' : 'text-white'}`}>{path.name}</p>
-                  <p className="mt-1 text-sm text-gray-400">{path.description}</p>
-                </div>
-                {!paused && (
-                  <span className="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-violet-300 group-hover:gap-2.5 transition-all">
-                    Start <ArrowRight className="h-4 w-4" />
-                  </span>
-                )}
-                </>
-              );
-
-              if (paused) {
-                return (
-                  <div
-                    key={path.name}
-                    className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-6 text-left opacity-80"
-                  >
-                    {inner}
-                  </div>
-                );
-              }
-
-              return (
+          {/* Creation paths — live rails only */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {creationPaths.map((path) => (
               <button
                 key={path.name}
                 onClick={() => router.push('/create-syndicate')}
                 className="group flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-left transition-all duration-300 hover:-translate-y-1 hover:border-violet-400/40 hover:bg-violet-500/[0.05] hover:shadow-[0_10px_40px_-12px_rgba(167,139,250,0.30)]"
               >
-                {inner}
+                <div className="flex items-center justify-between">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-400/15 text-xl text-violet-300">
+                    <path.icon className="h-5 w-5" />
+                  </div>
+                  <span className="rounded-full border border-emerald-400/30 px-2.5 py-0.5 text-[10px] uppercase tracking-widest text-emerald-300/80">
+                    {path.note}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-white">{path.name}</p>
+                  <p className="mt-1 text-sm text-gray-400">{path.description}</p>
+                </div>
+                <span className="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-violet-300 group-hover:gap-2.5 transition-all">
+                  Start <ArrowRight className="h-4 w-4" />
+                </span>
               </button>
-              );
-            })}
+            ))}
           </div>
 
           <p className="text-center text-xs text-gray-500">
             No syndicates exist on Base yet — whoever creates the first one writes the leaderboard.
           </p>
+          {fhenixPausedNote ? (
+            <p className="text-center text-[11px] text-gray-600">
+              Privacy (Fhenix): {fhenixPausedNote}
+            </p>
+          ) : null}
         </ShellSection>
       </PageShell>
     );
@@ -325,7 +287,7 @@ export default function SyndicateDiscoveryPage() {
     <PageShell width="wide">
       <PageHeader
         title="Coordinate"
-        supportingLine="Pool capital with a group. Encrypted balances, selective reveal, shared upside."
+        supportingLine="Pool capital with a group. Safe, Splits, or PoolTogether — shared upside on Base."
         accent="coordinate"
       >
         <Button

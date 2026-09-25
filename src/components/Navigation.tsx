@@ -16,6 +16,7 @@ import {
   Wallet, Ghost, Orbit, Bitcoin, Zap, DoorOpen,
 } from 'lucide-react';
 import { useActiveSeason } from '@/hooks/useActiveSeason';
+import { isNavVisible } from '@/config/capabilities';
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
@@ -42,16 +43,18 @@ const LADDER_NAV: NavItem[] = [
   { href: '/coordinate', label: 'Coordinate', icon: Users },
 ];
 
-const CAMPAIGN_NAV: NavItem = {
-  href: '/season',
-  label: 'Season',
-  icon: Crown,
-  flag: 'Campaign',
-};
+function campaignNavItem(endsLabel?: string | null): NavItem {
+  return {
+    href: '/season',
+    label: 'Season',
+    icon: Crown,
+    flag: endsLabel ? `Ends ${endsLabel}` : 'Campaign',
+  };
+}
 
 // AGENT_POOL_NAV is the single definition of the Agent Pool entry. It is
-// referenced from SECONDARY_NAV (overflow-only) so the top bar stays
-// ≤5 (Play / Grow / Coordinate / Season* / Operators).
+// inserted into overflow only when isNavVisible('xlayer_prize_pool'), so
+// the top bar stays ≤5 (Play / Grow / Coordinate / Season* / Operators).
 const AGENT_POOL_NAV: NavItem = {
   href: '/xlayer',
   label: 'Agent Pool',
@@ -66,10 +69,9 @@ const OPERATORS_NAV: NavItem = {
   flag: 'Proof',
 };
 
-const SECONDARY_NAV: NavItem[] = [
+const SECONDARY_BASE: NavItem[] = [
   { href: '/bridge', label: 'Fund', icon: ArrowLeftRight },
   { href: '/ways-in', label: 'Ways in', icon: DoorOpen },
-  { href: AGENT_POOL_NAV.href, label: AGENT_POOL_NAV.label, icon: AGENT_POOL_NAV.icon, flag: AGENT_POOL_NAV.flag },
   { href: '/portfolio', label: 'Portfolio', icon: LayoutDashboard, requiresWallet: true },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
@@ -84,10 +86,25 @@ export default function Navigation({ className = '' }: NavigationProps) {
   const pathname = usePathname();
   const { isConnected, walletType, chain, connect } = useUnifiedWallet();
   const mounted = useIsMounted();
-  const { visible: seasonVisible } = useActiveSeason();
+  const { visible: seasonVisible, season } = useActiveSeason();
+  const endsFlag =
+    season && season.drawWindowEnd > 0
+      ? new Date(season.drawWindowEnd).toLocaleDateString(undefined, {
+          month: 'short',
+          day: 'numeric',
+        })
+      : null;
   // Top-level stays ≤5: Play / Grow / Coordinate / Season* / Operators.
-  // Agent Pool is an experiment — it lives in overflow, not the top bar.
-  const worldItems = seasonVisible ? [CAMPAIGN_NAV, OPERATORS_NAV] : [OPERATORS_NAV];
+  // Agent Pool is an experiment — overflow only, and only when the capability reads.
+  const worldItems = seasonVisible
+    ? [campaignNavItem(endsFlag), OPERATORS_NAV]
+    : [OPERATORS_NAV];
+  const secondaryNav: NavItem[] = [
+    SECONDARY_BASE[0],
+    SECONDARY_BASE[1],
+    ...(isNavVisible('xlayer_prize_pool') ? [AGENT_POOL_NAV] : []),
+    ...SECONDARY_BASE.slice(2),
+  ];
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -190,7 +207,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
       </span>
     ) : null;
 
-  const secondaryItems = SECONDARY_NAV.filter(
+  const secondaryItems = secondaryNav.filter(
     (item) => !('requiresWallet' in item && item.requiresWallet) || isConnected
   );
 

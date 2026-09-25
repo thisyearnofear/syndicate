@@ -115,6 +115,8 @@ export default function WaysInPage() {
   const rail = useOperatorRun('rail');
   const { draw: latestDraw, loaded: drawLoaded } = useLatestDraw();
   const listingUrl = process.env.NEXT_PUBLIC_OKX_AI_LISTING_URL;
+  const railCap = getCapability('rail_xlayer');
+  const railDocsOpen = railCap.readsEnabled && railCap.status !== 'paused';
 
   return (
     <PageShell accent="neutral" width="wide">
@@ -226,10 +228,22 @@ export default function WaysInPage() {
         </div>
       </ShellSection>
 
-      {/* For agents and builders */}
+      {/* For agents and builders — full x402 docs only while the rail is enabled. */}
       <ShellSection>
         <div id="agents" className="scroll-mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
           <h2 className="mb-2 text-base font-semibold text-white">For agents and builders</h2>
+          {!railDocsOpen ? (
+            <p className="text-sm text-gray-400">
+              The X Layer Agent Rail (Syndicate Tickets) is not enabled in this environment.
+              {railCap.availabilityMessage ? ` ${railCap.availabilityMessage}` : ''}{' '}
+              Agent Pool on testnet remains a separate experiment — see the rail card above or{' '}
+              <Link href="/operators" className="text-gray-300 underline-offset-2 hover:underline">
+                /operators
+              </Link>
+              .
+            </p>
+          ) : (
+            <>
           <p className="mb-1 text-sm text-gray-400">
             Syndicate Tickets is an x402 pay-per-call endpoint: pay{' '}
             {OKX_RAIL.price.replace('$', '')} USD₮0 on X Layer and our operator buys one real
@@ -304,6 +318,8 @@ export default function WaysInPage() {
               )}
             </p>
           </div>
+            </>
+          )}
         </div>
       </ShellSection>
 

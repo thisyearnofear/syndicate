@@ -16,6 +16,8 @@ import { FirstActionPrompt } from "@/components/onboarding/FirstActionPrompt";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/shared/components/ui/Button";
 import { deriveOrbState, resolveEndMs, type RoundOrbState } from "@/components/motion/RoundOrb";
+import { getCapability } from "@/config/capabilities";
+import { timeFromLoadMs, trackEvent } from "@/services/analytics/client";
 
 // Lazy load heavy components
 const SimplePurchaseModal = lazy(() => import("@/components/modal/SimplePurchaseModal"));
@@ -151,7 +153,13 @@ export default function Home() {
     }
   }, []);
 
-  const handleBuyClick = useCallback(() => handlePurchaseAction(), [handlePurchaseAction]);
+  const handleBuyClick = useCallback(() => {
+    trackEvent({
+      eventName: "home_cta_click",
+      properties: { timeToCtaMs: timeFromLoadMs() },
+    });
+    handlePurchaseAction();
+  }, [handlePurchaseAction]);
   const handleOpenAdvanced = useCallback((protocol?: string) => {
     setSelectedProtocol(protocol === 'megapot' || protocol === 'pooltogether' ? protocol : undefined);
     setShowPurchaseModal(true);
@@ -162,6 +170,10 @@ export default function Home() {
   useEffect(() => {
     const handler = (e: CustomEvent) => {
       setShareState({ count: e.detail?.ticketCount ?? 1, drawId: e.detail?.drawId });
+      trackEvent({
+        eventName: "home_purchase_success",
+        properties: { ticketCount: e.detail?.ticketCount ?? 1, drawId: e.detail?.drawId },
+      });
     };
     window.addEventListener('syndicate:purchase-success', handler as EventListener);
     return () => window.removeEventListener('syndicate:purchase-success', handler as EventListener);
@@ -276,21 +288,29 @@ export default function Home() {
           </button>
           <button
             type="button"
-            onClick={() => router.push("/operators")}
+            onClick={() => {
+              trackEvent({ eventName: "proof_door_click" });
+              router.push("/operators");
+            }}
             className="text-xs text-gray-500 transition-colors hover:text-gray-200"
           >
             Proof — every run receipted and replayable →
           </button>
         </section>
 
-        {/* Rails door — one quiet line, neutral register. */}
+        {/* Rails door — agent clause only when rail_xlayer is live (AGENTS.md). */}
         <section aria-label="Rails and access" className="mb-8 text-center">
           <button
             type="button"
-            onClick={() => router.push('/ways-in')}
+            onClick={() => {
+              trackEvent({ eventName: "ways_in_compare_click" });
+              router.push('/ways-in');
+            }}
             className="text-xs text-gray-500 transition-colors hover:text-gray-200"
           >
-            From Stacks or an X Layer agent? Operators settle it, receipts prove it. Compare rails →
+            {getCapability('rail_xlayer').status === 'live'
+              ? 'From Stacks or an X Layer agent? Operators settle it, receipts prove it. Compare rails →'
+              : 'Coming from another chain? Operators settle it, receipts prove it. Compare rails →'}
           </button>
         </section>
 

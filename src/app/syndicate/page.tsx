@@ -20,6 +20,7 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { SeasonCrewOverlay } from "@/components/season/SeasonCrewOverlay";
 import type { SyndicateInfo } from "@/domains/lottery/types";
 import { useUnifiedWallet } from "@/hooks";
+import { useActiveSeason } from "@/hooks/useActiveSeason";
 
 // Uses query param ?id=xxx instead of dynamic segment [id]
 // to avoid Next.js buildAppStaticPaths crash during build.
@@ -37,6 +38,10 @@ export default function SyndicateDetailPage() {
   const [isSharing, setIsSharing] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const { address } = useUnifiedWallet();
+  const { visible: seasonVisible } = useActiveSeason();
+  // Derive — don't force-set tab state when the campaign ends mid-view.
+  const tabValue =
+    !seasonVisible && activeTab === 'season' ? 'overview' : activeTab;
 
   useEffect(() => {
     if (!id) return;
@@ -183,7 +188,7 @@ export default function SyndicateDetailPage() {
 
       <ShellSection>
         {/* ── Tabbed Content ────────────────────────────────────────────── */}
-        <Tabs value={activeTab} onValueChange={(tab) => {
+        <Tabs value={tabValue} onValueChange={(tab) => {
           setActiveTab(tab);
           // Update URL without full navigation so tab is deep-linkable
           const params = new URLSearchParams(searchParams?.toString());
@@ -211,10 +216,12 @@ export default function SyndicateDetailPage() {
               <Vote className="w-4 h-4" />
               <span className="hidden sm:inline">Governance</span>
             </TabsTrigger>
-            <TabsTrigger value="season">
-              <Gavel className="w-4 h-4" />
-              <span className="hidden sm:inline">Season</span>
-            </TabsTrigger>
+            {seasonVisible && (
+              <TabsTrigger value="season">
+                <Gavel className="w-4 h-4" />
+                <span className="hidden sm:inline">Season</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* ── Overview Tab ─────────────────────────────────────────────── */}
@@ -259,10 +266,12 @@ export default function SyndicateDetailPage() {
             <GovernanceVoting poolId={id} />
           </TabsContent>
 
-          {/* ── Season Tab ──────────────────────────────────────────────── */}
-          <TabsContent value="season">
-            <SeasonCrewOverlay poolId={id} />
-          </TabsContent>
+          {/* ── Season Tab — only while a campaign is temporally active ─── */}
+          {seasonVisible && (
+            <TabsContent value="season">
+              <SeasonCrewOverlay poolId={id} />
+            </TabsContent>
+          )}
         </Tabs>
       </ShellSection>
 

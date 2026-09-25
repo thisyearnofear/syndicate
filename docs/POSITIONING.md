@@ -13,8 +13,11 @@ Syndicate is **one mechanism with four expressions**, and the mechanism is the b
 |---|---|
 | Play (Megapot) | Deposit, win, or get the deposit back. Capital never at risk. |
 | Grow (yield-to-tickets) | Principal sits in a vault; only the yield buys tickets. |
-| Coordinate (syndicates, Safe/0xSplits/Fhenix) | The same thing collectively, with selective privacy. |
-| X Layer Prize Hook | LP capital stays; trading surcharges fund the prize pot. |
+| Coordinate (syndicates — Safe / 0xSplits / PoolTogether) | The same thing collectively on Base. |
+| Season of Tickets | Time-boxed campaign layer on Play (crews + call-the-pot). |
+| X Layer Agent Rail | Funding rail: agents pay on X Layer; operator buys on Base (receipts). |
+
+Footnotes (not peer expressions): **Fhenix privacy** is paused (orphaned coordinator — do not send funds). **X Layer Agent Pool** is a testnet experiment (keeper self-play), separate from the Agent Rail door.
 
 The lottery, the vaults, the syndicates, and the hook are not four products — they are four instances of one sentence. The identity problem this resolves: each surface previously presented its own instance as *the* product, making a coherent system look fragmented.
 

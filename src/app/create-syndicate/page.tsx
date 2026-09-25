@@ -543,17 +543,22 @@ export default function CreateSyndicatePage() {
               </div>
               <div>
                 <h2 className="text-xl font-bold text-white">Pool Type</h2>
-                <p className="text-gray-400">Choose whether your syndicate should be public by default or privacy-native</p>
+                <p className="text-gray-400">
+                  {fhenixVisible
+                    ? 'Choose public coordination or privacy-native (when available)'
+                    : 'Choose how your group coordinates on Base'}
+                </p>
               </div>
             </div>
 
-            <div className="mb-6 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-gray-200">Public modes</span>
-                <span className="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-medium text-amber-300">Private mode</span>
-              </div>
+            <div className="mb-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
               <p className="text-sm text-gray-300 leading-relaxed">
-                Public modes optimize for transparency and familiar on-chain coordination. The private Fhenix mode keeps contribution amounts encrypted and supports selective disclosure for members.
+                Safe, 0xSplits, and PoolTogether are live on Base — transparent shares, on-chain payouts.
+                {!fhenixVisible && (
+                  <span className="mt-2 block text-xs text-gray-500">
+                    Privacy (Fhenix) is paused and not offered here — a re-deploy is under review.
+                  </span>
+                )}
               </p>
             </div>
             
