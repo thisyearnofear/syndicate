@@ -320,10 +320,7 @@ export default function Home() {
       )}
 
       <FirstActionPrompt
-        onGrow={() => {
-          const el = document.getElementById('quick-purchase');
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }}
+        onGrow={() => router.push('/vaults')}
       />
 
       {/* Share prompt — appears after purchase */}

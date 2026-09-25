@@ -17,6 +17,7 @@ const eslintConfig = [
   {
     ignores: [
       'lib/openzeppelin-contracts/**',
+      'lib/v4-core/**',
       'contracts/**',
       'dev-tools/**',
       'empty-module/**',
@@ -42,6 +43,35 @@ const eslintConfig = [
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',
           caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+    },
+  },
+
+  // Register containment (docs/DESIGN.md): the lab/arena visual language
+  // must not leak into consumer money surfaces. New UI in these files gets
+  // the tokens; everyone else uses ACCENTS from src/config/design.ts.
+  {
+    files: ['src/**/*.tsx'],
+    ignores: [
+      'src/components/layout/**',
+      'src/components/motion/**',
+      'src/components/NavigationHeader.tsx',
+      'src/components/home/CampaignBanner.tsx',
+      'src/components/season/**',
+      'src/components/xlayer/**',
+      'src/app/season/**',
+      'src/app/xlayer/**',
+      'src/app/operators/**',
+    ],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "Literal[value=/arena-|surface-arena|lab-scanline|\\bhud\\b|seal-crack|seal-fleck|cutoff-ring|grow-bloom|clip-reveal/], TemplateElement[value.raw=/arena-|surface-arena|lab-scanline|\\bhud\\b|seal-crack|seal-fleck|cutoff-ring|grow-bloom|clip-reveal/]",
+          message:
+            'Lab/arena register tokens are route-scoped (docs/DESIGN.md). Use ACCENTS from src/config/design.ts on consumer surfaces.',
         },
       ],
     },

@@ -34,8 +34,6 @@ export const shadows = {
 // identity: Play=amber, Grow=emerald, Coordinate=violet; infrastructure
 // pages stay neutral. No page invents a new accent family.
 
-import type { ProductModeId } from '@/config/productModes';
-
 export type DesignAccent = 'play' | 'grow' | 'coordinate' | 'neutral' | 'experimental' | 'arena';
 
 export interface AccentTokens {
@@ -238,12 +236,3 @@ export const DOMAIN_ACCENT: Record<string, DesignAccent> = {
   settings: 'neutral',
 };
 
-/**
- * @deprecated The three-card mode ladder was removed from `/` (Play-only
- * home). Route accents come from DOMAIN_ACCENT. Kept for external callers.
- */
-export const MODE_ACCENTS: Record<ProductModeId, AccentTokens> = {
-  public_play: ACCENTS.play,
-  yield_to_tickets: ACCENTS.grow,
-  private_vaults: ACCENTS.coordinate,
-};

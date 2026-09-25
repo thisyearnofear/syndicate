@@ -4,7 +4,7 @@
  * Shows a "Now try Grow" prompt that:
  *   - Only appears after the user's first-ever purchase completes
  *   - Explains yield-to-tickets in one sentence
- *   - Scrolls/navigates to QuickDeposit or /vaults
+ *   - Navigates to /vaults (Grow rung — not the Play checkout)
  *   - Dismissible (persisted to localStorage)
  *   - Animated entrance with the motion system
  *
