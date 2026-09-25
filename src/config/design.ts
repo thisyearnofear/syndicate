@@ -222,7 +222,7 @@ export const DOMAIN_SURFACE: Record<string, DesignSurface> = {
   'yield-strategies': 'grow',
 };
 
-/** Route domain → accent. Landing/product-mode accents alias these. */
+/** Route domain → accent. */
 export const DOMAIN_ACCENT: Record<string, DesignAccent> = {
   home: 'play',
   'my-tickets': 'play',
@@ -238,7 +238,10 @@ export const DOMAIN_ACCENT: Record<string, DesignAccent> = {
   settings: 'neutral',
 };
 
-/** Alias for the landing's mode ladder (was page-local in app/page.tsx). */
+/**
+ * @deprecated The three-card mode ladder was removed from `/` (Play-only
+ * home). Route accents come from DOMAIN_ACCENT. Kept for external callers.
+ */
 export const MODE_ACCENTS: Record<ProductModeId, AccentTokens> = {
   public_play: ACCENTS.play,
   yield_to_tickets: ACCENTS.grow,

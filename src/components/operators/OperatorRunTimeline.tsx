@@ -15,7 +15,7 @@
  * each operator panel adds its own world's badge above the timeline.
  */
 
-import { ExternalLink } from 'lucide-react';
+import { OperatorTaskRow } from './TaskRow';
 
 export interface OperatorReplayEntry {
   id: string;
@@ -39,20 +39,6 @@ export interface OperatorTimelineNode {
   chain?: string | null;
   at: number;
 }
-
-const DOT_STYLE: Record<OperatorTimelineNode['kind'], string> = {
-  plan: 'bg-slate-400 w-2.5 h-2.5',
-  plan_failed: 'bg-rose-400 w-2.5 h-2.5',
-  complete: 'bg-emerald-400 w-3.5 h-3.5',
-  fail: 'bg-rose-400 w-2.5 h-2.5',
-};
-
-const KIND_LABEL: Record<OperatorTimelineNode['kind'], string> = {
-  plan: 'plan',
-  plan_failed: 'plan failed',
-  complete: 'on-chain ✓',
-  fail: 'failed',
-};
 
 /** Collapse an execute + its terminal complete/fail into one action node. */
 export function toOperatorTimeline(entries: OperatorReplayEntry[]): OperatorTimelineNode[] {
@@ -102,16 +88,6 @@ export function toOperatorTimeline(entries: OperatorReplayEntry[]): OperatorTime
   return nodes;
 }
 
-function timeAgo(ts: number): string {
-  const seconds = Math.max(1, Math.floor((Date.now() - ts) / 1000));
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
-
 export function OperatorRunTimeline({
   entries,
   explorerTx,
@@ -131,51 +107,15 @@ export function OperatorRunTimeline({
   }
 
   return (
-    <ol className="relative space-y-4" aria-label="Operator run timeline">
+    <ol
+      className="relative space-y-4"
+      aria-label="Operator run timeline"
+      data-operator-run-count={nodes.length}
+    >
       {/* The spine */}
       <span aria-hidden className="absolute left-[5px] top-2 bottom-2 w-px bg-white/10" />
       {nodes.map((node) => (
-        <li key={node.id} className="relative flex items-start gap-3 pl-1">
-          <span
-            aria-hidden
-            className={`mt-1.5 shrink-0 rounded-full ${DOT_STYLE[node.kind]}`}
-          />
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-              <p className="text-sm font-medium text-gray-200">{node.label}</p>
-              <time className="shrink-0 text-[11px] text-gray-500" dateTime={new Date(node.at).toISOString()}>
-                {timeAgo(node.at)}
-              </time>
-            </div>
-            {node.detail && (
-              <p className="mt-0.5 break-words text-xs text-gray-500">{node.detail}</p>
-            )}
-            <div className="mt-1 flex items-center gap-3">
-              <span
-                className={`text-[11px] font-medium ${
-                  node.kind === 'complete'
-                    ? 'text-emerald-400'
-                    : node.kind === 'fail' || node.kind === 'plan_failed'
-                      ? 'text-rose-400'
-                      : 'text-gray-500'
-                }`}
-              >
-                {KIND_LABEL[node.kind]}
-              </span>
-              {node.txHash && (
-                <a
-                  href={explorerTx(node.txHash, node.chain)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 font-mono text-[11px] text-gray-400 underline-offset-2 hover:text-white hover:underline"
-                >
-                  {node.txHash.slice(0, 10)}…{node.txHash.slice(-6)}
-                  <ExternalLink className="h-3 w-3" aria-hidden />
-                </a>
-              )}
-            </div>
-          </div>
-        </li>
+        <OperatorTaskRow key={node.id} node={node} explorerTx={explorerTx} />
       ))}
     </ol>
   );

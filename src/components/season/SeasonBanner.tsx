@@ -2,7 +2,7 @@
 
 /**
  * SEASON BANNER — campaign chip on Coordinate (and any leftover host).
- * Play home uses SeasonLivingRoom instead (docs/DESIGN.md).
+ * Play home uses CampaignBanner (src/components/home/CampaignBanner.tsx).
  */
 
 import { useState } from 'react';

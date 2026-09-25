@@ -116,10 +116,11 @@ User feedback says the app is already hard to navigate; Season must not add clut
 
 Season is a campaign layer on Play, not a fourth philosophy:
 
-- **Living-room inset** on Play (`/`): the real crew table inside a bounded
-  arena plate. Take a seat is the campaign action; Enter draw stays the live
-  Megapot CTA. Scoring is address-attributed (the buyer's wallet), not the
-  `CREW-…` join code — that code is Syndicate-internal.
+- **Campaign banner** on Play (`/`): a bounded arena plate with the season
+  name, end date, crew/seat counts, and one CTA into Season HQ. Enter draw
+  stays the live Megapot CTA and the only mobile sticky. Scoring is
+  address-attributed (the buyer's wallet), not the `CREW-…` join code
+  — that code is Syndicate-internal.
 - **Time-bound Campaign chip** in primary nav while a season is active,
   plus the banner on `/coordinate`. Both hide when there is no season.
   This is not a permanent fourth rung.

@@ -123,19 +123,17 @@ serif with real history in it.
 The arena accent MAY NOT bleed into `default` pages. Lab MAY NOT bleed either.
 Sanctioned bridges are visually contained:
 
-- Nav: **ladder** (Play / Grow / Coordinate, left) vs **worlds** (Season +
-  Agent Pool + Operators, right of a hairline, always visible, flagged) vs
-  **overflow** (Fund / Ways in / Portfolio / Settings). Never flatten those into five
-  equal rungs. Season's Campaign chip hides when there is no active season;
-  Operators' chip is the proof claim itself ("Proof").
-- The **living-room inset** on Play (`/`): a bounded arena plate that shows
-  the real crew table. `/` stays `surface="default"` with Play amber; the
-  inset never sets the page ground. Take-a-seat is the campaign action;
-  Enter-draw remains the live Megapot money CTA. Mobile sticky stays those
-  two actions — Agent Pool is not a third thumb button.
-- The **lab inset** on Play (`/`): a bounded HUD plate that points at
-  `/xlayer`. Same rule as the living room — it never paints the home ground
-  cyan. One CTA: watch the agent run.
+- Nav: **ladder** (Play / Grow / Coordinate, left) vs **campaign + proof**
+  (Season + Operators, right of a hairline, always visible, flagged) vs
+  **overflow** (Fund / Ways in / Agent Pool / Portfolio / Settings). Never
+  flatten those into equal rungs. Season's Campaign chip hides when there is
+  no active season; Operators' chip is the proof claim itself ("Proof").
+  Agent Pool is an experiment — overflow-only, never top-level. Top-level
+  stays ≤5: Play / Grow / Coordinate / Season* / Operators.
+- The **campaign banner** on Play (`/`): a bounded arena plate with the
+  season name, end date, crew/seat counts, and one CTA into Season HQ.
+  `/` stays `surface="default"` with Play amber; the banner never sets the
+  page ground. Mobile sticky is Enter-draw only — home has one job.
 - The Season overlay on `/syndicate?id=…` is an **arena inset**: the arena
   register inside its own bounded plate. Host accent stays outside it.
 

@@ -29,11 +29,12 @@ interface NavItem {
 }
 
 /**
- * Nav IA (docs/DESIGN.md, docs/POSITIONING.md):
+ * NAV IA (docs/DESIGN.md, docs/POSITIONING.md):
  *   Ladder (left)  — Play / Grow / Coordinate. Unlabeled. The product.
- *   Worlds (right) — Season + Agent Pool + Operators. Flagged satellites,
- *                    always visible, never mixed into the three rungs.
- *   Overflow       — Fund / Portfolio / Settings.
+ *   Campaign       — Season, temporal chip (ends date), hidden when inactive.
+ *   Proof (right)  — Operators. Flagged satellite, always visible.
+ *   Overflow       — Fund / Ways in / Agent Pool / Portfolio / Settings.
+ *   Max 5 top-level: Play, Grow, Coordinate, Season*, Operators.
  */
 const LADDER_NAV: NavItem[] = [
   { href: '/', label: 'Play', icon: Ticket },
@@ -48,6 +49,9 @@ const CAMPAIGN_NAV: NavItem = {
   flag: 'Campaign',
 };
 
+// AGENT_POOL_NAV is the single definition of the Agent Pool entry. It is
+// referenced from SECONDARY_NAV (overflow-only) so the top bar stays
+// ≤5 (Play / Grow / Coordinate / Season* / Operators).
 const AGENT_POOL_NAV: NavItem = {
   href: '/xlayer',
   label: 'Agent Pool',
@@ -63,9 +67,10 @@ const OPERATORS_NAV: NavItem = {
 };
 
 const SECONDARY_NAV: NavItem[] = [
-  { href: '/portfolio', label: 'Portfolio', icon: LayoutDashboard, requiresWallet: true },
   { href: '/bridge', label: 'Fund', icon: ArrowLeftRight },
   { href: '/ways-in', label: 'Ways in', icon: DoorOpen },
+  { href: AGENT_POOL_NAV.href, label: AGENT_POOL_NAV.label, icon: AGENT_POOL_NAV.icon, flag: AGENT_POOL_NAV.flag },
+  { href: '/portfolio', label: 'Portfolio', icon: LayoutDashboard, requiresWallet: true },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -80,9 +85,9 @@ export default function Navigation({ className = '' }: NavigationProps) {
   const { isConnected, walletType, chain, connect } = useUnifiedWallet();
   const mounted = useIsMounted();
   const { visible: seasonVisible } = useActiveSeason();
-  const worldItems = seasonVisible
-    ? [CAMPAIGN_NAV, AGENT_POOL_NAV, OPERATORS_NAV]
-    : [AGENT_POOL_NAV, OPERATORS_NAV];
+  // Top-level stays ≤5: Play / Grow / Coordinate / Season* / Operators.
+  // Agent Pool is an experiment — it lives in overflow, not the top bar.
+  const worldItems = seasonVisible ? [CAMPAIGN_NAV, OPERATORS_NAV] : [OPERATORS_NAV];
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -235,7 +240,7 @@ export default function Navigation({ className = '' }: NavigationProps) {
                   >
                     <Icon className="w-4 h-4" />
                     <span className="hidden xl:inline">{item.label}</span>
-                    <span className="xl:hidden">{item.href === '/xlayer' ? 'Agent' : item.href === '/operators' ? 'Ops' : item.label}</span>
+                    <span className="xl:hidden">{item.href === '/operators' ? 'Ops' : item.label}</span>
                     <span className="hidden lg:inline">{flagChip(item)}</span>
                   </Link>
                 );

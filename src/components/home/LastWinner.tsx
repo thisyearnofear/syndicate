@@ -3,48 +3,38 @@
 /**
  * LAST WINNER — Animated banner showing the most recent jackpot win.
  * Designed for virality: the kind of thing people screenshot.
+ *
+ * Receives `draw` from useLatestDraw — does not fetch on its own. Polling
+ * was removed with the shared hook: a fresh winner arrives on next visit.
  */
 
-import { useState, useEffect } from "react";
 import { Trophy } from "lucide-react";
+import type { LatestDrawData } from "@/hooks/useLatestDraw";
 
-interface WinnerData {
-  address: string;
-  prizeUsd: number;
-  ticketCount: number;
-  drawId: number;
-  timestamp: number;
-}
+export function LastWinner({
+  draw,
+  loaded,
+}: {
+  draw: LatestDrawData | null;
+  loaded: boolean;
+}) {
+  if (!loaded) {
+    return (
+      <div
+        aria-hidden
+        className="mx-auto h-12 w-full max-w-2xl animate-pulse rounded-xl bg-white/[0.04]"
+      />
+    );
+  }
 
-export function LastWinner() {
-  const [winner, setWinner] = useState<WinnerData | null>(null);
+  if (!draw?.isResolved || !draw?.winner) return null;
 
-  useEffect(() => {
-    let cancelled = false;
-    const load = () =>
-      fetch("/api/draws/latest")
-        .then((r) => r.json())
-        .then((data) => {
-          if (!cancelled && data.draw?.isResolved && data.draw?.winner) {
-            // winnerPrizeUsd is the amount actually paid to this winner
-            // (Data API); prizeUsd fallback is the round prize pool.
-            setWinner({
-              address: data.draw.winner,
-              prizeUsd: parseFloat(data.draw.winnerPrizeUsd ?? data.draw.prizeUsd),
-              ticketCount: data.draw.winnerTicketCount ?? 1,
-              drawId: data.draw.id,
-              timestamp: data.draw.drawTime,
-            });
-          }
-        })
-        .catch(() => {});
-    load();
-    // Poll so a fresh winner arrives without a page refresh (cheap endpoint).
-    const interval = setInterval(load, 60_000);
-    return () => { cancelled = true; clearInterval(interval); };
-  }, []);
-
-  if (!winner) return null;
+  const winner = {
+    address: draw.winner,
+    prizeUsd: parseFloat(draw.winnerPrizeUsd ?? draw.prizeUsd),
+    ticketCount: draw.winnerTicketCount ?? 1,
+    drawId: draw.id,
+  };
 
   const short = `${winner.address.slice(0, 6)}...${winner.address.slice(-4)}`;
   const prize = winner.prizeUsd.toLocaleString(undefined, {
