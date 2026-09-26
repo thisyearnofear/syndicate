@@ -9,6 +9,7 @@
  */
 
 import { ExternalLink } from "lucide-react";
+import { RECEIPT } from "@/config/design";
 
 export function shortHash(hash: string): string {
   if (hash.length < 16) return hash;
@@ -62,16 +63,22 @@ export function ReceiptStrip({
   const resolved = resolveReceiptStatus(status, txHash);
   const dot =
     resolved === "verified"
-      ? "bg-emerald-400"
+      ? RECEIPT.dotVerified
       : resolved === "pending"
-        ? "bg-amber-400 animate-pulse"
-        : "bg-gray-500";
+        ? RECEIPT.dotPending
+        : RECEIPT.dotAbsorbed;
   const statusText =
     resolved === "verified"
       ? "verified"
       : resolved === "pending"
         ? "pending"
         : "operator-absorbed";
+  const statusTone =
+    resolved === "verified"
+      ? RECEIPT.verified
+      : resolved === "pending"
+        ? RECEIPT.pending
+        : RECEIPT.absorbed;
 
   return (
     <span
@@ -85,17 +92,15 @@ export function ReceiptStrip({
           target="_blank"
           rel="noopener noreferrer"
           onClick={onOpen}
-          className="inline-flex items-center gap-1 font-mono text-gray-300 underline-offset-2 hover:text-white hover:underline"
+          className={`inline-flex items-center gap-1 ${RECEIPT.hash} underline-offset-2 hover:text-white hover:underline`}
         >
           {shortHash(txHash)}
           <ExternalLink className="h-3 w-3" aria-hidden />
         </a>
       ) : txHash ? (
-        <span className="font-mono text-gray-300">{shortHash(txHash)}</span>
+        <span className={RECEIPT.hash}>{shortHash(txHash)}</span>
       ) : null}
-      <span className={resolved === "verified" ? "text-emerald-400/80" : "text-gray-500"}>
-        {statusText}
-      </span>
+      <span className={statusTone}>{statusText}</span>
       {at ? <span className="text-gray-600">· {timeAgo(at)}</span> : null}
     </span>
   );

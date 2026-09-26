@@ -17,6 +17,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/shared/components/ui/Button";
 import { deriveOrbState, resolveEndMs, type RoundOrbState } from "@/components/motion/RoundOrb";
 import { getCapability } from "@/config/capabilities";
+import { MOTION_BUDGET } from "@/config/design";
 import { timeFromLoadMs, trackEvent } from "@/services/analytics/client";
 
 // Lazy load heavy components
@@ -108,7 +109,7 @@ export default function Home() {
   // copy was removed in the distill pass — one CountUp implementation).
   const prizeUsd = jackpotStats?.prizeUsd ? parseFloat(jackpotStats.prizeUsd) : 0;
   const { value: animatedPrize } = useCountUp(prizeUsd, {
-    durationMs: 1500,
+    durationMs: MOTION_BUDGET.countUpDurationMs,
     animateOnMount: true,
   });
   const prizeDisplay = useMemo(() => {

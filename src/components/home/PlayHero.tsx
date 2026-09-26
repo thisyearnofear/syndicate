@@ -12,7 +12,7 @@ import { Clock } from "lucide-react";
 import { Button } from "@/shared/components/ui/Button";
 import { BeamFrame } from "@/components/motion/BeamFrame";
 import { RoundOrb, type RoundOrbState } from "@/components/motion/RoundOrb";
-import { ACCENTS } from "@/config/design";
+import { ACCENTS, MOTION_BUDGET } from "@/config/design";
 
 interface PlayHeroProps {
   prizeDisplay: string | null;
@@ -70,8 +70,12 @@ export function PlayHero({
       </p>
 
       <div className="flex justify-center pt-3 animate-fade-in-up" style={{ animationDelay: "150ms" }}>
-        {/* Finite laps: money CTA earns a beam, not a forever glow (DESIGN.md). */}
-        <BeamFrame laps={2} duration={4} className="rounded-2xl inline-block">
+        {/* Finite laps: money CTA earns a beam, not a forever glow (MOTION_BUDGET). */}
+        <BeamFrame
+          laps={MOTION_BUDGET.beamLapsMax}
+          duration={MOTION_BUDGET.beamDurationSec}
+          className="rounded-2xl inline-block"
+        >
           <Button
             variant="warning"
             size="lg"

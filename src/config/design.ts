@@ -26,15 +26,76 @@ export const shadows = {
 } as const;
 
 // =============================================================================
-// LADDER COLOR LANGUAGE (added by the reveal-grammar design system)
+// LADDER COLOR LANGUAGE (OKLCH — docs/DESIGN.md)
 // =============================================================================
 //
-// The rulebook is docs/DESIGN.md: pages may only take accent colors from
-// ACCENTS, mapped to their domain via DOMAIN_ACCENT. The ladder is the
-// identity: Play=amber, Grow=emerald, Coordinate=violet; infrastructure
-// pages stay neutral. No page invents a new accent family.
+// Accents are perceptually balanced in OKLCH (matched lightness/chroma across
+// the ladder) so Play/Grow/Coordinate read as one system, not Tailwind defaults
+// glued together. Pages take colors only from ACCENTS / RECEIPT below.
 
 export type DesignAccent = 'play' | 'grow' | 'coordinate' | 'neutral' | 'experimental' | 'arena';
+
+/** Canonical OKLCH swatches. Tailwind classes below use the same values. */
+export const OKLCH = {
+  play: {
+    hi: 'oklch(0.90 0.12 85)',
+    mid: 'oklch(0.82 0.15 75)',
+    lo: 'oklch(0.72 0.16 55)',
+  },
+  grow: {
+    hi: 'oklch(0.90 0.11 165)',
+    mid: 'oklch(0.80 0.14 160)',
+    lo: 'oklch(0.70 0.12 175)',
+  },
+  // Indigo-violet (not fuchsia) — avoid the purple→pink AI default.
+  coordinate: {
+    hi: 'oklch(0.88 0.10 285)',
+    mid: 'oklch(0.78 0.14 290)',
+    lo: 'oklch(0.68 0.12 300)',
+  },
+  experimental: {
+    hi: 'oklch(0.90 0.10 210)',
+    mid: 'oklch(0.80 0.12 220)',
+    lo: 'oklch(0.72 0.10 240)',
+  },
+  arena: {
+    hi: 'oklch(0.94 0.04 95)',
+    mid: 'oklch(0.86 0.10 85)',
+    lo: 'oklch(0.72 0.14 75)',
+    oxblood: 'oklch(0.38 0.12 25)',
+  },
+  receipt: {
+    verified: 'oklch(0.78 0.14 155)',
+    pending: 'oklch(0.82 0.14 75)',
+    absorbed: 'oklch(0.55 0.02 260)',
+    hash: 'oklch(0.82 0.02 260)',
+  },
+} as const;
+
+/** Proof-object tokens — same emerald/amber/mono everywhere (ReceiptStrip). */
+export const RECEIPT = {
+  hash: 'font-mono text-[oklch(0.82_0.02_260)]',
+  verified: 'text-[oklch(0.78_0.14_155)]',
+  pending: 'text-[oklch(0.82_0.14_75)]',
+  absorbed: 'text-[oklch(0.55_0.02_260)]',
+  dotVerified: 'bg-[oklch(0.78_0.14_155)]',
+  dotPending: 'bg-[oklch(0.82_0.14_75)] animate-pulse',
+  dotAbsorbed: 'bg-[oklch(0.55_0.02_260)]',
+} as const;
+
+/**
+ * Motion budget (docs/DESIGN.md Hard Rule 5 + Phase 5).
+ * One entrance per surface; BeamFrame only on the primary money CTA;
+ * ceremony primitives stay route-licensed.
+ */
+export const MOTION_BUDGET = {
+  headerEnterMs: 0,
+  contentEnterMs: 120,
+  /** Max BeamFrame laps on a money CTA (never Infinity on consumer surfaces). */
+  beamLapsMax: 2,
+  beamDurationSec: 4,
+  countUpDurationMs: 1500,
+} as const;
 
 export interface AccentTokens {
   /** Gradient used for heading text and hairlines. neutral keeps plain white. */
@@ -58,39 +119,45 @@ export interface AccentTokens {
 
 export const ACCENTS: Record<DesignAccent, AccentTokens> = {
   play: {
-    gradientText: 'bg-gradient-to-r from-amber-200 via-yellow-300 to-orange-400 bg-clip-text text-transparent',
-    tile: 'bg-amber-400/15',
-    badge: 'text-amber-300/70',
-    border: 'hover:border-amber-400/40 hover:shadow-[0_10px_40px_-12px_rgba(251,191,36,0.30)]',
-    icon: 'text-amber-300',
-    hairline: 'from-amber-400/70 via-amber-400/20 to-transparent',
+    gradientText:
+      'bg-gradient-to-r from-[oklch(0.90_0.12_85)] via-[oklch(0.82_0.15_75)] to-[oklch(0.72_0.16_55)] bg-clip-text text-transparent',
+    tile: 'bg-[oklch(0.82_0.15_75_/0.15)]',
+    badge: 'text-[oklch(0.82_0.15_75_/0.75)]',
+    border:
+      'hover:border-[oklch(0.82_0.15_75_/0.40)] hover:shadow-[0_10px_40px_-12px_oklch(0.82_0.15_75_/0.30)]',
+    icon: 'text-[oklch(0.82_0.15_75)]',
+    hairline: 'from-[oklch(0.82_0.15_75_/0.70)] via-[oklch(0.82_0.15_75_/0.20)] to-transparent',
     glow: {
-      top: 'bg-amber-500/[0.07]',
-      bottom: 'bg-orange-500/[0.05]',
+      top: 'bg-[oklch(0.72_0.16_55_/0.07)]',
+      bottom: 'bg-[oklch(0.72_0.16_55_/0.05)]',
     },
   },
   grow: {
-    gradientText: 'bg-gradient-to-r from-emerald-200 via-emerald-300 to-teal-400 bg-clip-text text-transparent',
-    tile: 'bg-emerald-400/15',
-    badge: 'text-emerald-300/70',
-    border: 'hover:border-emerald-400/40 hover:shadow-[0_10px_40px_-12px_rgba(52,211,153,0.30)]',
-    icon: 'text-emerald-300',
-    hairline: 'from-emerald-400/70 via-emerald-400/20 to-transparent',
+    gradientText:
+      'bg-gradient-to-r from-[oklch(0.90_0.11_165)] via-[oklch(0.80_0.14_160)] to-[oklch(0.70_0.12_175)] bg-clip-text text-transparent',
+    tile: 'bg-[oklch(0.80_0.14_160_/0.15)]',
+    badge: 'text-[oklch(0.80_0.14_160_/0.75)]',
+    border:
+      'hover:border-[oklch(0.80_0.14_160_/0.40)] hover:shadow-[0_10px_40px_-12px_oklch(0.80_0.14_160_/0.30)]',
+    icon: 'text-[oklch(0.80_0.14_160)]',
+    hairline: 'from-[oklch(0.80_0.14_160_/0.70)] via-[oklch(0.80_0.14_160_/0.20)] to-transparent',
     glow: {
-      top: 'bg-emerald-500/[0.07]',
-      bottom: 'bg-teal-500/[0.05]',
+      top: 'bg-[oklch(0.80_0.14_160_/0.07)]',
+      bottom: 'bg-[oklch(0.70_0.12_175_/0.05)]',
     },
   },
   coordinate: {
-    gradientText: 'bg-gradient-to-r from-violet-200 via-purple-300 to-fuchsia-400 bg-clip-text text-transparent',
-    tile: 'bg-violet-400/15',
-    badge: 'text-violet-300/70',
-    border: 'hover:border-violet-400/40 hover:shadow-[0_10px_40px_-12px_rgba(167,139,250,0.30)]',
-    icon: 'text-violet-300',
-    hairline: 'from-violet-400/70 via-violet-400/20 to-transparent',
+    gradientText:
+      'bg-gradient-to-r from-[oklch(0.88_0.10_285)] via-[oklch(0.78_0.14_290)] to-[oklch(0.68_0.12_300)] bg-clip-text text-transparent',
+    tile: 'bg-[oklch(0.78_0.14_290_/0.15)]',
+    badge: 'text-[oklch(0.78_0.14_290_/0.75)]',
+    border:
+      'hover:border-[oklch(0.78_0.14_290_/0.40)] hover:shadow-[0_10px_40px_-12px_oklch(0.78_0.14_290_/0.30)]',
+    icon: 'text-[oklch(0.78_0.14_290)]',
+    hairline: 'from-[oklch(0.78_0.14_290_/0.70)] via-[oklch(0.78_0.14_290_/0.20)] to-transparent',
     glow: {
-      top: 'bg-violet-500/[0.08]',
-      bottom: 'bg-fuchsia-500/[0.05]',
+      top: 'bg-[oklch(0.78_0.14_290_/0.08)]',
+      bottom: 'bg-[oklch(0.68_0.12_300_/0.05)]',
     },
   },
   neutral: {
@@ -101,8 +168,8 @@ export const ACCENTS: Record<DesignAccent, AccentTokens> = {
     icon: 'text-gray-300',
     hairline: 'from-white/30 via-white/10 to-transparent',
     glow: {
-      top: 'bg-blue-500/[0.05]',
-      bottom: 'bg-indigo-500/[0.04]',
+      top: 'bg-[oklch(0.55_0.08_260_/0.05)]',
+      bottom: 'bg-[oklch(0.45_0.08_280_/0.04)]',
     },
   },
   /**
@@ -110,38 +177,36 @@ export const ACCENTS: Record<DesignAccent, AccentTokens> = {
    * engine" — must always pair with a Testnet badge (docs/DESIGN.md).
    */
   experimental: {
-    gradientText: 'bg-gradient-to-r from-cyan-200 via-blue-300 to-indigo-300 bg-clip-text text-transparent',
-    tile: 'bg-cyan-400/15',
-    badge: 'text-cyan-300/70',
-    border: 'hover:border-cyan-400/40 hover:shadow-[0_10px_40px_-12px_rgba(34,211,238,0.30)]',
-    icon: 'text-cyan-300',
-    hairline: 'from-cyan-400/70 via-cyan-400/20 to-transparent',
+    gradientText:
+      'bg-gradient-to-r from-[oklch(0.90_0.10_210)] via-[oklch(0.80_0.12_220)] to-[oklch(0.72_0.10_240)] bg-clip-text text-transparent',
+    tile: 'bg-[oklch(0.80_0.12_220_/0.15)]',
+    badge: 'text-[oklch(0.80_0.12_220_/0.75)]',
+    border:
+      'hover:border-[oklch(0.80_0.12_220_/0.40)] hover:shadow-[0_10px_40px_-12px_oklch(0.80_0.12_220_/0.30)]',
+    icon: 'text-[oklch(0.80_0.12_220)]',
+    hairline: 'from-[oklch(0.80_0.12_220_/0.70)] via-[oklch(0.80_0.12_220_/0.20)] to-transparent',
     glow: {
-      top: 'bg-cyan-500/[0.08]',
-      bottom: 'bg-blue-500/[0.05]',
+      top: 'bg-[oklch(0.80_0.12_220_/0.08)]',
+      bottom: 'bg-[oklch(0.72_0.10_240_/0.05)]',
     },
   },
   /**
    * ARENA — the game layer (Season of Tickets). Antique gold and oxblood:
    * the 1653 tontine, not a fintech dashboard. Pairs with
-   * `<PageShell surface="arena">` and the .vellum / .ledger-rule utilities
-   * in globals.css. See docs/DESIGN.md "The arena surface".
-   *
-   * Deliberately distinct from `play` amber: play is bright amber on cool
-   * slate, arena is aged brass on warm ink. The surface carries most of the
-   * difference; this accent only has to stay in period with it.
+   * `<PageShell surface="arena">`. Deliberately distinct from `play` amber.
    */
   arena: {
     gradientText:
-      'bg-gradient-to-r from-[#f7ead0] via-[#e3c887] to-[#b8891f] bg-clip-text text-transparent',
-    tile: 'bg-[#c9a227]/15',
-    badge: 'text-[#e3c887]/80',
-    border: 'hover:border-[#c9a227]/45 hover:shadow-[0_10px_40px_-12px_rgba(201,162,39,0.35)]',
-    icon: 'text-[#e3c887]',
-    hairline: 'from-[#c9a227]/80 via-[#c9a227]/25 to-transparent',
+      'bg-gradient-to-r from-[oklch(0.94_0.04_95)] via-[oklch(0.86_0.10_85)] to-[oklch(0.72_0.14_75)] bg-clip-text text-transparent',
+    tile: 'bg-[oklch(0.72_0.14_75_/0.15)]',
+    badge: 'text-[oklch(0.86_0.10_85_/0.85)]',
+    border:
+      'hover:border-[oklch(0.72_0.14_75_/0.45)] hover:shadow-[0_10px_40px_-12px_oklch(0.72_0.14_75_/0.35)]',
+    icon: 'text-[oklch(0.86_0.10_85)]',
+    hairline: 'from-[oklch(0.72_0.14_75_/0.80)] via-[oklch(0.72_0.14_75_/0.25)] to-transparent',
     glow: {
-      top: 'bg-[#7a2018]/[0.22]',
-      bottom: 'bg-[#c9a227]/[0.10]',
+      top: 'bg-[oklch(0.38_0.12_25_/0.22)]',
+      bottom: 'bg-[oklch(0.72_0.14_75_/0.10)]',
     },
   },
 };

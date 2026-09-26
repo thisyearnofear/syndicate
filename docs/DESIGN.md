@@ -239,15 +239,15 @@ ground** — not a cyan restyle of Season, and not an unlabeled core page:
   accent `'experimental'` (cyan). Cyan means one thing: "this is the R&D
   engine." Titles and prize figures use `font-mono`. Panels use `.hud`
   (console plate), never `.vellum`.
-- Agent Pool lives in the **worlds cluster** (not the Play/Grow/Coordinate
-  ladder) with a Testnet chip in cyan. Always visible — never wallet-gated
-  overflow. The chip is honesty, not decoration.
+- Agent Pool lives in **overflow only** (never top-level; nav ≤5). It is
+  gated by `isNavVisible('xlayer_prize_pool')` with a cyan Testnet chip.
+  The chip is honesty, not decoration. It is not a peer of Play/Grow/Coordinate.
 - Write-gate state stays visibly disclosed. Convergence stops at chrome —
   the badges are the honesty contract and never get polished away.
 - Its accent MAY NOT bleed into core Base pages; core pages may not
   ship their own "experimental" variants without the same badges.
-- Cross-links run both ways: home acknowledges the experimental engine;
-  `/xlayer` links back into Play / Grow / Coordinate.
+- Cross-links: Ways in disambiguates Agent Rail (entry) vs Agent Pool
+  (experiment); `/xlayer` links back into Play / Grow / Coordinate.
 
 ## Hard rules
 
@@ -261,7 +261,10 @@ ground** — not a cyan restyle of Season, and not an unlabeled core page:
 5. `prefers-reduced-motion` disables all non-essential animation, including
    the arena's ambient layer, the lab scanline, the grow bloom, and every
    ceremony beat. Count-ups snap to their final value; nothing important is
-   conveyed by motion alone.
+   conveyed by motion alone. Consumer surfaces honor `MOTION_BUDGET` in
+   `src/config/design.ts`: one content entrance (~120ms), BeamFrame capped
+   at `beamLapsMax` on the primary money CTA (never `Infinity`), ceremony
+   primitives stay route-licensed.
 6. Don't inline material design tokens (`.glass-premium` forks, duplicated
    keyframes) — import from globals or extend them globally.
 7. Honesty beats polish, but honesty is not chrome. Capability badges
@@ -284,3 +287,6 @@ ground** — not a cyan restyle of Season, and not an unlabeled core page:
    and `home/CampaignBanner.tsx` (the one sanctioned arena inset).
    `eslint.config.js` fails the build on leakage — everything else speaks
    `ACCENTS` from `src/config/design.ts`.
+10. Accent colors are OKLCH-balanced in `ACCENTS` / `OKLCH` / `RECEIPT`
+    (`src/config/design.ts`). Do not reintroduce raw Tailwind amber/emerald
+    forks for ladder identity — extend the OKLCH swatches instead.
