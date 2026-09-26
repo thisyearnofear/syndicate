@@ -218,11 +218,12 @@ export function QuickPurchase({ onAdvanced, className = "" }: QuickPurchaseProps
         ))}
       </div>
 
-      {/* Buy button */}
+      {/* Buy button — Play amber (ACCENTS.play ladder); emerald is Grow's
+          identity and must not appear on the Play checkout (docs/DESIGN.md). */}
       <Button
-        variant="default"
+        variant="warning"
         size="lg"
-        className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold text-base py-4 shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+        className="w-full font-semibold text-base py-4 transition-all hover:scale-[1.02] active:scale-[0.98]"
         onClick={handleBuy}
         disabled={isPurchasing}
       >
