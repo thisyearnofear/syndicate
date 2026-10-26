@@ -33,7 +33,7 @@ pnpm test
 - **Season of Tickets** is a campaign layer on Megapot: crews pool real ticket entries, hold tontine seats, and settle via receipt-verified Call-the-Pot rounds on Base Sepolia/Base as configured.
 - **Other chains** are funding and routing rails into the Base-native product.
 - **Megapot** remains the lottery engine; Syndicate owns coordination, yield routing, privacy, and automation.
-- **X Layer** is an experimental second engine: a Uniswap v4 Prize Pool Hook where trading fees fund weighted draws. The read-only `/xlayer` dashboard is shipped; testnet deployment and write flows are pending.
+- **X Layer** is an experimental second engine: a Uniswap v4 Prize Pool Hook where trading fees fund weighted draws. Deployed on testnet 1952 with a guided `/xlayer` flow and an agent keeper loop (human-in-the-loop approval, receipt-verified); deposit writes remain capability-gated.
 
 ## Documentation
 
